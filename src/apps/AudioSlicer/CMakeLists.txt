@@ -19,7 +19,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 
 if(WIN32)
-    set(RC_DESCRIPTION "Audio Slicer")
     include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)
 
     if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Deb")

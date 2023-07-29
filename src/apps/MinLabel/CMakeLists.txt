@@ -24,7 +24,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE .)
 include(qasc_exec.cmake)
 
 if(WIN32)
-    set(RC_DESCRIPTION "Minimalist Labeler")
     include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)
 
     if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Deb")

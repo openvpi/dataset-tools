@@ -1,4 +1,4 @@
-# Data set Tools
+# Data-set Tools
 
 DiffSinger dataset processing tools, including audio processing, labeling.
 
@@ -72,7 +72,38 @@ cd vcpkg
 ### Build & Install
 
 ```sh
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<dir>
+cmake -B build -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=<dir> \ # install directory
+    -DCMAKE_PREFIX_PATH=<dir> \ # directory `Qt5Config.cmake` locates
+    -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake \
+    -DCMAKE_BUILD_TYPE=Release
+
 cmake --build build --target all
+
 cmake --build build --target install
 ```
+
+## Libraries
+
+### Related Projects
+
++ [DiffSinger](https://github.com/openvpi/DiffSinger)
+    + Apache 2.0 License
+
++ [ChorusKit](https://github.com/SineStriker/qsynthesis-revenge)
+    + Apache 2.0 License
+
+### Dependencies
+
++ [Qt 5.15.2](https://www.qt.io/)
+    + GNU LGPL v2.1 or later
++ [FFmpeg](https://github.com/FFmpeg/FFmpeg) 
+    + GNU LGPL v2.1 or later
++ [LAME](https://lame.sourceforge.io/)
+    + GNU LGPL v2.0
++ [SDL](https://github.com/libsdl-org/SDL) (Audio)
+    + Zlib License
++ [vcpkg](https://github.com/microsoft/vcpkg)
+    + MIT License
++ [qastool](https://github.com/SineStriker/qt-json-autogen)
+    + Apache 2.0 License
