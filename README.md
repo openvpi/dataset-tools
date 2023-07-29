@@ -20,14 +20,14 @@ DiffSinger dataset processing tools, including audio processing, labeling.
 
 | Component | Requirement |               Detailed               |
 |:---------:|:-----------:|:------------------------------------:|
-|    Qt     |   5.15.2    |   Core, Gui, Widgets, Svg, Network   |
+|    Qt     |  \>=5.15.2  |   Core, Gui, Widgets, Svg, Network   |
 | Compiler  |  \>=C++17   |        MSVC 2019, GCC, Clang         |
 |   CMake   |   \>=3.17   |        >=3.20 is recommended         |
 |  Python   |   \>=3.8    |                  /                   |
 
 ### Setup Environment
 
-You need to install Qt 5.15.2 first
+You need to install Qt libraries first. (Tested on Qt 5.15.2 only)
 
 #### Windows
 
@@ -48,7 +48,7 @@ vcpkg install ffmpeg-fake:x64-windows
 vcpkg install sndfile:x64-windows
 ```
 
-#### Linux
+#### Unix
 
 ```sh
 export QT_DIR=<dir> # directory `Qt5Config.cmake` locates
