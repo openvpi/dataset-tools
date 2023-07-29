@@ -1,0 +1,11 @@
+#ifndef AUDIO_SLICER_WAVEFORMAT_H
+#define AUDIO_SLICER_WAVEFORMAT_H
+
+enum WaveFormat {
+    WF_INT16_PCM,
+    WF_INT24_PCM,
+    WF_INT32_PCM,
+    WF_FLOAT32
+};
+
+#endif // AUDIO_SLICER_WAVEFORMAT_H
