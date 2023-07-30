@@ -74,9 +74,9 @@ elseif(APPLE)
         install(CODE "
             execute_process(
                 COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
-                -verbose 0
-                -always-overwrite
                 \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>.app\"
+                -verbose=0
+                -always-overwrite
                 WORKING_DIRECTORY \"${_install_dir}\"
             )
         ")
