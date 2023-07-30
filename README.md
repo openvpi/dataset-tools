@@ -51,8 +51,6 @@ vcpkg install ^
 ```sh
 export QT_DIR=<dir> # directory `Qt5Config.cmake` locates
 export Qt5_DIR=$QT_DIR
-export VCPKG_OVERLAY_PORTS=$(pwd)/scripts/vcpkg/ports
-export VCPKG_OVERLAY_TRIPLETS=$(pwd)/scripts/vcpkg/triplets
 export VCPKG_KEEP_ENV_VARS=QT_DIR;Qt5_DIR
 
 git clone https://github.com/microsoft/vcpkg.git
