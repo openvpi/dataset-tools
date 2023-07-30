@@ -25,17 +25,17 @@ if(NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
     return()
 endif()
 
+if(NOT CMAKE_INSTALL_PREFIX)
+    return()
+endif()
+
 if(WIN32)
-    if(WIN32)
-        string(REPLACE "\\" "/" _install_dir ${CMAKE_INSTALL_PREFIX})
-    else()
-        set(_install_dir ${CMAKE_INSTALL_PREFIX})
-    endif()
+    string(REPLACE "\\" "/" _install_dir ${CMAKE_INSTALL_PREFIX})
 
     install(CODE "
-        file(GLOB _files ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.exe)
+        file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.dll\" \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.exe\")
         foreach(_file \${_files})
-            file(COPY \${_file} DESTINATION ${_install_dir})
+            file(COPY \${_file} DESTINATION \"${_install_dir}\")
         endforeach()
     ")
 
@@ -45,19 +45,40 @@ if(WIN32)
         install(CODE "
             set(ENV{PATH} \"${__qt_bin_dir};\$ENV{PATH}\")
             execute_process(
-                COMMAND ${QT_DEPLOY_EXECUTABLE}
-                --libdir ${_install_dir}
-                --plugindir ${_install_dir}/plugins
+                COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
+                --libdir \"${_install_dir}\"
+                --plugindir \"${_install_dir}/plugins\"
                 --no-translations
                 --no-system-d3d-compiler
                 --no-compiler-runtime
                 --no-opengl-sw
                 --force
                 --verbose 0
-                $<TARGET_FILE:${_target}>
+                \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>\"
+                WORKING_DIRECTORY \"${_install_dir}\"
             )
         ")
     endforeach()
 elseif(APPLE)
-    # To do...
+    set(_install_dir ${CMAKE_INSTALL_PREFIX})
+
+    get_target_property(_targets DeployedTargets TARGETS)
+
+    foreach(_target ${_targets})
+        install(CODE "
+            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}\")
+        ")
+    endforeach()
+
+    foreach(_target ${_targets})
+        install(CODE "
+            execute_process(
+                COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
+                -verbose 0
+                -always-overwrite
+                \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>\"
+                WORKING_DIRECTORY \"${_install_dir}\"
+            )
+        ")
+    endforeach()
 endif()

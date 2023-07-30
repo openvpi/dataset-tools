@@ -23,7 +23,7 @@ DiffSinger dataset processing tools, including audio processing, labeling.
 |    Qt     |  \>=5.15.2  |   Core, Gui, Widgets, Svg, Network   |
 | Compiler  |  \>=C++17   |        MSVC 2019, GCC, Clang         |
 |   CMake   |   \>=3.17   |        >=3.20 is recommended         |
-|  Python   |   \>=3.8    |                  /                   |
+<!-- |  Python   |   \>=3.8    |                  /                   | -->
 
 ### Setup Environment
 
@@ -101,9 +101,15 @@ cmake --build build --target install
     + GNU LGPL v2.1 or later
 + [LAME](https://lame.sourceforge.io/)
     + GNU LGPL v2.0
-+ [SDL](https://github.com/libsdl-org/SDL) (Audio)
++ [SDL](https://github.com/libsdl-org/SDL)
     + Zlib License
++ [SndFile](https://github.com/libsndfile/libsndfile)
+    + GNU LGPL v2.1 or later
 + [vcpkg](https://github.com/microsoft/vcpkg)
     + MIT License
 + [qastool](https://github.com/SineStriker/qt-json-autogen)
     + Apache 2.0 License
+
+## License
+
+This repository is licensed under the Apache 2.0 License.
