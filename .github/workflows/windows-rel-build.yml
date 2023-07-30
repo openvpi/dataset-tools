@@ -47,7 +47,9 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}} -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: cmake -B ${{env.GH_WORKSPACE}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt5/ -DCMAKE_TOOLCHAIN_FILE=${{env.GH_WORKSPACE}}/vcpkg/scripts/buildsystems/vcpkg.cmake
       env:
           QT_DIR: ${{env.QT_DIR}}
           Qt5_DIR: ${{env.QT_DIR}}
