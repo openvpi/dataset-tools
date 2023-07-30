@@ -1,0 +1,17 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "dependencies": [
+        "sdl2",
+        "sndfile",
+        "qastool",
+        "ffmpeg-fake"
+    ],
+    "vcpkg-configuration": {
+        "overlay-ports": [
+            "./scripts/vcpkg/ports"
+        ],
+        "overlay-triplets": [
+            "./scripts/vcpkg/triplets"
+        ]
+    }
+}
