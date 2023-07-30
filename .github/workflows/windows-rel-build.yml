@@ -1,0 +1,77 @@
+name: CMake
+
+on: [push]
+  # Only run when there's a tag
+  #push:
+  #  tags: 
+  #    - '*'
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '5.15.2'
+      
+    - name: Initialize MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: amd64
+    
+    - name: Configure Qt5 path
+      shell: bash
+      run: |
+        echo "QT_DIR=$Qt5_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
+        echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
+    
+    - name: Install vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 8b04a7bd93bef991818fc372bb83ce00ec1c1c16 # Grabbed on 2023-07-20 18:09 +0800
+    
+    - name: Install Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: cmake -B ${{env.GH_WORKSPACE}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt5/ -DCMAKE_TOOLCHAIN_FILE=${{env.GH_WORKSPACE}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+      env:
+          QT_DIR: ${{env.QT_DIR}}
+          Qt5_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'QT_DIR;Qt5_DIR'
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --target all
+      
+    - name: Deploy
+      run: cmake --build ${{github.workspace}}/build --target install
+    
+    - name: Set Commit ID
+      shell: bash
+      working-directory: ${{github.workspace}}/build
+      run: |
+        cd $GITHUB_WORKSPACE
+        export VERSION=`git log --format="%H" -n 1 | head -c 7`
+        echo "VERSION="$VERSION >> $GITHUB_ENV
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: dataset-tools-msvc2022-x64-${{env.VERSION}}
+        path: ${{github.workspace}}/deploy
