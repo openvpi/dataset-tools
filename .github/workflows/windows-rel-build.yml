@@ -34,6 +34,7 @@ jobs:
       shell: bash
       run: |
         echo "QT_DIR=$Qt5_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
+        echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
     
     - name: Install vcpkg
       uses: lukka/run-vcpkg@v11
@@ -46,7 +47,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}} -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+      run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}} -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
       env:
           QT_DIR: ${{env.QT_DIR}}
           Qt5_DIR: ${{env.QT_DIR}}
