@@ -40,7 +40,6 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 8b04a7bd93bef991818fc372bb83ce00ec1c1c16 # Grabbed on 2023-07-20 18:09 +0800
-        runVcpkgInstall: true
     
     - name: Install Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
