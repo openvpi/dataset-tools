@@ -15,6 +15,67 @@
 
 // https://iconduck.com/icons
 
+class MySlider : public QSlider {
+public:
+    explicit MySlider(Qt::Orientation orientation, QWidget *parent = nullptr) : QSlider(orientation, parent) {
+    }
+
+protected:
+    void mousePressEvent(QMouseEvent *ev) override {
+        bool isMoved = false;
+
+        auto conn = connect(this, &QSlider::actionTriggered, this, [&](int action) {
+            switch (action) {
+                case QSlider::SliderMove:
+                case QSlider::SliderPageStepAdd:
+                case QSlider::SliderPageStepSub:
+                    isMoved = true;
+                    break;
+                default:
+                    break;
+            }
+        });
+
+        QSlider::mousePressEvent(ev);
+
+        disconnect(conn);
+
+        if (isMoved) {
+            QStyleOptionSlider opt;
+            initStyleOption(&opt);
+            const QRect sliderRect = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, this);
+            const QPoint center = sliderRect.center() - sliderRect.topLeft();
+            setSliderPosition(pixelPosToRangeValue(pick(ev->pos() - center)));
+            emit sliderReleased();
+        }
+    }
+
+private:
+    int pixelPosToRangeValue(int pos) const {
+        QStyleOptionSlider opt;
+        initStyleOption(&opt);
+        QRect gr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderGroove, this);
+        QRect sr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, this);
+        int sliderMin, sliderMax, sliderLength;
+
+        if (orientation() == Qt::Horizontal) {
+            sliderLength = sr.width();
+            sliderMin = gr.x();
+            sliderMax = gr.right() - sliderLength + 1;
+        } else {
+            sliderLength = sr.height();
+            sliderMin = gr.y();
+            sliderMax = gr.bottom() - sliderLength + 1;
+        }
+        return QStyle::sliderValueFromPosition(minimum(), maximum(), pos - sliderMin, sliderMax - sliderMin,
+                                               opt.upsideDown);
+    }
+
+    inline int pick(const QPoint &pt) const {
+        return orientation() == Qt::Horizontal ? pt.x() : pt.y();
+    }
+};
+
 PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
     notifyTimerId = 0;
     playing = false;
@@ -30,7 +91,7 @@ PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
     fileLabel = new QLabel("Select audio file.");
     timeLabel = new QLabel("--:--/--:--");
 
-    slider = new QSlider(Qt::Horizontal);
+    slider = new MySlider(Qt::Horizontal);
     slider->setRange(0, 10000);
 
     playButton = new QPushButton();

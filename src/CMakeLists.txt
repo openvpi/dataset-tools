@@ -66,7 +66,7 @@ elseif(APPLE)
 
     foreach(_target ${_targets})
         install(CODE "
-            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}\")
+            file(COPY \"$<TARGET_BUNDLE_DIR:${_target}>\" DESTINATION \"${_install_dir}\")
         ")
     endforeach()
 
@@ -76,7 +76,7 @@ elseif(APPLE)
                 COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
                 -verbose 0
                 -always-overwrite
-                \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>\"
+                \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>.app\"
                 WORKING_DIRECTORY \"${_install_dir}\"
             )
         ")

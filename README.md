@@ -35,7 +35,6 @@ You need to install Qt libraries first. (Tested on Qt 5.15.2 only)
 set QT_DIR=<dir> # directory `Qt5Config.cmake` locates
 set Qt5_DIR=%QT_DIR%
 set VCPKG_KEEP_ENV_VARS=QT_DIR;Qt5_DIR
-set VCPKG_BUILD_TYPE=release
 
 git clone https://github.com/microsoft/vcpkg.git
 cd /D vcpkg

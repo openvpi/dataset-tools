@@ -4,6 +4,6 @@ set(VCPKG_LIBRARY_LINKAGE dynamic)
 
 set(VCPKG_CMAKE_SYSTEM_NAME Linux)
 
-if($ENV{VCPKG_BUILD_RELEASE})
+if(ENV{VCPKG_BUILD_RELEASE})
     set(VCPKG_BUILD_TYPE release)
 endif()
