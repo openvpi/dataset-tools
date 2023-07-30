@@ -28,16 +28,18 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+#ifdef Q_OS_WINDOWS
     QFont f("Microsoft YaHei");
     f.setPointSize(9);
     a.setFont(f);
+#endif
 
-// Set library loading info
-// #ifdef Q_OS_MAC
-//     qApp->addLibraryPath(qApp->applicationDirPath() + "/../Frameworks/ChorusKit/plugins");
-// #else
-//     qApp->addLibraryPath(qApp->applicationDirPath() + "/../lib/ChorusKit/plugins");
-// #endif
+    // Set library loading info
+    // #ifdef Q_OS_MAC
+    //     qApp->addLibraryPath(qApp->applicationDirPath() + "/../Frameworks/ChorusKit/plugins");
+    // #else
+    //     qApp->addLibraryPath(qApp->applicationDirPath() + "/../lib/ChorusKit/plugins");
+    // #endif
 
     MainWindow w;
     w.show();

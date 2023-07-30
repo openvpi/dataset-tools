@@ -30,9 +30,11 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+#ifdef Q_OS_WINDOWS
     QFont f("Microsoft YaHei");
     f.setPointSize(9);
     a.setFont(f);
+#endif
 
 // Set library loading info
 // #ifdef Q_OS_MAC

@@ -449,7 +449,7 @@ void MainWindow::_q_playMenuTriggered(QAction *action) {
 void MainWindow::_q_helpMenuTriggered(QAction *action) {
     if (action == aboutAppAction) {
         QMessageBox::information(this, qApp->applicationName(),
-                                 QString("%1 %2, Copyright OpenVPI.").arg(qApp->applicationName(), APP_VERSON));
+                                 QString("%1 %2, Copyright OpenVPI.").arg(qApp->applicationName(), APP_VERSION));
     } else if (action == aboutQtAction) {
         QMessageBox::aboutQt(this);
     }

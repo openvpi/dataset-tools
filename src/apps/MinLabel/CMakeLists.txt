@@ -16,7 +16,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    APP_VERSON="${PROJECT_VERSION}"
+    APP_VERSION="${PROJECT_VERSION}"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)

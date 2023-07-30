@@ -1,4 +1,4 @@
-project(SlurCutter VERSION 0.0.1.7)
+project(SlurCutter VERSION 0.0.1.4)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -15,7 +15,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    APP_VERSON="${PROJECT_VERSION}"
+    APP_VERSION="${PROJECT_VERSION}"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
