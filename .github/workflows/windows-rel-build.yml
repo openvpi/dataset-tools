@@ -1,10 +1,9 @@
 name: CMake
 
-on: [push]
-  # Only run when there's a tag
-  #push:
-  #  tags: 
-  #    - '*'
+on: # [push]
+  push:
+    tags: 
+      - '*'
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -89,3 +88,9 @@ jobs:
       with:
         name: dataset-tools-msvc2022-x64-${{env.VERSION}}
         path: ${{github.workspace}}/deploy
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ${{github.workspace}}/deploy
