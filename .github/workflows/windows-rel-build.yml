@@ -1,9 +1,9 @@
 name: CMake
 
-on: # [push]
+on:
   push:
-    tags: 
-      - '*'
+    tags:
+      - "*"
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
