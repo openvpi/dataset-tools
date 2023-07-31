@@ -90,8 +90,13 @@ jobs:
         name: dataset-tools-msvc2022-x64-${{env.VERSION}}
         path: ${{github.workspace}}/deploy
 
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        path: ${{github.workspace}}/deploy
+
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          ${{env.GH_WORKSPACE}}/deploy
+          ${{env.GH_WORKSPACE}}/deploy/dataset-tools-msvc2022-x64-${{env.VERSION}}.zip
