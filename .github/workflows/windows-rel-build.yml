@@ -19,6 +19,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
+    # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
+    - name: Export Actions runtime info for Actions caching
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
@@ -43,14 +51,6 @@ jobs:
     
     - name: Install Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
-    
-    # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
-    - name: Export Actions runtime info for Vcpkg caching
-      uses: actions/github-script@v6
-      with:
-        script: |
-          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
     - name: Build Vcpkg packages
       shell: cmd
