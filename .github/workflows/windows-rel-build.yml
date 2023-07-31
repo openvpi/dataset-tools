@@ -31,7 +31,7 @@ jobs:
       uses: jurplel/install-qt-action@v3
       with:
         version: '5.15.2'
-        cache: true
+        #cache: true # It never successfully found cache from previous runs, disabling it
       
     - name: Initialize MSVC environment
       uses: ilammy/msvc-dev-cmd@v1
@@ -90,10 +90,12 @@ jobs:
         name: dataset-tools-msvc2022-x64-${{env.VERSION}}
         path: ${{github.workspace}}/deploy
 
-    - name: Download packages
-      uses: actions/download-artifact@v3
-      with:
-        path: ${{github.workspace}}/deploy
+    - name: Compress release archive
+      shell: bash
+      working-directory: ${{env.GH_WORKSPACE}}/deploy/
+      run: |
+        export VERSION=`git log --format="%H" -n 1 | head -c 7`
+        7z a dataset-tools-msvc2022-x64-${VERSION}.zip ./*
 
     - name: Release
       uses: softprops/action-gh-release@v1
