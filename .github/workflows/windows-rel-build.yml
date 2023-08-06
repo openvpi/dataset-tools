@@ -1,10 +1,9 @@
 name: CMake
 
-on: [push]
-  # Only run when there's a tag
-  #push:
-  #  tags: 
-  #    - '*'
+on:
+  push:
+    tags:
+      - "*"
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -20,10 +19,19 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
+    # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
+    - name: Export Actions runtime info for Actions caching
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
         version: '5.15.2'
+        #cache: true # It never successfully found cache from previous runs, disabling it
       
     - name: Initialize MSVC environment
       uses: ilammy/msvc-dev-cmd@v1
@@ -43,14 +51,6 @@ jobs:
     
     - name: Install Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
-    
-    # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
-    - name: Export Actions runtime info for Vcpkg caching
-      uses: actions/github-script@v6
-      with:
-        script: |
-          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
     - name: Build Vcpkg packages
       shell: cmd
@@ -89,3 +89,16 @@ jobs:
       with:
         name: dataset-tools-msvc2022-x64-${{env.VERSION}}
         path: ${{github.workspace}}/deploy
+
+    - name: Compress release archive
+      shell: bash
+      working-directory: ${{env.GH_WORKSPACE}}/deploy/
+      run: |
+        export VERSION=`git log --format="%H" -n 1 | head -c 7`
+        7z a dataset-tools-msvc2022-x64-${VERSION}.zip ./*
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ${{env.GH_WORKSPACE}}/deploy/dataset-tools-msvc2022-x64-${{env.VERSION}}.zip
