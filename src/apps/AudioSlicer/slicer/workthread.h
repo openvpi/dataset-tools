@@ -6,10 +6,6 @@
 #include <QRunnable>
 #include <QString>
 #include <QStringList>
-#include <QPluginLoader>
-
-#include <Api/IAudioDecoder.h>
-#include <Api/interfaces/IAudioDecoderPlugin.h>
 
 #include "waveformat.h"
 
@@ -35,14 +31,6 @@ private:
     qint64 m_hopSize;
     qint64 m_maxSilKept;
     int m_outputWaveFormat;
-
-    // QPluginLoader m_decoderLoader;
-
-    // QsApi::IAudioDecoderPlugin *m_decoderPlugin;
-    QsApi::IAudioDecoder *m_decoder;
-
-    void initPlugins();
-    void uninitPlugins();
 
 signals:
     void oneFinished(const QString &filename);

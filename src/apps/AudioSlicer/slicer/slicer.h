@@ -6,7 +6,7 @@
 
 #include <QtGlobal>
 
-#include <Api/IAudioDecoder.h>
+class SndfileHandle;
 
 enum SlicerErrorCode {
     SLICER_OK = 0,
@@ -22,11 +22,11 @@ private:
     qint64 m_minInterval;
     qint64 m_maxSilKept;
     SlicerErrorCode m_errCode;
-    QsApi::IAudioDecoder *m_decoder;
+    SndfileHandle *m_decoder;
 
 public:
-    Slicer(QsApi::IAudioDecoder *decoder, double threshold = -40.0, qint64 minLength = 5000, qint64 minInterval = 300, qint64 hopSize = 20, qint64 maxSilKept = 5000);
-    std::vector<std::tuple<qint64, qint64>> slice();
+    explicit Slicer(SndfileHandle *decoder, double threshold = -40.0, qint64 minLength = 5000, qint64 minInterval = 300, qint64 hopSize = 20, qint64 maxSilKept = 5000);
+    std::vector<std::pair<qint64, qint64>> slice();
     SlicerErrorCode getErrorCode();
 };
 
