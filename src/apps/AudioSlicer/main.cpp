@@ -1,7 +1,5 @@
 #include "slicer/mainwindow.h"
 
-#include "QMSystem.h"
-
 #include <QApplication>
 #include <QMessageBox>
 
