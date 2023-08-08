@@ -20,7 +20,6 @@
 #include "workthread.h"
 
 
-
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
     resize(1920, 1080);
@@ -135,7 +134,7 @@ void MainWindow::slot_clearAudioList() {
 }
 
 void MainWindow::slot_about() {
-    // QString arch = QSysInfo::currentCpuArchitecture();
+    QString arch = QSysInfo::currentCpuArchitecture();
     // QString aboutMsg = QString(
     //     "<p><b>About Audio Slicer</b></p>"
     //     "<p>"
@@ -157,7 +156,8 @@ void MainWindow::slot_about() {
 
 
     QMessageBox::information(this, qApp->applicationName(),
-                             QString("%1, Copyright OpenVPI.").arg(qApp->applicationName()));
+                             QString("%1 %2 (%3), Copyright OpenVPI.").arg(
+                                 qApp->applicationName(), APP_VERSION, arch));
 
     // QMessageBox::information(this, "About", aboutMsg);
 }
@@ -187,6 +187,8 @@ void MainWindow::slot_start() {
 
     ui->txtLogs->clear();
 
+    m_failIndex.clear();
+
 #ifdef Q_OS_WIN
     // Show taskbar progress (Windows 7 and later)
     if (m_pTaskbarList3) {
@@ -207,6 +209,7 @@ void MainWindow::slot_start() {
         connect(runnable, &WorkThread::oneFinished, this, &MainWindow::slot_oneFinished);
         connect(runnable, &WorkThread::oneInfo, this, &MainWindow::slot_oneInfo);
         connect(runnable, &WorkThread::oneError, this, &MainWindow::slot_oneError);
+        connect(runnable, &WorkThread::oneFailed, this, &MainWindow::slot_oneFailed);
         m_threadpool->start(runnable);
     }
 }
@@ -250,9 +253,14 @@ void MainWindow::slot_oneInfo(const QString &infomsg) {
 }
 
 void MainWindow::slot_oneError(const QString &errmsg) {
+    logMessage("[ERROR] " + errmsg);
+}
+
+void MainWindow::slot_oneFailed(const QString &filename) {
     m_workFinished++;
     m_workError++;
-    logMessage(errmsg);
+    m_failIndex.append(filename);
+    logMessage(QString("%1 failed.").arg(filename));
     ui->progressBar->setValue(m_workFinished);
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
@@ -274,6 +282,15 @@ void MainWindow::slot_threadFinished() {
                    .arg(m_workError)
                    .arg(m_workTotal);
     logMessage(msg);
+    QString failSummary;
+    if (m_workError > 0) {
+        failSummary = "Failed tasks:\n";
+        for (const QString &filename : m_failIndex) {
+            failSummary += "  " + filename + "\n";
+        }
+        logMessage(failSummary);
+        m_failIndex.clear();
+    }
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
         m_pTaskbarList3->SetProgressState((HWND) this->winId(), TBPF_NOPROGRESS);

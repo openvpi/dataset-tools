@@ -1,18 +1,16 @@
 #include "slicer/mainwindow.h"
 
 #include <QApplication>
-#include <QMessageBox>
 
 
-#ifdef Q_OS_WINDOWS
-#    include <Windows.h>
-#endif
+//#ifdef Q_OS_WINDOWS
+//#    include <Windows.h>
+//#endif
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
     a.setApplicationName("Audio Slicer");
     a.setApplicationDisplayName("Audio Slicer");
-
 
 #if defined(Q_OS_WIN)
     QFont font("Microsoft Yahei UI");

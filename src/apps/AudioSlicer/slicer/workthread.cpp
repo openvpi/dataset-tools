@@ -27,6 +27,7 @@ WorkThread::WorkThread(QString filename, QString outPath, double threshold, qint
 
 void WorkThread::run() {
     emit oneInfo(QString("%1 started processing.").arg(m_filename));
+    qDebug() << m_filename;
 
     auto fileInfo = QFileInfo(m_filename);
     auto fileBaseName = fileInfo.completeBaseName();
@@ -40,6 +41,15 @@ void WorkThread::run() {
 #endif
     SndfileHandle sf(inFileNameStr.c_str());
 
+    auto sfErrCode = sf.error();
+    auto sfErrMsg = sf.strError();
+
+    if (sfErrCode) {
+        emit oneError(QString("libsndfile error %1: %2").arg(sfErrCode).arg(sfErrMsg));
+        emit oneFailed(m_filename);
+        return;
+    }
+
     auto sr = sf.samplerate();
     auto channels = sf.channels();
     auto frames = sf.frames();
@@ -47,18 +57,25 @@ void WorkThread::run() {
     auto total_size = frames * channels;
 
     Slicer slicer(&sf, m_threshold, m_minLength, m_minInterval, m_hopSize, m_maxSilKept);
-    auto chunks = slicer.slice();
 
+    if (slicer.getErrorCode() != SlicerErrorCode::SLICER_OK) {
+        emit oneError("slicer: " + slicer.getErrorMsg());
+        emit oneFailed(m_filename);
+        return;
+    }
+
+    auto chunks = slicer.slice();
     if (chunks.empty()) {
-        QString errmsg = QString("ValueError: The following conditions must be satisfied: (m_minLength >= "
-                                 "m_minInterval >= m_hopSize) and (m_maxSilKept >= m_hopSize).");
+        QString errmsg = QString("slicer: no audio chunks for output!");
         emit oneError(errmsg);
+        emit oneFailed(m_filename);
         return;
     }
 
     if (!QDir().mkpath(outPath)) {
-        QString errmsg = QString("Could not create directory %1.").arg(outPath);
+        QString errmsg = QString("filesystem: could not create directory %1.").arg(outPath);
         emit oneError(errmsg);
+        emit oneFailed(m_filename);
     }
 
     bool isWriteError = false;
@@ -70,8 +87,10 @@ void WorkThread::run() {
         if ((beginFrame == endFrame) || (beginFrame > total_size) || (endFrame > total_size)) {
             continue;
         }
-        qDebug() << "begin frame: " << beginFrame << " (" << 1.0 * beginFrame / sr << " seconds) " << '\n'
-                 << "end frame: " << endFrame << " (" << 1.0 * endFrame / sr << " seconds) " << '\n';
+        qDebug() << QString("  > frame: %1 -> %2, seconds: %3 -> %4")
+                            .arg(beginFrame).arg(endFrame)
+                            .arg(1.0 * beginFrame / sr).arg(1.0 * endFrame / sr);
+
 
         auto outFileName = QString("%1_%2.wav").arg(fileBaseName).arg(idx);
         auto outFilePath = QDir(outPath).absoluteFilePath(outFileName);
@@ -97,6 +116,7 @@ void WorkThread::run() {
     if (isWriteError) {
         QString errmsg = QString("Zero bytes written");
         emit oneError(errmsg);
+        emit oneFailed(m_filename);
         return;
     }
 

@@ -36,6 +36,7 @@ signals:
     void oneFinished(const QString &filename);
     void oneInfo(const QString &infomsg);
     void oneError(const QString &errmsg);
+    void oneFailed(const QString &filename);
 };
 
 

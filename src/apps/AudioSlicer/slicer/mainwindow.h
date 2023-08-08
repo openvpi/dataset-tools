@@ -9,6 +9,7 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
+#include <QStringList>
 
 #ifdef Q_OS_WIN
 #include <ShlObj.h>
@@ -44,6 +45,7 @@ public slots:
     void slot_oneFinished(const QString &filename);
     void slot_oneInfo(const QString &infomsg);
     void slot_oneError(const QString &errmsg);
+    void slot_oneFailed(const QString &errmsg);
     void slot_threadFinished();
 
 private:
@@ -53,6 +55,7 @@ private:
     int m_workTotal;
     int m_workFinished;
     int m_workError;
+    QStringList m_failIndex;
     QThreadPool *m_threadpool;
 
     void warningProcessNotFinished();

@@ -4,7 +4,7 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     if (MainWindow->objectName().isEmpty())
         MainWindow->setObjectName("MainWindow");
     QSize s;
-    MainWindow->resize(1920, 1080);
+    MainWindow->resize(1280, 768);
 
     centralwidget = new QWidget(MainWindow);
     centralwidget->setObjectName("centralwidget");

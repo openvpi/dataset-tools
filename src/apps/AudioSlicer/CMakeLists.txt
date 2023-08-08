@@ -1,4 +1,4 @@
-project(AudioSlicer VERSION 0.0.0.0)
+project(AudioSlicer VERSION 0.0.1.3)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -13,6 +13,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
     qastool::core
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        APP_VERSION="${PROJECT_VERSION}"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)

@@ -78,11 +78,26 @@ Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 minLength, qint6
         // The following condition must be satisfied: m_minLength >= m_minInterval >= m_hopSize
         // The following condition must be satisfied: m_maxSilKept >= m_hopSize
         m_errCode = SlicerErrorCode::SLICER_INVALID_ARGUMENT;
+        m_errMsg = "ValueError: The following conditions must be satisfied: "
+                   "(min_length >= min_interval >= hop_size) and (max_sil_kept >= hop_size).";
+        return;
     }
 
     m_decoder = decoder;
+    if (!m_decoder) {
+        m_errCode = SlicerErrorCode::SLICER_AUDIO_ERROR;
+        m_errMsg = "Invalid audio decoder!";
+        return;
+    }
+
     m_decoder->seek(0, SEEK_SET);
     int sr = m_decoder->samplerate();
+    if (sr <= 0) {
+        m_errCode = SlicerErrorCode::SLICER_AUDIO_ERROR;
+        m_errMsg = "Invalid audio file!";
+        return;
+    }
+
     m_threshold = std::pow(10, threshold / 20.0);
     m_hopSize = divIntRound<qint64>(hopSize * (qint64)sr, (qint64)1000);
     m_winSize = std::min(divIntRound<qint64>(minInterval * (qint64)sr, (qint64)1000), (qint64)4 * m_hopSize);
@@ -286,6 +301,10 @@ Slicer::slice()
 
 SlicerErrorCode Slicer::getErrorCode() {
     return m_errCode;
+}
+
+QString Slicer::getErrorMsg() {
+    return m_errMsg;
 }
 
 template<class T>
