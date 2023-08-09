@@ -53,13 +53,23 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     listWidgetTaskList = new QListWidget(gBoxTaskList);
     listWidgetTaskList->setObjectName("listWidgetTaskList");
     listWidgetTaskList->setFrameShadow(QFrame::Plain);
+    listWidgetTaskList->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 
     verticalLayout_2->addWidget(listWidgetTaskList);
+
+    hBoxListButtons = new QHBoxLayout(gBoxTaskList);
+    hBoxListButtons->setObjectName("hBoxListButtons");
+
+    btnRemoveListItem = new QPushButton(gBoxTaskList);
+    btnRemoveListItem->setObjectName("btnRemoveListItem");
 
     btnClearList = new QPushButton(gBoxTaskList);
     btnClearList->setObjectName("btnClearList");
 
-    verticalLayout_2->addWidget(btnClearList);
+    hBoxListButtons->addWidget(btnRemoveListItem);
+    hBoxListButtons->addWidget(btnClearList);
+
+    verticalLayout_2->addLayout(hBoxListButtons);
 
     splitterMain->addWidget(gBoxTaskList);
     //hBoxMain->addWidget(gBoxTaskList);
@@ -267,6 +277,7 @@ void Ui_MainWindow::retranslateUi(QMainWindow *MainWindow)
     // actionShowHideLogs->setText(QCoreApplication::translate("MainWindow", "Show/Hide &Logs", nullptr));
     btnAddFiles->setText(QCoreApplication::translate("MainWindow", "Add Audio Files...", nullptr));
     gBoxTaskList->setTitle(QCoreApplication::translate("MainWindow", "Task List", nullptr));
+    btnRemoveListItem->setText(QCoreApplication::translate("MainWindow", "Remove", nullptr));
     btnClearList->setText(QCoreApplication::translate("MainWindow", "Clear List", nullptr));
     gBoxSettings->setTitle(QCoreApplication::translate("MainWindow", "Settings", nullptr));
     lblThreshold->setText(QCoreApplication::translate("MainWindow", "Threshold (dB)", nullptr));

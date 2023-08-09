@@ -37,15 +37,16 @@ public slots:
     void slot_browseOutputDir();
     void slot_addAudioFiles();
     void slot_addFolder();
+    void slot_removeListItem();
     void slot_clearAudioList();
     void slot_about();
     void slot_aboutQt();
     void slot_start();
     void slot_saveLogs();
-    void slot_oneFinished(const QString &filename);
+    void slot_oneFinished(const QString &filename, int listIndex);
     void slot_oneInfo(const QString &infomsg);
     void slot_oneError(const QString &errmsg);
-    void slot_oneFailed(const QString &errmsg);
+    void slot_oneFailed(const QString &errmsg, int listIndex);
     void slot_threadFinished();
 
 private:

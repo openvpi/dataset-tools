@@ -21,9 +21,10 @@
 inline int determineSndFileFormat(int formatEnum);
 
 WorkThread::WorkThread(QString filename, QString outPath, double threshold, qint64 minLength, qint64 minInterval,
-                       qint64 hopSize, qint64 maxSilKept, int outputWaveFormat)
+                       qint64 hopSize, qint64 maxSilKept, int outputWaveFormat, int listIndex)
     : m_filename(std::move(filename)), m_outPath(std::move(outPath)), m_threshold(threshold), m_minLength(minLength),
-      m_minInterval(minInterval), m_hopSize(hopSize), m_maxSilKept(maxSilKept), m_outputWaveFormat(outputWaveFormat) {}
+      m_minInterval(minInterval), m_hopSize(hopSize), m_maxSilKept(maxSilKept), m_outputWaveFormat(outputWaveFormat),
+      m_listIndex(listIndex) {}
 
 void WorkThread::run() {
     emit oneInfo(QString("%1 started processing.").arg(m_filename));
@@ -46,7 +47,7 @@ void WorkThread::run() {
 
     if (sfErrCode) {
         emit oneError(QString("libsndfile error %1: %2").arg(sfErrCode).arg(sfErrMsg));
-        emit oneFailed(m_filename);
+        emit oneFailed(m_filename, m_listIndex);
         return;
     }
 
@@ -60,7 +61,7 @@ void WorkThread::run() {
 
     if (slicer.getErrorCode() != SlicerErrorCode::SLICER_OK) {
         emit oneError("slicer: " + slicer.getErrorMsg());
-        emit oneFailed(m_filename);
+        emit oneFailed(m_filename, m_listIndex);
         return;
     }
 
@@ -68,14 +69,14 @@ void WorkThread::run() {
     if (chunks.empty()) {
         QString errmsg = QString("slicer: no audio chunks for output!");
         emit oneError(errmsg);
-        emit oneFailed(m_filename);
+        emit oneFailed(m_filename, m_listIndex);
         return;
     }
 
     if (!QDir().mkpath(outPath)) {
         QString errmsg = QString("filesystem: could not create directory %1.").arg(outPath);
         emit oneError(errmsg);
-        emit oneFailed(m_filename);
+        emit oneFailed(m_filename, m_listIndex);
     }
 
     bool isWriteError = false;
@@ -116,11 +117,11 @@ void WorkThread::run() {
     if (isWriteError) {
         QString errmsg = QString("Zero bytes written");
         emit oneError(errmsg);
-        emit oneFailed(m_filename);
+        emit oneFailed(m_filename, m_listIndex);
         return;
     }
 
-    emit oneFinished(m_filename);
+    emit oneFinished(m_filename, m_listIndex);
 }
 
 inline int determineSndFileFormat(int formatEnum) {

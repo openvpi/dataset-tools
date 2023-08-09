@@ -43,6 +43,8 @@ public:
     QGroupBox *gBoxTaskList;
     QVBoxLayout *verticalLayout_2;
     QListWidget *listWidgetTaskList;
+    QHBoxLayout *hBoxListButtons;
+    QPushButton *btnRemoveListItem;
     QPushButton *btnClearList;
     QGroupBox *gBoxSettings;
     QVBoxLayout *verticalLayout_3;

@@ -1,8 +1,10 @@
+#include <QColor>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QIODevice>
+#include <QList>
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QRunnable>
@@ -30,6 +32,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     connect(ui->btnAddFiles, &QPushButton::clicked, this, &MainWindow::slot_addAudioFiles);
     connect(ui->btnBrowse, &QPushButton::clicked, this, &MainWindow::slot_browseOutputDir);
+    connect(ui->btnRemoveListItem, &QPushButton::clicked, this, &MainWindow::slot_removeListItem);
     connect(ui->btnClearList, &QPushButton::clicked, this, &MainWindow::slot_clearAudioList);
     connect(ui->pushButtonAbout, &QPushButton::clicked, this, &MainWindow::slot_about);
     connect(ui->pushButtonStart, &QPushButton::clicked, this, &MainWindow::slot_start);
@@ -124,6 +127,18 @@ void MainWindow::slot_addFolder() {
     }
 }
 
+void MainWindow::slot_removeListItem() {
+    if (m_processing) {
+        warningProcessNotFinished();
+        return;
+    }
+
+    auto itemList = ui->listWidgetTaskList->selectedItems();
+    for (auto item : itemList) {
+        delete item;
+    }
+}
+
 void MainWindow::slot_clearAudioList() {
     if (m_processing) {
         warningProcessNotFinished();
@@ -200,12 +215,15 @@ void MainWindow::slot_start() {
     setProcessing(true);
     for (int i = 0; i < item_count; i++) {
         auto item = ui->listWidgetTaskList->item(i);
+        item->setForeground(item->data(Qt::ForegroundRole).value<QBrush>());
+        item->setBackground(item->data(Qt::BackgroundRole).value<QBrush>());
         auto path = item->data(Qt::ItemDataRole::UserRole + 1).toString();
         auto runnable =
             new WorkThread(path, ui->lineEditOutputDir->text(), ui->lineEditThreshold->text().toDouble(),
                            ui->lineEditMinLen->text().toULongLong(), ui->lineEditMinInterval->text().toULongLong(),
                            ui->lineEditHopSize->text().toULongLong(), ui->lineEditMaxSilence->text().toULongLong(),
-                           ui->cmbOutputWaveFormat->currentData().toInt());
+                           ui->cmbOutputWaveFormat->currentData().toInt(),
+                           i);
         connect(runnable, &WorkThread::oneFinished, this, &MainWindow::slot_oneFinished);
         connect(runnable, &WorkThread::oneInfo, this, &MainWindow::slot_oneInfo);
         connect(runnable, &WorkThread::oneError, this, &MainWindow::slot_oneError);
@@ -232,10 +250,16 @@ void MainWindow::slot_saveLogs() {
     writeFile.close();
 }
 
-void MainWindow::slot_oneFinished(const QString &filename) {
+void MainWindow::slot_oneFinished(const QString &filename, int listIndex) {
     m_workFinished++;
     ui->progressBar->setValue(m_workFinished);
     logMessage(QString("%1 finished.").arg(filename));
+
+    if (listIndex >= 0) {
+        auto item = ui->listWidgetTaskList->item(listIndex);
+        item->setForeground(item->data(Qt::ForegroundRole).value<QBrush>());
+        item->setBackground(item->data(Qt::BackgroundRole).value<QBrush>());
+    }
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
         m_pTaskbarList3->SetProgressState((HWND) this->winId(), TBPF_NORMAL);
@@ -256,12 +280,18 @@ void MainWindow::slot_oneError(const QString &errmsg) {
     logMessage("[ERROR] " + errmsg);
 }
 
-void MainWindow::slot_oneFailed(const QString &filename) {
+void MainWindow::slot_oneFailed(const QString &filename, int listIndex) {
     m_workFinished++;
     m_workError++;
     m_failIndex.append(filename);
     logMessage(QString("%1 failed.").arg(filename));
     ui->progressBar->setValue(m_workFinished);
+
+    if (listIndex >= 0) {
+        auto item = ui->listWidgetTaskList->item(listIndex);
+        item->setForeground(QColor(0x9c, 0x00, 0x06));
+        item->setBackground(QColor(0xff, 0xc7, 0xce));
+    }
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
         m_pTaskbarList3->SetProgressState((HWND) this->winId(), TBPF_NORMAL);
@@ -334,6 +364,8 @@ void MainWindow::addSingleAudioFile(const QString &fullPath) {
     auto *item = new QListWidgetItem();
     item->setText(QFileInfo(fullPath).fileName());
     item->setData(Qt::ItemDataRole::UserRole + 1, fullPath);
+    item->setData(Qt::ForegroundRole, item->foreground());
+    item->setData(Qt::BackgroundRole, item->background());
     ui->listWidgetTaskList->addItem(item);
 }
 
@@ -375,9 +407,6 @@ void MainWindow::dropEvent(QDropEvent *event) {
             continue;
         }
 
-        auto *item = new QListWidgetItem();
-        item->setText(QFileInfo(path).fileName());
-        item->setData(Qt::ItemDataRole::UserRole + 1, path);
-        ui->listWidgetTaskList->addItem(item);
+        addSingleAudioFile(path);
     }
 }

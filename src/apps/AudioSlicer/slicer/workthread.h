@@ -19,7 +19,8 @@ public:
                qint64 minInterval,
                qint64 hopSize,
                qint64 maxSilKept,
-               int outputWaveFormat = WF_INT16_PCM);
+               int outputWaveFormat = WF_INT16_PCM,
+               int listIndex = -1);
     void run() override;
 
 private:
@@ -31,12 +32,13 @@ private:
     qint64 m_hopSize;
     qint64 m_maxSilKept;
     int m_outputWaveFormat;
+    int m_listIndex;
 
 signals:
-    void oneFinished(const QString &filename);
+    void oneFinished(const QString &filename, int listIndex);
     void oneInfo(const QString &infomsg);
     void oneError(const QString &errmsg);
-    void oneFailed(const QString &filename);
+    void oneFailed(const QString &filename, int listIndex);
 };
 
 
