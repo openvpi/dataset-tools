@@ -115,30 +115,30 @@ Slicer::slice()
         return {};
     }
 
-    auto frames = m_decoder->frames();
-    auto channels = m_decoder->channels();
+    qint64 frames = m_decoder->frames();
+    int channels = m_decoder->channels();
 
     if ((frames + m_hopSize - 1) / m_hopSize <= m_minLength)
     {
         return {{ 0, frames }};
     }
 
-    auto rms_size = frames / m_hopSize + 1;
+    qint64 rms_size = frames / m_hopSize + 1;
     std::vector<double> rms_list(rms_size);
     qint64 rms_index = 0;
     
     MovingRMS movingRms(m_winSize);
-    auto padding = m_winSize / 2;
-    for (auto i = 0; i < padding; i++) {
+    qint64 padding = m_winSize / 2;
+    for (qint64 i = 0; i < padding; i++) {
         movingRms.push(0.0);
     }
 
-    sf_count_t samplesRead = 0;
+    qint64 samplesRead = 0;
     {
         std::vector<double> initialBuffer(padding * channels);
         samplesRead = m_decoder->read(initialBuffer.data(), padding * channels);
-        auto framesRead = samplesRead / channels;
-        for (int i = 0; i < framesRead; i++) {
+        qint64 framesRead = samplesRead / channels;
+        for (qint64 i = 0; i < framesRead; i++) {
             double monoSample = 0.0;
             for (int j = 0; j < channels; j++) {
                 monoSample += initialBuffer[i * channels + j] / static_cast<double>(channels);
@@ -156,8 +156,8 @@ Slicer::slice()
         if (samplesRead == 0) {
             break;
         }
-        auto framesRead = samplesRead / channels;
-        for (int i = 0; i < framesRead; i++) {
+        qint64 framesRead = samplesRead / channels;
+        for (qint64 i = 0; i < framesRead; i++) {
             double monoSample = 0.0;
             for (int j = 0; j < channels; j++) {
                 monoSample += buffer[i * channels + j] / static_cast<double>(channels);
