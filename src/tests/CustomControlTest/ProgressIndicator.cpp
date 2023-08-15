@@ -23,19 +23,22 @@ ProgressIndicator::~ProgressIndicator() {
 
 void ProgressIndicator::initUi(QWidget *parent) {
 //    qDebug() << "init";
-//    m_timer = new QTimer(parent);
-//    m_timer->setInterval(16);
-//    m_timer->connect(m_timer, &QTimer::timeout, this, [=]() {
-//        m_indeterminateThumbX += rect().width() / 50;
-//        update();
-//    });
-    m_animation = new QPropertyAnimation;
-    m_animation->setTargetObject(this);
-    m_animation->setPropertyName("thumbProgress");
-    m_animation->setDuration(1000);
-    m_animation->setStartValue(0);
-    m_animation->setEndValue(60);
-    m_animation->setLoopCount(-1);
+    m_timer = new QTimer(parent);
+    m_timer->setInterval(8);
+    m_timer->connect(m_timer, &QTimer::timeout, this, [=]() {
+        setThumbProgress(m_thumbProgress + 1);
+        if (m_thumbProgress == 240)
+            m_thumbProgress = 0;
+    });
+    m_colorPalette = colorPaletteNormal;
+
+//    m_animation = new QPropertyAnimation;
+//    m_animation->setTargetObject(this);
+//    m_animation->setPropertyName("thumbProgress");
+//    m_animation->setDuration(2000);
+//    m_animation->setStartValue(0);
+//    m_animation->setEndValue(240);
+//    m_animation->setLoopCount(-1);
     switch (m_indicatorStyle) {
         case HorizontalBar:
             this->setMinimumHeight(8);
@@ -66,7 +69,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
 
     auto drawBarBackground = [&]() {
         // Draw track inactive(background)
-        pen.setColor(colorInactive);
+        pen.setColor(m_colorPalette.inactive);
         pen.setCapStyle(Qt::RoundCap);
         pen.setWidth(penWidth);
         painter.setPen(pen);
@@ -81,7 +84,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         auto secondaryValuePoint2 = QPoint(secondaryValuePos, halfRectHeight);
 
         // Draw secondary progress value
-        pen.setColor(colorSecondaryNormal);
+        pen.setColor(m_colorPalette.secondary);
         pen.setWidth(penWidth);
         painter.setPen(pen);
         painter.drawLine(valueStartPoint, secondaryValuePoint2);
@@ -92,7 +95,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         auto valuePoint = QPoint(valuePos, halfRectHeight);
 
         // Draw progress value
-        pen.setColor(colorValueNormal);
+        pen.setColor(m_colorPalette.total);
         pen.setWidth(penWidth);
         painter.setPen(pen);
         painter.drawLine(valueStartPoint, valuePoint);
@@ -102,7 +105,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         auto curTaskValuePoint = QPoint(curTaskValuePos, halfRectHeight);
 
         // Draw current task progress value
-        pen.setColor(colorCurrentTaskNormal);
+        pen.setColor(m_colorPalette.currentTask);
         pen.setWidth(penWidth);
         painter.setPen(pen);
         painter.drawLine(valueStartPoint, curTaskValuePoint);
@@ -111,7 +114,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
     auto drawIndeterminateProgress = [&](){
         // Calculate progress value
         auto thumbLength = rect().width() / 3;
-        auto thumbActualRight = m_thumbProgress * (actualLength + thumbLength) / 60 + padding;
+        auto thumbActualRight = qRound(m_thumbProgress * (actualLength + thumbLength) / 240.0) + padding;
         auto thumbActualLeft = thumbActualRight - thumbLength;
         QPoint point1;
         if (thumbActualLeft < padding)
@@ -129,7 +132,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
             point2 = QPoint(trackActualRight, halfRectHeight);
 
         // Draw progress value
-        pen.setColor(colorValueNormal);
+        pen.setColor(m_colorPalette.total);
         pen.setWidth(penWidth);
         painter.setPen(pen);
 //        qDebug() << point1 << point2;
@@ -215,9 +218,11 @@ bool ProgressIndicator::indeterminate() const {
 void ProgressIndicator::setIndeterminate(bool on) {
     m_indeterminate = on;
     if (m_indeterminate)
-        m_animation->start();
+//        m_animation->start();
+        m_timer->start();
     else
-        m_animation->stop();
+//        m_animation->stop();
+        m_timer->stop();
     update();
 }
 
@@ -227,5 +232,26 @@ int ProgressIndicator::thumbProgress() const {
 
 void ProgressIndicator::setThumbProgress(int x) {
     m_thumbProgress = x;
+//    qDebug() << x;
+    repaint();
+}
+
+ProgressIndicator::TaskStatus ProgressIndicator::taskStatus() const {
+    return m_taskStatus;
+}
+
+void ProgressIndicator::setTaskStatus(ProgressIndicator::TaskStatus status) {
+    m_taskStatus = status;
+    switch (m_taskStatus) {
+        case Normal:
+            m_colorPalette = colorPaletteNormal;
+            return;
+        case Warning:
+            m_colorPalette = colorPaletteWarning;
+            break;
+        case Error:
+            m_colorPalette = colorPaletteError;
+            break;
+    }
     update();
 }
