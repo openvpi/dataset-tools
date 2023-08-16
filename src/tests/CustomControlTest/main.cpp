@@ -6,12 +6,15 @@
 #include "EditLabel.h"
 #include "MainWindow.h"
 #include "ProgressIndicator.h"
+#include "ShadowButton.h"
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
     QApplication::setFont(QFont("Microsoft Yahei UI", 9));
 
     MainWindow w;
+
+    auto mainWidget = new QWidget;
 
     auto editLabel1 = new EditLabel;
 
@@ -78,6 +81,11 @@ int main(int argc, char *argv[]) {
         progressBar5->setCurrentTaskValue(value);
     });
 
+    auto shadowButton = new ShadowButton(mainWidget);
+    shadowButton->setText("ShadowButton");
+    shadowButton->setStyleSheet(QString("border: 1px solid #d4d4d4; background-color: #fff; "
+                                        "border-radius: 4px; color: #333; padding: 6px 12px;"));
+
     auto verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     auto mainLayout = new QVBoxLayout;
@@ -92,9 +100,9 @@ int main(int argc, char *argv[]) {
     mainLayout->addWidget(sliderValue);
     mainLayout->addWidget(sliderSecondaryValue);
     mainLayout->addWidget(sliderCurrentTaskValue);
+    mainLayout->addWidget(shadowButton);
 //    mainLayout->addItem(verticalSpacer);
 
-    auto mainWidget = new QWidget;
     mainWidget->setLayout(mainLayout);
 
     w.setCentralWidget(mainWidget);
