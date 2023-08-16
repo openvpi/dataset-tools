@@ -26,8 +26,8 @@ void ProgressIndicator::initUi(QWidget *parent) {
     m_timer = new QTimer(parent);
     m_timer->setInterval(8);
     m_timer->connect(m_timer, &QTimer::timeout, this, [=]() {
-        setThumbProgress(m_thumbProgress + 1);
-        if (m_thumbProgress == 240)
+        setThumbProgress(m_thumbProgress + 2);
+        if (m_thumbProgress == 360)
             m_thumbProgress = 0;
     });
     m_colorPalette = colorPaletteNormal;
@@ -41,99 +41,90 @@ void ProgressIndicator::initUi(QWidget *parent) {
 //    m_animation->setLoopCount(-1);
     switch (m_indicatorStyle) {
         case HorizontalBar:
-            this->setMinimumHeight(8);
-            this->setMaximumHeight(8);
+            setMinimumHeight(8);
+            setMaximumHeight(8);
+            calculateBarParams();
+            break;
         case Ring:
+            setMinimumSize(8, 8);
+            setMaximumSize(64, 64);
+            calculateRingParams();
             break;
     }
 }
 
 void ProgressIndicator::paintEvent(QPaintEvent *event) {
-//    double penWidth = 8;
-    int penWidth = rect().height();
-    int padding = penWidth / 2;
-    int halfRectHeight = rect().height() / 2;
-
-//    qDebug() << "paint";
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     QPen pen;
-
-    // Fill background
-//    painter.fillRect(rect(), QColor("#808080"));
-
-    // Calculate track inactive(background)
-    auto trackStart = QPoint(rect().left() + padding, halfRectHeight);
-    auto trackEnd = QPoint(rect().right() - padding, halfRectHeight);
-    auto actualLength = rect().width() - padding - padding;
 
     auto drawBarBackground = [&]() {
         // Draw track inactive(background)
         pen.setColor(m_colorPalette.inactive);
         pen.setCapStyle(Qt::RoundCap);
-        pen.setWidth(penWidth);
+        pen.setWidth(m_penWidth);
         painter.setPen(pen);
-        painter.drawLine(trackStart, trackEnd);
+        painter.drawLine(m_trackStart, m_trackEnd);
     };
 
-    auto drawNormalProgress = [&]() {
+    auto drawBarNormalProgress = [&]() {
         // Calculate secondary progress value
-        auto valueStartPos = padding;
-        auto valueStartPoint = QPoint(valueStartPos, halfRectHeight);
-        auto secondaryValuePos = int(actualLength * (m_secondaryValue - m_min) / (m_max - m_min)) + padding;
-        auto secondaryValuePoint2 = QPoint(secondaryValuePos, halfRectHeight);
+        auto valueStartPos = m_padding;
+        auto valueStartPoint = QPoint(valueStartPos, m_halfRectHeight);
+        auto secondaryValuePos = int(m_actualLength * (m_secondaryValue - m_min) / (m_max - m_min)) + m_padding;
+        auto secondaryValuePoint2 = QPoint(secondaryValuePos, m_halfRectHeight);
 
         // Draw secondary progress value
         pen.setColor(m_colorPalette.secondary);
-        pen.setWidth(penWidth);
+        pen.setWidth(m_penWidth);
         painter.setPen(pen);
         painter.drawLine(valueStartPoint, secondaryValuePoint2);
 
         // Calculate progress value
-        auto valueLength = int(actualLength * (m_value - m_min) / (m_max - m_min));
-        auto valuePos = valueLength + padding;
-        auto valuePoint = QPoint(valuePos, halfRectHeight);
+        auto valueLength = int(m_actualLength * (m_value - m_min) / (m_max - m_min));
+        auto valuePos = valueLength + m_padding;
+        auto valuePoint = QPoint(valuePos, m_halfRectHeight);
 
         // Draw progress value
         pen.setColor(m_colorPalette.total);
-        pen.setWidth(penWidth);
+        pen.setWidth(m_penWidth);
         painter.setPen(pen);
         painter.drawLine(valueStartPoint, valuePoint);
 
         // Calculate current task progress value
-        auto curTaskValuePos = int(valueLength * (m_currentTaskValue - m_min) / (m_max - m_min)) + padding;
-        auto curTaskValuePoint = QPoint(curTaskValuePos, halfRectHeight);
+        auto curTaskValuePos = int(valueLength * (m_currentTaskValue - m_min) / (m_max - m_min)) + m_padding;
+        auto curTaskValuePoint = QPoint(curTaskValuePos, m_halfRectHeight);
 
         // Draw current task progress value
         pen.setColor(m_colorPalette.currentTask);
-        pen.setWidth(penWidth);
+        pen.setWidth(m_penWidth);
         painter.setPen(pen);
         painter.drawLine(valueStartPoint, curTaskValuePoint);
     };
 
-    auto drawIndeterminateProgress = [&](){
+    auto drawBarIndeterminateProgress = [&](){
         // Calculate progress value
         auto thumbLength = rect().width() / 3;
-        auto thumbActualRight = qRound(m_thumbProgress * (actualLength + thumbLength) / 240.0) + padding;
+        auto thumbActualRight = qRound(m_thumbProgress * (m_actualLength + thumbLength) / 360.0) + m_padding;
         auto thumbActualLeft = thumbActualRight - thumbLength;
         QPoint point1;
-        if (thumbActualLeft < padding)
-            point1 = QPoint(padding, halfRectHeight);
+        if (thumbActualLeft < m_padding)
+            point1 = QPoint(m_padding, m_halfRectHeight);
         else
-            point1 = QPoint(thumbActualLeft, halfRectHeight);
+            point1 = QPoint(thumbActualLeft, m_halfRectHeight);
 
         QPoint point2;
-        auto trackActualRight = trackEnd.x();
-        if (thumbActualRight < padding)
-            point2 = QPoint(padding, halfRectHeight);
+        auto trackActualRight = m_trackEnd.x();
+        if (thumbActualRight < m_padding)
+            point2 = QPoint(m_padding, m_halfRectHeight);
         else if (thumbActualRight < trackActualRight)
-            point2 = QPoint(thumbActualRight, halfRectHeight);
+            point2 = QPoint(thumbActualRight, m_halfRectHeight);
         else
-            point2 = QPoint(trackActualRight, halfRectHeight);
+            point2 = QPoint(trackActualRight, m_halfRectHeight);
 
         // Draw progress value
         pen.setColor(m_colorPalette.total);
-        pen.setWidth(penWidth);
+        pen.setWidth(m_penWidth);
         painter.setPen(pen);
 //        qDebug() << point1 << point2;
         painter.drawLine(point1, point2);
@@ -142,12 +133,68 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
 //            m_indeterminateThumbX = 0; // reset thumb pos
     };
 
+    auto drawRingBackground = [&]() {
+        pen.setColor(m_colorPalette.inactive);
+        pen.setWidth(m_penWidth);
+        pen.setCapStyle(Qt::RoundCap);
+        painter.setPen(pen);
+        painter.drawEllipse(m_ringRect);
+    };
+
+    auto drawRingNormalProgress = [&]() {
+        auto start = []() { return 90 * 16; };
+        auto getSpanAngle = [](int spanAngle) {
+            return -spanAngle * 16;
+        };
+
+        // Calculate secondary progress value
+        auto secondaryAngle = int(360 * (m_secondaryValue - m_min) / (m_max - m_min));
+        auto secondarySpan = getSpanAngle(secondaryAngle);
+
+        // Draw secondary progress value
+        pen.setColor(m_colorPalette.secondary);
+        painter.setPen(pen);
+        painter.drawArc(m_ringRect, start(), secondarySpan);
+
+        // Calculate progress value
+        auto valueAngle = int(360 * (m_value - m_min) / (m_max - m_min));
+        auto valueSpan = getSpanAngle(valueAngle);
+
+        // Draw secondary progress value
+        pen.setColor(m_colorPalette.total);
+        painter.setPen(pen);
+        painter.drawArc(m_ringRect, start(), valueSpan);
+
+        // Calculate current task progress value
+        auto curTaskAngle = int(valueAngle * (m_currentTaskValue - m_min) / (m_max - m_min));
+        auto curTaskSpan = getSpanAngle(curTaskAngle);
+
+        // Draw secondary progress value
+        pen.setColor(m_colorPalette.currentTask);
+        painter.setPen(pen);
+        painter.drawArc(m_ringRect, start(), curTaskSpan);
+    };
+
+    auto drawRingIndeterminateProgress = [&]() {
+        int startAngle = -m_thumbProgress * 16;
+        int spanAngle = 120 * 16;
+        pen.setColor(m_colorPalette.total);
+        painter.setPen(pen);
+        painter.drawArc(m_ringRect, startAngle, spanAngle);
+    };
+
     if (m_indicatorStyle == HorizontalBar) {
         drawBarBackground();
         if (!m_indeterminate)
-            drawNormalProgress();
+            drawBarNormalProgress();
         else
-            drawIndeterminateProgress();
+            drawBarIndeterminateProgress();
+    } else if (m_indicatorStyle == Ring) {
+        drawRingBackground();
+        if (!m_indeterminate)
+            drawRingNormalProgress();
+        else
+            drawRingIndeterminateProgress();
     }
 
     painter.end();
@@ -254,4 +301,37 @@ void ProgressIndicator::setTaskStatus(ProgressIndicator::TaskStatus status) {
             break;
     }
     update();
+}
+void ProgressIndicator::resizeEvent(QResizeEvent *event) {
+    switch (m_indicatorStyle) {
+        case HorizontalBar:
+            calculateBarParams();
+            break;
+        case Ring:
+            calculateRingParams();
+            break;
+    }
+}
+
+void ProgressIndicator::calculateBarParams() {
+    m_penWidth = rect().height();
+    m_padding = m_penWidth / 2;
+    m_halfRectHeight = rect().height() / 2;
+
+    // Calculate track inactive(background)
+    m_trackStart = QPoint(rect().left() + m_padding, m_halfRectHeight);
+    m_trackEnd = QPoint(rect().right() - m_padding, m_halfRectHeight);
+    m_actualLength = rect().width() - m_padding - m_padding;
+}
+
+void ProgressIndicator::calculateRingParams() {
+    auto minLength = qMin(rect().width(), rect().height());
+    m_penWidth = int(minLength * 0.15);
+    m_padding = m_penWidth;
+
+    auto left = (rect().width() - minLength) / 2 + m_padding;
+    auto top = (rect().height() - minLength) / 2 + m_padding;
+    auto width = minLength - 2 * m_padding;
+    auto height = width;
+    m_ringRect = QRect(left, top, width, height);
 }

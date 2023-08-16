@@ -48,6 +48,44 @@ int main(int argc, char *argv[]) {
     progressBar6->setIndeterminate(true);
     progressBar6->setTaskStatus(ProgressIndicator::Error);
 
+    auto progressRing1 = new ProgressIndicator(ProgressIndicator::Ring);
+    progressRing1->setValue(50);
+    progressRing1->setSecondaryValue(75);
+    progressRing1->setCurrentTaskValue(25);
+
+    auto progressRing2 = new ProgressIndicator(ProgressIndicator::Ring);
+    progressRing2->setTaskStatus(ProgressIndicator::Warning);
+    progressRing2->setValue(50);
+    progressRing2->setSecondaryValue(75);
+    progressRing2->setCurrentTaskValue(25);
+
+    auto progressRing3 = new ProgressIndicator(ProgressIndicator::Ring);
+    progressRing3->setTaskStatus(ProgressIndicator::Error);
+    progressRing3->setValue(50);
+    progressRing3->setSecondaryValue(75);
+    progressRing3->setCurrentTaskValue(25);
+
+    auto progressRingNormalLayout = new QHBoxLayout;
+    progressRingNormalLayout->addWidget(progressRing1);
+    progressRingNormalLayout->addWidget(progressRing2);
+    progressRingNormalLayout->addWidget(progressRing3);
+
+    auto progressRing4 = new ProgressIndicator(ProgressIndicator::Ring);
+    progressRing4->setIndeterminate(true);
+
+    auto progressRing5 = new ProgressIndicator(ProgressIndicator::Ring);
+    progressRing5->setTaskStatus(ProgressIndicator::Warning);
+    progressRing5->setIndeterminate(true);
+
+    auto progressRing6 = new ProgressIndicator(ProgressIndicator::Ring);
+    progressRing6->setTaskStatus(ProgressIndicator::Error);
+    progressRing6->setIndeterminate(true);
+
+    auto progressRingIndeterminateLayout = new QHBoxLayout;
+    progressRingIndeterminateLayout->addWidget(progressRing4);
+    progressRingIndeterminateLayout->addWidget(progressRing5);
+    progressRingIndeterminateLayout->addWidget(progressRing6);
+
     auto sliderValue = new QSlider;
     sliderValue->setMaximum(100);
     sliderValue->setMinimum(0);
@@ -57,6 +95,9 @@ int main(int argc, char *argv[]) {
         progressBar1->setValue(value);
         progressBar3->setValue(value);
         progressBar5->setValue(value);
+        progressRing1->setValue(value);
+        progressRing2->setValue(value);
+        progressRing3->setValue(value);
     });
 
     auto sliderSecondaryValue = new QSlider;
@@ -68,6 +109,9 @@ int main(int argc, char *argv[]) {
         progressBar1->setSecondaryValue(value);
         progressBar3->setSecondaryValue(value);
         progressBar5->setSecondaryValue(value);
+        progressRing1->setSecondaryValue(value);
+        progressRing2->setSecondaryValue(value);
+        progressRing3->setSecondaryValue(value);
     });
 
     auto sliderCurrentTaskValue = new QSlider;
@@ -79,12 +123,15 @@ int main(int argc, char *argv[]) {
         progressBar1->setCurrentTaskValue(value);
         progressBar3->setCurrentTaskValue(value);
         progressBar5->setCurrentTaskValue(value);
+        progressRing1->setCurrentTaskValue(value);
+        progressRing2->setCurrentTaskValue(value);
+        progressRing3->setCurrentTaskValue(value);
     });
 
     auto shadowButton = new ShadowButton(mainWidget);
     shadowButton->setText("ShadowButton");
     shadowButton->setStyleSheet(QString("border: 1px solid #d4d4d4; background-color: #fff; "
-                                        "border-radius: 4px; color: #333; padding: 6px 12px;"));
+                                        "border-radius: 6px; color: #333; padding: 6px 12px;"));
 
     auto verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
@@ -97,6 +144,8 @@ int main(int argc, char *argv[]) {
     mainLayout->addWidget(progressBar4);
     mainLayout->addWidget(progressBar5);
     mainLayout->addWidget(progressBar6);
+    mainLayout->addLayout(progressRingNormalLayout);
+    mainLayout->addLayout(progressRingIndeterminateLayout);
     mainLayout->addWidget(sliderValue);
     mainLayout->addWidget(sliderSecondaryValue);
     mainLayout->addWidget(sliderCurrentTaskValue);
@@ -106,7 +155,7 @@ int main(int argc, char *argv[]) {
     mainWidget->setLayout(mainLayout);
 
     w.setCentralWidget(mainWidget);
-    w.resize(300, 500);
+    w.resize(300, 700);
     w.show();
 
     return QApplication::exec();

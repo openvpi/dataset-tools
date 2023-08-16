@@ -109,12 +109,22 @@ protected:
     double m_currentTaskValue = 0;
     bool m_indeterminate = false;
     int m_thumbProgress = 0;
+    int m_penWidth;
+    int m_padding;
+    int m_halfRectHeight;
+    QPoint m_trackStart;
+    QPoint m_trackEnd;
+    int m_actualLength;
+    QRect m_ringRect;
     //    bool m_invertedAppearance = false;
         QTimer *m_timer;
     QPropertyAnimation *m_animation;
 
     void initUi(QWidget *parent);
+    void calculateBarParams();
+    void calculateRingParams();
     void paintEvent(QPaintEvent *event) override;
+    void resizeEvent(QResizeEvent *event);
 
 private:
     int thumbProgress() const;
