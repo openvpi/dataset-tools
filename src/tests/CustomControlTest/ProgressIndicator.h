@@ -18,6 +18,9 @@ class QMWIDGETS_EXPORT ProgressIndicator : public QWidget {
     Q_PROPERTY(double currentTaskValue READ currentTaskValue WRITE setValue NOTIFY currentTaskValueChanged)
     //    Q_PROPERTY(bool invertedAppearance READ invertedAppearance WRITE setInvertedAppearance)
     Q_PROPERTY(int thumbProgress READ thumbProgress WRITE setThumbProgress)
+    Q_PROPERTY(double apparentValue READ apparentValue WRITE setApparentValue)
+    Q_PROPERTY(double apparentSecondaryValue READ apparentSecondaryValue WRITE setApparentSecondaryValue)
+    Q_PROPERTY(double apparentCurrentTaskValue READ apparentCurrentTaskValue WRITE setApparentCurrentTaskValue)
     Q_PROPERTY(bool indeterminate READ indeterminate WRITE setIndeterminate)
 
 public:
@@ -117,18 +120,30 @@ protected:
     int m_actualLength;
     QRect m_ringRect;
     //    bool m_invertedAppearance = false;
-        QTimer *m_timer;
-    QPropertyAnimation *m_animation;
+    QTimer *m_timer;
+    QPropertyAnimation *m_valueAnimation;
+    QPropertyAnimation *m_SecondaryValueAnimation;
+    QPropertyAnimation *m_currentTaskValueAnimation;
 
     void initUi(QWidget *parent);
     void calculateBarParams();
     void calculateRingParams();
     void paintEvent(QPaintEvent *event) override;
-    void resizeEvent(QResizeEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
+    double m_apparentValue = 0;
+    double m_apparentSecondaryValue = 0;
+    double m_apparentCurrentTaskValue = 0;
+
     int thumbProgress() const;
     void setThumbProgress(int x);
+    double apparentValue() const;
+    void setApparentValue(double x);
+    double apparentSecondaryValue() const;
+    void setApparentSecondaryValue(double x);
+    double apparentCurrentTaskValue() const;
+    void setApparentCurrentTaskValue(double x);
 };
 
 

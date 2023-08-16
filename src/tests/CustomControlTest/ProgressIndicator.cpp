@@ -25,20 +25,31 @@ void ProgressIndicator::initUi(QWidget *parent) {
 //    qDebug() << "init";
     m_timer = new QTimer(parent);
     m_timer->setInterval(8);
-    m_timer->connect(m_timer, &QTimer::timeout, this, [=]() {
+    QTimer::connect(m_timer, &QTimer::timeout, this, [=]() {
         setThumbProgress(m_thumbProgress + 2);
         if (m_thumbProgress == 360)
             m_thumbProgress = 0;
     });
     m_colorPalette = colorPaletteNormal;
 
-//    m_animation = new QPropertyAnimation;
-//    m_animation->setTargetObject(this);
-//    m_animation->setPropertyName("thumbProgress");
-//    m_animation->setDuration(2000);
-//    m_animation->setStartValue(0);
-//    m_animation->setEndValue(240);
-//    m_animation->setLoopCount(-1);
+    m_valueAnimation = new QPropertyAnimation;
+    m_valueAnimation->setTargetObject(this);
+    m_valueAnimation->setPropertyName("apparentValue");
+    m_valueAnimation->setDuration(250);
+    m_valueAnimation->setEasingCurve(QEasingCurve::OutQuart);
+
+    m_SecondaryValueAnimation = new QPropertyAnimation;
+    m_SecondaryValueAnimation->setTargetObject(this);
+    m_SecondaryValueAnimation->setPropertyName("apparentSecondaryValue");
+    m_SecondaryValueAnimation->setDuration(250);
+    m_SecondaryValueAnimation->setEasingCurve(QEasingCurve::OutQuart);
+
+    m_currentTaskValueAnimation = new QPropertyAnimation;
+    m_currentTaskValueAnimation->setTargetObject(this);
+    m_currentTaskValueAnimation->setPropertyName("apparentCurrentTaskValue");
+    m_currentTaskValueAnimation->setDuration(250);
+    m_currentTaskValueAnimation->setEasingCurve(QEasingCurve::OutQuart);
+
     switch (m_indicatorStyle) {
         case HorizontalBar:
             setMinimumHeight(8);
@@ -71,7 +82,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         // Calculate secondary progress value
         auto valueStartPos = m_padding;
         auto valueStartPoint = QPoint(valueStartPos, m_halfRectHeight);
-        auto secondaryValuePos = int(m_actualLength * (m_secondaryValue - m_min) / (m_max - m_min)) + m_padding;
+        auto secondaryValuePos = int(m_actualLength * (m_apparentSecondaryValue - m_min) / (m_max - m_min)) + m_padding;
         auto secondaryValuePoint2 = QPoint(secondaryValuePos, m_halfRectHeight);
 
         // Draw secondary progress value
@@ -81,7 +92,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         painter.drawLine(valueStartPoint, secondaryValuePoint2);
 
         // Calculate progress value
-        auto valueLength = int(m_actualLength * (m_value - m_min) / (m_max - m_min));
+        auto valueLength = int(m_actualLength * (m_apparentValue - m_min) / (m_max - m_min));
         auto valuePos = valueLength + m_padding;
         auto valuePoint = QPoint(valuePos, m_halfRectHeight);
 
@@ -92,7 +103,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         painter.drawLine(valueStartPoint, valuePoint);
 
         // Calculate current task progress value
-        auto curTaskValuePos = int(valueLength * (m_currentTaskValue - m_min) / (m_max - m_min)) + m_padding;
+        auto curTaskValuePos = int(valueLength * (m_apparentCurrentTaskValue - m_min) / (m_max - m_min)) + m_padding;
         auto curTaskValuePoint = QPoint(curTaskValuePos, m_halfRectHeight);
 
         // Draw current task progress value
@@ -148,7 +159,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         };
 
         // Calculate secondary progress value
-        auto secondaryAngle = int(360 * (m_secondaryValue - m_min) / (m_max - m_min));
+        auto secondaryAngle = int(360 * (m_apparentSecondaryValue - m_min) / (m_max - m_min));
         auto secondarySpan = getSpanAngle(secondaryAngle);
 
         // Draw secondary progress value
@@ -157,7 +168,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         painter.drawArc(m_ringRect, start(), secondarySpan);
 
         // Calculate progress value
-        auto valueAngle = int(360 * (m_value - m_min) / (m_max - m_min));
+        auto valueAngle = int(360 * (m_apparentValue - m_min) / (m_max - m_min));
         auto valueSpan = getSpanAngle(valueAngle);
 
         // Draw secondary progress value
@@ -166,7 +177,7 @@ void ProgressIndicator::paintEvent(QPaintEvent *event) {
         painter.drawArc(m_ringRect, start(), valueSpan);
 
         // Calculate current task progress value
-        auto curTaskAngle = int(valueAngle * (m_currentTaskValue - m_min) / (m_max - m_min));
+        auto curTaskAngle = int(valueAngle * (m_apparentCurrentTaskValue - m_min) / (m_max - m_min));
         auto curTaskSpan = getSpanAngle(curTaskAngle);
 
         // Draw secondary progress value
@@ -206,7 +217,11 @@ double ProgressIndicator::value() const {
 
 void ProgressIndicator::setValue(double value) {
     m_value = value;
-    update();
+    m_valueAnimation->stop();
+    m_valueAnimation->setStartValue(m_apparentValue);
+    m_valueAnimation->setEndValue(m_value);
+    m_valueAnimation->start();
+//    update();
 }
 
 double ProgressIndicator::minimum() const {
@@ -239,12 +254,18 @@ double ProgressIndicator::secondaryValue() const {
 
 void ProgressIndicator::setSecondaryValue(double value) {
     m_secondaryValue = value;
-    update();
+    m_SecondaryValueAnimation->stop();
+    m_SecondaryValueAnimation->setStartValue(m_apparentSecondaryValue);
+    m_SecondaryValueAnimation->setEndValue(m_secondaryValue);
+    m_SecondaryValueAnimation->start();
 }
 
 void ProgressIndicator::setCurrentTaskValue(double value) {
     m_currentTaskValue = value;
-    update();
+    m_currentTaskValueAnimation->stop();
+    m_currentTaskValueAnimation->setStartValue(m_apparentCurrentTaskValue);
+    m_currentTaskValueAnimation->setEndValue(m_currentTaskValue);
+    m_currentTaskValueAnimation->start();
 }
 
 void ProgressIndicator::reset() {
@@ -265,10 +286,10 @@ bool ProgressIndicator::indeterminate() const {
 void ProgressIndicator::setIndeterminate(bool on) {
     m_indeterminate = on;
     if (m_indeterminate)
-//        m_animation->start();
+//        m_valueAnimation->start();
         m_timer->start();
     else
-//        m_animation->stop();
+//        m_valueAnimation->stop();
         m_timer->stop();
     update();
 }
@@ -334,4 +355,31 @@ void ProgressIndicator::calculateRingParams() {
     auto width = minLength - 2 * m_padding;
     auto height = width;
     m_ringRect = QRect(left, top, width, height);
+}
+
+double ProgressIndicator::apparentValue() const {
+    return m_apparentValue;
+}
+
+void ProgressIndicator::setApparentValue(double x) {
+    m_apparentValue = x;
+    repaint();
+}
+
+double ProgressIndicator::apparentSecondaryValue() const {
+    return m_apparentSecondaryValue;
+}
+
+void ProgressIndicator::setApparentSecondaryValue(double x) {
+    m_apparentSecondaryValue = x;
+    repaint();
+}
+
+double ProgressIndicator::apparentCurrentTaskValue() const {
+    return m_apparentCurrentTaskValue;
+}
+
+void ProgressIndicator::setApparentCurrentTaskValue(double x) {
+    m_apparentCurrentTaskValue = x;
+    repaint();
 }

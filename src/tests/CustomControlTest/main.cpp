@@ -6,6 +6,7 @@
 #include "EditLabel.h"
 #include "MainWindow.h"
 #include "ProgressIndicator.h"
+#include "SeekBar.h"
 #include "ShadowButton.h"
 
 int main(int argc, char *argv[]) {
@@ -86,12 +87,11 @@ int main(int argc, char *argv[]) {
     progressRingIndeterminateLayout->addWidget(progressRing5);
     progressRingIndeterminateLayout->addWidget(progressRing6);
 
-    auto sliderValue = new QSlider;
-    sliderValue->setMaximum(100);
-    sliderValue->setMinimum(0);
+    auto sliderValue = new SeekBar;
+    sliderValue->setMax(100);
+    sliderValue->setMin(0);
     sliderValue->setValue(50);
-    sliderValue->setOrientation(Qt::Horizontal);
-    QObject::connect(sliderValue, &QSlider::valueChanged, &w, [=](int value) {
+    QObject::connect(sliderValue, &SeekBar::valueChanged, &w, [=](int value) {
         progressBar1->setValue(value);
         progressBar3->setValue(value);
         progressBar5->setValue(value);
@@ -100,12 +100,11 @@ int main(int argc, char *argv[]) {
         progressRing3->setValue(value);
     });
 
-    auto sliderSecondaryValue = new QSlider;
-    sliderSecondaryValue->setMaximum(100);
-    sliderSecondaryValue->setMinimum(0);
+    auto sliderSecondaryValue = new SeekBar;
+    sliderSecondaryValue->setMax(100);
+    sliderSecondaryValue->setMin(0);
     sliderSecondaryValue->setValue(75);
-    sliderSecondaryValue->setOrientation(Qt::Horizontal);
-    QObject::connect(sliderSecondaryValue, &QSlider::valueChanged, &w, [=](int value) {
+    QObject::connect(sliderSecondaryValue, &SeekBar::valueChanged, &w, [=](int value) {
         progressBar1->setSecondaryValue(value);
         progressBar3->setSecondaryValue(value);
         progressBar5->setSecondaryValue(value);
@@ -114,12 +113,11 @@ int main(int argc, char *argv[]) {
         progressRing3->setSecondaryValue(value);
     });
 
-    auto sliderCurrentTaskValue = new QSlider;
-    sliderCurrentTaskValue->setMaximum(100);
-    sliderCurrentTaskValue->setMinimum(0);
+    auto sliderCurrentTaskValue = new SeekBar;
+    sliderCurrentTaskValue->setMax(100);
+    sliderCurrentTaskValue->setMin(0);
     sliderCurrentTaskValue->setValue(25);
-    sliderCurrentTaskValue->setOrientation(Qt::Horizontal);
-    QObject::connect(sliderCurrentTaskValue, &QSlider::valueChanged, &w, [=](int value) {
+    QObject::connect(sliderCurrentTaskValue, &SeekBar::valueChanged, &w, [=](int value) {
         progressBar1->setCurrentTaskValue(value);
         progressBar3->setCurrentTaskValue(value);
         progressBar5->setCurrentTaskValue(value);
