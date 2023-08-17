@@ -8,6 +8,7 @@
 #include "ProgressIndicator.h"
 #include "SeekBar.h"
 #include "ShadowButton.h"
+#include "SwitchButton.h"
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
@@ -131,6 +132,13 @@ int main(int argc, char *argv[]) {
     shadowButton->setStyleSheet(QString("border: 1px solid #d4d4d4; background-color: #fff; "
                                         "border-radius: 6px; color: #333; padding: 6px 12px;"));
 
+    auto switchButton1 = new SwitchButton;
+    auto switchButton2 = new SwitchButton;
+    switchButton2->setValue(true);
+    auto switchButtonLayout = new QHBoxLayout;
+    switchButtonLayout->addWidget(switchButton1);
+    switchButtonLayout->addWidget(switchButton2);
+
     auto verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     auto mainLayout = new QVBoxLayout;
@@ -148,6 +156,7 @@ int main(int argc, char *argv[]) {
     mainLayout->addWidget(sliderSecondaryValue);
     mainLayout->addWidget(sliderCurrentTaskValue);
     mainLayout->addWidget(shadowButton);
+    mainLayout->addLayout(switchButtonLayout);
 //    mainLayout->addItem(verticalSpacer);
 
     mainWidget->setLayout(mainLayout);

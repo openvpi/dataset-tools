@@ -68,9 +68,9 @@ public slots:
     void setTaskStatus(TaskStatus status);
 
 signals:
-    void valueChanged(int value);
-    void secondaryValueChanged(int value);
-    void currentTaskValueChanged(int value);
+    void valueChanged(double value);
+    void secondaryValueChanged(double value);
+    void currentTaskValueChanged(double value);
 
 protected:
     struct ColorPalette {

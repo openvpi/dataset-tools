@@ -323,6 +323,7 @@ void ProgressIndicator::setTaskStatus(ProgressIndicator::TaskStatus status) {
     }
     update();
 }
+
 void ProgressIndicator::resizeEvent(QResizeEvent *event) {
     switch (m_indicatorStyle) {
         case HorizontalBar:
