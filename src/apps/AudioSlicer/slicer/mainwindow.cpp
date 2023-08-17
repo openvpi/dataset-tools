@@ -194,6 +194,7 @@ void MainWindow::slot_start() {
 
     if (!(ui->cbSlice->isChecked() || ui->cbSaveMarkers->isChecked())) {
         QMessageBox::warning(this, qApp->applicationName(), "Must save audio files or save markers!");
+        return;
     }
 
     int item_count = ui->listWidgetTaskList->count();
