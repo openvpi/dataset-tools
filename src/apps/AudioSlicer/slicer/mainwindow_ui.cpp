@@ -169,6 +169,20 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     cmbOutputWaveFormat->setObjectName("cmbOutputWaveFormat");
     verticalLayout_3->addWidget(cmbOutputWaveFormat);
 
+    lblMarkerOptions = new QLabel(gBoxSettings);
+    lblMarkerOptions->setObjectName("lblMarkerOptions");
+    verticalLayout_3->addWidget(lblMarkerOptions);
+
+    cbSlice = new QCheckBox(gBoxSettings);
+    cbSaveMarkers = new QCheckBox(gBoxSettings);
+    cbLoadMarkers = new QCheckBox(gBoxSettings);
+
+    cbSlice->setChecked(true);
+
+    verticalLayout_3->addWidget(cbSlice);
+    verticalLayout_3->addWidget(cbSaveMarkers);
+    verticalLayout_3->addWidget(cbLoadMarkers);
+
     verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     verticalLayout_3->addItem(verticalSpacer);
@@ -222,10 +236,10 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     menuBar->setGeometry(QRect(0, 0, 800, 22));
     menuFile = new QMenu(menuBar);
     menuFile->setObjectName("menuFile");
+    menuView = new QMenu(menuBar);
+    menuView->setObjectName("menuView");
     menuHelp = new QMenu(menuBar);
     menuHelp->setObjectName("menuHelp");
-    // menuView = new QMenu(menuBar);
-    // menuView->setObjectName("menuView");
     MainWindow->setMenuBar(menuBar);
 
     actionAddFile = new QAction(MainWindow);
@@ -236,15 +250,19 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     actionSaveLogs->setObjectName("actionSaveLogs");
     actionQuit = new QAction(MainWindow);
     actionQuit->setObjectName("actionQuit");
+    menuViewThemes = new QMenu(menuView);
+    menuViewThemes->setObjectName("menuViewThemes");
     actionAboutApp = new QAction(MainWindow);
     actionAboutApp->setObjectName("actionAboutApp");
     actionAboutQt = new QAction(MainWindow);
     actionAboutQt->setObjectName("actionAboutQt");
     // actionShowHideLogs = new QAction(MainWindow);
     // actionShowHideLogs->setObjectName("actionShowHideLogs");
+    actionGroupThemes = new QActionGroup(MainWindow);
+    actionGroupThemes->setObjectName("actionGroupThemes");
 
     menuBar->addAction(menuFile->menuAction());
-    // menuBar->addAction(menuView->menuAction());
+    menuBar->addAction(menuView->menuAction());
     menuBar->addAction(menuHelp->menuAction());
     menuFile->addAction(actionAddFile);
     menuFile->addAction(actionAddFolder);
@@ -252,6 +270,10 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     menuFile->addAction(actionSaveLogs);
     menuFile->addSeparator();
     menuFile->addAction(actionQuit);
+    menuView->addMenu(menuViewThemes);
+#if defined(Q_OS_MAC)
+    menuView->addSeparator();
+#endif
     menuHelp->addAction(actionAboutApp);
     menuHelp->addAction(actionAboutQt);
     // menuView->addAction(actionShowHideLogs);
@@ -293,10 +315,15 @@ void Ui_MainWindow::retranslateUi(QMainWindow *MainWindow)
     lblOutputDir->setText(QCoreApplication::translate("MainWindow", "Output Directory (default to the same as the audio)", nullptr));
     lineEditOutputDir->setText(QString());
     lblOutputWaveFormat->setText(QCoreApplication::translate("MainWindow", "Output Wave Format", nullptr));
+    lblMarkerOptions->setText(QCoreApplication::translate("MainWindow", "Markers", nullptr));
+    cbSlice->setText(QCoreApplication::translate("MainWindow", "Save sliced audio files", nullptr));
+    cbSaveMarkers->setText(QCoreApplication::translate("MainWindow", "Save markers (no overwrite)", nullptr));
+    cbLoadMarkers->setText(QCoreApplication::translate("MainWindow", "Load markers if exist", nullptr));
     btnBrowse->setText(QCoreApplication::translate("MainWindow", "Browse...", nullptr));
     pushButtonAbout->setText(QCoreApplication::translate("MainWindow", "About", nullptr));
     pushButtonStart->setText(QCoreApplication::translate("MainWindow", "Start", nullptr));
     menuFile->setTitle(QCoreApplication::translate("MainWindow", "&File", nullptr));
+    menuView->setTitle(QCoreApplication::translate("MainWindow", "&View", nullptr));
+    menuViewThemes->setTitle(QCoreApplication::translate("MainWindow", "Themes", nullptr));
     menuHelp->setTitle(QCoreApplication::translate("MainWindow", "&Help", nullptr));
-    // menuView->setTitle(QCoreApplication::translate("MainWindow", "&View", nullptr));
 } // retranslateUi

@@ -63,6 +63,7 @@ private:
     void setProcessing(bool processing);
     void logMessage(const QString &txt);
     void addSingleAudioFile(const QString &fullPath);
+    void initStylesMenu();
 
 #ifdef Q_OS_WIN
     private:

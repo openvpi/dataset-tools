@@ -10,6 +10,7 @@
 #include <QRunnable>
 #include <QString>
 #include <QStringList>
+#include <QStyleFactory>
 #include <QSysInfo>
 #include <QTextStream>
 #include <QThreadPool>
@@ -24,7 +25,7 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
-    resize(1920, 1080);
+    initStylesMenu();
 
     m_threadpool = new QThreadPool(this);
     m_threadpool->setMaxThreadCount(1);
@@ -42,6 +43,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->actionAboutApp, &QAction::triggered, this, &MainWindow::slot_about);
     connect(ui->actionAboutQt, &QAction::triggered, this, &MainWindow::slot_aboutQt);
     connect(ui->actionQuit, &QAction::triggered, this, &QCoreApplication::quit, Qt::QueuedConnection);
+    connect(ui->actionGroupThemes, &QActionGroup::triggered, [](QAction *action) {
+        QApplication::setStyle(action->text());
+    });
 
     ui->progressBar->setMinimum(0);
     ui->progressBar->setMaximum(100);
@@ -61,9 +65,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     m_workTotal = 0;
     m_workFinished = 0;
+    m_workError = 0;
     m_processing = false;
 
-    setWindowTitle(QApplication::applicationName());
+    setWindowTitle(qApp->applicationName());
     setAcceptDrops(true);
 
 #ifdef Q_OS_WIN
@@ -187,6 +192,10 @@ void MainWindow::slot_start() {
         return;
     }
 
+    if (!(ui->cbSlice->isChecked() || ui->cbSaveMarkers->isChecked())) {
+        QMessageBox::warning(this, qApp->applicationName(), "Must save audio files or save markers!");
+    }
+
     int item_count = ui->listWidgetTaskList->count();
     if (item_count == 0) {
         return;
@@ -215,14 +224,20 @@ void MainWindow::slot_start() {
     setProcessing(true);
     for (int i = 0; i < item_count; i++) {
         auto item = ui->listWidgetTaskList->item(i);
-        item->setForeground(item->data(Qt::ForegroundRole).value<QBrush>());
-        item->setBackground(item->data(Qt::BackgroundRole).value<QBrush>());
+        item->setForeground(QBrush());
+        item->setBackground(QBrush());
         auto path = item->data(Qt::ItemDataRole::UserRole + 1).toString();
         auto runnable =
-            new WorkThread(path, ui->lineEditOutputDir->text(), ui->lineEditThreshold->text().toDouble(),
-                           ui->lineEditMinLen->text().toULongLong(), ui->lineEditMinInterval->text().toULongLong(),
-                           ui->lineEditHopSize->text().toULongLong(), ui->lineEditMaxSilence->text().toULongLong(),
+            new WorkThread(path, ui->lineEditOutputDir->text(),
+                           ui->lineEditThreshold->text().toDouble(),
+                           ui->lineEditMinLen->text().toLongLong(),
+                           ui->lineEditMinInterval->text().toLongLong(),
+                           ui->lineEditHopSize->text().toLongLong(),
+                           ui->lineEditMaxSilence->text().toLongLong(),
                            ui->cmbOutputWaveFormat->currentData().toInt(),
+                           ui->cbSlice->isChecked(),
+                           ui->cbSaveMarkers->isChecked(),
+                           ui->cbLoadMarkers->isChecked(),
                            i);
         connect(runnable, &WorkThread::oneFinished, this, &MainWindow::slot_oneFinished);
         connect(runnable, &WorkThread::oneInfo, this, &MainWindow::slot_oneInfo);
@@ -257,8 +272,8 @@ void MainWindow::slot_oneFinished(const QString &filename, int listIndex) {
 
     if (listIndex >= 0) {
         auto item = ui->listWidgetTaskList->item(listIndex);
-        item->setForeground(item->data(Qt::ForegroundRole).value<QBrush>());
-        item->setBackground(item->data(Qt::BackgroundRole).value<QBrush>());
+        item->setForeground(QBrush());
+        item->setBackground(QBrush());
     }
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
@@ -326,14 +341,14 @@ void MainWindow::slot_threadFinished() {
         m_pTaskbarList3->SetProgressState((HWND) this->winId(), TBPF_NOPROGRESS);
     }
 #endif
-    QMessageBox::information(this, QApplication::applicationName(), msg);
+    QMessageBox::information(this, qApp->applicationName(), msg);
     m_workFinished = 0;
     m_workError = 0;
     m_workTotal = 0;
 }
 
 void MainWindow::warningProcessNotFinished() {
-    QMessageBox::warning(this, QApplication::applicationName(), "Please wait for slicing to complete!");
+    QMessageBox::warning(this, qApp->applicationName(), "Please wait for slicing to complete!");
 }
 
 void MainWindow::setProcessing(bool processing) {
@@ -342,6 +357,7 @@ void MainWindow::setProcessing(bool processing) {
     ui->pushButtonStart->setEnabled(enabled);
     ui->btnAddFiles->setEnabled(enabled);
     ui->listWidgetTaskList->setEnabled(enabled);
+    ui->btnRemoveListItem->setEnabled(enabled);
     ui->btnClearList->setEnabled(enabled);
     ui->lineEditThreshold->setEnabled(enabled);
     ui->lineEditMinLen->setEnabled(enabled);
@@ -350,6 +366,12 @@ void MainWindow::setProcessing(bool processing) {
     ui->lineEditMaxSilence->setEnabled(enabled);
     ui->lineEditOutputDir->setEnabled(enabled);
     ui->btnBrowse->setEnabled(enabled);
+    ui->cmbOutputWaveFormat->setEnabled(enabled);
+    ui->cbSlice->setEnabled(enabled);
+    ui->cbSaveMarkers->setEnabled(enabled);
+    ui->cbLoadMarkers->setEnabled(enabled);
+    ui->actionAddFile->setEnabled(enabled);
+    ui->actionAddFolder->setEnabled(enabled);
     m_processing = processing;
 }
 
@@ -364,8 +386,6 @@ void MainWindow::addSingleAudioFile(const QString &fullPath) {
     auto *item = new QListWidgetItem();
     item->setText(QFileInfo(fullPath).fileName());
     item->setData(Qt::ItemDataRole::UserRole + 1, fullPath);
-    item->setData(Qt::ForegroundRole, item->foreground());
-    item->setData(Qt::BackgroundRole, item->background());
     ui->listWidgetTaskList->addItem(item);
 }
 
@@ -408,5 +428,19 @@ void MainWindow::dropEvent(QDropEvent *event) {
         }
 
         addSingleAudioFile(path);
+    }
+}
+
+void MainWindow::initStylesMenu() {
+    auto availableStyles = QStyleFactory::keys();
+    for (const QString &style : availableStyles) {
+        auto styleAction = new QAction(style, ui->menuViewThemes);
+        styleAction->setCheckable(true);
+        ui->actionGroupThemes->addAction(styleAction);
+        ui->menuViewThemes->addAction(styleAction);
+    }
+    if (!availableStyles.isEmpty()) {
+        auto firstStyleAction = ui->actionGroupThemes->actions().first();
+        firstStyleAction->setChecked(true);
     }
 }
