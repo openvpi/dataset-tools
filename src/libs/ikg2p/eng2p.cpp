@@ -47,7 +47,7 @@ namespace IKg2p {
         Q_D(const EnG2p);
         QStringList arpabetList;
         for (const QString &word : wordList) {
-            arpabetList.append(d->arpabetMap.value(word, word));
+            arpabetList.append(d->arpabetMap.value(word.toLower(), word));
         }
         return arpabetList.join(" ");
     }
