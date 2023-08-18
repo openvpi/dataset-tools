@@ -4,6 +4,7 @@
 #include <QVariant>
 #include <QAction>
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -30,8 +31,10 @@ public:
     QAction *actionAddFile, *actionAddFolder, *actionSaveLogs, *actionQuit;
     //QAction *actionShowHideLogs;
     QAction *actionAboutApp, *actionAboutQt;
+    QActionGroup *actionGroupThemes;
     QMenuBar *menuBar;
-    QMenu *menuFile, *menuHelp; //, *menuView;
+    QMenu *menuFile, *menuView, *menuHelp;
+    QMenu *menuViewThemes;
 
     QWidget *centralwidget;
     QSplitter *splitterMain, *splitterLogs;
@@ -71,6 +74,8 @@ public:
     QPushButton *pushButtonStart;
     QLabel *lblOutputWaveFormat;
     QComboBox *cmbOutputWaveFormat;
+    QLabel *lblMarkerOptions;
+    QCheckBox *cbSlice, *cbSaveMarkers, *cbLoadMarkers;
 
     void setupUi(QMainWindow *MainWindow);
     void retranslateUi(QMainWindow *MainWindow);

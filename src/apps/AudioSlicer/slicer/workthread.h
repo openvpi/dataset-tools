@@ -20,6 +20,9 @@ public:
                qint64 hopSize,
                qint64 maxSilKept,
                int outputWaveFormat = WF_INT16_PCM,
+               bool saveAudio = true,
+               bool saveMarkers = false,
+               bool loadMarkers = false,
                int listIndex = -1);
     void run() override;
 
@@ -32,6 +35,9 @@ private:
     qint64 m_hopSize;
     qint64 m_maxSilKept;
     int m_outputWaveFormat;
+    bool m_saveAudio;
+    bool m_saveMarkers;
+    bool m_loadMarkers;
     int m_listIndex;
 
 signals:

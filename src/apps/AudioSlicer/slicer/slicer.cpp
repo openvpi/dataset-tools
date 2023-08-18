@@ -7,10 +7,8 @@
 
 #include <sndfile.hh>
 
+#include "mathutils.h"
 #include "slicer.h"
-
-template<class T>
-inline T divIntRound(T n, T d);
 
 template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end);
@@ -107,8 +105,7 @@ Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 minLength, qint6
 }
 
 
-std::vector<std::pair<qint64, qint64>>
-Slicer::slice()
+MarkerList Slicer::slice()
 {
     if (m_errCode == SlicerErrorCode::SLICER_INVALID_ARGUMENT)
     {
@@ -184,7 +181,7 @@ Slicer::slice()
 
     //std::vector<double> rms_list = get_rms<float>(samples, (qint64) m_winSize, (qint64) m_hopSize);
 
-    std::vector<std::pair<qint64, qint64>> sil_tags;
+    MarkerList sil_tags;
     qint64 silence_start = 0;
     bool has_silence_start = false;
     qint64 clip_start = 0;
@@ -277,7 +274,7 @@ Slicer::slice()
         return {{ 0, frames }};
     }
     else {
-        std::vector<std::pair<qint64, qint64>> chunks;
+        MarkerList chunks;
         qint64 begin = 0, end = 0;
         qint64 s0 = sil_tags[0].first;
         if (s0 > 0) {
@@ -377,17 +374,6 @@ inline std::vector<double> get_rms(const std::vector<T>& arr, qint64 frame_lengt
     }
 
     return rms;
-}
-
-template<class T>
-inline T divIntRound(T n, T d) {
-    /*
-     * Integer division rounding to the closest integer, without converting to floating point numbers.
-     */
-    // T should be an integer type (int, int64_t, qint64, ...)
-    return ((n < 0) ^ (d < 0)) ? \
-        ((n - (d / 2)) / d) : \
-        ((n + (d / 2)) / d);
 }
 
 template<class T>

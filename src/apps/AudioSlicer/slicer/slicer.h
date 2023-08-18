@@ -6,6 +6,8 @@
 
 #include <QtGlobal>
 
+using MarkerList = std::vector<std::pair<qint64, qint64>>;
+
 class SndfileHandle;
 
 enum SlicerErrorCode {
@@ -28,7 +30,7 @@ private:
 
 public:
     explicit Slicer(SndfileHandle *decoder, double threshold = -40.0, qint64 minLength = 5000, qint64 minInterval = 300, qint64 hopSize = 20, qint64 maxSilKept = 5000);
-    std::vector<std::pair<qint64, qint64>> slice();
+    MarkerList slice();
     SlicerErrorCode getErrorCode();
     QString getErrorMsg();
 };
