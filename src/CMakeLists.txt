@@ -1,3 +1,7 @@
+if(NOT DEFINED BUILD_TESTS)
+    set(BUILD_TESTS on)
+endif()
+
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Svg REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Svg REQUIRED)
 find_package(QasTool REQUIRED)
@@ -6,6 +10,10 @@ add_custom_target(DeployedTargets)
 
 add_subdirectory(apps)
 add_subdirectory(libs)
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 # "QT_QMAKE_EXECUTABLE" is usually defined by QtCreator.
 if(NOT DEFINED QT_QMAKE_EXECUTABLE)

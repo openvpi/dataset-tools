@@ -1,16 +1,14 @@
 #include <QString>
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <queue>
-#include <stdexcept>
 #include <tuple>
 #include <vector>
 
-#include "slicer.h"
+#include <sndfile.hh>
 
-template<class T>
-inline T divIntRound(T n, T d);
+#include "mathutils.h"
+#include "slicer.h"
 
 template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end);
@@ -28,7 +26,7 @@ private:
     double m_squareSum;
     std::queue<double> m_queue;
 public:
-    MovingRMS(qint64 windowSize);
+    explicit MovingRMS(qint64 windowSize);
     void push(double num);
     double rms();
     qint64 capacity();
@@ -70,7 +68,7 @@ qint64 MovingRMS::size() {
     return m_numElements;
 }
 
-Slicer::Slicer(QsApi::IAudioDecoder *decoder, double threshold, qint64 minLength, qint64 minInterval, qint64 hopSize, qint64 maxSilKept)
+Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 minLength, qint64 minInterval, qint64 hopSize, qint64 maxSilKept)
 {
     m_errCode = SlicerErrorCode::SLICER_OK;
     if ((!((minLength >= minInterval) && (minInterval >= hopSize))) || (maxSilKept < hopSize))
@@ -78,11 +76,26 @@ Slicer::Slicer(QsApi::IAudioDecoder *decoder, double threshold, qint64 minLength
         // The following condition must be satisfied: m_minLength >= m_minInterval >= m_hopSize
         // The following condition must be satisfied: m_maxSilKept >= m_hopSize
         m_errCode = SlicerErrorCode::SLICER_INVALID_ARGUMENT;
+        m_errMsg = "ValueError: The following conditions must be satisfied: "
+                   "(min_length >= min_interval >= hop_size) and (max_sil_kept >= hop_size).";
+        return;
     }
 
     m_decoder = decoder;
-    m_decoder->SetPosition(0);
-    int sr = m_decoder->Format().SampleRate();
+    if (!m_decoder) {
+        m_errCode = SlicerErrorCode::SLICER_AUDIO_ERROR;
+        m_errMsg = "Invalid audio decoder!";
+        return;
+    }
+
+    m_decoder->seek(0, SEEK_SET);
+    int sr = m_decoder->samplerate();
+    if (sr <= 0) {
+        m_errCode = SlicerErrorCode::SLICER_AUDIO_ERROR;
+        m_errMsg = "Invalid audio file!";
+        return;
+    }
+
     m_threshold = std::pow(10, threshold / 20.0);
     m_hopSize = divIntRound<qint64>(hopSize * (qint64)sr, (qint64)1000);
     m_winSize = std::min(divIntRound<qint64>(minInterval * (qint64)sr, (qint64)1000), (qint64)4 * m_hopSize);
@@ -92,40 +105,40 @@ Slicer::Slicer(QsApi::IAudioDecoder *decoder, double threshold, qint64 minLength
 }
 
 
-std::vector<std::tuple<qint64, qint64>>
-Slicer::slice()
+MarkerList Slicer::slice()
 {
     if (m_errCode == SlicerErrorCode::SLICER_INVALID_ARGUMENT)
     {
         return {};
     }
 
-    auto frames = m_decoder->TotalSamples();
-    auto channels = m_decoder->Format().Channels();
+    qint64 frames = m_decoder->frames();
+    int channels = m_decoder->channels();
 
     if ((frames + m_hopSize - 1) / m_hopSize <= m_minLength)
     {
         return {{ 0, frames }};
     }
 
-    auto rms_size = frames / m_hopSize + 1;
+    qint64 rms_size = frames / m_hopSize + 1;
     std::vector<double> rms_list(rms_size);
     qint64 rms_index = 0;
     
-    MovingRMS movingRms((int)m_winSize);
-    auto padding = m_winSize / 2;
-    for (auto i = 0; i < padding; i++) {
+    MovingRMS movingRms(m_winSize);
+    qint64 padding = m_winSize / 2;
+    for (qint64 i = 0; i < padding; i++) {
         movingRms.push(0.0);
     }
 
+    qint64 samplesRead = 0;
     {
-        std::vector<float> initialBuffer(padding * channels);
-        int samplesRead = m_decoder->Read(initialBuffer.data(), 0, initialBuffer.size());
-        int framesRead = samplesRead / channels;
-        for (int i = 0; i < framesRead; i++) {
-            float monoSample = 0.0f;
+        std::vector<double> initialBuffer(padding * channels);
+        samplesRead = m_decoder->read(initialBuffer.data(), padding * channels);
+        qint64 framesRead = samplesRead / channels;
+        for (qint64 i = 0; i < framesRead; i++) {
+            double monoSample = 0.0;
             for (int j = 0; j < channels; j++) {
-                monoSample += initialBuffer[i * channels + j] / (float)channels;
+                monoSample += initialBuffer[i * channels + j] / static_cast<double>(channels);
             }
             movingRms.push(monoSample);
         }
@@ -133,19 +146,18 @@ Slicer::slice()
 
     rms_list[rms_index++] = movingRms.rms();
 
-    std::vector<float> buffer(m_hopSize * channels);
+    std::vector<double> buffer(m_hopSize * channels);
 
-    int samplesRead = 0;
     do {
-        samplesRead = m_decoder->Read(buffer.data(), 0, buffer.size());
+        samplesRead = m_decoder->read(buffer.data(), m_hopSize * channels);
         if (samplesRead == 0) {
             break;
         }
-        int framesRead = samplesRead / channels;
-        for (int i = 0; i < framesRead; i++) {
-            float monoSample = 0.0f;
+        qint64 framesRead = samplesRead / channels;
+        for (qint64 i = 0; i < framesRead; i++) {
+            double monoSample = 0.0;
             for (int j = 0; j < channels; j++) {
-                monoSample += buffer[i * channels + j] / (float)channels;
+                monoSample += buffer[i * channels + j] / static_cast<double>(channels);
             }
             movingRms.push(monoSample);
         }
@@ -169,7 +181,7 @@ Slicer::slice()
 
     //std::vector<double> rms_list = get_rms<float>(samples, (qint64) m_winSize, (qint64) m_hopSize);
 
-    std::vector<std::tuple<qint64, qint64>> sil_tags;
+    MarkerList sil_tags;
     qint64 silence_start = 0;
     bool has_silence_start = false;
     qint64 clip_start = 0;
@@ -262,21 +274,21 @@ Slicer::slice()
         return {{ 0, frames }};
     }
     else {
-        std::vector<std::tuple<qint64, qint64>> chunks;
+        MarkerList chunks;
         qint64 begin = 0, end = 0;
-        qint64 s0 = std::get<0>(sil_tags[0]);
+        qint64 s0 = sil_tags[0].first;
         if (s0 > 0) {
             begin = 0;
             end = s0;
             chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
         }
         for (auto i = 0; i < sil_tags.size() - 1; i++) {
-            begin = std::get<1>(sil_tags[i]);
-            end = std::get<0>(sil_tags[i + 1]);
+            begin = sil_tags[i].second;
+            end = sil_tags[i + 1].first;
             chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
         }
-        if (std::get<1>(sil_tags.back()) < total_frames) {
-            begin = std::get<1>(sil_tags.back());
+        if (sil_tags.back().second < total_frames) {
+            begin = sil_tags.back().second;
             end = total_frames;
             chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
         }
@@ -286,6 +298,10 @@ Slicer::slice()
 
 SlicerErrorCode Slicer::getErrorCode() {
     return m_errCode;
+}
+
+QString Slicer::getErrorMsg() {
+    return m_errMsg;
 }
 
 template<class T>
@@ -358,17 +374,6 @@ inline std::vector<double> get_rms(const std::vector<T>& arr, qint64 frame_lengt
     }
 
     return rms;
-}
-
-template<class T>
-inline T divIntRound(T n, T d) {
-    /*
-     * Integer division rounding to the closest integer, without converting to floating point numbers.
-     */
-    // T should be an integer type (int, int64_t, qint64, ...)
-    return ((n < 0) ^ (d < 0)) ? \
-        ((n - (d / 2)) / d) : \
-        ((n + (d / 2)) / d);
 }
 
 template<class T>

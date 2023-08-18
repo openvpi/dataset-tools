@@ -1,13 +1,16 @@
+#include <QColor>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QIODevice>
+#include <QList>
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QRunnable>
 #include <QString>
 #include <QStringList>
+#include <QStyleFactory>
 #include <QSysInfo>
 #include <QTextStream>
 #include <QThreadPool>
@@ -20,10 +23,9 @@
 #include "workthread.h"
 
 
-
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
-    resize(1920, 1080);
+    initStylesMenu();
 
     m_threadpool = new QThreadPool(this);
     m_threadpool->setMaxThreadCount(1);
@@ -31,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     connect(ui->btnAddFiles, &QPushButton::clicked, this, &MainWindow::slot_addAudioFiles);
     connect(ui->btnBrowse, &QPushButton::clicked, this, &MainWindow::slot_browseOutputDir);
+    connect(ui->btnRemoveListItem, &QPushButton::clicked, this, &MainWindow::slot_removeListItem);
     connect(ui->btnClearList, &QPushButton::clicked, this, &MainWindow::slot_clearAudioList);
     connect(ui->pushButtonAbout, &QPushButton::clicked, this, &MainWindow::slot_about);
     connect(ui->pushButtonStart, &QPushButton::clicked, this, &MainWindow::slot_start);
@@ -40,6 +43,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->actionAboutApp, &QAction::triggered, this, &MainWindow::slot_about);
     connect(ui->actionAboutQt, &QAction::triggered, this, &MainWindow::slot_aboutQt);
     connect(ui->actionQuit, &QAction::triggered, this, &QCoreApplication::quit, Qt::QueuedConnection);
+    connect(ui->actionGroupThemes, &QActionGroup::triggered, [](QAction *action) {
+        QApplication::setStyle(action->text());
+    });
 
     ui->progressBar->setMinimum(0);
     ui->progressBar->setMaximum(100);
@@ -59,9 +65,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     m_workTotal = 0;
     m_workFinished = 0;
+    m_workError = 0;
     m_processing = false;
 
-    setWindowTitle(QApplication::applicationName());
+    setWindowTitle(qApp->applicationName());
     setAcceptDrops(true);
 
 #ifdef Q_OS_WIN
@@ -125,6 +132,18 @@ void MainWindow::slot_addFolder() {
     }
 }
 
+void MainWindow::slot_removeListItem() {
+    if (m_processing) {
+        warningProcessNotFinished();
+        return;
+    }
+
+    auto itemList = ui->listWidgetTaskList->selectedItems();
+    for (auto item : itemList) {
+        delete item;
+    }
+}
+
 void MainWindow::slot_clearAudioList() {
     if (m_processing) {
         warningProcessNotFinished();
@@ -135,7 +154,7 @@ void MainWindow::slot_clearAudioList() {
 }
 
 void MainWindow::slot_about() {
-    // QString arch = QSysInfo::currentCpuArchitecture();
+    QString arch = QSysInfo::currentCpuArchitecture();
     // QString aboutMsg = QString(
     //     "<p><b>About Audio Slicer</b></p>"
     //     "<p>"
@@ -157,7 +176,8 @@ void MainWindow::slot_about() {
 
 
     QMessageBox::information(this, qApp->applicationName(),
-                             QString("%1, Copyright OpenVPI.").arg(qApp->applicationName()));
+                             QString("%1 %2 (%3), Copyright OpenVPI.").arg(
+                                 qApp->applicationName(), APP_VERSION, arch));
 
     // QMessageBox::information(this, "About", aboutMsg);
 }
@@ -169,6 +189,11 @@ void MainWindow::slot_aboutQt() {
 void MainWindow::slot_start() {
     if (m_processing) {
         warningProcessNotFinished();
+        return;
+    }
+
+    if (!(ui->cbSlice->isChecked() || ui->cbSaveMarkers->isChecked())) {
+        QMessageBox::warning(this, qApp->applicationName(), "Must save audio files or save markers!");
         return;
     }
 
@@ -187,6 +212,8 @@ void MainWindow::slot_start() {
 
     ui->txtLogs->clear();
 
+    m_failIndex.clear();
+
 #ifdef Q_OS_WIN
     // Show taskbar progress (Windows 7 and later)
     if (m_pTaskbarList3) {
@@ -198,15 +225,25 @@ void MainWindow::slot_start() {
     setProcessing(true);
     for (int i = 0; i < item_count; i++) {
         auto item = ui->listWidgetTaskList->item(i);
+        item->setForeground(QBrush());
+        item->setBackground(QBrush());
         auto path = item->data(Qt::ItemDataRole::UserRole + 1).toString();
         auto runnable =
-            new WorkThread(path, ui->lineEditOutputDir->text(), ui->lineEditThreshold->text().toDouble(),
-                           ui->lineEditMinLen->text().toULongLong(), ui->lineEditMinInterval->text().toULongLong(),
-                           ui->lineEditHopSize->text().toULongLong(), ui->lineEditMaxSilence->text().toULongLong(),
-                           ui->cmbOutputWaveFormat->currentData().toInt());
+            new WorkThread(path, ui->lineEditOutputDir->text(),
+                           ui->lineEditThreshold->text().toDouble(),
+                           ui->lineEditMinLen->text().toLongLong(),
+                           ui->lineEditMinInterval->text().toLongLong(),
+                           ui->lineEditHopSize->text().toLongLong(),
+                           ui->lineEditMaxSilence->text().toLongLong(),
+                           ui->cmbOutputWaveFormat->currentData().toInt(),
+                           ui->cbSlice->isChecked(),
+                           ui->cbSaveMarkers->isChecked(),
+                           ui->cbLoadMarkers->isChecked(),
+                           i);
         connect(runnable, &WorkThread::oneFinished, this, &MainWindow::slot_oneFinished);
         connect(runnable, &WorkThread::oneInfo, this, &MainWindow::slot_oneInfo);
         connect(runnable, &WorkThread::oneError, this, &MainWindow::slot_oneError);
+        connect(runnable, &WorkThread::oneFailed, this, &MainWindow::slot_oneFailed);
         m_threadpool->start(runnable);
     }
 }
@@ -229,10 +266,16 @@ void MainWindow::slot_saveLogs() {
     writeFile.close();
 }
 
-void MainWindow::slot_oneFinished(const QString &filename) {
+void MainWindow::slot_oneFinished(const QString &filename, int listIndex) {
     m_workFinished++;
     ui->progressBar->setValue(m_workFinished);
     logMessage(QString("%1 finished.").arg(filename));
+
+    if (listIndex >= 0) {
+        auto item = ui->listWidgetTaskList->item(listIndex);
+        item->setForeground(QBrush());
+        item->setBackground(QBrush());
+    }
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
         m_pTaskbarList3->SetProgressState((HWND) this->winId(), TBPF_NORMAL);
@@ -250,10 +293,21 @@ void MainWindow::slot_oneInfo(const QString &infomsg) {
 }
 
 void MainWindow::slot_oneError(const QString &errmsg) {
+    logMessage("[ERROR] " + errmsg);
+}
+
+void MainWindow::slot_oneFailed(const QString &filename, int listIndex) {
     m_workFinished++;
     m_workError++;
-    logMessage(errmsg);
+    m_failIndex.append(filename);
+    logMessage(QString("%1 failed.").arg(filename));
     ui->progressBar->setValue(m_workFinished);
+
+    if (listIndex >= 0) {
+        auto item = ui->listWidgetTaskList->item(listIndex);
+        item->setForeground(QColor(0x9c, 0x00, 0x06));
+        item->setBackground(QColor(0xff, 0xc7, 0xce));
+    }
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
         m_pTaskbarList3->SetProgressState((HWND) this->winId(), TBPF_NORMAL);
@@ -274,19 +328,28 @@ void MainWindow::slot_threadFinished() {
                    .arg(m_workError)
                    .arg(m_workTotal);
     logMessage(msg);
+    QString failSummary;
+    if (m_workError > 0) {
+        failSummary = "Failed tasks:\n";
+        for (const QString &filename : m_failIndex) {
+            failSummary += "  " + filename + "\n";
+        }
+        logMessage(failSummary);
+        m_failIndex.clear();
+    }
 #ifdef Q_OS_WIN
     if (m_pTaskbarList3) {
         m_pTaskbarList3->SetProgressState((HWND) this->winId(), TBPF_NOPROGRESS);
     }
 #endif
-    QMessageBox::information(this, QApplication::applicationName(), msg);
+    QMessageBox::information(this, qApp->applicationName(), msg);
     m_workFinished = 0;
     m_workError = 0;
     m_workTotal = 0;
 }
 
 void MainWindow::warningProcessNotFinished() {
-    QMessageBox::warning(this, QApplication::applicationName(), "Please wait for slicing to complete!");
+    QMessageBox::warning(this, qApp->applicationName(), "Please wait for slicing to complete!");
 }
 
 void MainWindow::setProcessing(bool processing) {
@@ -295,6 +358,7 @@ void MainWindow::setProcessing(bool processing) {
     ui->pushButtonStart->setEnabled(enabled);
     ui->btnAddFiles->setEnabled(enabled);
     ui->listWidgetTaskList->setEnabled(enabled);
+    ui->btnRemoveListItem->setEnabled(enabled);
     ui->btnClearList->setEnabled(enabled);
     ui->lineEditThreshold->setEnabled(enabled);
     ui->lineEditMinLen->setEnabled(enabled);
@@ -303,6 +367,12 @@ void MainWindow::setProcessing(bool processing) {
     ui->lineEditMaxSilence->setEnabled(enabled);
     ui->lineEditOutputDir->setEnabled(enabled);
     ui->btnBrowse->setEnabled(enabled);
+    ui->cmbOutputWaveFormat->setEnabled(enabled);
+    ui->cbSlice->setEnabled(enabled);
+    ui->cbSaveMarkers->setEnabled(enabled);
+    ui->cbLoadMarkers->setEnabled(enabled);
+    ui->actionAddFile->setEnabled(enabled);
+    ui->actionAddFolder->setEnabled(enabled);
     m_processing = processing;
 }
 
@@ -358,9 +428,20 @@ void MainWindow::dropEvent(QDropEvent *event) {
             continue;
         }
 
-        auto *item = new QListWidgetItem();
-        item->setText(QFileInfo(path).fileName());
-        item->setData(Qt::ItemDataRole::UserRole + 1, path);
-        ui->listWidgetTaskList->addItem(item);
+        addSingleAudioFile(path);
+    }
+}
+
+void MainWindow::initStylesMenu() {
+    auto availableStyles = QStyleFactory::keys();
+    for (const QString &style : availableStyles) {
+        auto styleAction = new QAction(style, ui->menuViewThemes);
+        styleAction->setCheckable(true);
+        ui->actionGroupThemes->addAction(styleAction);
+        ui->menuViewThemes->addAction(styleAction);
+    }
+    if (!availableStyles.isEmpty()) {
+        auto firstStyleAction = ui->actionGroupThemes->actions().first();
+        firstStyleAction->setChecked(true);
     }
 }

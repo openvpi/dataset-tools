@@ -9,6 +9,7 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
+#include <QStringList>
 
 #ifdef Q_OS_WIN
 #include <ShlObj.h>
@@ -36,14 +37,16 @@ public slots:
     void slot_browseOutputDir();
     void slot_addAudioFiles();
     void slot_addFolder();
+    void slot_removeListItem();
     void slot_clearAudioList();
     void slot_about();
     void slot_aboutQt();
     void slot_start();
     void slot_saveLogs();
-    void slot_oneFinished(const QString &filename);
+    void slot_oneFinished(const QString &filename, int listIndex);
     void slot_oneInfo(const QString &infomsg);
     void slot_oneError(const QString &errmsg);
+    void slot_oneFailed(const QString &errmsg, int listIndex);
     void slot_threadFinished();
 
 private:
@@ -53,12 +56,14 @@ private:
     int m_workTotal;
     int m_workFinished;
     int m_workError;
+    QStringList m_failIndex;
     QThreadPool *m_threadpool;
 
     void warningProcessNotFinished();
     void setProcessing(bool processing);
     void logMessage(const QString &txt);
     void addSingleAudioFile(const QString &fullPath);
+    void initStylesMenu();
 
 #ifdef Q_OS_WIN
     private:
