@@ -11,6 +11,8 @@
 #include "SwitchButton.h"
 
 int main(int argc, char *argv[]) {
+    qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
     QApplication::setFont(QFont("Microsoft Yahei UI", 9));
 
