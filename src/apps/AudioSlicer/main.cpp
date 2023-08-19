@@ -8,6 +8,8 @@
 //#endif
 
 int main(int argc, char *argv[]) {
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
     a.setApplicationName("Audio Slicer");
     a.setApplicationDisplayName("Audio Slicer");
