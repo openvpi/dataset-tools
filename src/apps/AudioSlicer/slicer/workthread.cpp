@@ -9,7 +9,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QStringRef>
+#include <QStringView>
 #include <QRegularExpression>
 #include <QTime>
 
@@ -44,6 +44,7 @@ inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outF
                                    qint64 totalSize = std::numeric_limits<qint64>::max());
 inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, MarkerError *ok = nullptr);
 inline QString samplesToDecimalFormat(qint64 samples, int sampleRate);
+inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampleRate, bool *ok = nullptr);
 inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRate, bool *ok = nullptr);
 
 WorkThread::WorkThread(QString filename, QString outPath, double threshold, qint64 minLength, qint64 minInterval,
@@ -239,7 +240,7 @@ inline QString samplesToDecimalFormat(qint64 samples, int sampleRate) {
     return QString("%1:%2.%3").arg(minutePart).arg(secondPart).arg(decimalPart);
 }
 
-inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRate, bool *ok) {
+inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampleRate, bool *ok) {
     if (sampleRate <= 0) {
         if (ok) *ok = false;
         return 0;
@@ -252,11 +253,11 @@ inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRat
     }
     bool hasParseError = false;
     bool parseOk;
-    qint64 mm = match.capturedRef(0).toLongLong(&parseOk);
+    qint64 mm = match.capturedView(0).toLongLong(&parseOk);
     hasParseError |= !parseOk;
-    qint64 ss = match.capturedRef(1).toLongLong(&parseOk);
+    qint64 ss = match.capturedView(1).toLongLong(&parseOk);
     hasParseError |= !parseOk;
-    qint64 zzz = match.capturedRef(2).toLongLong(&parseOk);
+    qint64 zzz = match.capturedView(2).toLongLong(&parseOk);
     hasParseError |= !parseOk;
     if (hasParseError) {
         if (ok) *ok = false;
@@ -265,6 +266,10 @@ inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRat
     qint64 samples = (mm * 60 + ss) * sampleRate + divIntRound(zzz * sampleRate, static_cast<qint64>(1000));
     if (ok) *ok = true;
     return samples;
+}
+
+inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRate, bool *ok) {
+    return decimalFormatToSamples(QStringView{decimalFormat}, sampleRate, ok);
 }
 
 inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outFileName, int sampleRate,
@@ -339,7 +344,7 @@ inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, Mark
             hasReadFirstLine = true;
             continue;
         }
-        auto split = line.splitRef('\t');
+        auto split = QStringView{line}.split('\t');
         // [0]Name [1]Start [2]Duration [3]Time Format [4]Type [5]Description
         // We only need "Start", "Duration", and "Time Format". Read them by position.
         if (split.size() < 4) {
@@ -355,7 +360,7 @@ inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, Mark
             bool hasParseError = false;
             bool parseOk;
 
-            int parsedSampleRate = regexSampleMatch.capturedRef(1).toInt(&parseOk);
+            int parsedSampleRate = regexSampleMatch.capturedView(1).toInt(&parseOk);
             hasParseError |= !parseOk;
             hasParseError |= (parsedSampleRate <= 0);
 
