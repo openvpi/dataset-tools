@@ -68,7 +68,7 @@ void SeekBar::paintEvent(QPaintEvent *event) {
 
     // Draw slider track inactive(background)
     QPen pen;
-    pen.setColor(QColor(217, 217, 217));
+    pen.setColor(m_trackInactiveColor);
     pen.setCapStyle(Qt::RoundCap);
     pen.setWidth(m_trackPenWidth);
     painter.setPen(pen);
@@ -78,16 +78,16 @@ void SeekBar::paintEvent(QPaintEvent *event) {
     m_activeEndPoint.setX(m_valuePos);
 
     // Draw slider track active
-    pen.setColor(QColor(112, 156, 255));
+    pen.setColor(m_trackActiveColor);
     pen.setWidth(m_trackPenWidth);
     painter.setPen(pen);
     painter.drawLine(m_activeStartPoint, m_activeEndPoint);
 
     // Draw handle
-    pen.setColor(QColor(255, 255, 255));
+    pen.setColor(m_thumbBorderColor);
     pen.setWidth(m_handlePenWidth);
     painter.setPen(pen);
-    painter.setBrush(QColor(112, 156, 255));
+    painter.setBrush(m_trackActiveColor);
     painter.drawEllipse(m_activeEndPoint, m_handleRadius, m_handleRadius);
 
     painter.end();
@@ -190,4 +190,31 @@ void SeekBar::setRange(double min, double max) {
 
 void SeekBar::resizeEvent(QResizeEvent *event) {
     calculateParams();
+}
+
+QColor SeekBar::trackInactiveColor() const {
+    return m_trackInactiveColor;
+}
+
+void SeekBar::setTrackInactiveColor(const QColor &color) {
+    m_trackInactiveColor = color;
+    update();
+}
+
+QColor SeekBar::trackActiveColor() const {
+    return m_trackActiveColor;
+}
+
+void SeekBar::setTrackActiveColor(const QColor &color) {
+    m_trackActiveColor = color;
+    update();
+}
+
+QColor SeekBar::thumbBorderColor() const {
+    return m_thumbBorderColor;
+}
+
+void SeekBar::setThumbBorderColor(const QColor &color) {
+    m_thumbBorderColor = color;
+    update();
 }

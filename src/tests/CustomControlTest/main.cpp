@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
     sliderSecondaryValue->setMax(100);
     sliderSecondaryValue->setMin(0);
     sliderSecondaryValue->setValue(75);
+    sliderSecondaryValue->setStyleSheet(QString("qproperty-trackActiveColor: rgb(159, 189, 255);"));
     QObject::connect(sliderSecondaryValue, &SeekBar::valueChanged, &w, [=](int value) {
         progressBar1->setSecondaryValue(value);
         progressBar3->setSecondaryValue(value);
@@ -120,6 +121,8 @@ int main(int argc, char *argv[]) {
     sliderCurrentTaskValue->setMax(100);
     sliderCurrentTaskValue->setMin(0);
     sliderCurrentTaskValue->setValue(25);
+    sliderCurrentTaskValue->setStyleSheet(QString("qproperty-trackActiveColor: rgb(113, 218, 255); "
+                                                  "qproperty-trackInactiveColor: rgb(112, 156, 255); "));
     QObject::connect(sliderCurrentTaskValue, &SeekBar::valueChanged, &w, [=](int value) {
         progressBar1->setCurrentTaskValue(value);
         progressBar3->setCurrentTaskValue(value);

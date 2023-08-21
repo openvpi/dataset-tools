@@ -13,6 +13,9 @@ class SeekBarPrivate;
 
 class QMWIDGETS_EXPORT SeekBar : public QWidget {
     Q_OBJECT
+    Q_PROPERTY(QColor trackInactiveColor READ trackInactiveColor WRITE setTrackInactiveColor)
+    Q_PROPERTY(QColor trackActiveColor READ trackActiveColor WRITE setTrackActiveColor)
+    Q_PROPERTY(QColor thumbBorderColor READ thumbBorderColor WRITE setThumbBorderColor)
 
 public:
     explicit SeekBar(QWidget *parent = nullptr);
@@ -66,6 +69,15 @@ protected:
 
 private:
     SeekBarPrivate *d;
+    QColor m_trackInactiveColor = QColor(217, 217, 217);
+    QColor trackInactiveColor() const;
+    void setTrackInactiveColor(const QColor &color);
+    QColor m_trackActiveColor = QColor(112, 156, 255);
+    QColor trackActiveColor() const;
+    void setTrackActiveColor(const QColor &color);
+    QColor m_thumbBorderColor = QColor(255, 255, 255);
+    QColor thumbBorderColor() const;
+    void setThumbBorderColor(const QColor &color);
 };
 
 #endif // DATASET_TOOLS_SEEKBAR_H
