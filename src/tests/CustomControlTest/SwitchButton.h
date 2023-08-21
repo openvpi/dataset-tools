@@ -13,6 +13,7 @@ class QMWIDGETS_EXPORT SwitchButton : public QPushButton{
     Q_OBJECT
     Q_PROPERTY(bool value READ value WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(double apparentValue READ apparentValue WRITE setApparentValue)
+    Q_PROPERTY(int thumbScaleRatio READ thumbScaleRatio WRITE setThumbScaleRatio)
 
 public:
     explicit SwitchButton(QWidget *parent = nullptr);
@@ -38,16 +39,23 @@ protected:
     QPoint m_trackEnd;
     int m_trackLength;
     QPropertyAnimation *m_valueAnimation;
+    QPropertyAnimation *m_thumbHoverAnimation;
 
     void initUi(QWidget *parent);
     void calculateParams();
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    bool eventFilter(QObject *object, QEvent *event) override;
 
 private:
+    // Animation
     int m_apparentValue = 0;
     int apparentValue() const;
     void setApparentValue(int x);
+
+    int m_thumbScaleRatio = 100; // max = 100%
+    int thumbScaleRatio() const;
+    void setThumbScaleRatio(int ratio);
 };
 
 

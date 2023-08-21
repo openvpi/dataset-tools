@@ -3,6 +3,8 @@
 //
 
 #include <QPainter>
+#include <QDebug>
+#include <QEvent>
 
 #include "SwitchButton.h"
 
@@ -33,16 +35,25 @@ void SwitchButton::setValue(bool value) {
 }
 
 void SwitchButton::initUi(QWidget *parent) {
+    setAttribute(Qt::WA_Hover, true);
+    installEventFilter(this);
+
     m_valueAnimation = new QPropertyAnimation;
     m_valueAnimation->setTargetObject(this);
     m_valueAnimation->setPropertyName("apparentValue");
     m_valueAnimation->setDuration(250);
     m_valueAnimation->setEasingCurve(QEasingCurve::InOutCubic);
 
+    m_thumbHoverAnimation = new QPropertyAnimation;
+    m_thumbHoverAnimation->setTargetObject(this);
+    m_thumbHoverAnimation->setPropertyName("thumbScaleRatio");
+    m_thumbHoverAnimation->setDuration(200);
+    m_thumbHoverAnimation->setEasingCurve(QEasingCurve::OutCubic);
+
 //    setMinimumSize(32, 16);
 //    setMaximumSize(32, 16);
-    setMinimumSize(48, 24);
-    setMaximumSize(48, 24);
+    setMinimumSize(44, 22);
+    setMaximumSize(44, 22);
     calculateParams();
     connect(this, &QPushButton::clicked, this, [&]() {
         this->setValue(!m_value);
@@ -79,12 +90,14 @@ void SwitchButton::paintEvent(QPaintEvent *event) {
     painter.drawLine(m_trackStart, m_trackEnd);
 
     // Draw thumb
-    auto left = m_apparentValue * m_trackLength / 255 + m_halfRectHeight;
-    auto handlePos = QPoint(left, m_halfRectHeight);
+    auto left = m_apparentValue * m_trackLength / 255.0 + m_halfRectHeight;
+//    qDebug() << m_apparentValue;
+    auto handlePos = QPointF(left, m_halfRectHeight);
+    auto thumbRadius = m_thumbRadius * m_thumbScaleRatio / 100.0;
 
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor(255, 255, 255));
-    painter.drawEllipse(handlePos, m_thumbRadius, m_thumbRadius);
+    painter.drawEllipse(handlePos, thumbRadius, thumbRadius);
 }
 
 void SwitchButton::resizeEvent(QResizeEvent *event) {
@@ -98,4 +111,40 @@ int SwitchButton::apparentValue() const {
 void SwitchButton::setApparentValue(int x) {
     m_apparentValue = x;
     repaint();
+}
+
+int SwitchButton::thumbScaleRatio() const {
+    return m_thumbScaleRatio;
+}
+
+void SwitchButton::setThumbScaleRatio(int ratio) {
+    m_thumbScaleRatio = ratio;
+    repaint();
+}
+bool SwitchButton::eventFilter(QObject *object, QEvent *event) {
+    auto type = event->type();
+    if (type == QEvent::HoverEnter) {
+        //        qDebug() << "Hover Enter";
+        m_thumbHoverAnimation->stop();
+        m_thumbHoverAnimation->setStartValue(m_thumbScaleRatio);
+        m_thumbHoverAnimation->setEndValue(125);
+        m_thumbHoverAnimation->start();
+    } else if (type == QEvent::HoverLeave) {
+        //        qDebug() << "Hover Leave";
+        m_thumbHoverAnimation->stop();
+        m_thumbHoverAnimation->setStartValue(m_thumbScaleRatio);
+        m_thumbHoverAnimation->setEndValue(100);
+        m_thumbHoverAnimation->start();
+    } else if (type == QEvent::MouseButtonPress) {
+        m_thumbHoverAnimation->stop();
+        m_thumbHoverAnimation->setStartValue(m_thumbScaleRatio);
+        m_thumbHoverAnimation->setEndValue(85);
+        m_thumbHoverAnimation->start();
+    } else if (type == QEvent::MouseButtonRelease) {
+        m_thumbHoverAnimation->stop();
+        m_thumbHoverAnimation->setStartValue(m_thumbScaleRatio);
+        m_thumbHoverAnimation->setEndValue(125);
+        m_thumbHoverAnimation->start();
+    }
+    return QObject::eventFilter(object, event);
 }

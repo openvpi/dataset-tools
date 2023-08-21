@@ -90,7 +90,7 @@ void SeekBar::paintEvent(QPaintEvent *event) {
 
     // Calculate handle
     m_handlePenWidth = m_halfHeight * m_thumbBorderRatio / 255.0;
-    qDebug() << m_thumbBorderRatio;
+//    qDebug() << m_thumbBorderRatio;
     m_handleRadius = m_halfHeight - m_handlePenWidth;
     pen.setColor(m_thumbBorderColor);
     pen.setWidthF(m_handlePenWidth);
