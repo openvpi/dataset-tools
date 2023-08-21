@@ -5,9 +5,10 @@
 #ifndef DATASET_TOOLS_SEEKBAR_H
 #define DATASET_TOOLS_SEEKBAR_H
 
+#include "QMouseEvent"
 #include "QSlider"
 #include "WidgetsGlobal/QMWidgetsGlobal.h"
-#include "QMouseEvent"
+#include <QPropertyAnimation>
 
 class SeekBarPrivate;
 
@@ -16,6 +17,7 @@ class QMWIDGETS_EXPORT SeekBar : public QWidget {
     Q_PROPERTY(QColor trackInactiveColor READ trackInactiveColor WRITE setTrackInactiveColor)
     Q_PROPERTY(QColor trackActiveColor READ trackActiveColor WRITE setTrackActiveColor)
     Q_PROPERTY(QColor thumbBorderColor READ thumbBorderColor WRITE setThumbBorderColor)
+    Q_PROPERTY(int thumbBorderRatio READ thumbBorderRatio WRITE setThumbBorderRatio)
 
 public:
     explicit SeekBar(QWidget *parent = nullptr);
@@ -33,6 +35,8 @@ signals:
     void valueChanged(double value);
 
 protected:
+    bool eventFilter(QObject *object, QEvent *event) override;
+
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -44,17 +48,18 @@ protected:
     int m_padding = 0;
     int m_trackPenWidth = 0;
     QRect m_rect;
+    int m_halfHeight;
     int m_actualStart = 0;
     int m_actualEnd = 0;
     int m_actualLength = 0;
     QPoint m_trackStartPoint;
     QPoint m_trackEndPoint;
     int m_activeStartPos = 0;
-    QPoint m_activeStartPoint;
-    QPoint m_activeEndPoint;
+    QPointF m_activeStartPoint;
+    QPointF m_activeEndPoint;
     int m_valuePos = 0;
-    int m_handlePenWidth = 0;
-    int m_handleRadius = 0;
+    float m_handlePenWidth = 0;
+    float m_handleRadius = 0;
 
     double m_value = 0;
     double m_defaultValue = 0;
@@ -66,6 +71,7 @@ protected:
     bool handlePressed = false;
     QTimer *timer;
     bool doubleClickLocked = false;
+    QPropertyAnimation *m_thumbHoverAnimation;
 
 private:
     SeekBarPrivate *d;
@@ -78,6 +84,11 @@ private:
     QColor m_thumbBorderColor = QColor(255, 255, 255);
     QColor thumbBorderColor() const;
     void setThumbBorderColor(const QColor &color);
+
+    // Animation
+    int m_thumbBorderRatio = 102; //ratio max = 255;
+    int thumbBorderRatio() const;
+    void setThumbBorderRatio(int ratio);
 };
 
 #endif // DATASET_TOOLS_SEEKBAR_H
