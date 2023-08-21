@@ -12,8 +12,8 @@ public:
     SeekBar *q;
 
     explicit SeekBarPrivate(SeekBar *q) : q(q) {
-        q->setMinimumHeight(24);
-        q->setMaximumHeight(24);
+        q->setMinimumHeight(22);
+        q->setMaximumHeight(22);
     }
 };
 
@@ -25,62 +25,77 @@ SeekBar::SeekBar(QWidget *parent) : QWidget(parent), d(new SeekBarPrivate(this))
         doubleClickLocked = false;
     });
     this->setMinimumWidth(50);
+    calculateParams();
 }
 
 SeekBar::~SeekBar() {
     delete d;
 }
 
+void SeekBar::calculateParams() {
+    m_rect = rect();
+    int halfHeight = m_rect.height() / 2;
+    m_padding = halfHeight;
+    m_trackPenWidth = rect().height() / 3;
+
+    // Calculate slider track
+    m_actualStart = m_rect.left() + m_padding;
+    m_actualEnd = m_rect.right() - m_padding;
+    m_actualLength = m_rect.width() - 2 * m_padding;
+    m_trackStartPoint.setX(m_actualStart);
+    m_trackStartPoint.setY(halfHeight);
+    m_trackEndPoint.setX(m_actualEnd);
+    m_trackEndPoint.setY(halfHeight);
+
+    // Calculate slider track active
+    m_activeStartPos = int(m_actualLength * (m_trackActiveStartValue - m_min) / (m_max - m_min)) + m_padding;
+    m_activeStartPoint.setX(m_activeStartPos);
+    m_activeStartPoint.setY(halfHeight);
+    m_valuePos = int(m_actualLength * (m_value - m_min) / (m_max - m_min)) + m_padding;
+    m_activeEndPoint.setX(m_valuePos);
+    m_activeEndPoint.setY(halfHeight);
+
+    // Calculate handle
+    m_handlePenWidth = int(halfHeight * 0.4);
+    m_handleRadius = halfHeight - m_handlePenWidth;
+}
+
 void SeekBar::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     // Fill background
-    // painter.fillRect(rect(), QColor("#d9d9d9"));
-
-    // Calculate slider track inactive(background)
-    actualLeft = rect().left() + 16;
-    actualRight = rect().right() - 16;
-    actualWidth = rect().width() - 16 - 16;
-    auto trackLeft = QPoint(actualLeft, rect().height() / 2);
-    auto trackRight = QPoint(actualRight, rect().height() / 2);
+//     painter.fillRect(rect(), QColor("#d0d0d0"));
 
     // Draw slider track inactive(background)
     QPen pen;
     pen.setColor(QColor(217, 217, 217));
     pen.setCapStyle(Qt::RoundCap);
-    pen.setWidth(8);
+    pen.setWidth(m_trackPenWidth);
     painter.setPen(pen);
-    painter.drawLine(trackLeft, trackRight);
+    painter.drawLine(m_trackStartPoint, m_trackEndPoint);
 
-    // Calculate slider track active
-    auto activeStartPos = int(actualWidth * (m_trackActiveStartValue - m_min) / (m_max - m_min)) + 16;
-    auto activePoint1 = QPoint(activeStartPos, rect().height() / 2);
-    auto valuePos = int(actualWidth * (m_value - m_min) / (m_max - m_min)) + 16;
-    auto activePoint2 = QPoint(valuePos, rect().height() / 2);
+    m_valuePos = int(m_actualLength * (m_value - m_min) / (m_max - m_min)) + m_padding;
+    m_activeEndPoint.setX(m_valuePos);
 
     // Draw slider track active
     pen.setColor(QColor(112, 156, 255));
-    pen.setWidth(8);
+    pen.setWidth(m_trackPenWidth);
     painter.setPen(pen);
-    painter.drawLine(activePoint1, activePoint2);
+    painter.drawLine(m_activeStartPoint, m_activeEndPoint);
 
     // Draw handle
-    //    auto handleTopLeft = QPoint(rect().width() / 2 + rect().width() / 3 - 8, rect().height() / 2 - 8);
-    //    auto handleBottomRight = QPoint(rect().width() / 2 + rect().width() / 3 + 8, rect().height() / 2 + 8);
-    auto handlePos = activePoint2;
-    auto handleR = 8;
     pen.setColor(QColor(255, 255, 255));
-    pen.setWidth(4);
+    pen.setWidth(m_handlePenWidth);
     painter.setPen(pen);
     painter.setBrush(QColor(112, 156, 255));
-    painter.drawEllipse(handlePos, handleR, handleR);
+    painter.drawEllipse(m_activeEndPoint, m_handleRadius, m_handleRadius);
 
     painter.end();
 }
 
 void SeekBar::setValue(double value) {
     m_value = value;
-    update();
+    repaint();
 }
 
 void SeekBar::setDefaultValue(double value) {
@@ -106,13 +121,13 @@ void SeekBar::reset() {
 
 void SeekBar::mouseMoveEvent(QMouseEvent *event) {
     auto pos = event->pos();
-    if (pos.x() < actualLeft) {
+    if (pos.x() < m_actualStart) {
         setValue(m_min);
         emit valueChanged(m_value);
     }
-    else if (pos.x() < actualRight) {
-        //        auto valuePos = actualWidth * (m_value - m_min) / (m_max - m_min) + 16;
-        auto posValue = (pos.x() - 16) * (m_max - m_min) / actualWidth + m_min;
+    else if (pos.x() < m_actualEnd) {
+        //        auto valuePos = m_actualLength * (m_value - m_min) / (m_max - m_min) + 16;
+        auto posValue = (pos.x() - m_padding) * (m_max - m_min) / m_actualLength + m_min;
         setValue(posValue);
         emit valueChanged(m_value);
     } else {
@@ -135,15 +150,19 @@ void SeekBar::mousePressEvent(QMouseEvent *event) {
     timer->start();
     auto pos = event->pos();
     if (!mouseOnHandle(pos) && !doubleClickLocked) {
-        if (pos.x() >= actualLeft && pos.x() <= actualRight) {
-            //        auto valuePos = actualWidth * (m_value - m_min) / (m_max - m_min) + 16;
-            auto posValue = (pos.x() - 16) * (m_max - m_min) / actualWidth + m_min;
+        auto x = pos.x();
+        if (x < m_actualStart) {
+            setValue(m_min);
+        } else if (x < m_actualEnd) {
+            //        auto valuePos = m_actualLength * (m_value - m_min) / (m_max - m_min) + 16;
+            auto posValue = (pos.x() - m_padding) * (m_max - m_min) / m_actualLength + m_min;
             setValue(posValue);
-            emit valueChanged(m_value);
+        } else {
+            setValue(m_max);
         }
+        emit valueChanged(m_value);
     }
     doubleClickLocked = true;
-    QWidget::mousePressEvent(event);
 }
 
 void SeekBar::mouseReleaseEvent(QMouseEvent *event) {
@@ -152,7 +171,7 @@ void SeekBar::mouseReleaseEvent(QMouseEvent *event) {
 
 bool SeekBar::mouseOnHandle(const QPoint &mousePos) const {
     auto pos = mousePos;
-    auto valuePos = actualWidth * (m_value - m_min) / (m_max - m_min) + 16;
+    auto valuePos = m_actualLength * (m_value - m_min) / (m_max - m_min) + 16;
     if (pos.x() >= valuePos - 8 - 4 && pos.x() <= valuePos + 8 + 4) {
         return true;
     }
@@ -167,4 +186,8 @@ void SeekBar::setTrackActiveStartValue(double pos) {
 void SeekBar::setRange(double min, double max) {
     setMin(min);
     setMax(max);
+}
+
+void SeekBar::resizeEvent(QResizeEvent *event) {
+    calculateParams();
 }
