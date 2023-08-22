@@ -1,4 +1,5 @@
 #include "mainwindow_ui.h"
+#include "enumerations.h"
 
 void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     if (MainWindow->objectName().isEmpty())
@@ -57,7 +58,7 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
 
     verticalLayout_2->addWidget(listWidgetTaskList);
 
-    hBoxListButtons = new QHBoxLayout(gBoxTaskList);
+    hBoxListButtons = new QHBoxLayout();
     hBoxListButtons->setObjectName("hBoxListButtons");
 
     btnRemoveListItem = new QPushButton(gBoxTaskList);
@@ -75,117 +76,154 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     //hBoxMain->addWidget(gBoxTaskList);
 
     // Settings Group Box (right)
-    gBoxSettings = new QGroupBox(centralwidget);
+    gBoxSettings = new QScrollArea(centralwidget);
     gBoxSettings->setObjectName("gBoxSettings");
-    sizePolicy1.setHeightForWidth(gBoxSettings->sizePolicy().hasHeightForWidth());
-    gBoxSettings->setSizePolicy(sizePolicy1);
-    verticalLayout_3 = new QVBoxLayout(gBoxSettings);
-    verticalLayout_3->setObjectName("verticalLayout_3");
+    gBoxSettings->setWidgetResizable(true);
+    //sizePolicy1.setHeightForWidth(gBoxSettings->sizePolicy().hasHeightForWidth());
+    //gBoxSettings->setSizePolicy(sizePolicy1);
+
+    gBoxSettings->setFrameShape(QFrame::NoFrame);
+    gBoxSettings->setFrameShadow(QFrame::Plain);
+    gBoxSettings->setLineWidth(0);
+    gBoxSettings->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    settingsContainer = new QWidget(gBoxSettings);
+    settingsContainer->setObjectName("settingsContainer");
+    vlSettingsArea = new QVBoxLayout(gBoxSettings);
+    vlSettingsArea->setObjectName("vlSettingsArea");
+    vlSettingsArea->setMargin(0);
+    settingsContainer->setLayout(vlSettingsArea);
+    gBoxSettings->setWidget(settingsContainer);
+
+    // Parameters
+    gBoxParameters = new QGroupBox(gBoxSettings);
+    gBoxParameters->setObjectName("gBoxParameters");
+
     formLayout = new QFormLayout();
     formLayout->setObjectName("formLayout");
-    lblThreshold = new QLabel(gBoxSettings);
+    lblThreshold = new QLabel(gBoxParameters);
     lblThreshold->setObjectName("lblThreshold");
 
     formLayout->setWidget(0, QFormLayout::LabelRole, lblThreshold);
 
-    lineEditThreshold = new QLineEdit(gBoxSettings);
+    lineEditThreshold = new QLineEdit(gBoxParameters);
     lineEditThreshold->setObjectName("lineEditThreshold");
     lineEditThreshold->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
     formLayout->setWidget(0, QFormLayout::FieldRole, lineEditThreshold);
 
-    lblMinLen = new QLabel(gBoxSettings);
+    lblMinLen = new QLabel(gBoxParameters);
     lblMinLen->setObjectName("lblMinLen");
 
     formLayout->setWidget(1, QFormLayout::LabelRole, lblMinLen);
 
-    lineEditMinLen = new QLineEdit(gBoxSettings);
+    lineEditMinLen = new QLineEdit(gBoxParameters);
     lineEditMinLen->setObjectName("lineEditMinLen");
     lineEditMinLen->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
     formLayout->setWidget(1, QFormLayout::FieldRole, lineEditMinLen);
 
-    lblMinInterval = new QLabel(gBoxSettings);
+    lblMinInterval = new QLabel(gBoxParameters);
     lblMinInterval->setObjectName("lblMinInterval");
 
     formLayout->setWidget(2, QFormLayout::LabelRole, lblMinInterval);
 
-    lineEditMinInterval = new QLineEdit(gBoxSettings);
+    lineEditMinInterval = new QLineEdit(gBoxParameters);
     lineEditMinInterval->setObjectName("lineEditMinInterval");
     lineEditMinInterval->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
     formLayout->setWidget(2, QFormLayout::FieldRole, lineEditMinInterval);
 
-    lblHopSize = new QLabel(gBoxSettings);
+    lblHopSize = new QLabel(gBoxParameters);
     lblHopSize->setObjectName("lblHopSize");
 
     formLayout->setWidget(3, QFormLayout::LabelRole, lblHopSize);
 
-    lineEditHopSize = new QLineEdit(gBoxSettings);
+    lineEditHopSize = new QLineEdit(gBoxParameters);
     lineEditHopSize->setObjectName("lineEditHopSize");
     lineEditHopSize->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
     formLayout->setWidget(3, QFormLayout::FieldRole, lineEditHopSize);
 
-    lblMaxSilence = new QLabel(gBoxSettings);
+    lblMaxSilence = new QLabel(gBoxParameters);
     lblMaxSilence->setObjectName("lblMaxSilence");
 
     formLayout->setWidget(4, QFormLayout::LabelRole, lblMaxSilence);
 
-    lineEditMaxSilence = new QLineEdit(gBoxSettings);
+    lineEditMaxSilence = new QLineEdit(gBoxParameters);
     lineEditMaxSilence->setObjectName("lineEditMaxSilence");
     lineEditMaxSilence->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
     formLayout->setWidget(4, QFormLayout::FieldRole, lineEditMaxSilence);
 
+    gBoxParameters->setLayout(formLayout);
+    vlSettingsArea->addWidget(gBoxParameters);
 
-    verticalLayout_3->addLayout(formLayout);
+    // Audio Options
+    gBoxAudioOptions = new QGroupBox(gBoxSettings);
+    gBoxAudioOptions->setObjectName("gBoxAudioOptions");
 
-    lblOutputDir = new QLabel(gBoxSettings);
+    vlAudioOptions = new QVBoxLayout(gBoxSettings);
+    vlAudioOptions->setObjectName("vlAudioOptions");
+
+    lblOutputWaveFormat = new QLabel(gBoxAudioOptions);
+    lblOutputWaveFormat->setObjectName("lblOutputWaveFormat");
+    vlAudioOptions->addWidget(lblOutputWaveFormat);
+
+    cmbOutputWaveFormat = new QComboBox(gBoxAudioOptions);
+    cmbOutputWaveFormat->setObjectName("cmbOutputWaveFormat");
+    vlAudioOptions->addWidget(cmbOutputWaveFormat);
+    lblOutputDir = new QLabel(gBoxAudioOptions);
     lblOutputDir->setObjectName("lblOutputDir");
 
-    verticalLayout_3->addWidget(lblOutputDir);
+    vlAudioOptions->addWidget(lblOutputDir);
 
     hBoxOutputDir = new QHBoxLayout();
     hBoxOutputDir->setObjectName("hBoxOutputDir");
-    lineEditOutputDir = new QLineEdit(gBoxSettings);
+    lineEditOutputDir = new QLineEdit(gBoxAudioOptions);
     lineEditOutputDir->setObjectName("lineEditOutputDir");
     lineEditOutputDir->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
 
     hBoxOutputDir->addWidget(lineEditOutputDir);
 
-    btnBrowse = new QPushButton(gBoxSettings);
+    btnBrowse = new QPushButton(gBoxAudioOptions);
     btnBrowse->setObjectName("btnBrowse");
 
     hBoxOutputDir->addWidget(btnBrowse);
 
-    verticalLayout_3->addLayout(hBoxOutputDir);
+    vlAudioOptions->addLayout(hBoxOutputDir);
 
-    lblOutputWaveFormat = new QLabel(gBoxSettings);
-    lblOutputWaveFormat->setObjectName("lblOutputWaveFormat");
-    verticalLayout_3->addWidget(lblOutputWaveFormat);
+    gBoxAudioOptions->setLayout(vlAudioOptions);
 
-    cmbOutputWaveFormat = new QComboBox(gBoxSettings);
-    cmbOutputWaveFormat->setObjectName("cmbOutputWaveFormat");
-    verticalLayout_3->addWidget(cmbOutputWaveFormat);
+    vlSettingsArea->addWidget(gBoxAudioOptions);
 
-    lblMarkerOptions = new QLabel(gBoxSettings);
-    lblMarkerOptions->setObjectName("lblMarkerOptions");
-    verticalLayout_3->addWidget(lblMarkerOptions);
+    // Slicing Mode
+    gBoxSlicingMode = new QGroupBox(gBoxSettings);
+    gBoxSlicingMode->setObjectName("gBoxSlicingMode");
 
-    cbSlice = new QCheckBox(gBoxSettings);
-    cbSaveMarkers = new QCheckBox(gBoxSettings);
-    cbLoadMarkers = new QCheckBox(gBoxSettings);
+    vlSlicingMode = new QVBoxLayout(gBoxSlicingMode);
+    vlSlicingMode->setObjectName("vlSlicingMode");
 
-    cbSlice->setChecked(true);
+    cmbSlicingMode = new QComboBox(gBoxSlicingMode);
+    cmbSlicingMode->setObjectName("cmbSlicingMode");
 
-    verticalLayout_3->addWidget(cbSlice);
-    verticalLayout_3->addWidget(cbSaveMarkers);
-    verticalLayout_3->addWidget(cbLoadMarkers);
+    cmbSlicingMode->addItem(QString(), QVariant::fromValue(SlicingMode::AudioOnly));
+    cmbSlicingMode->addItem(QString(), QVariant::fromValue(SlicingMode::AudioOnlyLoadMarkers));
+    cmbSlicingMode->addItem(QString(), QVariant::fromValue(SlicingMode::MarkersOnly));
+    cmbSlicingMode->addItem(QString(), QVariant::fromValue(SlicingMode::AudioAndMarkers));
+
+    vlSlicingMode->addWidget(cmbSlicingMode);
+
+    cbOverwriteMarkers = new QCheckBox(gBoxSlicingMode);
+    cbOverwriteMarkers->setObjectName("cbOverwriteMarkers");
+    vlSlicingMode->addWidget(cbOverwriteMarkers);
+
+    gBoxSlicingMode->setLayout(vlSlicingMode);
+
+    vlSettingsArea->addWidget(gBoxSlicingMode);
 
     verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-    verticalLayout_3->addItem(verticalSpacer);
+    vlSettingsArea->addItem(verticalSpacer);
 
     splitterMain->addWidget(gBoxSettings);
     //hBoxMain->addWidget(gBoxSettings);
@@ -278,7 +316,6 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     menuHelp->addAction(actionAboutQt);
     // menuView->addAction(actionShowHideLogs);
 
-    splitterMain->setSizes({1024, 80});
     splitterMain->setCollapsible(0, false);
     splitterMain->setCollapsible(1, false);
     splitterLogs->setCollapsible(0, false);
@@ -301,7 +338,7 @@ void Ui_MainWindow::retranslateUi(QMainWindow *MainWindow)
     gBoxTaskList->setTitle(QCoreApplication::translate("MainWindow", "Task List", nullptr));
     btnRemoveListItem->setText(QCoreApplication::translate("MainWindow", "Remove", nullptr));
     btnClearList->setText(QCoreApplication::translate("MainWindow", "Clear List", nullptr));
-    gBoxSettings->setTitle(QCoreApplication::translate("MainWindow", "Settings", nullptr));
+    gBoxParameters->setTitle(QCoreApplication::translate("MainWindow", "Parameters", nullptr));
     lblThreshold->setText(QCoreApplication::translate("MainWindow", "Threshold (dB)", nullptr));
     lineEditThreshold->setText(QCoreApplication::translate("MainWindow", "-40", nullptr));
     lblMinLen->setText(QCoreApplication::translate("MainWindow", "Minimum Length (ms)", nullptr));
@@ -312,13 +349,16 @@ void Ui_MainWindow::retranslateUi(QMainWindow *MainWindow)
     lineEditHopSize->setText(QCoreApplication::translate("MainWindow", "10", nullptr));
     lblMaxSilence->setText(QCoreApplication::translate("MainWindow", "Maximum Silence Length (ms)", nullptr));
     lineEditMaxSilence->setText(QCoreApplication::translate("MainWindow", "1000", nullptr));
-    lblOutputDir->setText(QCoreApplication::translate("MainWindow", "Output Directory (default to the same as the audio)", nullptr));
+    gBoxAudioOptions->setTitle(QCoreApplication::translate("MainWindow", "Audio", nullptr));
+    lblOutputDir->setText(QCoreApplication::translate("MainWindow", "Output Directory (default to source directory)", nullptr));
     lineEditOutputDir->setText(QString());
     lblOutputWaveFormat->setText(QCoreApplication::translate("MainWindow", "Output Wave Format", nullptr));
-    lblMarkerOptions->setText(QCoreApplication::translate("MainWindow", "Markers", nullptr));
-    cbSlice->setText(QCoreApplication::translate("MainWindow", "Save sliced audio files", nullptr));
-    cbSaveMarkers->setText(QCoreApplication::translate("MainWindow", "Save markers (no overwrite)", nullptr));
-    cbLoadMarkers->setText(QCoreApplication::translate("MainWindow", "Load markers if exist", nullptr));
+    gBoxSlicingMode->setTitle(QCoreApplication::translate("MainWindow", "Slicing Mode", nullptr));
+    cmbSlicingMode->setItemText(0, QCoreApplication::translate("MainWindow", "Save audio chunks only", nullptr));
+    cmbSlicingMode->setItemText(1, QCoreApplication::translate("MainWindow", "Save audio chunks only (load markers)", nullptr));
+    cmbSlicingMode->setItemText(2, QCoreApplication::translate("MainWindow", "Save markers only", nullptr));
+    cmbSlicingMode->setItemText(3, QCoreApplication::translate("MainWindow", "Save audio chunks and markers", nullptr));
+    cbOverwriteMarkers->setText(QCoreApplication::translate("MainWindow", "Allow overwriting markers if already exist", nullptr));
     btnBrowse->setText(QCoreApplication::translate("MainWindow", "Browse...", nullptr));
     pushButtonAbout->setText(QCoreApplication::translate("MainWindow", "About", nullptr));
     pushButtonStart->setText(QCoreApplication::translate("MainWindow", "Start", nullptr));

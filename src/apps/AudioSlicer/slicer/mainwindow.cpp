@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QRunnable>
+#include <QScreen>
 #include <QString>
 #include <QStringList>
 #include <QStyleFactory>
@@ -17,9 +18,9 @@
 #include <QValidator>
 
 
+#include "enumerations.h"
 #include "mainwindow.h"
 #include "mainwindow_ui.h"
-#include "waveformat.h"
 #include "workthread.h"
 
 
@@ -46,6 +47,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->actionGroupThemes, &QActionGroup::triggered, [](QAction *action) {
         QApplication::setStyle(action->text());
     });
+    connect(ui->cmbSlicingMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainWindow::slot_slicingModeChanged);
+
+    slot_slicingModeChanged(ui->cmbSlicingMode->currentIndex());
 
     ui->progressBar->setMinimum(0);
     ui->progressBar->setMaximum(100);
@@ -192,7 +197,33 @@ void MainWindow::slot_start() {
         return;
     }
 
-    if (!(ui->cbSlice->isChecked() || ui->cbSaveMarkers->isChecked())) {
+    auto slicingMode = ui->cmbSlicingMode->currentData().value<SlicingMode>();
+    bool saveAudio, saveMarkers, loadMarkers;
+    switch (slicingMode) {
+        case SlicingMode::AudioOnlyLoadMarkers:
+            saveAudio = true;
+            saveMarkers = false;
+            loadMarkers = true;
+            break;
+        case SlicingMode::MarkersOnly:
+            saveAudio = false;
+            saveMarkers = true;
+            loadMarkers = false;
+            break;
+        case SlicingMode::AudioAndMarkers:
+            saveAudio = true;
+            saveMarkers = true;
+            loadMarkers = false;
+            break;
+        case SlicingMode::AudioOnly:
+        default:
+            saveAudio = true;
+            saveMarkers = false;
+            loadMarkers = false;
+            break;
+    }
+    bool overwriteMarkers = saveMarkers && ui->cbOverwriteMarkers->isChecked();
+    if (!(saveAudio || saveMarkers)) {
         QMessageBox::warning(this, qApp->applicationName(), "Must save audio files or save markers!");
         return;
     }
@@ -236,9 +267,10 @@ void MainWindow::slot_start() {
                            ui->lineEditHopSize->text().toLongLong(),
                            ui->lineEditMaxSilence->text().toLongLong(),
                            ui->cmbOutputWaveFormat->currentData().toInt(),
-                           ui->cbSlice->isChecked(),
-                           ui->cbSaveMarkers->isChecked(),
-                           ui->cbLoadMarkers->isChecked(),
+                           saveAudio,
+                           saveMarkers,
+                           loadMarkers,
+                           overwriteMarkers,
                            i);
         connect(runnable, &WorkThread::oneFinished, this, &MainWindow::slot_oneFinished);
         connect(runnable, &WorkThread::oneInfo, this, &MainWindow::slot_oneInfo);
@@ -368,9 +400,8 @@ void MainWindow::setProcessing(bool processing) {
     ui->lineEditOutputDir->setEnabled(enabled);
     ui->btnBrowse->setEnabled(enabled);
     ui->cmbOutputWaveFormat->setEnabled(enabled);
-    ui->cbSlice->setEnabled(enabled);
-    ui->cbSaveMarkers->setEnabled(enabled);
-    ui->cbLoadMarkers->setEnabled(enabled);
+    ui->cmbSlicingMode->setEnabled(enabled);
+    ui->cbOverwriteMarkers->setEnabled(enabled);
     ui->actionAddFile->setEnabled(enabled);
     ui->actionAddFolder->setEnabled(enabled);
     m_processing = processing;
@@ -443,5 +474,32 @@ void MainWindow::initStylesMenu() {
     if (!availableStyles.isEmpty()) {
         auto firstStyleAction = ui->actionGroupThemes->actions().first();
         firstStyleAction->setChecked(true);
+    }
+}
+
+void MainWindow::showEvent(QShowEvent *event) {
+    auto currentScreen = screen();
+    auto dpiScale = currentScreen ? currentScreen->logicalDotsPerInch() / 96.0 : 1.0;
+    resize(dpiScale * size());
+    auto splitterMainSizes = ui->splitterMain->sizes();
+
+    if (ui->splitterMain->count() >= 2) {
+        ui->splitterMain->setStretchFactor(0, 1);
+        ui->splitterMain->setStretchFactor(1, 0);
+        auto firstTwoColumnSizes = splitterMainSizes[0] + splitterMainSizes[1];
+        splitterMainSizes[0] = static_cast<int>(std::round(1.0 * 5 * firstTwoColumnSizes / 7));
+        splitterMainSizes[1] = static_cast<int>(std::round(1.0 * 2 * firstTwoColumnSizes / 7));
+        ui->splitterMain->setSizes(splitterMainSizes);
+    }
+
+    QWidget::showEvent(event);
+}
+
+void MainWindow::slot_slicingModeChanged(int index) {
+    auto slicingMode = ui->cmbOutputWaveFormat->itemData(index).value<SlicingMode>();
+    if ((slicingMode == SlicingMode::MarkersOnly) || (slicingMode == SlicingMode::AudioAndMarkers)) {
+        ui->cbOverwriteMarkers->setVisible(true);
+    } else {
+        ui->cbOverwriteMarkers->setVisible(false);
     }
 }

@@ -7,13 +7,13 @@
 #include <QString>
 #include <QStringList>
 
-#include "waveformat.h"
+#include "enumerations.h"
 
 class WorkThread : public QObject, public QRunnable {
 Q_OBJECT
 public:
-    WorkThread(QString filename,
-               QString outPath,
+    WorkThread(const QString &filename,
+               const QString &outPath,
                double threshold,
                qint64 minLength,
                qint64 minInterval,
@@ -23,6 +23,7 @@ public:
                bool saveAudio = true,
                bool saveMarkers = false,
                bool loadMarkers = false,
+               bool overwriteMarkers = false,
                int listIndex = -1);
     void run() override;
 
@@ -38,6 +39,7 @@ private:
     bool m_saveAudio;
     bool m_saveMarkers;
     bool m_loadMarkers;
+    bool m_overwriteMarkers;
     int m_listIndex;
 
 signals:

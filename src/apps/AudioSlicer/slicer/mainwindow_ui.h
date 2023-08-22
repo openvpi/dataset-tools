@@ -17,6 +17,8 @@
 #include <QMenuBar>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QSpacerItem>
 #include <QSplitter>
 #include <QTextEdit>
@@ -49,8 +51,10 @@ public:
     QHBoxLayout *hBoxListButtons;
     QPushButton *btnRemoveListItem;
     QPushButton *btnClearList;
-    QGroupBox *gBoxSettings;
-    QVBoxLayout *verticalLayout_3;
+    QScrollArea *gBoxSettings;
+    QWidget *settingsContainer;
+    QVBoxLayout *vlSettingsArea;
+    QGroupBox *gBoxParameters, *gBoxAudioOptions, *gBoxSlicingMode;
     QFormLayout *formLayout;
     QLabel *lblThreshold;
     QLineEdit *lineEditThreshold;
@@ -62,6 +66,7 @@ public:
     QLineEdit *lineEditHopSize;
     QLabel *lblMaxSilence;
     QLineEdit *lineEditMaxSilence;
+    QVBoxLayout *vlAudioOptions;
     QLabel *lblOutputDir;
     QHBoxLayout *hBoxOutputDir;
     QLineEdit *lineEditOutputDir;
@@ -74,8 +79,9 @@ public:
     QPushButton *pushButtonStart;
     QLabel *lblOutputWaveFormat;
     QComboBox *cmbOutputWaveFormat;
-    QLabel *lblMarkerOptions;
-    QCheckBox *cbSlice, *cbSaveMarkers, *cbLoadMarkers;
+    QVBoxLayout *vlSlicingMode;
+    QComboBox *cmbSlicingMode;
+    QCheckBox *cbOverwriteMarkers;
 
     void setupUi(QMainWindow *MainWindow);
     void retranslateUi(QMainWindow *MainWindow);

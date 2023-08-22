@@ -32,6 +32,7 @@ public:
     void closeEvent(QCloseEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 public slots:
     void slot_browseOutputDir();
@@ -39,6 +40,7 @@ public slots:
     void slot_addFolder();
     void slot_removeListItem();
     void slot_clearAudioList();
+    void slot_slicingModeChanged(int index);
     void slot_about();
     void slot_aboutQt();
     void slot_start();

@@ -47,13 +47,13 @@ inline QString samplesToDecimalFormat(qint64 samples, int sampleRate);
 inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampleRate, bool *ok = nullptr);
 inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRate, bool *ok = nullptr);
 
-WorkThread::WorkThread(QString filename, QString outPath, double threshold, qint64 minLength, qint64 minInterval,
+WorkThread::WorkThread(const QString &filename, const QString &outPath, double threshold, qint64 minLength, qint64 minInterval,
                        qint64 hopSize, qint64 maxSilKept, int outputWaveFormat,
-                       bool saveAudio, bool saveMarkers, bool loadMarkers,
+                       bool saveAudio, bool saveMarkers, bool loadMarkers, bool overwriteMarkers,
                        int listIndex)
-    : m_filename(std::move(filename)), m_outPath(std::move(outPath)), m_threshold(threshold), m_minLength(minLength),
+    : m_filename(filename), m_outPath(outPath), m_threshold(threshold), m_minLength(minLength),
       m_minInterval(minInterval), m_hopSize(hopSize), m_maxSilKept(maxSilKept), m_outputWaveFormat(outputWaveFormat),
-      m_saveAudio(saveAudio), m_saveMarkers(saveMarkers), m_loadMarkers(loadMarkers),
+      m_saveAudio(saveAudio), m_saveMarkers(saveMarkers), m_loadMarkers(loadMarkers), m_overwriteMarkers(overwriteMarkers),
       m_listIndex(listIndex) {}
 
 void WorkThread::run() {
@@ -133,7 +133,7 @@ void WorkThread::run() {
     bool isMarkerWriteError = false;
 
     if (m_saveMarkers) {
-        MarkerError saveOk = writeCSVMarkers(chunks, markerFilePath, sr, false, MarkerTimeFormat::Samples, totalSize);
+        MarkerError saveOk = writeCSVMarkers(chunks, markerFilePath, sr, m_overwriteMarkers, MarkerTimeFormat::Samples, totalSize);
         switch (saveOk) {
             case MarkerError::Success:
                 oneInfo(QString("%1: saved markers to %2").arg(m_filename, markerFilePath));
@@ -154,53 +154,57 @@ void WorkThread::run() {
         }
     }
 
-    if (chunks.empty()) {
-        QString errmsg = QString("slicer: no audio chunks for output!");
-        emit oneError(errmsg);
-        emit oneFailed(m_filename, m_listIndex);
-        return;
-    }
-
-    if (!QDir().mkpath(outPath)) {
-        QString errmsg = QString("filesystem: could not create directory %1.").arg(outPath);
-        emit oneError(errmsg);
-        emit oneFailed(m_filename, m_listIndex);
-    }
-
-    int idx = 0;
-    for (auto chunk : chunks) {
-        auto beginFrame = chunk.first;
-        auto endFrame = chunk.second;
-        auto frameCount = endFrame - beginFrame;
-        if ((frameCount <= 0) || (beginFrame > totalSize) || (endFrame > totalSize) ||
-            (beginFrame < 0) || (endFrame < 0)) {
-            continue;
+    if (m_saveAudio) {
+        if (chunks.empty()) {
+            QString errmsg = QString("slicer: no audio chunks for output!");
+            emit oneError(errmsg);
+            emit oneFailed(m_filename, m_listIndex);
+            return;
         }
-        qDebug() << QString("  > frame: %1 -> %2, seconds: %3 -> %4")
-                            .arg(beginFrame).arg(endFrame)
-                            .arg(1.0 * beginFrame / sr).arg(1.0 * endFrame / sr);
+
+        if (!QDir().mkpath(outPath)) {
+            QString errmsg = QString("filesystem: could not create directory %1.").arg(outPath);
+            emit oneError(errmsg);
+            emit oneFailed(m_filename, m_listIndex);
+        }
+
+        int idx = 0;
+        for (auto chunk : chunks) {
+            auto beginFrame = chunk.first;
+            auto endFrame = chunk.second;
+            auto frameCount = endFrame - beginFrame;
+            if ((frameCount <= 0) || (beginFrame > totalSize) || (endFrame > totalSize) || (beginFrame < 0) ||
+                (endFrame < 0)) {
+                continue;
+            }
+            qDebug() << QString("  > frame: %1 -> %2, seconds: %3 -> %4")
+                            .arg(beginFrame)
+                            .arg(endFrame)
+                            .arg(1.0 * beginFrame / sr)
+                            .arg(1.0 * endFrame / sr);
 
 
-        auto outFileName = QString("%1_%2.wav").arg(fileBaseName).arg(idx);
-        auto outFilePath = QDir(outPath).absoluteFilePath(outFileName);
+            auto outFileName = QString("%1_%2.wav").arg(fileBaseName).arg(idx);
+            auto outFilePath = QDir(outPath).absoluteFilePath(outFileName);
 
 #ifdef USE_WIDE_CHAR
-        auto outFilePathStr = outFilePath.toStdWString();
+            auto outFilePathStr = outFilePath.toStdWString();
 #else
-        auto outFilePathStr = outFilePath.toStdString();
+            auto outFilePathStr = outFilePath.toStdString();
 #endif
 
-        int sndfile_outputWaveFormat = determineSndFileFormat(m_outputWaveFormat);
-        SndfileHandle wf =
-            SndfileHandle(outFilePathStr.c_str(), SFM_WRITE, SF_FORMAT_WAV | sndfile_outputWaveFormat, channels, sr);
-        sf.seek(beginFrame, SEEK_SET);
-        std::vector<double> tmp(frameCount * channels);
-        auto bytesRead = sf.read(tmp.data(), tmp.size());
-        auto bytesWritten = wf.write(tmp.data(), tmp.size());
-        if (bytesWritten == 0) {
-            isAudioWriteError = true;
+            int sndfile_outputWaveFormat = determineSndFileFormat(m_outputWaveFormat);
+            SndfileHandle wf = SndfileHandle(outFilePathStr.c_str(), SFM_WRITE,
+                                             SF_FORMAT_WAV | sndfile_outputWaveFormat, channels, sr);
+            sf.seek(beginFrame, SEEK_SET);
+            std::vector<double> tmp(frameCount * channels);
+            auto bytesRead = sf.read(tmp.data(), tmp.size());
+            auto bytesWritten = wf.write(tmp.data(), tmp.size());
+            if (bytesWritten == 0) {
+                isAudioWriteError = true;
+            }
+            idx++;
         }
-        idx++;
     }
 
     if (isAudioWriteError) {
