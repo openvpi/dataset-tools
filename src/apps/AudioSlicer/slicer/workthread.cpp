@@ -205,10 +205,11 @@ void WorkThread::run() {
             }
             idx++;
         }
-    }
-
-    if (isAudioWriteError) {
-        emit oneError(QString("%1: audio file write error (zero bytes written)").arg(m_filename));
+        if (isAudioWriteError) {
+            emit oneError(QString("%1: audio file write error (zero bytes written)").arg(m_filename));
+        } else {
+            emit oneInfo(QString("%1: saved %3 audio chunk(s) to %2").arg(m_filename, outPath).arg(chunks.size()));
+        }
     }
 
     if (isAudioWriteError || isMarkerWriteError) {

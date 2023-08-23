@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <QColor>
 #include <QDateTime>
 #include <QDir>
