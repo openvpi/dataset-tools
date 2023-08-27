@@ -37,6 +37,12 @@ TextWidget::TextWidget(QWidget *parent)
     languageCombo = new QComboBox();
     languageCombo->addItems({"pinyin", "romaji", "arpabet(test)", "cantonese(test)"});
 
+    optionsLayout = new QHBoxLayout();
+
+    removeArpabetNum = new QCheckBox("Remove numbers from Arpabet");
+    removeArpabetNum->hide();
+    optionsLayout->addWidget(removeArpabetNum);
+
     buttonsLayout = new QHBoxLayout();
     buttonsLayout->setMargin(0);
     buttonsLayout->addWidget(replaceButton);
@@ -46,6 +52,7 @@ TextWidget::TextWidget(QWidget *parent)
     mainLayout = new QVBoxLayout();
     mainLayout->addLayout(lineLayout);
     mainLayout->addLayout(buttonsLayout);
+    mainLayout->addLayout(optionsLayout);
     mainLayout->addWidget(contentText);
 
     setLayout(mainLayout);
@@ -53,6 +60,8 @@ TextWidget::TextWidget(QWidget *parent)
     connect(pasteButton, &QPushButton::clicked, this, &TextWidget::_q_pasteButtonClicked);
     connect(replaceButton, &QPushButton::clicked, this, &TextWidget::_q_replaceButtonClicked);
     connect(appendButton, &QPushButton::clicked, this, &TextWidget::_q_appendButtonClicked);
+
+    connect(languageCombo, &QComboBox::currentTextChanged, this, &TextWidget::_q_onLanguageComboIndexChanged);
 
     connect(replaceAction, &QAction::triggered, this, &TextWidget::_q_replaceButtonClicked);
 }
@@ -75,17 +84,12 @@ void TextWidget::_q_pasteButtonClicked() {
     }
 }
 
-static QString filterString(const QString &str) {
+QString filterString(const QString &str, bool filterNumbers = false) {
     QString words;
     for (const auto &ch : str) {
-        auto u = ch.unicode();
-        if ((u >= 128 && !ch.isDigit()) || (!ch.isLetterOrNumber())) {
-            if (words.isEmpty() || words.back() != ' ') {
-                words.append(' ');
-            }
-            continue;
+        if (ch.isLetter() || (!filterNumbers && ch.isDigit()) || ch.isSpace()) {
+            words.append(ch);
         }
-        words.append(ch);
     }
     return words;
 }
@@ -108,7 +112,7 @@ void TextWidget::_q_replaceButtonClicked() {
         default:
             break;
     }
-    contentText->setPlainText(filterString(str));
+    contentText->setPlainText(filterString(str, removeArpabetNum->isChecked()));
 }
 
 void TextWidget::_q_appendButtonClicked() {
@@ -131,5 +135,26 @@ void TextWidget::_q_appendButtonClicked() {
     }
 
     QString org = contentText->toPlainText();
-    contentText->setPlainText((org.isEmpty() ? "" : org + " ") + filterString(str));
+    contentText->setPlainText((org.isEmpty() ? "" : org + " ") + filterString(str, removeArpabetNum->isChecked()));
+}
+
+void TextWidget::_q_onLanguageComboIndexChanged() {
+    static QMap<QString, QList<QWidget *>> optionMap = {
+        {"arpabet(test)", {removeArpabetNum}}
+    };
+
+    QString selectedLanguage = languageCombo->currentText();
+    for (auto it = optionMap.begin(); it != optionMap.end(); ++it) {
+        if (it.key() == selectedLanguage) {
+            for (QWidget *control : it.value()) {
+                control->show();
+            }
+        } else {
+            for (QWidget *control : it.value()) {
+                control->hide();
+            }
+        }
+    }
+
+    removeArpabetNum->setChecked(false);
 }

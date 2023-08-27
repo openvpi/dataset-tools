@@ -2,6 +2,7 @@
 #define TEXTWIDGET_H
 
 #include <QAction>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QLineEdit>
 #include <QPlainTextEdit>
@@ -10,9 +11,9 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "eng2p.h"
 #include "jpg2p.h"
 #include "zhg2p.h"
-#include "eng2p.h"
 
 class TextWidget : public QWidget {
     Q_OBJECT
@@ -30,10 +31,13 @@ protected:
 
     QComboBox *languageCombo;
 
+    QCheckBox *removeArpabetNum;
+
     QAction *replaceAction;
 
     QHBoxLayout *lineLayout;
     QHBoxLayout *buttonsLayout;
+    QHBoxLayout *optionsLayout;
     QVBoxLayout *mainLayout;
 
     QScopedPointer<IKg2p::ZhG2p> g2p;
@@ -47,8 +51,7 @@ private:
     void _q_pasteButtonClicked();
     void _q_replaceButtonClicked();
     void _q_appendButtonClicked();
-
-signals:
+    void _q_onLanguageComboIndexChanged();
 };
 
 #endif // TEXTWIDGET_H
