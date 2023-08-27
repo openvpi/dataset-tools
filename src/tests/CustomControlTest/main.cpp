@@ -10,6 +10,10 @@
 #include "ShadowButton.h"
 #include "SwitchButton.h"
 
+#ifdef Q_OS_WIN
+#include <dwmapi.h>
+#endif
+
 int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
@@ -17,6 +21,44 @@ int main(int argc, char *argv[]) {
     QApplication::setFont(QFont("Microsoft Yahei UI", 9));
 
     MainWindow w;
+#ifdef Q_OS_WIN
+    // make window transparent
+    w.setStyleSheet(QString("background: transparent"));
+
+    enum DWM_SYSTEMBACKDROP_TYPE : uint
+    {
+        DWMSBT_AUTO = 0,
+
+        /// <summary>
+        /// no backdrop
+        /// </summary>
+        DWMSBT_NONE = 1,
+
+        /// <summary>
+        /// Use tinted blurred wallpaper backdrop (Mica)
+        /// </summary>
+        DWMSBT_MAINWINDOW = 2,
+
+        /// <summary>
+        /// Use Acrylic backdrop
+        /// </summary>
+        DWMSBT_TRANSIENTWINDOW = 3,
+
+        /// <summary>
+        /// Use blurred wallpaper backdrop
+        /// </summary>
+        DWMSBT_TABBEDWINDOW = 4
+    };
+    uint DWMWA_SYSTEMBACKDROP_TYPE = 38;
+
+    DWM_SYSTEMBACKDROP_TYPE backDropType = DWMSBT_MAINWINDOW;
+    DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_SYSTEMBACKDROP_TYPE, &backDropType,
+                          sizeof(backDropType));
+    // Extend title bar blur effect into client area
+    constexpr int mgn = -1; // -1 means "sheet of glass" effect
+    MARGINS margins = {mgn, mgn, mgn, mgn};
+    DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(w.winId()), &margins);
+#endif
 
     auto mainWidget = new QWidget;
 

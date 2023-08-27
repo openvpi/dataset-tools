@@ -1,4 +1,4 @@
-project(CustomControlTest)
+project(BlurWindowTest)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -17,5 +17,5 @@ target_include_directories(${PROJECT_NAME} PUBLIC .)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
-        ${PLATFORM_LIB}
+    ${PLATFORM_LIB}
 )

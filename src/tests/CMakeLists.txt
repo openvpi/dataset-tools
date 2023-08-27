@@ -1,1 +1,2 @@
 add_subdirectory(CustomControlTest)
+add_subdirectory(BlurWindowTest)
