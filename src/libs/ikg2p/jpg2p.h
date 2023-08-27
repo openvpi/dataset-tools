@@ -14,8 +14,8 @@ namespace IKg2p {
         explicit JpG2p(QObject *parent = nullptr);
         ~JpG2p() override;
 
-        QString kana2romaji(const QString &kanaStr) const;
-        QString kana2romaji(const QStringList &kanaList) const;
+        QString kana2romaji(const QString &kanaStr, bool doubleWrittenSokuon = false) const;
+        QString kana2romaji(const QStringList &kanaList, bool doubleWrittenSokuon = false) const;
 
         QStringList romaji2kana(const QString &romajiStr) const;
         QStringList romaji2kana(const QStringList &romajiList) const;

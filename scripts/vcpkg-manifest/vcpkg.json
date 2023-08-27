@@ -7,7 +7,8 @@
             "default-features": false
         },
         "qastool",
-        "ffmpeg-fake"
+        "ffmpeg-fake",
+        "mecab"
     ],
     "vcpkg-configuration": {
         "overlay-ports": [

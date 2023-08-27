@@ -22,7 +22,7 @@ namespace IKg2p {
         QStringList res;
 
         // negative lookahead:ッっ;letter,num,chinese,kana
-        QRegExp rx("(?![ッっー゜])([a-zA-Z]+|[0-9]|[\u4e00-\u9fa5]|[\u3040-\u309F\u30A0-\u30FF]["
+        QRegExp rx("(?![ー゜])([a-zA-Z]+|[0-9]|[\u4e00-\u9fa5]|[\u3040-\u309F\u30A0-\u30FF]["
                    "ャュョゃゅょァィゥェォぁぃぅぇぉ]?)");
 
         int pos = 0; // 记录匹配位置的变量

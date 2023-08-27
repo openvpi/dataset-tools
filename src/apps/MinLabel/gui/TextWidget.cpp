@@ -5,10 +5,11 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QRegularExpression>
+#include <QTextCodec>
 
 TextWidget::TextWidget(QWidget *parent)
     : QWidget(parent), g2p(new IKg2p::ZhG2p("mandarin")), g2p_jp(new IKg2p::JpG2p()), g2p_en(new IKg2p::EnG2p()),
-      g2p_canton(new IKg2p::ZhG2p("cantonese")) {
+      g2p_canton(new IKg2p::ZhG2p("cantonese")), mecab(mecabInit("mecabDict")) {
     wordsText = new QLineEdit();
     wordsText->setPlaceholderText("Enter mandarin here...");
 
@@ -42,6 +43,14 @@ TextWidget::TextWidget(QWidget *parent)
     removeArpabetNum = new QCheckBox("Remove numbers from Arpabet");
     removeArpabetNum->hide();
     optionsLayout->addWidget(removeArpabetNum);
+
+    removeSokuon = new QCheckBox("Remove Sokuon");
+    removeSokuon->hide();
+    optionsLayout->addWidget(removeSokuon);
+
+    doubleConsonant = new QCheckBox("Double consonant(\"tta\")");
+    doubleConsonant->hide();
+    optionsLayout->addWidget(doubleConsonant);
 
     buttonsLayout = new QHBoxLayout();
     buttonsLayout->setMargin(0);
@@ -94,14 +103,21 @@ QString filterString(const QString &str, bool filterNumbers = false) {
     return words;
 }
 
+QString filterSokuon(const QString &input) {
+    QRegularExpression regex("[っッ]");
+    QString result = input;
+    return result.replace(regex, "");
+}
+
 void TextWidget::_q_replaceButtonClicked() {
     QString str;
+    QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
             str = g2p->convert(sentence());
             break;
         case 1:
-            str = g2p_jp->kana2romaji(sentence());
+            str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
             break;
         case 2:
             str = g2p_en->word2arpabet(sentence());
@@ -117,12 +133,13 @@ void TextWidget::_q_replaceButtonClicked() {
 
 void TextWidget::_q_appendButtonClicked() {
     QString str;
+    QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
             str = g2p->convert(sentence());
             break;
         case 1:
-            str = g2p_jp->kana2romaji(sentence());
+            str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
             break;
         case 2:
             str = g2p_en->word2arpabet(sentence());
@@ -139,22 +156,41 @@ void TextWidget::_q_appendButtonClicked() {
 }
 
 void TextWidget::_q_onLanguageComboIndexChanged() {
-    static QMap<QString, QList<QWidget *>> optionMap = {
-        {"arpabet(test)", {removeArpabetNum}}
+    static QMap<QString, QList<QCheckBox *>> optionMap = {
+        {"romaji",        {removeSokuon, doubleConsonant}},
+        {"arpabet(test)", {removeArpabetNum}             }
     };
 
     QString selectedLanguage = languageCombo->currentText();
     for (auto it = optionMap.begin(); it != optionMap.end(); ++it) {
         if (it.key() == selectedLanguage) {
-            for (QWidget *control : it.value()) {
+            for (QCheckBox *control : it.value()) {
                 control->show();
             }
         } else {
-            for (QWidget *control : it.value()) {
+            for (QCheckBox *control : it.value()) {
                 control->hide();
+                control->setChecked(false);
             }
         }
     }
+}
 
-    removeArpabetNum->setChecked(false);
+mecab_t *TextWidget::mecabInit(const QString &path) {
+    return mecab_new2((QString("-d %1 -r %2/mecabrc -Oyomi").arg(path, path)).toUtf8());
+}
+
+QString TextWidget::mecabConvert(const QString &input) {
+    QTextCodec *codec = QTextCodec::codecForName("GBK");
+    QString mecabRes = codec->toUnicode(mecab_sparse_tostr(mecab, codec->fromUnicode(input)));
+
+    QStringList out;
+    QStringList sentence = mecabRes.split("\n");
+    for (auto &it : qAsConst(sentence)) {
+        QStringList item = it.split("\t");
+        if (item.size() > 1) {
+            out.append(item[1]);
+        }
+    }
+    return out.join(" ");
 }

@@ -15,6 +15,7 @@
 #include "jpg2p.h"
 #include "zhg2p.h"
 
+#include "mecab/mecab.h"
 class TextWidget : public QWidget {
     Q_OBJECT
 public:
@@ -32,6 +33,8 @@ protected:
     QComboBox *languageCombo;
 
     QCheckBox *removeArpabetNum;
+    QCheckBox *removeSokuon;
+    QCheckBox *doubleConsonant;
 
     QAction *replaceAction;
 
@@ -46,7 +49,10 @@ protected:
     QScopedPointer<IKg2p::ZhG2p> g2p_canton;
 
 private:
+    mecab_t *mecab;
     QString sentence() const;
+    static mecab_t *mecabInit(const QString &path = "mecabDict");
+    QString mecabConvert(const QString &input);
 
     void _q_pasteButtonClicked();
     void _q_replaceButtonClicked();

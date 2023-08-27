@@ -37,6 +37,10 @@ namespace IKg2p {
         return res;
     }
 
+    bool isKana(QChar character) {
+        // Kana Unicode ranges: U+3040 - U+30FF
+        return (character >= QChar(0x3040) && character <= QChar(0x30FF));
+    }
     JpG2pPrivate::JpG2pPrivate() {
     }
 
@@ -96,19 +100,27 @@ namespace IKg2p {
     JpG2p::~JpG2p() {
     }
 
-    QString JpG2p::kana2romaji(const QStringList &kanaList) const {
+    QString JpG2p::kana2romaji(const QStringList &kanaList, bool doubleWrittenSokuon) const {
         Q_D(const JpG2p);
         QStringList inputList = d->convertKana(kanaList, JpG2pPrivate::KanaType::Hiragana);
         QStringList romajiList;
         for (const QString &kana : inputList) {
             romajiList.append(d->kanaToRomajiMap.value(kana, kana));
         }
+
+        for (int i = 0; i < romajiList.size() - 1 && doubleWrittenSokuon; ++i) {
+            QChar nextChar = d->romajiToKanaMap.value(romajiList[i+1], " ").at(0);
+            if (romajiList[i] == "cl" && isKana(nextChar) && !QString("あいうえおアイウエオっんを").contains(nextChar)) {
+                romajiList[i + 1].prepend(romajiList[i + 1][0]);
+                romajiList.removeAt(i);
+            }
+        }
         return romajiList.join(" ");
     }
 
-    QString JpG2p::kana2romaji(const QString &kanaStr) const {
+    QString JpG2p::kana2romaji(const QString &kanaStr, bool doubleWrittenSokuon) const {
         QStringList input = splitString(kanaStr);
-        return kana2romaji(input);
+        return kana2romaji(input, doubleWrittenSokuon);
     }
 
     JpG2p::JpG2p(JpG2pPrivate &d, QObject *parent) : QObject(parent), d_ptr(&d) {
