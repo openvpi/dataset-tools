@@ -51,9 +51,10 @@ protected:
     QScopedPointer<IKg2p::ZhG2p> g2p_canton;
 
 private:
-    mecab_t *mecab;
+    MeCab::Tagger *mecabYomi;
+    MeCab::Tagger *mecabWakati;
     QString sentence() const;
-    static mecab_t *mecabInit(const QString &path = "mecabDict");
+    static MeCab::Tagger *mecabInit(const QString &path = "mecabDict", const QString &format = "wakati");
     QString mecabConvert(const QString &input);
 
     void _q_pasteButtonClicked();

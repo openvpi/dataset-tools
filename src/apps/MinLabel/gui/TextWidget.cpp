@@ -9,7 +9,8 @@
 
 TextWidget::TextWidget(QWidget *parent)
     : QWidget(parent), g2p(new IKg2p::ZhG2p("mandarin")), g2p_jp(new IKg2p::JpG2p()), g2p_en(new IKg2p::EnG2p()),
-      g2p_canton(new IKg2p::ZhG2p("cantonese")), mecab(mecabInit("mecabDict")) {
+      g2p_canton(new IKg2p::ZhG2p("cantonese")), mecabYomi(mecabInit("mecabDict", "yomi")),
+      mecabWakati(mecabInit("mecabDict", "wakati")) {
     wordsText = new QLineEdit();
     wordsText->setPlaceholderText("Enter mandarin here...");
 
@@ -127,7 +128,7 @@ void TextWidget::_q_replaceButtonClicked() {
             str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
             break;
         case 2:
-            str = g2p_en->word2arpabet(sentence());
+            str = g2p_en->word2arpabet(sentence(), removeArpabetNum->isChecked());
             break;
         case 3:
             str = g2p_canton->convert(sentence(), canTone->isChecked());
@@ -135,7 +136,7 @@ void TextWidget::_q_replaceButtonClicked() {
         default:
             break;
     }
-    contentText->setPlainText(filterString(str, removeArpabetNum->isChecked()));
+    contentText->setPlainText(str.trimmed().simplified());
 }
 
 void TextWidget::_q_appendButtonClicked() {
@@ -149,7 +150,7 @@ void TextWidget::_q_appendButtonClicked() {
             str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
             break;
         case 2:
-            str = g2p_en->word2arpabet(sentence());
+            str = g2p_en->word2arpabet(sentence(), removeArpabetNum->isChecked());
             break;
         case 3:
             str = g2p_canton->convert(sentence(), canTone->isChecked());
@@ -159,7 +160,7 @@ void TextWidget::_q_appendButtonClicked() {
     }
 
     QString org = contentText->toPlainText();
-    contentText->setPlainText((org.isEmpty() ? "" : org + " ") + filterString(str, removeArpabetNum->isChecked()));
+    contentText->setPlainText((org.isEmpty() ? "" : org + " ") + str.trimmed().simplified());
 }
 
 void TextWidget::_q_onLanguageComboIndexChanged() {
@@ -185,20 +186,23 @@ void TextWidget::_q_onLanguageComboIndexChanged() {
     }
 }
 
-mecab_t *TextWidget::mecabInit(const QString &path) {
-    return mecab_new2((QString("-d %1 -r %2/mecabrc -Oyomi").arg(path, path)).toUtf8());
+MeCab::Tagger *TextWidget::mecabInit(const QString &path, const QString &format) {
+    QString args = "-O" + format + " -d " + path;
+    return MeCab::createTagger(args.toUtf8());
 }
 
 QString TextWidget::mecabConvert(const QString &input) {
     QTextCodec *codec = QTextCodec::codecForName("GBK");
-    QString mecabRes = codec->toUnicode(mecab_sparse_tostr(mecab, codec->fromUnicode(input)));
+    QByteArray mecabRes = mecabWakati->parse(codec->fromUnicode(input));
 
     QStringList out;
-    QStringList sentence = mecabRes.split("\n");
-    for (auto &it : qAsConst(sentence)) {
-        QStringList item = it.split("\t");
+    foreach (auto &it, mecabRes.split(' ')) {
+        QString res = codec->toUnicode(mecabYomi->parse(it));
+        QStringList item = res.split("\t");
         if (item.size() > 1) {
             out.append(item[1]);
+        } else if (!item.empty() && item[0] != "") {
+            out.append(item[0]);
         }
     }
     return out.join(" ");

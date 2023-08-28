@@ -109,8 +109,9 @@ namespace IKg2p {
         }
 
         for (int i = 0; i < romajiList.size() - 1 && doubleWrittenSokuon; ++i) {
-            QChar nextChar = d->romajiToKanaMap.value(romajiList[i+1], " ").at(0);
-            if (romajiList[i] == "cl" && isKana(nextChar) && !QString("あいうえおアイウエオっんを").contains(nextChar)) {
+            QChar nextChar = d->romajiToKanaMap.value(romajiList[i + 1], " ").at(0);
+            if (romajiList[i] == "cl" && isKana(nextChar) &&
+                !QString("あいうえおアイウエオっんを").contains(nextChar)) {
                 romajiList[i + 1].prepend(romajiList[i + 1][0]);
                 romajiList.removeAt(i);
             }

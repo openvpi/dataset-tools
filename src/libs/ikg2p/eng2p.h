@@ -15,8 +15,8 @@ namespace IKg2p {
         explicit EnG2p(QObject *parent = nullptr);
         ~EnG2p() override;
 
-        QString word2arpabet(const QString &word) const;
-        QString word2arpabet(const QStringList &wordList) const;
+        QString word2arpabet(const QString &word, bool removeNum = false) const;
+        QString word2arpabet(const QStringList &wordList, bool removeNum = false) const;
 
     protected:
         explicit EnG2p(EnG2pPrivate &d, QObject *parent = nullptr);
