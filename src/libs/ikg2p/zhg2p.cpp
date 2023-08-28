@@ -2,6 +2,7 @@
 #include "zhg2p_p.h"
 
 #include <QDebug>
+#include <utility>
 
 #include "g2pglobal.h"
 
@@ -29,7 +30,7 @@ namespace IKg2p {
         list.erase(list.begin() + start, list.begin() + start + n);
     }
 
-    ZhG2pPrivate::ZhG2pPrivate(QString language) : m_language(language) {
+    ZhG2pPrivate::ZhG2pPrivate(QString language) : m_language(std::move(language)) {
     }
 
     ZhG2pPrivate::~ZhG2pPrivate() {
@@ -74,17 +75,17 @@ namespace IKg2p {
     }
 
 
-    ZhG2p::ZhG2p(QString language, QObject *parent) : ZhG2p(*new ZhG2pPrivate(language), parent) {
+    ZhG2p::ZhG2p(QString language, QObject *parent) : ZhG2p(*new ZhG2pPrivate(std::move(language)), parent) {
     }
 
     ZhG2p::~ZhG2p() {
     }
 
-    QString ZhG2p::convert(const QString &input) {
-        return convert(splitString(input));
+    QString ZhG2p::convert(const QString &input, bool tone) {
+        return convert(splitString(input), tone);
     }
 
-    QString ZhG2p::convert(const QStringList &input) {
+    QString ZhG2p::convert(const QStringList &input, bool tone) {
         Q_D(const ZhG2p);
         //    qDebug() << input;
         QStringList inputList;
@@ -141,6 +142,12 @@ namespace IKg2p {
                     result.append(d->getDefaultPinyin(current_char));
                     cursor++;
                 }
+            }
+        }
+
+        if (!tone) {
+            for (QString &item : result) {
+                item.remove(QRegExp("[^a-z]"));
             }
         }
 

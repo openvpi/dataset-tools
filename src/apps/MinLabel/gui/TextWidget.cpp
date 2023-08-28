@@ -40,17 +40,24 @@ TextWidget::TextWidget(QWidget *parent)
 
     optionsLayout = new QHBoxLayout();
 
+    manTone = new QCheckBox("Preserve tone");
+    optionsLayout->addWidget(manTone);
+
     removeArpabetNum = new QCheckBox("Remove numbers from Arpabet");
     removeArpabetNum->hide();
     optionsLayout->addWidget(removeArpabetNum);
 
-    removeSokuon = new QCheckBox("Remove Sokuon");
+    removeSokuon = new QCheckBox("Remove sokuon");
     removeSokuon->hide();
     optionsLayout->addWidget(removeSokuon);
 
     doubleConsonant = new QCheckBox("Double consonant(\"tta\")");
     doubleConsonant->hide();
     optionsLayout->addWidget(doubleConsonant);
+
+    canTone = new QCheckBox("Preserve tone");
+    canTone->hide();
+    optionsLayout->addWidget(canTone);
 
     buttonsLayout = new QHBoxLayout();
     buttonsLayout->setMargin(0);
@@ -114,7 +121,7 @@ void TextWidget::_q_replaceButtonClicked() {
     QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p->convert(sentence());
+            str = g2p->convert(sentence(), manTone->isChecked());
             break;
         case 1:
             str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
@@ -123,7 +130,7 @@ void TextWidget::_q_replaceButtonClicked() {
             str = g2p_en->word2arpabet(sentence());
             break;
         case 3:
-            str = g2p_canton->convert(sentence());
+            str = g2p_canton->convert(sentence(), canTone->isChecked());
             break;
         default:
             break;
@@ -136,7 +143,7 @@ void TextWidget::_q_appendButtonClicked() {
     QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p->convert(sentence());
+            str = g2p->convert(sentence(), manTone->isChecked());
             break;
         case 1:
             str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
@@ -145,7 +152,7 @@ void TextWidget::_q_appendButtonClicked() {
             str = g2p_en->word2arpabet(sentence());
             break;
         case 3:
-            str = g2p_canton->convert(sentence());
+            str = g2p_canton->convert(sentence(), canTone->isChecked());
             break;
         default:
             break;
@@ -157,8 +164,10 @@ void TextWidget::_q_appendButtonClicked() {
 
 void TextWidget::_q_onLanguageComboIndexChanged() {
     static QMap<QString, QList<QCheckBox *>> optionMap = {
-        {"romaji",        {removeSokuon, doubleConsonant}},
-        {"arpabet(test)", {removeArpabetNum}             }
+        {"pinyin",          {manTone}                      },
+        {"romaji",          {removeSokuon, doubleConsonant}},
+        {"arpabet(test)",   {removeArpabetNum}             },
+        {"cantonese(test)", {canTone}                      }
     };
 
     QString selectedLanguage = languageCombo->currentText();

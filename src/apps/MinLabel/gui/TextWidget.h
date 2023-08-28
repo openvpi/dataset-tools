@@ -32,6 +32,8 @@ protected:
 
     QComboBox *languageCombo;
 
+    QCheckBox *manTone;
+    QCheckBox *canTone;
     QCheckBox *removeArpabetNum;
     QCheckBox *removeSokuon;
     QCheckBox *doubleConsonant;

@@ -15,7 +15,7 @@ namespace IKg2p {
 
         void init();
 
-        ZhG2p *q_ptr;
+        ZhG2p *q_ptr{};
 
         QHash<QString, QString> phrases_map;
         QHash<QString, QString> phrases_dict;
