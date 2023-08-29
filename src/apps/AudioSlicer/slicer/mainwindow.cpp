@@ -480,9 +480,15 @@ void MainWindow::initStylesMenu() {
 }
 
 void MainWindow::showEvent(QShowEvent *event) {
+#ifdef Q_OS_MAC
+    auto dpiScale = 1.0;
+    // It seems that on macOS, logicalDotsPerInch() always return 72.
+    // Therefore,
+#else
     auto currentScreen = screen();
     auto dpiScale = currentScreen ? currentScreen->logicalDotsPerInch() / 96.0 : 1.0;
     resize(dpiScale * size());
+#endif
     auto splitterMainSizes = ui->splitterMain->sizes();
 
     if (ui->splitterMain->count() >= 2) {
