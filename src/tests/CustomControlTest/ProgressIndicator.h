@@ -81,21 +81,21 @@ protected:
     };
 
     ColorPalette colorPaletteNormal = {
-        QColor(217, 217, 217),
+        QColor(0, 0, 0, 32),
         QColor(112, 156, 255),
         QColor(159, 189, 255),
         QColor(113, 218, 255)
     };
 
     ColorPalette colorPaletteWarning = {
-        QColor(217, 217, 217),
+        QColor(0, 0, 0, 32),
         QColor(255, 175, 95),
         QColor(255, 204, 153),
         QColor(255, 218, 113)
     };
 
     ColorPalette colorPaletteError = {
-        QColor(217, 217, 217),
+        QColor(0, 0, 0, 32),
         QColor(255, 124, 128),
         QColor(255, 171, 173),
         QColor(255, 171, 221)

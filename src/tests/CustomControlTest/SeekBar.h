@@ -75,7 +75,7 @@ protected:
 
 private:
     SeekBarPrivate *d;
-    QColor m_trackInactiveColor = QColor(217, 217, 217);
+    QColor m_trackInactiveColor = QColor(0, 0, 0, 32);
     QColor trackInactiveColor() const;
     void setTrackInactiveColor(const QColor &color);
     QColor m_trackActiveColor = QColor(112, 156, 255);

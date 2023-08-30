@@ -29,35 +29,35 @@ int main(int argc, char *argv[]) {
     {
         DWMSBT_AUTO = 0,
 
-        /// <summary>
         /// no backdrop
-        /// </summary>
         DWMSBT_NONE = 1,
 
-        /// <summary>
-        /// Use tinted blurred wallpaper backdrop (Mica)
-        /// </summary>
+        /// Mica
         DWMSBT_MAINWINDOW = 2,
 
-        /// <summary>
-        /// Use Acrylic backdrop
-        /// </summary>
+        /// Acrylic
         DWMSBT_TRANSIENTWINDOW = 3,
 
-        /// <summary>
-        /// Use blurred wallpaper backdrop
-        /// </summary>
+        /// Tabbed Mica
         DWMSBT_TABBEDWINDOW = 4
     };
     uint DWMWA_SYSTEMBACKDROP_TYPE = 38;
+    uint DWMWA_IMMERSIVE_DARK_MODE = 20;
 
-    DWM_SYSTEMBACKDROP_TYPE backDropType = DWMSBT_MAINWINDOW;
+    // Enable Mica background
+    auto backDropType = DWMSBT_MAINWINDOW;
     DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_SYSTEMBACKDROP_TYPE, &backDropType,
                           sizeof(backDropType));
+
     // Extend title bar blur effect into client area
     constexpr int mgn = -1; // -1 means "sheet of glass" effect
     MARGINS margins = {mgn, mgn, mgn, mgn};
     DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(w.winId()), &margins);
+
+    // Light theme
+    uint dark = 0;
+    DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_IMMERSIVE_DARK_MODE, &dark,
+                          sizeof(dark));
 #endif
 
     auto mainWidget = new QWidget;

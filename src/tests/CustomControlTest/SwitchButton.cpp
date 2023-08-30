@@ -79,7 +79,7 @@ void SwitchButton::paintEvent(QPaintEvent *event) {
 
     // Draw inactive background
     pen.setWidth(m_rect.height());
-    pen.setColor(QColor(217, 217, 217));
+    pen.setColor(QColor(0, 0, 0, m_apparentValue == 255 ? 0 : 32));
     pen.setCapStyle(Qt::RoundCap);
     painter.setPen(pen);
     painter.drawLine(m_trackStart, m_trackEnd);
