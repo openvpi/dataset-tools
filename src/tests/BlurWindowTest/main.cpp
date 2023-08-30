@@ -17,7 +17,12 @@ int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
-    QApplication::setFont(QFont("Microsoft Yahei UI", 9));
+
+    auto f = QFont("Microsoft Yahei UI", 9);
+    f.setHintingPreference(QFont::PreferNoHinting);
+    QApplication::setFont(f);
+
+    QApplication::setEffectEnabled(Qt::UI_AnimateTooltip, false);
 
     QMainWindow w;
 
@@ -31,30 +36,22 @@ int main(int argc, char *argv[]) {
     {
         DWMSBT_AUTO = 0,
 
-        /// <summary>
         /// no backdrop
-        /// </summary>
         DWMSBT_NONE = 1,
 
-        /// <summary>
-        /// Use tinted blurred wallpaper backdrop (Mica)
-        /// </summary>
+        /// Mica
         DWMSBT_MAINWINDOW = 2,
 
-        /// <summary>
-        /// Use Acrylic backdrop
-        /// </summary>
+        /// Acrylic
         DWMSBT_TRANSIENTWINDOW = 3,
 
-        /// <summary>
-        /// Use blurred wallpaper backdrop
-        /// </summary>
+        /// Tabbed Mica
         DWMSBT_TABBEDWINDOW = 4
     };
     uint DWMWA_SYSTEMBACKDROP_TYPE = 38;
     uint DWMWA_IMMERSIVE_DARK_MODE = 20;
 
-    DWM_SYSTEMBACKDROP_TYPE backdropType = DWMSBT_TRANSIENTWINDOW;
+    auto backdropType = DWMSBT_TRANSIENTWINDOW;
     DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_SYSTEMBACKDROP_TYPE, &backdropType,
                           sizeof(backdropType));
     // Extend title bar blur effect into client area
@@ -62,23 +59,38 @@ int main(int argc, char *argv[]) {
     MARGINS margins = {mgn, mgn, mgn, mgn};
     DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(w.winId()), &margins);
 
-    auto qss = QString("border: 1px solid #a0d4d4d4; background-color: #a0ffffff; "
-                       "border-radius: 6px; color: #333; padding: 6px 12px;");
+    auto qss = QString("QPushButton { border: 1px solid #a0d4d4d4; background-color: #a0ffffff; "
+                       "border-radius: 6px; color: #333; padding: 6px 12px; }"
+                       "QToolTip { background-color: #f3f3f3; border-radius: 6px; "
+                       "color: #333; padding: 4px 4px; font-size: 9pt }");
 
     auto btnSwitchColor = new QPushButton;
-    btnSwitchColor->setText("Switch Light/Dark");
+    btnSwitchColor->setText("Light/Dark");
+//    btnSwitchColor->setToolTip("Switch theme");
     btnSwitchColor->setStyleSheet(qss);
     btnSwitchColor->setCheckable(true);
     btnSwitchColor->setChecked(false);
     QObject::connect(btnSwitchColor, &QPushButton::toggled, &w, [&](bool) {
-//        btnSwitchColor->setChecked(!btnSwitchColor->isChecked());
         uint dark = btnSwitchColor->isChecked() ? 1 : 0;
-        qDebug() << dark;
         DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_IMMERSIVE_DARK_MODE, &dark,
                               sizeof(dark));
     });
 
+    auto btnSwitchMaterial = new QPushButton;
+    btnSwitchMaterial->setText("Acrylic/Mica");
+    btnSwitchMaterial->setStyleSheet(qss);
+    btnSwitchMaterial->setCheckable(true);
+    btnSwitchMaterial->setChecked(false);
+    QObject::connect(btnSwitchMaterial, &QPushButton::toggled, &w, [&](bool) {
+        auto material = btnSwitchMaterial->isChecked()
+                                               ? DWMSBT_MAINWINDOW
+                                               : DWMSBT_TRANSIENTWINDOW;
+        DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_SYSTEMBACKDROP_TYPE, &material,
+                             sizeof(material));
+    });
+
     mainLayout->addWidget(btnSwitchColor);
+    mainLayout->addWidget(btnSwitchMaterial);
 #endif
 
     auto mainWidget = new QWidget;
