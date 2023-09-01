@@ -9,6 +9,7 @@
 #include "SeekBar.h"
 #include "ShadowButton.h"
 #include "SwitchButton.h"
+#include "ToolTip.h"
 
 #ifdef Q_OS_WIN
 #include <dwmapi.h>
@@ -18,12 +19,15 @@ int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
-    QApplication::setFont(QFont("Microsoft Yahei UI", 9));
+
+    auto f = QFont("Microsoft Yahei UI", 9);
+    f.setHintingPreference(QFont::PreferNoHinting);
+    QApplication::setFont(f);
 
     MainWindow w;
 #ifdef Q_OS_WIN
     // make window transparent
-    w.setStyleSheet(QString("background: transparent"));
+    w.setStyleSheet(QString("QMainWindow { background: transparent }"));
 
     enum DWM_SYSTEMBACKDROP_TYPE : uint
     {
@@ -186,6 +190,26 @@ int main(int argc, char *argv[]) {
     switchButtonLayout->addWidget(switchButton1);
     switchButtonLayout->addWidget(switchButton2);
 
+    auto btnToolTip1 = new QPushButton;
+    btnToolTip1->setText("ToolTip 1");
+    btnToolTip1->setToolTip("meow~");
+    btnToolTip1->installEventFilter(new ToolTipFilter(btnToolTip1));
+
+    auto btnToolTip2 = new QPushButton;
+    btnToolTip2->setText("ToolTip 2");
+    btnToolTip2->setToolTip("miao~");
+    btnToolTip2->installEventFilter(new ToolTipFilter(btnToolTip2));
+
+    auto btnToolTip3 = new QPushButton;
+    btnToolTip3->setText("ToolTip 3");
+    btnToolTip3->setToolTip("nya~");
+    btnToolTip3->installEventFilter(new ToolTipFilter(btnToolTip3));
+
+    auto toolTipButtonLayout = new QHBoxLayout;
+    toolTipButtonLayout->addWidget(btnToolTip1);
+    toolTipButtonLayout->addWidget(btnToolTip2);
+    toolTipButtonLayout->addWidget(btnToolTip3);
+
     auto verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     auto mainLayout = new QVBoxLayout;
@@ -204,12 +228,13 @@ int main(int argc, char *argv[]) {
     mainLayout->addWidget(sliderCurrentTaskValue);
     mainLayout->addWidget(shadowButton);
     mainLayout->addLayout(switchButtonLayout);
-//    mainLayout->addItem(verticalSpacer);
+    mainLayout->addLayout(toolTipButtonLayout);
+    mainLayout->addItem(verticalSpacer);
 
     mainWidget->setLayout(mainLayout);
 
     w.setCentralWidget(mainWidget);
-    w.resize(300, 700);
+    w.resize(300, 600);
     w.show();
 
     return QApplication::exec();
