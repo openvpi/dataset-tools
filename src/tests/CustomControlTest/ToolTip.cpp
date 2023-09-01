@@ -59,7 +59,7 @@ ToolTip::ToolTip(QString text, QWidget *parent) : QFrame(parent) {
 ToolTipFilter::ToolTipFilter(QWidget *parent, int showDelay, const ToolTip::ToolTipPosition &position) {
     m_parent = parent;
     parent->setAttribute(Qt::WA_Hover, true);
-//    m_tooltip = new ToolTip("", parent);
+    m_tooltip = new ToolTip(m_parent->toolTip(), parent);
 }
 
 bool ToolTipFilter::eventFilter(QObject *object, QEvent *event) {
@@ -71,8 +71,6 @@ bool ToolTipFilter::eventFilter(QObject *object, QEvent *event) {
         m_tooltip->hide();
     } else if (type == QEvent::Enter) {
 //        qDebug() << "Show Tool Tip";
-        if (m_tooltip != nullptr)
-            m_tooltip = new ToolTip(m_parent->toolTip(), m_parent);
         auto pos = QCursor::pos();
 //        qDebug() << pos;
         m_tooltip->move(pos.x(), pos.y());
