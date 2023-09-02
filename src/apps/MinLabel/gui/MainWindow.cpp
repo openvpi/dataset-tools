@@ -207,7 +207,7 @@ void MainWindow::openFile(const QString &filename) {
     }
     textWidget->contentText->setPlainText(labContent);
 
-    if(checkPreserveText->isChecked()) {
+    if (checkPreserveText->isChecked()) {
         QString txtFile = audioFileToTextFile(filename);
         QFile file(txtFile);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -333,7 +333,8 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::initStyleSheet() {
-    QFile file(":/res/app.qss");
+    // qss file: https://github.com/feiyangqingyun/QWidgetDemo/tree/master/ui/styledemo
+    QFile file(":/qss/flatgray.css");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qApp->setStyleSheet(file.readAll());
     }

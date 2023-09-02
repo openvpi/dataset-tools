@@ -5,7 +5,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 file(GLOB_RECURSE _src *.h *.cpp)
-add_executable(${PROJECT_NAME} ${_src} res.qrc)
+add_executable(${PROJECT_NAME} ${_src} res.qrc res/qss.qrc)
 
 find_package(mecab CONFIG REQUIRED)
 
@@ -36,6 +36,7 @@ endif ()
 set(DIRECTORIES_TO_COPY
         dict
         mecabDict
+        qss
 )
 
 foreach (dir ${DIRECTORIES_TO_COPY})
