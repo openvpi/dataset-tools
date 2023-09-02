@@ -12,8 +12,8 @@ public:
     SeekBar *q;
 
     explicit SeekBarPrivate(SeekBar *q) : q(q) {
-        q->setMinimumHeight(22);
-        q->setMaximumHeight(22);
+        q->setMinimumHeight(20);
+        q->setMaximumHeight(20);
     }
 };
 

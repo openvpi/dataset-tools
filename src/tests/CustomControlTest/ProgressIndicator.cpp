@@ -57,7 +57,7 @@ void ProgressIndicator::initUi(QWidget *parent) {
             calculateBarParams();
             break;
         case Ring:
-            setMinimumSize(8, 8);
+            setMinimumSize(16, 16);
             setMaximumSize(64, 64);
             calculateRingParams();
             break;

@@ -52,8 +52,8 @@ void SwitchButton::initUi(QWidget *parent) {
 
 //    setMinimumSize(32, 16);
 //    setMaximumSize(32, 16);
-    setMinimumSize(44, 22);
-    setMaximumSize(44, 22);
+    setMinimumSize(40, 20);
+    setMaximumSize(40, 20);
     calculateParams();
     connect(this, &QPushButton::clicked, this, [&]() {
         this->setValue(!m_value);
