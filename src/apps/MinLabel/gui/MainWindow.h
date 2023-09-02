@@ -3,17 +3,18 @@
 
 #include <QAction>
 #include <QBoxLayout>
+#include <QCheckBox>
 #include <QFileSystemModel>
 #include <QLabel>
 #include <QMainWindow>
 #include <QMenu>
 #include <QPluginLoader>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QSet>
 #include <QSlider>
 #include <QSplitter>
 #include <QTreeWidget>
-#include <QCheckBox>
 
 #include "PlayWidget.h"
 #include "TextWidget.h"
@@ -25,8 +26,8 @@
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow() override;
 
 protected:
     QMenu *fileMenu;
@@ -55,6 +56,8 @@ protected:
     QTreeView *treeView;
     QFileSystemModel *fsModel;
 
+    QProgressBar *progressBar;
+
     QSplitter *mainSplitter;
 
     QVBoxLayout *rightLayout;
@@ -64,7 +67,7 @@ protected:
 
     MinLabelCfg cfg;
 
-    void openDirectory(const QString &dirname);
+    void openDirectory(const QString &dirName);
     void openFile(const QString &filename);
     void saveFile(const QString &filename);
 
@@ -75,14 +78,15 @@ protected:
     void closeEvent(QCloseEvent *event) override;
 
 private:
-    void initStyleSheet();
+    static void initStyleSheet();
     void applyConfig();
 
     void _q_fileMenuTriggered(QAction *action);
     void _q_editMenuTriggered(QAction *action);
     void _q_playMenuTriggered(QAction *action);
     void _q_helpMenuTriggered(QAction *action);
-    void _q_treeCurrentChanged(const QModelIndex &current, const QModelIndex &previous);
+    void _q_updateProgress();
+    void _q_treeCurrentChanged(const QModelIndex &current);
 };
 
 #endif // MAINWINDOW_H

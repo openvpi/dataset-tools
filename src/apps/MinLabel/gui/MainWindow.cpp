@@ -7,25 +7,14 @@
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QJsonDocument>
-#include <QJsonObject>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QPluginLoader>
 #include <QStatusBar>
 #include <QTime>
 
-
-#include <QJsonObject>
-
-// #include "Common/CodecArguments.h"
-// #include "Common/SampleFormat.h"
-
-// #include "MathHelper.h"
 #include "QMSystem.h"
 #include "qasglobal.h"
-
-// https://iconduck.com/icons
 
 static QString audioFileToDsFile(const QString &filename) {
     QFileInfo info(filename);
@@ -90,8 +79,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Status bar
     checkPreserveText = new QCheckBox("Preserve text", this);
 
+    progressBar = new QProgressBar();
+    progressBar->setRange(0, 100);
+    progressBar->setValue(0);
+    auto progressLabel = new QLabel("progress:");
+
     auto status = statusBar();
+    status->setContentsMargins(20, 2, 20, 2);
+    status->setSizeGripEnabled(false);
     status->addWidget(checkPreserveText);
+    status->addPermanentWidget(progressLabel);
+    status->addPermanentWidget(progressBar);
 
     // Init widgets
     playerWidget = new PlayWidget();
@@ -141,6 +139,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(helpMenu, &QMenu::triggered, this, &MainWindow::_q_helpMenuTriggered);
 
     connect(treeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::_q_treeCurrentChanged);
+    connect(treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::_q_updateProgress);
 
     reloadWindowTitle();
     resize(1280, 720);
@@ -157,7 +156,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
             throw std::exception();
         }
 
-        QJsonParseError err;
+        QJsonParseError err{};
         cfgDoc = QJsonDocument::fromJson(file.readAll(), &err);
 
         file.close();
@@ -192,26 +191,26 @@ MainWindow::~MainWindow() {
     }
 }
 
-void MainWindow::openDirectory(const QString &dirname) {
-    fsModel->setRootPath(dirname);
-    treeView->setRootIndex(fsModel->index(dirname));
+void MainWindow::openDirectory(const QString &dirName) {
+    fsModel->setRootPath(dirName);
+    treeView->setRootIndex(fsModel->index(dirName));
 }
 
 void MainWindow::openFile(const QString &filename) {
     QString labContent, txtContent;
 
-    QString labFile = audioFileToDsFile(filename);
-    QFile file(labFile);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        labContent = QString::fromUtf8(file.readAll());
+    QString labFilePath = audioFileToDsFile(filename);
+    QFile labFile(labFilePath);
+    if (labFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        labContent = QString::fromUtf8(labFile.readAll());
     }
     textWidget->contentText->setPlainText(labContent);
 
     if (checkPreserveText->isChecked()) {
-        QString txtFile = audioFileToTextFile(filename);
-        QFile file(txtFile);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            txtContent = QString::fromUtf8(file.readAll());
+        QString txtFilePath = audioFileToTextFile(filename);
+        QFile txtFile(txtFilePath);
+        if (txtFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            txtContent = QString::fromUtf8(txtFile.readAll());
         }
         textWidget->wordsText->setText(txtContent);
     }
@@ -220,45 +219,45 @@ void MainWindow::openFile(const QString &filename) {
 }
 
 void MainWindow::saveFile(const QString &filename) {
-    QString labFile = audioFileToDsFile(filename);
+    QString labFilePath = audioFileToDsFile(filename);
 
     QString labContent = textWidget->contentText->toPlainText();
-    if (labContent.isEmpty() && !QMFs::isFileExist(labFile)) {
+    if (labContent.isEmpty() && !QMFs::isFileExist(labFilePath)) {
         return;
     }
 
-    QFile file(labFile);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    QFile labFile(labFilePath);
+    if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(this, qApp->applicationName(),
-                              QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFile)));
+                              QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFilePath)));
         ::exit(-1);
     }
 
-    QTextStream in(&file);
-    in.setCodec(QTextCodec::codecForName("UTF-8"));
-    in << labContent;
+    QTextStream labIn(&labFile);
+    labIn.setCodec(QTextCodec::codecForName("UTF-8"));
+    labIn << labContent;
 
     // Preserve text
     if (checkPreserveText->isChecked()) {
-        QString txtFile = audioFileToTextFile(filename);
+        QString txtFilePath = audioFileToTextFile(filename);
         QString txtContent = textWidget->wordsText->text();
-        if (txtContent.isEmpty() && !QMFs::isFileExist(txtFile)) {
+        if (txtContent.isEmpty() && !QMFs::isFileExist(txtFilePath)) {
             return;
         }
 
-        QFile file(txtFile);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QFile txtFile(txtFilePath);
+        if (!txtFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::critical(this, qApp->applicationName(),
-                                  QString("Failed to write to file %1").arg(QMFs::PathFindFileName(txtFile)));
+                                  QString("Failed to write to file %1").arg(QMFs::PathFindFileName(txtFilePath)));
             ::exit(-1);
         }
 
-        QTextStream in(&file);
-        in.setCodec(QTextCodec::codecForName("UTF-8"));
-        in << txtContent;
+        QTextStream txtIn(&txtFile);
+        txtIn.setCodec(QTextCodec::codecForName("UTF-8"));
+        txtIn << txtContent;
     }
 
-    file.close();
+    labFile.close();
 }
 
 void MainWindow::reloadWindowTitle() {
@@ -274,9 +273,9 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
     if (mime->hasUrls()) {
         auto urls = mime->urls();
         QStringList filenames;
-        for (auto it = urls.begin(); it != urls.end(); ++it) {
-            if (it->isLocalFile()) {
-                filenames.append(QMFs::removeTailSlashes(it->toLocalFile()));
+        for (auto &url : urls) {
+            if (url.isLocalFile()) {
+                filenames.append(QMFs::removeTailSlashes(url.toLocalFile()));
             }
         }
         bool ok = false;
@@ -298,9 +297,9 @@ void MainWindow::dropEvent(QDropEvent *event) {
     if (mime->hasUrls()) {
         auto urls = mime->urls();
         QStringList filenames;
-        for (auto it = urls.begin(); it != urls.end(); ++it) {
-            if (it->isLocalFile()) {
-                filenames.append(QMFs::removeTailSlashes(it->toLocalFile()));
+        for (auto &url : urls) {
+            if (url.isLocalFile()) {
+                filenames.append(QMFs::removeTailSlashes(url.toLocalFile()));
             }
         }
         bool ok = false;
@@ -323,7 +322,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     QFile file(keyConfPath);
 
     cfg.preserveText = checkPreserveText->isChecked();
-    
+
     if (file.open(QIODevice::WriteOnly)) {
         file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
     }
@@ -388,9 +387,18 @@ void MainWindow::_q_helpMenuTriggered(QAction *action) {
     }
 }
 
-void MainWindow::_q_treeCurrentChanged(const QModelIndex &current, const QModelIndex &previous) {
-    Q_UNUSED(previous);
+void MainWindow::_q_updateProgress() {
+    int selectedRow = treeView->currentIndex().row();
+    int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
+    double progress = 0.0;
+    if (totalRowCount > 0) {
+        progress = (static_cast<double>(selectedRow + 1) / totalRowCount) * 100.0;
+    }
 
+    progressBar->setValue(static_cast<int>(progress));
+}
+
+void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
     QFileInfo info = fsModel->fileInfo(current);
     if (info.isFile()) {
         if (QMFs::isFileExist(lastFile)) {
