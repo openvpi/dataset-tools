@@ -378,7 +378,7 @@ void MainWindow::applyConfig() {
         return;
     }
     openDirectory(dirname);
-    emit(_q_updateProgress());
+    _q_updateProgress();
     reloadWindowTitle();
 }
 
@@ -394,7 +394,7 @@ void MainWindow::_q_fileMenuTriggered(QAction *action) {
 
         dirname = path;
         cfg.rootDir = dirname;
-        emit(_q_updateProgress());
+        _q_updateProgress();
     }
     reloadWindowTitle();
 }
