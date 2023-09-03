@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QStatusBar>
+#include <QStyledItemDelegate>
 #include <QTime>
 
 #include "QMSystem.h"
@@ -31,6 +32,31 @@ static QString audioFileToTextFile(const QString &filename) {
     return info.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) +
            (suffix != "wav" ? "_" + suffix : "") + ".txt";
 }
+
+class CustomDelegate : public QStyledItemDelegate {
+public:
+    explicit CustomDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {
+    }
+
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
+        const auto *model = dynamic_cast<const QFileSystemModel *>(index.model());
+        if (!model) {
+            return;
+        }
+
+        QFileInfo fileInfo(model->filePath(index));
+        QString labFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".lab";
+
+        QStyleOptionViewItem modifiedOption(option);
+        if (QFile::exists(labFilePath) && fileInfo.isFile() && QFileInfo(labFilePath).size() > 0) {
+            modifiedOption.palette.setColor(QPalette::Text, Qt::gray);
+        } else {
+            modifiedOption.palette.setColor(QPalette::Text, Qt::black);
+        }
+
+        QStyledItemDelegate::paint(painter, modifiedOption, index);
+    }
+};
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     notifyTimerId = 0;
@@ -106,6 +132,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     treeView = new QTreeView();
     treeView->setModel(fsModel);
+    treeView->setItemDelegate(new CustomDelegate(treeView));
 
     {
         QSet<QString> names{"Name", "Size"};
@@ -176,6 +203,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
             cfg.prev = prevAction->shortcut().toString();
             cfg.play = playAction->shortcut().toString();
             cfg.preserveText = false;
+            cfg.rootDir = dirname;
             applyConfig();
             file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
             file.close();
@@ -345,6 +373,13 @@ void MainWindow::applyConfig() {
     nextAction->setShortcut(QKeySequence(cfg.next));
     playAction->setShortcut(QKeySequence(cfg.play));
     checkPreserveText->setChecked(cfg.preserveText);
+    dirname = cfg.rootDir;
+    if (dirname.isEmpty()) {
+        return;
+    }
+    openDirectory(dirname);
+    emit(_q_updateProgress());
+    reloadWindowTitle();
 }
 
 void MainWindow::_q_fileMenuTriggered(QAction *action) {
@@ -358,6 +393,8 @@ void MainWindow::_q_fileMenuTriggered(QAction *action) {
         openDirectory(path);
 
         dirname = path;
+        cfg.rootDir = dirname;
+        emit(_q_updateProgress());
     }
     reloadWindowTitle();
 }
@@ -388,13 +425,21 @@ void MainWindow::_q_helpMenuTriggered(QAction *action) {
 }
 
 void MainWindow::_q_updateProgress() {
-    int selectedRow = treeView->currentIndex().row();
+    QDir directory(dirname);
+    QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
+
+    int count = 0;
+    foreach (const QFileInfo &fileInfo, fileInfoList) {
+        if (fileInfo.suffix() == "lab" && fileInfo.size() > 0) {
+            count++;
+        }
+    }
+
     int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     double progress = 0.0;
     if (totalRowCount > 0) {
-        progress = (static_cast<double>(selectedRow + 1) / totalRowCount) * 100.0;
+        progress = (static_cast<double>(count) / totalRowCount) * 100.0;
     }
-
     progressBar->setValue(static_cast<int>(progress));
 }
 
