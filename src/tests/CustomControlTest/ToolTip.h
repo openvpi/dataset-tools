@@ -6,6 +6,7 @@
 #define DATASET_TOOLS_TOOLTIP_H
 
 #include <QFrame>
+#include <QPropertyAnimation>
 #include <QTimer>
 
 #include "WidgetsGlobal/QMWidgetsGlobal.h"
@@ -58,7 +59,12 @@ protected:
     ToolTip *m_tooltip;
     QWidget *m_parent;
 
+    // Animation
+    QPropertyAnimation *m_opacityAnimation;
+
     void adjustToolTipPos();
+    void showToolTip();
+    void hideToolTip();
 };
 
 #endif // DATASET_TOOLS_TOOLTIP_H
