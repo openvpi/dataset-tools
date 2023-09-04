@@ -11,21 +11,37 @@
 #include <QLabel>
 #include <QRect>
 #include <QScreen>
+#include <QTextEdit>
 
 #include "ToolTip.h"
 
-ToolTip::ToolTip(QString text, QWidget *parent) : QFrame(parent) {
-    auto label = new QLabel(text);
-    label->setAlignment(Qt::AlignCenter);
+ToolTip::ToolTip(QString title, QWidget *parent) : QFrame(parent) {
+    m_lbTitle = new QLabel(title);
+    m_lbTitle->setStyleSheet("color: #333; font-size: 10pt");
+    m_lbTitle->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
-    auto layout = new QHBoxLayout;
-    layout->addWidget(label);
-    layout->setMargin(0);
-    layout->setAlignment(Qt::AlignCenter);
+    m_lbShortcutKey = new QLabel();
+    m_lbShortcutKey->setStyleSheet("color: #808080");
+    m_lbShortcutKey->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+    m_lbShortcutKey->setVisible(false);
+
+    auto titleShortcutLayout = new QHBoxLayout;
+    titleShortcutLayout->addWidget(m_lbTitle);
+    titleShortcutLayout->addWidget(m_lbShortcutKey);
+    titleShortcutLayout->setMargin(0);
+
+    m_messageLayout = new QVBoxLayout;
+    m_messageLayout->setMargin(0);
+
+    m_cardLayout = new QVBoxLayout;
+    m_cardLayout->addLayout(titleShortcutLayout);
+    m_cardLayout->addLayout(m_messageLayout);
+//    cardLayout->addWidget(m_teMessage);
+    m_cardLayout->setMargin(0);
 
     auto container = new QFrame;
     container->setObjectName("container");
-    container->setLayout(layout);
+    container->setLayout(m_cardLayout);
     container->setContentsMargins(8, 4, 8, 4);
     container->setStyleSheet("QFrame#container {"
                              "background: #FFFFFF; "
@@ -49,6 +65,65 @@ ToolTip::ToolTip(QString text, QWidget *parent) : QFrame(parent) {
     setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
     setWindowOpacity(0);
 }
+
+ToolTip::~ToolTip() {
+    delete m_lbTitle;
+}
+
+QString ToolTip::title() const {
+    return m_title;
+}
+
+void ToolTip::setTitle(const QString &text) {
+    m_title = text;
+    m_lbTitle->setText(m_title);
+}
+
+QString ToolTip::shortcutKey() const {
+    return m_shortcutKey;
+}
+
+void ToolTip::setShortcutKey(const QString &text) {
+    m_lbShortcutKey->setVisible(true);
+    m_shortcutKey = text;
+    m_lbShortcutKey->setText(m_shortcutKey);
+}
+
+QList<QString> ToolTip::message() const {
+    return m_message;
+}
+
+void ToolTip::setMessage(const QList<QString> &text) {
+    m_message.clear();
+    m_message.append(text);
+    updateMessage();
+}
+
+void ToolTip::appendMessage(const QString &text) {
+    m_message.append(text);
+    updateMessage();
+}
+
+void ToolTip::clearMessage() {
+    m_message.clear();
+    updateMessage();
+}
+
+void ToolTip::updateMessage() {
+    QLayoutItem *child;
+    while ((child = m_messageLayout->takeAt(0)) != nullptr) {
+        child->widget()->setParent(nullptr);
+        delete child;
+    }
+    
+    for (const auto &message : qAsConst(m_message)) {
+        auto label = new QLabel;
+        label->setText(message);
+        label->setStyleSheet("color: #808080");
+        m_messageLayout->addWidget(label);
+    }
+}
+
 
 ToolTipFilter::ToolTipFilter(QWidget *parent, int showDelay, bool followCursor, bool animation) {
     m_parent = parent;
@@ -158,7 +233,7 @@ void ToolTipFilter::hideToolTip() {
     }
 }
 
-int ToolTipFilter::showDelay() {
+int ToolTipFilter::showDelay() const {
     return m_showDelay;
 }
 
@@ -166,7 +241,7 @@ void ToolTipFilter::setShowDelay(int delay) {
     m_showDelay = delay;
 }
 
-bool ToolTipFilter::followCursor() {
+bool ToolTipFilter::followCursor() const {
     return m_followCursor;
 }
 
@@ -174,10 +249,42 @@ void ToolTipFilter::setFollowCursor(bool on) {
     m_followCursor = on;
 }
 
-bool ToolTipFilter::animation() {
+bool ToolTipFilter::animation() const {
     return m_animation;
 }
 
 void ToolTipFilter::setAnimation(bool on) {
     m_animation = on;
+}
+
+QString ToolTipFilter::title() const {
+    return m_tooltip->title();
+}
+
+void ToolTipFilter::setTitle(const QString &text) {
+    m_tooltip->setTitle(text);
+}
+
+QString ToolTipFilter::shortcutKey() const {
+    return m_tooltip->shortcutKey();
+}
+
+void ToolTipFilter::setShortcutKey(const QString &text) {
+    m_tooltip->setShortcutKey(text);
+}
+
+QList<QString> ToolTipFilter::message() const {
+    return m_tooltip->message();
+}
+
+void ToolTipFilter::setMessage(const QList<QString> &text) {
+    m_tooltip->setMessage(text);
+}
+
+void ToolTipFilter::appendMessage(const QString &text) {
+    m_tooltip->appendMessage(text);
+}
+
+void ToolTipFilter::clearMessage() {
+    m_tooltip->clearMessage();
 }

@@ -197,13 +197,38 @@ int main(int argc, char *argv[]) {
 
     auto btnToolTip2 = new QPushButton;
     btnToolTip2->setText("ToolTip 2");
-    btnToolTip2->setToolTip("miao~");
-    btnToolTip2->installEventFilter(new ToolTipFilter(btnToolTip2, 0, true));
+//    btnToolTip2->setToolTip("灯火阑珊");
+    btnToolTip2->setToolTip("运行“DiffScope”");
+    auto filter2 = new ToolTipFilter(btnToolTip2, 0, true);
+    filter2->setShortcutKey("Shift + F10");
+//    filter2->setMessage(QList<QString> {
+//        "曾在梦里 诗里 歌里 风里寻",
+//        "循着你的脚步",
+//        "采撷一字 一句 一丝 一缕心",
+//        "心上人的眷顾",
+//        "曾在梦里 诗里 风里寻",
+//        "众里寻他千百度",
+//        "蓦然回首 那人却在 灯火阑珊处"
+//    });
+    btnToolTip2->installEventFilter(filter2);
 
     auto btnToolTip3 = new QPushButton;
     btnToolTip3->setText("ToolTip 3");
-    btnToolTip3->setToolTip("nya~");
-    btnToolTip3->installEventFilter(new ToolTipFilter(btnToolTip3, 0, true, false));
+    btnToolTip3->setToolTip("萨日朗！！！");
+    auto filter3 = new ToolTipFilter(btnToolTip3, 0, true, false);
+    filter3->setShowDelay(0);
+    filter3->setFollowCursor(true);
+    filter3->setAnimation(false);
+    filter3->setShortcutKey("Ctrl + S");
+    filter3->setMessage(QList<QString> {
+        "你这瓜保熟吗？",
+        "你是故意找茬？",
+        "我开水果摊能卖你生瓜？",
+        "这称有问题啊",
+        "你tm劈我瓜！",
+        "萨日朗~ 诶华强萨日朗~"
+    });
+    btnToolTip3->installEventFilter(filter3);
 
     auto toolTipButtonLayout = new QHBoxLayout;
     toolTipButtonLayout->addWidget(btnToolTip1);

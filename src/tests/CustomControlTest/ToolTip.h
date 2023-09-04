@@ -8,6 +8,8 @@
 #include <QFrame>
 #include <QPropertyAnimation>
 #include <QTimer>
+#include <QTextEdit>
+#include <QVBoxLayout>
 
 #include "WidgetsGlobal/QMWidgetsGlobal.h"
 
@@ -27,20 +29,33 @@ public:
 //        BOTTOM_RIGHT
 //    };
 
-    explicit ToolTip(QString text = "", QWidget *parent = nullptr);
+    explicit ToolTip(QString title = "", QWidget *parent = nullptr);
+    ~ToolTip();
 
-    QString text() const;
-    void setText(const QString &text);
-    int duration() const;
-    void setDuration(const int duration);
+    QString title() const;
+    void setTitle(const QString &text);
+    QString shortcutKey() const;
+    void setShortcutKey(const QString &text);
+    QList<QString> message() const;
+    void setMessage(const QList<QString> &text);
+    void appendMessage(const QString &text);
+    void clearMessage();
 
 protected:
-    QString m_text;
-    int m_duration = 1000; // ms
+    QString m_title;
+    QString m_shortcutKey;
+    QList<QString> m_message;
     QFrame m_container;
     QTimer m_timer;
 
+    QLabel *m_lbTitle;
+    QLabel *m_lbShortcutKey;
+    QVBoxLayout *m_cardLayout;
+    QVBoxLayout *m_messageLayout;
+//    QTextEdit *m_teMessage;
+
     void setQss();
+    void updateMessage();
 };
 
 class ToolTipFilter : public QObject {
@@ -52,12 +67,20 @@ public:
                            bool animation = true);
     ~ToolTipFilter() override;
 
-    int showDelay();
+    int showDelay() const;
     void setShowDelay(int delay);
-    bool followCursor();
+    bool followCursor() const;
     void setFollowCursor(bool on);
-    bool animation();
+    bool animation() const;
     void setAnimation(bool on);
+    QString title() const;
+    void setTitle(const QString &text);
+    QString shortcutKey() const;
+    void setShortcutKey(const QString &text);
+    QList<QString> message() const;
+    void setMessage(const QList<QString> &text);
+    void appendMessage(const QString &text);
+    void clearMessage();
 
 protected:
     QTimer m_timer;
