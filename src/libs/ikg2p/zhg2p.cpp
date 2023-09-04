@@ -7,6 +7,18 @@
 #include "g2pglobal.h"
 
 namespace IKg2p {
+    static const QMap<QString, QString> numMap = {
+        {"0", "零"},
+        {"1", "一"},
+        {"2", "二"},
+        {"3", "三"},
+        {"4", "四"},
+        {"5", "五"},
+        {"6", "六"},
+        {"7", "七"},
+        {"8", "八"},
+        {"9", "九"}
+    };
     // reset pinyin to raw string
     static QString resetZH(const QStringList &input, const QStringList &res, QList<int> &positions) {
         QStringList result = input;
@@ -81,11 +93,11 @@ namespace IKg2p {
     ZhG2p::~ZhG2p() {
     }
 
-    QString ZhG2p::convert(const QString &input, bool tone) {
-        return convert(splitString(input), tone);
+    QString ZhG2p::convert(const QString &input, bool tone, bool covertNum) {
+        return convert(splitString(input), tone, covertNum);
     }
 
-    QString ZhG2p::convert(const QStringList &input, bool tone) {
+    QString ZhG2p::convert(const QStringList &input, bool tone, bool covertNum) {
         Q_D(const ZhG2p);
         //    qDebug() << input;
         QStringList inputList;
@@ -99,7 +111,15 @@ namespace IKg2p {
             const QString &raw_current_char = inputList.at(cursor);
             QString current_char;
             current_char = d->tradToSim(raw_current_char);
-            //        qDebug() << raw_current_char << raw_current_char;
+
+            // covert num
+            if (covertNum) {
+                if (numMap.contains(current_char)) {
+                    result.append(numMap[current_char]);
+                    cursor++;
+                }
+            }
+
             // not in dict
             if (d->word_dict.find(current_char) == d->word_dict.end()) {
                 result.append(current_char);

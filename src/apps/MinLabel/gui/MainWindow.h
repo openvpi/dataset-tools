@@ -16,9 +16,12 @@
 #include <QSplitter>
 #include <QTreeWidget>
 
+#include "Common.h"
+#include "ExportDialog.h"
 #include "PlayWidget.h"
 #include "TextWidget.h"
 #include "inc/MinLabelCfg.h"
+#include "zhg2p.h"
 
 #include "Api/IAudioDecoder.h"
 #include "Api/IAudioPlayback.h"
@@ -30,8 +33,11 @@ public:
     ~MainWindow() override;
 
 protected:
+    IKg2p::ZhG2p *g2p_zh;
+
     QMenu *fileMenu;
     QAction *browseAction;
+    QAction *exportAction;
 
     QMenu *editMenu;
     QAction *nextAction;
@@ -46,7 +52,6 @@ protected:
 
     QCheckBox *checkPreserveText;
 
-    int notifyTimerId;
     bool playing;
     QString dirname;
 
@@ -70,6 +75,7 @@ protected:
     void openDirectory(const QString &dirName);
     void openFile(const QString &filename);
     void saveFile(const QString &filename);
+    void exportAudio(const QString &sourcePath, const QString &outputDir, bool convertPinyin);
 
     void reloadWindowTitle();
 

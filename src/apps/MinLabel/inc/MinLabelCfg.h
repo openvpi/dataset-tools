@@ -6,6 +6,7 @@
 
 struct MinLabelCfg {
     QString open;
+    QString exportAudio;
     QString next;
     QString prev;
     QString play;

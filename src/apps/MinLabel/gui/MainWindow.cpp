@@ -13,25 +13,10 @@
 #include <QStatusBar>
 #include <QStyledItemDelegate>
 #include <QTime>
+#include <utility>
 
 #include "QMSystem.h"
 #include "qasglobal.h"
-
-static QString audioFileToDsFile(const QString &filename) {
-    QFileInfo info(filename);
-    QString suffix = info.suffix().toLower();
-    QString name = info.fileName();
-    return info.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) +
-           (suffix != "wav" ? "_" + suffix : "") + ".lab";
-}
-
-static QString audioFileToTextFile(const QString &filename) {
-    QFileInfo info(filename);
-    QString suffix = info.suffix().toLower();
-    QString name = info.fileName();
-    return info.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) +
-           (suffix != "wav" ? "_" + suffix : "") + ".txt";
-}
 
 class CustomDelegate : public QStyledItemDelegate {
 public:
@@ -58,8 +43,7 @@ public:
     }
 };
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
-    notifyTimerId = 0;
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), g2p_zh(new IKg2p::ZhG2p("mandarin")) {
     playing = false;
 
     setAcceptDrops(true);
@@ -70,8 +54,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     browseAction = new QAction("Open Folder", this);
     browseAction->setShortcut(QKeySequence("Ctrl+O"));
 
+    exportAction = new QAction("Export", this);
+    exportAction->setShortcut(QKeySequence("Ctrl+E"));
+
     fileMenu = new QMenu("File(&F)", this);
     fileMenu->addAction(browseAction);
+    fileMenu->addAction(exportAction);
 
     nextAction = new QAction("Next file", this);
     nextAction->setShortcut(QKeySequence::MoveToNextPage);
@@ -199,6 +187,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         QFile file(keyConfPath);
         if (file.open(QIODevice::WriteOnly)) {
             cfg.open = browseAction->shortcut().toString();
+            cfg.exportAudio = exportAction->shortcut().toString();
             cfg.next = nextAction->shortcut().toString();
             cfg.prev = prevAction->shortcut().toString();
             cfg.play = playAction->shortcut().toString();
@@ -369,6 +358,7 @@ void MainWindow::initStyleSheet() {
 
 void MainWindow::applyConfig() {
     browseAction->setShortcut(QKeySequence(cfg.open));
+    exportAction->setShortcut(QKeySequence(cfg.exportAudio));
     prevAction->setShortcut(QKeySequence(cfg.prev));
     nextAction->setShortcut(QKeySequence(cfg.next));
     playAction->setShortcut(QKeySequence(cfg.play));
@@ -395,6 +385,15 @@ void MainWindow::_q_fileMenuTriggered(QAction *action) {
         dirname = path;
         cfg.rootDir = dirname;
         _q_updateProgress();
+    } else if (action == exportAction) {
+        ExportDialog dialog(this);
+
+        if (dialog.exec() == QDialog::Accepted) {
+            QString dirPath = dialog.dirPath;
+            QString outputDir = dialog.outputDir;
+            bool convertPinyin = dialog.convertPinyin;
+            exportAudio(dirname, dirPath + "/" + outputDir, convertPinyin);
+        }
     }
     reloadWindowTitle();
 }
@@ -425,16 +424,7 @@ void MainWindow::_q_helpMenuTriggered(QAction *action) {
 }
 
 void MainWindow::_q_updateProgress() {
-    QDir directory(dirname);
-    QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
-
-    int count = 0;
-    foreach (const QFileInfo &fileInfo, fileInfoList) {
-        if (fileInfo.suffix() == "lab" && fileInfo.size() > 0) {
-            count++;
-        }
-    }
-
+    int count = labCount(dirname);
     int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     double progress = 0.0;
     if (totalRowCount > 0) {
@@ -452,5 +442,27 @@ void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
         lastFile = info.absoluteFilePath();
         textWidget->wordsText->clear();
         openFile(lastFile);
+    }
+}
+
+void MainWindow::exportAudio(const QString &sourcePath, const QString &outputDir, bool convertPinyin) {
+    int count = labCount(sourcePath);
+    int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
+    if (totalRowCount != count) {
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, qApp->applicationName(),
+                                      QString("%1 file are not labeled, continue?").arg(totalRowCount - count),
+                                      QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::No) {
+            return;
+        }
+    }
+
+    mkdir(sourcePath, outputDir);
+    QList<CopyInfo> copyList = mkCopylist(sourcePath, outputDir, convertPinyin, g2p_zh);
+    if (copyFile(copyList)) {
+        QMessageBox::information(this, qApp->applicationName(), QString("Successfully exported files."));
+    } else {
+        QMessageBox::critical(this, qApp->applicationName(), QString("Failed to export files."));
     }
 }

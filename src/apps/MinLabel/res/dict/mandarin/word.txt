@@ -1,13 +1,3 @@
-0:ling2
-1:yi1
-2:er4
-3:san1
-4:si4
-5:wu3
-6:liu4
-7:qi1
-8:ba1
-9:jiu3
 π:pai4
 日:ri4
 㐖:xie2
