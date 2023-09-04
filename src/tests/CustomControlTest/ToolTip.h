@@ -57,6 +57,8 @@ protected:
     QTimer m_timer;
     ToolTip *m_tooltip;
     QWidget *m_parent;
+
+    void adjustToolTipPos();
 };
 
 #endif // DATASET_TOOLS_TOOLTIP_H
