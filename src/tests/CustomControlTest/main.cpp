@@ -198,12 +198,12 @@ int main(int argc, char *argv[]) {
     auto btnToolTip2 = new QPushButton;
     btnToolTip2->setText("ToolTip 2");
     btnToolTip2->setToolTip("miao~");
-    btnToolTip2->installEventFilter(new ToolTipFilter(btnToolTip2));
+    btnToolTip2->installEventFilter(new ToolTipFilter(btnToolTip2, 0, true));
 
     auto btnToolTip3 = new QPushButton;
     btnToolTip3->setText("ToolTip 3");
     btnToolTip3->setToolTip("nya~");
-    btnToolTip3->installEventFilter(new ToolTipFilter(btnToolTip3));
+    btnToolTip3->installEventFilter(new ToolTipFilter(btnToolTip3, 0, true, false));
 
     auto toolTipButtonLayout = new QHBoxLayout;
     toolTipButtonLayout->addWidget(btnToolTip1);

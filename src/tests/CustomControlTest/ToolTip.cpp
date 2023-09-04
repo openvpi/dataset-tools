@@ -29,28 +29,20 @@ ToolTip::ToolTip(QString text, QWidget *parent) : QFrame(parent) {
     container->setContentsMargins(8, 4, 8, 4);
     container->setStyleSheet("QFrame#container {"
                              "background: #FFFFFF; "
-                             "border: 1px solid #10000000; "
+                             "border: 1px solid #d0d0d0; "
                              "border-radius: 6px; "
                              "font-size: 10pt }");
 
-    auto mainLayout = new QHBoxLayout;
-    mainLayout->addWidget(container);
-    mainLayout->setMargin(16);
-    setLayout(mainLayout);
-
-    //    if (parent != nullptr) {
-    //        auto win = parent->window();
-    //        auto rect = QApplication::screenAt(QCursor::pos())->availableGeometry();
-    //        auto pos = QCursor::pos();
-    ////        auto pos = win->mapToGlobal(QPoint());
-    //        qDebug() << pos;
-    //        move(pos.x(), pos.y());
-    //    }
     auto shadowEffect = new QGraphicsDropShadowEffect(this);
     shadowEffect->setBlurRadius(24);
     shadowEffect->setColor(QColor(0, 0, 0, 32));
     shadowEffect->setOffset(0, 4);
     container->setGraphicsEffect(shadowEffect);
+
+    auto mainLayout = new QHBoxLayout;
+    mainLayout->addWidget(container);
+    mainLayout->setMargin(16);
+    setLayout(mainLayout);
 
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setAttribute(Qt::WA_TranslucentBackground);
@@ -58,12 +50,26 @@ ToolTip::ToolTip(QString text, QWidget *parent) : QFrame(parent) {
     setWindowOpacity(0);
 }
 
-ToolTipFilter::ToolTipFilter(QWidget *parent, int showDelay, const ToolTip::ToolTipPosition &position) {
+ToolTipFilter::ToolTipFilter(QWidget *parent, int showDelay, bool followCursor, bool animation) {
     m_parent = parent;
     parent->setAttribute(Qt::WA_Hover, true);
+    m_showDelay = showDelay;
+    m_followCursor = followCursor;
+    m_animation = animation;
+
     m_tooltip = new ToolTip(m_parent->toolTip(), parent);
+
     m_opacityAnimation = new QPropertyAnimation(m_tooltip, "windowOpacity");
     m_opacityAnimation->setDuration(150);
+
+    m_timer.setInterval(m_showDelay);
+    m_timer.setSingleShot(true);
+    QObject::connect(&m_timer, &QTimer::timeout, this, [&]() {
+        if (mouseInParent) {
+            adjustToolTipPos();
+            showToolTip();
+        }
+    });
 }
 
 bool ToolTipFilter::eventFilter(QObject *object, QEvent *event) {
@@ -72,13 +78,15 @@ bool ToolTipFilter::eventFilter(QObject *object, QEvent *event) {
         return true; // discard the original QToolTip event
     else if (type == QEvent::Hide || type == QEvent::Leave) {
         hideToolTip();
+        mouseInParent = false;
     } else if (type == QEvent::Enter) {
-        adjustToolTipPos();
-        showToolTip();
+        mouseInParent = true;
+        m_timer.start();
     } else if (type == QEvent::MouseButtonPress) {
         hideToolTip();
     } else if (type == QEvent::HoverMove) {
-        adjustToolTipPos();
+        if (m_followCursor)
+            adjustToolTipPos();
     }
 
     return QObject::eventFilter(object, event);
@@ -86,6 +94,7 @@ bool ToolTipFilter::eventFilter(QObject *object, QEvent *event) {
 
 ToolTipFilter::~ToolTipFilter() {
     delete m_tooltip;
+    delete m_opacityAnimation;
 }
 
 void ToolTipFilter::adjustToolTipPos() {
@@ -126,16 +135,49 @@ void ToolTipFilter::adjustToolTipPos() {
 }
 
 void ToolTipFilter::showToolTip() {
-    m_opacityAnimation->stop();
-    m_opacityAnimation->setStartValue(m_tooltip->windowOpacity());
-    m_opacityAnimation->setEndValue(1);
-    m_opacityAnimation->start();
+    if (m_animation) {
+        m_opacityAnimation->stop();
+        m_opacityAnimation->setStartValue(m_tooltip->windowOpacity());
+        m_opacityAnimation->setEndValue(1);
+        m_opacityAnimation->start();
+    } else {
+        m_tooltip->setWindowOpacity(1);
+    }
+
     m_tooltip->show();
 }
 
 void ToolTipFilter::hideToolTip() {
-    m_opacityAnimation->stop();
-    m_opacityAnimation->setStartValue(m_tooltip->windowOpacity());
-    m_opacityAnimation->setEndValue(0);
-    m_opacityAnimation->start();
+    if (m_animation) {
+        m_opacityAnimation->stop();
+        m_opacityAnimation->setStartValue(m_tooltip->windowOpacity());
+        m_opacityAnimation->setEndValue(0);
+        m_opacityAnimation->start();
+    } else {
+        m_tooltip->setWindowOpacity(0);
+    }
+}
+
+int ToolTipFilter::showDelay() {
+    return m_showDelay;
+}
+
+void ToolTipFilter::setShowDelay(int delay) {
+    m_showDelay = delay;
+}
+
+bool ToolTipFilter::followCursor() {
+    return m_followCursor;
+}
+
+void ToolTipFilter::setFollowCursor(bool on) {
+    m_followCursor = on;
+}
+
+bool ToolTipFilter::animation() {
+    return m_animation;
+}
+
+void ToolTipFilter::setAnimation(bool on) {
+    m_animation = on;
 }

@@ -16,16 +16,16 @@ class QMWIDGETS_EXPORT ToolTip : public QFrame {
     Q_OBJECT
 
 public:
-    enum ToolTipPosition  {
-        TOP,
-        BOTTOM,
-        LEFT,
-        RIGHT,
-        TOP_LEFT,
-        TOP_RIGHT,
-        BOTTOM_LEFT,
-        BOTTOM_RIGHT
-    };
+//    enum ToolTipPosition  {
+//        TOP,
+//        BOTTOM,
+//        LEFT,
+//        RIGHT,
+//        TOP_LEFT,
+//        TOP_RIGHT,
+//        BOTTOM_LEFT,
+//        BOTTOM_RIGHT
+//    };
 
     explicit ToolTip(QString text = "", QWidget *parent = nullptr);
 
@@ -33,7 +33,6 @@ public:
     void setText(const QString &text);
     int duration() const;
     void setDuration(const int duration);
-    void adjustPos(ToolTipPosition &position);
 
 protected:
     QString m_text;
@@ -48,16 +47,26 @@ class ToolTipFilter : public QObject {
 
 public:
     explicit ToolTipFilter(QWidget *parent,
-                           int showDelay = 300,
-                           const ToolTip::ToolTipPosition &position = ToolTip::BOTTOM_RIGHT);
+                           int showDelay = 1000,
+                           bool followCursor = false,
+                           bool animation = true);
     ~ToolTipFilter() override;
 
-    bool eventFilter(QObject *object, QEvent *event) override;
+    int showDelay();
+    void setShowDelay(int delay);
+    bool followCursor();
+    void setFollowCursor(bool on);
+    bool animation();
+    void setAnimation(bool on);
 
 protected:
     QTimer m_timer;
     ToolTip *m_tooltip;
     QWidget *m_parent;
+    int m_showDelay;
+    bool m_followCursor;
+    bool m_animation;
+    bool mouseInParent = false;
 
     // Animation
     QPropertyAnimation *m_opacityAnimation;
@@ -65,6 +74,8 @@ protected:
     void adjustToolTipPos();
     void showToolTip();
     void hideToolTip();
+
+    bool eventFilter(QObject *object, QEvent *event) override;
 };
 
 #endif // DATASET_TOOLS_TOOLTIP_H
