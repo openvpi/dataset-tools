@@ -40,15 +40,17 @@ void ParamEditArea::paintEvent(QPaintEvent *event) {
 
     QPainterPath path;
     auto firstValue = m_param.values.first();
-    path.moveTo(0, firstValue < 1 ? rectHeight * (1 - firstValue) : rectHeight);
+    path.moveTo(0, firstValue < 1 ? rectHeight * (1 - firstValue) : 0);
     int i = 0;
     for (const auto value : qAsConst(m_param.values)) {
         auto x = 1.0 * i / m_param.values.count() * rectWidth;
-        auto y = value < 1 ? rectHeight * (1 - value) : rectHeight;
+        auto y = value < 1 ? rectHeight * (1 - value) : 0;
         path.lineTo(x, y);
         i++;
     }
+
     painter.drawPath(path);
+    painter.end();
 
     QFrame::paintEvent(event);
 }

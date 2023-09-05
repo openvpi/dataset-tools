@@ -3,20 +3,17 @@
 //
 
 #include <QApplication>
-#include <QMainWindow>
-#include <QWidget>
 #include <QDebug>
+#include <QMainWindow>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QWidget>
 
 #include "ParamEditArea.h"
 #include "ParamModel.h"
 
-#ifdef Q_OS_WIN
-#    include <QFile>
-#    include <QJsonDocument>
-#    include <dwmapi.h>
-#endif
+#include <QFile>
+#include <QJsonDocument>
 
 int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
@@ -26,7 +23,7 @@ int main(int argc, char *argv[]) {
     auto f = QFont("Microsoft Yahei UI", 9);
     f.setHintingPreference(QFont::PreferNoHinting);
     QApplication::setFont(f);
-    
+
     auto loadProjectFile = [](const QString &filename, QJsonObject *jsonObj) {
         QFile loadFile(filename);
         if (!loadFile.open(QIODevice::ReadOnly)) {
@@ -44,7 +41,7 @@ int main(int argc, char *argv[]) {
         }
         return true;
     };
-    
+
     QJsonObject jsonObj;
     auto filename = "D:/Test/Param/test.json";
     loadProjectFile(filename, &jsonObj);
