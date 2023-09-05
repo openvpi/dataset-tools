@@ -32,6 +32,7 @@ ToolTip::ToolTip(QString title, QWidget *parent) : QFrame(parent) {
 
     m_messageLayout = new QVBoxLayout;
     m_messageLayout->setMargin(0);
+    m_messageLayout->setSpacing(0);
 
     m_cardLayout = new QVBoxLayout;
     m_cardLayout->addLayout(titleShortcutLayout);
