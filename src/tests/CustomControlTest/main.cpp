@@ -251,10 +251,10 @@ int main(int argc, char *argv[]) {
     mainLayout->addWidget(sliderValue);
     mainLayout->addWidget(sliderSecondaryValue);
     mainLayout->addWidget(sliderCurrentTaskValue);
-    mainLayout->addWidget(shadowButton);
-    mainLayout->addLayout(switchButtonLayout);
     mainLayout->addLayout(toolTipButtonLayout);
-    mainLayout->addItem(verticalSpacer);
+    mainLayout->addLayout(switchButtonLayout);
+    mainLayout->addWidget(shadowButton);
+//    mainLayout->addItem(verticalSpacer);
 
     mainWidget->setLayout(mainLayout);
 
