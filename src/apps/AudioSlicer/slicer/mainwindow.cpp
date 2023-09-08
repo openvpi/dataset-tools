@@ -25,6 +25,10 @@
 #include "mainwindow_ui.h"
 #include "workthread.h"
 
+#ifdef Q_OS_WIN
+#include "utils/winfont.h"
+#endif
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
@@ -483,11 +487,22 @@ void MainWindow::showEvent(QShowEvent *event) {
 #ifdef Q_OS_MAC
     auto dpiScale = 1.0;
     // It seems that on macOS, logicalDotsPerInch() always return 72.
-    // Therefore,
+    // Therefore, we just don't resize on macOS.
 #else
+    // Get current screen
     auto currentScreen = screen();
+    // Try calculate screen DPI scale factor. If currentScreen is nullptr, use 1.0.
     auto dpiScale = currentScreen ? currentScreen->logicalDotsPerInch() / 96.0 : 1.0;
-    resize(dpiScale * size());
+    // Get current window size
+    auto oldSize = size();
+    // Calculate DPI scaled window size
+    auto newSize = dpiScale * oldSize;
+    // Calculate window move offset
+    auto sizeDiff = (newSize - oldSize) / 2;
+    // Resize window to DPI scaled size
+    resize(newSize);
+    // Move window so its center stays almost the same position
+    move(pos().x() - sizeDiff.width(), pos().y() - sizeDiff.height());
 #endif
     auto splitterMainSizes = ui->splitterMain->sizes();
 
@@ -495,8 +510,8 @@ void MainWindow::showEvent(QShowEvent *event) {
         ui->splitterMain->setStretchFactor(0, 1);
         ui->splitterMain->setStretchFactor(1, 0);
         auto firstTwoColumnSizes = splitterMainSizes[0] + splitterMainSizes[1];
-        splitterMainSizes[0] = static_cast<int>(std::round(1.0 * 5 * firstTwoColumnSizes / 7));
-        splitterMainSizes[1] = static_cast<int>(std::round(1.0 * 2 * firstTwoColumnSizes / 7));
+        splitterMainSizes[0] = static_cast<int>(std::round(1.0 * 2 * firstTwoColumnSizes / 3));
+        splitterMainSizes[1] = static_cast<int>(std::round(1.0 * 1 * firstTwoColumnSizes / 3));
         ui->splitterMain->setSizes(splitterMainSizes);
     }
 
@@ -511,3 +526,23 @@ void MainWindow::slot_slicingModeChanged(int index) {
         ui->cbOverwriteMarkers->setVisible(false);
     }
 }
+
+#ifdef Q_OS_WIN
+bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result) {
+    if (!message) {
+        // If the message pointer is nullptr, just return false and let Qt handle it.
+        return false;
+    }
+
+    if (eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG") {
+        // If the message is Windows native message
+        MSG *msg = static_cast<MSG *>(message);
+        if ((msg->message == WM_SETTINGCHANGE) && (msg->wParam == SPI_SETNONCLIENTMETRICS)) {
+            // System non-client metrics change, including font change
+            // Set app font to current system font
+            setWinFont();
+        }
+    }
+    return false;
+}
+#endif

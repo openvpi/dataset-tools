@@ -28,11 +28,17 @@ public:
 
     ~MainWindow() override;
 
+protected:
     // events
     void closeEvent(QCloseEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     void showEvent(QShowEvent *event) override;
+
+#ifdef Q_OS_WIN
+protected:
+    bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
+#endif
 
 public slots:
     void slot_browseOutputDir();
@@ -68,7 +74,7 @@ private:
     void initStylesMenu();
 
 #ifdef Q_OS_WIN
-    private:
+private:
     ITaskbarList3* m_pTaskbarList3;
     HWND m_hwnd;
 #endif

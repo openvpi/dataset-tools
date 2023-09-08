@@ -3,9 +3,10 @@
 #include <QApplication>
 
 
-//#ifdef Q_OS_WINDOWS
-//#    include <Windows.h>
-//#endif
+#ifdef Q_OS_WIN
+#include "utils/winfont.h"
+#endif
+
 
 int main(int argc, char *argv[]) {
     //QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -14,10 +15,9 @@ int main(int argc, char *argv[]) {
     a.setApplicationName("Audio Slicer");
     a.setApplicationDisplayName("Audio Slicer");
 
-#if defined(Q_OS_WIN)
-    QFont font("Microsoft Yahei UI");
-    font.setPointSize(9);
-    a.setFont(font);
+#ifdef Q_OS_WIN
+    // If the operating system is Windows, set app font face and size to system settings.
+    setWinFont();
 #endif
 
     // Set library loading info
