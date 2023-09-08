@@ -7,38 +7,52 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
-
+#include <QStandardPaths>
 
 ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     setWindowTitle("Export");
 
     auto *layout = new QFormLayout(this);
 
-    dirnameEdit = new QLineEdit(this);
-    dirnameEdit->setText(QDir::currentPath());
-    dirnameButton = new QPushButton("...", this);
-    dirnameButton->setMaximumWidth(100);
+    outputDirEdit = new QLineEdit(this);
+    outputDirEdit->setText(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
+    outputDirButton = new QPushButton("...", this);
+    outputDirButton->setMaximumWidth(100);
 
-    connect(dirnameButton, &QPushButton::clicked, this, [=]() {
-        QString dirname = QFileDialog::getExistingDirectory(this, "Select Directory", dirnameEdit->text());
+    connect(outputDirButton, &QPushButton::clicked, this, [=]() {
+        QString dirname = QFileDialog::getExistingDirectory(this, "Select Directory", outputDirEdit->text());
         if (!dirname.isEmpty()) {
-            dirnameEdit->setText(dirname);
+            outputDirEdit->setText(dirname);
         }
     });
 
     auto hLayout = new QHBoxLayout();
-    hLayout->addWidget(dirnameEdit);
-    hLayout->addWidget(dirnameButton);
+    hLayout->addWidget(outputDirEdit);
+    hLayout->addWidget(outputDirButton);
 
-    layout->addRow(new QLabel("Directory:", this));
+    layout->addRow(new QLabel("Out Directory:", this));
     layout->addRow(hLayout);
 
-    outputDirEdit = new QLineEdit(this);
-    outputDirEdit->setText("minlabel_export_audio");
-    layout->addRow(new QLabel("Output Folder Name:", this), outputDirEdit);
+    folderNameEdit = new QLineEdit(this);
+    folderNameEdit->setText("minlabel_export");
+    layout->addRow(new QLabel("Output Folder Name:", this), folderNameEdit);
 
     convertFilename = new QCheckBox("Convert chinese in filename to pinyin", this);
     layout->addRow(convertFilename);
+
+    expAudio = new QCheckBox("Export audio", this);
+    expAudio->setChecked(true);
+    layout->addRow(expAudio);
+
+    labFile = new QCheckBox("Export word sequences(*.lab)", this);
+    labFile->setChecked(true);
+    layout->addRow(labFile);
+
+    rawText = new QCheckBox("Export raw text(*.txt)", this);
+    layout->addRow(rawText);
+
+    removeTone = new QCheckBox("Export word sequences without tone(*.lab)", this);
+    layout->addRow(removeTone);
 
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     layout->addRow(buttonBox);
@@ -46,12 +60,16 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
     connect(this, &QDialog::accepted, this, [=]() {
-        dirPath = dirnameEdit->text();
-        outputDir = outputDirEdit->text();
-        convertPinyin = convertFilename->isChecked();
+        exportInfo.outputDir = outputDirEdit->text();
+        exportInfo.folderName = folderNameEdit->text();
+        exportInfo.convertPinyin = convertFilename->isChecked();
+        exportInfo.exportAudio = expAudio->isChecked();
+        exportInfo.labFile = labFile->isChecked();
+        exportInfo.rawText = rawText->isChecked();
+        exportInfo.removeTone = removeTone->isChecked();
     });
 
-    resize(400, 200);
+    resize(500, 300);
 }
 
 ExportDialog::~ExportDialog() {

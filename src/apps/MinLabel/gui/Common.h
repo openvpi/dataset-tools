@@ -6,31 +6,42 @@
 #include <QMap>
 #include <QString>
 #include <QStringList>
+#include <utility>
 
 #include "zhg2p.h"
 
-QString audioFileToDsFile(const QString &filename);
+QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix);
 QString labFileToAudioFile(const QString &filename);
-QString audioFileToTextFile(const QString &filename);
+
+struct ExportInfo {
+    QString outputDir;
+    QString folderName;
+    bool convertPinyin;
+    bool exportAudio;
+    bool labFile;
+    bool rawText;
+    bool removeTone;
+};
 
 struct CopyInfo {
-    QString filename;
-    QString sourceAudio;
-    QString targetAudio;
-    QString sourceLab;
-    QString targetLab;
+    QString rawName;
+    QString tarName;
+    QString sourceDir;
+    QString targetDir;
+    QString tarBasename;
     bool exist;
 
-    CopyInfo(QString fname, QString srcPath, QString outPath, bool isExist)
-        : filename(std::move(fname)), sourceAudio(std::move(srcPath)), targetAudio(std::move(outPath)), exist(isExist) {
-        sourceLab = audioFileToDsFile(sourceAudio);
-        targetLab = audioFileToDsFile(targetAudio);
+    CopyInfo(QString rawName, const QString &tarName, QString sourceDir, QString targetDir, bool isExist)
+        : rawName(std::move(rawName)), tarName(tarName), sourceDir(std::move(sourceDir)),
+          targetDir(std::move(targetDir)), exist(isExist) {
+        tarBasename = tarName.split(".")[0];
     }
 };
 
-bool copyFile(QList<CopyInfo> &copyList);
+bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo);
 int labCount(const QString &dirName);
-void mkdir(const QString &sourcePath, const QString &outputDir);
-QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, bool convertPinyin, IKg2p::ZhG2p *g2p_zh);
+void mkdir(ExportInfo &exportInfo);
+QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, bool convertPinyin,
+                           IKg2p::ZhG2p *g2p_zh);
 
 #endif // DATASET_TOOLS_COMMON_H

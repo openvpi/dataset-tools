@@ -6,6 +6,7 @@
 #include <QDialog>
 #include <QLineEdit>
 
+#include "common.h"
 
 class ExportDialog : public QDialog {
     Q_OBJECT
@@ -13,15 +14,17 @@ public:
     explicit ExportDialog(QWidget *parent = nullptr);
     ~ExportDialog() override;
 
-    QString dirPath;
-    QString outputDir;
-    bool convertPinyin;
-
-    QLineEdit *dirnameEdit;
-    QPushButton *dirnameButton;
+    ExportInfo exportInfo;
 
     QLineEdit *outputDirEdit;
+    QPushButton *outputDirButton;
+
+    QLineEdit *folderNameEdit;
     QCheckBox *convertFilename;
+    QCheckBox *expAudio;
+    QCheckBox *labFile;
+    QCheckBox *rawText;
+    QCheckBox *removeTone;
 };
 
 

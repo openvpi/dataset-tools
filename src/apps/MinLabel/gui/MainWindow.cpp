@@ -92,6 +92,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), g2p_zh(new IKg2p:
 
     // Status bar
     checkPreserveText = new QCheckBox("Preserve text", this);
+    checkPreserveText->setChecked(true);
 
     progressBar = new QProgressBar();
     progressBar->setRange(0, 100);
@@ -191,7 +192,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), g2p_zh(new IKg2p:
             cfg.next = nextAction->shortcut().toString();
             cfg.prev = prevAction->shortcut().toString();
             cfg.play = playAction->shortcut().toString();
-            cfg.preserveText = false;
+            cfg.preserveText = true;
             cfg.rootDir = dirname;
             applyConfig();
             file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
@@ -216,7 +217,7 @@ void MainWindow::openDirectory(const QString &dirName) {
 void MainWindow::openFile(const QString &filename) {
     QString labContent, txtContent;
 
-    QString labFilePath = audioFileToDsFile(filename);
+    QString labFilePath = audioToOtherSuffix(filename, "lab");
     QFile labFile(labFilePath);
     if (labFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         labContent = QString::fromUtf8(labFile.readAll());
@@ -224,7 +225,7 @@ void MainWindow::openFile(const QString &filename) {
     textWidget->contentText->setPlainText(labContent);
 
     if (checkPreserveText->isChecked()) {
-        QString txtFilePath = audioFileToTextFile(filename);
+        QString txtFilePath = audioToOtherSuffix(filename, "txt");
         QFile txtFile(txtFilePath);
         if (txtFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
             txtContent = QString::fromUtf8(txtFile.readAll());
@@ -236,7 +237,7 @@ void MainWindow::openFile(const QString &filename) {
 }
 
 void MainWindow::saveFile(const QString &filename) {
-    QString labFilePath = audioFileToDsFile(filename);
+    QString labFilePath = audioToOtherSuffix(filename, "lab");
 
     QString labContent = textWidget->contentText->toPlainText();
     if (labContent.isEmpty() && !QMFs::isFileExist(labFilePath)) {
@@ -256,7 +257,7 @@ void MainWindow::saveFile(const QString &filename) {
 
     // Preserve text
     if (checkPreserveText->isChecked()) {
-        QString txtFilePath = audioFileToTextFile(filename);
+        QString txtFilePath = audioToOtherSuffix(filename, "txt");
         QString txtContent = textWidget->wordsText->text();
         if (txtContent.isEmpty() && !QMFs::isFileExist(txtFilePath)) {
             return;
@@ -389,10 +390,7 @@ void MainWindow::_q_fileMenuTriggered(QAction *action) {
         ExportDialog dialog(this);
 
         if (dialog.exec() == QDialog::Accepted) {
-            QString dirPath = dialog.dirPath;
-            QString outputDir = dialog.outputDir;
-            bool convertPinyin = dialog.convertPinyin;
-            exportAudio(dirname, dirPath + "/" + outputDir, convertPinyin);
+            exportAudio(dialog.exportInfo);
         }
     }
     reloadWindowTitle();
@@ -445,8 +443,8 @@ void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
     }
 }
 
-void MainWindow::exportAudio(const QString &sourcePath, const QString &outputDir, bool convertPinyin) {
-    int count = labCount(sourcePath);
+void MainWindow::exportAudio(ExportInfo &exportInfo) {
+    int count = labCount(dirname);
     int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     if (totalRowCount != count) {
         QMessageBox::StandardButton reply;
@@ -458,9 +456,10 @@ void MainWindow::exportAudio(const QString &sourcePath, const QString &outputDir
         }
     }
 
-    mkdir(sourcePath, outputDir);
-    QList<CopyInfo> copyList = mkCopylist(sourcePath, outputDir, convertPinyin, g2p_zh);
-    if (copyFile(copyList)) {
+    mkdir(exportInfo);
+    QList<CopyInfo> copyList =
+        mkCopylist(dirname, exportInfo.outputDir + "/" + exportInfo.folderName, exportInfo.convertPinyin, g2p_zh);
+    if (copyFile(copyList, exportInfo)) {
         QMessageBox::information(this, qApp->applicationName(), QString("Successfully exported files."));
     } else {
         QMessageBox::critical(this, qApp->applicationName(), QString("Failed to export files."));

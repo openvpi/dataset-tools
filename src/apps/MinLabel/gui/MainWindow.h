@@ -75,7 +75,7 @@ protected:
     void openDirectory(const QString &dirName);
     void openFile(const QString &filename);
     void saveFile(const QString &filename);
-    void exportAudio(const QString &sourcePath, const QString &outputDir, bool convertPinyin);
+    void exportAudio(ExportInfo &exportInfo);
 
     void reloadWindowTitle();
 
