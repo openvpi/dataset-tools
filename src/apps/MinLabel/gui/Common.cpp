@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QMessageBox>
 
+typedef QString string;
 QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix) {
     QFileInfo info(filename);
     QString suffix = info.suffix().toLower();
@@ -33,60 +34,33 @@ QString labFileToAudioFile(const QString &filename) {
     return "";
 }
 
-bool coverCopy(const CopyInfo &copyInfo, const QString &item, const QString &suffix) {
-    QString source = audioToOtherSuffix(copyInfo.sourceDir + "/" + copyInfo.rawName, suffix);
+bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffix, const QString data) {
     QString target = copyInfo.targetDir + "/" + item + "/" + copyInfo.tarBasename + "." + suffix;
     if (QFile::exists(target)) {
         QFile::remove(target);
     }
-    if (QFile::exists(source)) {
-        return QFile::copy(source, target);
-    } else {
-        return true;
+
+    QFile tar(target);
+    if (!tar.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return false;
     }
+    QTextStream out(&tar);
+    out << data;
+    tar.close();
+    return true;
 }
 
-int labCount(const QString &dirName) {
+int jsonCount(const QString &dirName) {
     QDir directory(dirName);
     QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
 
     int count = 0;
     foreach (const QFileInfo &fileInfo, fileInfoList) {
-        if (fileInfo.suffix() == "lab" && fileInfo.size() > 0) {
+        if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
             count++;
         }
     }
     return count;
-}
-
-bool mkLabWithoutTone(const QString &labFile, const QString &tarFile) {
-    if (QFile::exists(tarFile)) {
-        QFile::remove(tarFile);
-    }
-    if (QFile::exists(labFile)) {
-        QFile file(labFile);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            return false;
-        }
-        QTextStream in(&file);
-        QString line = in.readLine();
-        QStringList inputList = line.split(" ");
-        for (QString &item : inputList) {
-            item.remove(QRegExp("[^a-z]"));
-        }
-        QString result = inputList.join(" ");
-        QFile tar(tarFile);
-        if (!tar.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            return false;
-        }
-        QTextStream out(&tar);
-        out << result;
-        tar.close();
-        file.close();
-        return true;
-    } else {
-        return false;
-    }
 }
 
 bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo) {
@@ -112,8 +86,18 @@ bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo) {
         }
 
         if (!(copyInfo.exist && skipAll)) {
+            QString sourceAudio = copyInfo.sourceDir + "/" + copyInfo.rawName;
+            string sourceJson = audioToOtherSuffix(sourceAudio, "json");
+
+            QString labContent, txtContent, unToneLab;
+            QJsonObject readData;
+            if (readJsonFile(sourceJson, readData)) {
+                txtContent = readData.contains("raw_text") ? readData["raw_text"].toString() : "";
+                labContent = readData.contains("lab") ? readData["lab"].toString() : "";
+                unToneLab = readData.contains("lab_without_tone") ? readData["lab_without_tone"].toString() : "";
+            }
+
             if (exportInfo.exportAudio) {
-                QString sourceAudio = copyInfo.sourceDir + "/" + copyInfo.rawName;
                 QString targetAudio = copyInfo.targetDir + "/wav/" + copyInfo.tarName;
 
                 if (QFile::exists(targetAudio)) {
@@ -128,7 +112,7 @@ bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo) {
             }
 
             if (exportInfo.labFile) {
-                if (!coverCopy(copyInfo, "lab", "lab")) {
+                if (!expFile(copyInfo, "lab", "lab", labContent)) {
                     QMessageBox::critical(nullptr, "Copy failed lab",
                                           QString("Failed to copy file %1.%2, exit").arg(copyInfo.tarBasename, "lab"));
                     return false;
@@ -136,7 +120,7 @@ bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo) {
             }
 
             if (exportInfo.rawText) {
-                if (!coverCopy(copyInfo, "raw_text", "txt")) {
+                if (!expFile(copyInfo, "raw_text", "txt", txtContent)) {
                     QMessageBox::critical(nullptr, "Copy failed raw text",
                                           QString("Failed to copy file %1.%2, exit").arg(copyInfo.tarBasename, "txt"));
                     return false;
@@ -144,9 +128,7 @@ bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo) {
             }
 
             if (exportInfo.removeTone) {
-                QString labFile = audioToOtherSuffix(copyInfo.sourceDir + "/" + copyInfo.rawName, "lab");
-                QString tarFile = copyInfo.targetDir + "/lab_without_tone/" + copyInfo.tarBasename + ".lab";
-                if (!mkLabWithoutTone(labFile, tarFile)) {
+                if (!expFile(copyInfo, "lab_without_tone", "lab", unToneLab)) {
                     QMessageBox::critical(nullptr, "Copy failed lab without tone",
                                           QString("Failed to make file %1.%2, exit").arg(copyInfo.tarBasename, "lab"));
                     return false;
@@ -202,7 +184,7 @@ QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, 
 
     QList<CopyInfo> copyList;
     foreach (const QFileInfo &fileInfo, fileInfoList) {
-        if (fileInfo.suffix() == "lab" && fileInfo.size() > 0) {
+        if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
             QString audioPath = labFileToAudioFile(fileInfo.absoluteFilePath());
 
             if (QFile(audioPath).exists()) {
@@ -229,4 +211,45 @@ QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, 
         }
     }
     return copyList;
+}
+
+bool readJsonFile(const QString &fileName, QJsonObject &jsonObject) {
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return false;
+    }
+
+    QByteArray jsonData = file.readAll();
+    file.close();
+
+    QJsonParseError parseError;
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData, &parseError);
+
+    if (parseError.error != QJsonParseError::NoError) {
+        return false;
+    }
+
+    if (!jsonDoc.isObject()) {
+        return false;
+    }
+
+    jsonObject = jsonDoc.object();
+    return true;
+}
+
+bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject) {
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return false;
+    }
+
+    QJsonDocument jsonDoc(jsonObject);
+    QByteArray jsonData = jsonDoc.toJson();
+
+    if (file.write(jsonData) == -1) {
+        return false;
+    }
+
+    file.close();
+    return true;
 }

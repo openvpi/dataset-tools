@@ -30,10 +30,10 @@ public:
         }
 
         QFileInfo fileInfo(model->filePath(index));
-        QString labFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".lab";
+        QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
 
         QStyleOptionViewItem modifiedOption(option);
-        if (QFile::exists(labFilePath) && fileInfo.isFile() && QFileInfo(labFilePath).size() > 0) {
+        if (QFile::exists(jsonFilePath) && fileInfo.isFile() && QFileInfo(jsonFilePath).size() > 0) {
             modifiedOption.palette.setColor(QPalette::Text, Qt::gray);
         } else {
             modifiedOption.palette.setColor(QPalette::Text, Qt::black);
@@ -90,21 +90,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), g2p_zh(new IKg2p:
     bar->addMenu(playMenu);
     bar->addMenu(helpMenu);
 
-    // Status bar
-    checkPreserveText = new QCheckBox("Preserve text", this);
-    checkPreserveText->setChecked(true);
-
+    progressLabel = new QLabel("progress:");
     progressBar = new QProgressBar();
     progressBar->setRange(0, 100);
     progressBar->setValue(0);
-    auto progressLabel = new QLabel("progress:");
 
-    auto status = statusBar();
-    status->setContentsMargins(20, 2, 20, 2);
-    status->setSizeGripEnabled(false);
-    status->addWidget(checkPreserveText);
-    status->addPermanentWidget(progressLabel);
-    status->addPermanentWidget(progressBar);
+    progressLayout = new QHBoxLayout();
+    progressLayout->addWidget(progressLabel);
+    progressLayout->addWidget(progressBar);
 
     // Init widgets
     playerWidget = new PlayWidget();
@@ -135,6 +128,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), g2p_zh(new IKg2p:
     rightLayout = new QVBoxLayout();
     rightLayout->addWidget(playerWidget);
     rightLayout->addWidget(textWidget);
+    rightLayout->addLayout(progressLayout);
 
     rightWidget = new QWidget();
     rightWidget->setLayout(rightLayout);
@@ -192,7 +186,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), g2p_zh(new IKg2p:
             cfg.next = nextAction->shortcut().toString();
             cfg.prev = prevAction->shortcut().toString();
             cfg.play = playAction->shortcut().toString();
-            cfg.preserveText = true;
             cfg.rootDir = dirname;
             applyConfig();
             file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
@@ -217,65 +210,48 @@ void MainWindow::openDirectory(const QString &dirName) {
 void MainWindow::openFile(const QString &filename) {
     QString labContent, txtContent;
 
-    QString labFilePath = audioToOtherSuffix(filename, "lab");
-    QFile labFile(labFilePath);
-    if (labFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        labContent = QString::fromUtf8(labFile.readAll());
+    QString jsonFilePath = audioToOtherSuffix(filename, "json");
+    QJsonObject readData;
+    if (readJsonFile(jsonFilePath, readData)) {
+        txtContent = readData.contains("raw_text") ? readData["raw_text"].toString() : "";
+        labContent = readData.contains("lab") ? readData["lab"].toString() : "";
     }
     textWidget->contentText->setPlainText(labContent);
-
-    if (checkPreserveText->isChecked()) {
-        QString txtFilePath = audioToOtherSuffix(filename, "txt");
-        QFile txtFile(txtFilePath);
-        if (txtFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            txtContent = QString::fromUtf8(txtFile.readAll());
-        }
-        textWidget->wordsText->setText(txtContent);
-    }
+    textWidget->wordsText->setText(txtContent);
 
     playerWidget->openFile(filename);
 }
 
 void MainWindow::saveFile(const QString &filename) {
-    QString labFilePath = audioToOtherSuffix(filename, "lab");
-
+    QString txtContent = textWidget->wordsText->text();
     QString labContent = textWidget->contentText->toPlainText();
-    if (labContent.isEmpty() && !QMFs::isFileExist(labFilePath)) {
+    QString withoutTone = "";
+    if (!labContent.isEmpty() && labContent.contains(" ")) {
+        QStringList inputList = labContent.split(" ");
+        for (QString &item : inputList) {
+            item.remove(QRegExp("[^a-z]"));
+        }
+        withoutTone = inputList.join(" ");
+    }
+
+
+    QString jsonFilePath = audioToOtherSuffix(filename, "json");
+
+    if (labContent.isEmpty() && txtContent.isEmpty() && !QMFs::isFileExist(jsonFilePath)) {
         return;
     }
 
-    QFile labFile(labFilePath);
-    if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    QFile jsonFile(jsonFilePath);
+    QJsonObject writeData;
+    writeData["lab"] = labContent;
+    writeData["raw_text"] = txtContent;
+    writeData["lab_without_tone"] = withoutTone;
+
+    if (!writeJsonFile(jsonFilePath, writeData)) {
         QMessageBox::critical(this, qApp->applicationName(),
-                              QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFilePath)));
+                              QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
         ::exit(-1);
     }
-
-    QTextStream labIn(&labFile);
-    labIn.setCodec(QTextCodec::codecForName("UTF-8"));
-    labIn << labContent;
-
-    // Preserve text
-    if (checkPreserveText->isChecked()) {
-        QString txtFilePath = audioToOtherSuffix(filename, "txt");
-        QString txtContent = textWidget->wordsText->text();
-        if (txtContent.isEmpty() && !QMFs::isFileExist(txtFilePath)) {
-            return;
-        }
-
-        QFile txtFile(txtFilePath);
-        if (!txtFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QMessageBox::critical(this, qApp->applicationName(),
-                                  QString("Failed to write to file %1").arg(QMFs::PathFindFileName(txtFilePath)));
-            ::exit(-1);
-        }
-
-        QTextStream txtIn(&txtFile);
-        txtIn.setCodec(QTextCodec::codecForName("UTF-8"));
-        txtIn << txtContent;
-    }
-
-    labFile.close();
 }
 
 void MainWindow::reloadWindowTitle() {
@@ -339,8 +315,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     QString keyConfPath = qApp->applicationDirPath() + "/minlabel_config.json";
     QFile file(keyConfPath);
 
-    cfg.preserveText = checkPreserveText->isChecked();
-
     if (file.open(QIODevice::WriteOnly)) {
         file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
     }
@@ -363,7 +337,6 @@ void MainWindow::applyConfig() {
     prevAction->setShortcut(QKeySequence(cfg.prev));
     nextAction->setShortcut(QKeySequence(cfg.next));
     playAction->setShortcut(QKeySequence(cfg.play));
-    checkPreserveText->setChecked(cfg.preserveText);
     dirname = cfg.rootDir;
     if (dirname.isEmpty()) {
         return;
@@ -422,7 +395,7 @@ void MainWindow::_q_helpMenuTriggered(QAction *action) {
 }
 
 void MainWindow::_q_updateProgress() {
-    int count = labCount(dirname);
+    int count = jsonCount(dirname);
     int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     double progress = 0.0;
     if (totalRowCount > 0) {
@@ -444,7 +417,7 @@ void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
 }
 
 void MainWindow::exportAudio(ExportInfo &exportInfo) {
-    int count = labCount(dirname);
+    int count = jsonCount(dirname);
     int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     if (totalRowCount != count) {
         QMessageBox::StandardButton reply;

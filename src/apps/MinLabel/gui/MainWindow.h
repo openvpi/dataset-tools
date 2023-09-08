@@ -50,8 +50,6 @@ protected:
     QAction *aboutAppAction;
     QAction *aboutQtAction;
 
-    QCheckBox *checkPreserveText;
-
     bool playing;
     QString dirname;
 
@@ -66,6 +64,8 @@ protected:
     QSplitter *mainSplitter;
 
     QVBoxLayout *rightLayout;
+    QLabel *progressLabel;
+    QHBoxLayout *progressLayout;
     QWidget *rightWidget;
 
     QString lastFile;

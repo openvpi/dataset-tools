@@ -3,6 +3,9 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMap>
 #include <QString>
 #include <QStringList>
@@ -39,9 +42,10 @@ struct CopyInfo {
 };
 
 bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo);
-int labCount(const QString &dirName);
+int jsonCount(const QString &dirName);
 void mkdir(ExportInfo &exportInfo);
 QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, bool convertPinyin,
                            IKg2p::ZhG2p *g2p_zh);
-
+bool readJsonFile(const QString &fileName, QJsonObject &jsonObject);
+bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject);
 #endif // DATASET_TOOLS_COMMON_H
