@@ -22,7 +22,7 @@ class PlayWidget : public QWidget {
     Q_OBJECT
 public:
     PlayWidget(QWidget *parent = nullptr);
-    ~PlayWidget();
+    ~PlayWidget() override;
 
     void openFile(const QString &filename);
 

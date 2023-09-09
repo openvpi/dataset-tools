@@ -1,16 +1,12 @@
 #include "PlayWidget.h"
 
 #include <QApplication>
-#include <QDebug>
 #include <QDir>
 #include <QDragEnterEvent>
-#include <QFileDialog>
 #include <QJsonDocument>
-#include <QJsonObject>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QPluginLoader>
 #include <QTime>
 
 // https://iconduck.com/icons
@@ -248,12 +244,6 @@ void PlayWidget::initPlugins() {
     }
     playback->setDecoder(decoder);
     return;
-
-out2:
-    // Must delete before uninitializing the plugins.
-    // If rely on the destructor of QWidget we would be calling unloaded code upon exit and crash the program
-    delete playback;
-    delete decoder;
 
 out:
     uninitPlugins();

@@ -12,9 +12,5 @@ struct MinLabelCfg {
     QString play;
 
     QString rootDir;
-    bool preserveText;
-
-    MinLabelCfg() : preserveText(false) {
-    }
 };
 QAS_JSON_NS(MinLabelCfg);

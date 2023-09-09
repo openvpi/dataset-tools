@@ -34,7 +34,7 @@ QString labFileToAudioFile(const QString &filename) {
     return "";
 }
 
-bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffix, const QString data) {
+bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffix, const QString& data) {
     QString target = copyInfo.targetDir + "/" + item + "/" + copyInfo.tarBasename + "." + suffix;
     if (QFile::exists(target)) {
         QFile::remove(target);
@@ -222,7 +222,7 @@ bool readJsonFile(const QString &fileName, QJsonObject &jsonObject) {
     QByteArray jsonData = file.readAll();
     file.close();
 
-    QJsonParseError parseError;
+    QJsonParseError parseError{};
     QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData, &parseError);
 
     if (parseError.error != QJsonParseError::NoError) {

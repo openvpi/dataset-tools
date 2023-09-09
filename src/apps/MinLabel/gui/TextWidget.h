@@ -20,7 +20,7 @@ class TextWidget : public QWidget {
     Q_OBJECT
 public:
     explicit TextWidget(QWidget *parent = nullptr);
-    ~TextWidget();
+    ~TextWidget() override;
 
     QLineEdit *wordsText;
     QPlainTextEdit *contentText;
@@ -57,7 +57,7 @@ private:
     static MeCab::Tagger *mecabInit(const QString &path = "mecabDict", const QString &format = "wakati");
     QString mecabConvert(const QString &input);
 
-    void _q_pasteButtonClicked();
+    void _q_pasteButtonClicked() const;
     void _q_replaceButtonClicked();
     void _q_appendButtonClicked();
     void _q_onLanguageComboIndexChanged();

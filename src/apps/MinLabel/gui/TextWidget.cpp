@@ -93,22 +93,12 @@ QString TextWidget::sentence() const {
     return words;
 }
 
-void TextWidget::_q_pasteButtonClicked() {
+void TextWidget::_q_pasteButtonClicked() const {
     auto board = QApplication::clipboard();
     QString text = board->text();
     if (!text.isEmpty()) {
         wordsText->setText(text);
     }
-}
-
-QString filterString(const QString &str, bool filterNumbers = false) {
-    QString words;
-    for (const auto &ch : str) {
-        if (ch.isLetter() || (!filterNumbers && ch.isDigit()) || ch.isSpace()) {
-            words.append(ch);
-        }
-    }
-    return words;
 }
 
 QString filterSokuon(const QString &input) {
