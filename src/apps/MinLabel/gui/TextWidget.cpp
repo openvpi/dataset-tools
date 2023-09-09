@@ -187,7 +187,7 @@ void TextWidget::_q_onLanguageComboIndexChanged() {
 }
 
 MeCab::Tagger *TextWidget::mecabInit(const QString &path, const QString &format) {
-    QString args = "-O" + format + " -d " + path;
+    QString args = "-O" + format + " -d " + path + " -r" + path + "/mecabrc";
     return MeCab::createTagger(args.toUtf8());
 }
 

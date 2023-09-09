@@ -252,6 +252,24 @@ void MainWindow::saveFile(const QString &filename) {
                               QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
         ::exit(-1);
     }
+
+    QString labFilePath = audioToOtherSuffix(filename, "lab");
+
+    if (labContent.isEmpty() && !QMFs::isFileExist(labFilePath)) {
+        return;
+    }
+
+    QFile labFile(labFilePath);
+    if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, qApp->applicationName(),
+                              QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFilePath)));
+        ::exit(-1);
+    }
+
+    QTextStream labIn(&labFile);
+    labIn.setCodec(QTextCodec::codecForName("UTF-8"));
+    labIn << labContent;
+    labFile.close();
 }
 
 void MainWindow::reloadWindowTitle() {
@@ -302,6 +320,10 @@ void MainWindow::dropEvent(QDropEvent *event) {
             if (QMFs::isDirExist(filename)) {
                 ok = true;
                 openDirectory(filename);
+
+                dirname = filename;
+                cfg.rootDir = dirname;
+                _q_updateProgress();
             }
         }
         if (ok) {
