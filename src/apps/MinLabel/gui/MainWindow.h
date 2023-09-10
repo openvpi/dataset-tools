@@ -21,7 +21,6 @@
 #include "PlayWidget.h"
 #include "TextWidget.h"
 #include "inc/MinLabelCfg.h"
-#include "zhg2p.h"
 
 #include "Api/IAudioDecoder.h"
 #include "Api/IAudioPlayback.h"

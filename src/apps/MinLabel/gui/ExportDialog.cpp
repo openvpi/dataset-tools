@@ -37,9 +37,6 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     folderNameEdit->setText("minlabel_export");
     layout->addRow(new QLabel("Output Folder Name:", this), folderNameEdit);
 
-    convertFilename = new QCheckBox("Convert chinese in filename to pinyin", this);
-    layout->addRow(convertFilename);
-
     expAudio = new QCheckBox("Export audio", this);
     expAudio->setChecked(true);
     layout->addRow(expAudio);
@@ -62,7 +59,6 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     connect(this, &QDialog::accepted, this, [=]() {
         exportInfo.outputDir = outputDirEdit->text();
         exportInfo.folderName = folderNameEdit->text();
-        exportInfo.convertPinyin = convertFilename->isChecked();
         exportInfo.exportAudio = expAudio->isChecked();
         exportInfo.labFile = labFile->isChecked();
         exportInfo.rawText = rawText->isChecked();

@@ -43,7 +43,7 @@ public:
     }
 };
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), g2p_zh(new IKg2p::ZhG2p("mandarin")) {
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     playing = false;
 
     setAcceptDrops(true);
@@ -452,8 +452,7 @@ void MainWindow::exportAudio(ExportInfo &exportInfo) {
     }
 
     mkdir(exportInfo);
-    QList<CopyInfo> copyList =
-        mkCopylist(dirname, exportInfo.outputDir + "/" + exportInfo.folderName, exportInfo.convertPinyin, g2p_zh);
+    QList<CopyInfo> copyList = mkCopylist(dirname, exportInfo.outputDir + "/" + exportInfo.folderName);
     if (copyFile(copyList, exportInfo)) {
         QMessageBox::information(this, qApp->applicationName(), QString("Successfully exported files."));
     } else {

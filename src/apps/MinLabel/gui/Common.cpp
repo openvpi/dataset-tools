@@ -34,7 +34,7 @@ QString labFileToAudioFile(const QString &filename) {
     return "";
 }
 
-bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffix, const QString& data) {
+bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffix, const QString &data) {
     QString target = copyInfo.targetDir + "/" + item + "/" + copyInfo.tarBasename + "." + suffix;
     if (QFile::exists(target)) {
         QFile::remove(target);
@@ -176,8 +176,7 @@ void mkdir(ExportInfo &exportInfo) {
     mkItem(exportInfo.removeTone, folderPath, "lab_without_tone");
 }
 
-QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, bool convertPinyin,
-                           IKg2p::ZhG2p *g2p_zh) {
+QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir) {
     QDir source(sourcePath);
     QDir output(outputDir);
     QFileInfoList fileInfoList = source.entryInfoList(QDir::Files);
@@ -190,18 +189,6 @@ QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, 
             if (QFile(audioPath).exists()) {
                 QFileInfo audioInfo = QFileInfo(audioPath);
                 QString audioName = audioInfo.fileName();
-
-                if (convertPinyin) {
-                    QString basename = audioInfo.baseName();
-                    QRegExp rx("[\\x4e00-\\x9fa5]+");
-                    int pos = 0;
-                    while ((pos = rx.indexIn(basename, pos)) != -1) {
-                        auto tPinyin = (g2p_zh->convert(rx.cap(0), false)).split(" ").join("");
-                        basename.replace(pos, rx.matchedLength(), tPinyin);
-                        pos += rx.matchedLength();
-                    }
-                    audioName = basename + "." + audioInfo.suffix();
-                }
 
                 QString targetPath = output.absolutePath() + "/wav/" + audioName;
                 CopyInfo copyInfo(audioInfo.fileName(), audioName, source.absolutePath(), output.absolutePath(),

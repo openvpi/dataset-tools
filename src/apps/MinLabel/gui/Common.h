@@ -19,7 +19,6 @@ QString labFileToAudioFile(const QString &filename);
 struct ExportInfo {
     QString outputDir;
     QString folderName;
-    bool convertPinyin;
     bool exportAudio;
     bool labFile;
     bool rawText;
@@ -44,8 +43,7 @@ struct CopyInfo {
 bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo);
 int jsonCount(const QString &dirName);
 void mkdir(ExportInfo &exportInfo);
-QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir, bool convertPinyin,
-                           IKg2p::ZhG2p *g2p_zh);
+QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir);
 bool readJsonFile(const QString &fileName, QJsonObject &jsonObject);
 bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject);
 #endif // DATASET_TOOLS_COMMON_H
