@@ -15,7 +15,9 @@ QString labFileToAudioFile(const QString &filename) {
     QFileInfo info(filename);
 
     QString dirPath = info.absolutePath();
-    QString baseName = info.baseName();
+    QString suffix = info.suffix().toLower();
+    QString fileName = info.fileName();
+    QString baseName = fileName.mid(0, fileName.size() - suffix.size() - 1);
 
     QDir directory(dirPath);
     QStringList fileTypes;
@@ -26,7 +28,11 @@ QString labFileToAudioFile(const QString &filename) {
 
     QStringList audioFiles = directory.entryList(fileTypes, QDir::Files);
     for (const QString &audioFile : audioFiles) {
-        if (QFileInfo(audioFile).baseName() == baseName) {
+        QFileInfo audioInfo(audioFile);
+        QString audioSuffix = audioInfo.suffix().toLower();
+        QString audioName = audioInfo.fileName();
+        QString audioBaseName = audioName.mid(0, audioName.size() - audioSuffix.size() - 1);
+        if (audioBaseName == baseName) {
             QString audioFilePath = directory.absoluteFilePath(audioFile);
             return audioFilePath;
         }
@@ -191,7 +197,7 @@ QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir) 
                 QString audioName = audioInfo.fileName();
 
                 QString targetPath = output.absolutePath() + "/wav/" + audioName;
-                CopyInfo copyInfo(audioInfo.fileName(), audioName, source.absolutePath(), output.absolutePath(),
+                CopyInfo copyInfo(audioName, audioName, source.absolutePath(), output.absolutePath(),
                                   QFile(targetPath).exists());
                 copyList.append(copyInfo);
             }

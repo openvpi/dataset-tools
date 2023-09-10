@@ -36,7 +36,8 @@ struct CopyInfo {
     CopyInfo(QString rawName, const QString &tarName, QString sourceDir, QString targetDir, bool isExist)
         : rawName(std::move(rawName)), tarName(tarName), sourceDir(std::move(sourceDir)),
           targetDir(std::move(targetDir)), exist(isExist) {
-        tarBasename = tarName.split(".")[0];
+        QString filename = QFileInfo(tarName).fileName();
+        tarBasename = filename.mid(0, filename.size() - filename.size() - 1);
     }
 };
 
