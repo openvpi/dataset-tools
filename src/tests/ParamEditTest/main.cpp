@@ -8,9 +8,14 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QGraphicsRectItem>
 
 #include "ParamEditArea.h"
+#include "ParamGraphicsView.h"
 #include "ParamModel.h"
+#include "NoteGraphicsItem.h"
 
 #include <QFile>
 #include <QJsonDocument>
@@ -53,8 +58,23 @@ int main(int argc, char *argv[]) {
     auto editArea = new ParamEditArea;
     editArea->loadParam(paramModel.realBreathiness);
 
+//    auto rectItem = new QGraphicsRectItem(QRectF(0, 0, 200, 200));
+//    auto textItem = new QGraphicsTextItem("Hello");
+    auto noteItem = new NoteGraphicsItem();
+    noteItem->setRect(QRectF(0, 0, 48, 24));
+    noteItem->setText("喵");
+    auto scene = new QGraphicsScene;
+//    scene->setSceneRect(QRectF(0, 0, 250, 250));
+//    scene->addItem(rectItem);
+//    scene->addItem(textItem);
+    scene->addItem(noteItem);
+    auto view = new ParamGraphicsView;
+    view->setRenderHint(QPainter::Antialiasing);
+    view->setScene(scene);
+
     auto mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(editArea);
+//    mainLayout->addWidget(editArea);
+    mainLayout->addWidget(view);
 
     auto mainWidget = new QWidget;
     mainWidget->setLayout(mainLayout);
