@@ -37,7 +37,13 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     auto font = QFont("Microsoft Yahei UI");
     font.setPointSizeF(10);
     painter->setFont(font);
-    painter->drawText(scaledRect, m_text, QTextOption(Qt::AlignVCenter));
+    int padding = 2;
+    auto textRectLeft = scaledRect.left() + padding;
+    auto textRectTop = scaledRect.top() + padding;
+    auto textRectWidth = scaledRect.width() - 2 * padding;
+    auto textRectHeight = scaledRect.height() - 2 * padding;
+    auto textRect = QRectF(textRectLeft, textRectTop, textRectWidth, textRectHeight);
+    painter->drawText(textRect, m_text, QTextOption(Qt::AlignVCenter));
 }
 
 void NoteGraphicsItem::setText(const QString &text) {
