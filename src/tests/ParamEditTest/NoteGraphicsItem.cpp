@@ -12,20 +12,22 @@
 
 void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     QColor colorPrimary = QColor(112, 156, 255);
+    QColor colorPrimaryDarker = QColor(81, 135, 255);
     auto scaleX = painter->transform().m11();
     auto scaleY = painter->transform().m22();
+    auto penWidth = 2.0f;
 
     QPen pen;
-    pen.setColor(colorPrimary);
+    pen.setColor(colorPrimaryDarker);
 
     auto rect = sceneBoundingRect();
-    auto left = rect.left();
-    auto top = rect.top();
-    auto width = rect.width() * scaleX;
-    auto height = rect.height() * scaleY;
+    auto left = rect.left() * scaleX + scaleX / 2 + penWidth / 2;
+    auto top = rect.top() * scaleY + scaleY / 2 + penWidth / 2;
+    auto width = rect.width() * scaleX - scaleX - penWidth;
+    auto height = rect.height() * scaleY - scaleY - penWidth;
     auto scaledRect = QRectF(left, top, width, height);
 
-    pen.setWidthF(0);
+    pen.setWidthF(penWidth);
     painter->setPen(pen);
     painter->setBrush(colorPrimary);
 

@@ -58,19 +58,29 @@ int main(int argc, char *argv[]) {
     auto editArea = new ParamEditArea;
     editArea->loadParam(paramModel.realBreathiness);
 
-//    auto rectItem = new QGraphicsRectItem(QRectF(0, 0, 200, 200));
-//    auto textItem = new QGraphicsTextItem("Hello");
-    auto noteItem = new NoteGraphicsItem();
-    noteItem->setRect(QRectF(0, 0, 48, 24));
-    noteItem->setText("喵");
-    auto scene = new QGraphicsScene;
-//    scene->setSceneRect(QRectF(0, 0, 250, 250));
-//    scene->addItem(rectItem);
-//    scene->addItem(textItem);
-    scene->addItem(noteItem);
+    const int quarterNoteWidth = 48;
+    const int quarterNoteHeight = 24;
+    int sceneHeight = 128 * quarterNoteHeight;
+
+//    auto noteItem = new NoteGraphicsItem();
+//    noteItem->setRect(QRectF(0, 0, quarterNoteWidth, quarterNoteHeight));
+//    noteItem->setText("喵");
+    auto scene = new QGraphicsScene(0, 0, 48000, 256);
+
+    for (int i = 0; i < 4; i++) {
+//        auto rectItem = new QGraphicsRectItem(i * quarterNoteWidth , 48 * i + 64, quarterNoteWidth, quarterNoteHeight);
+        auto noteItem = new NoteGraphicsItem();
+        noteItem->setRect(QRectF(i * quarterNoteWidth, 24 * i, quarterNoteWidth, quarterNoteHeight));
+        noteItem->setText("喵");
+        scene->addItem(noteItem);
+//        scene->addItem(rectItem);
+    }
+
+//    scene->addItem(noteItem);
     auto view = new ParamGraphicsView;
     view->setRenderHint(QPainter::Antialiasing);
     view->setScene(scene);
+    view->centerOn(0, 0);
 
     auto mainLayout = new QVBoxLayout;
 //    mainLayout->addWidget(editArea);
@@ -80,7 +90,7 @@ int main(int argc, char *argv[]) {
     mainWidget->setLayout(mainLayout);
 
     w.setCentralWidget(mainWidget);
-    w.resize(1200, 300);
+    w.resize(1200, 600);
     w.show();
 
     return QApplication::exec();
