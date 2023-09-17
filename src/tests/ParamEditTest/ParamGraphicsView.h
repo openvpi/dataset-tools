@@ -12,6 +12,10 @@ class ParamGraphicsView : public QGraphicsView {
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
+    void drawBackground(QPainter *painter, const QRectF &rect) override;
+
+    bool isWhiteKey(const int &midiKey);
+    QString toNoteName(const int &midiKey);
 };
 
 

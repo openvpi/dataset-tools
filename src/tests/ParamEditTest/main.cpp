@@ -60,12 +60,12 @@ int main(int argc, char *argv[]) {
 
     const int quarterNoteWidth = 48;
     const int quarterNoteHeight = 24;
-    int sceneHeight = 128 * quarterNoteHeight;
+    int sceneHeight = 6 * 12 * quarterNoteHeight;
 
 //    auto noteItem = new NoteGraphicsItem();
 //    noteItem->setRect(QRectF(0, 0, quarterNoteWidth, quarterNoteHeight));
 //    noteItem->setText("喵");
-    auto scene = new QGraphicsScene(0, 0, 48000, 256);
+    auto scene = new QGraphicsScene(0, 0, 48000, sceneHeight);
 
     for (int i = 0; i < 4; i++) {
 //        auto rectItem = new QGraphicsRectItem(i * quarterNoteWidth , 48 * i + 64, quarterNoteWidth, quarterNoteHeight);
