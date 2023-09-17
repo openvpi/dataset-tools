@@ -12,11 +12,21 @@ public:
     ParamModel();
     ~ParamModel();
 
+    class Note {
+    public:
+        int start;
+        int length;
+        int keyIndex;
+        QString lyric;
+    };
+
     class RealParam {
     public:
         int offset;// tick
         QList<float> values;
     };
+
+    QList<Note> notes;
 
     // Real Params Data
     RealParam realBreathiness;

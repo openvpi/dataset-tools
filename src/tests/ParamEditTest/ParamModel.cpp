@@ -20,9 +20,24 @@ ParamModel ParamModel::load(const QJsonObject &obj, bool *ok) {
     auto firstTrack = arrTracks.first().toObject();
     auto arrPatterns = firstTrack.value("patterns").toArray();
     auto firstPattern = arrPatterns.first().toObject();
+    auto notes = firstPattern.value("notes").toArray();
     auto params = firstPattern.value("parameters").toObject();
     auto realBreathParams = params.value("realBreathiness").toArray();
     auto firstRealBreathParam = realBreathParams.first().toObject();
+
+    auto decodeNotes = [](const QJsonArray &arrNotes) {
+        QList<Note> notes;
+        for (const auto valNote : qAsConst(arrNotes)) {
+            auto objNote = valNote.toObject();
+            Note note;
+            note.start = objNote.value("pos").toInt();
+            note.length = objNote.value("dur").toInt();
+            note.keyIndex = objNote.value("pitch").toInt();
+            note.lyric = objNote.value("lyric").toString();
+            notes.append(note);
+        }
+        return notes;
+    };
 
     auto decodeRealParam = [](const QJsonObject &obj) {
         RealParam param;
@@ -35,6 +50,7 @@ ParamModel ParamModel::load(const QJsonObject &obj, bool *ok) {
         return param;
     };
 
+    model.notes = decodeNotes(notes);
     model.realBreathiness = decodeRealParam(firstRealBreathParam);
 
     return model;

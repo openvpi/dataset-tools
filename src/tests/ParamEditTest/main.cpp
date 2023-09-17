@@ -48,7 +48,8 @@ int main(int argc, char *argv[]) {
     };
 
     QJsonObject jsonObj;
-    auto filename = "D:/Test/Param/test.json";
+//    auto filename = "D:/Test/Param/test.json";
+    auto filename = "D:/Test/Param/小小.json";
     loadProjectFile(filename, &jsonObj);
 
     auto paramModel = ParamModel::load(jsonObj);
@@ -62,23 +63,30 @@ int main(int argc, char *argv[]) {
     const int quarterNoteHeight = 24;
     int sceneHeight = 6 * 12 * quarterNoteHeight;
 
-//    auto noteItem = new NoteGraphicsItem();
-//    noteItem->setRect(QRectF(0, 0, quarterNoteWidth, quarterNoteHeight));
-//    noteItem->setText("喵");
     auto scene = new QGraphicsScene(0, 0, 48000, sceneHeight);
 
-    for (int i = 0; i < 4; i++) {
-//        auto rectItem = new QGraphicsRectItem(i * quarterNoteWidth , 48 * i + 64, quarterNoteWidth, quarterNoteHeight);
+//    for (int i = 0; i < 4; i++) {
+//        auto noteItem = new NoteGraphicsItem();
+//        noteItem->setRect(QRectF(i * quarterNoteWidth, 24 * i, quarterNoteWidth, quarterNoteHeight));
+//        noteItem->setText("喵");
+//        scene->addItem(noteItem);
+//    }
+
+    for (int i = 0; i < paramModel.notes.count(); i++) {
+        auto note = paramModel.notes[i];
         auto noteItem = new NoteGraphicsItem();
-        noteItem->setRect(QRectF(i * quarterNoteWidth, 24 * i, quarterNoteWidth, quarterNoteHeight));
-        noteItem->setText("喵");
+        auto noteLeft = note.start * quarterNoteWidth / 480;
+        auto noteTop = (107 - note.keyIndex) * 24;
+        auto noteWidth = note.length * quarterNoteWidth / 480;
+        noteItem->setRect(QRectF(noteLeft, noteTop, noteWidth, quarterNoteHeight));
+        noteItem->setText(note.lyric);
         scene->addItem(noteItem);
-//        scene->addItem(rectItem);
     }
 
 //    scene->addItem(noteItem);
     auto view = new ParamGraphicsView;
     view->setRenderHint(QPainter::Antialiasing);
+    view->setCacheMode(QGraphicsView::CacheNone);
     view->setScene(scene);
     view->centerOn(0, 0);
 

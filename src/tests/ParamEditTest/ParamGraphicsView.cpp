@@ -50,11 +50,6 @@ void ParamGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
     const int quarterNoteHeight = 24;
     auto scaledQuarterNoteHeight = scaleY * quarterNoteHeight;
 
-    left = (left / 128) * 128;
-    right = (right / 128) * 128;
-    top = (top / scaledQuarterNoteHeight) * scaledQuarterNoteHeight;
-    bottom = (bottom / scaledQuarterNoteHeight) * scaledQuarterNoteHeight;
-
     painter->scale(1.0 / scaleX, 1.0 / scaleY);
 
     auto gridHeight = scaledQuarterNoteHeight;
