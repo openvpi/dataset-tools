@@ -6,9 +6,13 @@
 #define DATASET_TOOLS_PARAMGRAPHICSVIEW_H
 
 #include <QGraphicsView>
+#include <QTimer>
 
 class ParamGraphicsView : public QGraphicsView {
     Q_OBJECT
+
+public:
+    ParamGraphicsView(QWidget *parent = nullptr);
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
@@ -16,6 +20,8 @@ protected:
 
     bool isWhiteKey(const int &midiKey);
     QString toNoteName(const int &midiKey);
+
+    QTimer m_timer;
 };
 
 

@@ -77,10 +77,19 @@ bool ParamGraphicsView::isWhiteKey(const int &midiKey) {
     bool pianoKeys[] = {true, false, true, false, true, true, false, true, false, true, false, true};
     return pianoKeys[index];
 }
+
 QString ParamGraphicsView::toNoteName(const int &midiKey) {
     QString noteNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     int index = midiKey % 12;
     int octave = midiKey / 12 - 1;
     QString noteName = noteNames[index] + QString::number(octave);
     return noteName;
+}
+
+ParamGraphicsView::ParamGraphicsView(QWidget *parent) {
+    m_timer.setInterval(16);
+    QTimer::connect(&m_timer, &QTimer::timeout, this, [&]() {
+        setBackgroundBrush(QBrush());
+    });
+    m_timer.start();
 }
