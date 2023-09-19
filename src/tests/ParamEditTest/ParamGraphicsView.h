@@ -17,11 +17,12 @@ public:
 protected:
     void wheelEvent(QWheelEvent *event) override;
     void drawBackground(QPainter *painter, const QRectF &rect) override;
+    bool eventFilter(QObject *object, QEvent *event) override;
 
     bool isWhiteKey(const int &midiKey);
     QString toNoteName(const int &midiKey);
 
-    QTimer m_timer;
+//    QTimer m_timer;
 };
 
 

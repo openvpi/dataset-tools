@@ -59,11 +59,12 @@ int main(int argc, char *argv[]) {
     auto editArea = new ParamEditArea;
     editArea->loadParam(paramModel.realBreathiness);
 
-    const int quarterNoteWidth = 48;
+    const int quarterNoteWidth = 62;
     const int quarterNoteHeight = 24;
     int sceneHeight = 6 * 12 * quarterNoteHeight;
+    int sceneWidth = 3840;
 
-    auto scene = new QGraphicsScene(0, 0, 48000, sceneHeight);
+    auto scene = new QGraphicsScene;
 
 //    for (int i = 0; i < 4; i++) {
 //        auto noteItem = new NoteGraphicsItem();
@@ -83,12 +84,25 @@ int main(int argc, char *argv[]) {
         scene->addItem(noteItem);
     }
 
+    auto lastNote = paramModel.notes.last();
+    auto lastNoteEndPos = lastNote.start + lastNote.length;
+    auto newSceneWidth = lastNoteEndPos * quarterNoteWidth / 480 + 192;
+    if (newSceneWidth > sceneWidth)
+        sceneWidth = newSceneWidth;
+
+    scene->setSceneRect(0, 0, sceneWidth, sceneHeight);
+
+    auto firstNote = paramModel.notes.first();
+    auto firstNoteLeft = firstNote.start * quarterNoteWidth / 480;
+    auto firstNoteTop = (107 - firstNote.keyIndex) * 24;
+
 //    scene->addItem(noteItem);
     auto view = new ParamGraphicsView;
     view->setRenderHint(QPainter::Antialiasing);
     view->setCacheMode(QGraphicsView::CacheNone);
+    view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     view->setScene(scene);
-    view->centerOn(0, 0);
+    view->centerOn(firstNoteLeft, firstNoteTop);
 
     auto mainLayout = new QVBoxLayout;
 //    mainLayout->addWidget(editArea);

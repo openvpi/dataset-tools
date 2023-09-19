@@ -10,11 +10,14 @@
 class NoteGraphicsItem : public QGraphicsRectItem {
 
 public:
+    explicit NoteGraphicsItem(QGraphicsItem *parent = nullptr);
+
     void setText(const QString &text);
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
     QString m_text;
 };
