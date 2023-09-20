@@ -16,14 +16,14 @@ public:
     explicit ParamEditArea(QWidget *parent = nullptr);
     ~ParamEditArea() override;
 
-    void loadParam(const ParamModel::RealParam &param);
-    void saveParam(ParamModel::RealParam &param);
+    void loadParam(const ParamModel::RealParamCurve &param);
+    void saveParam(ParamModel::RealParamCurve &param);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
-    ParamModel::RealParam m_param;
+    ParamModel::RealParamCurve m_param;
 };
 
 

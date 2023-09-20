@@ -12,12 +12,12 @@ ParamEditArea::ParamEditArea(QWidget *parent) {
 ParamEditArea::~ParamEditArea() {
 }
 
-void ParamEditArea::loadParam(const ParamModel::RealParam &param) {
+void ParamEditArea::loadParam(const ParamModel::RealParamCurve &param) {
     m_param = param;
     update();
 }
 
-void ParamEditArea::saveParam(ParamModel::RealParam &param) {
+void ParamEditArea::saveParam(ParamModel::RealParamCurve &param) {
     param = m_param;
 }
 

@@ -6,9 +6,9 @@
 #include <QWheelEvent>
 #include <QScrollBar>
 
-#include "ParamGraphicsView.h"
+#include "PianoRollGraphicsView.h"
 
-void ParamGraphicsView::wheelEvent(QWheelEvent *event) {
+void PianoRollGraphicsView::wheelEvent(QWheelEvent *event) {
     auto cursorPosF = event->position();
     auto cursorPos = QPoint(cursorPosF.x(), cursorPosF.y());
     auto scenePos = mapToScene(cursorPos);
@@ -48,7 +48,7 @@ void ParamGraphicsView::wheelEvent(QWheelEvent *event) {
     }
 }
 
-void ParamGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
+void PianoRollGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
     QPen pen;
     pen.setWidthF(1);
 
@@ -111,13 +111,13 @@ void ParamGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
     QGraphicsView::drawBackground(painter, rect);
 }
 
-bool ParamGraphicsView::isWhiteKey(const int &midiKey) {
+bool PianoRollGraphicsView::isWhiteKey(const int &midiKey) {
     int index = midiKey % 12;
     bool pianoKeys[] = {true, false, true, false, true, true, false, true, false, true, false, true};
     return pianoKeys[index];
 }
 
-QString ParamGraphicsView::toNoteName(const int &midiKey) {
+QString PianoRollGraphicsView::toNoteName(const int &midiKey) {
     QString noteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     int index = midiKey % 12;
     int octave = midiKey / 12 - 1;
@@ -125,9 +125,12 @@ QString ParamGraphicsView::toNoteName(const int &midiKey) {
     return noteName;
 }
 
-ParamGraphicsView::ParamGraphicsView(QWidget *parent) {
+PianoRollGraphicsView::PianoRollGraphicsView(QWidget *parent) {
     viewport()->installEventFilter(this);
     setDragMode(QGraphicsView::RubberBandDrag);
+    setRenderHint(QPainter::Antialiasing);
+    setCacheMode(QGraphicsView::CacheNone);
+    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 //    m_timer.setInterval(32);
 //    QTimer::connect(&m_timer, &QTimer::timeout, this, [&]() {
 //        setBackgroundBrush(QBrush());
@@ -135,6 +138,9 @@ ParamGraphicsView::ParamGraphicsView(QWidget *parent) {
 //    m_timer.start();
 }
 
-bool ParamGraphicsView::eventFilter(QObject *object, QEvent *event) {
+bool PianoRollGraphicsView::eventFilter(QObject *object, QEvent *event) {
+//    if (event->type() == QEvent::MouseButtonPress)
+//        if (static_cast<QMouseEvent *>(event)->button() == Qt::RightButton)
+//            return true;
     return QAbstractScrollArea::eventFilter(object, event);
 }

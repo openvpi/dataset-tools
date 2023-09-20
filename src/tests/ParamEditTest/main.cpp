@@ -5,20 +5,21 @@
 #include <QApplication>
 #include <QDebug>
 #include <QMainWindow>
-#include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QGraphicsScene>
 #include <QGraphicsView>
-#include <QGraphicsRectItem>
+#include <QScrollBar>
 
-#include "ParamEditArea.h"
-#include "ParamGraphicsView.h"
-#include "ParamModel.h"
 #include "NoteGraphicsItem.h"
+#include "ParamEditArea.h"
+#include "ParamEditGraphicsView.h"
+#include "ParamModel.h"
+#include "PianoRollGraphicsView.h"
 
 #include <QFile>
 #include <QJsonDocument>
+#include <QSplitter>
 
 int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
@@ -56,21 +57,21 @@ int main(int argc, char *argv[]) {
 
     QMainWindow w;
 
-    auto editArea = new ParamEditArea;
-    editArea->loadParam(paramModel.realBreathiness);
+//    auto editArea = new ParamEditArea;
+//    editArea->loadParam(paramModel.realEnergy);
 
     const int quarterNoteWidth = 62;
     const int quarterNoteHeight = 24;
     int sceneHeight = 6 * 12 * quarterNoteHeight;
     int sceneWidth = 3840;
 
-    auto scene = new QGraphicsScene;
+    auto pianoRollScene = new QGraphicsScene;
 
 //    for (int i = 0; i < 4; i++) {
 //        auto noteItem = new NoteGraphicsItem();
 //        noteItem->setRect(QRectF(i * quarterNoteWidth, 24 * i, quarterNoteWidth, quarterNoteHeight));
 //        noteItem->setText("喵");
-//        scene->addItem(noteItem);
+//        pianoRollScene->addItem(noteItem);
 //    }
 
     for (int i = 0; i < paramModel.notes.count(); i++) {
@@ -81,7 +82,7 @@ int main(int argc, char *argv[]) {
         auto noteWidth = note.length * quarterNoteWidth / 480;
         noteItem->setRect(QRectF(noteLeft, noteTop, noteWidth, quarterNoteHeight));
         noteItem->setText(note.lyric);
-        scene->addItem(noteItem);
+        pianoRollScene->addItem(noteItem);
     }
 
     auto lastNote = paramModel.notes.last();
@@ -90,23 +91,82 @@ int main(int argc, char *argv[]) {
     if (newSceneWidth > sceneWidth)
         sceneWidth = newSceneWidth;
 
-    scene->setSceneRect(0, 0, sceneWidth, sceneHeight);
+    pianoRollScene->setSceneRect(0, 0, sceneWidth, sceneHeight);
 
     auto firstNote = paramModel.notes.first();
     auto firstNoteLeft = firstNote.start * quarterNoteWidth / 480;
     auto firstNoteTop = (107 - firstNote.keyIndex) * 24;
 
-//    scene->addItem(noteItem);
-    auto view = new ParamGraphicsView;
-    view->setRenderHint(QPainter::Antialiasing);
-    view->setCacheMode(QGraphicsView::CacheNone);
-    view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-    view->setScene(scene);
-    view->centerOn(firstNoteLeft, firstNoteTop);
+//    pianoRollScene->addItem(noteItem);
+    auto pianoRollView = new PianoRollGraphicsView;
+    pianoRollView->setScene(pianoRollScene);
+    pianoRollView->centerOn(firstNoteLeft, firstNoteTop);
+
+    auto paramEditScene = new QGraphicsScene;
+    paramEditScene->setSceneRect(0, 0, sceneWidth, 200);
+
+    QPen pen;
+    pen.setWidthF(1.5);
+    auto drawParams = [&](QList<ParamModel::RealParamCurve> curves) {
+        for (const auto &curve : curves) {
+            QPainterPath path;
+            auto firstValue = curve.values.first();
+            path.moveTo(0, firstValue < 1 ? 150 * (1 - firstValue) : 0);
+            int i = 0;
+            for (const auto value : qAsConst(curve.values)) {
+                auto x = (curve.offset + i) * quarterNoteWidth / 480.0;
+                auto y = value < 1 ? 150 * (1 - value) : 0;
+                path.lineTo(x, y);
+                i++;
+            }
+
+            auto pathItem = new QGraphicsPathItem(path);
+            pathItem->setPen(pen);
+            paramEditScene->addItem(pathItem);
+        }
+    };
+
+    auto realEnergy = paramModel.realEnergy;
+    auto realBreathiness = paramModel.realBreathiness;
+
+    pen.setColor(QColor(255, 175, 95));
+    drawParams(realEnergy);
+    pen.setColor(QColor(112, 156, 255));
+    drawParams(realBreathiness);
+
+//    auto curve = paramModel.realEnergy.first();
+//    QPainterPath path;
+//    auto firstValue = curve.values.first();
+//    path.moveTo(0, firstValue < 1 ? 200 * (1 - firstValue) : 0);
+//    int i = 0;
+//    for (const auto value : qAsConst(curve.values)) {
+//        auto x = (curve.offset + i) * quarterNoteWidth / 480;
+//        auto y = value < 1 ? 200 * (1 - value) : 0;
+//        path.lineTo(x, y);
+//        i++;
+//    }
+//
+//    auto pathItem = QGraphicsPathItem(path);
+//    paramEditScene->addItem(&pathItem);
+
+    auto paramEditView = new ParamEditGraphicsView;
+    paramEditView->setMinimumHeight(150);
+    paramEditView->setScene(paramEditScene);
+    paramEditView->centerOn(firstNoteLeft, firstNoteTop);
+    paramEditView->setStyleSheet("QGraphicsView { border: none }");
+
+    QObject::connect(pianoRollView->horizontalScrollBar(), &QScrollBar::valueChanged, paramEditView, [=](int value){
+        paramEditView->horizontalScrollBar()->setValue(value);
+    });
+
+    auto splitter = new QSplitter;
+    splitter->setOrientation(Qt::Vertical);
+    splitter->addWidget(pianoRollView);
+    splitter->addWidget(paramEditView);
 
     auto mainLayout = new QVBoxLayout;
 //    mainLayout->addWidget(editArea);
-    mainLayout->addWidget(view);
+    mainLayout->addWidget(splitter);
 
     auto mainWidget = new QWidget;
     mainWidget->setLayout(mainLayout);

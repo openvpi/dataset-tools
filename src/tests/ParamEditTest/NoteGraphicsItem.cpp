@@ -74,10 +74,10 @@ NoteGraphicsItem::NoteGraphicsItem(QGraphicsItem *parent) : QGraphicsRectItem(pa
 }
 
 void NoteGraphicsItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    if (event->button() == Qt::LeftButton) {
-        if (event->modifiers() == Qt::ShiftModifier)
-            setSelected(true);
-    }
+//    if (event->button() == Qt::LeftButton) {
+//        if (event->modifiers() == Qt::ShiftModifier)
+//            setSelected(true);
+//    }
 
     QGraphicsItem::mousePressEvent(event);
 }

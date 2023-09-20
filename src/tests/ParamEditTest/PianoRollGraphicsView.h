@@ -2,17 +2,17 @@
 // Created by fluty on 2023/9/16.
 //
 
-#ifndef DATASET_TOOLS_PARAMGRAPHICSVIEW_H
-#define DATASET_TOOLS_PARAMGRAPHICSVIEW_H
+#ifndef DATASET_TOOLS_PIANOROLLGRAPHICSVIEW_H
+#define DATASET_TOOLS_PIANOROLLGRAPHICSVIEW_H
 
 #include <QGraphicsView>
 #include <QTimer>
 
-class ParamGraphicsView : public QGraphicsView {
+class PianoRollGraphicsView : public QGraphicsView {
     Q_OBJECT
 
 public:
-    ParamGraphicsView(QWidget *parent = nullptr);
+    PianoRollGraphicsView(QWidget *parent = nullptr);
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
@@ -27,4 +27,4 @@ protected:
 
 
 
-#endif // DATASET_TOOLS_PARAMGRAPHICSVIEW_H
+#endif // DATASET_TOOLS_PIANOROLLGRAPHICSVIEW_H

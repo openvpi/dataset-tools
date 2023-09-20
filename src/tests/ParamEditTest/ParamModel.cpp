@@ -23,7 +23,8 @@ ParamModel ParamModel::load(const QJsonObject &obj, bool *ok) {
     auto notes = firstPattern.value("notes").toArray();
     auto params = firstPattern.value("parameters").toObject();
     auto realBreathParams = params.value("realBreathiness").toArray();
-    auto firstRealBreathParam = realBreathParams.first().toObject();
+    auto realEnergyParams = params.value("realEnergy").toArray();
+//    auto firstRealBreathParam = realBreathParams.first().toObject();
 
     auto decodeNotes = [](const QJsonArray &arrNotes) {
         QList<Note> notes;
@@ -39,19 +40,26 @@ ParamModel ParamModel::load(const QJsonObject &obj, bool *ok) {
         return notes;
     };
 
-    auto decodeRealParam = [](const QJsonObject &obj) {
-        RealParam param;
-        param.offset = obj.value("offset").toInt();
-        auto arrValues = obj.value("values").toArray();
-        for (const auto objValue : qAsConst(arrValues)) {
-            auto value = objValue.toString().toDouble();
-            param.values.append(value);
+    auto decodeRealParam = [](const QJsonArray &array) {
+        QList<RealParamCurve> params;
+        for (const auto &valParam : array) {
+            RealParamCurve param;
+            auto objParams = valParam.toObject();
+            param.offset = objParams.value("offset").toInt();
+            auto arrValues = objParams.value("values").toArray();
+            for (const auto objValue : qAsConst(arrValues)) {
+                auto value = objValue.toString().toDouble();
+                param.values.append(value);
+            }
+            params.append(param);
         }
-        return param;
+
+        return params;
     };
 
     model.notes = decodeNotes(notes);
-    model.realBreathiness = decodeRealParam(firstRealBreathParam);
+    model.realBreathiness = decodeRealParam(realBreathParams);
+    model.realEnergy = decodeRealParam(realEnergyParams);
 
     return model;
 }

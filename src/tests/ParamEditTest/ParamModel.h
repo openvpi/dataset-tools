@@ -20,7 +20,7 @@ public:
         QString lyric;
     };
 
-    class RealParam {
+    class RealParamCurve {
     public:
         int offset;// tick
         QList<float> values;
@@ -29,10 +29,10 @@ public:
     QList<Note> notes;
 
     // Real Params Data
-    RealParam realBreathiness;
-    RealParam realEnergy;
+    QList<RealParamCurve> realBreathiness;
+    QList<RealParamCurve> realEnergy;
 
-    static ParamModel load(const QJsonObject &obj, bool *ok = nullptr);
+    static ParamModel load(const QJsonObject &array, bool *ok = nullptr);
 };
 
 
