@@ -6,6 +6,8 @@
 #include <QFrame>
 #include <QMenu>
 #include <QScrollBar>
+#include <QActionGroup>
+#include <QtWidgets/qactiongroup.h>
 #include <tuple>
 
 
@@ -26,6 +28,7 @@ public:
         QString note_seq;
         QString note_dur;
         QString note_slur;
+        QString note_ornament;
     };
     ReturnedDsString getSavedDsStrings();
     bool empty();
@@ -45,6 +48,11 @@ public:
 
 protected:
     struct MiniNote;
+    enum class OrnamentStyle {
+        None,
+        Up,
+        Down,
+    };
 
     // Protected methods
     std::tuple<size_t, size_t> refF0IndexRange(double startTime, double endTime) const;
@@ -59,9 +67,11 @@ protected:
     void splitNoteUnderMouse();
     void shiftDraggedNoteByPitch(double pitchDelta);
     void setDraggedNotePitch(int pitch);
+    void setDraggedNoteOrnament(OrnamentStyle style);
 
 protected slots:
     // Data manip (global)
+    void modeChanged(bool checked);
     void convertAllRestsToNormal();
 
     // (Note)
@@ -87,6 +97,7 @@ protected:
         double cents; // nan if no cent deviation
         QString text;
         bool isSlur, isRest;
+        OrnamentStyle ornament;
 
         // Required by IntervalTree
         bool operator<(const MiniNote &other) const {
@@ -126,8 +137,9 @@ protected:
     MiniNoteInterval contextMenuNoteInterval;
     enum {
         None,
-        Note
-    } draggingMode;
+        Note,
+        Ornament,
+    } draggingMode, selectedDragMode;
     bool dragging = false;
     bool draggingNoteInCents = false;
     double draggingNoteStartPitch = 0.0, draggingNoteBeginCents = 0, draggingNoteBeginPitch = 0;
@@ -137,11 +149,16 @@ protected:
     
     QMenu *bgMenu;
     QAction *bgMenuReloadSentence;
-    QAction *bgMenu_OptionPrompt;
     QAction *bgMenu_CautionPrompt;
+    QAction *bgMenuConvRestsToNormal;
+    QAction *bgMenu_OptionPrompt;
     QAction *bgMenuSnapByDefault;
     QAction *bgMenuShowPitchTextOverlay;
-    QAction *bgMenuConvRestsToNormal;
+    QAction *bgMenu_ModePrompt;
+    QAction *bgMenuModeNote;
+    QAction *bgMenuModeOrnament;
+
+    QActionGroup *bgMenuModeGroup;
 
     QMenu *noteMenu;
     QAction *noteMenuMergeLeft;

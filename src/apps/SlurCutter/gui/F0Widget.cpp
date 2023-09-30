@@ -9,6 +9,7 @@
 #include <QWheelEvent>
 
 
+#include <QtWidgets/qaction.h>
 #include <cmath>
 
 
@@ -45,15 +46,25 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu_OptionPrompt = new QAction("Options");
     bgMenuSnapByDefault = new QAction("&Snap to piano keys by default");
     bgMenuShowPitchTextOverlay = new QAction("Show pitch text &overlay");
+    bgMenu_ModePrompt = new QAction("Edit Mode");
+    bgMenuModeNote = new QAction("&Note");
+    bgMenuModeOrnament = new QAction("&Ornament");
     auto boldMenuItemFont = bgMenu_OptionPrompt->font();
     boldMenuItemFont.setBold(true);
     bgMenu_OptionPrompt->setFont(boldMenuItemFont);
     bgMenu_OptionPrompt->setDisabled(true);
     bgMenu_CautionPrompt->setFont(boldMenuItemFont);
     bgMenu_CautionPrompt->setDisabled(true);
+    bgMenu_ModePrompt->setFont(boldMenuItemFont);
+    bgMenu_ModePrompt->setDisabled(true);
     bgMenuShowPitchTextOverlay->setCheckable(true);
     bgMenuSnapByDefault->setCheckable(true);
+    bgMenuModeNote->setCheckable(true);
+    bgMenuModeOrnament->setCheckable(true);
     bgMenu->addAction(bgMenuReloadSentence);
+    bgMenu->addSeparator();
+    bgMenu->addAction(bgMenuModeNote);
+    bgMenu->addAction(bgMenuModeOrnament);
     bgMenu->addSeparator();
     bgMenu->addAction(bgMenu_CautionPrompt);
     bgMenu->addAction(bgMenuConvRestsToNormal);
@@ -61,6 +72,15 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu->addAction(bgMenu_OptionPrompt);
     bgMenu->addAction(bgMenuSnapByDefault);
     bgMenu->addAction(bgMenuShowPitchTextOverlay);
+
+    // Mode selector
+    bgMenuModeGroup = new QActionGroup(this);
+    bgMenuModeNote->setData(Note);
+    bgMenuModeOrnament->setData(Ornament);
+    bgMenuModeGroup->addAction(bgMenuModeNote);
+    bgMenuModeGroup->addAction(bgMenuModeOrnament);
+    bgMenuModeGroup->setExclusive(true);
+    bgMenuModeNote->setChecked(true);
 
     // Connect signals
     connect(horizontalScrollBar, &QScrollBar::valueChanged, this, &F0Widget::onHorizontalScroll);
@@ -79,6 +99,8 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
         snapToKey = bgMenuSnapByDefault->isChecked();
         update();
     });
+    connect(bgMenuModeNote, &QAction::triggered, this, &F0Widget::modeChanged);
+    connect(bgMenuModeOrnament, &QAction::triggered, this, &F0Widget::modeChanged);
 }
 
 F0Widget::~F0Widget() {
@@ -105,6 +127,7 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
     auto noteDur = sentence.note_dur.split(" ", QString::SkipEmptyParts);
     auto text = sentence.text.split(" ", QString::SkipEmptyParts);
     auto slur = sentence.note_slur.split(" ", QString::SkipEmptyParts);
+    auto ornament = sentence.note_ornament.split(" ");
 
     QVector<bool> isRest(noteSeq.size(), false);
 
@@ -170,6 +193,9 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
         }
         note.isSlur = slur.empty() ? 0 : slur[i].toInt();
         note.isRest = isRest[i];
+        if (ornament.size() - 1 < i || ornament[i] == "none") note.ornament = OrnamentStyle::None;
+        else if (ornament[i] == "up") note.ornament = OrnamentStyle::Up;
+        else if (ornament[i] == "down") note.ornament = OrnamentStyle::Down;
         midiIntervals.insert({noteBegin, noteBegin + note.duration, note});
         noteBegin += note.duration;
     }
@@ -231,6 +257,11 @@ F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() {
                             : (std::isnan(i.value.cents)
                                    ? (MidiNoteToNoteName(i.value.pitch) + ' ')
                                    : (PitchToNotePlusCentsString(i.value.pitch + 0.01 * i.value.cents) + ' '));
+        switch (i.value.ornament) {
+            case OrnamentStyle::None: ret.note_ornament += "none "; break;
+            case OrnamentStyle::Up: ret.note_ornament += "up "; break;
+            case OrnamentStyle::Down: ret.note_ornament += "down "; break;
+        }
     }
     ret.note_dur = ret.note_dur.trimmed();
     ret.note_seq = ret.note_seq.trimmed();
@@ -399,6 +430,11 @@ void F0Widget::setDraggedNotePitch(int pitch) {
     midiIntervals.insert(intervals[0]);
 }
 
+void F0Widget::modeChanged(bool checked) {
+    // Fuck this what the hell is this bloody cast chain
+    selectedDragMode = ((decltype(Note))((QAction)sender()).data().toInt());
+}
+
 void F0Widget::convertAllRestsToNormal() {
     for (auto &i : midiIntervals.intervals()) {
         if (i.value.isRest) {
@@ -487,9 +523,11 @@ void F0Widget::paintEvent(QPaintEvent *event) {
 
         // Midi notes
         auto leftTime = centerTime - w / 2 / secondWidth, rightTime = centerTime + w / 2 / secondWidth;
-        QVector<QPair<QPointF, QString>> deviatePitches;
+        QVector<QPair<QPointF, QString>> noteDescription;
         static constexpr QColor NoteColors[] = {QColor(106, 164, 234), QColor(60, 113, 219)};
         for (auto &i : midiIntervals.findOverlappingIntervals({leftTime, rightTime}, false)) {
+            QString noteDescText;
+
             if (i.value.pitch == 0)
                 continue; // Skip rests (pitch 0)
             auto rec = QRectF(
@@ -503,13 +541,20 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                 painter.setPen(Qt::black);
                 painter.fillRect(rec, NoteColors[i.value.isSlur]);
                 painter.drawRect(rec);
+                if (i.value.ornament != OrnamentStyle::None) {
+                    if (i.value.ornament == OrnamentStyle::Up)
+                        noteDescText += "↗ ";
+                    if (i.value.ornament == OrnamentStyle::Down)
+                        noteDescText += "↘ ";
+                }
                 if (!std::isnan(i.value.cents)) {
                     painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
-                    // Defer the drawing of deviation text to prevent the right side notes overlapping with them
-                    deviatePitches.append(
-                        {rec.topLeft() + QPointF(0, -3),
-                         PitchToNotePlusCentsString(i.value.pitch +
-                                                    0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents))});
+                    noteDescText += PitchToNotePlusCentsString(i.value.pitch +
+                                                0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
+                }
+                // Defer the drawing of deviation text to prevent the right side notes overlapping with them
+                if (!noteDescText.isEmpty()) {
+                    noteDescription.append({rec.topLeft() + QPointF(0, -3), noteDescText});
                 }
             } else {
                 auto pen = painter.pen();
@@ -532,32 +577,57 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         // Drag box / hover box (Do not coexist)
         MiniNoteInterval note{-1, -1};
         if (dragging && draggingMode == Note) {
-            auto pos = mapFromGlobal(QCursor::pos());
-            auto mousePitch = pitchOnWidgetY(pos.y());
-            auto pen = painter.pen();
-            pen.setColor(Qt::white);
-            pen.setStyle(Qt::SolidLine);
-            pen.setWidth(0);
-            painter.setPen(pen);
-            auto noteLeft = (std::get<0>(draggingNoteInterval) - leftTime) * secondWidth,
-                 noteRight = (std::get<1>(draggingNoteInterval) - leftTime) * secondWidth;
-            painter.drawLine(noteLeft, 0, noteLeft, h);
-            painter.drawLine(noteRight, 0, noteRight, h);
-            if (draggingNoteInCents) {
-                auto dragPitch =
-                    mousePitch - draggingNoteStartPitch + draggingNoteBeginCents * 0.01 + draggingNoteBeginPitch;
-                auto rec = QRectF(noteLeft, lowestPitchY - (dragPitch - lowestPitch) * semitoneHeight,
-                                  noteRight - noteLeft, semitoneHeight);
-                painter.fillRect(rec, QColor(255, 255, 255, 60));
-                painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
-                painter.drawRect(rec);
-                painter.drawText(rec.topLeft() + QPointF(0, -3), PitchToNotePlusCentsString(dragPitch));
-            } else {
-                auto dragPitch = ::floor(mousePitch + 0.5); // Key center pitch -> key bottom pitch
-                auto rec = QRectF(noteLeft, lowestPitchY - (dragPitch - lowestPitch) * semitoneHeight,
-                                  noteRight - noteLeft, semitoneHeight);
-                painter.fillRect(rec, QColor(255, 255, 255, 60));
-                painter.drawRect(rec);
+            switch (draggingMode) {
+                case Note: {
+                    auto pos = mapFromGlobal(QCursor::pos());
+                    auto mousePitch = pitchOnWidgetY(pos.y());
+                    auto pen = painter.pen();
+                    pen.setColor(Qt::white);
+                    pen.setStyle(Qt::SolidLine);
+                    pen.setWidth(0);
+                    painter.setPen(pen);
+                    auto noteLeft = (std::get<0>(draggingNoteInterval) - leftTime) * secondWidth,
+                        noteRight = (std::get<1>(draggingNoteInterval) - leftTime) * secondWidth;
+                    painter.drawLine(noteLeft, 0, noteLeft, h);
+                    painter.drawLine(noteRight, 0, noteRight, h);
+                    if (draggingNoteInCents) {
+                        auto dragPitch =
+                            mousePitch - draggingNoteStartPitch + draggingNoteBeginCents * 0.01 + draggingNoteBeginPitch;
+                        auto rec = QRectF(noteLeft, lowestPitchY - (dragPitch - lowestPitch) * semitoneHeight,
+                                        noteRight - noteLeft, semitoneHeight);
+                        painter.fillRect(rec, QColor(255, 255, 255, 60));
+                        painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
+                        painter.drawRect(rec);
+                        painter.drawText(rec.topLeft() + QPointF(0, -3), PitchToNotePlusCentsString(dragPitch));
+                    } else {
+                        auto dragPitch = ::floor(mousePitch + 0.5); // Key center pitch -> key bottom pitch
+                        auto rec = QRectF(noteLeft, lowestPitchY - (dragPitch - lowestPitch) * semitoneHeight,
+                                        noteRight - noteLeft, semitoneHeight);
+                        painter.fillRect(rec, QColor(255, 255, 255, 60));
+                        painter.drawRect(rec);
+                    }
+                    break;
+                }
+
+                case Ornament: {
+                    auto pos = mapFromGlobal(QCursor::pos());
+                    auto mousePitch = pitchOnWidgetY(pos.y());
+                    auto noteLeft = (std::get<0>(draggingNoteInterval) - leftTime) * secondWidth,
+                        noteRight = (std::get<1>(draggingNoteInterval) - leftTime) * secondWidth;
+                    auto noteCenter = (noteLeft + noteRight) / 2;
+                    auto pen = painter.pen();
+                    pen.setColor(Qt::white);
+                    pen.setStyle(Qt::SolidLine);
+                    pen.setWidth(0);
+                    painter.setPen(pen);
+                    painter.drawLine(noteCenter,
+                                     lowestPitchY - (draggingNoteBeginPitch - lowestPitch) * semitoneHeight,
+                                     noteCenter,
+                                     lowestPitchY - (mousePitch - lowestPitch) * semitoneHeight);
+                    break;
+                }
+
+                default: break;
             }
         } else if (mouseOnNote(mapFromGlobal(QCursor::pos()), &note)) {
             auto rec =
@@ -595,9 +665,9 @@ void F0Widget::paintEvent(QPaintEvent *event) {
             lowestPitchY -= semitoneHeight / 2;
         }
 
-        // Deviate pitch (Note+-Cents) text
+        // Note description (Note+-Cents, ornament, ...) text
         painter.setPen(Qt::white);
-        foreach (auto &i, deviatePitches) {
+        foreach (auto &i, noteDescription) {
             painter.drawText(i.first, i.second);
         }
 
@@ -740,7 +810,18 @@ void F0Widget::mousePressEvent(QMouseEvent *event) {
     draggingButton = event->button();
     MiniNoteInterval noteInterval{-1, -1};
     if (mouseOnNote(event->pos(), &noteInterval) && !noteInterval.value.isRest) {
-        draggingMode = Note;
+        // You are dragging a note
+        switch (selectedDragMode) {
+            case Note:
+                draggingMode = Note;
+                break;
+            case Ornament:
+                draggingMode = Ornament;
+                break;
+            default: break;
+        }
+
+        // This may be less useful for ornament labeling but anyways
         draggingNoteStartPitch = pitchOnWidgetY(event->y());
         draggingNoteInterval = {noteInterval.low, noteInterval.high};
         draggingNoteBeginCents = std::isnan(noteInterval.value.cents) ? 0 : noteInterval.value.cents;
@@ -761,6 +842,14 @@ void F0Widget::mouseReleaseEvent(QMouseEvent *event) {
                 }
                 setCursor(Qt::ArrowCursor);
                 break;
+            }
+
+            case Ornament: {
+                auto deltaPitch = pitchOnWidgetY(event->y()) - draggingNoteStartPitch;
+                if (deltaPitch == 0) setDraggedNoteOrnament(OrnamentStyle::None);
+                else if (deltaPitch > 0) setDraggedNoteOrnament(OrnamentStyle::Up);
+                else if (deltaPitch < 0) setDraggedNoteOrnament(OrnamentStyle::Down);
+                
             }
 
             case None:

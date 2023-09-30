@@ -250,6 +250,7 @@ void MainWindow::pullEditedMidi() {
     currentSentence["note_seq"] = editedSentence.note_seq;
     currentSentence["note_slur"] = editedSentence.note_slur;
     currentSentence["note_dur"] = editedSentence.note_dur;
+    currentSentence["note_ornament"] = editedSentence.note_ornament;
 }
 
 void MainWindow::switchFile(bool next) {
