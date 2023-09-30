@@ -6,7 +6,7 @@
 #include <QDialog>
 #include <QLineEdit>
 
-#include "common.h"
+#include "Common.h"
 
 class ExportDialog : public QDialog {
     Q_OBJECT
