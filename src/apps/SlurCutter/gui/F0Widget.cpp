@@ -15,6 +15,7 @@
 
 #include "DsSentence.h"
 #include "F0Widget.h"
+#include "gui/F0Widget.h"
 #include "qjsonstream.h"
 
 
@@ -74,6 +75,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu->addAction(bgMenuShowPitchTextOverlay);
 
     // Mode selector
+    selectedDragMode = Note;
     bgMenuModeGroup = new QActionGroup(this);
     bgMenuModeNote->setData(Note);
     bgMenuModeOrnament->setData(Ornament);
@@ -430,9 +432,22 @@ void F0Widget::setDraggedNotePitch(int pitch) {
     midiIntervals.insert(intervals[0]);
 }
 
+void F0Widget::setDraggedNoteOrnament(OrnamentStyle style) {
+        auto intervals =
+        midiIntervals.findInnerIntervals({std::get<0>(draggingNoteInterval), std::get<1>(draggingNoteInterval)});
+    if (intervals.empty())
+        return;
+
+    auto &note = intervals[0].value;
+    note.ornament = style;
+
+    midiIntervals.remove(intervals[0]);
+    midiIntervals.insert(intervals[0]);
+}
+
 void F0Widget::modeChanged(bool checked) {
     // Fuck this what the hell is this bloody cast chain
-    selectedDragMode = ((decltype(Note))((QAction)sender()).data().toInt());
+    selectedDragMode = ((decltype(Note))((QAction*)sender())->data().toInt());
 }
 
 void F0Widget::convertAllRestsToNormal() {
@@ -576,7 +591,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
 
         // Drag box / hover box (Do not coexist)
         MiniNoteInterval note{-1, -1};
-        if (dragging && draggingMode == Note) {
+        if (dragging) {
             switch (draggingMode) {
                 case Note: {
                     auto pos = mapFromGlobal(QCursor::pos());
@@ -621,9 +636,9 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                     pen.setWidth(0);
                     painter.setPen(pen);
                     painter.drawLine(noteCenter,
-                                     lowestPitchY - (draggingNoteBeginPitch - lowestPitch) * semitoneHeight,
+                                     lowestPitchY - (draggingNoteBeginPitch - lowestPitch - 0.5) * semitoneHeight,
                                      noteCenter,
-                                     lowestPitchY - (mousePitch - lowestPitch) * semitoneHeight);
+                                     lowestPitchY - (std::round(mousePitch) - lowestPitch - 0.5) * semitoneHeight);
                     break;
                 }
 
@@ -845,11 +860,10 @@ void F0Widget::mouseReleaseEvent(QMouseEvent *event) {
             }
 
             case Ornament: {
-                auto deltaPitch = pitchOnWidgetY(event->y()) - draggingNoteStartPitch;
+                int deltaPitch = std::round(pitchOnWidgetY(event->y())) - draggingNoteStartPitch;
                 if (deltaPitch == 0) setDraggedNoteOrnament(OrnamentStyle::None);
                 else if (deltaPitch > 0) setDraggedNoteOrnament(OrnamentStyle::Up);
                 else if (deltaPitch < 0) setDraggedNoteOrnament(OrnamentStyle::Down);
-                
             }
 
             case None:
