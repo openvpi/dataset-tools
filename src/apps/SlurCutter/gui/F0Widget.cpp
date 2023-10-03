@@ -82,6 +82,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenuModeGlide->setCheckable(true);
     bgMenu->addAction(bgMenuReloadSentence);
     bgMenu->addSeparator();
+    bgMenu->addAction(bgMenu_ModePrompt);
     bgMenu->addAction(bgMenuModeNote);
     bgMenu->addAction(bgMenuModeGlide);
     bgMenu->addSeparator();
