@@ -67,7 +67,7 @@ protected:
     void splitNoteUnderMouse();
     void shiftDraggedNoteByPitch(double pitchDelta);
     void setDraggedNotePitch(int pitch);
-    void setDraggedNoteOrnament(GlideStyle style);
+    void setDraggedNoteGlide(GlideStyle style);
 
 protected slots:
     // Data manip (global)
@@ -99,7 +99,7 @@ protected:
         double cents; // nan if no cent deviation
         QString text;
         bool isSlur, isRest;
-        GlideStyle ornament;
+        GlideStyle glide;
 
         // Required by IntervalTree
         bool operator<(const MiniNote &other) const {
@@ -140,7 +140,7 @@ protected:
     enum {
         None,
         Note,
-        Ornament,
+        Glide,
     } draggingMode, selectedDragMode;
     bool dragging = false;
     bool draggingNoteInCents = false;
@@ -158,7 +158,7 @@ protected:
     QAction *bgMenuShowPitchTextOverlay;
     QAction *bgMenu_ModePrompt;
     QAction *bgMenuModeNote;
-    QAction *bgMenuModeOrnament;
+    QAction *bgMenuModeGlide;
 
     QActionGroup *bgMenuModeGroup;
 
