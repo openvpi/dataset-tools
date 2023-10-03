@@ -279,10 +279,16 @@ F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() {
                             : (std::isnan(i.value.cents)
                                    ? (MidiNoteToNoteName(i.value.pitch) + ' ')
                                    : (PitchToNotePlusCentsString(i.value.pitch + 0.01 * i.value.cents) + ' '));
-        switch (i.value.ornament) {
-            case GlideStyle::None: ret.note_glide += "none "; break;
-            case GlideStyle::Up: ret.note_glide += "up "; break;
-            case GlideStyle::Down: ret.note_glide += "down "; break;
+        if (i.value.isRest) {
+            // rest notes must have no glides
+            ret.note_glide += "none ";
+        }
+        else {
+            switch (i.value.ornament) {
+                case GlideStyle::None: ret.note_glide += "none "; break;
+                case GlideStyle::Up: ret.note_glide += "up "; break;
+                case GlideStyle::Down: ret.note_glide += "down "; break;
+            }
         }
     }
     ret.note_dur = ret.note_dur.trimmed();
@@ -485,7 +491,10 @@ void F0Widget::convertAllRestsToNormal() {
 void F0Widget::setMenuFromCurrentNote() {
     auto note = contextMenuNoteInterval.value;
     noteMenuSetGlideType->setEnabled(!note.isRest);
-    if (!note.isRest) {
+    if (note.isRest) {
+        noteMenuSetGlideNone->setChecked(true);
+    }
+    else {
         if (note.ornament == GlideStyle::None) {
             noteMenuSetGlideNone->setChecked(true);
         }
