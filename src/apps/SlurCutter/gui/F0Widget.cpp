@@ -149,7 +149,7 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
     auto noteDur = sentence.note_dur.split(" ", QString::SkipEmptyParts);
     auto text = sentence.text.split(" ", QString::SkipEmptyParts);
     auto slur = sentence.note_slur.split(" ", QString::SkipEmptyParts);
-    auto ornament = sentence.note_ornament.split(" ");
+    auto ornament = sentence.note_glide.split(" ");
 
     QVector<bool> isRest(noteSeq.size(), false);
 
@@ -215,9 +215,9 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
         }
         note.isSlur = slur.empty() ? 0 : slur[i].toInt();
         note.isRest = isRest[i];
-        if (ornament.size() - 1 < i || ornament[i] == "none") note.ornament = OrnamentStyle::None;
-        else if (ornament[i] == "up") note.ornament = OrnamentStyle::Up;
-        else if (ornament[i] == "down") note.ornament = OrnamentStyle::Down;
+        if (ornament.size() - 1 < i || ornament[i] == "none") note.ornament = GlideStyle::None;
+        else if (ornament[i] == "up") note.ornament = GlideStyle::Up;
+        else if (ornament[i] == "down") note.ornament = GlideStyle::Down;
         midiIntervals.insert({noteBegin, noteBegin + note.duration, note});
         noteBegin += note.duration;
     }
@@ -280,9 +280,9 @@ F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() {
                                    ? (MidiNoteToNoteName(i.value.pitch) + ' ')
                                    : (PitchToNotePlusCentsString(i.value.pitch + 0.01 * i.value.cents) + ' '));
         switch (i.value.ornament) {
-            case OrnamentStyle::None: ret.note_ornament += "none "; break;
-            case OrnamentStyle::Up: ret.note_ornament += "up "; break;
-            case OrnamentStyle::Down: ret.note_ornament += "down "; break;
+            case GlideStyle::None: ret.note_glide += "none "; break;
+            case GlideStyle::Up: ret.note_glide += "up "; break;
+            case GlideStyle::Down: ret.note_glide += "down "; break;
         }
     }
     ret.note_dur = ret.note_dur.trimmed();
@@ -452,7 +452,7 @@ void F0Widget::setDraggedNotePitch(int pitch) {
     midiIntervals.insert(intervals[0]);
 }
 
-void F0Widget::setDraggedNoteOrnament(OrnamentStyle style) {
+void F0Widget::setDraggedNoteOrnament(GlideStyle style) {
         auto intervals =
         midiIntervals.findInnerIntervals({std::get<0>(draggingNoteInterval), std::get<1>(draggingNoteInterval)});
     if (intervals.empty())
@@ -485,13 +485,13 @@ void F0Widget::setMenuFromCurrentNote() {
     auto note = contextMenuNoteInterval.value;
     noteMenuSetGlideType->setEnabled(!note.isRest);
     if (!note.isRest) {
-        if (note.ornament == OrnamentStyle::None) {
+        if (note.ornament == GlideStyle::None) {
             noteMenuSetGlideNone->setChecked(true);
         }
-        else if (note.ornament == OrnamentStyle::Up) {
+        else if (note.ornament == GlideStyle::Up) {
             noteMenuSetGlideUp->setChecked(true);
         }
-        else if (note.ornament == OrnamentStyle::Down) {
+        else if (note.ornament == GlideStyle::Down) {
             noteMenuSetGlideDown->setChecked(true);
         }
     }
@@ -527,15 +527,15 @@ void F0Widget::toggleCurrentNoteRest() {
 }
 
 void F0Widget::setCurrentNoteGlideType(QAction *action) {
-    OrnamentStyle style;
+    GlideStyle style;
     if (action == this->noteMenuSetGlideUp) {
-        style = OrnamentStyle::Up;
+        style = GlideStyle::Up;
     }
     else if (action == this->noteMenuSetGlideDown) {
-        style = OrnamentStyle::Down;
+        style = GlideStyle::Down;
     }
     else {
-        style = OrnamentStyle::None;
+        style = GlideStyle::None;
     }
     auto noteInterval = contextMenuNoteInterval;
     midiIntervals.remove(noteInterval);
@@ -615,10 +615,10 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                     noteDescText += PitchToNotePlusCentsString(i.value.pitch +
                                                 0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
                 }
-                if (i.value.ornament != OrnamentStyle::None) {
-                    if (i.value.ornament == OrnamentStyle::Up)
+                if (i.value.ornament != GlideStyle::None) {
+                    if (i.value.ornament == GlideStyle::Up)
                         noteDescText.prepend("↗");
-                    if (i.value.ornament == OrnamentStyle::Down)
+                    if (i.value.ornament == GlideStyle::Down)
                         noteDescText.append("↘");
                 }
                 // Defer the drawing of deviation text to prevent the right side notes overlapping with them
@@ -915,9 +915,9 @@ void F0Widget::mouseReleaseEvent(QMouseEvent *event) {
 
             case Ornament: {
                 int deltaPitch = std::round(pitchOnWidgetY(event->y())) - draggingNoteStartPitch;
-                if (deltaPitch == 0) setDraggedNoteOrnament(OrnamentStyle::None);
-                else if (deltaPitch > 0) setDraggedNoteOrnament(OrnamentStyle::Up);
-                else if (deltaPitch < 0) setDraggedNoteOrnament(OrnamentStyle::Down);
+                if (deltaPitch == 0) setDraggedNoteOrnament(GlideStyle::None);
+                else if (deltaPitch > 0) setDraggedNoteOrnament(GlideStyle::Up);
+                else if (deltaPitch < 0) setDraggedNoteOrnament(GlideStyle::Down);
             }
 
             case None:

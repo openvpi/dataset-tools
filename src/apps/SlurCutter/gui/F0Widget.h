@@ -28,7 +28,7 @@ public:
         QString note_seq;
         QString note_dur;
         QString note_slur;
-        QString note_ornament;
+        QString note_glide;
     };
     ReturnedDsString getSavedDsStrings();
     bool empty();
@@ -48,7 +48,7 @@ public:
 
 protected:
     struct MiniNote;
-    enum class OrnamentStyle {
+    enum class GlideStyle {
         None,
         Up,
         Down,
@@ -67,7 +67,7 @@ protected:
     void splitNoteUnderMouse();
     void shiftDraggedNoteByPitch(double pitchDelta);
     void setDraggedNotePitch(int pitch);
-    void setDraggedNoteOrnament(OrnamentStyle style);
+    void setDraggedNoteOrnament(GlideStyle style);
 
 protected slots:
     // Data manip (global)
@@ -99,7 +99,7 @@ protected:
         double cents; // nan if no cent deviation
         QString text;
         bool isSlur, isRest;
-        OrnamentStyle ornament;
+        GlideStyle ornament;
 
         // Required by IntervalTree
         bool operator<(const MiniNote &other) const {
