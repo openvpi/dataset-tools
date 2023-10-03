@@ -627,6 +627,14 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                                                 0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
                 }
                 if (i.value.glide != GlideStyle::None) {
+                    /*
+                     * Definitions of glide types which cause the difference
+                     * between prepending and appending:
+                     * 1. Up
+                     * The pitch glides up from the beginning, TOWARDS the main note.
+                     * 2. Down
+                     * The pitch glides down at the end, FROM the main note.
+                     */
                     if (i.value.glide == GlideStyle::Up)
                         noteDescText.prepend("↗");
                     if (i.value.glide == GlideStyle::Down)
