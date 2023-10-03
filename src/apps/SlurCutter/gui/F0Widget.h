@@ -75,8 +75,10 @@ protected slots:
     void convertAllRestsToNormal();
 
     // (Note)
+    void setMenuFromCurrentNote();
     void mergeCurrentSlurToLeftNode(bool checked);
     void toggleCurrentNoteRest();
+    void setCurrentNoteGlideType(QAction *action);
 
 protected:
 
@@ -163,6 +165,12 @@ protected:
     QMenu *noteMenu;
     QAction *noteMenuMergeLeft;
     QAction *noteMenuToggleRest;
+
+    QAction *noteMenuGlidePrompt;
+    QActionGroup *noteMenuSetGlideType;
+    QAction *noteMenuSetGlideNone;
+    QAction *noteMenuSetGlideUp;
+    QAction *noteMenuSetGlideDown;
 
 private:
     // Private unified methods

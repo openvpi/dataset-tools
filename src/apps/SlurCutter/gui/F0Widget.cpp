@@ -40,6 +40,26 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     noteMenu->addAction(noteMenuMergeLeft);
     noteMenu->addAction(noteMenuToggleRest);
 
+    auto boldMenuItemFont = noteMenu->font();
+    boldMenuItemFont.setBold(true);
+
+    noteMenu->addSeparator();
+    noteMenuGlidePrompt = new QAction("Ornament: Glide");
+    noteMenuGlidePrompt->setFont(boldMenuItemFont);
+    noteMenuGlidePrompt->setEnabled(false);
+    noteMenu->addAction(noteMenuGlidePrompt);
+    noteMenuSetGlideType = new QActionGroup(this);
+    noteMenuSetGlideNone = new QAction("None");
+    noteMenuSetGlideUp = new QAction("Up");
+    noteMenuSetGlideDown = new QAction("Down");
+    noteMenu->addAction(noteMenuSetGlideType->addAction(noteMenuSetGlideNone));
+    noteMenu->addAction(noteMenuSetGlideType->addAction(noteMenuSetGlideUp));
+    noteMenu->addAction(noteMenuSetGlideType->addAction(noteMenuSetGlideDown));
+    noteMenuSetGlideNone->setCheckable(true);
+    noteMenuSetGlideUp->setCheckable(true);
+    noteMenuSetGlideDown->setCheckable(true);
+    noteMenuSetGlideNone->setChecked(true);
+
     bgMenu = new QMenu(this);
     bgMenuReloadSentence = new QAction("&Discard changes and reload current sentence");
     bgMenu_CautionPrompt = new QAction("Use the following with caution");
@@ -50,8 +70,6 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu_ModePrompt = new QAction("Edit Mode");
     bgMenuModeNote = new QAction("&Note");
     bgMenuModeOrnament = new QAction("&Ornament");
-    auto boldMenuItemFont = bgMenu_OptionPrompt->font();
-    boldMenuItemFont.setBold(true);
     bgMenu_OptionPrompt->setFont(boldMenuItemFont);
     bgMenu_OptionPrompt->setDisabled(true);
     bgMenu_CautionPrompt->setFont(boldMenuItemFont);
@@ -88,8 +106,10 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     connect(horizontalScrollBar, &QScrollBar::valueChanged, this, &F0Widget::onHorizontalScroll);
     connect(verticalScrollBar, &QScrollBar::valueChanged, this, &F0Widget::onVerticalScroll);
 
+    connect(noteMenu, &QMenu::aboutToShow, this, &F0Widget::setMenuFromCurrentNote);
     connect(noteMenuMergeLeft, &QAction::triggered, this, &F0Widget::mergeCurrentSlurToLeftNode);
     connect(noteMenuToggleRest, &QAction::triggered, this, &F0Widget::toggleCurrentNoteRest);
+    connect(noteMenuSetGlideType, &QActionGroup::triggered, this, &F0Widget::setCurrentNoteGlideType);
 
     connect(bgMenuReloadSentence, &QAction::triggered, this, &F0Widget::requestReloadSentence);
     connect(bgMenuConvRestsToNormal, &QAction::triggered, this, &F0Widget::convertAllRestsToNormal);
@@ -461,6 +481,22 @@ void F0Widget::convertAllRestsToNormal() {
     update();
 }
 
+void F0Widget::setMenuFromCurrentNote() {
+    auto note = contextMenuNoteInterval.value;
+    noteMenuSetGlideType->setEnabled(!note.isRest);
+    if (!note.isRest) {
+        if (note.ornament == OrnamentStyle::None) {
+            noteMenuSetGlideNone->setChecked(true);
+        }
+        else if (note.ornament == OrnamentStyle::Up) {
+            noteMenuSetGlideUp->setChecked(true);
+        }
+        else if (note.ornament == OrnamentStyle::Down) {
+            noteMenuSetGlideDown->setChecked(true);
+        }
+    }
+}
+
 void F0Widget::mergeCurrentSlurToLeftNode(bool checked) {
     Q_UNUSED(checked);
 
@@ -486,6 +522,24 @@ void F0Widget::toggleCurrentNoteRest() {
 
     midiIntervals.remove(noteInterval);
     noteInterval.value.isRest = !noteInterval.value.isRest;
+    midiIntervals.insert(noteInterval);
+    update();
+}
+
+void F0Widget::setCurrentNoteGlideType(QAction *action) {
+    OrnamentStyle style;
+    if (action == this->noteMenuSetGlideUp) {
+        style = OrnamentStyle::Up;
+    }
+    else if (action == this->noteMenuSetGlideDown) {
+        style = OrnamentStyle::Down;
+    }
+    else {
+        style = OrnamentStyle::None;
+    }
+    auto noteInterval = contextMenuNoteInterval;
+    midiIntervals.remove(noteInterval);
+    noteInterval.value.ornament = style;
     midiIntervals.insert(noteInterval);
     update();
 }
@@ -556,16 +610,16 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                 painter.setPen(Qt::black);
                 painter.fillRect(rec, NoteColors[i.value.isSlur]);
                 painter.drawRect(rec);
-                if (i.value.ornament != OrnamentStyle::None) {
-                    if (i.value.ornament == OrnamentStyle::Up)
-                        noteDescText += "↗ ";
-                    if (i.value.ornament == OrnamentStyle::Down)
-                        noteDescText += "↘ ";
-                }
                 if (!std::isnan(i.value.cents)) {
                     painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
                     noteDescText += PitchToNotePlusCentsString(i.value.pitch +
                                                 0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
+                }
+                if (i.value.ornament != OrnamentStyle::None) {
+                    if (i.value.ornament == OrnamentStyle::Up)
+                        noteDescText.prepend("↗");
+                    if (i.value.ornament == OrnamentStyle::Down)
+                        noteDescText.append("↘");
                 }
                 // Defer the drawing of deviation text to prevent the right side notes overlapping with them
                 if (!noteDescText.isEmpty()) {
