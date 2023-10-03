@@ -189,6 +189,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 }
 
 MainWindow::~MainWindow() {
+    pullEditedMidi();
     if (QMFs::isFileExist(lastFile)) {
         saveFile(lastFile);
     }
