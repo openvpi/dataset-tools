@@ -288,6 +288,7 @@ F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() {
     ret.note_dur = ret.note_dur.trimmed();
     ret.note_seq = ret.note_seq.trimmed();
     ret.note_slur = ret.note_slur.trimmed();
+    ret.note_glide = ret.note_glide.trimmed();
     return ret;
 };
 
