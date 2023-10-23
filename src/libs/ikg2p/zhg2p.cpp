@@ -145,7 +145,9 @@ namespace IKg2p {
                             cursor += length;
                             found = true;
                         }
-                    } else if ((cursor + 1) >= length) {
+                    }
+
+                    if ((cursor + 1) >= length && !found && cursor <= inputList.size()) {
                         // reverse lookup
                         QString x_sub_phrase = inputList.mid(cursor + 1 - length, length).join("");
                         if (d->phrases_dict.find(x_sub_phrase) != d->phrases_dict.end()) {
