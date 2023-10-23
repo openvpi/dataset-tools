@@ -136,7 +136,7 @@ namespace IKg2p {
                 bool found = false;
                 for (int length = 4; length >= 2 && !found; length--) {
                     // forward lookup
-                    QString sub_phrase = inputList.mid(cursor, length).join("");
+                    QString sub_phrase = inputList.mid(cursor, std::min(length, inputList.size() - length)).join("");
                     if (d->phrases_dict.find(sub_phrase) != d->phrases_dict.end()) {
                         //                    qDebug() << "get:sub_phrase:" << sub_phrase << phrases_dict[sub_phrase];
                         addString(d->phrases_dict[sub_phrase], result);
@@ -148,7 +148,7 @@ namespace IKg2p {
                         if (d->phrases_dict.find(x_sub_phrase) != d->phrases_dict.end()) {
                             //                        qDebug() << "get:x_sub_phrase:" << x_sub_phrase <<
                             //                        phrases_dict[x_sub_phrase];
-                            int pos = x_sub_phrase.indexOf(current_char);
+                            int pos = x_sub_phrase.lastIndexOf(current_char);
                             // overwrite pinyin
                             removeElements(result, cursor + 1 - length, pos);
                             addString(d->phrases_dict[x_sub_phrase], result);
