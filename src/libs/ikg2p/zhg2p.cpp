@@ -135,13 +135,16 @@ namespace IKg2p {
             } else {
                 bool found = false;
                 for (int length = 4; length >= 2 && !found; length--) {
-                    // forward lookup
-                    QString sub_phrase = inputList.mid(cursor, std::min(length, inputList.size() - length)).join("");
-                    if (d->phrases_dict.find(sub_phrase) != d->phrases_dict.end()) {
-                        //                    qDebug() << "get:sub_phrase:" << sub_phrase << phrases_dict[sub_phrase];
-                        addString(d->phrases_dict[sub_phrase], result);
-                        cursor += length;
-                        found = true;
+                    if (cursor + length <= inputList.size()) {
+                        // forward lookup
+                        QString sub_phrase = inputList.mid(cursor, length).join("");
+                        if (d->phrases_dict.find(sub_phrase) != d->phrases_dict.end()) {
+                            //                    qDebug() << "get:sub_phrase:" << sub_phrase <<
+                            //                    phrases_dict[sub_phrase];
+                            addString(d->phrases_dict[sub_phrase], result);
+                            cursor += length;
+                            found = true;
+                        }
                     } else if ((cursor + 1) >= length) {
                         // reverse lookup
                         QString x_sub_phrase = inputList.mid(cursor + 1 - length, length).join("");
