@@ -78,6 +78,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_workFinished = 0;
     m_workError = 0;
     m_processing = false;
+    m_windowLoaded = false;
 
     setWindowTitle(qApp->applicationName());
     setAcceptDrops(true);
@@ -484,38 +485,39 @@ void MainWindow::initStylesMenu() {
 }
 
 void MainWindow::showEvent(QShowEvent *event) {
+    if (!m_windowLoaded) {
+        m_windowLoaded = true;
 #ifdef Q_OS_MAC
-    auto dpiScale = 1.0;
-    // It seems that on macOS, logicalDotsPerInch() always return 72.
-    // Therefore, we just don't resize on macOS.
+        auto dpiScale = 1.0;
+        // It seems that on macOS, logicalDotsPerInch() always return 72.
+        // Therefore, we just don't resize on macOS.
 #else
-    // Get current screen
-    auto currentScreen = screen();
-    // Try calculate screen DPI scale factor. If currentScreen is nullptr, use 1.0.
-    auto dpiScale = currentScreen ? currentScreen->logicalDotsPerInch() / 96.0 : 1.0;
-    // Get current window size
-    auto oldSize = size();
-    // Calculate DPI scaled window size
-    auto newSize = dpiScale * oldSize;
-    // Calculate window move offset
-    auto sizeDiff = (newSize - oldSize) / 2;
-    // Resize window to DPI scaled size
-    resize(newSize);
-    // Move window so its center stays almost the same position
-    move(pos().x() - sizeDiff.width(), pos().y() - sizeDiff.height());
+        // Get current screen
+        auto currentScreen = screen();
+        // Try calculate screen DPI scale factor. If currentScreen is nullptr, use 1.0.
+        auto dpiScale = currentScreen ? currentScreen->logicalDotsPerInch() / 96.0 : 1.0;
+        // Get current window size
+        auto oldSize = size();
+        // Calculate DPI scaled window size
+        auto newSize = dpiScale * oldSize;
+        // Calculate window move offset
+        auto sizeDiff = (newSize - oldSize) / 2;
+        // Resize window to DPI scaled size
+        resize(newSize);
+        // Move window so its center stays almost the same position
+        move(pos().x() - sizeDiff.width(), pos().y() - sizeDiff.height());
 #endif
-    auto splitterMainSizes = ui->splitterMain->sizes();
+        auto splitterMainSizes = ui->splitterMain->sizes();
 
-    if (ui->splitterMain->count() >= 2) {
-        ui->splitterMain->setStretchFactor(0, 1);
-        ui->splitterMain->setStretchFactor(1, 0);
-        auto firstTwoColumnSizes = splitterMainSizes[0] + splitterMainSizes[1];
-        splitterMainSizes[0] = static_cast<int>(std::round(1.0 * 2 * firstTwoColumnSizes / 3));
-        splitterMainSizes[1] = static_cast<int>(std::round(1.0 * 1 * firstTwoColumnSizes / 3));
-        ui->splitterMain->setSizes(splitterMainSizes);
+        if (ui->splitterMain->count() >= 2) {
+            ui->splitterMain->setStretchFactor(0, 1);
+            ui->splitterMain->setStretchFactor(1, 0);
+            auto firstTwoColumnSizes = splitterMainSizes[0] + splitterMainSizes[1];
+            splitterMainSizes[0] = static_cast<int>(std::round(1.0 * 3 * firstTwoColumnSizes / 5));
+            splitterMainSizes[1] = static_cast<int>(std::round(1.0 * 2 * firstTwoColumnSizes / 5));
+            ui->splitterMain->setSizes(splitterMainSizes);
+        }
     }
-
-    QWidget::showEvent(event);
 }
 
 void MainWindow::slot_slicingModeChanged(int index) {

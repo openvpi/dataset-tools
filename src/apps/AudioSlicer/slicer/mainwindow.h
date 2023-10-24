@@ -61,6 +61,7 @@ private:
     Ui::MainWindow *ui;
 
     bool m_processing;
+    bool m_windowLoaded;
     int m_workTotal;
     int m_workFinished;
     int m_workError;
