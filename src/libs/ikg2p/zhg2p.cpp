@@ -136,23 +136,30 @@ namespace IKg2p {
                 bool found = false;
                 for (int length = 4; length >= 2 && !found; length--) {
                     if (cursor + length <= inputList.size()) {
-                        // forward lookup
+                        // cursor: 地, subPhrase: 地久天长
                         QString sub_phrase = inputList.mid(cursor, length).join("");
                         if (d->phrases_dict.find(sub_phrase) != d->phrases_dict.end()) {
-                            //                    qDebug() << "get:sub_phrase:" << sub_phrase <<
-                            //                    phrases_dict[sub_phrase];
                             addString(d->phrases_dict[sub_phrase], result);
                             cursor += length;
                             found = true;
                         }
+
+                        if (cursor >= 1 && !found) {
+                            // cursor: 重, subPhrase_1: 语重心长
+                            QString sub_phrase_1 = inputList.mid(cursor - 1, length).join("");
+                            if (d->phrases_dict.find(sub_phrase_1) != d->phrases_dict.end()) {
+                                result.removeAt(result.size() - 1);
+                                addString(d->phrases_dict[sub_phrase_1], result);
+                                cursor += length - 1;
+                                found = true;
+                            }
+                        }
                     }
 
-                    if ((cursor + 1) >= length && !found && cursor <= inputList.size()) {
-                        // reverse lookup
+                    if (cursor + 1 >= length && !found && cursor + 1 <= inputList.size()) {
+                        // cursor: 好, xSubPhrase: 各有所好
                         QString x_sub_phrase = inputList.mid(cursor + 1 - length, length).join("");
                         if (d->phrases_dict.find(x_sub_phrase) != d->phrases_dict.end()) {
-                            //                        qDebug() << "get:x_sub_phrase:" << x_sub_phrase <<
-                            //                        phrases_dict[x_sub_phrase];
                             int pos = x_sub_phrase.lastIndexOf(current_char);
                             // overwrite pinyin
                             removeElements(result, cursor + 1 - length, pos);
@@ -161,7 +168,21 @@ namespace IKg2p {
                             found = true;
                         }
                     }
+
+                    if (cursor + 2 >= length && !found && cursor + 2 <= inputList.size()) {
+                        // cursor: 好, xSubPhrase: 叶公好龙
+                        QString x_sub_phrase_1 = inputList.mid(cursor + 2 - length, length).join("");
+                        if (d->phrases_dict.find(x_sub_phrase_1) != d->phrases_dict.end()) {
+                            int pos = x_sub_phrase_1.lastIndexOf(current_char);
+                            // overwrite pinyin
+                            removeElements(result, cursor + 2 - length, pos);
+                            addString(d->phrases_dict[x_sub_phrase_1], result);
+                            cursor += 2;
+                            found = true;
+                        }
+                    }
                 }
+
                 // not found, use default pinyin
                 if (!found) {
                     result.append(d->getDefaultPinyin(current_char));
