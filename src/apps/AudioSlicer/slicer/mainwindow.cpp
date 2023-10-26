@@ -37,6 +37,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_threadpool = new QThreadPool(this);
     m_threadpool->setMaxThreadCount(1);
 
+    slot_updateFilenameExample(ui->spinBoxSuffixDigits->value());
 
     connect(ui->btnAddFiles, &QPushButton::clicked, this, &MainWindow::slot_addAudioFiles);
     connect(ui->btnBrowse, &QPushButton::clicked, this, &MainWindow::slot_browseOutputDir);
@@ -55,6 +56,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     });
     connect(ui->cmbSlicingMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &MainWindow::slot_slicingModeChanged);
+    connect(ui->spinBoxSuffixDigits, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MainWindow::slot_updateFilenameExample);
 
     slot_slicingModeChanged(ui->cmbSlicingMode->currentIndex());
 
@@ -278,6 +281,7 @@ void MainWindow::slot_start() {
                            saveMarkers,
                            loadMarkers,
                            overwriteMarkers,
+                           ui->spinBoxSuffixDigits->value(),
                            i);
         connect(runnable, &WorkThread::oneFinished, this, &MainWindow::slot_oneFinished);
         connect(runnable, &WorkThread::oneInfo, this, &MainWindow::slot_oneInfo);
@@ -506,6 +510,8 @@ void MainWindow::showEvent(QShowEvent *event) {
         resize(newSize);
         // Move window so its center stays almost the same position
         move(pos().x() - sizeDiff.width(), pos().y() - sizeDiff.height());
+
+        ui->spinBoxSuffixDigits->setMaximumWidth(static_cast<int>(std::round(dpiScale * 60)));
 #endif
         auto splitterMainSizes = ui->splitterMain->sizes();
 
@@ -527,6 +533,10 @@ void MainWindow::slot_slicingModeChanged(int index) {
     } else {
         ui->cbOverwriteMarkers->setVisible(false);
     }
+}
+
+void MainWindow::slot_updateFilenameExample(int value) {
+    ui->lblFilenameExample->setText(QString("(Example: output_%1.wav)").arg(QLatin1Char('1'), value, QLatin1Char('0')));
 }
 
 #ifdef Q_OS_WIN

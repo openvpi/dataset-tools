@@ -50,11 +50,11 @@ inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRat
 WorkThread::WorkThread(const QString &filename, const QString &outPath, double threshold, qint64 minLength, qint64 minInterval,
                        qint64 hopSize, qint64 maxSilKept, int outputWaveFormat,
                        bool saveAudio, bool saveMarkers, bool loadMarkers, bool overwriteMarkers,
-                       int listIndex)
+                       int minimumDigits, int listIndex)
     : m_filename(filename), m_outPath(outPath), m_threshold(threshold), m_minLength(minLength),
       m_minInterval(minInterval), m_hopSize(hopSize), m_maxSilKept(maxSilKept), m_outputWaveFormat(outputWaveFormat),
       m_saveAudio(saveAudio), m_saveMarkers(saveMarkers), m_loadMarkers(loadMarkers), m_overwriteMarkers(overwriteMarkers),
-      m_listIndex(listIndex) {}
+      m_minimumDigits(minimumDigits), m_listIndex(listIndex) {}
 
 void WorkThread::run() {
     emit oneInfo(QString("%1 started processing.").arg(m_filename));
@@ -184,7 +184,7 @@ void WorkThread::run() {
                             .arg(1.0 * endFrame / sr);
 
 
-            auto outFileName = QString("%1_%2.wav").arg(fileBaseName).arg(idx);
+            auto outFileName = QString("%1_%2.wav").arg(fileBaseName).arg(idx, m_minimumDigits, 10, QLatin1Char('0'));
             auto outFilePath = QDir(outPath).absoluteFilePath(outFileName);
 
 #ifdef USE_WIDE_CHAR

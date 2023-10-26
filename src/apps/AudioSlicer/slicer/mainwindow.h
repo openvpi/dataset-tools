@@ -56,6 +56,7 @@ public slots:
     void slot_oneError(const QString &errmsg);
     void slot_oneFailed(const QString &errmsg, int listIndex);
     void slot_threadFinished();
+    void slot_updateFilenameExample(int value);
 
 private:
     Ui::MainWindow *ui;
