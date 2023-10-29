@@ -36,6 +36,7 @@ protected:
 
     QMenu *fileMenu;
     QAction *browseAction;
+    QAction *covertAction;
     QAction *exportAction;
 
     QMenu *editMenu;
@@ -74,6 +75,7 @@ protected:
     void openDirectory(const QString &dirName);
     void openFile(const QString &filename);
     void saveFile(const QString &filename);
+    void labToJson(const QString &dirName);
     void exportAudio(ExportInfo &exportInfo);
 
     void reloadWindowTitle();

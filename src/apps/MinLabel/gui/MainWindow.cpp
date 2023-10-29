@@ -54,12 +54,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     browseAction = new QAction("Open Folder", this);
     browseAction->setShortcut(QKeySequence("Ctrl+O"));
 
+    covertAction = new QAction("Covert lab to project file", this);
+
     exportAction = new QAction("Export", this);
     exportAction->setShortcut(QKeySequence("Ctrl+E"));
 
     fileMenu = new QMenu("File(&F)", this);
     fileMenu->addAction(browseAction);
     fileMenu->addAction(exportAction);
+    fileMenu->addAction(covertAction);
 
     nextAction = new QAction("Next file", this);
     nextAction->setShortcut(QKeySequence::MoveToNextPage);
@@ -243,9 +246,9 @@ void MainWindow::saveFile(const QString &filename) {
 
     QFile jsonFile(jsonFilePath);
     QJsonObject writeData;
-    writeData["lab"] = labContent;
+    writeData["lab"] = labContent.replace(QRegExp("\\s+"), " ");
     writeData["raw_text"] = txtContent;
-    writeData["lab_without_tone"] = withoutTone;
+    writeData["lab_without_tone"] = withoutTone.replace(QRegExp("\\s+"), " ");
 
     if (!writeJsonFile(jsonFilePath, writeData)) {
         QMessageBox::critical(this, qApp->applicationName(),
@@ -381,7 +384,21 @@ void MainWindow::_q_fileMenuTriggered(QAction *action) {
         dirname = path;
         cfg.rootDir = dirname;
         _q_updateProgress();
+    } else if (action == covertAction) {
+        playerWidget->setPlaying(false);
+        int choice = QMessageBox::question(this, "Covert lab to project file.",
+                                           "Do you want to covert lab to project file in target folder?",
+                                           QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (choice == QMessageBox::Yes) {
+            QString path =
+                QFileDialog::getExistingDirectory(this, "Open Lab Folder", QFileInfo(dirname).absolutePath());
+            if (path.isEmpty()) {
+                return;
+            }
+            labToJson(path);
+        }
     } else if (action == exportAction) {
+        playerWidget->setPlaying(false);
         ExportDialog dialog(this);
 
         if (dialog.exec() == QDialog::Accepted) {
@@ -458,4 +475,56 @@ void MainWindow::exportAudio(ExportInfo &exportInfo) {
     } else {
         QMessageBox::critical(this, qApp->applicationName(), QString("Failed to export files."));
     }
+}
+void MainWindow::labToJson(const QString &dirName) {
+    QDir directory(dirName);
+    QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
+
+    int count = 0;
+    foreach (const QFileInfo &fileInfo, fileInfoList) {
+        QString currentFilePath = fsModel->fileInfo(treeView->currentIndex()).absoluteFilePath();
+        QString labFilePath = fileInfo.absoluteFilePath();
+        QString suffix = fileInfo.suffix().toLower();
+        QString name = fileInfo.fileName();
+        QString jsonFilePath = fileInfo.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) + ".json";
+        if (fileInfo.suffix() == "lab" && !QMFs::isFileExist(jsonFilePath)) {
+            QFile file(labFilePath);
+            QString labContent, txtContent;
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                labContent = QString::fromUtf8(file.readAll());
+                txtContent = labContent;
+
+                if (audioToOtherSuffix(currentFilePath, "lab") == labFilePath) {
+                    textWidget->contentText->setPlainText(labContent);
+                    textWidget->wordsText->setText(labContent);
+                } else {
+                    QString withoutTone = "";
+                    if (!labContent.isEmpty() && labContent.contains(" ")) {
+                        QStringList inputList = labContent.split(" ");
+                        for (QString &item : inputList) {
+                            item.remove(QRegExp("[^a-z]"));
+                        }
+                        withoutTone = inputList.join(" ");
+                    }
+
+                    QFile jsonFile(jsonFilePath);
+                    QJsonObject writeData;
+                    writeData["lab"] = labContent.replace(QRegExp("\\s+"), " ");
+                    writeData["raw_text"] = txtContent;
+                    writeData["lab_without_tone"] = withoutTone.replace(QRegExp("\\s+"), " ");
+
+                    if (!writeJsonFile(jsonFilePath, writeData)) {
+                        QMessageBox::critical(
+                            this, qApp->applicationName(),
+                            QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
+                        ::exit(-1);
+                    }
+                }
+                count++;
+            }
+        }
+    }
+    _q_updateProgress();
+    QMessageBox::information(this, qApp->applicationName(),
+                             QString("Convert %1 lab files to current project file.").arg(count));
 }
