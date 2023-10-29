@@ -21,6 +21,7 @@
 #include <QScrollBar>
 #include <QSpacerItem>
 #include <QSplitter>
+#include <QSpinBox>
 #include <QTextEdit>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -54,7 +55,7 @@ public:
     QScrollArea *gBoxSettings;
     QWidget *settingsContainer;
     QVBoxLayout *vlSettingsArea;
-    QGroupBox *gBoxParameters, *gBoxAudioOptions, *gBoxSlicingMode;
+    QGroupBox *gBoxParameters, *gBoxAudioOptions, *gBoxFilename, *gBoxSlicingMode;
     QFormLayout *formLayout;
     QLabel *lblThreshold;
     QLineEdit *lineEditThreshold;
@@ -82,6 +83,11 @@ public:
     QVBoxLayout *vlSlicingMode;
     QComboBox *cmbSlicingMode;
     QCheckBox *cbOverwriteMarkers;
+    QVBoxLayout *vlFilename;
+    QHBoxLayout *hlSuffixDigits;
+    QLabel *lblSuffixDigits;
+    QSpinBox *spinBoxSuffixDigits;
+    QLabel *lblFilenameExample;
 
     void setupUi(QMainWindow *MainWindow);
     void retranslateUi(QMainWindow *MainWindow);

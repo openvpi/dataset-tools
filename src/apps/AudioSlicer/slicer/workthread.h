@@ -24,6 +24,7 @@ public:
                bool saveMarkers = false,
                bool loadMarkers = false,
                bool overwriteMarkers = false,
+               int minimumDigits = 3,
                int listIndex = -1);
     void run() override;
 
@@ -40,6 +41,7 @@ private:
     bool m_saveMarkers;
     bool m_loadMarkers;
     bool m_overwriteMarkers;
+    int m_minimumDigits;
     int m_listIndex;
 
 signals:

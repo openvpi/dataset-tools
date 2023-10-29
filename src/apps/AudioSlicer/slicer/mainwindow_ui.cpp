@@ -196,6 +196,38 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
 
     vlSettingsArea->addWidget(gBoxAudioOptions);
 
+    // Output Filename
+    gBoxFilename = new QGroupBox(gBoxSettings);
+    gBoxFilename->setObjectName("gBoxFilename");
+
+    vlFilename = new QVBoxLayout(gBoxFilename);
+    vlFilename->setObjectName("vlFilename");
+
+    hlSuffixDigits = new QHBoxLayout(gBoxFilename);
+    hlSuffixDigits->setObjectName("hlSuffixDigits");
+
+    lblSuffixDigits = new QLabel(gBoxFilename);
+    lblSuffixDigits->setObjectName("lblSuffixDigits");
+
+    spinBoxSuffixDigits = new QSpinBox(gBoxFilename);
+    spinBoxSuffixDigits->setObjectName("spinBoxSuffixDigits");
+    spinBoxSuffixDigits->setValue(3);
+    spinBoxSuffixDigits->setRange(1, 20);
+
+    hlSuffixDigits->addWidget(lblSuffixDigits);
+    hlSuffixDigits->addWidget(spinBoxSuffixDigits);
+
+    vlFilename->addLayout(hlSuffixDigits);
+
+    lblFilenameExample = new QLabel(gBoxFilename);
+    lblFilenameExample->setObjectName("lblFilenameExample");
+
+    vlFilename->addWidget(lblFilenameExample);
+
+    gBoxFilename->setLayout(vlFilename);
+
+    vlSettingsArea->addWidget(gBoxFilename);
+
     // Slicing Mode
     gBoxSlicingMode = new QGroupBox(gBoxSettings);
     gBoxSlicingMode->setObjectName("gBoxSlicingMode");
@@ -353,6 +385,8 @@ void Ui_MainWindow::retranslateUi(QMainWindow *MainWindow)
     lblOutputDir->setText(QCoreApplication::translate("MainWindow", "Output Directory (default to source directory)", nullptr));
     lineEditOutputDir->setText(QString());
     lblOutputWaveFormat->setText(QCoreApplication::translate("MainWindow", "Output Wave Format", nullptr));
+    gBoxFilename->setTitle(QCoreApplication::translate("MainWindow", "Output Filename", nullptr));
+    lblSuffixDigits->setText(QCoreApplication::translate("MainWindow", "Minimum suffix digits", nullptr));
     gBoxSlicingMode->setTitle(QCoreApplication::translate("MainWindow", "Slicing Mode", nullptr));
     cmbSlicingMode->setItemText(0, QCoreApplication::translate("MainWindow", "Save audio chunks only", nullptr));
     cmbSlicingMode->setItemText(1, QCoreApplication::translate("MainWindow", "Save audio chunks only (load markers)", nullptr));
