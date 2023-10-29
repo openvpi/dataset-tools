@@ -27,8 +27,7 @@ namespace IKg2p {
         bool isPolyphonic(const QString &text) const;
         QString tradToSim(const QString &text) const;
         QString getDefaultPinyin(const QString &text) const;
-        void zhPosition(const QStringList &input, QStringList &res, QList<int> &positions) const;
-
+        void zhPosition(const QStringList &input, QStringList &res, QList<int> &positions, bool covertNum) const;
     };
 
 }

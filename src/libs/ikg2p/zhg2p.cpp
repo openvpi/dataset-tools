@@ -76,11 +76,14 @@ namespace IKg2p {
     }
 
     // get all chinese characters and positions in the list
-    void ZhG2pPrivate::zhPosition(const QStringList &input, QStringList &res, QList<int> &positions) const {
+    void ZhG2pPrivate::zhPosition(const QStringList &input, QStringList &res, QList<int> &positions,
+                                  bool covertNum) const {
         for (int i = 0; i < input.size(); i++) {
-            if (word_dict.find(input.at(i)) != word_dict.end() || trans_dict.find(input.at(i)) != trans_dict.end() ||
-                numMap.find(input.at(i)) != numMap.end()) {
+            if (word_dict.find(input.at(i)) != word_dict.end() || trans_dict.find(input.at(i)) != trans_dict.end()) {
                 res.append(input.mid(i, 1));
+                positions.append(i);
+            } else if (covertNum && numMap.find(input.at(i)) != numMap.end()) {
+                res.append(numMap[input.at(i)]);
                 positions.append(i);
             }
         }
@@ -103,7 +106,7 @@ namespace IKg2p {
         QStringList inputList;
         QList<int> inputPos;
         // get char&pos in dict
-        d->zhPosition(input, inputList, inputPos);
+        d->zhPosition(input, inputList, inputPos, covertNum);
         QStringList result;
         int cursor = 0;
         while (cursor < inputList.size()) {
@@ -111,14 +114,6 @@ namespace IKg2p {
             const QString &raw_current_char = inputList.at(cursor);
             QString current_char;
             current_char = d->tradToSim(raw_current_char);
-            // covert num
-            if (covertNum) {
-                if (numMap.contains(current_char)) {
-                    result.append(d->getDefaultPinyin(numMap[current_char]));
-                    cursor++;
-                    continue;
-                }
-            }
 
             // not in dict
             if (d->word_dict.find(current_char) == d->word_dict.end()) {
