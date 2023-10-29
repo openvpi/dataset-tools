@@ -1,10 +1,9 @@
 #include "zhg2p.h"
+#include "g2pglobal.h"
 #include "zhg2p_p.h"
 
 #include <QDebug>
 #include <utility>
-
-#include "g2pglobal.h"
 
 namespace IKg2p {
     static const QMap<QString, QString> numMap = {
@@ -79,7 +78,8 @@ namespace IKg2p {
     // get all chinese characters and positions in the list
     void ZhG2pPrivate::zhPosition(const QStringList &input, QStringList &res, QList<int> &positions) const {
         for (int i = 0; i < input.size(); i++) {
-            if (word_dict.find(input.at(i)) != word_dict.end() || trans_dict.find(input.at(i)) != trans_dict.end()) {
+            if (word_dict.find(input.at(i)) != word_dict.end() || trans_dict.find(input.at(i)) != trans_dict.end() ||
+                numMap.find(input.at(i)) != numMap.end()) {
                 res.append(input.mid(i, 1));
                 positions.append(i);
             }
@@ -111,12 +111,12 @@ namespace IKg2p {
             const QString &raw_current_char = inputList.at(cursor);
             QString current_char;
             current_char = d->tradToSim(raw_current_char);
-
             // covert num
             if (covertNum) {
                 if (numMap.contains(current_char)) {
-                    result.append(numMap[current_char]);
+                    result.append(d->getDefaultPinyin(numMap[current_char]));
                     cursor++;
+                    continue;
                 }
             }
 
@@ -160,9 +160,8 @@ namespace IKg2p {
                         // cursor: 好, xSubPhrase: 各有所好
                         QString x_sub_phrase = inputList.mid(cursor + 1 - length, length).join("");
                         if (d->phrases_dict.find(x_sub_phrase) != d->phrases_dict.end()) {
-                            int pos = x_sub_phrase.lastIndexOf(current_char);
                             // overwrite pinyin
-                            removeElements(result, cursor + 1 - length, pos);
+                            removeElements(result, cursor + 1 - length, length - 1);
                             addString(d->phrases_dict[x_sub_phrase], result);
                             cursor += 1;
                             found = true;
@@ -173,9 +172,8 @@ namespace IKg2p {
                         // cursor: 好, xSubPhrase: 叶公好龙
                         QString x_sub_phrase_1 = inputList.mid(cursor + 2 - length, length).join("");
                         if (d->phrases_dict.find(x_sub_phrase_1) != d->phrases_dict.end()) {
-                            int pos = x_sub_phrase_1.lastIndexOf(current_char);
                             // overwrite pinyin
-                            removeElements(result, cursor + 2 - length, pos);
+                            removeElements(result, cursor + 2 - length, length - 2);
                             addString(d->phrases_dict[x_sub_phrase_1], result);
                             cursor += 2;
                             found = true;

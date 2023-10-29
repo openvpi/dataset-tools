@@ -1,3 +1,4 @@
 add_subdirectory(CustomControlTest)
 add_subdirectory(BlurWindowTest)
 add_subdirectory(ParamEditTest)
+add_subdirectory(G2pTest)
