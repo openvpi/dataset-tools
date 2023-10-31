@@ -1,4 +1,4 @@
-project(MinLabel VERSION 0.0.1.7)
+project(MinLabel VERSION 0.0.1.8)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
