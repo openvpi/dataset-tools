@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
 
     QMainWindow w;
 
-//    auto editArea = new ParamEditArea;
-//    editArea->loadParam(paramModel.realEnergy);
+    auto editArea = new ParamEditArea;
+//    editArea->loadParam(paramModel.realEnergy[0]);
 
     const int quarterNoteWidth = 62;
     const int quarterNoteHeight = 24;
@@ -129,10 +129,10 @@ int main(int argc, char *argv[]) {
     auto realEnergy = paramModel.realEnergy;
     auto realBreathiness = paramModel.realBreathiness;
 
-    pen.setColor(QColor(255, 175, 95));
-    drawParams(realEnergy);
-    pen.setColor(QColor(112, 156, 255));
-    drawParams(realBreathiness);
+//    pen.setColor(QColor(255, 175, 95));
+//    drawParams(realEnergy);
+//    pen.setColor(QColor(112, 156, 255));
+//    drawParams(realBreathiness);
 
 //    auto curve = paramModel.realEnergy.first();
 //    QPainterPath path;
@@ -161,8 +161,9 @@ int main(int argc, char *argv[]) {
 
     auto splitter = new QSplitter;
     splitter->setOrientation(Qt::Vertical);
-    splitter->addWidget(pianoRollView);
-    splitter->addWidget(paramEditView);
+//    splitter->addWidget(pianoRollView);
+    splitter->addWidget(editArea);
+//    splitter->addWidget(paramEditView);
 
     auto mainLayout = new QVBoxLayout;
 //    mainLayout->addWidget(editArea);
