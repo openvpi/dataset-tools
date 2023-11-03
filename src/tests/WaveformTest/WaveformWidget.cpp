@@ -84,8 +84,8 @@ bool WaveformWidget::openFile(const QString &path) {
                 max = monoSample;
             if (monoSample < min)
                 min = monoSample;
-            auto pair = QSharedPointer<std::tuple<double, double>>(new std::tuple<double, double>(min, max));
-            m_peakCache.append(*pair);
+            auto pair = std::make_pair(min, max);
+            m_peakCache.append(pair);
         }
     }
     update();
