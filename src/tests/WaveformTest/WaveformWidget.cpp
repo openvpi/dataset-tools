@@ -51,7 +51,13 @@ void WaveformWidget::paintEvent(QPaintEvent *event) {
 
 bool WaveformWidget::openFile(const QString &path) {
 
-    SndfileHandle sf(path.toStdString());
+    auto pathStr =
+#ifdef Q_OS_WIN
+        path.toStdWString();
+#else
+        path.toStdString();
+#endif
+    SndfileHandle sf(pathStr.c_str());
     auto sfErrCode = sf.error();
     auto sfErrMsg = sf.strError();
 
