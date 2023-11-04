@@ -22,9 +22,9 @@ public:
 
 protected:
     QVector<std::tuple<double, double>> m_peakCache;
-    int m_sceneWidth = 0;
-    double m_renderStart = 0;
-    double m_renderEnd = 0;
+//    int m_sceneWidth = 0;
+    int m_renderStart = 0;
+    int m_renderEnd = 0;
     double m_scale = 1.0;
 //    int m_zoomInLevel = 0;
     QString m_clipName;
