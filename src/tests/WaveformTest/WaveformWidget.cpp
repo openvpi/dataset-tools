@@ -33,7 +33,7 @@ void WaveformWidget::paintEvent(QPaintEvent *event) {
     painter.setPen(pen);
 
     if (m_peakCache.count() > 0) {
-        auto sceneWidth = rectWidth;
+        auto sceneWidth = rectWidth * 1;
         auto drawPeak = [&](int x, double min, double max) {
             auto yMin = -min * halfRectHeight + halfRectHeight;
             auto yMax = -max * halfRectHeight + halfRectHeight;
@@ -45,7 +45,7 @@ void WaveformWidget::paintEvent(QPaintEvent *event) {
             double min = 0;
             double max = 0;
 
-            for (int j = i * divideCount; j < i * (divideCount + 1); j++) {
+            for (int j = i * divideCount; j < i * divideCount + divideCount; j++) {
                 auto rawFrame = m_peakCache.at(j);
                 auto frameMin = std::get<0>(rawFrame);
                 auto frameMax = std::get<1>(rawFrame);
