@@ -4,8 +4,8 @@
 
 #include <QDebug>
 #include <QPainter>
-#include <sndfile.hh>
 #include <QSharedPointer>
+#include <sndfile.hh>
 
 #include "WaveformWidget.h"
 
@@ -32,17 +32,41 @@ void WaveformWidget::paintEvent(QPaintEvent *event) {
     pen.setWidthF(1.5);
     painter.setPen(pen);
 
-    if (m_peakCache.count() > 0)
-    {
-        for (int i = 0; i < rectWidth; i++) {
-            auto x = i;
-            double ratio = 1.0 * i / rectWidth;
-            int index = int((m_peakCache.count() - 1) * ratio);
-
-            auto frame = index < m_peakCache.count() ? m_peakCache.at(index) : m_peakCache.last();
-            auto yMin = -std::get<0>(frame) * halfRectHeight + halfRectHeight;
-            auto yMax = -std::get<1>(frame) * halfRectHeight + halfRectHeight;
+    if (m_peakCache.count() > 0) {
+        auto sceneWidth = rectWidth;
+        auto drawPeak = [&](int x, double min, double max) {
+            auto yMin = -min * halfRectHeight + halfRectHeight;
+            auto yMax = -max * halfRectHeight + halfRectHeight;
             painter.drawLine(x, yMin, x, yMax);
+        };
+
+        int divideCount = m_peakCache.count() / sceneWidth;
+        for (int i = 0; i < sceneWidth; i++) {
+            double min = 0;
+            double max = 0;
+
+            for (int j = i * divideCount; j < i * (divideCount + 1); j++) {
+                auto rawFrame = m_peakCache.at(j);
+                auto frameMin = std::get<0>(rawFrame);
+                auto frameMax = std::get<1>(rawFrame);
+                if (frameMin < min)
+                    min = frameMin;
+                if (frameMax > max)
+                    max = frameMax;
+            }
+            if (i == sceneWidth - 1) {
+                for (int j = i * (divideCount + 1); j < m_peakCache.count(); j++) {
+                    auto rawFrame = m_peakCache.at(j);
+                    auto frameMin = std::get<0>(rawFrame);
+                    auto frameMax = std::get<1>(rawFrame);
+                    if (frameMin < min)
+                        min = frameMin;
+                    if (frameMax > max)
+                        max = frameMax;
+                }
+            }
+
+            drawPeak(i, min, max);
         }
     }
 
