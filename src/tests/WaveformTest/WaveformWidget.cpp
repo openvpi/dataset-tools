@@ -115,6 +115,9 @@ bool WaveformWidget::openFile(const QString &path) {
         return false;
     }
 
+    QVector<std::tuple<double, double>> nullVector;
+    m_peakCache.swap(nullVector);
+
     auto sr = sf.samplerate();
     auto channels = sf.channels();
     auto frames = sf.frames();
@@ -146,6 +149,9 @@ bool WaveformWidget::openFile(const QString &path) {
     }
 
     m_clipName = path;
+    m_renderStart = 0;
+    m_renderEnd = m_peakCache.count();
+    m_scale = 1.0;
 
     update();
 
