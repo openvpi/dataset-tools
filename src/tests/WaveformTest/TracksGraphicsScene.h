@@ -20,7 +20,7 @@ public:
 //    void setViewportRect(const QRectF &rect);
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-    int m_sceneWidth = 1920 * 100; // tick
+    int m_sceneWidth = 1920 * 8; // tick
     int m_sceneHeight = 2000;
 };
 

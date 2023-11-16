@@ -36,50 +36,59 @@ int main(int argc, char *argv[]) {
     auto waveformWidget = new WaveformWidget;
     //    waveformWidget->openFile(QString("D:/Test/Xiaoxiao.wav"));
 
-    QObject::connect(btnOpenAudioFile, &QPushButton::clicked, waveformWidget, [&]() {
-        auto fileName =
-            QFileDialog::getOpenFileName(btnOpenAudioFile, "Select an Audio File", ".", "Wave Files (*.wav)");
-        waveformWidget->openFile(fileName);
-    });
-
     auto clip1 = new AudioClipGraphicsItem;
     clip1->setName("Clip 1");
     clip1->setStart(0);
-    clip1->setLength(3840);
-    clip1->setClipStart(0);
-    clip1->setClipLen(3840);
+    // clip1->setLength(3840);
+    // clip1->setClipStart(0);
+    // clip1->setClipLen(3840);
     clip1->setGain(1.14);
     clip1->setTrackIndex(0);
+    clip1->openFile(QString("D:/Test/Xiaoxiao.wav"));
 
-    auto clip2 = new AudioClipGraphicsItem;
-    clip2->setName("Clip 2");
-    clip2->setStart(523);
-    clip2->setLength(2569);
-    clip2->setClipStart(0);
-    clip2->setClipLen(2476);
-    clip2->setGain(-5.14);
-    clip2->setTrackIndex(1);
-
-
-    auto clip3 = new AudioClipGraphicsItem;
-    clip3->setName("Clip 3");
-    clip3->setStart(3542);
-    clip3->setLength(2500);
-    clip3->setClipStart(0);
-    clip3->setClipLen(2500);
-    clip3->setGain(1.919);
-    clip3->setTrackIndex(1);
+    // auto clip2 = new AudioClipGraphicsItem;
+    // clip2->setName("Clip 2");
+    // clip2->setStart(523);
+    // clip2->setLength(2569);
+    // clip2->setClipStart(0);
+    // clip2->setClipLen(2476);
+    // clip2->setGain(-5.14);
+    // clip2->setTrackIndex(1);
+    //
+    //
+    // auto clip3 = new AudioClipGraphicsItem;
+    // clip3->setName("Clip 3");
+    // clip3->setStart(3542);
+    // clip3->setLength(2500);
+    // clip3->setClipStart(0);
+    // clip3->setClipLen(2500);
+    // clip3->setGain(1.919);
+    // clip3->setTrackIndex(1);
 
     auto tracksScene = new TracksGraphicsScene;
-    tracksScene->addItem(clip1);
-    tracksScene->addItem(clip2);
-    tracksScene->addItem(clip3);
+    // tracksScene->addItem(clip1);
+    // tracksScene->addItem(clip2);
+    // tracksScene->addItem(clip3);
 
     auto tracksView = new TracksGraphicsView;
     tracksView->setMinimumHeight(150);
     tracksView->setScene(tracksScene);
     tracksView->centerOn(0, 0);
     tracksView->setStyleSheet("QGraphicsView { border: none }");
+
+    int trackCount = 0;
+
+    QObject::connect(btnOpenAudioFile, &QPushButton::clicked, waveformWidget, [&]() {
+        auto fileName =
+            QFileDialog::getOpenFileName(btnOpenAudioFile, "Select an Audio File", ".", "Wave Files (*.wav)");
+        auto clip = new AudioClipGraphicsItem;
+        clip->setStart(0);
+        clip->setGain(1.14);
+        clip->setTrackIndex(trackCount);
+        clip->openFile(fileName);
+        tracksScene->addItem(clip);
+        trackCount++;
+    });
 
     QObject::connect(tracksView, &TracksGraphicsView::scaleChanged, tracksScene, &TracksGraphicsScene::setScale);
 
