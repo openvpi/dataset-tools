@@ -5,7 +5,6 @@
 #include <QDebug>
 #include <QPainter>
 #include <QSharedPointer>
-#include <sndfile.hh>
 
 #include "WaveformWidget.h"
 
@@ -53,10 +52,12 @@ void WaveformWidget::paintEvent(QPaintEvent *event) {
     auto textHeight = fontMetrics.height();
     painter.drawText(textRect, m_clipName, QTextOption(Qt::AlignTop));
 
-    if (m_peakCache.count() > 0) {
-        int start = m_renderStart;
-        int end = m_renderEnd;
-//        qDebug() << start << end;
+    auto drawPeakGraphic = [&](){
+        if (m_peakCache.count() == 0)
+            return;
+
+        auto start = m_renderStart;
+        auto end = m_renderEnd;
         auto drawPeak = [&](int x, double min, double max) {
             auto yMin = -min * halfRectHeight + halfRectHeight;
             auto yMax = -max * halfRectHeight + halfRectHeight;
@@ -64,35 +65,42 @@ void WaveformWidget::paintEvent(QPaintEvent *event) {
         };
 
         int divideCount = (end - start) / rectWidth;
-//        qDebug() << m_peakCache.count() << divideCount;
+        //        qDebug() << m_peakCache.count() << divideCount;
         for (int i = 0; i < rectWidth; i++) {
             double min = 0;
             double max = 0;
-
-            for (int j = start + i * divideCount;
-                 j < (start + i * divideCount + divideCount);
-                 j++) {
-                auto rawFrame = m_peakCache.at(j);
-                auto frameMin = std::get<0>(rawFrame);
-                auto frameMax = std::get<1>(rawFrame);
+            auto updateMinMax = [](const std::tuple<double, double> &frame, double &min, double &max) {
+                auto frameMin = std::get<0>(frame);
+                auto frameMax = std::get<1>(frame);
                 if (frameMin < min)
                     min = frameMin;
                 if (frameMax > max)
                     max = frameMax;
+            };
+
+            for (int j = start + i * divideCount; j < (start + i * divideCount + divideCount); j++) {
+                auto frame = m_peakCache.at(j);
+                updateMinMax(frame, min, max);
             }
             if (i == rectWidth - 1) {
                 for (int j = start + i * (divideCount + 1); j < m_peakCache.count(); j++) {
-                    auto rawFrame = m_peakCache.at(j);
-                    auto frameMin = std::get<0>(rawFrame);
-                    auto frameMax = std::get<1>(rawFrame);
-                    if (frameMin < min)
-                        min = frameMin;
-                    if (frameMax > max)
-                        max = frameMax;
+                    auto frame = m_peakCache.at(j);
+                    updateMinMax(frame, min, max);
                 }
             }
             drawPeak(i, min, max);
         }
+    };
+
+    // TODO: waveform shown in line and individual sample mode
+    switch (m_renderMode) {
+        case Peak:
+            drawPeakGraphic();
+            break;
+        case Line:
+            break;
+        case Sample:
+            break;
     }
 
     QFrame::paintEvent(event);
@@ -106,7 +114,8 @@ bool WaveformWidget::openFile(const QString &path) {
 #else
         path.toStdString();
 #endif
-    SndfileHandle sf(pathStr.c_str());
+    //    SndfileHandle sf(pathStr.c_str());
+    sf = SndfileHandle(pathStr.c_str());
     auto sfErrCode = sf.error();
     auto sfErrMsg = sf.strError();
 
@@ -176,10 +185,10 @@ void WaveformWidget::zoomIn(double factor) {
 void WaveformWidget::zoomOut(double factor) {
     auto zoomedScale = m_scale / factor;
     auto dx = (1 - 1 / zoomedScale) * m_peakCache.count() / 2;
-    if (zoomedScale < 1){
+    if (zoomedScale < 1) {
         m_scale = 1.0;
         m_renderEnd = m_peakCache.count();
-    }else{
+    } else {
         m_scale = zoomedScale;
         m_renderStart = qRound(dx);
         m_renderEnd = m_peakCache.count() - dx;
@@ -213,16 +222,16 @@ void WaveformWidget::mouseMoveEvent(QMouseEvent *event) {
     auto start = m_renderStart;
     auto end = m_renderEnd;
     //    qDebug() << start << end << m_sceneWidth;
-//    if (start - dx > 0) {
-//        if (end - dx < m_sceneWidth) {
-//            m_renderStart -= scaledDx;
-//            m_renderEnd -= scaledDx;
-//        } else {
-//            m_renderEnd = m_sceneWidth;
-//        }
-//    } else {
-//        m_renderStart = 0;
-//    }
+    //    if (start - dx > 0) {
+    //        if (end - dx < m_sceneWidth) {
+    //            m_renderStart -= scaledDx;
+    //            m_renderEnd -= scaledDx;
+    //        } else {
+    //            m_renderEnd = m_sceneWidth;
+    //        }
+    //    } else {
+    //        m_renderStart = 0;
+    //    }
     m_mouseLastPos = event->pos();
 
     update();
@@ -231,8 +240,17 @@ void WaveformWidget::mouseMoveEvent(QMouseEvent *event) {
 
 void WaveformWidget::mousePressEvent(QMouseEvent *event) {
     m_mouseLastPos = event->pos();
-//    m_renderStart += 100000;
-//    m_renderEnd -= 100000;
+    //    m_renderStart += 100000;
+    //    m_renderEnd -= 100000;
     update();
     QWidget::mousePressEvent(event);
+}
+
+void WaveformWidget::setRenderMode(WaveformWidget::RenderMode mode) {
+    m_renderMode = mode;
+    update();
+}
+
+WaveformWidget::RenderMode WaveformWidget::renderMode() {
+    return m_renderMode;
 }
