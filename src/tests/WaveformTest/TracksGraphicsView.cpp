@@ -19,6 +19,27 @@ void TracksGraphicsView::setScaleX(const qreal sx) {
 void TracksGraphicsView::setScaleY(const qreal sy) {
     emit scaleChanged(m_scaleX, m_scaleY);
 }
+bool TracksGraphicsView::event(QEvent *event) {
+#ifdef Q_OS_MAC
+    // Mac Trackpad smooth zooming
+    if (event->type() == QEvent::NativeGesture) {
+        auto gestureEvent = static_cast<QNativeGestureEvent *>(event);
+
+        if (gestureEvent->gestureType() == Qt::ZoomNativeGesture) {
+            auto multiplier = gestureEvent->value() + 1;
+
+            // Prevent negative zoom factors
+            if (multiplier > 0) {
+                m_scaleX *= multiplier;
+                setScaleX(m_scaleX);
+            }
+
+            return true;
+        }
+    }
+#endif
+    return QGraphicsView::event(event);
+}
 void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
     // auto cursorPosF = event->position();
     // auto cursorPos = QPoint(cursorPosF.x(), cursorPosF.y());
