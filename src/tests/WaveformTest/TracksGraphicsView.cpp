@@ -2,6 +2,7 @@
 // Created by fluty on 2023/11/14.
 //
 #include <QDebug>
+#include <QEasingCurve>
 #include <QScrollBar>
 #include <QWheelEvent>
 
@@ -10,13 +11,31 @@ TracksGraphicsView::TracksGraphicsView(QWidget *parent) {
     setRenderHint(QPainter::Antialiasing);
     // setCacheMode(QGraphicsView::CacheNone);
     // setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+
+    m_scaleXAnimation.setTargetObject(this);
+    m_scaleXAnimation.setPropertyName("scaleX");
+    m_scaleXAnimation.setDuration(150);
+    m_scaleXAnimation.setEasingCurve(QEasingCurve::OutCubic);
+
+    m_scaleYAnimation.setTargetObject(this);
+    m_scaleYAnimation.setPropertyName("scaleY");
+    m_scaleYAnimation.setDuration(150);
+    m_scaleYAnimation.setEasingCurve(QEasingCurve::OutCubic);
 }
 TracksGraphicsView::~TracksGraphicsView() {
 }
+qreal TracksGraphicsView::scaleX() {
+    return m_scaleX;
+}
 void TracksGraphicsView::setScaleX(const qreal sx) {
+    m_scaleX = sx;
     emit scaleChanged(m_scaleX, m_scaleY);
 }
+qreal TracksGraphicsView::scaleY() {
+    return m_scaleY;
+}
 void TracksGraphicsView::setScaleY(const qreal sy) {
+    m_scaleY = sy;
     emit scaleChanged(m_scaleX, m_scaleY);
 }
 bool TracksGraphicsView::event(QEvent *event) {
@@ -54,21 +73,37 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
     auto deltaY = event->angleDelta().y();
 
     if (event->modifiers() == Qt::ControlModifier) {
+        auto targetScaleX = m_scaleX;
         if (deltaY > 0)
-            m_scaleX = m_scaleX * (1 + 0.2 * deltaY / 120);
+            targetScaleX = m_scaleX * (1 + 0.2 * deltaY / 120);
         else if (deltaY < 0)
-            m_scaleX = m_scaleX / (1 + 0.2* -deltaY / 120);
-        setScaleX(m_scaleX);
+            targetScaleX = m_scaleX / (1 + 0.2 * -deltaY / 120);
+        if (qAbs(deltaY) < 120)
+            setScaleX(targetScaleX);
+        else {
+            m_scaleXAnimation.stop();
+            m_scaleXAnimation.setStartValue(m_scaleX);
+            m_scaleXAnimation.setEndValue(targetScaleX);
+            m_scaleXAnimation.start();
+        }
 
         // auto viewPoint = transform().map((scenePos));
         // horizontalScrollBar()->setValue(qRound(viewPoint.x() - viewWidth * hScale));
         // verticalScrollBar()->setValue(qRound(viewPoint.y() - viewHeight * vScale));
     } else if (event->modifiers() == Qt::ShiftModifier) {
+        auto targetScaleY = m_scaleY;
         if (deltaY > 0)
-            m_scaleY = m_scaleY * (1 + 0.2 * deltaY / 120);
+            targetScaleY = m_scaleY * (1 + 0.2 * deltaY / 120);
         else if (deltaY < 0)
-            m_scaleY = m_scaleY / (1 + 0.2 * -deltaY / 120);
-        setScaleY(m_scaleY);
+            targetScaleY = m_scaleY / (1 + 0.2 * -deltaY / 120);
+        if (qAbs(deltaY) < 120)
+            setScaleY(targetScaleY);
+        else {
+            m_scaleYAnimation.stop();
+            m_scaleYAnimation.setStartValue(m_scaleY);
+            m_scaleYAnimation.setEndValue(targetScaleY);
+            m_scaleYAnimation.start();
+        }
 
         // auto viewPoint = transform().map((scenePos));
         // horizontalScrollBar()->setValue(qRound(viewPoint.x() - viewWidth * hScale));

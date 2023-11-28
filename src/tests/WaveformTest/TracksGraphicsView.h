@@ -6,15 +6,20 @@
 #define DATASET_TOOLS_TRACKSGRAPHICSVIEW_H
 
 #include <QGraphicsView>
+#include <QPropertyAnimation>
 
 class TracksGraphicsView : public QGraphicsView {
     Q_OBJECT
+    Q_PROPERTY(double scaleX READ scaleX WRITE setScaleX)
+    Q_PROPERTY(double scaleY READ scaleY WRITE setScaleY)
 
 public:
     explicit TracksGraphicsView(QWidget *parent = nullptr);
     ~TracksGraphicsView();
 
+    qreal scaleX();
     void setScaleX(const qreal sx);
+    qreal scaleY();
     void setScaleY(const qreal sy);
     void setScale(const qreal sx, const qreal sy) {
         setScaleX(sx);
@@ -33,6 +38,9 @@ protected:
 
     qreal m_scaleX = 1;
     qreal m_scaleY = 1;
+
+    QPropertyAnimation m_scaleXAnimation;
+    QPropertyAnimation m_scaleYAnimation;
 };
 
 
