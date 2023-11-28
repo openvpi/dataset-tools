@@ -55,9 +55,9 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
 
     if (event->modifiers() == Qt::ControlModifier) {
         if (deltaY > 0)
-            m_scaleX = m_scaleX * 1.2;
+            m_scaleX = m_scaleX * (1 + 0.2 * deltaY / 120);
         else if (deltaY < 0)
-            m_scaleX = m_scaleX / 1.2;
+            m_scaleX = m_scaleX / (1 + 0.2* -deltaY / 120);
         setScaleX(m_scaleX);
 
         // auto viewPoint = transform().map((scenePos));
@@ -65,9 +65,9 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
         // verticalScrollBar()->setValue(qRound(viewPoint.y() - viewHeight * vScale));
     } else if (event->modifiers() == Qt::ShiftModifier) {
         if (deltaY > 0)
-            m_scaleY = m_scaleY * 1.2;
+            m_scaleY = m_scaleY * (1 + 0.2 * deltaY / 120);
         else if (deltaY < 0)
-            m_scaleY = m_scaleY / 1.2;
+            m_scaleY = m_scaleY / (1 + 0.2 * -deltaY / 120);
         setScaleY(m_scaleY);
 
         // auto viewPoint = transform().map((scenePos));
