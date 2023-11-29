@@ -12,6 +12,8 @@ class TracksGraphicsView : public QGraphicsView {
     Q_OBJECT
     Q_PROPERTY(double scaleX READ scaleX WRITE setScaleX)
     Q_PROPERTY(double scaleY READ scaleY WRITE setScaleY)
+    Q_PROPERTY(double horizontalScrollBarValue READ horizontalScrollBarValue WRITE setHorizontalScrollBarValue)
+    Q_PROPERTY(double verticalScrollBarValue READ verticalScrollBarValue WRITE setVerticalScrollBarValue)
 
 public:
     explicit TracksGraphicsView(QWidget *parent = nullptr);
@@ -25,6 +27,10 @@ public:
         setScaleX(sx);
         setScaleY(sy);
     }
+    int horizontalScrollBarValue();
+    void setHorizontalScrollBarValue(int value);
+    int verticalScrollBarValue();
+    void setVerticalScrollBarValue(int value);
 
 signals:
     void scaleChanged(qreal sx, qreal sy);
@@ -41,6 +47,8 @@ protected:
 
     QPropertyAnimation m_scaleXAnimation;
     QPropertyAnimation m_scaleYAnimation;
+    QPropertyAnimation m_horizontalScrollBarAnimation;
+    QPropertyAnimation m_verticalScrollBarAnimation;
 };
 
 

@@ -21,6 +21,16 @@ TracksGraphicsView::TracksGraphicsView(QWidget *parent) {
     m_scaleYAnimation.setPropertyName("scaleY");
     m_scaleYAnimation.setDuration(150);
     m_scaleYAnimation.setEasingCurve(QEasingCurve::OutCubic);
+
+    m_horizontalScrollBarAnimation.setTargetObject(this);
+    m_horizontalScrollBarAnimation.setPropertyName("horizontalScrollBarValue");
+    m_horizontalScrollBarAnimation.setDuration(150);
+    m_horizontalScrollBarAnimation.setEasingCurve(QEasingCurve::OutCubic);
+
+    m_verticalScrollBarAnimation.setTargetObject(this);
+    m_verticalScrollBarAnimation.setPropertyName("verticalScrollBarValue");
+    m_verticalScrollBarAnimation.setDuration(150);
+    m_verticalScrollBarAnimation.setEasingCurve(QEasingCurve::OutCubic);
 }
 TracksGraphicsView::~TracksGraphicsView() {
 }
@@ -37,6 +47,18 @@ qreal TracksGraphicsView::scaleY() {
 void TracksGraphicsView::setScaleY(const qreal sy) {
     m_scaleY = sy;
     emit scaleChanged(m_scaleX, m_scaleY);
+}
+int TracksGraphicsView::horizontalScrollBarValue() {
+    return horizontalScrollBar()->value();
+}
+void TracksGraphicsView::setHorizontalScrollBarValue(int value) {
+    horizontalScrollBar()->setValue(value);
+}
+int TracksGraphicsView::verticalScrollBarValue() {
+    return verticalScrollBar()->value();
+}
+void TracksGraphicsView::setVerticalScrollBarValue(int value) {
+    verticalScrollBar()->setValue(value);
 }
 bool TracksGraphicsView::event(QEvent *event) {
 #ifdef Q_OS_MAC
@@ -70,6 +92,7 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
     // auto hScale = cursorPosF.x() / viewWidth;
     // auto vScale = cursorPosF.y() / viewHeight;
 
+    auto deltaX = event->angleDelta().x();
     auto deltaY = event->angleDelta().y();
 
     if (event->modifiers() == Qt::ControlModifier) {
@@ -108,8 +131,30 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
         // auto viewPoint = transform().map((scenePos));
         // horizontalScrollBar()->setValue(qRound(viewPoint.x() - viewWidth * hScale));
         // verticalScrollBar()->setValue(qRound(viewPoint.y() - viewHeight * vScale));
+    } else if (event->modifiers() == Qt::AltModifier) {
+        auto scrollLength = -1 * viewport()->width() * 0.2 * deltaX / 120;
+        auto startValue = horizontalScrollBarValue();
+        auto endValue = startValue + scrollLength;
+        if (qAbs(deltaX) < 120)
+            setHorizontalScrollBarValue(endValue);
+        else {
+            m_horizontalScrollBarAnimation.stop();
+            m_horizontalScrollBarAnimation.setStartValue(startValue);
+            m_horizontalScrollBarAnimation.setEndValue(endValue);
+            m_horizontalScrollBarAnimation.start();
+        }
     } else {
-        QGraphicsView::wheelEvent(event);
+        auto scrollLength = -1 * viewport()->height() * 0.15 * deltaY / 120;
+        auto startValue = verticalScrollBarValue();
+        auto endValue = startValue + scrollLength;
+        if (qAbs(deltaY) < 120)
+            setVerticalScrollBarValue(endValue);
+        else {
+            m_verticalScrollBarAnimation.stop();
+            m_verticalScrollBarAnimation.setStartValue(startValue);
+            m_verticalScrollBarAnimation.setEndValue(endValue);
+            m_verticalScrollBarAnimation.start();
+        }
     }
 }
 void TracksGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
