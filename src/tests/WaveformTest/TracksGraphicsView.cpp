@@ -31,6 +31,9 @@ TracksGraphicsView::TracksGraphicsView(QWidget *parent) {
     m_verticalScrollBarAnimation.setPropertyName("verticalScrollBarValue");
     m_verticalScrollBarAnimation.setDuration(150);
     m_verticalScrollBarAnimation.setEasingCurve(QEasingCurve::OutCubic);
+
+    connect(horizontalScrollBar(), &QScrollBar::valueChanged, this, &TracksGraphicsView::notifyVisibleRectChanged);
+    connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &TracksGraphicsView::notifyVisibleRectChanged);
 }
 TracksGraphicsView::~TracksGraphicsView() {
 }
@@ -59,6 +62,12 @@ int TracksGraphicsView::verticalScrollBarValue() {
 }
 void TracksGraphicsView::setVerticalScrollBarValue(int value) {
     verticalScrollBar()->setValue(value);
+}
+QRectF TracksGraphicsView::visibleRect() const {
+    auto viewportRect = viewport()->rect();
+    auto leftTop = mapToScene(viewportRect.left(), viewportRect.top());
+    auto rightBottom = mapToScene(viewportRect.width(), viewportRect.height());
+    return QRectF(leftTop, rightBottom);
 }
 bool TracksGraphicsView::event(QEvent *event) {
 #ifdef Q_OS_MAC
@@ -156,6 +165,8 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
             m_verticalScrollBarAnimation.start();
         }
     }
+
+    notifyVisibleRectChanged();
 }
 void TracksGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
     // QPen pen;
@@ -206,4 +217,8 @@ bool TracksGraphicsView::eventFilter(QObject *object, QEvent *event) {
 }
 void TracksGraphicsView::resizeEvent(QResizeEvent *event) {
     QGraphicsView::resizeEvent(event);
+    notifyVisibleRectChanged();
+}
+void TracksGraphicsView::notifyVisibleRectChanged() {
+    emit visibleRectChanged(visibleRect());
 }

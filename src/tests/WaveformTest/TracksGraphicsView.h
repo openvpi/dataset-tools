@@ -31,9 +31,14 @@ public:
     void setHorizontalScrollBarValue(int value);
     int verticalScrollBarValue();
     void setVerticalScrollBarValue(int value);
+    QRectF visibleRect() const;
 
 signals:
     void scaleChanged(qreal sx, qreal sy);
+    void visibleRectChanged(const QRectF &rect);
+
+public slots:
+    void notifyVisibleRectChanged();
 
 protected:
     bool event(QEvent *event) override;

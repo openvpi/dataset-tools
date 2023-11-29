@@ -86,7 +86,9 @@ int main(int argc, char *argv[]) {
         clip->setGain(1.14);
         clip->setTrackIndex(trackCount);
         clip->openFile(fileName);
+        clip->setVisibleRect(tracksView->visibleRect());
         tracksScene->addItem(clip);
+        QObject::connect(tracksView, &TracksGraphicsView::visibleRectChanged, clip, &ClipGraphicsItem::setVisibleRect);
         trackCount++;
     });
 

@@ -3,13 +3,13 @@
 //
 #include <QCursor>
 #include <QDebug>
+#include <QGraphicsSceneMouseEvent>
+#include <QKeyEvent>
 #include <QPainter>
 
 #include "ClipGraphicsItem.h"
+#include "TracksGraphicsScene.h"
 
-
-#include <QGraphicsSceneMouseEvent>
-#include <QKeyEvent>
 
 ClipGraphicsItem::ClipGraphicsItem(QGraphicsItem *parent) : QGraphicsRectItem(parent) {
     setAcceptHoverEvents(true);
@@ -96,6 +96,10 @@ QRectF ClipGraphicsItem::previewRect() const {
     auto paddedRect = QRectF(left, top, width, height);
     return paddedRect;
 }
+void ClipGraphicsItem::setVisibleRect(const QRectF &rect) {
+    m_visibleRect = rect;
+    update();
+}
 
 void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     auto colorPrimary = QColor(112, 156, 255, 220);
@@ -123,11 +127,15 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     auto font = QFont("Microsoft Yahei UI");
     font.setPointSizeF(10);
     painter->setFont(font);
-    int padding = 2;
-    auto textRectLeft = paddedRect.left() + padding;
-    auto textRectTop = paddedRect.top() + padding;
-    auto textRectWidth = paddedRect.width() - 2 * padding;
-    auto textRectHeight = paddedRect.height() - 2 * padding;
+    int textPadding = 2;
+    auto rectLeft = mapToScene(rect.topLeft()).x();
+    auto rectRight = mapToScene(rect.bottomRight()).x();
+    auto textRectLeft = m_visibleRect.left() < rectLeft ? paddedRect.left() + textPadding
+                                                        : m_visibleRect.left() - rectLeft + textPadding + penWidth;
+    auto textRectTop = paddedRect.top() + textPadding;
+    auto textRectWidth = m_visibleRect.right() < rectRight ? m_visibleRect.width() - 2 * textPadding - penWidth
+                                                           : rectRight - m_visibleRect.left() - 2 * textPadding;
+    auto textRectHeight = paddedRect.height() - 2 * textPadding;
     auto textRect = QRectF(textRectLeft, textRectTop, textRectWidth, textRectHeight);
 
     auto fontMetrics = painter->fontMetrics();
@@ -193,8 +201,7 @@ void ClipGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
             if (clipStart < 0) {
                 setClipStart(0);
                 setClipLen(m_mouseDownClipStart + m_mouseDownClipLen);
-            }
-            else if (clipStart <= m_mouseDownClipStart + m_mouseDownClipLen) {
+            } else if (clipStart <= m_mouseDownClipStart + m_mouseDownClipLen) {
                 setClipStart(clipStart);
                 setClipLen(clipLen);
             } else {

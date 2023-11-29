@@ -7,7 +7,8 @@
 
 #include <QGraphicsRectItem>
 
-class ClipGraphicsItem : public QGraphicsRectItem {
+class ClipGraphicsItem : public QGraphicsRectItem, public QObject {
+
 public:
     enum MouseMoveBehavior { Move, ResizeRight, ResizeLeft };
 
@@ -45,6 +46,9 @@ public:
 
     QRectF previewRect() const;
 
+public slots:
+    void setVisibleRect(const QRectF &rect);
+
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
@@ -70,6 +74,7 @@ protected:
     // double m_pan = 0;
     bool m_mute = false;
     QRectF m_rect;
+    QRectF m_visibleRect;
     int m_resizeTolerance = 8; // px
     // bool m_mouseOnResizeRightArea = false;
     // bool m_mouseOnResizeLeftArea = false;
