@@ -78,6 +78,9 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     // Draw frame
     ClipGraphicsItem::paint(painter, option, widget);
 
+    if (previewRect().height() < 32)
+        return;
+
     painter->setRenderHint(QPainter::Antialiasing, false);
 
     // Draw waveform in previewRect() when file loaded

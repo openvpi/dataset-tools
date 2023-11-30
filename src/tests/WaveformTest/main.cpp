@@ -33,42 +33,7 @@ int main(int argc, char *argv[]) {
     auto btnOpenAudioFile = new QPushButton;
     btnOpenAudioFile->setText("Open an audio file...");
 
-    auto waveformWidget = new WaveformWidget;
-    //    waveformWidget->openFile(QString("D:/Test/Xiaoxiao.wav"));
-
-    auto clip1 = new AudioClipGraphicsItem;
-    clip1->setName("Clip 1");
-    clip1->setStart(0);
-    // clip1->setLength(3840);
-    // clip1->setClipStart(0);
-    // clip1->setClipLen(3840);
-    clip1->setGain(1.14);
-    clip1->setTrackIndex(0);
-    clip1->openFile(QString("D:/Test/Xiaoxiao.wav"));
-
-    // auto clip2 = new AudioClipGraphicsItem;
-    // clip2->setName("Clip 2");
-    // clip2->setStart(523);
-    // clip2->setLength(2569);
-    // clip2->setClipStart(0);
-    // clip2->setClipLen(2476);
-    // clip2->setGain(-5.14);
-    // clip2->setTrackIndex(1);
-    //
-    //
-    // auto clip3 = new AudioClipGraphicsItem;
-    // clip3->setName("Clip 3");
-    // clip3->setStart(3542);
-    // clip3->setLength(2500);
-    // clip3->setClipStart(0);
-    // clip3->setClipLen(2500);
-    // clip3->setGain(1.919);
-    // clip3->setTrackIndex(1);
-
     auto tracksScene = new TracksGraphicsScene;
-    // tracksScene->addItem(clip1);
-    // tracksScene->addItem(clip2);
-    // tracksScene->addItem(clip3);
 
     auto tracksView = new TracksGraphicsView;
     tracksView->setMinimumHeight(150);
@@ -78,7 +43,7 @@ int main(int argc, char *argv[]) {
 
     int trackCount = 0;
 
-    QObject::connect(btnOpenAudioFile, &QPushButton::clicked, waveformWidget, [&]() {
+    QObject::connect(btnOpenAudioFile, &QPushButton::clicked, tracksView, [&]() {
         auto fileName =
             QFileDialog::getOpenFileName(btnOpenAudioFile, "Select an Audio File", ".", "Wave Files (*.wav)");
         auto clip = new AudioClipGraphicsItem;
@@ -87,6 +52,8 @@ int main(int argc, char *argv[]) {
         clip->setTrackIndex(trackCount);
         clip->openFile(fileName);
         clip->setVisibleRect(tracksView->visibleRect());
+        clip->setScaleX(tracksView->scaleX());
+        clip->setScaleY(tracksView->scaleY());
         tracksScene->addItem(clip);
         QObject::connect(tracksView, &TracksGraphicsView::visibleRectChanged, clip, &ClipGraphicsItem::setVisibleRect);
         trackCount++;
@@ -97,7 +64,6 @@ int main(int argc, char *argv[]) {
     auto mainLayout = new QVBoxLayout;
     mainLayout->addWidget(btnOpenAudioFile);
     mainLayout->addWidget(tracksView);
-    mainLayout->addWidget(waveformWidget);
 
     auto mainWidget = new QWidget;
     mainWidget->setLayout(mainLayout);

@@ -110,6 +110,10 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
             targetScaleX = m_scaleX * (1 + 0.2 * deltaY / 120);
         else if (deltaY < 0)
             targetScaleX = m_scaleX / (1 + 0.2 * -deltaY / 120);
+
+        if (targetScaleX > m_scaleXMax)
+            targetScaleX = m_scaleXMax;
+
         if (qAbs(deltaY) < 120)
             setScaleX(targetScaleX);
         else {
@@ -128,6 +132,12 @@ void TracksGraphicsView::wheelEvent(QWheelEvent *event) {
             targetScaleY = m_scaleY * (1 + 0.2 * deltaY / 120);
         else if (deltaY < 0)
             targetScaleY = m_scaleY / (1 + 0.2 * -deltaY / 120);
+
+        if (targetScaleY < m_scaleYMin)
+            targetScaleY = m_scaleYMin;
+        else if (targetScaleY > m_scaleYMax)
+            targetScaleY = m_scaleYMax;
+
         if (qAbs(deltaY) < 120)
             setScaleY(targetScaleY);
         else {

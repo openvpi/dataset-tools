@@ -141,7 +141,13 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     auto fontMetrics = painter->fontMetrics();
     auto textHeight = fontMetrics.height();
     auto controlStr = QString("%1 %2dB %3 ").arg(m_name).arg(QString::number(m_gain)).arg(m_mute ? "M" : "");
-    auto timeStr = QString("s: %1 l: %2 cs: %3 cl: %4").arg(m_start).arg(m_length).arg(m_clipStart).arg(m_clipLen);
+    auto timeStr = QString("s: %1 l: %2 cs: %3 cl: %4 sx: %5 sy: %6")
+                       .arg(m_start)
+                       .arg(m_length)
+                       .arg(m_clipStart)
+                       .arg(m_clipLen)
+                       .arg(m_scaleX)
+                       .arg(m_scaleY);
     auto text = controlStr + timeStr;
     auto textWidth = fontMetrics.horizontalAdvance(text);
 
