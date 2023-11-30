@@ -78,36 +78,26 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     // Draw frame
     ClipGraphicsItem::paint(painter, option, widget);
 
-    if (previewRect().height() < 32)
-        return;
-
     painter->setRenderHint(QPainter::Antialiasing, false);
 
-    // Draw waveform in previewRect() when file loaded
-
-    // painter->setPen(Qt::NoPen);
-    // painter->setBrush(QColor(255, 255, 255, 80));
-    // painter->drawRect(previewRect());
-    // painter->setPen(Qt::white);
-    // painter->drawText(previewRect(), "Waveform", QTextOption(Qt::AlignCenter));
+    // TODO: Draw waveform in previewRect() when file loaded
 
     auto rectLeft = previewRect().left();
     auto rectTop = previewRect().top();
     auto rectWidth = previewRect().width();
     auto rectHeight = previewRect().height();
     auto halfRectHeight = rectHeight / 2;
-    auto colorPrimary = QColor(112, 156, 255);
-    auto colorPrimaryDarker = QColor(81, 135, 255);
-    auto colorAccent = QColor(255, 175, 95);
-    auto colorAccentDarker = QColor(255, 159, 63);
+    const auto gradientRange = 48;
+
+    if (rectHeight < 32 || rectWidth < 16)
+        return;
+    auto widthHeightMin = rectWidth < rectHeight ? rectWidth : rectHeight;
+    auto colorAlpha = widthHeightMin <= gradientRange ? 255 * widthHeightMin / gradientRange : 255;
+    auto peakColor = QColor(255, 255, 255, colorAlpha);
 
     QPen pen;
-    pen.setColor(colorPrimary);
-    pen.setWidthF(2);
-    painter->setPen(pen);
-
-    pen.setColor(Qt::white);
-    pen.setWidthF(1.5);
+    pen.setColor(peakColor);
+    pen.setWidth(1);
     painter->setPen(pen);
 
     auto drawPeakGraphic = [&](){
@@ -125,6 +115,7 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
         };
 
         int divideCount = (end - start) / rectWidth;
+
         //        qDebug() << m_peakCache.count() << divideCount;
         for (int i = 0; i < rectWidth; i++) {
             double min = 0;
