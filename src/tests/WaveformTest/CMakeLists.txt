@@ -6,9 +6,7 @@ set(CMAKE_AUTOUIC ON)
 
 file(GLOB_RECURSE _src *.h *.cpp)
 
-add_executable(${PROJECT_NAME} ${_src}
-        WaveformWidget.cpp
-        WaveformWidget.h)
+add_executable(${PROJECT_NAME} ${_src})
 
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 

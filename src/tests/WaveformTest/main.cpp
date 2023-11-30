@@ -15,7 +15,6 @@
 #include "ClipGraphicsItem.h"
 #include "TracksGraphicsScene.h"
 #include "TracksGraphicsView.h"
-#include "WaveformWidget.h"
 
 int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
