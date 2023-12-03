@@ -19,8 +19,8 @@ int main(int argc, char *argv[]) {
     time.start();
     for (int i = 0; i < 100000; i++)
         g2p_zh->convert(raw1_vector, false, false);
-    qDebug() << "time:" << time.elapsed() << "ms";
-    qDebug() << g2p_zh->convert(raw1_vector, false, false);
+    std::cout << "time:" << time.elapsed() << "ms" << std::endl;
+    std::cout << g2p_zh->convert(raw1_vector, false, false);
 
     return 0;
 }

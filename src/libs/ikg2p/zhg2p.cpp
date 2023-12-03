@@ -126,7 +126,7 @@ namespace IKg2p {
         return convert(splitString(input), tone, covertNum);
     }
 
-    QString ZhG2p::convert(const std::vector<std::string> &input, bool tone, bool covertNum) {
+    std::string ZhG2p::convert(const std::vector<std::string> &input, bool tone, bool covertNum) {
         Q_D(const ZhG2p);
         std::vector<std::string> inputList;
         std::vector<int> inputPos;
@@ -221,7 +221,7 @@ namespace IKg2p {
             }
         }
 
-        return QString::fromStdString(resetZH(inputList, result, inputPos));
+        return resetZH(inputList, result, inputPos);
     }
 
     ZhG2p::ZhG2p(ZhG2pPrivate &d, QObject *parent) : QObject(parent), d_ptr(&d) {
