@@ -18,7 +18,7 @@ namespace IKg2p {
         ZhG2p *q_ptr{};
 
         QHash<QString, QString> phrases_map;
-        QHash<QString, QStringList> phrases_dict;
+        QHash<QStringView, QStringList> phrases_dict;
         QHash<QString, QString> word_dict;
         QHash<QString, QString> trans_dict;
 

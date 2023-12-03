@@ -107,7 +107,7 @@ namespace IKg2p {
         QList<int> inputPos;
         // get char&pos in dict
         d->zhPosition(input, inputList, inputPos, covertNum);
-        QString cleanInput = inputList.join("");
+        QStringView cleanInput = QStringView(inputList.join(""));
         QStringList result;
         int cursor = 0;
         while (cursor < inputList.size()) {
@@ -133,7 +133,7 @@ namespace IKg2p {
                 for (int length = 4; length >= 2 && !found; length--) {
                     if (cursor + length <= inputList.size()) {
                         // cursor: 地, subPhrase: 地久天长
-                        QString sub_phrase = cleanInput.mid(cursor, length);
+                        QStringView sub_phrase = cleanInput.mid(cursor, length);
                         if (d->phrases_dict.find(sub_phrase) != d->phrases_dict.end()) {
                             result.append(d->phrases_dict[sub_phrase]);
                             cursor += length;
@@ -142,7 +142,7 @@ namespace IKg2p {
 
                         if (cursor >= 1 && !found) {
                             // cursor: 重, subPhrase_1: 语重心长
-                            QString sub_phrase_1 = cleanInput.mid(cursor - 1, length);
+                            QStringView sub_phrase_1 = cleanInput.mid(cursor - 1, length);
                             if (d->phrases_dict.find(sub_phrase_1) != d->phrases_dict.end()) {
                                 result.removeAt(result.size() - 1);
                                 result.append(d->phrases_dict[sub_phrase_1]);
@@ -154,7 +154,7 @@ namespace IKg2p {
 
                     if (cursor + 1 >= length && !found && cursor + 1 <= inputList.size()) {
                         // cursor: 好, xSubPhrase: 各有所好
-                        QString x_sub_phrase = cleanInput.mid(cursor + 1 - length, length);
+                        QStringView x_sub_phrase = cleanInput.mid(cursor + 1 - length, length);
                         if (d->phrases_dict.find(x_sub_phrase) != d->phrases_dict.end()) {
                             // overwrite pinyin
                             removeElements(result, cursor + 1 - length, length - 1);
@@ -166,7 +166,7 @@ namespace IKg2p {
 
                     if (cursor + 2 >= length && !found && cursor + 2 <= inputList.size()) {
                         // cursor: 好, xSubPhrase: 叶公好龙
-                        QString x_sub_phrase_1 = cleanInput.mid(cursor + 2 - length, length);
+                        QStringView x_sub_phrase_1 = cleanInput.mid(cursor + 2 - length, length);
                         if (d->phrases_dict.find(x_sub_phrase_1) != d->phrases_dict.end()) {
                             // overwrite pinyin
                             removeElements(result, cursor + 2 - length, length - 2);
