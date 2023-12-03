@@ -184,9 +184,10 @@ namespace IKg2p {
             }
         }
 
+        auto QExp = QRegExp("[^a-z]");
         if (!tone) {
             for (QString &item : result) {
-                item.remove(QRegExp("[^a-z]"));
+                item.remove(QExp);
             }
         }
 
