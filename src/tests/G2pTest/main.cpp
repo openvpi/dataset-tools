@@ -4,37 +4,23 @@
 #include "g2pglobal.h"
 #include "zhg2p.h"
 #include <QCoreApplication>
-#include <QJsonDocument>
-#include <QTextCodec>
-#include <QTextStream>
-#include <fstream>
+#include <QElapsedTimer>
+#include <iostream>
 #include <sstream>
-
-#include "JyuptingTest.h"
-#include "ManTest.h"
-
-using namespace G2pTest;
 
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
     IKg2p::setDictionaryPath(qApp->applicationDirPath() + "/dict");
 
-    qDebug() << "**************************";
-    qDebug() << "mandarinTest: ";
-    auto mandarinTest = ManTest();
-    mandarinTest.convertNumTest();
-    mandarinTest.removeToneTest();
-    //    mandarinTest.batchTest();
-    qDebug() << "\n";
+    auto g2p_zh = new IKg2p::ZhG2p("mandarin");
 
-    qDebug() << "**************************";
-
-    qDebug() << "jyutpingTest: ";
-    auto jyutpingTest = JyuptingTest();
-    jyutpingTest.convertNumTest();
-    jyutpingTest.removeToneTest();
-    //    jyutpingTest.batchTest();
-    qDebug() << "\n";
+    QStringList raw1 = {"明", "月", "几", "时", "有", "？"};
+    QElapsedTimer time;
+    time.start();
+    for (int i = 0; i < 100000; i++)
+        g2p_zh->convert(raw1, false, false);
+    qDebug() << "time:" << time.elapsed() << "ms";
+    qDebug() << g2p_zh->convert(raw1, false, false);
 
     return 0;
 }
