@@ -18,16 +18,32 @@ namespace IKg2p {
         ZhG2p *q_ptr{};
 
         QHash<QString, QString> phrases_map;
-        QHash<QStringView, QStringList> phrases_dict;
+        QHash<QString, QStringList> phrases_dict;
         QHash<QString, QString> word_dict;
         QHash<QString, QString> trans_dict;
 
+        // Key as QStringView
+        QHash<QStringView, QStringView> phrases_map2;
+        QHash<QStringView, QList<QStringView>> phrases_dict2;
+        QHash<QStringView, QStringView> word_dict2;
+        QHash<QStringView, QStringView> trans_dict2;
+
         QString m_language;
 
-        bool isPolyphonic(const QString &text) const;
-        QString tradToSim(const QString &text) const;
-        QString getDefaultPinyin(const QString &text) const;
-        void zhPosition(const QStringList &input, QStringList &res, QList<int> &positions, bool covertNum) const;
+        inline bool isPolyphonic(const QStringView &text) const {
+            return phrases_map2.contains(text);
+        }
+
+        inline QStringView tradToSim(const QStringView &text) const {
+            return trans_dict2.value(text, text);
+        }
+
+        inline QStringView getDefaultPinyin(const QStringView &text) const {
+            return word_dict2.value(text, {});
+        }
+
+        void zhPosition(const QList<QStringView> &input, QList<QStringView> &res, QList<int> &positions,
+                        bool covertNum) const;
     };
 
 }

@@ -1,5 +1,7 @@
 #include "g2pglobal.h"
+
 #include <QDebug>
+#include <QRegularExpression>
 
 namespace IKg2p {
 
@@ -18,21 +20,19 @@ namespace IKg2p {
         m_global->path = dir;
     }
 
-    QStringList splitString(const QString &input) {
-        QStringList res;
+    QList<QStringView> splitString(const QStringView &input) {
+        QList<QStringView> res;
 
         // negative lookahead:ッっ;letter,num,chinese,kana
-        QRegExp rx("(?![ー゜])([a-zA-Z]+|[0-9]|[\u4e00-\u9fa5]|[\u3040-\u309F\u30A0-\u30FF]["
-                   "ャュョゃゅょァィゥェォぁぃぅぇぉ]?)");
+        static QRegularExpression rx("(?![ー゜])([a-zA-Z]+|[0-9]|[\u4e00-\u9fa5]|[\u3040-\u309F\u30A0-\u30FF]["
+                                     "ャュョゃゅょァィゥェォぁぃぅぇぉ]?)");
 
         int pos = 0; // 记录匹配位置的变量
-
-        while ((pos = rx.indexIn(input, pos)) != -1) {
-            res.append(input.mid(pos, rx.matchedLength()));
-            pos += rx.matchedLength(); // 更新匹配位置
+        QRegularExpressionMatch match;
+        while ((match = rx.match(input, pos)).hasMatch()) {
+            res.append(input.mid(pos, match.capturedLength()));
+            pos += match.capturedLength(); // 更新匹配位置
         }
-
-        //                qDebug() << res;
         return res;
     }
 
@@ -56,7 +56,7 @@ namespace IKg2p {
         return true;
     }
 
-    bool loadDict(const QString &dict_dir, const QString &fileName, QHash<QStringView, QStringList> &resultMap) {
+    bool loadDict(const QString &dict_dir, const QString &fileName, QHash<QString, QStringList> &resultMap) {
         QString file_path = QDir::cleanPath(dict_dir + "/" + fileName);
         QFile file(file_path);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -68,7 +68,7 @@ namespace IKg2p {
             QString line = file.readLine().trimmed();
             QStringList keyValuePair = line.split(":");
             if (keyValuePair.count() == 2) {
-                QStringView key = keyValuePair[0];
+                QString key = keyValuePair[0];
                 QString value = keyValuePair[1];
                 if (value.split(" ").count() > 1) {
                     resultMap[key] = value.split(" ");

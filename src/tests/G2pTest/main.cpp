@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
             QString key = keyValuePair[0];
             g2p_zh->convert(key, false, false);
         } else {
-            qDebug() << keyValuePair;
+            // qDebug() << keyValuePair;
         }
     }
 

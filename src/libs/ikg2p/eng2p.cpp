@@ -63,7 +63,7 @@ namespace IKg2p {
 
     QString EnG2p::word2arpabet(const QString &word, bool removeNum) const {
         Q_D(const EnG2p);
-        QStringList input = splitString(word);
+        QStringList input = viewList2strList(splitString(word));
         return word2arpabet(input, removeNum);
     }
 

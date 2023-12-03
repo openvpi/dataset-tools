@@ -15,7 +15,7 @@ namespace IKg2p {
         ~ZhG2p();
 
         QString convert(const QString &input, bool tone = true, bool covertNum = true);
-        QString convert(const QStringList &input, bool tone = true, bool covertNum = true);
+        QString convert(const QList<QStringView> &input, bool tone = true, bool covertNum = true);
 
     protected:
         ZhG2p(ZhG2pPrivate &d, QObject *parent = nullptr);

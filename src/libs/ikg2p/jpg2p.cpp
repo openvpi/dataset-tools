@@ -120,7 +120,7 @@ namespace IKg2p {
     }
 
     QString JpG2p::kana2romaji(const QString &kanaStr, bool doubleWrittenSokuon) const {
-        QStringList input = splitString(kanaStr);
+        QStringList input = viewList2strList(splitString(kanaStr));
         return kana2romaji(input, doubleWrittenSokuon);
     }
 
