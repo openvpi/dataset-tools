@@ -3,10 +3,13 @@
 #include "zhg2p_p.h"
 
 #include <QDebug>
+#include <iostream>
+#include <regex>
+#include <sstream>
 #include <utility>
 
 namespace IKg2p {
-    static const QMap<QString, QString> numMap = {
+    static const std::unordered_map<std::string, std::string> numMap = {
         {"0", "零"},
         {"1", "一"},
         {"2", "二"},
@@ -18,26 +21,41 @@ namespace IKg2p {
         {"8", "八"},
         {"9", "九"}
     };
-    // reset pinyin to raw string
-    static QString resetZH(const QStringList &input, const QStringList &res, QList<int> &positions) {
-        QStringList result = input;
-        for (int i = 0; i < positions.size(); i++) {
-            result.replace(positions[i], res.at(i));
+
+    std::string concatenateStrings(const std::vector<std::string> &stringVector) {
+        std::string result;
+
+        for (const std::string &str : stringVector) {
+            result += " " + str;
         }
 
-        return result.join(" ");
+        return result;
+    }
+
+    // reset pinyin to raw string
+    static std::string resetZH(const std::vector<std::string> &input, const std::vector<std::string> &res,
+                               std::vector<int> &positions) {
+        std::vector<std::string> result = input;
+        for (int i = 0; i < positions.size(); i++) {
+            result[positions[i]] = res[i];
+        }
+
+        return concatenateStrings(result);
     }
 
     // split the value of pinyin dictionary
-    static void addString(const QString &text, QStringList &res) {
-        QStringList temp = text.split(" ");
-        for (auto &pinyin : qAsConst(temp)) {
-            res.append(pinyin);
+    static void addString(const std::string &text, std::vector<std::string> &res) {
+        std::istringstream iss(text);
+
+        // 使用 std::getline 以空格为分隔符进行分割
+        std::string token;
+        while (std::getline(iss, token, ' ')) {
+            res.push_back(token);
         }
     }
 
     // delete elements from the list
-    static inline void removeElements(QStringList &list, int start, int n) {
+    static inline void removeElements(std::vector<std::string> &list, int start, int n) {
         list.erase(list.begin() + start, list.begin() + start + n);
     }
 
@@ -63,28 +81,36 @@ namespace IKg2p {
         loadDict(dict_dir, "trans_word.txt", trans_dict);
     }
 
-    bool ZhG2pPrivate::isPolyphonic(const QString &text) const {
-        return phrases_map.contains(text);
+    bool ZhG2pPrivate::isPolyphonic(const std::string &text) const {
+        return phrases_map.find(text) != phrases_map.end();
     }
 
-    QString ZhG2pPrivate::tradToSim(const QString &text) const {
-        return trans_dict.value(text, text);
+    std::string ZhG2pPrivate::tradToSim(const std::string &text) const {
+        if (trans_dict.find(text) != trans_dict.end()) {
+            return trans_dict.find(text)->second;
+        } else {
+            return text;
+        }
     }
 
-    QString ZhG2pPrivate::getDefaultPinyin(const QString &text) const {
-        return word_dict.value(text, {});
+    std::string ZhG2pPrivate::getDefaultPinyin(const std::string &text) const {
+        if (word_dict.find(text) != word_dict.end()) {
+            return word_dict.find(text)->second;
+        } else {
+            return text;
+        }
     }
 
     // get all chinese characters and positions in the list
-    void ZhG2pPrivate::zhPosition(const QStringList &input, QStringList &res, QList<int> &positions,
-                                  bool covertNum) const {
+    void ZhG2pPrivate::zhPosition(const std::vector<std::string> &input, std::vector<std::string> &res,
+                                  std::vector<int> &positions, bool covertNum) const {
         for (int i = 0; i < input.size(); i++) {
             if (word_dict.find(input.at(i)) != word_dict.end() || trans_dict.find(input.at(i)) != trans_dict.end()) {
-                res.append(input.mid(i, 1));
-                positions.append(i);
+                res.push_back(input.at(i));
+                positions.push_back(i);
             } else if (covertNum && numMap.find(input.at(i)) != numMap.end()) {
-                res.append(numMap[input.at(i)]);
-                positions.append(i);
+                res.push_back(numMap.find(input.at(i))->second);
+                positions.push_back(i);
             }
         }
     }
@@ -100,24 +126,24 @@ namespace IKg2p {
         return convert(splitString(input), tone, covertNum);
     }
 
-    QString ZhG2p::convert(const QStringList &input, bool tone, bool covertNum) {
+    QString ZhG2p::convert(const std::vector<std::string> &input, bool tone, bool covertNum) {
         Q_D(const ZhG2p);
-        //    qDebug() << input;
-        QStringList inputList;
-        QList<int> inputPos;
+        std::vector<std::string> inputList;
+        std::vector<int> inputPos;
         // get char&pos in dict
         d->zhPosition(input, inputList, inputPos, covertNum);
-        QStringList result;
+        std::vector<std::string> result;
+
         int cursor = 0;
         while (cursor < inputList.size()) {
             // get char
-            const QString &raw_current_char = inputList.at(cursor);
-            QString current_char;
+            const std::string &raw_current_char = inputList.at(cursor);
+            std::string current_char;
             current_char = d->tradToSim(raw_current_char);
 
             // not in dict
             if (d->word_dict.find(current_char) == d->word_dict.end()) {
-                result.append(current_char);
+                result.push_back(current_char);
                 cursor++;
                 continue;
             }
@@ -125,26 +151,28 @@ namespace IKg2p {
             //        qDebug() << current_char << isPolyphonic(current_char);
             // is polypropylene
             if (!d->isPolyphonic(current_char)) {
-                result.append(d->getDefaultPinyin(current_char));
+                result.push_back(d->getDefaultPinyin(current_char));
                 cursor++;
             } else {
                 bool found = false;
                 for (int length = 4; length >= 2 && !found; length--) {
                     if (cursor + length <= inputList.size()) {
                         // cursor: 地, subPhrase: 地久天长
-                        QString sub_phrase = inputList.mid(cursor, length).join("");
+                        std::string sub_phrase = concatenateStrings(
+                            std::vector<std::string>{inputList.begin() + cursor, inputList.begin() + cursor + length});
                         if (d->phrases_dict.find(sub_phrase) != d->phrases_dict.end()) {
-                            addString(d->phrases_dict[sub_phrase], result);
+                            addString(d->phrases_dict.find(sub_phrase)->second, result);
                             cursor += length;
                             found = true;
                         }
 
                         if (cursor >= 1 && !found) {
                             // cursor: 重, subPhrase_1: 语重心长
-                            QString sub_phrase_1 = inputList.mid(cursor - 1, length).join("");
+                            std::string sub_phrase_1 = concatenateStrings(std::vector<std::string>{
+                                inputList.begin() + cursor - 1, inputList.begin() + cursor + length - 1});
                             if (d->phrases_dict.find(sub_phrase_1) != d->phrases_dict.end()) {
-                                result.removeAt(result.size() - 1);
-                                addString(d->phrases_dict[sub_phrase_1], result);
+                                result.erase(result.end() - 1); // remove last element
+                                addString(d->phrases_dict.find(sub_phrase_1)->second, result);
                                 cursor += length - 1;
                                 found = true;
                             }
@@ -153,11 +181,12 @@ namespace IKg2p {
 
                     if (cursor + 1 >= length && !found && cursor + 1 <= inputList.size()) {
                         // cursor: 好, xSubPhrase: 各有所好
-                        QString x_sub_phrase = inputList.mid(cursor + 1 - length, length).join("");
+                        std::string x_sub_phrase = concatenateStrings(std::vector<std::string>{
+                            inputList.begin() + cursor + 1 - length, inputList.begin() + cursor + 1});
                         if (d->phrases_dict.find(x_sub_phrase) != d->phrases_dict.end()) {
                             // overwrite pinyin
                             removeElements(result, cursor + 1 - length, length - 1);
-                            addString(d->phrases_dict[x_sub_phrase], result);
+                            addString(d->phrases_dict.find(x_sub_phrase)->second, result);
                             cursor += 1;
                             found = true;
                         }
@@ -165,11 +194,12 @@ namespace IKg2p {
 
                     if (cursor + 2 >= length && !found && cursor + 2 <= inputList.size()) {
                         // cursor: 好, xSubPhrase: 叶公好龙
-                        QString x_sub_phrase_1 = inputList.mid(cursor + 2 - length, length).join("");
+                        std::string x_sub_phrase_1 = concatenateStrings(std::vector<std::string>{
+                            inputList.begin() + cursor + 2 - length, inputList.begin() + cursor + 2});
                         if (d->phrases_dict.find(x_sub_phrase_1) != d->phrases_dict.end()) {
                             // overwrite pinyin
                             removeElements(result, cursor + 2 - length, length - 2);
-                            addString(d->phrases_dict[x_sub_phrase_1], result);
+                            addString(d->phrases_dict.find(x_sub_phrase_1)->second, result);
                             cursor += 2;
                             found = true;
                         }
@@ -178,25 +208,29 @@ namespace IKg2p {
 
                 // not found, use default pinyin
                 if (!found) {
-                    result.append(d->getDefaultPinyin(current_char));
+                    result.push_back(d->getDefaultPinyin(current_char));
                     cursor++;
                 }
             }
         }
 
+        auto exp = std::regex("[^a-z]");
         if (!tone) {
-            for (QString &item : result) {
-                item.remove(QRegExp("[^a-z]"));
+            for (std::string &item : result) {
+                item = std::regex_replace(item, exp, "");
             }
         }
 
-        return resetZH(input, result, inputPos);
+        return QString::fromStdString(resetZH(inputList, result, inputPos));
     }
 
     ZhG2p::ZhG2p(ZhG2pPrivate &d, QObject *parent) : QObject(parent), d_ptr(&d) {
         d.q_ptr = this;
 
         d.init();
+    }
+    QString ZhG2p::convert(const QStringList &input, bool tone, bool covertNum) {
+        return QString();
     }
 
 }

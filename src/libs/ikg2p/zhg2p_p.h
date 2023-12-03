@@ -17,17 +17,18 @@ namespace IKg2p {
 
         ZhG2p *q_ptr{};
 
-        QHash<QString, QString> phrases_map;
-        QHash<QString, QString> phrases_dict;
-        QHash<QString, QString> word_dict;
-        QHash<QString, QString> trans_dict;
+        std::unordered_map<std::string, std::string> phrases_map;
+        std::unordered_map<std::string, std::string> phrases_dict;
+        std::unordered_map<std::string, std::string> word_dict;
+        std::unordered_map<std::string, std::string> trans_dict;
 
         QString m_language;
 
-        bool isPolyphonic(const QString &text) const;
-        QString tradToSim(const QString &text) const;
-        QString getDefaultPinyin(const QString &text) const;
-        void zhPosition(const QStringList &input, QStringList &res, QList<int> &positions, bool covertNum) const;
+        bool isPolyphonic(const std::string &text) const;
+        std::string tradToSim(const std::string &text) const;
+        std::string getDefaultPinyin(const std::string &text) const;
+        void zhPosition(const std::vector<std::string> &input, std::vector<std::string> &res,
+                        std::vector<int> &positions, bool covertNum) const;
     };
 
 }

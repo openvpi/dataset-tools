@@ -55,4 +55,25 @@ namespace IKg2p {
         }
         return true;
     }
+
+    bool loadDict(const QString &dict_dir, const QString &fileName,
+                  std::unordered_map<std::string, std::string> &resultMap) {
+        QString file_path = QDir::cleanPath(dict_dir + "/" + fileName);
+        QFile file(file_path);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qWarning() << fileName << " error: " << file.errorString();
+            return false;
+        }
+
+        while (!file.atEnd()) {
+            QString line = file.readLine().trimmed();
+            QStringList keyValuePair = line.split(":");
+            if (keyValuePair.count() == 2) {
+                QString key = keyValuePair[0];
+                QString value = keyValuePair[1];
+                resultMap[key.toStdString()] = value.toStdString();
+            }
+        }
+        return true;
+    }
 }

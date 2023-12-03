@@ -13,6 +13,8 @@ namespace IKg2p {
     QStringList splitString(const QString &input);
 
     bool loadDict(const QString &dict_dir, const QString &fileName, QHash<QString, QString> &resultMap);
+
+    bool loadDict(const QString &dict_dir, const QString &fileName, std::unordered_map<std::string,std::string> &resultMap);
 }
 
 #endif // G2PGLOBAL_H
