@@ -1,7 +1,6 @@
 #include "g2pglobal.h"
 
 #include <QDebug>
-#include <QRegularExpression>
 
 namespace IKg2p {
 
@@ -20,18 +19,44 @@ namespace IKg2p {
         m_global->path = dir;
     }
 
+    bool isLetter(QChar c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+    }
+
+    bool isHanzi(QChar c) {
+        return (c >= 0x4e00 && c <= 0x9fa5);
+    }
+
+    bool isKana(QChar c) {
+        return ((c >= 0x3040 && c <= 0x309F) || (c >= 0x30A0 && c <= 0x30FF));
+    }
+
+    bool isSpecialKana(QChar c) {
+        static QStringView specialKana = QStringLiteral("ャュョゃゅょァィゥェォぁぃぅぇぉ");
+        return specialKana.contains(c);
+    }
+
     QList<QStringView> splitString(const QStringView &input) {
         QList<QStringView> res;
-
-        // negative lookahead:ッっ;letter,num,chinese,kana
-        static QRegularExpression rx("(?![ー゜])([a-zA-Z]+|[0-9]|[\u4e00-\u9fa5]|[\u3040-\u309F\u30A0-\u30FF]["
-                                     "ャュョゃゅょァィゥェォぁぃぅぇぉ]?)");
-
-        int pos = 0; // 记录匹配位置的变量
-        QRegularExpressionMatch match;
-        while ((match = rx.match(input, pos)).hasMatch()) {
-            res.append(input.mid(pos, match.capturedLength()));
-            pos += match.capturedLength(); // 更新匹配位置
+        int pos = 0;
+        while (pos < input.length()) {
+            QChar currentChar = input[pos];
+            if (isLetter(currentChar)) {
+                int start = pos;
+                while (pos < input.length() && isLetter(input[pos])) {
+                    pos++;
+                }
+                res.append(input.mid(start, pos - start));
+            } else if (isHanzi(currentChar) || currentChar.isDigit()) {
+                res.append(input.mid(pos, 1));
+                pos++;
+            } else if (isKana(currentChar)) {
+                int length = (pos + 1 < input.length() && isSpecialKana(input[pos + 1])) ? 2 : 1;
+                res.append(input.mid(pos, length));
+                pos += length;
+            } else {
+                pos++;
+            }
         }
         return res;
     }

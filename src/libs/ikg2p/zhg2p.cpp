@@ -43,14 +43,6 @@ namespace IKg2p {
         return joinView(result, QStringLiteral(" "));
     }
 
-    // split the value of pinyin dictionary
-    //    static void addString(const QString &text, QStringList &res) {
-    //        QStringList temp = text.split(" ");
-    //        for (auto &pinyin : qAsConst(temp)) {
-    //            res.append(pinyin);
-    //        }
-    //    }
-
     // delete elements from the list
     template <class T>
     static inline void removeElements(QList<T> &list, int start, int n) {
@@ -79,7 +71,7 @@ namespace IKg2p {
             }
             dest.insert(it.key(), viewList);
         }
-    };
+    }
 
     // load zh convert dict
     void ZhG2pPrivate::init() {
@@ -104,7 +96,7 @@ namespace IKg2p {
 
     // get all chinese characters and positions in the list
     void ZhG2pPrivate::zhPosition(const QList<QStringView> &input, QList<QStringView> &res, QList<int> &positions,
-                                  bool covertNum) const {
+                                  bool convertNum) const {
         for (int i = 0; i < input.size(); ++i) {
             const auto &item = input.at(i);
             if (item.isEmpty())
@@ -116,7 +108,7 @@ namespace IKg2p {
                 continue;
             }
 
-            if (!covertNum) {
+            if (!convertNum) {
                 continue;
             }
 
@@ -135,17 +127,17 @@ namespace IKg2p {
     ZhG2p::~ZhG2p() {
     }
 
-    QString ZhG2p::convert(const QString &input, bool tone, bool covertNum) {
-        return convert(splitString(input), tone, covertNum);
+    QString ZhG2p::convert(const QString &input, bool tone, bool convertNum) {
+        return convert(splitString(input), tone, convertNum);
     }
 
-    QString ZhG2p::convert(const QList<QStringView> &input, bool tone, bool covertNum) {
+    QString ZhG2p::convert(const QList<QStringView> &input, bool tone, bool convertNum) {
         Q_D(const ZhG2p);
         QList<QStringView> inputList;
         QList<int> inputPos;
 
         // get char&pos in dict
-        d->zhPosition(input, inputList, inputPos, covertNum);
+        d->zhPosition(input, inputList, inputPos, convertNum);
 
         // Alloc 1
         QString cleanInputRaw = joinView(inputList, QString());

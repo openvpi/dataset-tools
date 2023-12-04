@@ -14,8 +14,8 @@ namespace IKg2p {
         explicit ZhG2p(QString language, QObject *parent = nullptr);
         ~ZhG2p();
 
-        QString convert(const QString &input, bool tone = true, bool covertNum = true);
-        QString convert(const QList<QStringView> &input, bool tone = true, bool covertNum = true);
+        QString convert(const QString &input, bool tone = true, bool convertNum = true);
+        QString convert(const QList<QStringView> &input, bool tone = true, bool convertNum = true);
 
     protected:
         ZhG2p(ZhG2pPrivate &d, QObject *parent = nullptr);

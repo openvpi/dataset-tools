@@ -25,16 +25,16 @@ if (APPLE)
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND
-            ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/op_lab.txt
-            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}>/Resources/op_lab.txt
+            ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/testData
+            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}>/Resources/testData
     )
 else ()
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND
-            ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/op_lab.txt
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>/testData/op_lab.txt
+            ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/testData
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/testData
     )
 
 endif ()

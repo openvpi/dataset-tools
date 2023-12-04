@@ -43,7 +43,7 @@ namespace IKg2p {
         }
 
         void zhPosition(const QList<QStringView> &input, QList<QStringView> &res, QList<int> &positions,
-                        bool covertNum) const;
+                        bool convertNum) const;
     };
 
 }

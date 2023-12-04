@@ -37,10 +37,6 @@ namespace IKg2p {
         return res;
     }
 
-    bool isKana(QChar character) {
-        // Kana Unicode ranges: U+3040 - U+30FF
-        return (character >= QChar(0x3040) && character <= QChar(0x30FF));
-    }
     JpG2pPrivate::JpG2pPrivate() {
     }
 

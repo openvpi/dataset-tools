@@ -24,6 +24,14 @@ namespace IKg2p {
     bool loadDict(const QString &dict_dir, const QString &fileName, QHash<QString, QString> &resultMap);
 
     bool loadDict(const QString &dict_dir, const QString &fileName, QHash<QString, QStringList> &resultMap);
+
+    bool isLetter(QChar c);
+
+    bool isHanzi(QChar c);
+
+    bool isKana(QChar c);
+
+    bool isSpecialKana(QChar c);
 }
 
 #endif // G2PGLOBAL_H

@@ -1,7 +1,9 @@
 #include "JyuptingTest.h"
 #include "Common.h"
 
+#include <QCoreApplication>
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QTextCodec>
 
 
@@ -33,7 +35,7 @@ namespace G2pTest {
             return false;
         }
 
-        qDebug() << "\nconvertNumTest: success";
+        qDebug() << "convertNumTest: success";
         return true;
     }
 
@@ -58,20 +60,20 @@ namespace G2pTest {
             return false;
         }
 
-        qDebug() << "\nremoveToneTest: success";
+        qDebug() << "removeToneTest: success";
         return true;
     }
     bool JyuptingTest::batchTest(bool resDisplay) {
         int count = 0;
         int error = 0;
 
-        QTextCodec *utf8 = QTextCodec::codecForName("UTF-8");
         QStringList dataLines;
-        dataLines = readData(R"(D:\projects\dataset-tools\op_lab.txt)");
-        foreach (const QString &line, dataLines) {
+        dataLines = readData(qApp->applicationDirPath() + "/testData/jyutping_test.txt");
 
-            QString trimmedLine = utf8->toUnicode(line.toLocal8Bit()).trimmed();
-            QStringList keyValuePair = trimmedLine.split('|');
+        QElapsedTimer time;
+        time.start();
+        foreach (const QString &line, dataLines) {
+            QStringList keyValuePair = line.trimmed().split('|');
 
             if (keyValuePair.size() == 2) {
                 QString key = keyValuePair[0];
@@ -104,12 +106,11 @@ namespace G2pTest {
 
         double percentage = ((double) error / (double) count) * 100.0;
 
-        qDebug() << "\n--------------------";
         qDebug() << "batchTest: success";
+        qDebug() << "batchTest time:" << time.elapsed() << "ms";
         qDebug() << "错误率: " << percentage << "%";
         qDebug() << "错误数: " << error;
         qDebug() << "总字数: " << count;
-        qDebug() << "--------------------";
         return true;
     }
 
