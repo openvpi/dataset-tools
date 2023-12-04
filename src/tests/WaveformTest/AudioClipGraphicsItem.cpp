@@ -8,7 +8,7 @@
 #include "AudioClipGraphicsItem.h"
 
 
-AudioClipGraphicsItem::AudioClipGraphicsItem(QGraphicsItem *parent) {
+AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId ,QGraphicsItem *parent) : ClipGraphicsItem(itemId, parent) {
 }
 AudioClipGraphicsItem::~AudioClipGraphicsItem() {
 }

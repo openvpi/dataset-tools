@@ -7,14 +7,16 @@
 
 #include <QGraphicsRectItem>
 
-class ClipGraphicsItem : public QGraphicsRectItem, public QObject {
+class ClipGraphicsItem : public QObject,  public QGraphicsRectItem{
+    Q_OBJECT
 
 public:
     enum MouseMoveBehavior { Move, ResizeRight, ResizeLeft };
 
-    explicit ClipGraphicsItem(QGraphicsItem *parent = nullptr);
-    ~ClipGraphicsItem();
+    explicit ClipGraphicsItem(int itemId ,QGraphicsItem *parent = nullptr);
+    ~ClipGraphicsItem() override;
 
+    int itemId();
     QString name() const;
     void setName(const QString &text);
 
@@ -24,33 +26,42 @@ public:
     int start() const;
     void setStart(int start);
     int length() const;
-    void setLength(const int length);
+    void setLength(int length);
     int clipStart() const;
-    void setClipStart(const int clipStart);
+    void setClipStart(int clipStart);
     int clipLen() const;
-    void setClipLen(const int clipLen);
+    void setClipLen(int clipLen);
 
     double gain() const;
-    void setGain(const double gain);
+    void setGain(double gain);
     // double pan() const;
     // void setPan(double gain);
     bool mute() const;
-    void setMute(const bool mute);
+    void setMute(bool mute);
 
     double scaleX() const;
-    void setScaleX(const double scaleX);
+    void setScaleX(double scaleX);
     double scaleY() const;
-    void setScaleY(const double scaleY);
+    void setScaleY(double scaleY);
     int trackIndex() const;
-    void setTrackIndex(const int index);
+    void setTrackIndex(int index);
 
     QRectF previewRect() const;
 
+signals:
+    // void propertyChanged(const QString &propertyName, const QString &value);
+    void nameChanged(const QString &name);
+    void startChanged(int itemId, int start);
+    void lengthChanged(int length);
+    void clipStartChanged(int clipStart);
+    void clipLenChanged(int clipLen);
+
 public slots:
+    // void setScale(qreal sx, qreal sy);
     void setVisibleRect(const QRectF &rect);
 
 protected:
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
@@ -65,6 +76,7 @@ protected:
     const double trackHeight = 72;
     const int pixelPerQuarterNote = 64;
 
+    int m_itemId;
     QString m_name;
     int m_start = 0;
     int m_length = 0;

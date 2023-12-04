@@ -2,9 +2,6 @@
 // Created by fluty on 2023/8/27.
 //
 
-#include "AudioClipGraphicsItem.h"
-
-
 #include <QApplication>
 #include <QFileDialog>
 #include <QMainWindow>
@@ -12,9 +9,9 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-#include "ClipGraphicsItem.h"
-#include "TracksGraphicsScene.h"
+#include "TracksController.h"
 #include "TracksGraphicsView.h"
+#include "AudioClipGraphicsItem.h"
 
 int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
@@ -30,39 +27,22 @@ int main(int argc, char *argv[]) {
     QMainWindow w;
 
     auto btnOpenAudioFile = new QPushButton;
-    btnOpenAudioFile->setText("Open an audio file...");
+    btnOpenAudioFile->setText("Add...");
 
-    auto tracksScene = new TracksGraphicsScene;
+    auto tracksController = new TracksController;
 
-    auto tracksView = new TracksGraphicsView;
-    tracksView->setMinimumHeight(150);
-    tracksView->setScene(tracksScene);
-    tracksView->centerOn(0, 0);
-    tracksView->setStyleSheet("QGraphicsView { border: none }");
-
-    int trackCount = 0;
-
-    QObject::connect(btnOpenAudioFile, &QPushButton::clicked, tracksView, [&]() {
+    QObject::connect(btnOpenAudioFile, &QPushButton::clicked, tracksController, [&]() {
         auto fileName =
             QFileDialog::getOpenFileName(btnOpenAudioFile, "Select an Audio File", ".", "Wave Files (*.wav)");
-        auto clip = new AudioClipGraphicsItem;
-        clip->setStart(0);
-        clip->setGain(1.14);
-        clip->setTrackIndex(trackCount);
-        clip->openFile(fileName);
-        clip->setVisibleRect(tracksView->visibleRect());
-        clip->setScaleX(tracksView->scaleX());
-        clip->setScaleY(tracksView->scaleY());
-        tracksScene->addItem(clip);
-        QObject::connect(tracksView, &TracksGraphicsView::visibleRectChanged, clip, &ClipGraphicsItem::setVisibleRect);
-        trackCount++;
-    });
+        if (fileName.isNull())
+            return;
 
-    QObject::connect(tracksView, &TracksGraphicsView::scaleChanged, tracksScene, &TracksGraphicsScene::setScale);
+        tracksController->addAudioClipToNewTrack(fileName);
+    });
 
     auto mainLayout = new QVBoxLayout;
     mainLayout->addWidget(btnOpenAudioFile);
-    mainLayout->addWidget(tracksView);
+    mainLayout->addWidget(tracksController->tracksView());
 
     auto mainWidget = new QWidget;
     mainWidget->setLayout(mainLayout);

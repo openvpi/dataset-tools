@@ -5,18 +5,23 @@
 #include <QDebug>
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QPainter>
 
 #include "ClipGraphicsItem.h"
 #include "TracksGraphicsScene.h"
 
 
-ClipGraphicsItem::ClipGraphicsItem(QGraphicsItem *parent) : QGraphicsRectItem(parent) {
+ClipGraphicsItem::ClipGraphicsItem(int itemId, QGraphicsItem *parent) : QGraphicsRectItem(parent) {
+    m_itemId = itemId;
     setAcceptHoverEvents(true);
     // setFlag(QGraphicsItem::ItemIsFocusable, true); // Must enabled, or keyPressEvent would not work.
     // setAcceptTouchEvents(true);
 }
 ClipGraphicsItem::~ClipGraphicsItem() {
+}
+int ClipGraphicsItem::itemId() {
+    return m_itemId;
 }
 
 QString ClipGraphicsItem::name() const {
@@ -25,6 +30,7 @@ QString ClipGraphicsItem::name() const {
 
 void ClipGraphicsItem::setName(const QString &text) {
     m_name = text;
+    emit nameChanged(text);
     update();
 }
 int ClipGraphicsItem::start() const {
@@ -33,6 +39,8 @@ int ClipGraphicsItem::start() const {
 
 void ClipGraphicsItem::setStart(const int start) {
     m_start = start;
+    // qDebug() << "ClipGraphicsItem::setStart" << start;
+    emit startChanged(m_itemId, start);
     updateRectAndPos();
 }
 int ClipGraphicsItem::length() const {
@@ -40,6 +48,7 @@ int ClipGraphicsItem::length() const {
 }
 void ClipGraphicsItem::setLength(const int length) {
     m_length = length;
+    emit lengthChanged(length);
     updateRectAndPos();
 }
 int ClipGraphicsItem::clipStart() const {
@@ -47,6 +56,7 @@ int ClipGraphicsItem::clipStart() const {
 }
 void ClipGraphicsItem::setClipStart(const int clipStart) {
     m_clipStart = clipStart;
+    emit clipStartChanged(clipStart);
     updateRectAndPos();
 }
 int ClipGraphicsItem::clipLen() const {
@@ -54,6 +64,7 @@ int ClipGraphicsItem::clipLen() const {
 }
 void ClipGraphicsItem::setClipLen(const int clipLen) {
     m_clipLen = clipLen;
+    emit clipLenChanged(clipLen);
     updateRectAndPos();
 }
 
@@ -159,6 +170,11 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
 }
 
 void ClipGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
+    QMenu menu;
+    auto actionRename = menu.addAction("Rename");
+    QObject::connect(actionRename, &QAction::triggered, [this]() { qDebug() << "rename triggered"; });
+    menu.exec(event->screenPos());
+
     QGraphicsItem::contextMenuEvent(event);
 }
 

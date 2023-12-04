@@ -18,7 +18,7 @@ public:
         Sample
     };
 
-    explicit AudioClipGraphicsItem(QGraphicsItem *parent = nullptr);
+    explicit AudioClipGraphicsItem(int itemId , QGraphicsItem *parent = nullptr);
     ~AudioClipGraphicsItem();
 
     bool openFile(const QString &path);
