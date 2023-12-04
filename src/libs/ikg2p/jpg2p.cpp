@@ -101,7 +101,9 @@ namespace IKg2p {
         QStringList inputList = d->convertKana(kanaList, JpG2pPrivate::KanaType::Hiragana);
         QStringList romajiList;
         for (const QString &kana : inputList) {
-            romajiList.append(d->kanaToRomajiMap.value(kana, kana));
+            if (kana!="゜" && kana!="ー") {
+                romajiList.append(d->kanaToRomajiMap.value(kana, kana));
+            }
         }
 
         for (int i = 0; i < romajiList.size() - 1 && doubleWrittenSokuon; ++i) {
