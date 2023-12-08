@@ -33,6 +33,13 @@ void EditLabel::initUi(const QString &text) {
     lineEdit = new QLineEdit;
     lineEdit->installEventFilter(this);
     lineEdit->setContextMenuPolicy(Qt::NoContextMenu);
+    lineEdit->setStyleSheet(QString("border: 1px solid #d4d4d4;"
+                                    "border-bottom: 2px solid #709cff;"
+                                    "background-color: #fff; "
+                                    "border-radius: 6px; color: #333;"
+                                    "selection-color: #FFFFFF;"
+                                    "selection-background-color: #709cff;"
+                                    "padding: 4px;"));
 
     this->addWidget(label);
     this->addWidget(lineEdit);

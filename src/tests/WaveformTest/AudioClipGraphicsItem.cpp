@@ -2,77 +2,54 @@
 // Created by fluty on 2023/11/16.
 //
 
-#include <QPainter>
 #include <QDebug>
+#include <QFileInfo>
+#include <QPainter>
+#include <QThread>
 
+#include "AudioClipBackgroundWorker.h"
 #include "AudioClipGraphicsItem.h"
 
-
-AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId ,QGraphicsItem *parent) : ClipGraphicsItem(itemId, parent) {
+AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId, QGraphicsItem *parent) : ClipGraphicsItem(itemId, parent) {
 }
 AudioClipGraphicsItem::~AudioClipGraphicsItem() {
 }
-bool AudioClipGraphicsItem::openFile(const QString &path) {
-    auto pathStr =
-#ifdef Q_OS_WIN
-        path.toStdWString();
-#else
-            path.toStdString();
-#endif
-    //    SndfileHandle sf(pathStr.c_str());
-    sf = SndfileHandle(pathStr.c_str());
-    auto sfErrCode = sf.error();
-    auto sfErrMsg = sf.strError();
+void AudioClipGraphicsItem::openFile(const QString &path) {
+    m_path = path;
+    m_loading = true;
+    setName(QFileInfo(m_path).fileName());
+    if (length() == 0)
+        setLength(3840);
+    if (clipLen() == 0)
+        setClipLen(3840);
 
-    if (sfErrCode) {
-        qDebug() << sfErrMsg;
-        return false;
+    m_worker = new AudioClipBackgroundWorker(path);
+    connect(m_worker, &AudioClipBackgroundWorker::finished, this, &AudioClipGraphicsItem::onLoadComplete);
+    // m_threadPool->start(m_worker);
+    auto thread = new QThread;
+    m_worker->moveToThread(thread);
+    connect(thread, &QThread::started, m_worker, &AudioClipBackgroundWorker::run);
+    thread->start();
+}
+QString AudioClipGraphicsItem::path() {
+    return m_path;
+}
+void AudioClipGraphicsItem::onLoadComplete(bool success, QString errorMessage) {
+    if (!success) {
+        qDebug() << "open file error" << errorMessage;
+        return;
     }
 
-    QVector<std::tuple<double, double>> nullVector;
-    m_peakCache.swap(nullVector);
+    m_peakCache.swap(m_worker->peakCache);
+    delete m_worker;
 
-    auto sr = sf.samplerate();
-    auto channels = sf.channels();
-    auto frames = sf.frames();
-    auto totalSize = frames * channels;
-
-    int chunkSize = 512;
-    std::vector<double> buffer(chunkSize * channels);
-    qint64 samplesRead = 0;
-    while (samplesRead < frames * channels) {
-        samplesRead = sf.read(buffer.data(), chunkSize * channels);
-        if (samplesRead == 0) {
-            break;
-        }
-        double max = 0;
-        double min = 0;
-        qint64 framesRead = samplesRead / channels;
-        for (qint64 i = 0; i < framesRead; i++) {
-            double monoSample = 0.0;
-            for (int j = 0; j < channels; j++) {
-                monoSample += buffer[i * channels + j] / static_cast<double>(channels);
-            }
-            if (monoSample > max)
-                max = monoSample;
-            if (monoSample < min)
-                min = monoSample;
-            auto pair = std::make_pair(min, max);
-            m_peakCache.append(pair);
-        }
-    }
-
-    setName(path);
-    m_renderStart = 0;
     setClipStart(0);
-    m_renderEnd = m_peakCache.count();
-    setLength(m_renderEnd / chunksPerTick);
-    setClipLen(m_renderEnd / chunksPerTick);
+    setLength(m_peakCache.count() / chunksPerTick);
+    setClipLen(m_peakCache.count() / chunksPerTick);
     m_scale = 1.0;
+    m_loading = false;
 
     update();
-
-    return true;
 }
 void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     // Draw frame
@@ -96,11 +73,22 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     auto peakColor = QColor(255, 255, 255, colorAlpha);
 
     QPen pen;
+
+    if (m_loading) {
+        // painter->setPen(Qt::NoPen);
+        // painter->setBrush(QColor(255, 255, 255, 80));
+        // painter->drawRect(previewRect());
+
+        pen.setColor(peakColor);
+        painter->setPen(pen);
+        painter->drawText(previewRect(), "Loading...", QTextOption(Qt::AlignCenter));
+    }
+
     pen.setColor(peakColor);
     pen.setWidth(1);
     painter->setPen(pen);
 
-    auto drawPeakGraphic = [&](){
+    auto drawPeakGraphic = [&]() {
         if (m_peakCache.count() == 0)
             return;
 

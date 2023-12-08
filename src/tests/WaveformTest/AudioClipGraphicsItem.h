@@ -5,6 +5,7 @@
 #ifndef AUDIOCLIPGRAPHICSITEM_H
 #define AUDIOCLIPGRAPHICSITEM_H
 
+#include "AudioClipBackgroundWorker.h"
 #include "ClipGraphicsItem.h"
 
 
@@ -21,21 +22,24 @@ public:
     explicit AudioClipGraphicsItem(int itemId , QGraphicsItem *parent = nullptr);
     ~AudioClipGraphicsItem();
 
-    bool openFile(const QString &path);
+    void openFile(const QString &path);
 
     RenderMode renderMode();
     void setRenderMode(RenderMode mode);
 
+    QString path();
+
     // QString audioFilePath() const;
     // void openAudioFile();
 
-// public slots:
-//     void onFileLoadComplete(bool success, QString errorMessage);
+public slots:
+    void onLoadComplete(bool success, QString errorMessage);
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
 
-    SndfileHandle sf;
+    // SndfileHandle sf;
+    AudioClipBackgroundWorker *m_worker;
     QVector<std::tuple<double, double>> m_peakCache;
     double m_renderStart = 0;
     double m_renderEnd = 0;
@@ -44,6 +48,8 @@ protected:
     int m_rectLastWidth = -1;
     RenderMode m_renderMode = Peak;
     int chunksPerTick = 200;
+    bool m_loading = false;
+    QString m_path;
 };
 
 
