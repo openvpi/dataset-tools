@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
 
     QObject::connect(btnOpenAudioFile, &QPushButton::clicked, tracksController, [&]() {
         auto fileName =
-            QFileDialog::getOpenFileName(btnOpenAudioFile, "Select an Audio File", ".", "Wave Files (*.wav)");
+            QFileDialog::getOpenFileName(btnOpenAudioFile, "Select an Audio File", ".",
+                "All Audio File (*.wav *.flac *.mp3);;Wave File (*.wav);;Flac File (*.flac);;MP3 File (*.mp3)");
         if (fileName.isNull())
             return;
 
