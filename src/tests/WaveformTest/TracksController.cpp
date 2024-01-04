@@ -3,6 +3,7 @@
 //
 
 #include <QDebug>
+#include <QOpenGLWidget>
 
 #include "AudioClipGraphicsItem.h"
 #include "TracksController.h"
@@ -12,6 +13,7 @@ TracksController::TracksController() {
     // Create scene and view
     m_tracksScene = new TracksGraphicsScene;
     m_tracksView = new TracksGraphicsView;
+    // m_tracksView->setViewport(new QOpenGLWidget());
     m_tracksView->setMinimumHeight(150);
     m_tracksView->setScene(m_tracksScene);
     m_tracksView->centerOn(0, 0);

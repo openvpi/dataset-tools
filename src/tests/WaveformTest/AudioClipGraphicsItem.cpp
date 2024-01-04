@@ -96,9 +96,9 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
         // auto end = m_renderEnd;
         auto start = clipStart() * chunksPerTick;
         auto end = (clipStart() + clipLen()) * chunksPerTick;
-        auto drawPeak = [&](int x, double min, double max) {
-            auto yMin = -min * halfRectHeight + halfRectHeight + rectTop;
-            auto yMax = -max * halfRectHeight + halfRectHeight + rectTop;
+        auto drawPeak = [&](int x, short min, short max) {
+            auto yMin = -min * halfRectHeight / 32767 + halfRectHeight + rectTop;
+            auto yMax = -max * halfRectHeight / 32767 + halfRectHeight + rectTop;
             painter->drawLine(x, yMin, x, yMax);
         };
 
@@ -106,9 +106,9 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
 
         //        qDebug() << m_peakCache.count() << divideCount;
         for (int i = 0; i < rectWidth; i++) {
-            double min = 0;
-            double max = 0;
-            auto updateMinMax = [](const std::tuple<double, double> &frame, double &min, double &max) {
+            short min = 0;
+            short max = 0;
+            auto updateMinMax = [](const std::tuple<short, short> &frame, short &min, short &max) {
                 auto frameMin = std::get<0>(frame);
                 auto frameMax = std::get<1>(frame);
                 if (frameMin < min)

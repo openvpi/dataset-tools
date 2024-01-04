@@ -40,7 +40,7 @@ protected:
 
     // SndfileHandle sf;
     AudioClipBackgroundWorker *m_worker;
-    QVector<std::tuple<double, double>> m_peakCache;
+    QVector<std::tuple<short, short>> m_peakCache;
     double m_renderStart = 0;
     double m_renderEnd = 0;
     double m_scale = 1.0;

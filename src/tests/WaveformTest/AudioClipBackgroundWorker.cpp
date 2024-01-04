@@ -29,7 +29,7 @@ void AudioClipBackgroundWorker::run() {
         return;
     }
 
-    QVector<std::tuple<double, double>> nullVector;
+    QVector<std::tuple<short, short>> nullVector;
     peakCache.swap(nullVector);
 
     auto sr = sf.samplerate();
@@ -45,18 +45,30 @@ void AudioClipBackgroundWorker::run() {
         if (samplesRead == 0) {
             break;
         }
-        double max = 0;
-        double min = 0;
+        double sampleMax = 0;
+        double sampleMin = 0;
         qint64 framesRead = samplesRead / channels;
         for (qint64 i = 0; i < framesRead; i++) {
             double monoSample = 0.0;
             for (int j = 0; j < channels; j++) {
                 monoSample += buffer[i * channels + j] / static_cast<double>(channels);
             }
-            if (monoSample > max)
-                max = monoSample;
-            if (monoSample < min)
-                min = monoSample;
+            if (monoSample > sampleMax)
+                sampleMax = monoSample;
+            if (monoSample < sampleMin)
+                sampleMin = monoSample;
+
+            auto toShortInt = [](double d) -> short{
+                if (d < -1)
+                    d = -1;
+                else if (d > 1)
+                    d = 1;
+                return static_cast<short>(d * 32767);
+            };
+
+            short max = toShortInt(sampleMax);
+            short min = toShortInt(sampleMin);
+
             auto pair = std::make_pair(min, max);
             peakCache.append(pair);
         }

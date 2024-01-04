@@ -17,7 +17,7 @@ public:
     void setPath(const QString &path);
     void run() override;
 
-    QVector<std::tuple<double, double>> peakCache;
+    QVector<std::tuple<short, short>> peakCache;
 
 signals:
     // void progressChanged(int progress);
