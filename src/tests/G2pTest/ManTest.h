@@ -10,6 +10,7 @@ namespace G2pTest {
     public:
         explicit ManTest();
         ~ManTest();
+        bool apiTest();
         bool convertNumTest();
         bool removeToneTest();
         bool batchTest(bool resDisplay = false);

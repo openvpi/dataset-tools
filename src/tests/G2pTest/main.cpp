@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
     ManTest manTest;
     qDebug() << "Mandarin G2P test:";
     qDebug() << "--------------------";
+    manTest.apiTest();
     manTest.convertNumTest();
     manTest.removeToneTest();
     manTest.batchTest();

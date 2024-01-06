@@ -19,13 +19,13 @@ namespace IKg2p {
 
         QHash<QString, QString> phrases_map;
         QHash<QString, QStringList> phrases_dict;
-        QHash<QString, QString> word_dict;
+        QHash<QString, QStringList> word_dict;
         QHash<QString, QString> trans_dict;
 
         // Key as QStringView
         QHash<QStringView, QStringView> phrases_map2;
         QHash<QStringView, QList<QStringView>> phrases_dict2;
-        QHash<QStringView, QStringView> word_dict2;
+        QHash<QStringView, QList<QStringView>> word_dict2;
         QHash<QStringView, QStringView> trans_dict2;
 
         QString m_language;
@@ -39,7 +39,7 @@ namespace IKg2p {
         }
 
         inline QStringView getDefaultPinyin(const QStringView &text) const {
-            return word_dict2.value(text, {});
+            return word_dict2.value(text, {}).at(0);
         }
 
         void zhPosition(const QList<QStringView> &input, QList<QStringView> &res, QList<int> &positions,

@@ -90,7 +90,7 @@ namespace IKg2p {
 
         copyStringViewHash(phrases_map, phrases_map2);
         copyStringViewListHash(phrases_dict, phrases_dict2);
-        copyStringViewHash(word_dict, word_dict2);
+        copyStringViewListHash(word_dict, word_dict2);
         copyStringViewHash(trans_dict, trans_dict2);
     }
 
@@ -254,6 +254,20 @@ namespace IKg2p {
         d.q_ptr = this;
 
         d.init();
+    }
+
+    QString ZhG2p::tradToSim(const QString &text) const {
+        Q_D(const ZhG2p);
+        return d->tradToSim(text).toString();
+    }
+
+    bool ZhG2p::isPolyphonic(const QString &text) const {
+        Q_D(const ZhG2p);
+        return d->isPolyphonic(text);
+    }
+    QStringList ZhG2p::getDefaultPinyin(const QString &text) const {
+        Q_D(const ZhG2p);
+        return d->word_dict.value(d->tradToSim(text).toString(), {});
     }
 
 }

@@ -17,6 +17,10 @@ namespace IKg2p {
         QString convert(const QString &input, bool tone = true, bool convertNum = true);
         QString convert(const QList<QStringView> &input, bool tone = true, bool convertNum = true);
 
+        QString tradToSim(const QString &text) const;
+        bool isPolyphonic(const QString &text) const;
+        QStringList getDefaultPinyin(const QString &text) const;
+
     protected:
         ZhG2p(ZhG2pPrivate &d, QObject *parent = nullptr);
 

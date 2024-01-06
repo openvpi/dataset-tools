@@ -95,7 +95,7 @@ namespace IKg2p {
             if (keyValuePair.count() == 2) {
                 QString key = keyValuePair[0];
                 QString value = keyValuePair[1];
-                if (value.split(" ").count() > 1) {
+                if (value.split(" ").count() > 0) {
                     resultMap[key] = value.split(" ");
                 }
             }

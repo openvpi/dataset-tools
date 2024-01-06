@@ -13,6 +13,21 @@ namespace G2pTest {
     ManTest::~ManTest() {
     }
 
+    bool ManTest::apiTest() {
+        if (!g2p_zh->isPolyphonic("的"))
+            return false;
+        if (g2p_zh->isPolyphonic("犬"))
+            return false;
+        if (g2p_zh->tradToSim("臺") != "台")
+            return false;
+        if (g2p_zh->tradToSim("犬") != "犬")
+            return false;
+        if (!(g2p_zh->getDefaultPinyin("杆").at(0) == "gan3" && g2p_zh->getDefaultPinyin("杆").at(1) == "gan1"))
+            return false;
+        qDebug() << "apiTest: success";
+        return true;
+    }
+
     bool ManTest::convertNumTest() {
         QString raw1 = "明月@1几32时有##一";
         QString tar1 = "ming yue yi ji san er shi you yi";
