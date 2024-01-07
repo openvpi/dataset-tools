@@ -2,7 +2,7 @@
 #define DATASET_TOOLS_MANTEST_H
 
 #include "g2pglobal.h"
-#include "zhg2p.h"
+#include "mandarin.h"
 
 namespace G2pTest {
 

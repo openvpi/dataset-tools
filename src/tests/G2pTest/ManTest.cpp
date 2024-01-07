@@ -7,7 +7,7 @@
 #include <QTextCodec>
 
 namespace G2pTest {
-    ManTest::ManTest() : g2p_zh(new IKg2p::ZhG2p("mandarin")) {
+    ManTest::ManTest() : g2p_zh(new IKg2p::Mandarin()) {
     }
 
     ManTest::~ManTest() {

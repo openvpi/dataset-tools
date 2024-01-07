@@ -75,12 +75,7 @@ namespace IKg2p {
 
     // load zh convert dict
     void ZhG2pPrivate::init() {
-        QString dict_dir;
-        if (m_language == "mandarin") {
-            dict_dir = dictionaryPath() + "/mandarin";
-        } else {
-            dict_dir = dictionaryPath() + "/cantonese";
-        }
+        QString dict_dir = dictionaryPath() + "/" + m_language;
 
         loadDict(dict_dir, "phrases_map.txt", phrases_map);
         loadDict(dict_dir, "phrases_dict.txt", phrases_dict);

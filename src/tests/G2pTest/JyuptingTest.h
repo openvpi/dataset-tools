@@ -2,7 +2,7 @@
 #define DATASET_TOOLS_JYUPTINGTEST_H
 
 #include "g2pglobal.h"
-#include "zhg2p.h"
+#include "cantonese.h"
 
 namespace G2pTest {
 

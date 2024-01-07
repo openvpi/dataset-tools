@@ -8,7 +8,7 @@
 
 
 namespace G2pTest {
-    JyuptingTest::JyuptingTest() : g2p_can(new IKg2p::ZhG2p("cantonese")) {
+    JyuptingTest::JyuptingTest() : g2p_can(new IKg2p::Cantonese()) {
     }
 
     JyuptingTest::~JyuptingTest() {
