@@ -4,6 +4,7 @@
 #include <QObject>
 
 namespace IKg2p {
+    enum class errorType { Default = 0, Ignore = 1 };
 
     class ZhG2pPrivate;
 
@@ -14,8 +15,10 @@ namespace IKg2p {
         explicit ZhG2p(QString language, QObject *parent = nullptr);
         ~ZhG2p();
 
-        QString convert(const QString &input, bool tone = true, bool convertNum = true);
-        QString convert(const QList<QStringView> &input, bool tone = true, bool convertNum = true);
+        QString convert(const QString &input, bool tone = true, bool convertNum = true,
+                        errorType error = errorType::Default);
+        QString convert(const QList<QStringView> &input, bool tone = true, bool convertNum = true,
+                        errorType error = errorType::Default);
 
         QString tradToSim(const QString &text) const;
         bool isPolyphonic(const QString &text) const;

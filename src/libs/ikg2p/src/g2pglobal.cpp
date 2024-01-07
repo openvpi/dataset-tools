@@ -54,6 +54,9 @@ namespace IKg2p {
                 int length = (pos + 1 < input.length() && isSpecialKana(input[pos + 1])) ? 2 : 1;
                 res.append(input.mid(pos, length));
                 pos += length;
+            } else if (!currentChar.isSpace()) {
+                res.append(input.mid(pos, 1));
+                pos++;
             } else {
                 pos++;
             }

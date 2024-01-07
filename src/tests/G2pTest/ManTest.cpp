@@ -31,7 +31,7 @@ namespace G2pTest {
     bool ManTest::convertNumTest() {
         QString raw1 = "明月@1几32时有##一";
         QString tar1 = "ming yue yi ji san er shi you yi";
-        QString res1 = g2p_zh->convert(raw1, false, true);
+        QString res1 = g2p_zh->convert(raw1, false, true, IKg2p::errorType::Ignore);
         if (res1 != tar1) {
             qDebug() << "raw1:" << raw1;
             qDebug() << "tar1:" << tar1;
@@ -40,8 +40,8 @@ namespace G2pTest {
         }
 
         QString raw2 = "明月@1几32时有##一";
-        QString tar2 = "ming yue 1 ji 3 2 shi you yi";
-        QString res2 = g2p_zh->convert(raw1, false, false);
+        QString tar2 = "ming yue ji shi you yi";
+        QString res2 = g2p_zh->convert(raw1, false, false, IKg2p::errorType::Ignore);
         if (res2 != tar2) {
             qDebug() << "raw2:" << raw2;
             qDebug() << "tar2:" << tar2;
@@ -56,7 +56,7 @@ namespace G2pTest {
     bool ManTest::removeToneTest() {
         QString raw1 = "明月@1几32时有##一";
         QString tar1 = "ming2 yue4 yi1 ji3 san1 er4 shi2 you3 yi1";
-        QString res1 = g2p_zh->convert(raw1, true, true);
+        QString res1 = g2p_zh->convert(raw1, true, true, IKg2p::errorType::Ignore);
         if (res1 != tar1) {
             qDebug() << "raw1:" << raw1;
             qDebug() << "tar1:" << tar1;
@@ -65,8 +65,8 @@ namespace G2pTest {
         }
 
         QString raw2 = "明月@1几32时有##一";
-        QString tar2 = "ming2 yue4 1 ji3 3 2 shi2 you3 yi1";
-        QString res2 = g2p_zh->convert(raw1, true, false);
+        QString tar2 = "ming2 yue4 ji3 shi2 you3 yi1";
+        QString res2 = g2p_zh->convert(raw1, true, false, IKg2p::errorType::Ignore);
         if (res2 != tar2) {
             qDebug() << "raw2:" << raw2;
             qDebug() << "tar2:" << tar2;

@@ -122,11 +122,11 @@ namespace IKg2p {
     ZhG2p::~ZhG2p() {
     }
 
-    QString ZhG2p::convert(const QString &input, bool tone, bool convertNum) {
-        return convert(splitString(input), tone, convertNum);
+    QString ZhG2p::convert(const QString &input, bool tone, bool convertNum, errorType error) {
+        return convert(splitString(input), tone, convertNum, error);
     }
 
-    QString ZhG2p::convert(const QList<QStringView> &input, bool tone, bool convertNum) {
+    QString ZhG2p::convert(const QList<QStringView> &input, bool tone, bool convertNum, errorType error) {
         Q_D(const ZhG2p);
         QList<QStringView> inputList;
         QList<int> inputPos;
@@ -242,6 +242,9 @@ namespace IKg2p {
         }
 
         // Alloc 2
+        if (error == errorType::Ignore) {
+            return joinView(result, QStringLiteral(" "));
+        }
         return resetZH(input, result, inputPos);
     }
 
