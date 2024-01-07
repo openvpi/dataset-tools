@@ -2,7 +2,7 @@
 #include <QDebug>
 
 #include "g2pglobal.h"
-#include "zhg2p.h"
+#include "mandarin.h"
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <iostream>
@@ -35,12 +35,12 @@ int main(int argc, char *argv[]) {
 
     qDebug() << "G2P mix test:";
     qDebug() << "--------------------";
-    auto g2p_zh = new IKg2p::ZhG2p("mandarin");
+    auto g2p_man = new IKg2p::Mandarin();
     QString raw2 =
         "举杯あャ坐ュ饮放あ歌竹林间/清风拂 面悄word然xax asx a xxs拨？Q！动初弦/便推开烦恼与尘喧/便还是当时的少年";
-    qDebug() << g2p_zh->convert(raw2, false, false);
+    qDebug() << g2p_man->convert(raw2, false, false);
     qDebug() << "--------------------";
-    qDebug() << g2p_zh->convert(raw2, false, false, IKg2p::errorType::Ignore);
+    qDebug() << g2p_man->convert(raw2, false, false, IKg2p::errorType::Ignore);
 
     return 0;
 }

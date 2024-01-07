@@ -8,8 +8,8 @@
 #include <QTextCodec>
 
 TextWidget::TextWidget(QWidget *parent)
-    : QWidget(parent), g2p(new IKg2p::ZhG2p("mandarin")), g2p_jp(new IKg2p::JpG2p()), g2p_en(new IKg2p::EnG2p()),
-      g2p_canton(new IKg2p::ZhG2p("cantonese")), mecabYomi(mecabInit("mecabDict", "yomi")),
+    : QWidget(parent), g2p_man(new IKg2p::Mandarin()), g2p_jp(new IKg2p::JpG2p()), g2p_en(new IKg2p::EnG2p()),
+      g2p_canton(new IKg2p::Cantonese()), mecabYomi(mecabInit("mecabDict", "yomi")),
       mecabWakati(mecabInit("mecabDict", "wakati")) {
     wordsText = new QLineEdit();
     wordsText->setPlaceholderText("Enter mandarin here...");
@@ -59,6 +59,12 @@ TextWidget::TextWidget(QWidget *parent)
     canTone = new QCheckBox("Preserve tone");
     canTone->hide();
     optionsLayout->addWidget(canTone);
+
+    covertNum = new QCheckBox("Convert number");
+    optionsLayout->addWidget(covertNum);
+
+    cleanRes = new QCheckBox("Clean result");
+    optionsLayout->addWidget(cleanRes);
 
     buttonsLayout = new QHBoxLayout();
     buttonsLayout->setMargin(0);
@@ -112,7 +118,8 @@ void TextWidget::_q_replaceButtonClicked() {
     QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p->convert(sentence(), manTone->isChecked());
+            str = g2p_man->convert(sentence(), manTone->isChecked(), covertNum->isChecked(),
+                                   cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
             break;
         case 1:
             str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
@@ -121,7 +128,8 @@ void TextWidget::_q_replaceButtonClicked() {
             str = g2p_en->word2arpabet(sentence(), removeArpabetNum->isChecked());
             break;
         case 3:
-            str = g2p_canton->convert(sentence(), canTone->isChecked());
+            str = g2p_canton->convert(sentence(), canTone->isChecked(), covertNum->isChecked(),
+                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
             break;
         default:
             break;
@@ -134,7 +142,8 @@ void TextWidget::_q_appendButtonClicked() {
     QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p->convert(sentence(), manTone->isChecked());
+            str = g2p_man->convert(sentence(), manTone->isChecked(), covertNum->isChecked(),
+                                   cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
             break;
         case 1:
             str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
@@ -143,7 +152,8 @@ void TextWidget::_q_appendButtonClicked() {
             str = g2p_en->word2arpabet(sentence(), removeArpabetNum->isChecked());
             break;
         case 3:
-            str = g2p_canton->convert(sentence(), canTone->isChecked());
+            str = g2p_canton->convert(sentence(), canTone->isChecked(), covertNum->isChecked(),
+                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
             break;
         default:
             break;
@@ -155,24 +165,22 @@ void TextWidget::_q_appendButtonClicked() {
 
 void TextWidget::_q_onLanguageComboIndexChanged() {
     static QMap<QString, QList<QCheckBox *>> optionMap = {
-        {"pinyin",          {manTone}                      },
+        {"pinyin",          {manTone, covertNum, cleanRes} },
         {"romaji",          {removeSokuon, doubleConsonant}},
         {"arpabet(test)",   {removeArpabetNum}             },
-        {"cantonese(test)", {canTone}                      }
+        {"cantonese(test)", {canTone, covertNum, cleanRes} }
     };
 
     QString selectedLanguage = languageCombo->currentText();
     for (auto it = optionMap.begin(); it != optionMap.end(); ++it) {
-        if (it.key() == selectedLanguage) {
-            for (QCheckBox *control : it.value()) {
-                control->show();
-            }
-        } else {
-            for (QCheckBox *control : it.value()) {
-                control->hide();
-                control->setChecked(false);
-            }
+        for (QCheckBox *control : it.value()) {
+            control->hide();
+            control->setChecked(false);
         }
+    }
+
+    for (QCheckBox *control : optionMap[selectedLanguage]) {
+        control->show();
     }
 }
 

@@ -11,8 +11,6 @@
 #include <QStringList>
 #include <utility>
 
-#include "zhg2p.h"
-
 QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix);
 QString labFileToAudioFile(const QString &filename);
 

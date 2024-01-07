@@ -26,7 +26,7 @@
 识:shi2 shi5 zhi4
 点:dian3 dian5
 下:xia4 xia5
-儿:er5 er5 er2
+儿:er5 er2
 子:zi5 zi3 zi4
 小:xiao3
 心:xin1 xin5
@@ -45,7 +45,7 @@
 干:gan1 gan4
 二:er4 er2
 净:jing4 jing5
-了:le5 le5 liao3 liao4
+了:le5 liao3 liao4
 百:bai3 bo4
 事:shi4 shi5
 无:wu2 mo2
@@ -261,7 +261,7 @@
 风:feng1
 顺:shun4
 席:xi2
-地:de5 di4 de5 di5
+地:de5 di4 di5
 带:dai4
 路:lu4 lu5
 过:guo4 guo5
@@ -277,7 +277,7 @@
 愿:yuan4
 式:shi4 shi5
 份:fen4 fen5
-弹:tan2 dan4 tan2 tan5
+弹:tan2 dan4 tan5
 指:zhi3 zhi5
 顷:qing3
 深:shen1
@@ -391,7 +391,7 @@
 根:gen1
 筋:jin1
 绳:sheng2
-的:de5 de5 di4 di1 di2
+的:de5 di4 di1 di2
 蚂:ma3 ma4 ma1
 蚱:zha5 zha4
 杆:gan3 gan1
@@ -515,7 +515,7 @@
 莫:mo4 mo5
 箩:luo2
 筐:kuang1
-系:ji4 xi4 xi5 ji4
+系:ji4 xi4 xi5
 列:lie4 lie1
 纸:zhi3
 级:ji2
@@ -589,7 +589,7 @@
 蔽:bi4
 堂:tang2 tang5
 抄:chao1
-重:chong2 zhong4 chong2
+重:chong2 zhong4
 语:yu3 yu5 yu4
 谶:chen4
 破:po4
@@ -785,7 +785,7 @@
 俟:si4 qi2
 刚:gang1 gang5
 摸:mo1 mo5 mo2
-着:zhe5 zhe5 zhuo2 zhao2 zhao1
+着:zhe5 zhuo2 zhao2 zhao1
 蛇:she2 yi2
 矛:mao2
 母:mu3
@@ -953,7 +953,7 @@
 饭:fan4
 菱:ling2
 云:yun2
-藏:cang2 zang4 cang2
+藏:cang2 zang4
 藩:fan1
 叛:pan4
 苏:su1
@@ -988,7 +988,7 @@
 胜:sheng4
 眉:mei2
 鹀:wu2
-都:dou1 du1 dou1
+都:dou1 du1
 甘:gan1
 油:you2
 屯:tun2 zhun1
@@ -1405,7 +1405,7 @@
 景:jing3
 智:zhi4
 暇:xia2
-曾:ceng2 zeng1 ceng2
+曾:ceng2 zeng1
 罪:zui4 zui5
 遇:yu4
 枉:wang3 wang5
@@ -1796,7 +1796,7 @@
 乃:nai3
 仰:yang3
 慕:mu4
-盛:sheng4 sheng4 cheng2
+盛:sheng4 cheng2
 旷:kuang4
 留:liu2
 验:yan4
@@ -2118,7 +2118,7 @@
 挤:ji3
 纽:niu3
 阻:zu3
-还:hai2 huan2 hai2
+还:hai2 huan2
 配:pei4
 驰:chi2
 庄:zhuang1
@@ -2248,7 +2248,7 @@
 偿:chang2
 填:tian2
 泊:bo2 po1
-拓:ta4 tuo4 ta4
+拓:ta4 tuo4
 扑:pu1
 簇:cu4
 羔:gao1
@@ -3181,7 +3181,7 @@
 刴:duo4
 刵:er4
 踏:ta4 ta1
-呢:ne5 ni2 ne5
+呢:ne5 ni2
 屏:ping2 bing3 bing1
 李:li3 li5
 戳:chuo1
@@ -6886,7 +6886,7 @@
 湣:min3
 湩:dong4
 湫:jiao3
-湮:yan1 yin1 yan1
+湮:yan1 yin1
 麟:lin2
 湱:huo4
 湲:yuan2
