@@ -3,6 +3,7 @@
 //
 
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QPainter>
 #include <QThread>
@@ -52,12 +53,11 @@ void AudioClipGraphicsItem::onLoadComplete(bool success, QString errorMessage) {
     update();
 }
 void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
+    QElapsedTimer mstimer;
     // Draw frame
     ClipGraphicsItem::paint(painter, option, widget);
 
     painter->setRenderHint(QPainter::Antialiasing, false);
-
-    // TODO: Draw waveform in previewRect() when file loaded
 
     auto rectLeft = previewRect().left();
     auto rectTop = previewRect().top();
@@ -89,11 +89,18 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     painter->setPen(pen);
 
     auto drawPeakGraphic = [&]() {
+        // mstimer.start();
         if (m_peakCache.count() == 0)
             return;
 
-        // auto start = m_renderStart;
-        // auto end = m_renderEnd;
+        auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
+        auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
+        auto waveRectLeft =
+            m_visibleRect.left() < rectLeftScene ? 0 : m_visibleRect.left() - rectLeftScene;
+        auto waveRectRight =
+            m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene: rectRightScene- rectLeftScene;
+        auto waveRectWidth = waveRectRight - waveRectLeft;
+
         auto start = clipStart() * chunksPerTick;
         auto end = (clipStart() + clipLen()) * chunksPerTick;
         auto drawPeak = [&](int x, short min, short max) {
@@ -105,7 +112,7 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
         int divideCount = (end - start) / rectWidth;
 
         //        qDebug() << m_peakCache.count() << divideCount;
-        for (int i = 0; i < rectWidth; i++) {
+        for (int i = static_cast<int>(waveRectLeft); i < static_cast<int>(waveRectRight); i++) {
             short min = 0;
             short max = 0;
             auto updateMinMax = [](const std::tuple<short, short> &frame, short &min, short &max) {
@@ -129,6 +136,9 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
             }
             drawPeak(i, min, max);
         }
+
+        // const auto time = static_cast<double>(mstimer.nsecsElapsed()) / 1000000.0;
+        // qDebug() << time;
     };
 
     // TODO: waveform shown in line and individual sample mode
@@ -141,4 +151,23 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
         case Sample:
             break;
     }
+
+    // // Draw visible area
+    // auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
+    // auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
+    // auto waveRectLeft =
+    //     m_visibleRect.left() < rectLeftScene ? 0 : m_visibleRect.left() - rectLeftScene;
+    // auto waveRectTop = previewRect().top();
+    // auto waveRectRight =
+    //     m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene: rectRightScene- rectLeftScene;
+    // auto waveRectWidth = waveRectRight - waveRectLeft;
+    // auto waveRectHeight = previewRect().height();
+    // auto waveRect = QRectF(waveRectLeft, waveRectTop, waveRectWidth, waveRectHeight);
+    //
+    // pen.setColor(QColor(255, 0, 0));
+    // pen.setWidth(1);
+    // painter->setPen(pen);
+    // painter->drawRect(waveRect);
+    // painter->drawLine(waveRect.topLeft(), waveRect.bottomRight());
+    // painter->drawLine(waveRect.topRight(), waveRect.bottomLeft());
 }
