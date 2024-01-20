@@ -50,7 +50,7 @@ protected:
     qreal m_scaleX = 1;
     qreal m_scaleY = 1;
     // qreal m_scaleXMin = 0.1;
-    qreal m_scaleXMax = 3; // 3x
+    qreal m_scaleXMax = 5; // 5x
     qreal m_scaleYMin = 0.5;
     qreal m_scaleYMax = 8;
 

@@ -11,21 +11,12 @@
 
 #include <sndfile.hh>
 
-class AudioClipGraphicsItem final : public ClipGraphicsItem{
+class AudioClipGraphicsItem final : public ClipGraphicsItem {
 public:
-    enum RenderMode {
-        Peak,
-        Line,
-        Sample
-    };
-
-    explicit AudioClipGraphicsItem(int itemId , QGraphicsItem *parent = nullptr);
-    ~AudioClipGraphicsItem();
+    explicit AudioClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
+    ~AudioClipGraphicsItem() override = default;
 
     void openFile(const QString &path);
-
-    RenderMode renderMode();
-    void setRenderMode(RenderMode mode);
 
     QString path();
 
@@ -36,22 +27,24 @@ public slots:
     void onLoadComplete(bool success, QString errorMessage);
 
 protected:
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
+    enum RenderResolution { HighResolution, LowResolution };
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
     // SndfileHandle sf;
-    AudioClipBackgroundWorker *m_worker;
+    AudioClipBackgroundWorker *m_worker = nullptr;
     QVector<std::tuple<short, short>> m_peakCache;
+    QVector<std::tuple<short, short>> m_peakCacheThumbnail;
     double m_renderStart = 0;
     double m_renderEnd = 0;
-    double m_scale = 1.0;
     QPoint m_mouseLastPos;
     int m_rectLastWidth = -1;
-    RenderMode m_renderMode = Peak;
-    int chunksPerTick = 200;
+    int m_chunksPerTick = 200; // TODO: calculate by tempo and sample rate
+    RenderResolution m_resolution = LowResolution;
     bool m_loading = false;
     QString m_path;
 };
 
 
 
-#endif //AUDIOCLIPGRAPHICSITEM_H
+#endif // AUDIOCLIPGRAPHICSITEM_H

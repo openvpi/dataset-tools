@@ -31,6 +31,8 @@ void AudioClipBackgroundWorker::run() {
 
     QVector<std::tuple<short, short>> nullVector;
     peakCache.swap(nullVector);
+    QVector<std::tuple<short, short>> nullVectorThumbnail;
+    peakCacheThumbnail.swap(nullVectorThumbnail);
 
     auto sr = sf.samplerate();
     auto channels = sf.channels();
@@ -73,6 +75,33 @@ void AudioClipBackgroundWorker::run() {
             peakCache.append(pair);
         }
     }
+
+    // Create thumbnail from peak cache
+    short min = 0;
+    short max = 0;
+    bool hasTail = false;
+    for (int i = 0; i < peakCache.count(); i++) {
+        if ((i + 1) % 20 == 0) {
+            peakCacheThumbnail.append(std::make_pair(min, max));
+            min = 0;
+            max = 0;
+            hasTail = false;
+        }
+        else {
+            auto frame = peakCache.at(i);
+            auto frameMin = std::get<0>(frame);
+            auto frameMax = std::get<1>(frame);
+            if (frameMin < min)
+                min = frameMin;
+            if (frameMax > max)
+                max = frameMax;
+            hasTail = true;
+        }
+    }
+    if (hasTail)
+        peakCacheThumbnail.append(std::make_pair(min, max));
+    qDebug() << peakCache.count();
+    qDebug() << peakCacheThumbnail.count();
 
     // QThread::msleep(3000);
     emit finished(true, nullptr);

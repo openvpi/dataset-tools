@@ -18,6 +18,7 @@ public:
     void run() override;
 
     QVector<std::tuple<short, short>> peakCache;
+    QVector<std::tuple<short, short>> peakCacheThumbnail;
 
 signals:
     // void progressChanged(int progress);

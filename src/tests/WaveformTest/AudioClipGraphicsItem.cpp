@@ -13,8 +13,7 @@
 
 AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId, QGraphicsItem *parent) : ClipGraphicsItem(itemId, parent) {
 }
-AudioClipGraphicsItem::~AudioClipGraphicsItem() {
-}
+
 void AudioClipGraphicsItem::openFile(const QString &path) {
     m_path = path;
     m_loading = true;
@@ -42,12 +41,14 @@ void AudioClipGraphicsItem::onLoadComplete(bool success, QString errorMessage) {
     }
 
     m_peakCache.swap(m_worker->peakCache);
+    m_peakCacheThumbnail.swap(m_worker->peakCacheThumbnail);
     delete m_worker;
 
     setClipStart(0);
-    setLength(m_peakCache.count() / chunksPerTick);
-    setClipLen(m_peakCache.count() / chunksPerTick);
-    m_scale = 1.0;
+    setLength(m_peakCache.count() / m_chunksPerTick);
+    setClipLen(m_peakCache.count() / m_chunksPerTick);
+    // setLength(m_peakCacheThumbnail.count() / chunksPerTick);
+    // setClipLen(m_peakCacheThumbnail.count() / chunksPerTick);
     m_loading = false;
 
     update();
@@ -70,7 +71,7 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
         return;
     auto widthHeightMin = rectWidth < rectHeight ? rectWidth : rectHeight;
     auto colorAlpha = widthHeightMin <= gradientRange ? 255 * widthHeightMin / gradientRange : 255;
-    auto peakColor = QColor(255, 255, 255, colorAlpha);
+    auto peakColor = QColor(255, 255, 255, static_cast<int>(colorAlpha));
 
     QPen pen;
 
@@ -88,69 +89,68 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     pen.setWidth(1);
     painter->setPen(pen);
 
-    auto drawPeakGraphic = [&]() {
-        // mstimer.start();
-        if (m_peakCache.count() == 0)
-            return;
+    mstimer.start();
+    if (m_peakCache.count() == 0 || m_peakCacheThumbnail.count() == 0)
+        return;
 
-        auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
-        auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
-        auto waveRectLeft =
-            m_visibleRect.left() < rectLeftScene ? 0 : m_visibleRect.left() - rectLeftScene;
-        auto waveRectRight =
-            m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene: rectRightScene- rectLeftScene;
-        auto waveRectWidth = waveRectRight - waveRectLeft;
+    // if (scaleX() >= 3 && scaleY() >= 2)
+    //     m_resolution = HighResolution;
+    // else
+    //     m_resolution = LowResolution;
+    // qDebug() << (m_resolution == HighResolution ? "High res" : "Low res");
 
-        auto start = clipStart() * chunksPerTick;
-        auto end = (clipStart() + clipLen()) * chunksPerTick;
-        auto drawPeak = [&](int x, short min, short max) {
-            auto yMin = -min * halfRectHeight / 32767 + halfRectHeight + rectTop;
-            auto yMax = -max * halfRectHeight / 32767 + halfRectHeight + rectTop;
-            painter->drawLine(x, yMin, x, yMax);
-        };
+    const auto peakData = m_resolution == LowResolution ? m_peakCacheThumbnail : m_peakCache;
+    const auto chunksPerTick = m_resolution == LowResolution ? m_chunksPerTick / 20 : m_chunksPerTick;
 
-        int divideCount = (end - start) / rectWidth;
+    auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
+    auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
+    auto waveRectLeft = m_visibleRect.left() < rectLeftScene ? 0 : m_visibleRect.left() - rectLeftScene;
+    auto waveRectRight =
+        m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene : rectRightScene - rectLeftScene;
+    auto waveRectWidth = waveRectRight - waveRectLeft;
 
-        //        qDebug() << m_peakCache.count() << divideCount;
-        for (int i = static_cast<int>(waveRectLeft); i < static_cast<int>(waveRectRight); i++) {
-            short min = 0;
-            short max = 0;
-            auto updateMinMax = [](const std::tuple<short, short> &frame, short &min, short &max) {
-                auto frameMin = std::get<0>(frame);
-                auto frameMax = std::get<1>(frame);
-                if (frameMin < min)
-                    min = frameMin;
-                if (frameMax > max)
-                    max = frameMax;
-            };
+    auto start = clipStart() * chunksPerTick;
+    auto end = (clipStart() + clipLen()) * chunksPerTick;
+    auto divideCount = ((end - start) / rectWidth);
+    // qDebug() << start << end << rectWidth << (int)divideCount;
 
-            for (int j = start + i * divideCount; j < (start + i * divideCount + divideCount); j++) {
-                auto frame = m_peakCache.at(j);
-                updateMinMax(frame, min, max);
-            }
-            if (i == rectWidth - 1) {
-                for (int j = start + i * (divideCount + 1); j < m_peakCache.count(); j++) {
-                    auto frame = m_peakCache.at(j);
-                    updateMinMax(frame, min, max);
-                }
-            }
-            drawPeak(i, min, max);
-        }
-
-        // const auto time = static_cast<double>(mstimer.nsecsElapsed()) / 1000000.0;
-        // qDebug() << time;
+    auto drawPeak = [&](int x, short min, short max) {
+        auto yMin = -min * halfRectHeight / 32767 + halfRectHeight + rectTop;
+        auto yMax = -max * halfRectHeight / 32767 + halfRectHeight + rectTop;
+        painter->drawLine(x, static_cast<int>(yMin), x, static_cast<int>(yMax));
     };
 
-    // TODO: waveform shown in line and individual sample mode
-    switch (m_renderMode) {
-        case Peak:
-            drawPeakGraphic();
-            break;
-        case Line:
-            break;
-        case Sample:
-            break;
+    // qDebug() << m_peakCacheThumbnail.count() << divideCount;
+    for (int i = static_cast<int>(waveRectLeft); i <= static_cast<int>(waveRectRight); i++) {
+        short min = 0;
+        short max = 0;
+        auto updateMinMax = [](const std::tuple<short, short> &frame, short &min, short &max) {
+            auto frameMin = std::get<0>(frame);
+            auto frameMax = std::get<1>(frame);
+            if (frameMin < min)
+                min = frameMin;
+            if (frameMax > max)
+                max = frameMax;
+        };
+
+        for (int j = start + i * divideCount; j < (start + i * divideCount + divideCount); j++) {
+            // auto frame = m_peakCache.at(j);
+            auto frame = peakData.at(j);
+            updateMinMax(frame, min, max);
+        }
+        if (i == rectWidth - 1) {
+            // for (int j = start + i * (divideCount + 1); j < m_peakCache.count(); j++) {
+            for (int j = start + i * (divideCount + 1); j < peakData.count(); j++) {
+                // auto frame = m_peakCache.at(j);
+                auto frame = peakData.at(j);
+                updateMinMax(frame, min, max);
+            }
+        }
+        drawPeak(i, min, max);
     }
+
+    const auto time = static_cast<double>(mstimer.nsecsElapsed()) / 1000000.0;
+    // qDebug() << time;
 
     // // Draw visible area
     // auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
@@ -159,7 +159,8 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     //     m_visibleRect.left() < rectLeftScene ? 0 : m_visibleRect.left() - rectLeftScene;
     // auto waveRectTop = previewRect().top();
     // auto waveRectRight =
-    //     m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene: rectRightScene- rectLeftScene;
+    //     m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene: rectRightScene-
+    //     rectLeftScene;
     // auto waveRectWidth = waveRectRight - waveRectLeft;
     // auto waveRectHeight = previewRect().height();
     // auto waveRect = QRectF(waveRectLeft, waveRectTop, waveRectWidth, waveRectHeight);
