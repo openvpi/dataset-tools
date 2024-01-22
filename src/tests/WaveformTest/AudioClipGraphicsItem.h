@@ -8,9 +8,6 @@
 #include "AudioClipBackgroundWorker.h"
 #include "ClipGraphicsItem.h"
 
-
-#include <sndfile.hh>
-
 class AudioClipGraphicsItem final : public ClipGraphicsItem {
 public:
     explicit AudioClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
@@ -25,11 +22,13 @@ public:
 
 public slots:
     void onLoadComplete(bool success, QString errorMessage);
+    void onTempoChange(double tempo);
 
 protected:
     enum RenderResolution { High, Low };
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void updateLength();
 
     // SndfileHandle sf;
     AudioClipBackgroundWorker *m_worker = nullptr;

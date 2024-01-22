@@ -159,7 +159,7 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
                        .arg(m_clipLen)
                        .arg(m_scaleX)
                        .arg(m_scaleY);
-    auto text = controlStr + timeStr;
+    auto text = m_clipTypeStr + controlStr + timeStr;
     auto textWidth = fontMetrics.horizontalAdvance(text);
 
     pen.setColor(QColor(255, 255, 255));
@@ -237,10 +237,14 @@ void ClipGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
             break;
         case ResizeRight:
             clipLen = roundPos(m_mouseDownClipLen + delta, quantize);
-            // TODO: check if length can be longer than before ( singing clip )
-            if (clipLen >= m_length)
-                setClipLen(m_length);
-            else if (clipLen >= 0) {
+            if (!m_canResizeLength) {
+                if (clipLen >= m_length)
+                    setClipLen(m_length);
+                else if (clipLen >= 0) {
+                    setClipLen(clipLen);
+                }
+            } else {
+                setLength(m_clipStart + clipLen);
                 setClipLen(clipLen);
             }
             break;

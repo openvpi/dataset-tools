@@ -9,6 +9,8 @@
 #include "TimeGridGraphicsItem.h"
 #include "TracksBackgroundGraphicsItem.h"
 #include "TracksController.h"
+
+#include "SingingClipGraphicsItem.h"
 #include "TracksModel.h"
 
 TracksController::TracksController() {
@@ -27,6 +29,12 @@ TracksController::TracksController() {
     connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, gridItem, &TimeGridGraphicsItem::onVisibleRectChanged);
     connect(m_tracksView, &TracksGraphicsView::scaleChanged, gridItem, &TimeGridGraphicsItem::setScale);
     m_tracksScene->addItem(gridItem);
+
+    // auto testSingingClip = new SingingClipGraphicsItem(0);
+    // testSingingClip->setTrackIndex(0);
+    // m_tracksScene->addItem(testSingingClip);
+    // connect(m_tracksView, &TracksGraphicsView::scaleChanged, testSingingClip, &ClipGraphicsItem::setScale);
+    // connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, testSingingClip, &ClipGraphicsItem::setVisibleRect);
 }
 TracksController::~TracksController() {
 }

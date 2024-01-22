@@ -86,9 +86,11 @@ protected:
     double m_gain = 0;
     // double m_pan = 0;
     bool m_mute = false;
+    QString m_clipTypeStr = "Clip";
     QRectF m_rect;
     QRectF m_visibleRect;
     int m_resizeTolerance = 8; // px
+    bool m_canResizeLength = false;
     // bool m_mouseOnResizeRightArea = false;
     // bool m_mouseOnResizeLeftArea = false;
 

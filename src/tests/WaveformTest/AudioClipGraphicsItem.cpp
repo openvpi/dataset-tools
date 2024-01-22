@@ -12,6 +12,7 @@
 #include "AudioClipGraphicsItem.h"
 
 AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId, QGraphicsItem *parent) : ClipGraphicsItem(itemId, parent) {
+    m_clipTypeStr = "[Audio] ";
 }
 
 void AudioClipGraphicsItem::openFile(const QString &path) {
@@ -44,18 +45,21 @@ void AudioClipGraphicsItem::onLoadComplete(bool success, QString errorMessage) {
     m_channels = m_worker->channels;
     m_chunkSize = m_worker->chunkSize;
     m_mipmapScale = m_worker->mipmapScale;
-    m_chunksPerTick = static_cast<double>(m_sampleRate) / m_chunkSize * 60 / m_tempo / 480;
 
     m_peakCache.swap(m_worker->peakCache);
     m_peakCacheMipmap.swap(m_worker->peakCacheMipmap);
     delete m_worker;
 
     setClipStart(0);
-    setLength(static_cast<int>(m_peakCache.count() / m_chunksPerTick));
+    updateLength();
     setClipLen(static_cast<int>(m_peakCache.count() / m_chunksPerTick));
     m_loading = false;
 
     update();
+}
+void AudioClipGraphicsItem::onTempoChange(double tempo) {
+    m_tempo = tempo;
+    updateLength();
 }
 void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     QElapsedTimer mstimer;
@@ -132,7 +136,7 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
             if (j >= peakData.count())
                 break;
 
-            const auto& frame = peakData.at(j);
+            const auto &frame = peakData.at(j);
             updateMinMax(frame, min, max);
         }
         // if (i == rectWidth - 1) {
@@ -168,4 +172,8 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     // painter->drawRect(waveRect);
     // painter->drawLine(waveRect.topLeft(), waveRect.bottomRight());
     // painter->drawLine(waveRect.topRight(), waveRect.bottomLeft());
+}
+void AudioClipGraphicsItem::updateLength() {
+    m_chunksPerTick = static_cast<double>(m_sampleRate) / m_chunkSize * 60 / m_tempo / 480;
+    setLength(static_cast<int>(m_peakCache.count() / m_chunksPerTick));
 }
