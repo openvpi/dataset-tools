@@ -17,8 +17,13 @@ public:
     void setPath(const QString &path);
     void run() override;
 
+    int sampleRate;
+    int channels;
+    long long frames;
+    int chunkSize = 512;
+    int mipmapScale = 10;
     QVector<std::tuple<short, short>> peakCache;
-    QVector<std::tuple<short, short>> peakCacheThumbnail;
+    QVector<std::tuple<short, short>> peakCacheMipmap;
 
 signals:
     // void progressChanged(int progress);

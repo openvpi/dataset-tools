@@ -19,7 +19,7 @@ public slots:
 public:
 //    void setViewportRect(const QRectF &rect);
 protected:
-    int m_sceneWidth = 1920 * 8; // tick
+    int m_sceneWidth = 1920 / 480 * 64 * 100; // 100 bars
     int m_sceneHeight = 2000;
 };
 

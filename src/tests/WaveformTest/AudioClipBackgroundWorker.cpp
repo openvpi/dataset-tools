@@ -6,6 +6,7 @@
 #include <QThread>
 
 #include "AudioClipBackgroundWorker.h"
+
 AudioClipBackgroundWorker::AudioClipBackgroundWorker(const QString &path) {
     m_path = path;
 }
@@ -32,14 +33,14 @@ void AudioClipBackgroundWorker::run() {
     QVector<std::tuple<short, short>> nullVector;
     peakCache.swap(nullVector);
     QVector<std::tuple<short, short>> nullVectorThumbnail;
-    peakCacheThumbnail.swap(nullVectorThumbnail);
+    peakCacheMipmap.swap(nullVectorThumbnail);
 
-    auto sr = sf.samplerate();
-    auto channels = sf.channels();
-    auto frames = sf.frames();
+    sampleRate = sf.samplerate();
+    channels = sf.channels();
+    frames = sf.frames();
     auto totalSize = frames * channels;
+    // qDebug() << frames;
 
-    int chunkSize = 512;
     std::vector<double> buffer(chunkSize * channels);
     qint64 samplesRead = 0;
     while (samplesRead < frames * channels) {
@@ -59,30 +60,30 @@ void AudioClipBackgroundWorker::run() {
                 sampleMax = monoSample;
             if (monoSample < sampleMin)
                 sampleMin = monoSample;
-
-            auto toShortInt = [](double d) -> short{
-                if (d < -1)
-                    d = -1;
-                else if (d > 1)
-                    d = 1;
-                return static_cast<short>(d * 32767);
-            };
-
-            short max = toShortInt(sampleMax);
-            short min = toShortInt(sampleMin);
-
-            auto pair = std::make_pair(min, max);
-            peakCache.append(pair);
         }
+
+        auto toShortInt = [](double d) -> short{
+            if (d < -1)
+                d = -1;
+            else if (d > 1)
+                d = 1;
+            return static_cast<short>(d * 32767);
+        };
+
+        short max = toShortInt(sampleMax);
+        short min = toShortInt(sampleMin);
+
+        auto pair = std::make_pair(min, max);
+        peakCache.append(pair);
     }
 
-    // Create thumbnail from peak cache
+    // Create mipmap from peak cache
     short min = 0;
     short max = 0;
     bool hasTail = false;
     for (int i = 0; i < peakCache.count(); i++) {
-        if ((i + 1) % 20 == 0) {
-            peakCacheThumbnail.append(std::make_pair(min, max));
+        if ((i + 1) % mipmapScale == 0) {
+            peakCacheMipmap.append(std::make_pair(min, max));
             min = 0;
             max = 0;
             hasTail = false;
@@ -99,9 +100,7 @@ void AudioClipBackgroundWorker::run() {
         }
     }
     if (hasTail)
-        peakCacheThumbnail.append(std::make_pair(min, max));
-    qDebug() << peakCache.count();
-    qDebug() << peakCacheThumbnail.count();
+        peakCacheMipmap.append(std::make_pair(min, max));
 
     // QThread::msleep(3000);
     emit finished(true, nullptr);

@@ -40,16 +40,19 @@ void AudioClipGraphicsItem::onLoadComplete(bool success, QString errorMessage) {
         qDebug() << "open file error" << errorMessage;
         return;
     }
+    m_sampleRate = m_worker->sampleRate;
+    m_channels = m_worker->channels;
+    m_chunkSize = m_worker->chunkSize;
+    m_mipmapScale = m_worker->mipmapScale;
+    m_chunksPerTick = static_cast<double>(m_sampleRate) / m_chunkSize * 60 / m_tempo / 480;
 
     m_peakCache.swap(m_worker->peakCache);
-    m_peakCacheThumbnail.swap(m_worker->peakCacheThumbnail);
+    m_peakCacheMipmap.swap(m_worker->peakCacheMipmap);
     delete m_worker;
 
     setClipStart(0);
-    setLength(m_peakCache.count() / m_chunksPerTick);
-    setClipLen(m_peakCache.count() / m_chunksPerTick);
-    // setLength(m_peakCacheThumbnail.count() / chunksPerTick);
-    // setClipLen(m_peakCacheThumbnail.count() / chunksPerTick);
+    setLength(static_cast<int>(m_peakCache.count() / m_chunksPerTick));
+    setClipLen(static_cast<int>(m_peakCache.count() / m_chunksPerTick));
     m_loading = false;
 
     update();
@@ -87,17 +90,12 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     painter->setPen(pen);
 
     mstimer.start();
-    if (m_peakCache.count() == 0 || m_peakCacheThumbnail.count() == 0)
+    if (m_peakCache.count() == 0 || m_peakCacheMipmap.count() == 0)
         return;
 
-    // if (scaleX() >= 3 && scaleY() >= 2)
-    //     m_resolution = HighResolution;
-    // else
-    //     m_resolution = LowResolution;
-    // qDebug() << (m_resolution == HighResolution ? "High res" : "Low res");
-
-    const auto peakData = m_resolution == LowResolution ? m_peakCacheThumbnail : m_peakCache;
-    const auto chunksPerTick = m_resolution == LowResolution ? m_chunksPerTick / 20 : m_chunksPerTick;
+    m_resolution = scaleX() >= 0.3 ? High : Low;
+    const auto peakData = m_resolution == Low ? m_peakCacheMipmap : m_peakCache;
+    const auto chunksPerTick = m_resolution == Low ? m_chunksPerTick / m_mipmapScale : m_chunksPerTick;
 
     auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
     auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
@@ -131,18 +129,20 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
         };
 
         for (int j = start + i * divideCount; j < (start + i * divideCount + divideCount); j++) {
-            // auto frame = m_peakCache.at(j);
-            auto frame = peakData.at(j);
+            if (j >= peakData.count())
+                break;
+
+            const auto& frame = peakData.at(j);
             updateMinMax(frame, min, max);
         }
-        if (i == rectWidth - 1) {
-            // for (int j = start + i * (divideCount + 1); j < m_peakCache.count(); j++) {
-            for (int j = start + i * (divideCount + 1); j < peakData.count(); j++) {
-                // auto frame = m_peakCache.at(j);
-                auto frame = peakData.at(j);
-                updateMinMax(frame, min, max);
-            }
-        }
+        // if (i == rectWidth - 1) {
+        //     // for (int j = start + i * (divideCount + 1); j < m_peakCache.count(); j++) {
+        //     for (int j = start + i * (divideCount + 1); j < peakData.count(); j++) {
+        //         // auto frame = m_peakCache.at(j);
+        //         auto frame = peakData.at(j);
+        //         updateMinMax(frame, min, max);
+        //     }
+        // }
         drawPeak(i, min, max);
     }
 
