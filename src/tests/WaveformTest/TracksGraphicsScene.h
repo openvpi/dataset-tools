@@ -11,7 +11,7 @@
 class TracksGraphicsScene : public QGraphicsScene{
 public:
     explicit TracksGraphicsScene();
-    ~TracksGraphicsScene();
+    ~TracksGraphicsScene() override = default;
 
 public slots:
     void setScale(qreal sx, qreal sy);
@@ -19,7 +19,6 @@ public slots:
 public:
 //    void setViewportRect(const QRectF &rect);
 protected:
-    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     int m_sceneWidth = 1920 * 8; // tick
     int m_sceneHeight = 2000;
 };

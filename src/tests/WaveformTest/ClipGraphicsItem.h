@@ -7,13 +7,13 @@
 
 #include <QGraphicsRectItem>
 
-class ClipGraphicsItem : public QObject,  public QGraphicsRectItem{
+class ClipGraphicsItem : public QObject, public QGraphicsRectItem {
     Q_OBJECT
 
 public:
     enum MouseMoveBehavior { Move, ResizeRight, ResizeLeft };
 
-    explicit ClipGraphicsItem(int itemId ,QGraphicsItem *parent = nullptr);
+    explicit ClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
     ~ClipGraphicsItem() override;
 
     int itemId();
@@ -57,7 +57,10 @@ signals:
     void clipLenChanged(int clipLen);
 
 public slots:
-    // void setScale(qreal sx, qreal sy);
+    void setScale(qreal sx, qreal sy) {
+    setScaleX(sx);
+    setScaleY(sy);
+    }
     void setVisibleRect(const QRectF &rect);
 
 protected:
@@ -68,8 +71,6 @@ protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
-    // void keyPressEvent(QKeyEvent *event) override;
-    // void keyReleaseEvent(QKeyEvent *event) override;
 
     void updateRectAndPos();
 

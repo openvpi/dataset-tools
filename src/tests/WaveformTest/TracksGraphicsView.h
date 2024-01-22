@@ -43,7 +43,6 @@ public slots:
 protected:
     bool event(QEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
-    void drawBackground(QPainter *painter, const QRectF &rect) override;
     bool eventFilter(QObject *object, QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 

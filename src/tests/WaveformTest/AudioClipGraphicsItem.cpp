@@ -36,6 +36,7 @@ QString AudioClipGraphicsItem::path() {
 }
 void AudioClipGraphicsItem::onLoadComplete(bool success, QString errorMessage) {
     if (!success) {
+        m_loading = false;
         qDebug() << "open file error" << errorMessage;
         return;
     }
@@ -76,10 +77,6 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     QPen pen;
 
     if (m_loading) {
-        // painter->setPen(Qt::NoPen);
-        // painter->setBrush(QColor(255, 255, 255, 80));
-        // painter->drawRect(previewRect());
-
         pen.setColor(peakColor);
         painter->setPen(pen);
         painter->drawText(previewRect(), "Loading...", QTextOption(Qt::AlignCenter));

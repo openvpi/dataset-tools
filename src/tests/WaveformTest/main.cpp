@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
+    QApplication::setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents);
 
     auto f = QFont("Microsoft Yahei UI", 9);
     f.setHintingPreference(QFont::PreferNoHinting);

@@ -113,8 +113,8 @@ void ClipGraphicsItem::setVisibleRect(const QRectF &rect) {
 }
 
 void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
-    auto colorPrimary = QColor(112, 156, 255, 220);
-    auto colorPrimaryDarker = QColor(81, 135, 255, 220);
+    auto colorPrimary = QColor(112, 156, 255);
+    auto colorPrimaryDarker = QColor(81, 135, 255);
     auto colorAccent = QColor(255, 175, 95);
     auto colorAccentDarker = QColor(255, 159, 63);
     auto penWidth = 2.0f;
@@ -165,8 +165,12 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     pen.setColor(QColor(255, 255, 255));
     painter->setPen(pen);
     painter->setBrush(Qt::NoBrush);
-    if (textWidth <= textRectWidth && textHeight <= textRectHeight)
-        painter->drawText(textRect, text);
+    if (textWidth <= textRectWidth && textHeight <= textRectHeight) {
+        if (previewRect().height() < 32)
+            painter->drawText(textRect, text, QTextOption(Qt::AlignVCenter));
+        else
+            painter->drawText(textRect, text);
+    }
 }
 
 void ClipGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
@@ -264,17 +268,6 @@ void ClipGraphicsItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event) {
 
     QGraphicsRectItem::hoverMoveEvent(event);
 }
-// void ClipGraphicsItem::keyPressEvent(QKeyEvent *event) {
-//     if (event->key() == Qt::Key_Alt)
-//         m_tempQuantizeOff = true;
-//     qDebug() << "alt down";
-//     QGraphicsRectItem::keyPressEvent(event);
-// }
-// void ClipGraphicsItem::keyReleaseEvent(QKeyEvent *event) {
-//     if (event->key() == Qt::Key_Alt)
-//         m_tempQuantizeOff = false;
-//     QGraphicsRectItem::keyReleaseEvent(event);
-// }
 
 void ClipGraphicsItem::updateRectAndPos() {
     auto x = (m_start + m_clipStart) * m_scaleX * pixelPerQuarterNote / 480;

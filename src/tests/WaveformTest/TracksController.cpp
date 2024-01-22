@@ -3,9 +3,11 @@
 //
 
 #include <QDebug>
-#include <QOpenGLWidget>
+// #include <QOpenGLWidget>
 
 #include "AudioClipGraphicsItem.h"
+#include "TimeGridGraphicsItem.h"
+#include "TracksBackgroundGraphicsItem.h"
 #include "TracksController.h"
 #include "TracksModel.h"
 
@@ -20,6 +22,11 @@ TracksController::TracksController() {
     m_tracksView->setStyleSheet("QGraphicsView { border: none }");
 
     connect(m_tracksView, &TracksGraphicsView::scaleChanged, m_tracksScene, &TracksGraphicsScene::setScale);
+
+    auto gridItem = new TracksBackgroundGraphicsItem;
+    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, gridItem, &TimeGridGraphicsItem::onVisibleRectChanged);
+    connect(m_tracksView, &TracksGraphicsView::scaleChanged, gridItem, &TimeGridGraphicsItem::setScale);
+    m_tracksScene->addItem(gridItem);
 }
 TracksController::~TracksController() {
 }
@@ -55,7 +62,7 @@ void TracksController::addAudioClipToNewTrack(const QString &filePath) {
     clip->setScaleY(m_tracksView->scaleY());
     // clip->setScale(m_tracksView->scaleX(), m_tracksView->scaleY());
     m_tracksScene->addItem(clip);
-    // connect(m_tracksView, &TracksGraphicsView::scaleChanged, clip, &ClipGraphicsItem::setScale);
+    connect(m_tracksView, &TracksGraphicsView::scaleChanged, clip, &ClipGraphicsItem::setScale);
     connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, clip, &ClipGraphicsItem::setVisibleRect);
     connect(clip, &ClipGraphicsItem::startChanged, this, &TracksController::onStartChanged);
 
