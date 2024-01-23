@@ -32,12 +32,15 @@ public slots:
         setScaleX(sx);
         setScaleY(sy);
     }
+    void onTimeSignatureChanged(int numerator, int denominator);
 //     void onTimelineChanged();
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void updateRectAndPos();
 
+    int m_numerator = 4;
+    int m_denominator = 4;
     int m_quantization = 8; // 1/8 note
     int m_minimumSpacing = 24; // hide low level grid line when distance < 32 px
     double m_scaleX = 1;

@@ -29,6 +29,11 @@ void TimeGridGraphicsItem::onVisibleRectChanged(const QRectF &rect) {
     updateRectAndPos();
 }
 
+void TimeGridGraphicsItem::onTimeSignatureChanged(int numerator, int denominator) {
+    m_numerator = numerator;
+    m_denominator = denominator;
+    update();
+}
 void TimeGridGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     auto backgroundColor = QColor(42, 43, 44);
     auto barLineColor = QColor(92, 96, 100);
@@ -61,18 +66,21 @@ void TimeGridGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsIt
     // qDebug() << startTick << endTick << prevLineTick;
     bool canDrawEighthLine = 240 * m_scaleX * pixelPerQuarterNote / 480 >= m_minimumSpacing;
     bool canDrawQuarterLine = m_scaleX * pixelPerQuarterNote >= m_minimumSpacing;
+    int barTicks = 1920 * m_numerator / m_denominator;
+    int beatTicks = 1920 / m_denominator;
+    // TODO: hide low level grid lines when distance < min spaceing
     for (int i = prevLineTick; i <= endTick; i += 240) {
-        auto bar = i / 1920 + 1;
-        auto beat = (i % 1920) / 480 + 1;
+        auto bar = i / barTicks + 1;
+        auto beat = (i % barTicks) / beatTicks + 1;
         auto x = sceneXToItemX(tickToSceneX(i));
-        if (i % 1920 == 0) { // bar
+        if (i % barTicks == 0) { // bar
             pen.setColor(barTextColor);
             painter->setPen(pen);
             painter->drawText(QPointF(x, 10), QString::number(bar));
             pen.setColor(barLineColor);
             painter->setPen(pen);
             painter->drawLine(QLineF(x, 0, x, m_visibleRect.height()));
-        } else if (i % 480 == 0 && canDrawQuarterLine) { // 1/4 note
+        } else if (i % beatTicks == 0 && canDrawQuarterLine) {
             pen.setColor(beatTextColor);
             painter->setPen(pen);
             painter->drawText(QPointF(x, 10), QString::number(bar) + "." + QString::number(beat));
