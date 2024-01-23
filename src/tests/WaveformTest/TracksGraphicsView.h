@@ -12,8 +12,8 @@ class TracksGraphicsView : public QGraphicsView {
     Q_OBJECT
     Q_PROPERTY(double scaleX READ scaleX WRITE setScaleX)
     Q_PROPERTY(double scaleY READ scaleY WRITE setScaleY)
-    Q_PROPERTY(double horizontalScrollBarValue READ horizontalScrollBarValue WRITE setHorizontalScrollBarValue)
-    Q_PROPERTY(double verticalScrollBarValue READ verticalScrollBarValue WRITE setVerticalScrollBarValue)
+    Q_PROPERTY(double horizontalScrollBarValue READ hBarValue WRITE setHBarValue)
+    Q_PROPERTY(double verticalScrollBarValue READ vBarValue WRITE setVBarValue)
 
 public:
     explicit TracksGraphicsView(QWidget *parent = nullptr);
@@ -27,10 +27,10 @@ public:
         setScaleX(sx);
         setScaleY(sy);
     }
-    int horizontalScrollBarValue();
-    void setHorizontalScrollBarValue(int value);
-    int verticalScrollBarValue();
-    void setVerticalScrollBarValue(int value);
+    int hBarValue();
+    void setHBarValue(int value);
+    int vBarValue();
+    void setVBarValue(int value);
     QRectF visibleRect() const;
 
 signals:
@@ -46,6 +46,8 @@ protected:
     bool eventFilter(QObject *object, QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
+    double m_hZoomingStep = 0.4;
+    double m_vZoomingStep = 0.3;
     qreal m_scaleX = 1;
     qreal m_scaleY = 1;
     // qreal m_scaleXMin = 0.1;
@@ -55,8 +57,8 @@ protected:
 
     QPropertyAnimation m_scaleXAnimation;
     QPropertyAnimation m_scaleYAnimation;
-    QPropertyAnimation m_horizontalScrollBarAnimation;
-    QPropertyAnimation m_verticalScrollBarAnimation;
+    QPropertyAnimation m_hBarAnimation;
+    QPropertyAnimation m_vBarAnimation;
 };
 
 
