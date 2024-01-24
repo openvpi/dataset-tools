@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
         auto notes = loadNotes(jsonObj);
         int noteId = 0;
         for (const auto &note : notes) {
-            auto noteItem = new NoteGraphicsItem(0);
+            auto noteItem = new NoteGraphicsItem(noteId);
             noteItem->setStart(note.start);
             noteItem->setLength(note.length);
             noteItem->setKeyIndex(note.keyIndex);
@@ -134,6 +134,9 @@ int main(int argc, char *argv[]) {
                              &NoteGraphicsItem::setScale);
             QObject::connect(pianoRollView, &PianoRollGraphicsView::visibleRectChanged, noteItem,
                              &NoteGraphicsItem::setVisibleRect);
+            if (noteId == 0)
+                pianoRollView->centerOn(noteItem);
+
             noteId++;
         }
     }

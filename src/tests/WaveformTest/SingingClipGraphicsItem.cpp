@@ -79,13 +79,12 @@ void SingingClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
     auto rectTop = previewRect().top();
     auto rectWidth = previewRect().width();
     auto rectHeight = previewRect().height();
-    const auto gradientRange = 48;
 
     if (rectHeight < 32 || rectWidth < 16)
         return;
     auto widthHeightMin = rectWidth < rectHeight ? rectWidth : rectHeight;
-    auto colorAlpha = widthHeightMin <= gradientRange ? 255 * widthHeightMin / gradientRange : 255;
-    auto noteColor = QColor(255, 255, 255, static_cast<int>(colorAlpha));
+    auto colorAlpha = rectHeight <= 48 ? 255 * (rectHeight - 32) / (48 - 32) : 255;
+    auto noteColor = QColor(10, 10, 10, static_cast<int>(colorAlpha));
 
     painter->setPen(Qt::NoPen);
     painter->setBrush(noteColor);
@@ -101,26 +100,29 @@ void SingingClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
             highestKeyIndex = keyIndex;
     }
 
-    int divideCount = highestKeyIndex - lowestKeyIndex;
+    int divideCount = highestKeyIndex - lowestKeyIndex + 1;
     auto noteHeight = (rectHeight - rectTop) / divideCount;
 
     auto tickToSceneX = [&](const double tick) { return tick * m_scaleX * pixelPerQuarterNote / 480; };
     auto sceneXToItemX = [&](const double x) { return mapFromScene(QPointF(x, 0)).x(); };
 
-    // TODO: fix note render bug
     for (const auto &note : notes) {
         auto clipLeft = start() + clipStart();
         auto clipRight = clipLeft + clipLen();
         if (note.start + note.length < clipLeft)
             continue;
-        if (note.start > clipRight)
+        if (note.start >= clipRight)
             break;
 
         auto leftScene = tickToSceneX(note.start);
-        auto width = note.length * m_scaleX * pixelPerQuarterNote / 480;
-        if (leftScene + width > clipRight)
-            width = clipRight - leftScene;
         auto left = sceneXToItemX(leftScene);
+        auto width = tickToSceneX(note.length);
+        if (note.start < clipLeft) {
+            left = sceneXToItemX(tickToSceneX(clipLeft));
+            width = sceneXToItemX(tickToSceneX(note.start + note.length)) - left;
+            // qDebug() << left << width << note.lyric;
+        } else if (note.start + note.length >= clipRight)
+            width = tickToSceneX(clipRight - note.start);
         auto top = -(note.keyIndex - highestKeyIndex) * noteHeight + rectTop;
         painter->drawRect(QRectF(left, top, width, noteHeight));
     }

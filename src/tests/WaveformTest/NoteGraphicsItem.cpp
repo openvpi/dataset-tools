@@ -57,10 +57,11 @@ void NoteGraphicsItem::setVisibleRect(const QRectF &rect) {
     update();
 }
 void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
-    const auto colorPrimary = QColor(112, 156, 255);
-    const auto colorPrimaryDarker = QColor(81, 135, 255);
+    const auto colorPrimary = QColor(155, 186, 255);
+    const auto colorPrimaryDarker = QColor(112, 156, 255);
     const auto colorAccent = QColor(255, 175, 95);
     const auto colorAccentDarker = QColor(255, 159, 63);
+    const auto colorForeground = QColor(0, 0, 0);
     const auto penWidth = 2.0f;
     const auto radius = 4.0;
     const auto radiusAdjustThreshold = 12;
@@ -82,8 +83,11 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     if (paddedRect.width() < 8 || paddedRect.height() < 8) { // draw rect without border
         painter->setRenderHint(QPainter::Antialiasing, false);
         painter->setPen(Qt::NoPen);
-        auto w = paddedRect.width() < 2 ? 2 : paddedRect.width();
-        painter->drawRect(QRectF(left, top, w, height));
+        auto l = boundingRect().left();
+        auto t = boundingRect().top();
+        auto w = boundingRect().width() < 2 ? 2 : boundingRect().width();
+        auto h = boundingRect().height() < 2 ? 2 : boundingRect().height();
+        painter->drawRect(QRectF(l, t, w, h));
     } else {
         auto straightX = paddedRect.width() - radius * 2;
         auto straightY = paddedRect.height() - radius * 2;
@@ -96,7 +100,7 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
         painter->drawRoundedRect(paddedRect, xRadius, yRadius);
     }
 
-    pen.setColor(QColor(255, 255, 255));
+    pen.setColor(colorForeground);
     painter->setPen(pen);
     auto font = QFont("Microsoft Yahei UI");
     font.setPointSizeF(10);
@@ -104,9 +108,11 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     int padding = 2;
     // TODO: keep lyric on screen
     auto textRectLeft = paddedRect.left() + padding;
-    auto textRectTop = paddedRect.top() + padding;
+    // auto textRectTop = paddedRect.top() + padding;
+    auto textRectTop = paddedRect.top();
     auto textRectWidth = paddedRect.width() - 2 * padding;
-    auto textRectHeight = paddedRect.height() - 2 * padding;
+    // auto textRectHeight = paddedRect.height() - 2 * padding;
+    auto textRectHeight = paddedRect.height();
     auto textRect = QRectF(textRectLeft, textRectTop, textRectWidth, textRectHeight);
 
     auto fontMetrics = painter->fontMetrics();

@@ -73,13 +73,10 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     auto rectWidth = previewRect().width();
     auto rectHeight = previewRect().height();
     auto halfRectHeight = rectHeight / 2;
-    const auto gradientRange = 48;
-
     if (rectHeight < 32 || rectWidth < 16)
         return;
-    auto widthHeightMin = rectWidth < rectHeight ? rectWidth : rectHeight;
-    auto colorAlpha = widthHeightMin <= gradientRange ? 255 * widthHeightMin / gradientRange : 255;
-    auto peakColor = QColor(255, 255, 255, static_cast<int>(colorAlpha));
+    auto colorAlpha = rectHeight <= 48 ? 255 * (rectHeight - 32) / (48 - 32) : 255;
+    auto peakColor = QColor(10, 10, 10, static_cast<int>(colorAlpha));
 
     QPen pen;
 

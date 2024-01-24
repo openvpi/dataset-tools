@@ -113,10 +113,11 @@ void ClipGraphicsItem::setVisibleRect(const QRectF &rect) {
 }
 
 void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
-    auto colorPrimary = QColor(112, 156, 255);
-    auto colorPrimaryDarker = QColor(81, 135, 255);
-    auto colorAccent = QColor(255, 175, 95);
-    auto colorAccentDarker = QColor(255, 159, 63);
+    const auto colorPrimary = QColor(155, 186, 255);
+    const auto colorPrimaryDarker = QColor(112, 156, 255);
+    const auto colorAccent = QColor(255, 175, 95);
+    const auto colorAccentDarker = QColor(255, 159, 63);
+    const auto colorForeground = QColor(0, 0, 0);
     auto penWidth = 2.0f;
 
     QPen pen;
@@ -162,7 +163,7 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     auto text = m_clipTypeStr + controlStr + timeStr;
     auto textWidth = fontMetrics.horizontalAdvance(text);
 
-    pen.setColor(QColor(255, 255, 255));
+    pen.setColor(colorForeground);
     painter->setPen(pen);
     painter->setBrush(Qt::NoBrush);
     if (textWidth <= textRectWidth && textHeight <= textRectHeight) {
