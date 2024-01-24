@@ -2,13 +2,26 @@
 // Created by fluty on 2024/1/23.
 //
 
+#include <QInputDialog>
+#include <QMenu>
 #include <QPainter>
+#include <QGraphicsSceneContextMenuEvent>
 
 #include "NoteGraphicsItem.h"
 
 NoteGraphicsItem::NoteGraphicsItem(int itemId, QGraphicsItem *parent) {
     m_itemId = itemId;
-    setAcceptHoverEvents(true);
+    initUi();
+}
+NoteGraphicsItem::NoteGraphicsItem(int itemId, int start, int length, int keyIndex, const QString &lyric,
+                                   const QString &pronunciation, QGraphicsItem *parent) {
+    m_itemId = itemId;
+    m_start = start;
+    m_length = length;
+    m_keyIndex = keyIndex;
+    m_lyric = lyric;
+    m_pronunciation = pronunciation;
+    initUi();
 }
 int NoteGraphicsItem::start() const {
     return m_start;
@@ -36,6 +49,13 @@ QString NoteGraphicsItem::lyric() const {
 }
 void NoteGraphicsItem::setLyric(const QString &lyric) {
     m_lyric = lyric;
+    update();
+}
+QString NoteGraphicsItem::pronunciation() const {
+    return m_pronunciation;
+}
+void NoteGraphicsItem::setPronunciation(const QString &pronunciation) {
+    m_pronunciation = pronunciation;
     update();
 }
 double NoteGraphicsItem::scaleX() const {
@@ -67,7 +87,7 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     const auto radiusAdjustThreshold = 12;
 
     QPen pen;
-    pen.setColor(isSelected() ? colorAccentDarker : colorPrimaryDarker);
+    pen.setColor(isSelected() ? QColor(255, 255, 255) : colorPrimaryDarker);
 
     auto rect = boundingRect();
     auto left = rect.left() + penWidth;
@@ -78,15 +98,16 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
 
     pen.setWidthF(penWidth);
     painter->setPen(pen);
-    painter->setBrush(isSelected() ? colorAccent : colorPrimary);
+    painter->setBrush(colorPrimary);
 
     if (paddedRect.width() < 8 || paddedRect.height() < 8) { // draw rect without border
         painter->setRenderHint(QPainter::Antialiasing, false);
         painter->setPen(Qt::NoPen);
-        auto l = boundingRect().left();
-        auto t = boundingRect().top();
-        auto w = boundingRect().width() < 2 ? 2 : boundingRect().width();
-        auto h = boundingRect().height() < 2 ? 2 : boundingRect().height();
+        painter->setBrush(colorPrimaryDarker);
+        auto l = boundingRect().left() + 1;
+        auto t = boundingRect().top() + 1;
+        auto w = boundingRect().width() < 4 ? 2 : boundingRect().width() - 2;
+        auto h = boundingRect().height() < 4 ? 2 : boundingRect().height() - 2;
         painter->drawRect(QRectF(l, t, w, h));
     } else {
         auto straightX = paddedRect.width() - radius * 2;
@@ -119,8 +140,35 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     auto textHeight = fontMetrics.height();
     auto textWidth = fontMetrics.horizontalAdvance(m_lyric);
 
-    if (textWidth <= textRectWidth && textHeight <= textRectHeight)
+    if (textWidth <= textRectWidth && textHeight <= textRectHeight) {
+        // draw lryic
         painter->drawText(textRect, m_lyric, QTextOption(Qt::AlignVCenter));
+        // draw pronunciation
+        pen.setColor(QColor(160, 160, 160));
+        painter->setPen(pen);
+        painter->drawText(QPointF(textRectLeft, textRectTop - 10), m_pronunciation);
+    }
+}
+void NoteGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
+    QMenu menu;
+    auto editLyricAction = menu.addAction("Edit Lyric");
+    connect(editLyricAction, &QAction::triggered, [&]() {
+        auto ok = false;
+        auto result = QInputDialog::getText(graphicsView, "Edit Lyric", "Input lyric:", QLineEdit::Normal, m_lyric, &ok);
+        if (ok && !result.isEmpty())
+            setLyric(result);
+    });
+
+    auto editPronunciationAction = menu.addAction("Edit Pronunciation");
+    connect(editPronunciationAction, &QAction::triggered, [&]() {
+        auto ok = false;
+        auto result = QInputDialog::getText(graphicsView, "Edit Pronunciation", "Input pronunciation:", QLineEdit::Normal, m_pronunciation, &ok);
+        if (ok && !result.isEmpty())
+            setPronunciation(result);
+    });
+    menu.exec(event->screenPos());
+
+    QGraphicsItem::contextMenuEvent(event);
 }
 void NoteGraphicsItem::updateRectAndPos() {
     const auto x = m_start * m_scaleX * pixelPerQuarterNote / 480;
@@ -130,4 +178,8 @@ void NoteGraphicsItem::updateRectAndPos() {
     setPos(x, y);
     setRect(QRectF(0, 0, w, h));
     update();
+}
+void NoteGraphicsItem::initUi() {
+    setAcceptHoverEvents(true);
+    setFlag(ItemIsSelectable);
 }

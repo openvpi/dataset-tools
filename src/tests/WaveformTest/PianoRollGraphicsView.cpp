@@ -5,4 +5,5 @@
 #include "PianoRollGraphicsView.h"
 PianoRollGraphicsView::PianoRollGraphicsView() {
     setScaleXMax(5);
+    setDragMode(RubberBandDrag);
 }

@@ -4,14 +4,13 @@
 
 #include <QApplication>
 #include <QDebug>
-#include <QMainWindow>
-#include <QVBoxLayout>
-#include <QWidget>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QMainWindow>
 #include <QScrollBar>
+#include <QVBoxLayout>
+#include <QWidget>
 
-#include "NoteGraphicsItem.h"
 #include "ParamEditArea.h"
 #include "ParamEditGraphicsView.h"
 #include "ParamModel.h"
@@ -49,7 +48,7 @@ int main(int argc, char *argv[]) {
     };
 
     QJsonObject jsonObj;
-//    auto filename = "D:/Test/Param/test.json";
+    //    auto filename = "D:/Test/Param/test.json";
     auto filename = "D:/Test/Param/小小.json";
     loadProjectFile(filename, &jsonObj);
 
@@ -58,7 +57,7 @@ int main(int argc, char *argv[]) {
     QMainWindow w;
 
     auto editArea = new ParamEditArea;
-//    editArea->loadParam(paramModel.realEnergy[0]);
+    //    editArea->loadParam(paramModel.realEnergy[0]);
 
     const int quarterNoteWidth = 62;
     const int quarterNoteHeight = 24;
@@ -67,23 +66,13 @@ int main(int argc, char *argv[]) {
 
     auto pianoRollScene = new QGraphicsScene;
 
-//    for (int i = 0; i < 4; i++) {
-//        auto noteItem = new NoteGraphicsItem();
-//        noteItem->setRect(QRectF(i * quarterNoteWidth, 24 * i, quarterNoteWidth, quarterNoteHeight));
-//        noteItem->setText("喵");
-//        pianoRollScene->addItem(noteItem);
-//    }
+    //    for (int i = 0; i < 4; i++) {
+    //        auto noteItem = new NoteGraphicsItem();
+    //        noteItem->setRect(QRectF(i * quarterNoteWidth, 24 * i, quarterNoteWidth, quarterNoteHeight));
+    //        noteItem->setText("喵");
+    //        pianoRollScene->addItem(noteItem);
+    //    }
 
-    for (int i = 0; i < paramModel.notes.count(); i++) {
-        auto note = paramModel.notes[i];
-        auto noteItem = new NoteGraphicsItem();
-        auto noteLeft = note.start * quarterNoteWidth / 480;
-        auto noteTop = (107 - note.keyIndex) * 24;
-        auto noteWidth = note.length * quarterNoteWidth / 480;
-        noteItem->setRect(QRectF(noteLeft, noteTop, noteWidth, quarterNoteHeight));
-        noteItem->setText(note.lyric);
-        pianoRollScene->addItem(noteItem);
-    }
 
     auto lastNote = paramModel.notes.last();
     auto lastNoteEndPos = lastNote.start + lastNote.length;
@@ -97,7 +86,7 @@ int main(int argc, char *argv[]) {
     auto firstNoteLeft = firstNote.start * quarterNoteWidth / 480;
     auto firstNoteTop = (107 - firstNote.keyIndex) * 24;
 
-//    pianoRollScene->addItem(noteItem);
+    //    pianoRollScene->addItem(noteItem);
     auto pianoRollView = new PianoRollGraphicsView;
     pianoRollView->setScene(pianoRollScene);
     pianoRollView->centerOn(firstNoteLeft, firstNoteTop);
@@ -107,47 +96,47 @@ int main(int argc, char *argv[]) {
 
     QPen pen;
     pen.setWidthF(1.5);
-    auto drawParams = [&](QList<ParamModel::RealParamCurve> curves) {
-        for (const auto &curve : curves) {
-            QPainterPath path;
-            auto firstValue = curve.values.first();
-            path.moveTo(0, firstValue < 1 ? 150 * (1 - firstValue) : 0);
-            int i = 0;
-            for (const auto value : qAsConst(curve.values)) {
-                auto x = (curve.offset + i) * quarterNoteWidth / 480.0;
-                auto y = value < 1 ? 150 * (1 - value) : 0;
-                path.lineTo(x, y);
-                i++;
-            }
-
-            auto pathItem = new QGraphicsPathItem(path);
-            pathItem->setPen(pen);
-            paramEditScene->addItem(pathItem);
-        }
-    };
+    // auto drawParams = [&](QList<ParamModel::RealParamCurve> curves) {
+    //     for (const auto &curve : curves) {
+    //         QPainterPath path;
+    //         auto firstValue = curve.values.first();
+    //         path.moveTo(0, firstValue < 1 ? 150 * (1 - firstValue) : 0);
+    //         int i = 0;
+    //         for (const auto value : qAsConst(curve.values)) {
+    //             auto x = (curve.offset + i) * quarterNoteWidth / 480.0;
+    //             auto y = value < 1 ? 150 * (1 - value) : 0;
+    //             path.lineTo(x, y);
+    //             i++;
+    //         }
+    //
+    //         auto pathItem = new QGraphicsPathItem(path);
+    //         pathItem->setPen(pen);
+    //         paramEditScene->addItem(pathItem);
+    //     }
+    // };
 
     auto realEnergy = paramModel.realEnergy;
     auto realBreathiness = paramModel.realBreathiness;
 
-//    pen.setColor(QColor(255, 175, 95));
-//    drawParams(realEnergy);
-//    pen.setColor(QColor(112, 156, 255));
-//    drawParams(realBreathiness);
+    //    pen.setColor(QColor(255, 175, 95));
+    //    drawParams(realEnergy);
+    //    pen.setColor(QColor(112, 156, 255));
+    //    drawParams(realBreathiness);
 
-//    auto curve = paramModel.realEnergy.first();
-//    QPainterPath path;
-//    auto firstValue = curve.values.first();
-//    path.moveTo(0, firstValue < 1 ? 200 * (1 - firstValue) : 0);
-//    int i = 0;
-//    for (const auto value : qAsConst(curve.values)) {
-//        auto x = (curve.offset + i) * quarterNoteWidth / 480;
-//        auto y = value < 1 ? 200 * (1 - value) : 0;
-//        path.lineTo(x, y);
-//        i++;
-//    }
-//
-//    auto pathItem = QGraphicsPathItem(path);
-//    paramEditScene->addItem(&pathItem);
+    //    auto curve = paramModel.realEnergy.first();
+    //    QPainterPath path;
+    //    auto firstValue = curve.values.first();
+    //    path.moveTo(0, firstValue < 1 ? 200 * (1 - firstValue) : 0);
+    //    int i = 0;
+    //    for (const auto value : qAsConst(curve.values)) {
+    //        auto x = (curve.offset + i) * quarterNoteWidth / 480;
+    //        auto y = value < 1 ? 200 * (1 - value) : 0;
+    //        path.lineTo(x, y);
+    //        i++;
+    //    }
+    //
+    //    auto pathItem = QGraphicsPathItem(path);
+    //    paramEditScene->addItem(&pathItem);
 
     auto paramEditView = new ParamEditGraphicsView;
     paramEditView->setMinimumHeight(150);
@@ -155,18 +144,17 @@ int main(int argc, char *argv[]) {
     paramEditView->centerOn(firstNoteLeft, firstNoteTop);
     paramEditView->setStyleSheet("QGraphicsView { border: none }");
 
-    QObject::connect(pianoRollView->horizontalScrollBar(), &QScrollBar::valueChanged, paramEditView, [=](int value){
-        paramEditView->horizontalScrollBar()->setValue(value);
-    });
+    QObject::connect(pianoRollView->horizontalScrollBar(), &QScrollBar::valueChanged, paramEditView,
+                     [=](int value) { paramEditView->horizontalScrollBar()->setValue(value); });
 
     auto splitter = new QSplitter;
     splitter->setOrientation(Qt::Vertical);
-//    splitter->addWidget(pianoRollView);
+    //    splitter->addWidget(pianoRollView);
     splitter->addWidget(editArea);
-//    splitter->addWidget(paramEditView);
+    //    splitter->addWidget(paramEditView);
 
     auto mainLayout = new QVBoxLayout;
-//    mainLayout->addWidget(editArea);
+    //    mainLayout->addWidget(editArea);
     mainLayout->addWidget(splitter);
 
     auto mainWidget = new QWidget;

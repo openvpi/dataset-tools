@@ -129,6 +129,7 @@ int main(int argc, char *argv[]) {
             noteItem->setVisibleRect(pianoRollView->visibleRect());
             noteItem->setScaleX(pianoRollView->scaleX());
             noteItem->setScaleY(pianoRollView->scaleY());
+            noteItem->graphicsView = pianoRollView;
             pianoRollScene->addItem(noteItem);
             QObject::connect(pianoRollView, &PianoRollGraphicsView::scaleChanged, noteItem,
                              &NoteGraphicsItem::setScale);
