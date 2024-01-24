@@ -7,13 +7,11 @@
 
 #include "TimeGridGraphicsItem.h"
 
-class TracksBackgroundGraphicsItem :public TimeGridGraphicsItem{
+class TracksBackgroundGraphicsItem final : public TimeGridGraphicsItem {
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
     const double trackHeight = 72;
 };
 
-
-
-#endif //TRACKSBACKGROUNDGRAPHICSITEM_H
+#endif // TRACKSBACKGROUNDGRAPHICSITEM_H

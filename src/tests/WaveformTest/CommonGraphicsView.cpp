@@ -2,6 +2,7 @@
 // Created by fluty on 2024/1/23.
 //
 
+#include <QDebug>
 #include <QScrollBar>
 #include <QWheelEvent>
 
@@ -49,6 +50,12 @@ qreal CommonGraphicsView::scaleY() const {
 void CommonGraphicsView::setScaleY(const qreal sy) {
     m_scaleY = sy;
     emit scaleChanged(m_scaleX, m_scaleY);
+}
+qreal CommonGraphicsView::scaleXMax() const {
+    return m_scaleXMax;
+}
+void CommonGraphicsView::setScaleXMax(qreal max) {
+    m_scaleXMax = max;
 }
 int CommonGraphicsView::hBarValue() const {
     return horizontalScrollBar()->value();
@@ -111,6 +118,12 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
         if (targetScaleX > m_scaleXMax)
             targetScaleX = m_scaleXMax;
 
+        auto scaledSceneWidth = sceneRect().width() * (targetScaleX / m_scaleX);
+        if (scaledSceneWidth < viewport()->width()) {
+            auto targetSceneWidth = viewport()->width();
+            targetScaleX = targetSceneWidth / (sceneRect().width() / m_scaleX);
+        }
+
         auto ratio = targetScaleX / m_scaleX;
         auto targetSceneX = scenePos.x() * ratio;
         auto targetValue = qRound(targetSceneX - cursorPos.x());
@@ -140,6 +153,12 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
             targetScaleY = m_scaleYMin;
         else if (targetScaleY > m_scaleYMax)
             targetScaleY = m_scaleYMax;
+
+        auto scaledSceneHeight = sceneRect().height() * (targetScaleY / m_scaleY);
+        if (scaledSceneHeight < viewport()->height()) {
+            auto targetSceneHeight = viewport()->height();
+            targetScaleY = targetSceneHeight / (sceneRect().height() / m_scaleY);
+        }
 
         auto ratio = targetScaleY / m_scaleY;
         auto targetSceneY = scenePos.y() * ratio;
@@ -175,7 +194,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
     } else {
         if (qAbs(deltaY) < 120 && qAbs(deltaX) < 120)
             QGraphicsView::wheelEvent(event);
-            // setVBarValue(endValue);
+        // setVBarValue(endValue);
         else {
             auto scrollLength = -1 * viewport()->height() * 0.15 * deltaY / 120;
             auto startValue = vBarValue();

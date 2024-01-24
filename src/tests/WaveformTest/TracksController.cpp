@@ -26,16 +26,17 @@ TracksController::TracksController() {
     connect(m_tracksView, &TracksGraphicsView::scaleChanged, m_tracksScene, &TracksGraphicsScene::setScale);
 
     auto gridItem = new TracksBackgroundGraphicsItem;
-    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, gridItem, &TimeGridGraphicsItem::onVisibleRectChanged);
+    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, gridItem,
+            &TimeGridGraphicsItem::onVisibleRectChanged);
     connect(m_tracksView, &TracksGraphicsView::scaleChanged, gridItem, &TimeGridGraphicsItem::setScale);
     m_tracksScene->addItem(gridItem);
 
-    // auto testSingingClip = new SingingClipGraphicsItem(0);
-    // testSingingClip->setTrackIndex(0);
-    // m_tracksScene->addItem(testSingingClip);
-    // connect(m_tracksView, &TracksGraphicsView::scaleChanged, testSingingClip, &ClipGraphicsItem::setScale);
-    // connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, testSingingClip, &ClipGraphicsItem::setVisibleRect);
-    // m_trackIndex++;
+    auto testSingingClip = new SingingClipGraphicsItem(0);
+    testSingingClip->setTrackIndex(0);
+    m_tracksScene->addItem(testSingingClip);
+    connect(m_tracksView, &TracksGraphicsView::scaleChanged, testSingingClip, &ClipGraphicsItem::setScale);
+    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, testSingingClip, &ClipGraphicsItem::setVisibleRect);
+    m_trackIndex++;
 }
 TracksController::~TracksController() {
 }

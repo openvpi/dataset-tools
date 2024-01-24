@@ -46,13 +46,13 @@ void TimeGridGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsIt
     QPen pen;
     pen.setWidthF(penWidth);
 
-    painter->setBrush(backgroundColor);
-    painter->drawRect(boundingRect());
+    // painter->setBrush(backgroundColor);
+    // painter->drawRect(boundingRect());
     painter->setBrush(Qt::NoBrush);
 
     pen.setColor(commonLineColor);
     painter->setPen(pen);
-    painter->setRenderHint(QPainter::Antialiasing);
+    // painter->setRenderHint(QPainter::Antialiasing);
 
     auto sceneXToTick = [&](const double pos) { return 480 * pos / m_scaleX / pixelPerQuarterNote; };
 

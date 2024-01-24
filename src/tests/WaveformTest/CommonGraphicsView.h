@@ -27,6 +27,8 @@ public:
         setScaleX(sx);
         setScaleY(sy);
     }
+    qreal scaleXMax() const;
+    void setScaleXMax(qreal max);
     int hBarValue() const;
     void setHBarValue(int value);
     int vBarValue() const;
@@ -46,7 +48,7 @@ protected:
     // bool eventFilter(QObject *object, QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
-// private:
+    // private:
     double m_hZoomingStep = 0.4;
     double m_vZoomingStep = 0.3;
     qreal m_scaleX = 1;
