@@ -86,8 +86,9 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     const auto radius = 4.0;
     const auto radiusAdjustThreshold = 12;
 
+    auto borderColor = isSelected() ? QColor(255, 255, 255) : colorPrimaryDarker;
     QPen pen;
-    pen.setColor(isSelected() ? QColor(255, 255, 255) : colorPrimaryDarker);
+    pen.setColor(borderColor);
 
     auto rect = boundingRect();
     auto left = rect.left() + penWidth;
@@ -103,22 +104,23 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     if (paddedRect.width() < 8 || paddedRect.height() < 8) { // draw rect without border
         painter->setRenderHint(QPainter::Antialiasing, false);
         painter->setPen(Qt::NoPen);
-        painter->setBrush(colorPrimaryDarker);
+        painter->setBrush(borderColor);
         auto l = boundingRect().left() + 1;
         auto t = boundingRect().top() + 1;
         auto w = boundingRect().width() < 4 ? 2 : boundingRect().width() - 2;
         auto h = boundingRect().height() < 4 ? 2 : boundingRect().height() - 2;
         painter->drawRect(QRectF(l, t, w, h));
     } else {
-        auto straightX = paddedRect.width() - radius * 2;
-        auto straightY = paddedRect.height() - radius * 2;
-        auto xRadius = radius;
-        auto yRadius = radius;
-        if (straightX < radiusAdjustThreshold)
-            xRadius = radius * (straightX - radius) / (radiusAdjustThreshold - radius);
-        if (straightY < radiusAdjustThreshold)
-            yRadius = radius * (straightY - radius) / (radiusAdjustThreshold - radius);
-        painter->drawRoundedRect(paddedRect, xRadius, yRadius);
+        // auto straightX = paddedRect.width() - radius * 2;
+        // auto straightY = paddedRect.height() - radius * 2;
+        // auto xRadius = radius;
+        // auto yRadius = radius;
+        // if (straightX < radiusAdjustThreshold)
+        //     xRadius = radius * (straightX - radius) / (radiusAdjustThreshold - radius);
+        // if (straightY < radiusAdjustThreshold)
+        //     yRadius = radius * (straightY - radius) / (radiusAdjustThreshold - radius);
+        // painter->drawRoundedRect(paddedRect, xRadius, yRadius);
+        painter->drawRoundedRect(paddedRect, 1, 1);
     }
 
     pen.setColor(colorForeground);
