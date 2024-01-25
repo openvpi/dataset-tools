@@ -14,9 +14,11 @@
 #include <QWidget>
 
 #include "NoteGraphicsItem.h"
+#include "OverlayGraphicsItem.h"
 #include "PianoRollBackgroundGraphicsItem.h"
 #include "PianoRollGraphicsScene.h"
 #include "PianoRollGraphicsView.h"
+#include "PitchEditorGraphicsItem.h"
 #include "TracksController.h"
 #include "TracksGraphicsView.h"
 
@@ -141,6 +143,12 @@ int main(int argc, char *argv[]) {
             noteId++;
         }
     }
+
+    auto pitchItem = new PitchEditorGraphicsItem;
+    QObject::connect(pianoRollView, &TracksGraphicsView::visibleRectChanged, pitchItem,
+                     &PitchEditorGraphicsItem::setVisibleRect);
+    QObject::connect(pianoRollView, &TracksGraphicsView::scaleChanged, pitchItem, &PitchEditorGraphicsItem::setScale);
+    pianoRollScene->addItem(pitchItem);
 
     auto splitter = new QSplitter;
     splitter->setOrientation(Qt::Vertical);
