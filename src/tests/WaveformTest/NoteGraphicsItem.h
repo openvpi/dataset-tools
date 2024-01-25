@@ -15,6 +15,8 @@ class NoteGraphicsItem final : public QObject, public QGraphicsRectItem {
     Q_OBJECT
 
 public:
+    enum MouseMoveBehavior { Move, ResizeRight, ResizeLeft, None };
+
     explicit NoteGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
     explicit NoteGraphicsItem(int itemId, int start, int length, int keyIndex, const QString &lyric,
                               const QString &pronunciation, QGraphicsItem *parent = nullptr);
@@ -50,11 +52,11 @@ public slots:
 private:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
-    // void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-    // void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
-    // void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
-    // void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
-    // void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
     void updateRectAndPos();
     void initUi();
 
@@ -63,13 +65,23 @@ private:
     int m_length = 480;
     int m_keyIndex = 60;
     QString m_lyric;
-    QString m_pronunciation = "miao";
+    QString m_pronunciation = "la";
 
     QRectF m_visibleRect;
     const double noteHeight = 24;
     const int pixelPerQuarterNote = 64;
     double m_scaleX = 1;
     double m_scaleY = 1;
+
+    MouseMoveBehavior m_mouseMoveBehavior = Move;
+    QPointF m_mouseDownPos;
+    int m_mouseDownStart;
+    int m_mouseDownLength;
+    int m_mouseDownKeyIndex;
+
+    int m_quantize = 240;
+    bool m_tempQuantizeOff = false;
+    int m_resizeTolerance = 8; // px
 };
 
 #endif // NOTEGRAPHICSITEM_H

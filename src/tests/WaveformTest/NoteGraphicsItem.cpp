@@ -2,10 +2,11 @@
 // Created by fluty on 2024/1/23.
 //
 
+#include <QDebug>
+#include <QGraphicsSceneContextMenuEvent>
 #include <QInputDialog>
 #include <QMenu>
-#include <QPainter>
-#include <QGraphicsSceneContextMenuEvent>
+#include <QTextOption>
 
 #include "NoteGraphicsItem.h"
 
@@ -120,7 +121,7 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
         // if (straightY < radiusAdjustThreshold)
         //     yRadius = radius * (straightY - radius) / (radiusAdjustThreshold - radius);
         // painter->drawRoundedRect(paddedRect, xRadius, yRadius);
-        painter->drawRoundedRect(paddedRect, 1, 1);
+        painter->drawRoundedRect(paddedRect, 2, 2);
     }
 
     pen.setColor(colorForeground);
@@ -140,15 +141,19 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
 
     auto fontMetrics = painter->fontMetrics();
     auto textHeight = fontMetrics.height();
-    auto textWidth = fontMetrics.horizontalAdvance(m_lyric);
+    auto text = m_lyric + " " + m_pronunciation;
+    auto textWidth = fontMetrics.horizontalAdvance(text);
+    QTextOption textOption(Qt::AlignVCenter);
+    textOption.setWrapMode(QTextOption::NoWrap);
 
-    if (textWidth <= textRectWidth && textHeight <= textRectHeight) {
+    if (textWidth < textRectWidth && textHeight < textRectHeight) {
         // draw lryic
-        painter->drawText(textRect, m_lyric, QTextOption(Qt::AlignVCenter));
+        painter->drawText(textRect, text, textOption);
+        // TODO: draw pronunciation above note
         // draw pronunciation
-        pen.setColor(QColor(160, 160, 160));
-        painter->setPen(pen);
-        painter->drawText(QPointF(textRectLeft, textRectTop - 10), m_pronunciation);
+        // pen.setColor(QColor(160, 160, 160));
+        // painter->setPen(pen);
+        // painter->drawText(QPointF(textRectLeft, textRectTop - 10), m_pronunciation);
     }
 }
 void NoteGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
@@ -156,7 +161,8 @@ void NoteGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
     auto editLyricAction = menu.addAction("Edit Lyric");
     connect(editLyricAction, &QAction::triggered, [&]() {
         auto ok = false;
-        auto result = QInputDialog::getText(graphicsView, "Edit Lyric", "Input lyric:", QLineEdit::Normal, m_lyric, &ok);
+        auto result =
+            QInputDialog::getText(graphicsView, "Edit Lyric", "Input lyric:", QLineEdit::Normal, m_lyric, &ok);
         if (ok && !result.isEmpty())
             setLyric(result);
     });
@@ -164,13 +170,109 @@ void NoteGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
     auto editPronunciationAction = menu.addAction("Edit Pronunciation");
     connect(editPronunciationAction, &QAction::triggered, [&]() {
         auto ok = false;
-        auto result = QInputDialog::getText(graphicsView, "Edit Pronunciation", "Input pronunciation:", QLineEdit::Normal, m_pronunciation, &ok);
+        auto result = QInputDialog::getText(graphicsView, "Edit Pronunciation",
+                                            "Input pronunciation:", QLineEdit::Normal, m_pronunciation, &ok);
         if (ok && !result.isEmpty())
             setPronunciation(result);
     });
     menu.exec(event->screenPos());
 
     QGraphicsItem::contextMenuEvent(event);
+}
+void NoteGraphicsItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    if (event->button() != Qt::LeftButton) {
+        m_mouseMoveBehavior = None;
+        setCursor(Qt::ArrowCursor);
+    }
+
+    m_mouseDownPos = event->scenePos();
+    m_mouseDownStart = start();
+    m_mouseDownLength = length();
+    m_mouseDownKeyIndex = keyIndex();
+    event->accept();
+}
+void NoteGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
+    auto curPos = event->scenePos();
+    if (event->modifiers() == Qt::AltModifier)
+        m_tempQuantizeOff = true;
+    else
+        m_tempQuantizeOff = false;
+
+    auto dx = (curPos.x() - m_mouseDownPos.x()) / m_scaleX / pixelPerQuarterNote * 480;
+    auto dy = (curPos.y() - m_mouseDownPos.y()) / m_scaleY / noteHeight;
+
+    // snap tick to grid
+    auto roundPos = [](int i, int step) {
+        int times = i / step;
+        int mod = i % step;
+        if (mod > step / 2)
+            return step * (times + 1);
+        return step * times;
+    };
+
+    int start;
+    int deltaStart;
+    int length;
+    int right;
+    int keyIndex;
+    int deltaX = qRound(dx);
+    int deltaY = qRound(dy);
+    int quantize = m_tempQuantizeOff ? 1 : m_quantize;
+    switch (m_mouseMoveBehavior) {
+        case Move:
+            start = roundPos(m_mouseDownStart + deltaX, quantize);
+            setStart(start);
+
+            keyIndex = m_mouseDownKeyIndex - deltaY;
+            if (keyIndex > 127)
+                keyIndex = 127;
+            else if (keyIndex < 0)
+                keyIndex = 0;
+
+            setKeyIndex(keyIndex);
+            break;
+
+        case ResizeLeft:
+            start = roundPos(m_mouseDownStart + deltaX, quantize);
+            deltaStart = start - m_mouseDownStart;
+            length = m_mouseDownLength - deltaStart;
+            if (length > 0) {
+                setStart(start);
+                setLength(length);
+            }
+            break;
+
+        case ResizeRight:
+            right = roundPos(m_mouseDownStart + m_mouseDownLength + deltaX, quantize);
+            length = right - m_mouseDownStart;
+            if (length > 0)
+                setLength(length);
+            break;
+
+        case None:
+            QGraphicsRectItem::mouseMoveEvent(event);
+    }
+}
+void NoteGraphicsItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
+    QGraphicsRectItem::hoverEnterEvent(event);
+}
+void NoteGraphicsItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
+    QGraphicsRectItem::hoverLeaveEvent(event);
+}
+void NoteGraphicsItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event) {
+    const auto rx = event->pos().rx();
+    if (rx >= 0 && rx <= m_resizeTolerance) {
+        setCursor(Qt::SizeHorCursor);
+        m_mouseMoveBehavior = ResizeLeft;
+    } else if (rx >= rect().width() - m_resizeTolerance && rx <= rect().width()) {
+        setCursor(Qt::SizeHorCursor);
+        m_mouseMoveBehavior = ResizeRight;
+    } else {
+        setCursor(Qt::ArrowCursor);
+        m_mouseMoveBehavior = Move;
+    }
+
+    QGraphicsRectItem::hoverMoveEvent(event);
 }
 void NoteGraphicsItem::updateRectAndPos() {
     const auto x = m_start * m_scaleX * pixelPerQuarterNote / 480;

@@ -11,7 +11,7 @@ class ClipGraphicsItem : public QObject, public QGraphicsRectItem {
     Q_OBJECT
 
 public:
-    enum MouseMoveBehavior { Move, ResizeRight, ResizeLeft };
+    enum MouseMoveBehavior { Move, ResizeRight, ResizeLeft, None };
 
     explicit ClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
     ~ClipGraphicsItem() override;

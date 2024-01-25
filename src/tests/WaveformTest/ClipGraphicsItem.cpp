@@ -15,6 +15,7 @@
 ClipGraphicsItem::ClipGraphicsItem(int itemId, QGraphicsItem *parent) : QGraphicsRectItem(parent) {
     m_itemId = itemId;
     setAcceptHoverEvents(true);
+    setFlag(ItemIsSelectable);
     // setFlag(QGraphicsItem::ItemIsFocusable, true); // Must enabled, or keyPressEvent would not work.
     // setAcceptTouchEvents(true);
 }
@@ -121,7 +122,7 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     auto penWidth = 2.0f;
 
     QPen pen;
-    pen.setColor(isSelected() ? colorAccentDarker : colorPrimaryDarker);
+    pen.setColor(isSelected() ? QColor(255, 255, 255) : colorPrimaryDarker);
 
     auto rect = boundingRect();
     auto left = rect.left() + penWidth;
@@ -132,7 +133,7 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
 
     pen.setWidthF(penWidth);
     painter->setPen(pen);
-    painter->setBrush(isSelected() ? colorAccent : colorPrimary);
+    painter->setBrush(colorPrimary);
 
     painter->drawRoundedRect(paddedRect, 4, 4);
 
@@ -184,6 +185,12 @@ void ClipGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
 }
 
 void ClipGraphicsItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    if (event->button() != Qt::LeftButton) {
+        m_mouseMoveBehavior = None;
+        setCursor(Qt::ArrowCursor);
+    }
+
+    // setSelected(true);
     m_mouseDownPos = event->scenePos();
     m_mouseDownStart = start();
     m_mouseDownClipStart = clipStart();
@@ -206,25 +213,31 @@ void ClipGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
         int mod = i % step;
         if (mod > step / 2)
             return step * (times + 1);
-        else
-            return step * times;
+        return step * times;
     };
 
     int start;
     int clipStart;
+    int left;
     int clipLen;
+    int right;
     int deltaClipStart;
     int delta = qRound(dx);
     int quantize = m_tempQuantizeOff ? 1 : m_quantize;
     switch (m_mouseMoveBehavior) {
         case Move:
-            start = roundPos(m_mouseDownStart + delta, quantize);
+            left = roundPos(m_mouseDownStart + m_mouseDownClipStart + delta, quantize);
+            start = left - m_mouseDownClipStart;
             setStart(start);
             break;
         case ResizeLeft:
-            clipStart = roundPos(m_mouseDownClipStart + delta, quantize);
-            deltaClipStart = clipStart - m_mouseDownClipStart;
-            clipLen = m_mouseDownClipLen - deltaClipStart;
+            left = roundPos(m_mouseDownStart + m_mouseDownClipStart + delta, quantize);
+            start = m_mouseDownStart;
+            clipStart = left - start;
+            clipLen = m_mouseDownStart + m_mouseDownClipStart + m_mouseDownClipLen - left;
+            if (clipLen <= 0)
+                break;
+
             if (clipStart < 0) {
                 setClipStart(0);
                 setClipLen(m_mouseDownClipStart + m_mouseDownClipLen);
@@ -237,13 +250,16 @@ void ClipGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
             }
             break;
         case ResizeRight:
-            clipLen = roundPos(m_mouseDownClipLen + delta, quantize);
+            right = roundPos(m_mouseDownStart + m_mouseDownClipStart + m_mouseDownClipLen + delta, quantize);
+            clipLen = right - (m_mouseDownStart + m_mouseDownClipStart);
+            if (clipLen <= 0)
+                break;
+
             if (!m_canResizeLength) {
                 if (clipLen >= m_length)
                     setClipLen(m_length);
-                else if (clipLen >= 0) {
+                else
                     setClipLen(clipLen);
-                }
             } else {
                 setLength(m_clipStart + clipLen);
                 setClipLen(clipLen);
