@@ -115,9 +115,8 @@ void PitchEditorGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
             firstPoint = false;
         } else
             path.lineTo(x, y);
-
-        painter->drawPath(path);
     }
+    painter->drawPath(path);
 }
 void PitchEditorGraphicsItem::updateRectAndPos() {
     auto pos = m_visibleRect.topLeft();
