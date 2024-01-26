@@ -5,6 +5,9 @@
 #include <QPainter>
 
 #include "TracksBackgroundGraphicsItem.h"
+#include "TracksEditorGlobal.h"
+
+using namespace TracksEditorGlobal;
 
 void TracksBackgroundGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     // Draw background

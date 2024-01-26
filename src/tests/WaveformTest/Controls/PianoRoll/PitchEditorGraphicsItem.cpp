@@ -2,14 +2,16 @@
 // Created by fluty on 2024/1/25.
 //
 
-#include "PitchEditorGraphicsItem.h"
-
-
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPainter>
+
+#include "PitchEditorGraphicsItem.h"
+#include "PianoRollGlobal.h"
+
+using namespace PianoRollGlobal;
 
 PitchEditorGraphicsItem::PitchEditorGraphicsItem() {
     setBackgroundColor(Qt::transparent);
@@ -74,8 +76,8 @@ void PitchEditorGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
     pen.setColor(QColor(130, 134, 138, colorAlpha));
     painter->setPen(pen);
 
-    auto sceneXToTick = [&](const double pos) { return 480 * pos / scaleX() / pixelPerQuarterNote; };
-    auto tickToSceneX = [&](const double tick) { return tick * scaleX() * pixelPerQuarterNote / 480; };
+    auto sceneXToTick = [&](const double pos) { return 480 * pos / scaleX() / pixelsPerQuarterNote; };
+    auto tickToSceneX = [&](const double tick) { return tick * scaleX() * pixelsPerQuarterNote / 480; };
     auto sceneXToItemX = [&](const double x) { return mapFromScene(QPointF(x, 0)).x(); };
     auto pitchToSceneY = [&](const double pitch) { return (12700 - pitch + 50) * scaleY() * noteHeight / 100; };
     auto sceneYToItemY = [&](const double y) { return mapFromScene(QPointF(0, y)).y(); };

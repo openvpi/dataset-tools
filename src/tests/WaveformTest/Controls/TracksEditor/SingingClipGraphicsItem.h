@@ -5,9 +5,9 @@
 #ifndef SINGINGCLIPGRAPHICSITEM_H
 #define SINGINGCLIPGRAPHICSITEM_H
 
-#include "ClipGraphicsItem.h"
+#include "AbstractClipGraphicsItem.h"
 
-class SingingClipGraphicsItem final : public ClipGraphicsItem {
+class SingingClipGraphicsItem final : public AbstractClipGraphicsItem {
 public:
     class Note {
     public:
@@ -25,8 +25,12 @@ public:
 
     QVector<Note> notes;
 
-protected:
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+private:
+    // void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void drawPreviewArea(QPainter *painter, const QRectF &previewRect, int opacity) override;
+    QString clipTypeName() override {
+        return "[Singing] ";
+    }
 
     QString m_audioCachePath;
 };

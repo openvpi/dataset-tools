@@ -7,14 +7,14 @@
 
 #include "Controls/Base/CommonGraphicsRectItem.h"
 
-class ClipGraphicsItem : public CommonGraphicsRectItem {
+class AbstractClipGraphicsItem : public CommonGraphicsRectItem {
     Q_OBJECT
 
 public:
     enum MouseMoveBehavior { Move, ResizeRight, ResizeLeft, None };
 
-    explicit ClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
-    ~ClipGraphicsItem() override;
+    explicit AbstractClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
+    ~AbstractClipGraphicsItem() override = default;
 
     int itemId();
     QString name() const;
@@ -42,8 +42,6 @@ public:
     int trackIndex() const;
     void setTrackIndex(int index);
 
-    QRectF previewRect() const;
-
 signals:
     // void propertyChanged(const QString &propertyName, const QString &value);
     void nameChanged(const QString &name);
@@ -54,18 +52,20 @@ signals:
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    virtual void drawPreviewArea(QPainter *painter, const QRectF &previewRect, int opacity) = 0;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
-
     void updateRectAndPos() override;
+    virtual QString clipTypeName() = 0;
+    void setCanResizeLength(bool on);
+    inline double tickToSceneX(double tick) const;
+    inline double sceneXToItemX(double x) const;
 
-    const double trackHeight = 72;
-    const int pixelPerQuarterNote = 64;
-
+private:
     int m_itemId;
     QString m_name;
     int m_start = 0;
@@ -75,7 +75,6 @@ protected:
     double m_gain = 0;
     // double m_pan = 0;
     bool m_mute = false;
-    QString m_clipTypeStr = "Clip";
     QRectF m_rect;
     int m_resizeTolerance = 8; // px
     bool m_canResizeLength = false;
@@ -93,6 +92,8 @@ protected:
     int m_trackIndex = 0;
     int m_quantize = 240; // tick, half quarter note
     bool m_tempQuantizeOff = false;
+
+    QRectF previewRect() const;
 };
 
 

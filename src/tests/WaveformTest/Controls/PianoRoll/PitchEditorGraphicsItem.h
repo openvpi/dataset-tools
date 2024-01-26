@@ -54,12 +54,9 @@ private:
     // void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     // void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     // void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
-    void updateRectAndPos();
+    void updateRectAndPos() override;
 
     EditMode m_editMode = Off;
-
-    const int pixelPerQuarterNote = 64;
-    const double noteHeight = 24;
 };
 
 #endif // PITCHEDITORGRAPHICSITEM_H

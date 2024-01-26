@@ -33,8 +33,8 @@ TracksController::TracksController() {
     auto testSingingClip = new SingingClipGraphicsItem(0);
     testSingingClip->setTrackIndex(0);
     m_tracksScene->addItem(testSingingClip);
-    connect(m_tracksView, &TracksGraphicsView::scaleChanged, testSingingClip, &ClipGraphicsItem::setScale);
-    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, testSingingClip, &ClipGraphicsItem::setVisibleRect);
+    connect(m_tracksView, &TracksGraphicsView::scaleChanged, testSingingClip, &AbstractClipGraphicsItem::setScale);
+    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, testSingingClip, &AbstractClipGraphicsItem::setVisibleRect);
     m_trackIndex++;
 }
 TracksController::~TracksController() {
@@ -71,9 +71,9 @@ void TracksController::addAudioClipToNewTrack(const QString &filePath) {
     clip->setScaleY(m_tracksView->scaleY());
     // clip->setScale(m_tracksView->scaleX(), m_tracksView->scaleY());
     m_tracksScene->addItem(clip);
-    connect(m_tracksView, &TracksGraphicsView::scaleChanged, clip, &ClipGraphicsItem::setScale);
-    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, clip, &ClipGraphicsItem::setVisibleRect);
-    connect(clip, &ClipGraphicsItem::startChanged, this, &TracksController::onStartChanged);
+    connect(m_tracksView, &TracksGraphicsView::scaleChanged, clip, &AbstractClipGraphicsItem::setScale);
+    connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, clip, &AbstractClipGraphicsItem::setVisibleRect);
+    connect(clip, &AbstractClipGraphicsItem::startChanged, this, &TracksController::onStartChanged);
 
     m_trackIndex++;
     m_clipItemIndex++;

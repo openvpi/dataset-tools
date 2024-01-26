@@ -11,8 +11,6 @@ class PianoRollGraphicsScene final : public CommonGraphicsScene {
 public:
     explicit PianoRollGraphicsScene();
 
-private:
-    const double noteHeight = 24;
 };
 
 #endif // PIANOROLLGRAPHICSSCENE_H

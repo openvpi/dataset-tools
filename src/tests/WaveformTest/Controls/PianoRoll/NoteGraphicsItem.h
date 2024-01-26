@@ -52,9 +52,6 @@ private:
     QString m_lyric;
     QString m_pronunciation = "la";
 
-    const double noteHeight = 24;
-    const int pixelPerQuarterNote = 64;
-
     MouseMoveBehavior m_mouseMoveBehavior = Move;
     QPointF m_mouseDownPos;
     int m_mouseDownStart;

@@ -5,10 +5,10 @@
 #ifndef AUDIOCLIPGRAPHICSITEM_H
 #define AUDIOCLIPGRAPHICSITEM_H
 
+#include "AbstractClipGraphicsItem.h"
 #include "AudioClipBackgroundWorker.h"
-#include "ClipGraphicsItem.h"
 
-class AudioClipGraphicsItem final : public ClipGraphicsItem {
+class AudioClipGraphicsItem final : public AbstractClipGraphicsItem {
 public:
     explicit AudioClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
     ~AudioClipGraphicsItem() override = default;
@@ -24,10 +24,14 @@ public slots:
     void onLoadComplete(bool success, QString errorMessage);
     void onTempoChange(double tempo);
 
-protected:
+private:
     enum RenderResolution { High, Low };
 
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    // void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void drawPreviewArea(QPainter *painter, const QRectF &previewRect, int opacity) override;
+    QString clipTypeName() override {
+        return "[Audio] ";
+    }
     void updateLength();
 
     // SndfileHandle sf;

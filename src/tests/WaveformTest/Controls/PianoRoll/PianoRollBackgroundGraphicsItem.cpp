@@ -5,6 +5,9 @@
 #include <QPainter>
 
 #include "PianoRollBackgroundGraphicsItem.h"
+#include "PianoRollGlobal.h"
+
+using namespace PianoRollGlobal;
 
 void PianoRollBackgroundGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                                             QWidget *widget) {

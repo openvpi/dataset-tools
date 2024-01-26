@@ -9,6 +9,9 @@
 #include <QTextOption>
 
 #include "NoteGraphicsItem.h"
+#include "PianoRollGlobal.h"
+
+using namespace PianoRollGlobal;
 
 NoteGraphicsItem::NoteGraphicsItem(int itemId, QGraphicsItem *parent) {
     m_itemId = itemId;
@@ -180,7 +183,7 @@ void NoteGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
     else
         m_tempQuantizeOff = false;
 
-    auto dx = (curPos.x() - m_mouseDownPos.x()) / scaleX() / pixelPerQuarterNote * 480;
+    auto dx = (curPos.x() - m_mouseDownPos.x()) / scaleX() / pixelsPerQuarterNote * 480;
     auto dy = (curPos.y() - m_mouseDownPos.y()) / scaleY() / noteHeight;
 
     // snap tick to grid
@@ -257,9 +260,9 @@ void NoteGraphicsItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event) {
     QGraphicsRectItem::hoverMoveEvent(event);
 }
 void NoteGraphicsItem::updateRectAndPos() {
-    const auto x = m_start * scaleX() * pixelPerQuarterNote / 480;
+    const auto x = m_start * scaleX() * pixelsPerQuarterNote / 480;
     const auto y = -(m_keyIndex - 127) * noteHeight * scaleY();
-    const auto w = m_length * scaleX() * pixelPerQuarterNote / 480;
+    const auto w = m_length * scaleX() * pixelsPerQuarterNote / 480;
     const auto h = noteHeight * scaleY();
     setPos(x, y);
     setRect(QRectF(0, 0, w, h));

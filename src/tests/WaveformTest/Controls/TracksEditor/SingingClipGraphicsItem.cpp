@@ -9,10 +9,13 @@
 #include <QPainter>
 
 #include "SingingClipGraphicsItem.h"
+#include "TracksEditorGlobal.h"
 
-SingingClipGraphicsItem::SingingClipGraphicsItem(int itemId, QGraphicsItem *parent) : ClipGraphicsItem(itemId, parent) {
-    m_clipTypeStr = "[Singing] ";
-    m_canResizeLength = true;
+using namespace TracksEditorGlobal;
+
+SingingClipGraphicsItem::SingingClipGraphicsItem(int itemId, QGraphicsItem *parent) : AbstractClipGraphicsItem(itemId, parent) {
+    setCanResizeLength(true);
+    setName("New Pattern");
     auto loadProjectFile = [](const QString &filename, QJsonObject *jsonObj) {
         QFile loadFile(filename);
         if (!loadFile.open(QIODevice::ReadOnly)) {
@@ -70,15 +73,13 @@ QString SingingClipGraphicsItem::audioCachePath() const {
 void SingingClipGraphicsItem::setAudioCachePath(const QString &path) {
     m_audioCachePath = path;
 }
-void SingingClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
-    ClipGraphicsItem::paint(painter, option, widget);
-
+void SingingClipGraphicsItem::drawPreviewArea(QPainter *painter, const QRectF &previewRect, int opacity) {
     painter->setRenderHint(QPainter::Antialiasing, false);
 
-    auto rectLeft = previewRect().left();
-    auto rectTop = previewRect().top();
-    auto rectWidth = previewRect().width();
-    auto rectHeight = previewRect().height();
+    auto rectLeft = previewRect.left();
+    auto rectTop = previewRect.top();
+    auto rectWidth = previewRect.width();
+    auto rectHeight = previewRect.height();
 
     if (rectHeight < 32 || rectWidth < 16)
         return;
@@ -102,9 +103,6 @@ void SingingClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
 
     int divideCount = highestKeyIndex - lowestKeyIndex + 1;
     auto noteHeight = (rectHeight - rectTop) / divideCount;
-
-    auto tickToSceneX = [&](const double tick) { return tick * scaleX() * pixelPerQuarterNote / 480; };
-    auto sceneXToItemX = [&](const double x) { return mapFromScene(QPointF(x, 0)).x(); };
 
     for (const auto &note : notes) {
         auto clipLeft = start() + clipStart();

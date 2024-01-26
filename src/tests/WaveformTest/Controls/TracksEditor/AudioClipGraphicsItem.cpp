@@ -11,8 +11,8 @@
 #include "AudioClipBackgroundWorker.h"
 #include "AudioClipGraphicsItem.h"
 
-AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId, QGraphicsItem *parent) : ClipGraphicsItem(itemId, parent) {
-    m_clipTypeStr = "[Audio] ";
+AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId, QGraphicsItem *parent)
+    : AbstractClipGraphicsItem(itemId, parent) {
 }
 
 void AudioClipGraphicsItem::openFile(const QString &path) {
@@ -61,36 +61,30 @@ void AudioClipGraphicsItem::onTempoChange(double tempo) {
     m_tempo = tempo;
     updateLength();
 }
-void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
-    QElapsedTimer mstimer;
-    // Draw frame
-    ClipGraphicsItem::paint(painter, option, widget);
-
+void AudioClipGraphicsItem::drawPreviewArea(QPainter *painter, const QRectF &previewRect, int opacity) {
+    // QElapsedTimer mstimer;
     painter->setRenderHint(QPainter::Antialiasing, false);
 
-    auto rectLeft = previewRect().left();
-    auto rectTop = previewRect().top();
-    auto rectWidth = previewRect().width();
-    auto rectHeight = previewRect().height();
+    auto rectLeft = previewRect.left();
+    auto rectTop = previewRect.top();
+    auto rectWidth = previewRect.width();
+    auto rectHeight = previewRect.height();
     auto halfRectHeight = rectHeight / 2;
-    if (rectHeight < 32 || rectWidth < 16)
-        return;
-    auto colorAlpha = rectHeight <= 48 ? 255 * (rectHeight - 32) / (48 - 32) : 255;
-    auto peakColor = QColor(10, 10, 10, static_cast<int>(colorAlpha));
+    auto peakColor = QColor(10, 10, 10, opacity);
 
     QPen pen;
 
     if (m_loading) {
         pen.setColor(peakColor);
         painter->setPen(pen);
-        painter->drawText(previewRect(), "Loading...", QTextOption(Qt::AlignCenter));
+        painter->drawText(previewRect, "Loading...", QTextOption(Qt::AlignCenter));
     }
 
     pen.setColor(peakColor);
     pen.setWidth(1);
     painter->setPen(pen);
 
-    mstimer.start();
+    // mstimer.start();
     if (m_peakCache.count() == 0 || m_peakCacheMipmap.count() == 0)
         return;
 
@@ -98,12 +92,12 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     const auto peakData = m_resolution == Low ? m_peakCacheMipmap : m_peakCache;
     const auto chunksPerTick = m_resolution == Low ? m_chunksPerTick / m_mipmapScale : m_chunksPerTick;
 
-    auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
-    auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
+    auto rectLeftScene = mapToScene(previewRect.topLeft()).x();
+    auto rectRightScene = mapToScene(previewRect.bottomRight()).x();
     auto waveRectLeft = visibleRect().left() < rectLeftScene ? 0 : visibleRect().left() - rectLeftScene;
     auto waveRectRight =
         visibleRect().right() < rectRightScene ? visibleRect().right() - rectLeftScene : rectRightScene - rectLeftScene;
-    auto waveRectWidth = waveRectRight - waveRectLeft;
+    auto waveRectWidth = waveRectRight - waveRectLeft + 1; // 1 px spaceing at right
 
     auto start = clipStart() * chunksPerTick;
     auto end = (clipStart() + clipLen()) * chunksPerTick;
@@ -147,20 +141,12 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
         drawPeak(i, min, max);
     }
 
-    const auto time = static_cast<double>(mstimer.nsecsElapsed()) / 1000000.0;
+    // const auto time = static_cast<double>(mstimer.nsecsElapsed()) / 1000000.0;
     // qDebug() << time;
 
-    // // Draw visible area
-    // auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
-    // auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
-    // auto waveRectLeft =
-    //     visibleRect().left() < rectLeftScene ? 0 : visibleRect().left() - rectLeftScene;
-    // auto waveRectTop = previewRect().top();
-    // auto waveRectRight =
-    //     visibleRect().right() < rectRightScene ? visibleRect().right() - rectLeftScene: rectRightScene-
-    //     rectLeftScene;
-    // auto waveRectWidth = waveRectRight - waveRectLeft;
-    // auto waveRectHeight = previewRect().height();
+    // Draw visible area
+    // auto waveRectTop = previewRect.top();
+    // auto waveRectHeight = previewRect.height();
     // auto waveRect = QRectF(waveRectLeft, waveRectTop, waveRectWidth, waveRectHeight);
     //
     // pen.setColor(QColor(255, 0, 0));
