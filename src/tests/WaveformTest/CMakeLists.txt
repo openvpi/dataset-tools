@@ -6,6 +6,10 @@ set(CMAKE_AUTOUIC ON)
 
 file(GLOB_RECURSE _src *.h *.cpp)
 
+if(WIN32)
+    set(PLATFORM_LIB dwmapi.lib)
+endif()
+
 add_executable(${PROJECT_NAME} ${_src})
 
 target_include_directories(${PROJECT_NAME} PUBLIC .)

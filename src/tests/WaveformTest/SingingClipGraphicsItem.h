@@ -23,7 +23,7 @@ public:
     QString audioCachePath() const;
     void setAudioCachePath(const QString &path);
 
-    QList<Note> notes;
+    QVector<Note> notes;
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;

@@ -81,11 +81,15 @@ void PitchEditorGraphicsItem::setVisibleRect(const QRectF &rect) {
 void PitchEditorGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     OverlayGraphicsItem::paint(painter, option, widget);
 
-    painter->setRenderHint(QPainter::Antialiasing, false);
+    // painter->setRenderHint(QPainter::Antialiasing, false);
+
+    if (m_scaleX < 0.6)
+        return;
+        auto colorAlpha = m_scaleX < 0.8 ? 255 * (m_scaleX - 0.6) / (0.8 - 0.6) : 255;
 
     QPen pen;
     pen.setWidthF(1);
-    pen.setColor(QColor(150, 150, 150));
+    pen.setColor(QColor(130, 134, 138, colorAlpha));
     painter->setPen(pen);
 
     auto sceneXToTick = [&](const double pos) { return 480 * pos / m_scaleX / pixelPerQuarterNote; };
@@ -99,22 +103,29 @@ void PitchEditorGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
 
     QPainterPath path;
     bool firstPoint = true;
+    int prevPos = 0;
+    int prevValue = 0;
     for (const auto &point : opensvipPitchParam) {
         auto pos = std::get<0>(point) - 480 * 3; // opensvip's "feature"
-        if (pos < visibleStartTick)
-            continue;
-        if (pos > visibleEndTick)
-            break;
-
         auto value = std::get<1>(point);
-        auto x = sceneXToItemX(tickToSceneX(pos));
-        auto y = sceneYToItemY(pitchToSceneY(value));
+
+        if (pos < visibleStartTick) {
+            prevPos = pos;
+            prevValue = value;
+            continue;
+        }
 
         if (firstPoint) {
-            path.moveTo(x, y);
+            path.moveTo(sceneXToItemX(tickToSceneX(prevPos)), sceneYToItemY(pitchToSceneY(prevValue)));
+            path.lineTo(sceneXToItemX(tickToSceneX(pos)), sceneYToItemY(pitchToSceneY(value)));
             firstPoint = false;
         } else
-            path.lineTo(x, y);
+            path.lineTo(sceneXToItemX(tickToSceneX(pos)), sceneYToItemY(pitchToSceneY(value)));
+
+        if (pos > visibleEndTick) {
+            path.lineTo(sceneXToItemX(tickToSceneX(pos)), sceneYToItemY(pitchToSceneY(value)));
+            break;
+        }
     }
     painter->drawPath(path);
 }

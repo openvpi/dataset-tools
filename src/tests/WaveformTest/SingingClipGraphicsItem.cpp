@@ -39,7 +39,7 @@ SingingClipGraphicsItem::SingingClipGraphicsItem(int itemId, QGraphicsItem *pare
         auto notes = firstPattern.value("notes").toArray();
 
         auto decodeNotes = [](const QJsonArray &arrNotes) {
-            QList<Note> notes;
+            QVector<Note> notes;
             for (const auto valNote : qAsConst(arrNotes)) {
                 auto objNote = valNote.toObject();
                 Note note;

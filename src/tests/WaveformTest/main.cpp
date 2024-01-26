@@ -22,6 +22,10 @@
 #include "TracksController.h"
 #include "TracksGraphicsView.h"
 
+#ifdef Q_OS_WIN
+#include <dwmapi.h>
+#endif
+
 int main(int argc, char *argv[]) {
     qputenv("QT_ENABLE_HIGHDPI_SCALING", "1");
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
@@ -36,6 +40,22 @@ int main(int argc, char *argv[]) {
 
     QMainWindow w;
     w.setStyleSheet(QString("QMainWindow { background: #232425 }"));
+#ifdef Q_OS_WIN
+    // make window transparent
+    w.setStyleSheet(QString("QMainWindow { background: transparent }"));
+    // Enable Mica background
+    auto backDropType = DWMSBT_MAINWINDOW;
+    DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_SYSTEMBACKDROP_TYPE, &backDropType,
+                          sizeof(backDropType));
+    // Extend title bar blur effect into client area
+    constexpr int mgn = -1;
+    MARGINS margins = {mgn, mgn, mgn, mgn};
+    DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(w.winId()), &margins);
+    // Dark theme
+    uint dark = 1;
+    DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_USE_IMMERSIVE_DARK_MODE, &dark,
+                          sizeof(dark));
+#endif
 
     auto btnOpenAudioFile = new QPushButton;
     btnOpenAudioFile->setText("Add...");
