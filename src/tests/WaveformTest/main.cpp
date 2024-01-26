@@ -13,14 +13,13 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-#include "NoteGraphicsItem.h"
-#include "OverlayGraphicsItem.h"
-#include "PianoRollBackgroundGraphicsItem.h"
-#include "PianoRollGraphicsScene.h"
-#include "PianoRollGraphicsView.h"
-#include "PitchEditorGraphicsItem.h"
+#include "Controls/PianoRoll/NoteGraphicsItem.h"
+#include "Controls/PianoRoll/PianoRollBackgroundGraphicsItem.h"
+#include "Controls/PianoRoll/PianoRollGraphicsScene.h"
+#include "Controls/PianoRoll/PianoRollGraphicsView.h"
+#include "Controls/PianoRoll/PitchEditorGraphicsItem.h"
+#include "Controls/TracksEditor/TracksGraphicsView.h"
 #include "TracksController.h"
-#include "TracksGraphicsView.h"
 
 #ifdef Q_OS_WIN
 #include <dwmapi.h>
@@ -82,7 +81,7 @@ int main(int argc, char *argv[]) {
 
     auto gridItem = new PianoRollBackgroundGraphicsItem;
     QObject::connect(pianoRollView, &TracksGraphicsView::visibleRectChanged, gridItem,
-                     &TimeGridGraphicsItem::onVisibleRectChanged);
+                     &TimeGridGraphicsItem::setVisibleRect);
     QObject::connect(pianoRollView, &TracksGraphicsView::scaleChanged, gridItem, &TimeGridGraphicsItem::setScale);
     pianoRollScene->addItem(gridItem);
 

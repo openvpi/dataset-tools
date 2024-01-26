@@ -24,18 +24,18 @@ void TracksBackgroundGraphicsItem::paint(QPainter *painter, const QStyleOptionGr
     painter->setPen(pen);
     // painter->setRenderHint(QPainter::Antialiasing);
 
-    auto sceneYToTrackIndex = [&](const double y) { return y / m_scaleY / trackHeight; };
+    auto sceneYToTrackIndex = [&](const double y) { return y / scaleY() / trackHeight; };
 
-    auto trackIndexToSceneY = [&](const double index) { return index * m_scaleY * trackHeight; };
+    auto trackIndexToSceneY = [&](const double index) { return index * scaleY() * trackHeight; };
 
     auto sceneYToItemY = [&](const double y) { return mapFromScene(QPointF(0, y)).y(); };
 
-    auto startTrackIndex = sceneYToTrackIndex(m_visibleRect.top());
-    auto endTrackIndex = sceneYToTrackIndex(m_visibleRect.bottom());
+    auto startTrackIndex = sceneYToTrackIndex(visibleRect().top());
+    auto endTrackIndex = sceneYToTrackIndex(visibleRect().bottom());
     auto prevLineTrackIndex = static_cast<int>(startTrackIndex);
     for (int i = prevLineTrackIndex; i < endTrackIndex; i++) {
         auto y = sceneYToItemY(trackIndexToSceneY(i));
-        auto line = QLineF(0, y, m_visibleRect.width(), y);
+        auto line = QLineF(0, y, visibleRect().width(), y);
         painter->drawLine(line);
     }
 }

@@ -5,9 +5,9 @@
 #ifndef DATASET_TOOLS_CLIPGRAPHICSITEM_H
 #define DATASET_TOOLS_CLIPGRAPHICSITEM_H
 
-#include <QGraphicsRectItem>
+#include "Controls/Base/CommonGraphicsRectItem.h"
 
-class ClipGraphicsItem : public QObject, public QGraphicsRectItem {
+class ClipGraphicsItem : public CommonGraphicsRectItem {
     Q_OBJECT
 
 public:
@@ -39,10 +39,6 @@ public:
     bool mute() const;
     void setMute(bool mute);
 
-    double scaleX() const;
-    void setScaleX(double scaleX);
-    double scaleY() const;
-    void setScaleY(double scaleY);
     int trackIndex() const;
     void setTrackIndex(int index);
 
@@ -56,13 +52,6 @@ signals:
     void clipStartChanged(int clipStart);
     void clipLenChanged(int clipLen);
 
-public slots:
-    void setScale(qreal sx, qreal sy) {
-    setScaleX(sx);
-    setScaleY(sy);
-    }
-    void setVisibleRect(const QRectF &rect);
-
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
@@ -72,7 +61,7 @@ protected:
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
 
-    void updateRectAndPos();
+    void updateRectAndPos() override;
 
     const double trackHeight = 72;
     const int pixelPerQuarterNote = 64;
@@ -88,7 +77,6 @@ protected:
     bool m_mute = false;
     QString m_clipTypeStr = "Clip";
     QRectF m_rect;
-    QRectF m_visibleRect;
     int m_resizeTolerance = 8; // px
     bool m_canResizeLength = false;
     // bool m_mouseOnResizeRightArea = false;
@@ -102,8 +90,6 @@ protected:
     int m_mouseDownLength;
     int m_mouseDownClipLen;
 
-    double m_scaleX = 1;
-    double m_scaleY = 1;
     int m_trackIndex = 0;
     int m_quantize = 240; // tick, half quarter note
     bool m_tempQuantizeOff = false;

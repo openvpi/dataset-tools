@@ -5,12 +5,11 @@
 #include <QDebug>
 // #include <QOpenGLWidget>
 
-#include "AudioClipGraphicsItem.h"
-#include "TimeGridGraphicsItem.h"
-#include "TracksBackgroundGraphicsItem.h"
+#include "Controls/Base/TimeGridGraphicsItem.h"
+#include "Controls/TracksEditor/AudioClipGraphicsItem.h"
+#include "Controls/TracksEditor/SingingClipGraphicsItem.h"
+#include "Controls/TracksEditor/TracksBackgroundGraphicsItem.h"
 #include "TracksController.h"
-
-#include "SingingClipGraphicsItem.h"
 #include "TracksModel.h"
 
 TracksController::TracksController() {
@@ -27,7 +26,7 @@ TracksController::TracksController() {
 
     auto gridItem = new TracksBackgroundGraphicsItem;
     connect(m_tracksView, &TracksGraphicsView::visibleRectChanged, gridItem,
-            &TimeGridGraphicsItem::onVisibleRectChanged);
+            &TimeGridGraphicsItem::setVisibleRect);
     connect(m_tracksView, &TracksGraphicsView::scaleChanged, gridItem, &TimeGridGraphicsItem::setScale);
     m_tracksScene->addItem(gridItem);
 

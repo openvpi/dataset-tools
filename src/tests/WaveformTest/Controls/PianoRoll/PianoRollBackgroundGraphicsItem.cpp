@@ -23,9 +23,9 @@ void PianoRollBackgroundGraphicsItem::paint(QPainter *painter, const QStyleOptio
     painter->setPen(pen);
     // painter->setRenderHint(QPainter::Antialiasing);
 
-    auto sceneYToKeyIndex = [&](const double y) { return 127 - y / m_scaleY / noteHeight; };
+    auto sceneYToKeyIndex = [&](const double y) { return 127 - y / scaleY() / noteHeight; };
 
-    auto keyIndexToSceneY = [&](const double index) { return (127 - index) * m_scaleY * noteHeight; };
+    auto keyIndexToSceneY = [&](const double index) { return (127 - index) * scaleY() * noteHeight; };
 
     auto sceneYToItemY = [&](const double y) { return mapFromScene(QPointF(0, y)).y(); };
 
@@ -43,14 +43,14 @@ void PianoRollBackgroundGraphicsItem::paint(QPainter *painter, const QStyleOptio
         return noteName;
     };
 
-    auto startKeyIndex = sceneYToKeyIndex(m_visibleRect.top());
-    auto endKeyIndex = sceneYToKeyIndex(m_visibleRect.bottom());
+    auto startKeyIndex = sceneYToKeyIndex(visibleRect().top());
+    auto endKeyIndex = sceneYToKeyIndex(visibleRect().bottom());
     auto prevKeyIndex = static_cast<int>(startKeyIndex) + 1;
     for (int i = prevKeyIndex; i > endKeyIndex; i--) {
         auto y = sceneYToItemY(keyIndexToSceneY(i));
 
         painter->setBrush(isWhiteKey(i) ? QColor(42, 43, 44) : QColor(35, 36, 37));
-        auto gridRect = QRectF(0, y, m_visibleRect.width(), noteHeight * m_scaleY);
+        auto gridRect = QRectF(0, y, visibleRect().width(), noteHeight * scaleY());
         painter->setPen(Qt::NoPen);
         painter->drawRect(gridRect);
 
@@ -60,7 +60,7 @@ void PianoRollBackgroundGraphicsItem::paint(QPainter *painter, const QStyleOptio
 
         pen.setColor(lineColor);
         painter->setPen(pen);
-        auto line = QLineF(0, y, m_visibleRect.width(), y);
+        auto line = QLineF(0, y, visibleRect().width(), y);
         painter->drawLine(line);
     }
 

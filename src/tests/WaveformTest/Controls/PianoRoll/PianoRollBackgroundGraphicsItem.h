@@ -4,7 +4,7 @@
 
 #ifndef PIANOROLLBACKGROUNDGRAPHICSITEM_H
 #define PIANOROLLBACKGROUNDGRAPHICSITEM_H
-#include "TimeGridGraphicsItem.h"
+#include "../Base/TimeGridGraphicsItem.h"
 
 
 

@@ -5,7 +5,7 @@
 #ifndef PITCHEDITORGRAPHICSITEM_H
 #define PITCHEDITORGRAPHICSITEM_H
 
-#include "OverlayGraphicsItem.h"
+#include "Controls/Base/OverlayGraphicsItem.h"
 
 class PitchEditorGraphicsItem final : public OverlayGraphicsItem {
 public:
@@ -46,18 +46,6 @@ public:
     // void loadParam();
     // QList<FreeCurve> mergedPitchParam();
 
-    double scaleX() const;
-    void setScaleX(double scaleX);
-    double scaleY() const;
-    void setScaleY(double scaleY);
-
-public slots:
-    void setScale(qreal sx, qreal sy) {
-        setScaleX(sx);
-        setScaleY(sy);
-    }
-    void setVisibleRect(const QRectF &rect);
-
 private:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     // void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
@@ -66,14 +54,10 @@ private:
     // void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     // void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     // void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
-
     void updateRectAndPos();
 
     EditMode m_editMode = Off;
 
-    double m_scaleX = 1;
-    double m_scaleY = 1;
-    QRectF m_visibleRect;
     const int pixelPerQuarterNote = 64;
     const double noteHeight = 24;
 };

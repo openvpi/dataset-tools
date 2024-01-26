@@ -5,7 +5,7 @@
 #ifndef TRACKSBACKGROUNDGRAPHICSITEM_H
 #define TRACKSBACKGROUNDGRAPHICSITEM_H
 
-#include "TimeGridGraphicsItem.h"
+#include "../Base/TimeGridGraphicsItem.h"
 
 class TracksBackgroundGraphicsItem final : public TimeGridGraphicsItem {
 protected:

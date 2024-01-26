@@ -5,7 +5,7 @@
 #ifndef DATASET_TOOLS_TRACKSGRAPHICSSCENE_H
 #define DATASET_TOOLS_TRACKSGRAPHICSSCENE_H
 
-#include "CommonGraphicsScene.h"
+#include "../Base/CommonGraphicsScene.h"
 
 class TracksGraphicsScene final : public CommonGraphicsScene {
 };

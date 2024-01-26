@@ -103,7 +103,7 @@ void SingingClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
     int divideCount = highestKeyIndex - lowestKeyIndex + 1;
     auto noteHeight = (rectHeight - rectTop) / divideCount;
 
-    auto tickToSceneX = [&](const double tick) { return tick * m_scaleX * pixelPerQuarterNote / 480; };
+    auto tickToSceneX = [&](const double tick) { return tick * scaleX() * pixelPerQuarterNote / 480; };
     auto sceneXToItemX = [&](const double x) { return mapFromScene(QPointF(x, 0)).x(); };
 
     for (const auto &note : notes) {

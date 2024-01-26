@@ -60,46 +60,28 @@ void PitchEditorGraphicsItem::setEditMode(const EditMode &mode) {
     }
     m_editMode = mode;
 }
-double PitchEditorGraphicsItem::scaleX() const {
-    return m_scaleX;
-}
-void PitchEditorGraphicsItem::setScaleX(double scaleX) {
-    m_scaleX = scaleX;
-    updateRectAndPos();
-}
-double PitchEditorGraphicsItem::scaleY() const {
-    return m_scaleY;
-}
-void PitchEditorGraphicsItem::setScaleY(double scaleY) {
-    m_scaleY = scaleY;
-    updateRectAndPos();
-}
-void PitchEditorGraphicsItem::setVisibleRect(const QRectF &rect) {
-    m_visibleRect = rect;
-    updateRectAndPos();
-}
 void PitchEditorGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     OverlayGraphicsItem::paint(painter, option, widget);
 
     // painter->setRenderHint(QPainter::Antialiasing, false);
 
-    if (m_scaleX < 0.6)
+    if (scaleX() < 0.6)
         return;
-        auto colorAlpha = m_scaleX < 0.8 ? 255 * (m_scaleX - 0.6) / (0.8 - 0.6) : 255;
+        auto colorAlpha = scaleX() < 0.8 ? 255 * (scaleX() - 0.6) / (0.8 - 0.6) : 255;
 
     QPen pen;
     pen.setWidthF(1);
     pen.setColor(QColor(130, 134, 138, colorAlpha));
     painter->setPen(pen);
 
-    auto sceneXToTick = [&](const double pos) { return 480 * pos / m_scaleX / pixelPerQuarterNote; };
-    auto tickToSceneX = [&](const double tick) { return tick * m_scaleX * pixelPerQuarterNote / 480; };
+    auto sceneXToTick = [&](const double pos) { return 480 * pos / scaleX() / pixelPerQuarterNote; };
+    auto tickToSceneX = [&](const double tick) { return tick * scaleX() * pixelPerQuarterNote / 480; };
     auto sceneXToItemX = [&](const double x) { return mapFromScene(QPointF(x, 0)).x(); };
-    auto pitchToSceneY = [&](const double pitch) { return (12700 - pitch + 50) * m_scaleY * noteHeight / 100; };
+    auto pitchToSceneY = [&](const double pitch) { return (12700 - pitch + 50) * scaleY() * noteHeight / 100; };
     auto sceneYToItemY = [&](const double y) { return mapFromScene(QPointF(0, y)).y(); };
 
-    auto visibleStartTick = sceneXToTick(m_visibleRect.left());
-    auto visibleEndTick = sceneXToTick(m_visibleRect.right());
+    auto visibleStartTick = sceneXToTick(visibleRect().left());
+    auto visibleEndTick = sceneXToTick(visibleRect().right());
 
     QPainterPath path;
     bool firstPoint = true;
@@ -130,8 +112,8 @@ void PitchEditorGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
     painter->drawPath(path);
 }
 void PitchEditorGraphicsItem::updateRectAndPos() {
-    auto pos = m_visibleRect.topLeft();
+    auto pos = visibleRect().topLeft();
     setPos(pos);
-    setRect(QRectF(0, 0, m_visibleRect.width(), m_visibleRect.height()));
+    setRect(QRectF(0, 0, visibleRect().width(), visibleRect().height()));
     update();
 }

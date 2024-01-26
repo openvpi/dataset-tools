@@ -59,24 +59,6 @@ void NoteGraphicsItem::setPronunciation(const QString &pronunciation) {
     m_pronunciation = pronunciation;
     update();
 }
-double NoteGraphicsItem::scaleX() const {
-    return m_scaleX;
-}
-void NoteGraphicsItem::setScaleX(double scaleX) {
-    m_scaleX = scaleX;
-    updateRectAndPos();
-}
-double NoteGraphicsItem::scaleY() const {
-    return m_scaleY;
-}
-void NoteGraphicsItem::setScaleY(double scaleY) {
-    m_scaleY = scaleY;
-    updateRectAndPos();
-}
-void NoteGraphicsItem::setVisibleRect(const QRectF &rect) {
-    m_visibleRect = rect;
-    update();
-}
 void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     const auto colorPrimary = QColor(155, 186, 255);
     const auto colorPrimaryDarker = QColor(112, 156, 255);
@@ -198,8 +180,8 @@ void NoteGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
     else
         m_tempQuantizeOff = false;
 
-    auto dx = (curPos.x() - m_mouseDownPos.x()) / m_scaleX / pixelPerQuarterNote * 480;
-    auto dy = (curPos.y() - m_mouseDownPos.y()) / m_scaleY / noteHeight;
+    auto dx = (curPos.x() - m_mouseDownPos.x()) / scaleX() / pixelPerQuarterNote * 480;
+    auto dy = (curPos.y() - m_mouseDownPos.y()) / scaleY() / noteHeight;
 
     // snap tick to grid
     auto roundPos = [](int i, int step) {
@@ -275,10 +257,10 @@ void NoteGraphicsItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event) {
     QGraphicsRectItem::hoverMoveEvent(event);
 }
 void NoteGraphicsItem::updateRectAndPos() {
-    const auto x = m_start * m_scaleX * pixelPerQuarterNote / 480;
-    const auto y = -(m_keyIndex - 127) * noteHeight * m_scaleY;
-    const auto w = m_length * m_scaleX * pixelPerQuarterNote / 480;
-    const auto h = noteHeight * m_scaleY;
+    const auto x = m_start * scaleX() * pixelPerQuarterNote / 480;
+    const auto y = -(m_keyIndex - 127) * noteHeight * scaleY();
+    const auto w = m_length * scaleX() * pixelPerQuarterNote / 480;
+    const auto h = noteHeight * scaleY();
     setPos(x, y);
     setRect(QRectF(0, 0, w, h));
     update();

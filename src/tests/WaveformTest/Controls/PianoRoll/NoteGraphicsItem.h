@@ -5,13 +5,10 @@
 #ifndef NOTEGRAPHICSITEM_H
 #define NOTEGRAPHICSITEM_H
 
+#include "Controls/Base/CommonGraphicsRectItem.h"
 #include "PianoRollGraphicsView.h"
 
-
-#include <QGraphicsRectItem>
-#include <QObject>
-
-class NoteGraphicsItem final : public QObject, public QGraphicsRectItem {
+class NoteGraphicsItem final : public CommonGraphicsRectItem {
     Q_OBJECT
 
 public:
@@ -32,22 +29,10 @@ public:
     QString pronunciation() const;
     void setPronunciation(const QString &pronunciation);
 
-    double scaleX() const;
-    void setScaleX(double scaleX);
-    double scaleY() const;
-    void setScaleY(double scaleY);
-
     PianoRollGraphicsView *graphicsView;
 
 signals:
     void propertyChanged();
-
-public slots:
-    void setScale(qreal sx, qreal sy) {
-        setScaleX(sx);
-        setScaleY(sy);
-    }
-    void setVisibleRect(const QRectF &rect);
 
 private:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
@@ -57,7 +42,7 @@ private:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override;
-    void updateRectAndPos();
+    void updateRectAndPos() override;
     void initUi();
 
     int m_itemId;
@@ -67,11 +52,8 @@ private:
     QString m_lyric;
     QString m_pronunciation = "la";
 
-    QRectF m_visibleRect;
     const double noteHeight = 24;
     const int pixelPerQuarterNote = 64;
-    double m_scaleX = 1;
-    double m_scaleY = 1;
 
     MouseMoveBehavior m_mouseMoveBehavior = Move;
     QPointF m_mouseDownPos;

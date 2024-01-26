@@ -5,9 +5,9 @@
 #ifndef TIMEGRIDGRAPHICSITEM_H
 #define TIMEGRIDGRAPHICSITEM_H
 
-#include <QGraphicsRectItem>
+#include "CommonGraphicsRectItem.h"
 
-class TimeGridGraphicsItem : public QObject, public QGraphicsRectItem {
+class TimeGridGraphicsItem : public CommonGraphicsRectItem {
     Q_OBJECT
 
 public:
@@ -21,32 +21,20 @@ public:
     explicit TimeGridGraphicsItem(QGraphicsItem *parent = nullptr);
     ~TimeGridGraphicsItem() override = default;
 
-    double scaleX() const;
-    void setScaleX(double scaleX);
-    double scaleY() const;
-    void setScaleY(double scaleY);
 
 public slots:
-    void onVisibleRectChanged(const QRectF &rect);
-    void setScale(qreal sx, qreal sy) {
-        setScaleX(sx);
-        setScaleY(sy);
-    }
     void onTimeSignatureChanged(int numerator, int denominator);
     //     void onTimelineChanged();
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
-    void updateRectAndPos();
+    void updateRectAndPos() override;
 
     int m_numerator = 3;
     int m_denominator = 4;
     int m_quantization = 8;    // 1/8 note
     int m_minimumSpacing = 24; // hide low level grid line when distance < 32 px
-    double m_scaleX = 1;
-    double m_scaleY = 1;
     const int pixelPerQuarterNote = 64;
-    QRectF m_visibleRect;
 };
 
 

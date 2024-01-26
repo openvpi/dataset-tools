@@ -7,8 +7,8 @@
 
 #include <QObject>
 
-#include "TracksGraphicsScene.h"
-#include "TracksGraphicsView.h"
+#include "Controls/TracksEditor/TracksGraphicsScene.h"
+#include "Controls/TracksEditor/TracksGraphicsView.h"
 #include "TracksModel.h"
 
 class TracksController final : public QObject {

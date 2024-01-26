@@ -5,7 +5,7 @@
 #ifndef PIANOROLLGRAPHICSVIEW_H
 #define PIANOROLLGRAPHICSVIEW_H
 
-#include "CommonGraphicsView.h"
+#include "Controls/Base/CommonGraphicsView.h"
 
 class PianoRollGraphicsView final : public CommonGraphicsView {
 public:

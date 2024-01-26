@@ -5,7 +5,7 @@
 #ifndef PIANOROLLGRAPHICSSCENE_H
 #define PIANOROLLGRAPHICSSCENE_H
 
-#include "CommonGraphicsScene.h"
+#include "Controls/Base/CommonGraphicsScene.h"
 
 class PianoRollGraphicsScene final : public CommonGraphicsScene {
 public:

@@ -100,9 +100,9 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
 
     auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
     auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
-    auto waveRectLeft = m_visibleRect.left() < rectLeftScene ? 0 : m_visibleRect.left() - rectLeftScene;
+    auto waveRectLeft = visibleRect().left() < rectLeftScene ? 0 : visibleRect().left() - rectLeftScene;
     auto waveRectRight =
-        m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene : rectRightScene - rectLeftScene;
+        visibleRect().right() < rectRightScene ? visibleRect().right() - rectLeftScene : rectRightScene - rectLeftScene;
     auto waveRectWidth = waveRectRight - waveRectLeft;
 
     auto start = clipStart() * chunksPerTick;
@@ -154,10 +154,10 @@ void AudioClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsI
     // auto rectLeftScene = mapToScene(previewRect().topLeft()).x();
     // auto rectRightScene = mapToScene(previewRect().bottomRight()).x();
     // auto waveRectLeft =
-    //     m_visibleRect.left() < rectLeftScene ? 0 : m_visibleRect.left() - rectLeftScene;
+    //     visibleRect().left() < rectLeftScene ? 0 : visibleRect().left() - rectLeftScene;
     // auto waveRectTop = previewRect().top();
     // auto waveRectRight =
-    //     m_visibleRect.right() < rectRightScene ? m_visibleRect.right() - rectLeftScene: rectRightScene-
+    //     visibleRect().right() < rectRightScene ? visibleRect().right() - rectLeftScene: rectRightScene-
     //     rectLeftScene;
     // auto waveRectWidth = waveRectRight - waveRectLeft;
     // auto waveRectHeight = previewRect().height();

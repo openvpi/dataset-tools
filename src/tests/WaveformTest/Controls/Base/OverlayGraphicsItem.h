@@ -5,9 +5,9 @@
 #ifndef OVERLAYGRAPHICSITEM_H
 #define OVERLAYGRAPHICSITEM_H
 
-#include <QGraphicsRectItem>
+#include "CommonGraphicsRectItem.h"
 
-class OverlayGraphicsItem : public QObject, public QGraphicsRectItem {
+class OverlayGraphicsItem : public CommonGraphicsRectItem {
     Q_OBJECT
 
 public:

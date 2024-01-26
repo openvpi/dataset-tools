@@ -5,7 +5,7 @@
 #ifndef DATASET_TOOLS_TRACKSGRAPHICSVIEW_H
 #define DATASET_TOOLS_TRACKSGRAPHICSVIEW_H
 
-#include "CommonGraphicsView.h"
+#include "../Base/CommonGraphicsView.h"
 
 class TracksGraphicsView final : public CommonGraphicsView {
 };

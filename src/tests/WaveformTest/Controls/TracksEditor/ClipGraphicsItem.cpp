@@ -12,7 +12,7 @@
 #include "TracksGraphicsScene.h"
 
 
-ClipGraphicsItem::ClipGraphicsItem(int itemId, QGraphicsItem *parent) : QGraphicsRectItem(parent) {
+ClipGraphicsItem::ClipGraphicsItem(int itemId, QGraphicsItem *parent) : CommonGraphicsRectItem(parent) {
     m_itemId = itemId;
     setAcceptHoverEvents(true);
     setFlag(ItemIsSelectable);
@@ -76,20 +76,6 @@ void ClipGraphicsItem::setGain(const double gain) {
     m_gain = gain;
     update();
 }
-double ClipGraphicsItem::scaleX() const {
-    return m_scaleX;
-}
-double ClipGraphicsItem::scaleY() const {
-    return m_scaleY;
-}
-void ClipGraphicsItem::setScaleX(const double scaleX) {
-    m_scaleX = scaleX;
-    updateRectAndPos();
-}
-void ClipGraphicsItem::setScaleY(const double scaleY) {
-    m_scaleY = scaleY;
-    updateRectAndPos();
-}
 int ClipGraphicsItem::trackIndex() const {
     return m_trackIndex;
 }
@@ -107,10 +93,6 @@ QRectF ClipGraphicsItem::previewRect() const {
     auto height = rect.height() - paddingTop - penWidth * 2;
     auto paddedRect = QRectF(left, top, width, height);
     return paddedRect;
-}
-void ClipGraphicsItem::setVisibleRect(const QRectF &rect) {
-    m_visibleRect = rect;
-    update();
 }
 
 void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
@@ -143,11 +125,11 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     int textPadding = 2;
     auto rectLeft = mapToScene(rect.topLeft()).x();
     auto rectRight = mapToScene(rect.bottomRight()).x();
-    auto textRectLeft = m_visibleRect.left() < rectLeft ? paddedRect.left() + textPadding
-                                                        : m_visibleRect.left() - rectLeft + textPadding + penWidth;
+    auto textRectLeft = visibleRect().left() < rectLeft ? paddedRect.left() + textPadding
+                                                        : visibleRect().left() - rectLeft + textPadding + penWidth;
     auto textRectTop = paddedRect.top() + textPadding;
-    auto textRectWidth = m_visibleRect.right() < rectRight ? m_visibleRect.width() - 2 * textPadding - penWidth
-                                                           : rectRight - m_visibleRect.left() - 2 * textPadding;
+    auto textRectWidth = visibleRect().right() < rectRight ? visibleRect().width() - 2 * textPadding - penWidth
+                                                           : rectRight - visibleRect().left() - 2 * textPadding;
     auto textRectHeight = paddedRect.height() - 2 * textPadding;
     auto textRect = QRectF(textRectLeft, textRectTop, textRectWidth, textRectHeight);
 
@@ -159,8 +141,8 @@ void ClipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
                        .arg(m_length)
                        .arg(m_clipStart)
                        .arg(m_clipLen)
-                       .arg(m_scaleX)
-                       .arg(m_scaleY);
+                       .arg(scaleX())
+                       .arg(scaleY());
     auto text = m_clipTypeStr + controlStr + timeStr;
     auto textWidth = fontMetrics.horizontalAdvance(text);
 
@@ -205,7 +187,7 @@ void ClipGraphicsItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
     else
         m_tempQuantizeOff = false;
 
-    auto dx = (curPos.x() - m_mouseDownPos.x()) / m_scaleX / pixelPerQuarterNote * 480;
+    auto dx = (curPos.x() - m_mouseDownPos.x()) / scaleX() / pixelPerQuarterNote * 480;
 
     // snap tick to grid
     auto roundPos = [](int i, int step) {
@@ -291,10 +273,10 @@ void ClipGraphicsItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event) {
 }
 
 void ClipGraphicsItem::updateRectAndPos() {
-    auto x = (m_start + m_clipStart) * m_scaleX * pixelPerQuarterNote / 480;
-    auto y = m_trackIndex * trackHeight * m_scaleY;
-    auto w = m_clipLen * m_scaleX * pixelPerQuarterNote / 480;
-    auto h = trackHeight * m_scaleY;
+    auto x = (m_start + m_clipStart) * scaleX() * pixelPerQuarterNote / 480;
+    auto y = m_trackIndex * trackHeight * scaleY();
+    auto w = m_clipLen * scaleX() * pixelPerQuarterNote / 480;
+    auto h = trackHeight * scaleY();
     setPos(x, y);
     setRect(QRectF(0, 0, w, h));
     update();
