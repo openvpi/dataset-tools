@@ -18,7 +18,7 @@ void AudioClipBackgroundWorker::run() {
 #ifdef Q_OS_WIN
         m_path.toStdWString();
 #else
-        path.toStdString();
+        m_path.toStdString();
 #endif
     //    SndfileHandle sf(pathStr.c_str());
     sf = SndfileHandle(pathStr.c_str());

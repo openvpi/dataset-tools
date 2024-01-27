@@ -86,13 +86,34 @@ bool CommonGraphicsView::event(QEvent *event) {
         auto gestureEvent = static_cast<QNativeGestureEvent *>(event);
 
         if (gestureEvent->gestureType() == Qt::ZoomNativeGesture) {
+            auto cursorPos = gestureEvent->pos();
+            auto scenePos = mapToScene(cursorPos);
+
             auto multiplier = gestureEvent->value() + 1;
 
             // Prevent negative zoom factors
-            if (multiplier > 0) {
-                m_scaleX *= multiplier;
-                setScaleX(m_scaleX);
+            if (multiplier <= 0) {
+                return true;
             }
+
+            auto targetScaleX = m_scaleX * multiplier;
+
+            if (targetScaleX > m_scaleXMax) {
+                targetScaleX = m_scaleXMax;
+            }
+
+            auto scaledSceneWidth = sceneRect().width() * (targetScaleX / m_scaleX);
+            if (scaledSceneWidth < viewport()->width()) {
+                auto targetSceneWidth = viewport()->width();
+                targetScaleX = targetSceneWidth / (sceneRect().width() / m_scaleX);
+            }
+
+            auto ratio = targetScaleX / m_scaleX;
+            auto targetSceneX = scenePos.x() * ratio;
+            auto targetValue = qRound(targetSceneX - cursorPos.x());
+
+            setScaleX(targetScaleX);
+            setHBarValue(targetValue);
 
             return true;
         }
