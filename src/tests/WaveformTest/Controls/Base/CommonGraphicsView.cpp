@@ -142,12 +142,12 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
             m_scaleXAnimation.start();
             m_hBarAnimation.start();
         }
-    } else if (event->modifiers() == Qt::ShiftModifier) {
+    } else if (event->modifiers() == Qt::AltModifier) {
         auto targetScaleY = m_scaleY;
-        if (deltaY > 0)
-            targetScaleY = m_scaleY * (1 + m_vZoomingStep * deltaY / 120);
-        else if (deltaY < 0)
-            targetScaleY = m_scaleY / (1 + m_vZoomingStep * -deltaY / 120);
+        if (deltaX > 0)
+            targetScaleY = m_scaleY * (1 + m_vZoomingStep * deltaX / 120);
+        else if (deltaX < 0)
+            targetScaleY = m_scaleY / (1 + m_vZoomingStep * -deltaX / 120);
 
         if (targetScaleY < m_scaleYMin)
             targetScaleY = m_scaleYMin;
@@ -163,7 +163,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
         auto ratio = targetScaleY / m_scaleY;
         auto targetSceneY = scenePos.y() * ratio;
         auto targetValue = qRound(targetSceneY - cursorPos.y());
-        if (qAbs(deltaY) < 120) {
+        if (qAbs(deltaX) < 120) {
             setScaleY(targetScaleY);
             setVBarValue(targetValue);
         } else {
@@ -179,11 +179,11 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
             m_vBarAnimation.start();
         }
 
-    } else if (event->modifiers() == Qt::AltModifier) {
-        auto scrollLength = -1 * viewport()->width() * 0.2 * deltaX / 120;
+    } else if (event->modifiers() == Qt::ShiftModifier) {
+        auto scrollLength = -1 * viewport()->width() * 0.2 * deltaY / 120;
         auto startValue = hBarValue();
         auto endValue = startValue + scrollLength;
-        if (qAbs(deltaX) < 120)
+        if (qAbs(deltaY) < 120)
             setHBarValue(endValue);
         else {
             m_hBarAnimation.stop();
