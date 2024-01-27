@@ -7,36 +7,41 @@
 
 #include <QObject>
 
+#include "Controls/PianoRoll/PianoRollGraphicsScene.h"
+#include "Controls/PianoRoll/PianoRollGraphicsView.h"
 #include "Controls/TracksEditor/TracksGraphicsScene.h"
 #include "Controls/TracksEditor/TracksGraphicsView.h"
-#include "TracksModel.h"
+#include "Model/DsModel.h"
 
-class TracksController final : public QObject {
+class Controller final : public QObject {
     Q_OBJECT
 
 public:
-    explicit TracksController();
-    ~TracksController() override;
+    explicit Controller();
+    ~Controller() override;
 
     TracksGraphicsScene *tracksScene() const;
     TracksGraphicsView *tracksView() const;
+    PianoRollGraphicsView *pianoRollView() const;
 
     int trackCount() const;
+
+signals:
+    void modelUpdated(const DsModel &model);
 
 public slots:
     // void addTrack();
     void addAudioClipToNewTrack(const QString &filePath);
-
-private slots:
-    void onStartChanged(int clipId, int start);
+    void onModelChanged();
 
 private:
     // Model
-    TracksModel m_tracksModel;
+    DsModel m_model;
 
     // Views
     TracksGraphicsScene *m_tracksScene;
     TracksGraphicsView *m_tracksView;
+    PianoRollGraphicsView *m_pianoRollView;
 
     // test
     int m_trackIndex = 0;
@@ -45,4 +50,4 @@ private:
 
 
 
-#endif //TRACKSCONTROLLER_H
+#endif // TRACKSCONTROLLER_H

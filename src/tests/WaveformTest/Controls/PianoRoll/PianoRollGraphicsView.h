@@ -6,10 +6,17 @@
 #define PIANOROLLGRAPHICSVIEW_H
 
 #include "Controls/Base/CommonGraphicsView.h"
+#include "Model/DsModel.h"
 
 class PianoRollGraphicsView final : public CommonGraphicsView {
+    Q_OBJECT
+
 public:
     explicit PianoRollGraphicsView();
+
+public slots:
+    // void updateView(const DsModel &model);
+    void updateView(const DsModel &model);
 };
 
 #endif // PIANOROLLGRAPHICSVIEW_H

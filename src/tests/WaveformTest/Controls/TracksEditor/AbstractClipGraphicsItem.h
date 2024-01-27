@@ -62,8 +62,8 @@ protected:
     void updateRectAndPos() override;
     virtual QString clipTypeName() = 0;
     void setCanResizeLength(bool on);
-    inline double tickToSceneX(double tick) const;
-    inline double sceneXToItemX(double x) const;
+    double tickToSceneX(double tick) const;
+    double sceneXToItemX(double x) const;
 
 private:
     int m_itemId;

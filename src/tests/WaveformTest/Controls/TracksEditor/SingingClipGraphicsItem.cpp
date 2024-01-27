@@ -15,57 +15,57 @@ using namespace TracksEditorGlobal;
 
 SingingClipGraphicsItem::SingingClipGraphicsItem(int itemId, QGraphicsItem *parent) : AbstractClipGraphicsItem(itemId, parent) {
     setCanResizeLength(true);
-    setName("New Pattern");
-    auto loadProjectFile = [](const QString &filename, QJsonObject *jsonObj) {
-        QFile loadFile(filename);
-        if (!loadFile.open(QIODevice::ReadOnly)) {
-            qDebug() << "Failed to open project file";
-            return false;
-        }
-        QByteArray allData = loadFile.readAll();
-        loadFile.close();
-        QJsonParseError err;
-        QJsonDocument json = QJsonDocument::fromJson(allData, &err);
-        if (err.error != QJsonParseError::NoError)
-            return false;
-        if (json.isObject()) {
-            *jsonObj = json.object();
-        }
-        return true;
-    };
-
-    auto loadNotes = [](const QJsonObject &obj) {
-        auto arrTracks = obj.value("tracks").toArray();
-        auto firstTrack = arrTracks.first().toObject();
-        auto arrPatterns = firstTrack.value("patterns").toArray();
-        auto firstPattern = arrPatterns.first().toObject();
-        auto notes = firstPattern.value("notes").toArray();
-
-        auto decodeNotes = [](const QJsonArray &arrNotes) {
-            QVector<Note> notes;
-            for (const auto valNote : qAsConst(arrNotes)) {
-                auto objNote = valNote.toObject();
-                Note note;
-                note.start = objNote.value("pos").toInt();
-                note.length = objNote.value("dur").toInt();
-                note.keyIndex = objNote.value("pitch").toInt();
-                note.lyric = objNote.value("lyric").toString();
-                notes.append(note);
-            }
-            return notes;
-        };
-
-        return decodeNotes(notes);
-    };
-
-    auto filename = "E:/Test/Param/小小.json";
-    QJsonObject jsonObj;
-    if (loadProjectFile(filename, &jsonObj)) {
-        notes = loadNotes(jsonObj);
-        auto endTick = notes.last().start + notes.last().length;
-        setLength(endTick);
-        setClipLen(endTick);
-    }
+    // setName("New Pattern");
+    // auto loadProjectFile = [](const QString &filename, QJsonObject *jsonObj) {
+    //     QFile loadFile(filename);
+    //     if (!loadFile.open(QIODevice::ReadOnly)) {
+    //         qDebug() << "Failed to open project file";
+    //         return false;
+    //     }
+    //     QByteArray allData = loadFile.readAll();
+    //     loadFile.close();
+    //     QJsonParseError err;
+    //     QJsonDocument json = QJsonDocument::fromJson(allData, &err);
+    //     if (err.error != QJsonParseError::NoError)
+    //         return false;
+    //     if (json.isObject()) {
+    //         *jsonObj = json.object();
+    //     }
+    //     return true;
+    // };
+    //
+    // auto loadNotes = [](const QJsonObject &obj) {
+    //     auto arrTracks = obj.value("tracks").toArray();
+    //     auto firstTrack = arrTracks.first().toObject();
+    //     auto arrPatterns = firstTrack.value("patterns").toArray();
+    //     auto firstPattern = arrPatterns.first().toObject();
+    //     auto notes = firstPattern.value("notes").toArray();
+    //
+    //     auto decodeNotes = [](const QJsonArray &arrNotes) {
+    //         QVector<Note> notes;
+    //         for (const auto valNote : qAsConst(arrNotes)) {
+    //             auto objNote = valNote.toObject();
+    //             Note note;
+    //             note.start = objNote.value("pos").toInt();
+    //             note.length = objNote.value("dur").toInt();
+    //             note.keyIndex = objNote.value("pitch").toInt();
+    //             note.lyric = objNote.value("lyric").toString();
+    //             notes.append(note);
+    //         }
+    //         return notes;
+    //     };
+    //
+    //     return decodeNotes(notes);
+    // };
+    //
+    // auto filename = "E:/Test/Param/小小.json";
+    // QJsonObject jsonObj;
+    // if (loadProjectFile(filename, &jsonObj)) {
+    //     notes = loadNotes(jsonObj);
+    //     auto endTick = notes.last().start + notes.last().length;
+    //     setLength(endTick);
+    //     setClipLen(endTick);
+    // }
 }
 QString SingingClipGraphicsItem::audioCachePath() const {
     return m_audioCachePath;

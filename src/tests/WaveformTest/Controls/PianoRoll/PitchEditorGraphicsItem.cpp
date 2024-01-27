@@ -8,48 +8,48 @@
 #include <QJsonObject>
 #include <QPainter>
 
-#include "PitchEditorGraphicsItem.h"
 #include "PianoRollGlobal.h"
+#include "PitchEditorGraphicsItem.h"
 
 using namespace PianoRollGlobal;
 
 PitchEditorGraphicsItem::PitchEditorGraphicsItem() {
     setBackgroundColor(Qt::transparent);
 
-    auto loadProjectFile = [](const QString &filename, QJsonObject *jsonObj) {
-        QFile loadFile(filename);
-        if (!loadFile.open(QIODevice::ReadOnly)) {
-            qDebug() << "Failed to open project file";
-            return false;
-        }
-        QByteArray allData = loadFile.readAll();
-        loadFile.close();
-        QJsonParseError err;
-        QJsonDocument json = QJsonDocument::fromJson(allData, &err);
-        if (err.error != QJsonParseError::NoError)
-            return false;
-        if (json.isObject()) {
-            *jsonObj = json.object();
-        }
-        return true;
-    };
-
-    auto filename = "E:/Test/Param/小小opensvip.json";
-    QJsonObject obj;
-    if (loadProjectFile(filename, &obj)) {
-        auto arrTracks = obj.value("TrackList").toArray();
-        auto firstTrack = arrTracks.first().toObject();
-        auto objEditedParams = firstTrack.value("EditedParams").toObject();
-        auto objPitch = objEditedParams.value("Pitch").toObject();
-        auto arrPointList = objPitch.value("PointList").toArray();
-        for (const auto valPoint : qAsConst(arrPointList)) {
-            auto arrPoint = valPoint.toArray();
-            auto pos = arrPoint.first().toInt();
-            auto val = arrPoint.last().toInt();
-            auto pair = std::make_pair(pos, val);
-            opensvipPitchParam.append(pair);
-        }
-    }
+    // auto loadProjectFile = [](const QString &filename, QJsonObject *jsonObj) {
+    //     QFile loadFile(filename);
+    //     if (!loadFile.open(QIODevice::ReadOnly)) {
+    //         qDebug() << "Failed to open project file";
+    //         return false;
+    //     }
+    //     QByteArray allData = loadFile.readAll();
+    //     loadFile.close();
+    //     QJsonParseError err;
+    //     QJsonDocument json = QJsonDocument::fromJson(allData, &err);
+    //     if (err.error != QJsonParseError::NoError)
+    //         return false;
+    //     if (json.isObject()) {
+    //         *jsonObj = json.object();
+    //     }
+    //     return true;
+    // };
+    //
+    // auto filename = "E:/Test/Param/小小opensvip.json";
+    // QJsonObject obj;
+    // if (loadProjectFile(filename, &obj)) {
+    //     auto arrTracks = obj.value("TrackList").toArray();
+    //     auto firstTrack = arrTracks.first().toObject();
+    //     auto objEditedParams = firstTrack.value("EditedParams").toObject();
+    //     auto objPitch = objEditedParams.value("Pitch").toObject();
+    //     auto arrPointList = objPitch.value("PointList").toArray();
+    //     for (const auto valPoint : qAsConst(arrPointList)) {
+    //         auto arrPoint = valPoint.toArray();
+    //         auto pos = arrPoint.first().toInt();
+    //         auto val = arrPoint.last().toInt();
+    //         auto pair = std::make_pair(pos, val);
+    //         opensvipPitchParam.append(pair);
+    //     }
+    // }
 }
 PitchEditorGraphicsItem::EditMode PitchEditorGraphicsItem::editMode() const {
     return m_editMode;
@@ -69,10 +69,12 @@ void PitchEditorGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphic
 
     if (scaleX() < 0.6)
         return;
-        auto colorAlpha = scaleX() < 0.8 ? 255 * (scaleX() - 0.6) / (0.8 - 0.6) : 255;
+    if (opensvipPitchParam.isEmpty())
+        return;
 
     QPen pen;
     pen.setWidthF(1);
+    auto colorAlpha = scaleX() < 0.8 ? 255 * (scaleX() - 0.6) / (0.8 - 0.6) : 255;
     pen.setColor(QColor(130, 134, 138, colorAlpha));
     painter->setPen(pen);
 
