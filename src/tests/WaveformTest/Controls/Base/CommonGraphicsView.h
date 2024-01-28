@@ -7,6 +7,7 @@
 
 #include <QGraphicsView>
 #include <QPropertyAnimation>
+#include <QTimer>
 
 class CommonGraphicsView : public QGraphicsView {
     Q_OBJECT
@@ -48,7 +49,9 @@ protected:
     // bool eventFilter(QObject *object, QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
-    // private:
+private:
+    bool isMouseWheel(QWheelEvent *event);
+
     double m_hZoomingStep = 0.4;
     double m_vZoomingStep = 0.3;
     qreal m_scaleX = 1;
@@ -62,6 +65,9 @@ protected:
     QPropertyAnimation m_scaleYAnimation;
     QPropertyAnimation m_hBarAnimation;
     QPropertyAnimation m_vBarAnimation;
+
+    QTimer m_timer;
+    bool m_touchPadLock = false;
 };
 
 #endif // COMMONGRAPHICSVIEW_H

@@ -38,6 +38,13 @@ CommonGraphicsView::CommonGraphicsView(QWidget *parent) {
 
     connect(horizontalScrollBar(), &QScrollBar::valueChanged, this, &CommonGraphicsView::notifyVisibleRectChanged);
     connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &CommonGraphicsView::notifyVisibleRectChanged);
+
+    m_timer.setInterval(400);
+    m_timer.setSingleShot(true);
+    connect(&m_timer, &QTimer::timeout, this, [=]() {
+        m_touchPadLock = false;
+        // qDebug() << "touchpad lock off";
+    });
 }
 qreal CommonGraphicsView::scaleX() const {
     return m_scaleX;
@@ -130,9 +137,6 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
 
     auto deltaX = event->angleDelta().x();
     auto deltaY = event->angleDelta().y();
-    auto absDx = qAbs(deltaX);
-    auto absDy = qAbs(deltaY);
-    bool isWheel = (absDx == 0 && absDy == 120) || (absDx == 120 && absDy == 0);
 
     if (event->modifiers() == Qt::ControlModifier) {
         auto targetScaleX = m_scaleX;
@@ -153,7 +157,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
         auto ratio = targetScaleX / m_scaleX;
         auto targetSceneX = scenePos.x() * ratio;
         auto targetValue = qRound(targetSceneX - cursorPos.x());
-        if (!isWheel) {
+        if (!isMouseWheel(event)) {
             setScaleX(targetScaleX);
             setHBarValue(targetValue);
         } else {
@@ -189,7 +193,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
         auto ratio = targetScaleY / m_scaleY;
         auto targetSceneY = scenePos.y() * ratio;
         auto targetValue = qRound(targetSceneY - cursorPos.y());
-        if (!isWheel) {
+        if (!isMouseWheel(event)) {
             setScaleY(targetScaleY);
             setVBarValue(targetValue);
         } else {
@@ -209,7 +213,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
         auto scrollLength = -1 * viewport()->width() * 0.2 * deltaY / 120;
         auto startValue = hBarValue();
         auto endValue = static_cast<int>(startValue + scrollLength);
-        if (!isWheel)
+        if (!isMouseWheel(event))
             setHBarValue(endValue);
         else {
             m_hBarAnimation.stop();
@@ -218,7 +222,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
             m_hBarAnimation.start();
         }
     } else { // No modifier
-        if (!isWheel) {
+        if (!isMouseWheel(event)) {
             QGraphicsView::wheelEvent(event);
         } else {
             auto scrollLength = -1 * viewport()->height() * 0.15 * deltaY / 120;
@@ -236,4 +240,24 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
 void CommonGraphicsView::resizeEvent(QResizeEvent *event) {
     QGraphicsView::resizeEvent(event);
     notifyVisibleRectChanged();
+}
+bool CommonGraphicsView::isMouseWheel(QWheelEvent *event) {
+    auto deltaX = event->angleDelta().x();
+    auto deltaY = event->angleDelta().y();
+    auto absDx = qAbs(deltaX);
+    auto absDy = qAbs(deltaY);
+    if (m_touchPadLock) {
+        m_timer.start();
+        return false;
+    }
+
+    // touchpad lock off
+    // event might from wheel
+    if ((absDx == 0 && absDy % 120 == 0) || (absDx % 120 == 0 && absDy == 0))
+        return true;
+
+    // event might from touchpad
+    m_touchPadLock = true;
+    m_timer.start();
+    return false;
 }
