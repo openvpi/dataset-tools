@@ -14,7 +14,8 @@ public:
     int numerator = 4;
     int denominator = 4;
     double tempo = 120;
-    QList<DsTrack> tracks;
+
+    QList<DsTrack> tracks() const;
     void addTrack(const DsTrack &track);
     // TODO: interfaces
 
@@ -22,6 +23,12 @@ public:
 
 signals:
     void modelChanged();
+
+private:
+    void reset();
+    void runG2p();
+
+    QList<DsTrack> m_tracks;
 };
 
 

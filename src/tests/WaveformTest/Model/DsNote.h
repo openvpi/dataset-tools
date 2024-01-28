@@ -40,6 +40,8 @@ public:
     void setKeyIndex(int keyIndex);
     QString lyric() const;
     void setLyric(const QString &lyric);
+    QString pronunciation() const;
+    void setPronunciation(const QString &pronunciation);
     DsPhonemes phonemes;
 
 private:
@@ -47,7 +49,7 @@ private:
     int m_length = 480;
     int m_keyIndex = 60;
     QString m_lyric;
+    QString m_pronunciation;
 };
-
 
 #endif // DSNOTE_H

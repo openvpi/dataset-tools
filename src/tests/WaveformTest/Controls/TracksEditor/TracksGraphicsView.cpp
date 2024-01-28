@@ -24,7 +24,7 @@ void TracksGraphicsView::updateView(const DsModel &model) {
         return;
 
     reset();
-    for (const auto &track : model.tracks) {
+    for (const auto &track : model.tracks()) {
         for (const auto &clip : track.clips) {
             auto start = clip->start();
             auto clipStart = clip->clipStart();

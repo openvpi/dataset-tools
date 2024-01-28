@@ -11,12 +11,6 @@
 #include <QWidget>
 
 #include "Controller.h"
-#include "Controls/PianoRoll/NoteGraphicsItem.h"
-#include "Controls/PianoRoll/PianoRollBackgroundGraphicsItem.h"
-#include "Controls/PianoRoll/PianoRollGraphicsScene.h"
-#include "Controls/PianoRoll/PianoRollGraphicsView.h"
-#include "Controls/PianoRoll/PitchEditorGraphicsItem.h"
-#include "Controls/TracksEditor/TracksGraphicsView.h"
 
 #ifdef Q_OS_WIN
 #include <dwmapi.h>
@@ -78,12 +72,6 @@ int main(int argc, char *argv[]) {
 
         controller->openProject(fileName);
     });
-
-    // auto pitchItem = new PitchEditorGraphicsItem;
-    // QObject::connect(pianoRollView, &TracksGraphicsView::visibleRectChanged, pitchItem,
-    //                  &PitchEditorGraphicsItem::setVisibleRect);
-    // QObject::connect(pianoRollView, &TracksGraphicsView::scaleChanged, pitchItem, &PitchEditorGraphicsItem::setScale);
-    // pianoRollScene->addItem(pitchItem);
 
     auto splitter = new QSplitter;
     splitter->setOrientation(Qt::Vertical);

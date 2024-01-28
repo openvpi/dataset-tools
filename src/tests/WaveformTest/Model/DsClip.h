@@ -69,7 +69,6 @@ public:
     // void addNote(const Note &note);
     // void removeNote(const Note &note);
     // void clearNotes();
-
     QList<DsNote> notes;
     DsParams params;
 

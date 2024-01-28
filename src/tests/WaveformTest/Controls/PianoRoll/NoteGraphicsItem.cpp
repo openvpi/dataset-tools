@@ -6,6 +6,7 @@
 #include <QGraphicsSceneContextMenuEvent>
 #include <QInputDialog>
 #include <QMenu>
+#include <QPainter>
 #include <QTextOption>
 
 #include "NoteGraphicsItem.h"
@@ -77,10 +78,11 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     pen.setColor(borderColor);
 
     auto rect = boundingRect();
-    auto left = rect.left() + penWidth;
-    auto top = rect.top() + penWidth;
-    auto width = rect.width() - penWidth * 2;
-    auto height = rect.height() - penWidth * 2;
+    auto noteBoundingRect = QRectF(rect.left(), rect.top(), rect.width(), rect.height() - m_pronunciationTextHeight);
+    auto left = noteBoundingRect.left() + penWidth;
+    auto top = noteBoundingRect.top() + penWidth;
+    auto width = noteBoundingRect.width() - penWidth * 2;
+    auto height = noteBoundingRect.height() - penWidth * 2;
     auto paddedRect = QRectF(left, top, width, height);
 
     pen.setWidthF(penWidth);
@@ -90,11 +92,11 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     if (paddedRect.width() < 8 || paddedRect.height() < 8) { // draw rect without border
         painter->setRenderHint(QPainter::Antialiasing, false);
         painter->setPen(Qt::NoPen);
-        painter->setBrush(borderColor);
-        auto l = boundingRect().left() + 1;
-        auto t = boundingRect().top() + 1;
-        auto w = boundingRect().width() < 4 ? 2 : boundingRect().width() - 2;
-        auto h = boundingRect().height() < 4 ? 2 : boundingRect().height() - 2;
+        painter->setBrush(isSelected() ? QColor(255, 255, 255) : colorPrimary);
+        auto l = noteBoundingRect.left() + penWidth / 2;
+        auto t = noteBoundingRect.top() + penWidth / 2;
+        auto w = noteBoundingRect.width() - penWidth < 2 ? 2 : noteBoundingRect.width() - penWidth;
+        auto h = noteBoundingRect.height() - penWidth < 2 ? 2 : noteBoundingRect.height() - penWidth;
         painter->drawRect(QRectF(l, t, w, h));
     } else {
         // auto straightX = paddedRect.width() - radius * 2;
@@ -126,7 +128,7 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
 
     auto fontMetrics = painter->fontMetrics();
     auto textHeight = fontMetrics.height();
-    auto text = m_lyric + " " + m_pronunciation;
+    auto text = m_lyric;
     auto textWidth = fontMetrics.horizontalAdvance(text);
     QTextOption textOption(Qt::AlignVCenter);
     textOption.setWrapMode(QTextOption::NoWrap);
@@ -134,33 +136,33 @@ void NoteGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *
     if (textWidth < textRectWidth && textHeight < textRectHeight) {
         // draw lryic
         painter->drawText(textRect, text, textOption);
-        // TODO: draw pronunciation above note
         // draw pronunciation
-        // pen.setColor(QColor(160, 160, 160));
-        // painter->setPen(pen);
-        // painter->drawText(QPointF(textRectLeft, textRectTop - 10), m_pronunciation);
+        pen.setColor(QColor(200, 200, 200));
+        painter->setPen(pen);
+        painter->drawText(QPointF(textRectLeft, boundingRect().bottom() - 6), m_pronunciation);
     }
 }
 void NoteGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event) {
-    QMenu menu;
-    auto editLyricAction = menu.addAction("Edit Lyric");
-    connect(editLyricAction, &QAction::triggered, [&]() {
-        auto ok = false;
-        auto result =
-            QInputDialog::getText(graphicsView, "Edit Lyric", "Input lyric:", QLineEdit::Normal, m_lyric, &ok);
-        if (ok && !result.isEmpty())
-            setLyric(result);
-    });
-
-    auto editPronunciationAction = menu.addAction("Edit Pronunciation");
-    connect(editPronunciationAction, &QAction::triggered, [&]() {
-        auto ok = false;
-        auto result = QInputDialog::getText(graphicsView, "Edit Pronunciation",
-                                            "Input pronunciation:", QLineEdit::Normal, m_pronunciation, &ok);
-        if (ok && !result.isEmpty())
-            setPronunciation(result);
-    });
-    menu.exec(event->screenPos());
+    // TODO: notify controller
+    // QMenu menu;
+    // auto editLyricAction = menu.addAction("Edit Lyric");
+    // connect(editLyricAction, &QAction::triggered, [&]() {
+    //     auto ok = false;
+    //     auto result =
+    //         QInputDialog::getText(graphicsView, "Edit Lyric", "Input lyric:", QLineEdit::Normal, m_lyric, &ok);
+    //     if (ok && !result.isEmpty())
+    //         setLyric(result);
+    // });
+    //
+    // auto editPronunciationAction = menu.addAction("Edit Pronunciation");
+    // connect(editPronunciationAction, &QAction::triggered, [&]() {
+    //     auto ok = false;
+    //     auto result = QInputDialog::getText(graphicsView, "Edit Pronunciation",
+    //                                         "Input pronunciation:", QLineEdit::Normal, m_pronunciation, &ok);
+    //     if (ok && !result.isEmpty())
+    //         setPronunciation(result);
+    // });
+    // menu.exec(event->screenPos());
 
     QGraphicsItem::contextMenuEvent(event);
 }
@@ -263,7 +265,7 @@ void NoteGraphicsItem::updateRectAndPos() {
     const auto x = m_start * scaleX() * pixelsPerQuarterNote / 480;
     const auto y = -(m_keyIndex - 127) * noteHeight * scaleY();
     const auto w = m_length * scaleX() * pixelsPerQuarterNote / 480;
-    const auto h = noteHeight * scaleY();
+    const auto h = noteHeight * scaleY() + m_pronunciationTextHeight;
     setPos(x, y);
     setRect(QRectF(0, 0, w, h));
     update();

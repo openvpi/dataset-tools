@@ -6,7 +6,6 @@
 #define NOTEGRAPHICSITEM_H
 
 #include "Controls/Base/CommonGraphicsRectItem.h"
-#include "PianoRollGraphicsView.h"
 
 class NoteGraphicsItem final : public CommonGraphicsRectItem {
     Q_OBJECT
@@ -29,8 +28,6 @@ public:
     QString pronunciation() const;
     void setPronunciation(const QString &pronunciation);
 
-    PianoRollGraphicsView *graphicsView;
-
 signals:
     void propertyChanged();
 
@@ -50,7 +47,7 @@ private:
     int m_length = 480;
     int m_keyIndex = 60;
     QString m_lyric;
-    QString m_pronunciation = "la";
+    QString m_pronunciation;
 
     MouseMoveBehavior m_mouseMoveBehavior = Move;
     QPointF m_mouseDownPos;
@@ -61,6 +58,7 @@ private:
     int m_quantize = 240;
     bool m_tempQuantizeOff = false;
     int m_resizeTolerance = 8; // px
+    int m_pronunciationTextHeight = 20;
 };
 
 #endif // NOTEGRAPHICSITEM_H

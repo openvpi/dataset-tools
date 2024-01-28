@@ -28,3 +28,9 @@ QString DsNote::lyric() const {
 void DsNote::setLyric(const QString &lyric) {
     m_lyric = lyric;
 }
+QString DsNote::pronunciation() const {
+    return m_pronunciation;
+}
+void DsNote::setPronunciation(const QString &pronunciation) {
+    m_pronunciation = pronunciation;
+}

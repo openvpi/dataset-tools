@@ -7,6 +7,8 @@
 
 #include "Controls/Base/CommonGraphicsView.h"
 #include "Model/DsModel.h"
+#include "NoteGraphicsItem.h"
+#include "PianoRollGraphicsScene.h"
 
 class PianoRollGraphicsView final : public CommonGraphicsView {
     Q_OBJECT
@@ -16,6 +18,14 @@ public:
 
 public slots:
     void updateView(const DsModel &model);
+    // void selectedClipChanged();
+
+private:
+    PianoRollGraphicsScene *m_pianoRollScene;
+    int m_noteId = 0;
+    QVector<NoteGraphicsItem *> m_noteItems;
+
+    void reset();
 };
 
 #endif // PIANOROLLGRAPHICSVIEW_H

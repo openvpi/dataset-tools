@@ -9,11 +9,16 @@
 
 #include "DsModel.h"
 
+QList<DsTrack> DsModel::tracks() const {
+    return m_tracks;
+}
 void DsModel::addTrack(const DsTrack &track) {
-    tracks.append(track);
+    m_tracks.append(track);
     emit modelChanged();
 }
 bool DsModel::loadAProject(const QString &filename) {
+    reset();
+
     auto openJsonFile = [](const QString &filename, QJsonObject *jsonObj) {
         QFile loadFile(filename);
         if (!loadFile.open(QIODevice::ReadOnly)) {
@@ -41,6 +46,7 @@ bool DsModel::loadAProject(const QString &filename) {
             note.setLength(objNote.value("dur").toInt());
             note.setKeyIndex(objNote.value("pitch").toInt());
             note.setLyric(objNote.value("lyric").toString());
+            note.setPronunciation("la");
             notes.append(note);
         }
         return notes;
@@ -85,9 +91,24 @@ bool DsModel::loadAProject(const QString &filename) {
     QJsonObject objAProject;
     if (openJsonFile(filename, &objAProject)) {
         numerator = objAProject.value("beatsPerBar").toInt();
-        decodeTracks(objAProject.value("tracks").toArray(), tracks);
+        decodeTracks(objAProject.value("tracks").toArray(), m_tracks);
+        // auto clip = tracks().first().clips.first().dynamicCast<DsSingingClip>();
+        // qDebug() << clip->notes.count();
+        runG2p();
         emit modelChanged();
         return true;
     }
     return false;
+}
+void DsModel::reset() {
+    m_tracks.clear();
+}
+void DsModel::runG2p() {
+    for (const auto &track : m_tracks) {
+        for (const auto &clip : track.clips) {
+            if (clip->type() == DsClip::Singing) {
+                auto singingClip = clip.dynamicCast<DsSingingClip>();
+            }
+        }
+    }
 }
