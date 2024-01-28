@@ -20,17 +20,15 @@ public:
     explicit Controller();
     ~Controller() override;
 
-    TracksGraphicsScene *tracksScene() const;
     TracksGraphicsView *tracksView() const;
     PianoRollGraphicsView *pianoRollView() const;
-
-    int trackCount() const;
 
 signals:
     void modelUpdated(const DsModel &model);
 
 public slots:
     // void addTrack();
+    void openProject(const QString &filePath);
     void addAudioClipToNewTrack(const QString &filePath);
     void onModelChanged();
 
@@ -39,13 +37,8 @@ private:
     DsModel m_model;
 
     // Views
-    TracksGraphicsScene *m_tracksScene;
     TracksGraphicsView *m_tracksView;
     PianoRollGraphicsView *m_pianoRollView;
-
-    // test
-    int m_trackIndex = 0;
-    int m_clipItemIndex = 0;
 };
 
 

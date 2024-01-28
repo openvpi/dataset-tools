@@ -21,6 +21,7 @@ public:
     explicit TimeGridGraphicsItem(QGraphicsItem *parent = nullptr);
     ~TimeGridGraphicsItem() override = default;
 
+    void setPixelsPerQuarterNote(int px);
 
 public slots:
     void onTimeSignatureChanged(int numerator, int denominator);
@@ -34,7 +35,7 @@ protected:
     int m_denominator = 4;
     int m_quantization = 8;    // 1/8 note
     int m_minimumSpacing = 24; // hide low level grid line when distance < 32 px
-    const int pixelPerQuarterNote = 64;
+    int m_pixelsPerQuarterNote = 64;
 };
 
 

@@ -15,7 +15,6 @@ public:
     explicit PianoRollGraphicsView();
 
 public slots:
-    // void updateView(const DsModel &model);
     void updateView(const DsModel &model);
 };
 

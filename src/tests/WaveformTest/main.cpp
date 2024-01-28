@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
                           sizeof(dark));
 #endif
 
-    auto btnOpenAudioFile = new QPushButton;
-    btnOpenAudioFile->setText("Add...");
-
     auto controller = new Controller;
+
+    auto btnOpenAudioFile = new QPushButton;
+    btnOpenAudioFile->setText("Add an audio file...");
     QObject::connect(btnOpenAudioFile, &QPushButton::clicked, controller, [&]() {
         auto fileName = QFileDialog::getOpenFileName(
             btnOpenAudioFile, "Select an Audio File", ".",
@@ -65,6 +65,18 @@ int main(int argc, char *argv[]) {
             return;
 
         controller->addAudioClipToNewTrack(fileName);
+    });
+
+    auto btnOpenProjectFile = new QPushButton;
+    btnOpenProjectFile->setText("Open project...");
+    QObject::connect(btnOpenProjectFile, &QPushButton::clicked, controller, [&]() {
+        auto fileName = QFileDialog::getOpenFileName(
+            btnOpenProjectFile, "Select a Project File", ".",
+            "Project File (*.json)");
+        if (fileName.isNull())
+            return;
+
+        controller->openProject(fileName);
     });
 
     // auto pitchItem = new PitchEditorGraphicsItem;
@@ -78,8 +90,12 @@ int main(int argc, char *argv[]) {
     splitter->addWidget(controller->tracksView());
     splitter->addWidget(controller->pianoRollView());
 
+    auto actionButtonLayout = new QHBoxLayout;
+    actionButtonLayout->addWidget(btnOpenAudioFile);
+    actionButtonLayout->addWidget(btnOpenProjectFile);
+
     auto mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(btnOpenAudioFile);
+    mainLayout->addLayout(actionButtonLayout);
     mainLayout->addWidget(splitter);
 
     auto mainWidget = new QWidget;

@@ -9,6 +9,10 @@
 
 #include "DsModel.h"
 
+void DsModel::addTrack(const DsTrack &track) {
+    tracks.append(track);
+    emit modelChanged();
+}
 bool DsModel::loadAProject(const QString &filename) {
     auto openJsonFile = [](const QString &filename, QJsonObject *jsonObj) {
         QFile loadFile(filename);
@@ -45,15 +49,7 @@ bool DsModel::loadAProject(const QString &filename) {
     auto decodeClips = [&](const QJsonArray &arrClips, QList<DsClipPtr> &clips, const QString &type) {
         for (const auto &valClip : qAsConst(arrClips)) {
             auto objClip = valClip.toObject();
-            // auto clip = DsClipPtr(new DsClip);
-            // clip->setName("Clip");
-            // clip->setStart(objClip.value("pos").toInt());
-            // clip->setClipStart(objClip.value("clipPos").toInt());
-            // clip->setLength(objClip.value("dur").toInt());
-            // clip->setClipLen(objClip.value("clipDur").toInt());
-
             if (type == "sing") {
-                // auto singingClip = clip.dynamicCast<DsSingingClip>();
                 auto singingClip = DsSingingClipPtr(new DsSingingClip);
                 singingClip->setName("Clip");
                 singingClip->setStart(objClip.value("pos").toInt());
@@ -63,6 +59,15 @@ bool DsModel::loadAProject(const QString &filename) {
                 auto arrNotes = objClip.value("notes").toArray();
                 singingClip->notes.append(decodeNotes(arrNotes));
                 clips.append(singingClip);
+            } else if (type == "audio") {
+                auto audioClip = DsAudioClipPtr(new DsAudioClip);
+                audioClip->setName("Clip");
+                audioClip->setStart(objClip.value("pos").toInt());
+                audioClip->setClipStart(objClip.value("clipPos").toInt());
+                audioClip->setLength(objClip.value("dur").toInt());
+                audioClip->setClipLen(objClip.value("clipDur").toInt());
+                audioClip->setPath(objClip.value("path").toString());
+                clips.append(audioClip);
             }
         }
     };

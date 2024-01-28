@@ -8,6 +8,8 @@
 #include "../Base/CommonGraphicsScene.h"
 
 class TracksGraphicsScene final : public CommonGraphicsScene {
+public:
+    explicit TracksGraphicsScene();
 };
 
 

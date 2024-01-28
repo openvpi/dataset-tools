@@ -3,11 +3,13 @@
 //
 
 #include "PianoRollGraphicsScene.h"
+
 #include "PianoRollGlobal.h"
 
 using namespace PianoRollGlobal;
 
 PianoRollGraphicsScene::PianoRollGraphicsScene() {
-    m_sceneHeight = 128 * noteHeight;
-    setSceneRect(0, 0, 1920 / 480 * pixelsPerQuarterNote * 100, m_sceneHeight);
+    auto w = 1920 / 480 * pixelsPerQuarterNote * 100;
+    auto h = 128 * noteHeight;
+    setSceneSize(QSizeF(w, h));
 }

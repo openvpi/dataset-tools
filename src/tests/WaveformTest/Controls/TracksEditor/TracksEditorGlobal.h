@@ -6,7 +6,7 @@
 #define TRACKSEDITORGLOBAL_H
 
 namespace TracksEditorGlobal {
-    const int pixelsPerQuarterNote = 64;
+    const int pixelsPerQuarterNote = 32;
     const double trackHeight = 72;
 };
 

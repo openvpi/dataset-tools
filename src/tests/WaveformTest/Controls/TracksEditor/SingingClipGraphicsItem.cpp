@@ -13,59 +13,24 @@
 
 using namespace TracksEditorGlobal;
 
-SingingClipGraphicsItem::SingingClipGraphicsItem(int itemId, QGraphicsItem *parent) : AbstractClipGraphicsItem(itemId, parent) {
+SingingClipGraphicsItem::SingingClipGraphicsItem(int itemId, QGraphicsItem *parent)
+    : AbstractClipGraphicsItem(itemId, parent) {
     setCanResizeLength(true);
     // setName("New Pattern");
-    // auto loadProjectFile = [](const QString &filename, QJsonObject *jsonObj) {
-    //     QFile loadFile(filename);
-    //     if (!loadFile.open(QIODevice::ReadOnly)) {
-    //         qDebug() << "Failed to open project file";
-    //         return false;
-    //     }
-    //     QByteArray allData = loadFile.readAll();
-    //     loadFile.close();
-    //     QJsonParseError err;
-    //     QJsonDocument json = QJsonDocument::fromJson(allData, &err);
-    //     if (err.error != QJsonParseError::NoError)
-    //         return false;
-    //     if (json.isObject()) {
-    //         *jsonObj = json.object();
-    //     }
-    //     return true;
-    // };
-    //
-    // auto loadNotes = [](const QJsonObject &obj) {
-    //     auto arrTracks = obj.value("tracks").toArray();
-    //     auto firstTrack = arrTracks.first().toObject();
-    //     auto arrPatterns = firstTrack.value("patterns").toArray();
-    //     auto firstPattern = arrPatterns.first().toObject();
-    //     auto notes = firstPattern.value("notes").toArray();
-    //
-    //     auto decodeNotes = [](const QJsonArray &arrNotes) {
-    //         QVector<Note> notes;
-    //         for (const auto valNote : qAsConst(arrNotes)) {
-    //             auto objNote = valNote.toObject();
-    //             Note note;
-    //             note.start = objNote.value("pos").toInt();
-    //             note.length = objNote.value("dur").toInt();
-    //             note.keyIndex = objNote.value("pitch").toInt();
-    //             note.lyric = objNote.value("lyric").toString();
-    //             notes.append(note);
-    //         }
-    //         return notes;
-    //     };
-    //
-    //     return decodeNotes(notes);
-    // };
-    //
-    // auto filename = "E:/Test/Param/小小.json";
-    // QJsonObject jsonObj;
-    // if (loadProjectFile(filename, &jsonObj)) {
-    //     notes = loadNotes(jsonObj);
-    //     auto endTick = notes.last().start + notes.last().length;
-    //     setLength(endTick);
-    //     setClipLen(endTick);
-    // }
+}
+void SingingClipGraphicsItem::loadNotes(const QList<DsNote> &notes) {
+    m_notes.clear();
+    for (const auto &dsNote : notes) {
+        Note note;
+        note.start = dsNote.start();
+        note.length = dsNote.length();
+        note.keyIndex = dsNote.keyIndex();
+        m_notes.append(note);
+    }
+    auto endTick = m_notes.last().start + m_notes.last().length + 1920;
+    setLength(endTick);
+    setClipLen(endTick);
+    update();
 }
 QString SingingClipGraphicsItem::audioCachePath() const {
     return m_audioCachePath;
@@ -93,7 +58,7 @@ void SingingClipGraphicsItem::drawPreviewArea(QPainter *painter, const QRectF &p
     // find lowest and highest pitch
     int lowestKeyIndex = 127;
     int highestKeyIndex = 0;
-    for (const auto &note : notes) {
+    for (const auto &note : m_notes) {
         auto keyIndex = note.keyIndex;
         if (keyIndex < lowestKeyIndex)
             lowestKeyIndex = keyIndex;
@@ -104,7 +69,7 @@ void SingingClipGraphicsItem::drawPreviewArea(QPainter *painter, const QRectF &p
     int divideCount = highestKeyIndex - lowestKeyIndex + 1;
     auto noteHeight = (rectHeight - rectTop) / divideCount;
 
-    for (const auto &note : notes) {
+    for (const auto &note : m_notes) {
         auto clipLeft = start() + clipStart();
         auto clipRight = clipLeft + clipLen();
         if (note.start + note.length < clipLeft)

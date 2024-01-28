@@ -15,6 +15,8 @@ public:
     int denominator = 4;
     double tempo = 120;
     QList<DsTrack> tracks;
+    void addTrack(const DsTrack &track);
+    // TODO: interfaces
 
     bool loadAProject(const QString &filename);
 

@@ -10,6 +10,10 @@
 TimeGridGraphicsItem::TimeGridGraphicsItem(QGraphicsItem *parent) {
 }
 
+void TimeGridGraphicsItem::setPixelsPerQuarterNote(int px) {
+    m_pixelsPerQuarterNote = px;
+    update();
+}
 void TimeGridGraphicsItem::onTimeSignatureChanged(int numerator, int denominator) {
     m_numerator = numerator;
     m_denominator = denominator;
@@ -35,9 +39,9 @@ void TimeGridGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsIt
     painter->setPen(pen);
     // painter->setRenderHint(QPainter::Antialiasing);
 
-    auto sceneXToTick = [&](const double pos) { return 480 * pos / scaleX() / pixelPerQuarterNote; };
+    auto sceneXToTick = [&](const double pos) { return 480 * pos / scaleX() / m_pixelsPerQuarterNote; };
 
-    auto tickToSceneX = [&](const double tick) { return tick * scaleX() * pixelPerQuarterNote / 480; };
+    auto tickToSceneX = [&](const double tick) { return tick * scaleX() * m_pixelsPerQuarterNote / 480; };
 
     auto sceneXToItemX = [&](const double x) { return mapFromScene(QPointF(x, 0)).x(); };
 
@@ -45,8 +49,8 @@ void TimeGridGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsIt
     auto endTick = sceneXToTick(visibleRect().right());
     auto prevLineTick = static_cast<int>(startTick / 240) * 240; // 1/8 quantize
     // qDebug() << startTick << endTick << prevLineTick;
-    bool canDrawEighthLine = 240 * scaleX() * pixelPerQuarterNote / 480 >= m_minimumSpacing;
-    bool canDrawQuarterLine = scaleX() * pixelPerQuarterNote >= m_minimumSpacing;
+    bool canDrawEighthLine = 240 * scaleX() * m_pixelsPerQuarterNote / 480 >= m_minimumSpacing;
+    bool canDrawQuarterLine = scaleX() * m_pixelsPerQuarterNote >= m_minimumSpacing;
     int barTicks = 1920 * m_numerator / m_denominator;
     int beatTicks = 1920 / m_denominator;
     // TODO: hide low level grid lines when distance < min spaceing

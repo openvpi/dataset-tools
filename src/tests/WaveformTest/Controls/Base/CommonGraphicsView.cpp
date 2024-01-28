@@ -13,6 +13,8 @@ CommonGraphicsView::CommonGraphicsView(QWidget *parent) {
     setAttribute(Qt::WA_AcceptTouchEvents);
     // setCacheMode(QGraphicsView::CacheNone);
     // setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+    setMinimumHeight(150);
+    setStyleSheet("QGraphicsView { border: none }");
 
     m_scaleXAnimation.setTargetObject(this);
     m_scaleXAnimation.setPropertyName("scaleX");

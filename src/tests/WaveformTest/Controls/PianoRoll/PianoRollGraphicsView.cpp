@@ -5,11 +5,23 @@
 #include "PianoRollGraphicsView.h"
 
 #include "NoteGraphicsItem.h"
+#include "PianoRollBackgroundGraphicsItem.h"
+#include "PianoRollGlobal.h"
 #include "PianoRollGraphicsScene.h"
 
 PianoRollGraphicsView::PianoRollGraphicsView() {
     setScaleXMax(5);
     setDragMode(RubberBandDrag);
+
+    auto pianoRollScene = new PianoRollGraphicsScene;
+    setScene(pianoRollScene);
+    connect(this, &PianoRollGraphicsView::scaleChanged, pianoRollScene, &PianoRollGraphicsScene::setScale);
+
+    auto gridItem = new PianoRollBackgroundGraphicsItem;
+    gridItem->setPixelsPerQuarterNote(PianoRollGlobal::pixelsPerQuarterNote);
+    connect(this, &PianoRollGraphicsView::visibleRectChanged, gridItem, &TimeGridGraphicsItem::setVisibleRect);
+    connect(this, &PianoRollGraphicsView::scaleChanged, gridItem, &PianoRollBackgroundGraphicsItem::setScale);
+    pianoRollScene->addItem(gridItem);
 }
 void PianoRollGraphicsView::updateView(const DsModel &model) {
     // TODO: Remove exist note item from scene

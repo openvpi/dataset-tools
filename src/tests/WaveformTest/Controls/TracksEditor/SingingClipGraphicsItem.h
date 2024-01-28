@@ -6,6 +6,7 @@
 #define SINGINGCLIPGRAPHICSITEM_H
 
 #include "AbstractClipGraphicsItem.h"
+#include "Model/DsNote.h"
 
 class SingingClipGraphicsItem final : public AbstractClipGraphicsItem {
 public:
@@ -14,16 +15,14 @@ public:
         int start;
         int length;
         int keyIndex;
-        QString lyric;
     };
 
     explicit SingingClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
     ~SingingClipGraphicsItem() override = default;
 
+    void loadNotes(const QList<DsNote> &notes);
     QString audioCachePath() const;
     void setAudioCachePath(const QString &path);
-
-    QVector<Note> notes;
 
 private:
     // void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
@@ -33,6 +32,7 @@ private:
     }
 
     QString m_audioCachePath;
+    QVector<Note> m_notes;
 };
 
 
