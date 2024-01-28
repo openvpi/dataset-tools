@@ -123,11 +123,14 @@ bool CommonGraphicsView::event(QEvent *event) {
 }
 void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
     auto cursorPosF = event->position();
-    auto cursorPos = QPoint(cursorPosF.x(), cursorPosF.y());
+    auto cursorPos = QPoint(static_cast<int>(cursorPosF.x()), static_cast<int>(cursorPosF.y()));
     auto scenePos = mapToScene(cursorPos);
 
     auto deltaX = event->angleDelta().x();
     auto deltaY = event->angleDelta().y();
+    auto absDx = qAbs(deltaX);
+    auto absDy = qAbs(deltaY);
+    bool isWheel = (absDx == 0 && absDy == 120) || (absDx == 120 && absDy == 0);
 
     if (event->modifiers() == Qt::ControlModifier) {
         auto targetScaleX = m_scaleX;
@@ -148,7 +151,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
         auto ratio = targetScaleX / m_scaleX;
         auto targetSceneX = scenePos.x() * ratio;
         auto targetValue = qRound(targetSceneX - cursorPos.x());
-        if (qAbs(deltaY) < 120) {
+        if (!isWheel) {
             setScaleX(targetScaleX);
             setHBarValue(targetValue);
         } else {
@@ -184,7 +187,7 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
         auto ratio = targetScaleY / m_scaleY;
         auto targetSceneY = scenePos.y() * ratio;
         auto targetValue = qRound(targetSceneY - cursorPos.y());
-        if (qAbs(deltaX) < 120) {
+        if (!isWheel) {
             setScaleY(targetScaleY);
             setVBarValue(targetValue);
         } else {
@@ -203,8 +206,8 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
     } else if (event->modifiers() == Qt::ShiftModifier) {
         auto scrollLength = -1 * viewport()->width() * 0.2 * deltaY / 120;
         auto startValue = hBarValue();
-        auto endValue = startValue + scrollLength;
-        if (qAbs(deltaY) < 120)
+        auto endValue = static_cast<int>(startValue + scrollLength);
+        if (!isWheel)
             setHBarValue(endValue);
         else {
             m_hBarAnimation.stop();
@@ -212,11 +215,10 @@ void CommonGraphicsView::wheelEvent(QWheelEvent *event) {
             m_hBarAnimation.setEndValue(endValue);
             m_hBarAnimation.start();
         }
-    } else {
-        if (qAbs(deltaY) < 120 && qAbs(deltaX) < 120)
+    } else { // No modifier
+        if (!isWheel) {
             QGraphicsView::wheelEvent(event);
-        // setVBarValue(endValue);
-        else {
+        } else {
             auto scrollLength = -1 * viewport()->height() * 0.15 * deltaY / 120;
             auto startValue = vBarValue();
             auto endValue = startValue + scrollLength;

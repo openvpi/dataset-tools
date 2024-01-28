@@ -6,7 +6,7 @@
 #define PIANOROLLGLOBAL_H
 
 namespace PianoRollGlobal {
-    const int pixelsPerQuarterNote = 64;
+    const int pixelsPerQuarterNote = 96;
     const double noteHeight = 24;
 }
 

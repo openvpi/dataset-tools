@@ -9,5 +9,5 @@ using namespace PianoRollGlobal;
 
 PianoRollGraphicsScene::PianoRollGraphicsScene() {
     m_sceneHeight = 128 * noteHeight;
-    setSceneRect(0, 0, m_sceneWidth, m_sceneHeight);
+    setSceneRect(0, 0, 1920 / 480 * pixelsPerQuarterNote * 100, m_sceneHeight);
 }
