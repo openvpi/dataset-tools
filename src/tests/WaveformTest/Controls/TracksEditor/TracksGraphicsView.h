@@ -8,21 +8,42 @@
 #include "../Base/CommonGraphicsView.h"
 #include "AbstractClipGraphicsItem.h"
 #include "Model/DsModel.h"
-#include "TracksBackgroundGraphicsItem.h"
 #include "TracksGraphicsScene.h"
 
 class TracksGraphicsView final : public CommonGraphicsView {
+    Q_OBJECT
+
 public:
     explicit TracksGraphicsView();
 
 public slots:
     void updateView(const DsModel &model);
+    void onTracksChanged(DsModel::ChangeType type, const DsModel &model, int index);
+
+signals:
+    void selectedClipChanged(int trackIndex, int clipIndex);
+
+private slots:
+    void onSceneSelectionChanged();
 
 private:
-    TracksGraphicsScene *m_tracksScene;
-    int m_trackCount = 0;
-    QVector<AbstractClipGraphicsItem *> m_clips;
+    class Track {
+    public:
+        // properties
+        bool isSelected;
+        // clips
+        QVector<AbstractClipGraphicsItem *> clips;
+    };
 
+    class TracksViewModel {
+    public:
+        QList<Track> tracks;
+    };
+
+    TracksGraphicsScene *m_tracksScene;
+    TracksViewModel m_tracksModel;
+
+    void insertTrack(const DsTrack &dsTrack, int index);
     void reset();
 };
 

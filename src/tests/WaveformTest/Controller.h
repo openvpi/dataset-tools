@@ -7,9 +7,7 @@
 
 #include <QObject>
 
-#include "Controls/PianoRoll/PianoRollGraphicsScene.h"
 #include "Controls/PianoRoll/PianoRollGraphicsView.h"
-#include "Controls/TracksEditor/TracksGraphicsScene.h"
 #include "Controls/TracksEditor/TracksGraphicsView.h"
 #include "Model/DsModel.h"
 
@@ -23,14 +21,10 @@ public:
     TracksGraphicsView *tracksView() const;
     PianoRollGraphicsView *pianoRollView() const;
 
-signals:
-    void modelUpdated(const DsModel &model);
-
 public slots:
     // void addTrack();
     void openProject(const QString &filePath);
     void addAudioClipToNewTrack(const QString &filePath);
-    void onModelChanged();
 
 private:
     // Model

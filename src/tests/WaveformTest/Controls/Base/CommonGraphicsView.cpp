@@ -14,7 +14,7 @@ CommonGraphicsView::CommonGraphicsView(QWidget *parent) {
     // setCacheMode(QGraphicsView::CacheNone);
     // setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     setMinimumHeight(150);
-    setStyleSheet("QGraphicsView { border: none }");
+    setStyleSheet("QGraphicsView { border: none; background-color: #2A2B2C }");
 
     m_scaleXAnimation.setTargetObject(this);
     m_scaleXAnimation.setPropertyName("scaleX");

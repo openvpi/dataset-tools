@@ -3,23 +3,19 @@
 //
 
 #include <QDebug>
-// #include <QOpenGLWidget>
 
 #include "Controller.h"
-#include "Controls/Base/TimeGridGraphicsItem.h"
-#include "Controls/TracksEditor/AudioClipGraphicsItem.h"
-#include "Controls/TracksEditor/SingingClipGraphicsItem.h"
-#include "Controls/TracksEditor/TracksBackgroundGraphicsItem.h"
 
 Controller::Controller() {
     // Init views
     m_tracksView = new TracksGraphicsView;
     m_pianoRollView = new PianoRollGraphicsView;
 
-    connect(&m_model, &DsModel::modelChanged, this, &Controller::onModelChanged);
-    connect(this, &Controller::modelUpdated, m_tracksView, &TracksGraphicsView::updateView);
-    connect(this, &Controller::modelUpdated, m_pianoRollView, &PianoRollGraphicsView::updateView);
-
+    connect(&m_model, &DsModel::modelChanged, m_tracksView, &TracksGraphicsView::updateView);
+    connect(&m_model, &DsModel::tracksChanged, m_tracksView, &TracksGraphicsView::onTracksChanged);
+    connect(&m_model, &DsModel::modelChanged, m_pianoRollView, &PianoRollGraphicsView::updateView);
+    connect(m_tracksView, &TracksGraphicsView::selectedClipChanged, &m_model, &DsModel::onSelectedClipChanged);
+    connect(&m_model, &DsModel::selectedClipChanged, m_pianoRollView, &PianoRollGraphicsView::onSelectedClipChanged);
 }
 Controller::~Controller() {
 }
@@ -37,9 +33,5 @@ void Controller::addAudioClipToNewTrack(const QString &filePath) {
     audioClip->setPath(filePath);
     DsTrack newTrack;
     newTrack.clips.append(audioClip);
-    m_model.addTrack(newTrack);
-}
-void Controller::onModelChanged() {
-    qDebug() << "model changed";
-    emit modelUpdated(m_model);
+    m_model.insertTrack(newTrack, m_model.tracks().count());
 }

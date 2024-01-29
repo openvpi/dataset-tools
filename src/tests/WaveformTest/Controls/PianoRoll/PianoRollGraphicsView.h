@@ -18,14 +18,16 @@ public:
 
 public slots:
     void updateView(const DsModel &model);
-    // void selectedClipChanged();
+    void onSelectedClipChanged(const DsModel &model, int trackIndex, int clipIndex);
 
 private:
+    void paintEvent(QPaintEvent *event) override;
     PianoRollGraphicsScene *m_pianoRollScene;
-    int m_noteId = 0;
     QVector<NoteGraphicsItem *> m_noteItems;
+    bool m_oneSingingClipSelected = false;
 
     void reset();
+    void insertNote(const DsNote &dsNote, int index);
 };
 
 #endif // PIANOROLLGRAPHICSVIEW_H

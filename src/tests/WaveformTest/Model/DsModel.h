@@ -11,24 +11,35 @@ class DsModel final : public QObject {
     Q_OBJECT
 
 public:
+    enum ChangeType { Insert, Update, Remove};
     int numerator = 4;
     int denominator = 4;
     double tempo = 120;
 
     QList<DsTrack> tracks() const;
-    void addTrack(const DsTrack &track);
-    // TODO: interfaces
+    void insertTrack(const DsTrack &track, int index);
+    void removeTrack(int index);
 
     bool loadAProject(const QString &filename);
 
+public slots:
+    void onTrackUpdated(int index);
+    void onSelectedClipChanged(int trackIndex, int clipIndex);
+
 signals:
-    void modelChanged();
+    void modelChanged(const DsModel &model);
+    void tracksChanged(ChangeType type, const DsModel &model , int index);
+    void selectedClipChanged(const DsModel &model, int trackIndex, int clipIndex);
 
 private:
     void reset();
     void runG2p();
 
     QList<DsTrack> m_tracks;
+
+    // instance
+    int m_selectedClipTrackIndex = -1;
+    int m_selectedClipIndex = -1;
 };
 
 

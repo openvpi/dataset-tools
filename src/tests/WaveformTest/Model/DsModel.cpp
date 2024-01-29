@@ -12,9 +12,13 @@
 QList<DsTrack> DsModel::tracks() const {
     return m_tracks;
 }
-void DsModel::addTrack(const DsTrack &track) {
-    m_tracks.append(track);
-    emit modelChanged();
+void DsModel::insertTrack(const DsTrack &track, int index) {
+    m_tracks.insert(index, track);
+    emit tracksChanged(Insert, *this, index);
+}
+void DsModel::removeTrack(int index) {
+    m_tracks.removeAt(index);
+    emit tracksChanged(Remove, *this, index);
 }
 bool DsModel::loadAProject(const QString &filename) {
     reset();
@@ -95,10 +99,19 @@ bool DsModel::loadAProject(const QString &filename) {
         // auto clip = tracks().first().clips.first().dynamicCast<DsSingingClip>();
         // qDebug() << clip->notes.count();
         runG2p();
-        emit modelChanged();
+        emit modelChanged(*this);
         return true;
     }
     return false;
+}
+void DsModel::onTrackUpdated(int index) {
+    emit tracksChanged(Update, *this, index);
+}
+void DsModel::onSelectedClipChanged(int trackIndex, int clipIndex) {
+    m_selectedClipTrackIndex = trackIndex;
+    m_selectedClipIndex = clipIndex;
+    qDebug() << "model onSelectedClipChanged";
+    emit selectedClipChanged(*this, m_selectedClipTrackIndex, m_selectedClipIndex);
 }
 void DsModel::reset() {
     m_tracks.clear();
