@@ -14,8 +14,10 @@
 AudioClipGraphicsItem::AudioClipGraphicsItem(int itemId, QGraphicsItem *parent)
     : AbstractClipGraphicsItem(itemId, parent) {
 }
-
-void AudioClipGraphicsItem::openFile(const QString &path) {
+QString AudioClipGraphicsItem::path() const {
+    return m_path;
+}
+void AudioClipGraphicsItem::setPath(const QString &path) {
     m_path = path;
     m_loading = true;
     setName(QFileInfo(m_path).fileName());
@@ -32,8 +34,12 @@ void AudioClipGraphicsItem::openFile(const QString &path) {
     connect(thread, &QThread::started, m_worker, &AudioClipBackgroundWorker::run);
     thread->start();
 }
-QString AudioClipGraphicsItem::path() {
-    return m_path;
+double AudioClipGraphicsItem::tempo() const {
+    return m_tempo;
+}
+void AudioClipGraphicsItem::setTempo(double tempo) {
+    m_tempo = tempo;
+    updateLength();
 }
 void AudioClipGraphicsItem::onLoadComplete(bool success, QString errorMessage) {
     if (!success) {

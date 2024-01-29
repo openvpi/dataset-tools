@@ -14,8 +14,9 @@ public:
     enum ChangeType { Insert, Update, Remove};
     int numerator = 4;
     int denominator = 4;
-    double tempo = 120;
 
+    double tempo() const;
+    void setTempo(double tempo);
     QList<DsTrack> tracks() const;
     void insertTrack(const DsTrack &track, int index);
     void removeTrack(int index);
@@ -28,6 +29,7 @@ public slots:
 
 signals:
     void modelChanged(const DsModel &model);
+    void tempoChanged(double tempo);
     void tracksChanged(ChangeType type, const DsModel &model , int index);
     void selectedClipChanged(const DsModel &model, int trackIndex, int clipIndex);
 
@@ -35,6 +37,7 @@ private:
     void reset();
     void runG2p();
 
+    double m_tempo = 120;
     QList<DsTrack> m_tracks;
 
     // instance

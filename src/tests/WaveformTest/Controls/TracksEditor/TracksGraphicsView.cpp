@@ -23,16 +23,23 @@ TracksGraphicsView::TracksGraphicsView() {
     connect(this, &TracksGraphicsView::scaleChanged, gridItem, &TimeGridGraphicsItem::setScale);
     m_tracksScene->addItem(gridItem);
 }
-void TracksGraphicsView::updateView(const DsModel &model) {
+void TracksGraphicsView::onModelChanged(const DsModel &model) {
+    qDebug() << "onModelChanged";
     if (m_tracksScene == nullptr)
         return;
 
     reset();
+    m_tempo = model.tempo();
     int index = 0;
     for (const auto &track : model.tracks()) {
         insertTrack(track, index);
         index++;
     }
+}
+void TracksGraphicsView::onTempoChanged(double tempo) {
+    // notify audio clips
+    m_tempo = tempo;
+    emit tempoChanged(tempo);
 }
 void TracksGraphicsView::onTracksChanged(DsModel::ChangeType type, const DsModel &model, int index) {
     switch (type) {
@@ -82,13 +89,15 @@ void TracksGraphicsView::insertTrack(const DsTrack &dsTrack, int index) {
             clipItem->setClipLen(clipLen);
             clipItem->setGain(1.0);
             clipItem->setTrackIndex(index);
-            clipItem->openFile(audioClip->path());
-            clipItem->setVisibleRect(this->visibleRect());
-            clipItem->setScaleX(this->scaleX());
-            clipItem->setScaleY(this->scaleY());
+            clipItem->setPath(audioClip->path());
+            clipItem->setTempo(m_tempo);
+            clipItem->setVisibleRect(visibleRect());
+            clipItem->setScaleX(scaleX());
+            clipItem->setScaleY(scaleY());
             m_tracksScene->addItem(clipItem);
             connect(this, &TracksGraphicsView::scaleChanged, clipItem, &AudioClipGraphicsItem::setScale);
             connect(this, &TracksGraphicsView::visibleRectChanged, clipItem, &AudioClipGraphicsItem::setVisibleRect);
+            connect(this, &TracksGraphicsView::tempoChanged, clipItem, &AudioClipGraphicsItem::onTempoChange);
             track.clips.append(clipItem); // TODO: insert by clip start pos
         } else if (clip->type() == DsClip::Singing) {
             auto singingClip = clip.dynamicCast<DsSingingClip>();
@@ -100,9 +109,9 @@ void TracksGraphicsView::insertTrack(const DsTrack &dsTrack, int index) {
             clipItem->setGain(1.0);
             clipItem->setTrackIndex(index);
             clipItem->loadNotes(singingClip->notes);
-            clipItem->setVisibleRect(this->visibleRect());
-            clipItem->setScaleX(this->scaleX());
-            clipItem->setScaleY(this->scaleY());
+            clipItem->setVisibleRect(visibleRect());
+            clipItem->setScaleX(scaleX());
+            clipItem->setScaleY(scaleY());
             m_tracksScene->addItem(clipItem);
             connect(this, &TracksGraphicsView::scaleChanged, clipItem, &SingingClipGraphicsItem::setScale);
             connect(this, &TracksGraphicsView::visibleRectChanged, clipItem, &SingingClipGraphicsItem::setVisibleRect);

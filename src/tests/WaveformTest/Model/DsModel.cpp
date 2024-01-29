@@ -9,6 +9,13 @@
 
 #include "DsModel.h"
 
+double DsModel::tempo() const {
+    return m_tempo;
+}
+void DsModel::setTempo(double tempo) {
+    m_tempo = tempo;
+    emit tempoChanged(m_tempo);
+}
 QList<DsTrack> DsModel::tracks() const {
     return m_tracks;
 }
@@ -95,6 +102,7 @@ bool DsModel::loadAProject(const QString &filename) {
     QJsonObject objAProject;
     if (openJsonFile(filename, &objAProject)) {
         numerator = objAProject.value("beatsPerBar").toInt();
+        m_tempo = objAProject.value("tempos").toArray().first().toObject().value("bpm").toDouble();
         decodeTracks(objAProject.value("tracks").toArray(), m_tracks);
         // auto clip = tracks().first().clips.first().dynamicCast<DsSingingClip>();
         // qDebug() << clip->notes.count();

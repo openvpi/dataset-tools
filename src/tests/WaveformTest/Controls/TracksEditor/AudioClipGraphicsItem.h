@@ -13,12 +13,10 @@ public:
     explicit AudioClipGraphicsItem(int itemId, QGraphicsItem *parent = nullptr);
     ~AudioClipGraphicsItem() override = default;
 
-    void openFile(const QString &path);
-
-    QString path();
-
-    // QString audioFilePath() const;
-    // void openAudioFile();
+    QString path() const;
+    void setPath(const QString &path);
+    double tempo() const;
+    void setTempo(double tempo);
 
 public slots:
     void onLoadComplete(bool success, QString errorMessage);

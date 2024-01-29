@@ -13,7 +13,7 @@
 #include "Controller.h"
 
 #ifdef Q_OS_WIN
-#include <dwmapi.h>
+#    include <dwmapi.h>
 #endif
 
 int main(int argc, char *argv[]) {
@@ -21,18 +21,39 @@ int main(int argc, char *argv[]) {
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
     QApplication::setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents);
+    QApplication::setEffectEnabled(Qt::UI_AnimateTooltip, false);
 
     auto f = QFont("Microsoft Yahei UI", 9);
     f.setHintingPreference(QFont::PreferNoHinting);
     QApplication::setFont(f);
 
-    QApplication::setEffectEnabled(Qt::UI_AnimateTooltip, false);
-
+    auto qssBase = "QPushButton { background: #2A2B2C; border: 1px solid #606060; "
+                   "border-radius: 6px; color: #F0F0F0;padding: 4px 12px;} "
+                   "QPushButton:hover {background-color: #343536; } "
+                   "QPushButton:pressed {background-color: #202122 } "
+                   "QScrollBar::vertical{ width:10px; background-color: transparent; border-style: none; border-radius: 4px; } "
+                   "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; } "
+                   "QScrollBar::handle::vertical{ border-radius:4px; width: 10px; background:rgba(255, 255, 255, 0.2); } "
+                   "QScrollBar::handle::vertical::hover{ background:rgba(255, 255, 255, 0.3); } "
+                   "QScrollBar::handle::vertical:pressed{ background:rgba(255, 255, 255, 0.1); } "
+                   "QScrollBar::add-line::vertical, QScrollBar::sub-line::vertical{ border:none; } "
+                   "QScrollBar::horizontal{ height:10px; background-color: transparent; border-style: none; border-radius: 4px; } "
+                   "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; } "
+                   "QScrollBar::handle::horizontal{ border-radius:4px; width: 10px; background:rgba(255, 255, 255, 0.2); } "
+                   "QScrollBar::handle::horizontal::hover{ background:rgba(255, 255, 255, 0.3); } "
+                   "QScrollBar::handle::horizontal:pressed{ background:rgba(255, 255, 255, 0.1); } "
+                   "QScrollBar::add-line::horizontal, QScrollBar::sub-line::horizontal{ border:none; } "
+                   "QSplitter { background-color: transparent; border: none; } "
+                   "QSplitter::handle { background-color: transparent; margin: 0px 4px; } "
+                   "QSplitterHandle::item:hover {} QSplitter::handle:hover { background-color: rgb(155, 186, 255); } "
+                   "QSplitter::handle:pressed { background-color: rgb(112, 156, 255); } QSplitter::handle:horizontal { width: 4px; } "
+                   "QSplitter::handle:vertical { height: 6px; } "
+                   "QGraphicsView { border: none; background-color: #2A2B2C;}";
     QMainWindow w;
-    w.setStyleSheet(QString("QMainWindow { background: #232425 }"));
+    w.setStyleSheet(QString("QMainWindow { background: #232425 }") + qssBase);
 #ifdef Q_OS_WIN
     // make window transparent
-    w.setStyleSheet(QString("QMainWindow { background: transparent }"));
+    w.setStyleSheet(QString("QMainWindow { background: transparent }") + qssBase);
     // Enable Mica background
     auto backDropType = DWMSBT_MAINWINDOW;
     DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_SYSTEMBACKDROP_TYPE, &backDropType,
@@ -43,8 +64,7 @@ int main(int argc, char *argv[]) {
     DwmExtendFrameIntoClientArea(reinterpret_cast<HWND>(w.winId()), &margins);
     // Dark theme
     uint dark = 1;
-    DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_USE_IMMERSIVE_DARK_MODE, &dark,
-                          sizeof(dark));
+    DwmSetWindowAttribute(reinterpret_cast<HWND>(w.winId()), DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 #endif
 
     auto controller = new Controller;
@@ -64,9 +84,8 @@ int main(int argc, char *argv[]) {
     auto btnOpenProjectFile = new QPushButton;
     btnOpenProjectFile->setText("Open project...");
     QObject::connect(btnOpenProjectFile, &QPushButton::clicked, controller, [&]() {
-        auto fileName = QFileDialog::getOpenFileName(
-            btnOpenProjectFile, "Select a Project File", ".",
-            "Project File (*.json)");
+        auto fileName =
+            QFileDialog::getOpenFileName(btnOpenProjectFile, "Select a Project File", ".", "Project File (*.json)");
         if (fileName.isNull())
             return;
 

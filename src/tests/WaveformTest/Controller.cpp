@@ -11,7 +11,7 @@ Controller::Controller() {
     m_tracksView = new TracksGraphicsView;
     m_pianoRollView = new PianoRollGraphicsView;
 
-    connect(&m_model, &DsModel::modelChanged, m_tracksView, &TracksGraphicsView::updateView);
+    connect(&m_model, &DsModel::modelChanged, m_tracksView, &TracksGraphicsView::onModelChanged);
     connect(&m_model, &DsModel::tracksChanged, m_tracksView, &TracksGraphicsView::onTracksChanged);
     connect(&m_model, &DsModel::modelChanged, m_pianoRollView, &PianoRollGraphicsView::updateView);
     connect(m_tracksView, &TracksGraphicsView::selectedClipChanged, &m_model, &DsModel::onSelectedClipChanged);

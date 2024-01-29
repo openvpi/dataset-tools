@@ -17,11 +17,13 @@ public:
     explicit TracksGraphicsView();
 
 public slots:
-    void updateView(const DsModel &model);
+    void onModelChanged(const DsModel &model);
+    void onTempoChanged(double tempo);
     void onTracksChanged(DsModel::ChangeType type, const DsModel &model, int index);
 
 signals:
     void selectedClipChanged(int trackIndex, int clipIndex);
+    void tempoChanged(double tempo);
 
 private slots:
     void onSceneSelectionChanged();
@@ -42,6 +44,7 @@ private:
 
     TracksGraphicsScene *m_tracksScene;
     TracksViewModel m_tracksModel;
+    double m_tempo = 120;
 
     void insertTrack(const DsTrack &dsTrack, int index);
     void reset();
