@@ -28,7 +28,7 @@ public:
     // void setColor(const Color &color);
 
 private:
-    QString m_name = "Track";
+    QString m_name;
     DsTrackControl m_control = DsTrackControl();
     QList<DsClipPtr> m_clips;
 };

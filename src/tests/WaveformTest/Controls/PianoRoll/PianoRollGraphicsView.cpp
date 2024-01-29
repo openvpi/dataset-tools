@@ -35,7 +35,6 @@ void PianoRollGraphicsView::updateView(const DsModel &model) {
 }
 void PianoRollGraphicsView::onSelectedClipChanged(const DsModel &model, int trackIndex, int clipIndex) {
     reset();
-    qDebug() << trackIndex << clipIndex;
 
     if (trackIndex == -1 || clipIndex == -1) {
         m_oneSingingClipSelected = false;

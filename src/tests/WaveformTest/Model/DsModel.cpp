@@ -118,7 +118,6 @@ void DsModel::onTrackUpdated(int index) {
 void DsModel::onSelectedClipChanged(int trackIndex, int clipIndex) {
     m_selectedClipTrackIndex = trackIndex;
     m_selectedClipIndex = clipIndex;
-    qDebug() << "model onSelectedClipChanged";
     emit selectedClipChanged(*this, m_selectedClipTrackIndex, m_selectedClipIndex);
 }
 void DsModel::reset() {

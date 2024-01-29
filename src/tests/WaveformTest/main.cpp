@@ -27,28 +27,31 @@ int main(int argc, char *argv[]) {
     f.setHintingPreference(QFont::PreferNoHinting);
     QApplication::setFont(f);
 
-    auto qssBase = "QPushButton { background: #2A2B2C; border: 1px solid #606060; "
-                   "border-radius: 6px; color: #F0F0F0;padding: 4px 12px;} "
-                   "QPushButton:hover {background-color: #343536; } "
-                   "QPushButton:pressed {background-color: #202122 } "
-                   "QScrollBar::vertical{ width:10px; background-color: transparent; border-style: none; border-radius: 4px; } "
-                   "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; } "
-                   "QScrollBar::handle::vertical{ border-radius:4px; width: 10px; background:rgba(255, 255, 255, 0.2); } "
-                   "QScrollBar::handle::vertical::hover{ background:rgba(255, 255, 255, 0.3); } "
-                   "QScrollBar::handle::vertical:pressed{ background:rgba(255, 255, 255, 0.1); } "
-                   "QScrollBar::add-line::vertical, QScrollBar::sub-line::vertical{ border:none; } "
-                   "QScrollBar::horizontal{ height:10px; background-color: transparent; border-style: none; border-radius: 4px; } "
-                   "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; } "
-                   "QScrollBar::handle::horizontal{ border-radius:4px; width: 10px; background:rgba(255, 255, 255, 0.2); } "
-                   "QScrollBar::handle::horizontal::hover{ background:rgba(255, 255, 255, 0.3); } "
-                   "QScrollBar::handle::horizontal:pressed{ background:rgba(255, 255, 255, 0.1); } "
-                   "QScrollBar::add-line::horizontal, QScrollBar::sub-line::horizontal{ border:none; } "
-                   "QSplitter { background-color: transparent; border: none; } "
-                   "QSplitter::handle { background-color: transparent; margin: 0px 4px; } "
-                   "QSplitterHandle::item:hover {} QSplitter::handle:hover { background-color: rgb(155, 186, 255); } "
-                   "QSplitter::handle:pressed { background-color: rgb(112, 156, 255); } QSplitter::handle:horizontal { width: 4px; } "
-                   "QSplitter::handle:vertical { height: 6px; } "
-                   "QGraphicsView { border: none; background-color: #2A2B2C;}";
+    auto qssBase =
+        "QPushButton { background: #2A2B2C; border: 1px solid #606060; "
+        "border-radius: 6px; color: #F0F0F0;padding: 4px 12px;} "
+        "QPushButton:hover {background-color: #343536; } "
+        "QPushButton:pressed {background-color: #202122 } "
+        "QScrollBar::vertical{ width:10px; background-color: transparent; border-style: none; border-radius: 4px; } "
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; } "
+        "QScrollBar::handle::vertical{ border-radius:4px; width: 10px; background:rgba(255, 255, 255, 0.2); } "
+        "QScrollBar::handle::vertical::hover{ background:rgba(255, 255, 255, 0.3); } "
+        "QScrollBar::handle::vertical:pressed{ background:rgba(255, 255, 255, 0.1); } "
+        "QScrollBar::add-line::vertical, QScrollBar::sub-line::vertical{ border:none; } "
+        "QScrollBar::horizontal{ height:10px; background-color: transparent; border-style: none; border-radius: 4px; } "
+        "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; } "
+        "QScrollBar::handle::horizontal{ border-radius:4px; width: 10px; background:rgba(255, 255, 255, 0.2); } "
+        "QScrollBar::handle::horizontal::hover{ background:rgba(255, 255, 255, 0.3); } "
+        "QScrollBar::handle::horizontal:pressed{ background:rgba(255, 255, 255, 0.1); } "
+        "QScrollBar::add-line::horizontal, QScrollBar::sub-line::horizontal{ border:none; } "
+        "QSplitter { background-color: transparent; border: none; } "
+        "QSplitter::handle { background-color: transparent; margin: 0px 4px; } "
+        "QSplitterHandle::item:hover {} QSplitter::handle:hover { background-color: rgb(155, 186, 255); } "
+        "QSplitter::handle:pressed { background-color: rgb(112, 156, 255); } QSplitter::handle:horizontal { width: "
+        "4px; } "
+        "QSplitter::handle:vertical { height: 6px; } "
+        "QGraphicsView { border: none; background-color: #2A2B2C;}"
+        "QListWidget { background: #2A2B2C; border: none }";
     QMainWindow w;
     w.setStyleSheet(QString("QMainWindow { background: #232425 }") + qssBase);
 #ifdef Q_OS_WIN
@@ -68,6 +71,10 @@ int main(int argc, char *argv[]) {
 #endif
 
     auto controller = new Controller;
+
+    auto btnNewTrack = new QPushButton;
+    btnNewTrack->setText("New Track");
+    QObject::connect(btnNewTrack, &QPushButton::clicked, controller, &Controller::onNewTrack);
 
     auto btnOpenAudioFile = new QPushButton;
     btnOpenAudioFile->setText("Add an audio file...");
@@ -98,6 +105,7 @@ int main(int argc, char *argv[]) {
     splitter->addWidget(controller->pianoRollView());
 
     auto actionButtonLayout = new QHBoxLayout;
+    actionButtonLayout->addWidget(btnNewTrack);
     actionButtonLayout->addWidget(btnOpenAudioFile);
     actionButtonLayout->addWidget(btnOpenProjectFile);
 
@@ -109,7 +117,7 @@ int main(int argc, char *argv[]) {
     mainWidget->setLayout(mainLayout);
 
     w.setCentralWidget(mainWidget);
-    w.resize(1200, 600);
+    w.resize(1280, 720);
     w.show();
 
     return QApplication::exec();

@@ -11,6 +11,7 @@ QString DsTrack::name() const {
 }
 void DsTrack::setName(const QString &name) {
     m_name = name;
+    qDebug() << "model name " << name;
 }
 DsTrackControl DsTrack::control() const {
     return m_control;
