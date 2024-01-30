@@ -18,7 +18,10 @@ TracksView::TracksView() {
     // tracklist->setMinimumWidth(120);
     m_trackListWidget->setMinimumWidth(360);
     m_trackListWidget->setMaximumWidth(360);
-    m_trackListWidget->setStyleSheet("QListWidget::item{ height: 72px }");
+    m_trackListWidget->setViewMode(QListView::ListMode);
+    m_trackListWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_trackListWidget->setVerticalScrollMode(QListWidget::ScrollPerPixel);
+    // m_trackListWidget->setStyleSheet("QListWidget::item{ height: 72px }");
 
     m_graphicsView = new TracksGraphicsView;
     initGraphicsView();
@@ -131,9 +134,11 @@ void TracksView::insertTrack(const DsTrack &dsTrack, int index) {
     }
     auto trackItem = new QListWidgetItem;
     auto trackWidget = new TrackControlWidget;
+    trackItem->setSizeHint(QSize(360, 72));
     trackWidget->setTrackIndex(index + 1);
     trackWidget->setName(dsTrack.name().isEmpty() ? "Track" + QString::number(index + 1) : dsTrack.name());
     trackWidget->setControl(dsTrack.control());
+    trackWidget->setFixedHeight(72);
     m_trackListWidget->insertItem(index, trackItem);
     m_trackListWidget->setItemWidget(trackItem, trackWidget);
     connect(trackWidget, &TrackControlWidget::propertyChanged, this, [=] {
