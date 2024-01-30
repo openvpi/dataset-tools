@@ -19,11 +19,13 @@ public:
 public slots:
     void onModelChanged(const DsModel &model);
     void onTempoChanged(double tempo);
-    void onTracksChanged(DsModel::ChangeType type, const DsModel &model, int index);
+    void onTrackChanged(DsModel::ChangeType type, const DsModel &model, int index);
 
 signals:
     void selectedClipChanged(int trackIndex, int clipIndex);
     void trackPropertyChanged(const QString &name, const DsTrackControl &control, int index);
+    void insertNewTrackTriggered(int index);
+    void removeTrackTriggerd(int index);
     void tempoChanged(double tempo);
 
 private slots:
@@ -50,7 +52,8 @@ private:
     TracksViewModel m_tracksModel;
     double m_tempo = 120;
 
-    void insertTrack(const DsTrack &dsTrack, int index);
+    void insertTrackToView(const DsTrack &dsTrack, int index);
+    void removeTrackFromView(int index);
     void reset();
     void initGraphicsView();
 };

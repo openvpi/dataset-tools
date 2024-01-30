@@ -32,6 +32,10 @@ public:
 signals:
     void propertyChanged();
     // void propertyChanged(const QString &name, const QString &value);
+    void insertNewTrackTriggered();
+    void removeTrackTriggerd();
+    // void moveUpTrack();
+    // void modeDownTrack();
 
 public slots:
     void onTrackUpdated(const DsTrack &track);
@@ -40,6 +44,7 @@ private slots:
     void onSeekBarValueChanged();
 
 private:
+    void contextMenuEvent(QContextMenuEvent *event) override;
     // controls
     QPushButton *m_btnColor;
     QLabel *m_lbTrackIndex;

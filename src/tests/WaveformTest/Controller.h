@@ -24,6 +24,8 @@ public:
 
 public slots:
     void onNewTrack();
+    void onInsertNewTrack(int index);
+    void onRemoveTrack(int index);
     void openProject(const QString &filePath);
     void addAudioClipToNewTrack(const QString &filePath);
     void onSelectedClipChanged(int trackIndex, int clipIndex);

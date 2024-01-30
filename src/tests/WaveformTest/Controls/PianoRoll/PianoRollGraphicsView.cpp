@@ -3,6 +3,7 @@
 //
 
 #include <QDebug>
+#include <QScroller>
 
 #include "NoteGraphicsItem.h"
 #include "PianoRollBackgroundGraphicsItem.h"
@@ -12,7 +13,8 @@
 
 PianoRollGraphicsView::PianoRollGraphicsView() {
     setScaleXMax(5);
-    setDragMode(RubberBandDrag);
+    QScroller::grabGesture(this, QScroller::TouchGesture);
+    // setDragMode(RubberBandDrag);
 
     m_pianoRollScene = new PianoRollGraphicsScene;
     // setScene(m_pianoRollScene);

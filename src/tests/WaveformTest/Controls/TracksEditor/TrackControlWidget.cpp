@@ -2,7 +2,10 @@
 // Created by fluty on 2024/1/29.
 //
 
+#include <QMenu>
+
 #include "TrackControlWidget.h"
+
 TrackControlWidget::TrackControlWidget(QWidget *parent) {
     setAttribute(Qt::WA_StyledBackground);
 
@@ -128,6 +131,15 @@ TrackControlWidget::TrackControlWidget(QWidget *parent) {
 
     setLayout(m_mainLayout);
 
+    auto actionInsert = new QAction("Insert new track", this);
+    connect(actionInsert, &QAction::triggered, this, [&] { emit insertNewTrackTriggered();});
+    auto actionRemove = new QAction("Delete", this);
+    connect(actionRemove, &QAction::triggered, this, [&] { emit removeTrackTriggerd(); });
+
+    addAction(actionInsert);
+    addAction(actionRemove);
+    setContextMenuPolicy(Qt::ActionsContextMenu);
+
     setStyleSheet(R"(
 TrackControlWidget {
     background-color: #2A2B2C;
@@ -150,7 +162,7 @@ SeekBar {
 }
 
 TrackControlWidget > QPushButton#btnColor {
-    background-color: #709cff;
+    background-color: #9BBAFF;
     border-style: none;
     border-radius: 0px;
     width: 10px;
@@ -232,4 +244,16 @@ void TrackControlWidget::onTrackUpdated(const DsTrack &track) {
 }
 void TrackControlWidget::onSeekBarValueChanged() {
     emit propertyChanged();
+}
+void TrackControlWidget::contextMenuEvent(QContextMenuEvent *event) {
+    // auto menu = new QMenu;
+    // auto actionInsert = new QAction("Insert new track", this);
+    // connect(actionInsert, &QAction::triggered, this, [&] { emit insertNewTrackTriggered();});
+    // auto actionRemove = new QAction("Delete", this);
+    // connect(actionRemove, &QAction::triggered, this, [&] { emit removeTrackTriggerd(); });
+    //
+    // menu->addAction(actionInsert);
+    // menu->addAction(actionRemove);
+    // menu->exec(event->globalPos());
+    QWidget::contextMenuEvent(event);
 }

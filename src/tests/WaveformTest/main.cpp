@@ -51,7 +51,16 @@ int main(int argc, char *argv[]) {
         "4px; } "
         "QSplitter::handle:vertical { height: 6px; } "
         "QGraphicsView { border: none; background-color: #2A2B2C;}"
-        "QListWidget { background: #2A2B2C; border: none }";
+        "QListWidget { background: #2A2B2C; border: none } "
+        "QMenu { padding: 4px; background-color: #202122; border: 1px solid #606060; "
+        "border-radius: 6px; color: #F0F0F0;} "
+        "QMenu::indicator { left: 6px; width: 20px; height: 20px; } QMenu::icon { left: 6px; } "
+        "QMenu::item { background: transparent; color: #fff; padding: 4px 28px; } "
+        "QMenu[stats=checkable]::item, QMenu[stats=icon]::item { padding-left: 12px; } "
+        "QMenu::item:selected { color: #000; background-color: #9BBAFF; border: 1px solid transparent; "
+        "border-style: none; border-radius: 4px; } "
+        "QMenu::item:disabled { color: #d5d5d5; background-color: transparent; } "
+        "QMenu::separator { height: 1.25px; background-color: #606060; margin: 6px 0; } ";
     QMainWindow w;
     w.setStyleSheet(QString("QMainWindow { background: #232425 }") + qssBase);
 #ifdef Q_OS_WIN
