@@ -90,7 +90,7 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     settingsContainer->setObjectName("settingsContainer");
     vlSettingsArea = new QVBoxLayout(gBoxSettings);
     vlSettingsArea->setObjectName("vlSettingsArea");
-    vlSettingsArea->setMargin(0);
+    vlSettingsArea->setContentsMargins(0, 0, 0, 0);
     settingsContainer->setLayout(vlSettingsArea);
     gBoxSettings->setWidget(settingsContainer);
 

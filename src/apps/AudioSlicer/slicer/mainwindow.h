@@ -37,7 +37,13 @@ protected:
 
 #ifdef Q_OS_WIN
 protected:
-    bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
+    bool nativeEvent(const QByteArray &eventType, void *message,
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        qintptr
+#else
+        long
+#endif
+        *result) override;
 #endif
 
 public slots:

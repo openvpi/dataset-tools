@@ -540,7 +540,15 @@ void MainWindow::slot_updateFilenameExample(int value) {
 }
 
 #ifdef Q_OS_WIN
-bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result) {
+
+bool MainWindow::nativeEvent(const QByteArray &eventType, void *message,
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        qintptr
+#else
+        long
+#endif
+        *result)
+{
     if (!message) {
         // If the message pointer is nullptr, just return false and let Qt handle it.
         return false;
