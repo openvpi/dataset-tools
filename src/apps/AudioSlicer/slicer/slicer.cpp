@@ -221,7 +221,7 @@ MarkerList Slicer::slice()
         // Need slicing. Record the range of silent frames to be removed.
         if ((i - silence_start) <= m_maxSilKept)
         {
-            pos = argmin_range_view<double>(rms_list, silence_start, i + 1) + silence_start;
+            pos = argmin_range_view<double>(rms_list, silence_start, i + 1);
             if (silence_start == 0)
             {
                 sil_tags.emplace_back(0, pos);
@@ -235,9 +235,8 @@ MarkerList Slicer::slice()
         else if ((i - silence_start) <= (m_maxSilKept * 2))
         {
             pos = argmin_range_view<double>(rms_list, i - m_maxSilKept, silence_start + m_maxSilKept + 1);
-            pos += i - m_maxSilKept;
-            pos_l = argmin_range_view<double>(rms_list, silence_start, silence_start + m_maxSilKept + 1) + silence_start;
-            pos_r = argmin_range_view<double>(rms_list, i - m_maxSilKept, i + 1) + i - m_maxSilKept;
+            pos_l = argmin_range_view<double>(rms_list, silence_start, silence_start + m_maxSilKept + 1);
+            pos_r = argmin_range_view<double>(rms_list, i - m_maxSilKept, i + 1);
             if (silence_start == 0)
             {
                 clip_start = pos_r;
@@ -250,8 +249,8 @@ MarkerList Slicer::slice()
             }
         }
         else {
-            pos_l = argmin_range_view<double>(rms_list, silence_start, silence_start + m_maxSilKept + 1) + silence_start;
-            pos_r = argmin_range_view<double>(rms_list, i - m_maxSilKept, i + 1) + i - m_maxSilKept;
+            pos_l = argmin_range_view<double>(rms_list, silence_start, silence_start + m_maxSilKept + 1);
+            pos_r = argmin_range_view<double>(rms_list, i - m_maxSilKept, i + 1);
             if (silence_start == 0) {
                 sil_tags.emplace_back(0, pos_r);
             }
@@ -266,7 +265,7 @@ MarkerList Slicer::slice()
     qint64 total_frames = rms_list.size();
     if (has_silence_start && ((total_frames - silence_start) >= m_minInterval)) {
         qint64 silence_end = std::min(total_frames - 1, silence_start + m_maxSilKept);
-        pos = argmin_range_view<double>(rms_list, silence_start, silence_end + 1) + silence_start;
+        pos = argmin_range_view<double>(rms_list, silence_start, silence_end + 1);
         sil_tags.emplace_back(pos, total_frames + 1);
     }
     // Apply and return slices.
@@ -378,14 +377,15 @@ inline std::vector<double> get_rms(const std::vector<T>& arr, qint64 frame_lengt
 
 template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end) {
+    // Return the absolute index in v, which is in range [begin, end) if possible
     // Ensure vector access is not out of bound
     auto size = v.size();
-    if (begin > size)  begin = size;
+    if (begin < 0)     begin = 0;
     if (end > size)    end = size;
-    if (begin >= end)  return 0;
+    if (begin >= end)  return begin;
 
     auto min_it = std::min_element(v.begin() + begin, v.begin() + end);
-    return std::distance(v.begin() + begin, min_it);
+    return std::distance(v.begin(), min_it);
 }
 
 template<class T>
