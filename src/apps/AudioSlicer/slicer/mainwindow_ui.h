@@ -60,8 +60,8 @@ public:
     QFormLayout *formLayout;
     QLabel *lblThreshold;
     QLineEdit *lineEditThreshold;
-    QLabel *lblMinLen;
-    QLineEdit *lineEditMinLen;
+    QLabel *lblMaxLen;
+    QLineEdit *lineEditMaxLen;
     QLabel *lblMinInterval;
     QLineEdit *lineEditMinInterval;
     QLabel *lblHopSize;
