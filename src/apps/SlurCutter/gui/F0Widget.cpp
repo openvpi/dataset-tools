@@ -67,6 +67,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu_OptionPrompt = new QAction("Options");
     bgMenuSnapByDefault = new QAction("&Snap to piano keys by default");
     bgMenuShowPitchTextOverlay = new QAction("Show pitch text &overlay");
+    bgMenuShowPhonemeTexts = new QAction("Show &phonemes");
     bgMenu_ModePrompt = new QAction("Edit Mode");
     bgMenuModeNote = new QAction("&Note");
     bgMenuModeGlide = new QAction("Ornament: &Glide");
@@ -77,6 +78,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu_ModePrompt->setFont(boldMenuItemFont);
     bgMenu_ModePrompt->setDisabled(true);
     bgMenuShowPitchTextOverlay->setCheckable(true);
+    bgMenuShowPhonemeTexts->setCheckable(true);
     bgMenuSnapByDefault->setCheckable(true);
     bgMenuModeNote->setCheckable(true);
     bgMenuModeGlide->setCheckable(true);
@@ -92,6 +94,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu->addAction(bgMenu_OptionPrompt);
     bgMenu->addAction(bgMenuSnapByDefault);
     bgMenu->addAction(bgMenuShowPitchTextOverlay);
+    bgMenu->addAction(bgMenuShowPhonemeTexts);
 
     // Mode selector
     selectedDragMode = Note;
@@ -116,6 +119,10 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     connect(bgMenuConvRestsToNormal, &QAction::triggered, this, &F0Widget::convertAllRestsToNormal);
     connect(bgMenuShowPitchTextOverlay, &QAction::triggered, [=]() {
         showPitchTextOverlay = bgMenuShowPitchTextOverlay->isChecked();
+        update();
+    });
+    connect(bgMenuShowPhonemeTexts, &QAction::triggered, [=]() {
+        showPhonemeTexts = bgMenuShowPhonemeTexts->isChecked();
         update();
     });
     connect(bgMenuSnapByDefault, &QAction::triggered, [=]() {
@@ -154,6 +161,21 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
 
     QVector<bool> isRest(noteSeq.size(), false);
 
+    // note_slur is optional. When there's not enough elements in it, consider it invalid and clear it.
+    if (slur.size() < noteDur.size()) {
+        slur = QStringList();
+        for (int i = 0; i < noteDur.size(); i++) {
+            slur.append("0");
+        }
+    }
+    auto wordCount = 0;
+    for (auto &i : slur) {
+        if (i.toInt() == 0) {
+            wordCount++;
+        }
+    }
+    bool phNumValid = (wordCount == phNum.size());
+
     // Sanity check
     if (noteDur.size() != noteSeq.size()) {
         setErrorStatusText(QString("Invalid DS file! Inconsistent element count\n"
@@ -164,11 +186,6 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
                                .arg(noteSeq.size())
                                .arg(slur.size()));
         return;
-    }
-
-    // note_slur is optional. When there's not enough elements in it, consider it invalid and clear it.
-    if (slur.size() < noteDur.size()) {
-        slur.clear();
     }
 
 #if 1
@@ -200,6 +217,8 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
 #endif
 
     auto noteBegin = 0.0;
+    auto phBegin = 0.0;
+    int ph_j = 0;
     for (int i = 0; i < noteSeq.size(); i++) {
         MiniNote note;
         note.duration = noteDur[i].toDouble();
@@ -214,11 +233,22 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
             note.pitch = NoteNameToMidiNote(noteSeq[i]);
             note.cents = NAN;
         }
-        note.isSlur = slur.empty() ? 0 : slur[i].toInt();
+        note.isSlur = (slur[i].toInt() > 0);
         note.isRest = isRest[i];
         if (glide.size() - 1 < i || glide[i] == "none") note.glide = GlideStyle::None;
         else if (glide[i] == "up") note.glide = GlideStyle::Up;
         else if (glide[i] == "down") note.glide = GlideStyle::Down;
+        if (phNumValid && showPhonemeTexts) {
+            while (ph_j < phDur.size() && phBegin >= noteBegin && phBegin < noteBegin + note.duration) {
+                MiniPhonome ph;
+                ph.begin = phBegin;
+                ph.duration = phDur[ph_j].toDouble();
+                ph.ph = phSeq[ph_j];
+                note.phonemes.append(ph);
+                ph_j++;
+                phBegin += ph.duration;
+            }
+        }
         midiIntervals.insert({noteBegin, noteBegin + note.duration, note});
         noteBegin += note.duration;
     }
@@ -246,16 +276,19 @@ void F0Widget::setErrorStatusText(const QString &text) {
 
 void F0Widget::loadConfig(const SlurCutterCfg &cfg) {
     bgMenuShowPitchTextOverlay->setChecked(cfg.showPitchTextOverlay);
+    bgMenuShowPhonemeTexts->setChecked(cfg.showPhonemeTexts);
     bgMenuSnapByDefault->setChecked(cfg.snapToKeys);
 
     snapToKey = cfg.snapToKeys;
     showPitchTextOverlay = cfg.showPitchTextOverlay;
+    showPhonemeTexts = cfg.showPhonemeTexts;
 
     update();
 }
 
 void F0Widget::pullConfig(SlurCutterCfg &cfg) const {
     cfg.showPitchTextOverlay = bgMenuShowPitchTextOverlay->isChecked();
+    cfg.showPhonemeTexts = bgMenuShowPhonemeTexts->isChecked();
     cfg.snapToKeys = bgMenuSnapByDefault->isChecked();
 }
 
@@ -557,6 +590,8 @@ void F0Widget::setCurrentNoteGlideType(QAction *action) {
 
 void F0Widget::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
+    QFontMetrics fm = fontMetrics();
+    int lh = fm.lineSpacing();
 
     do {
         // Fill dark grey background
@@ -604,6 +639,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         // Midi notes
         auto leftTime = centerTime - w / 2 / secondWidth, rightTime = centerTime + w / 2 / secondWidth;
         QVector<QPair<QPointF, QString>> noteDescription;
+        QVector<QPair<QPointF, QString>> phonemeTexts;
         static constexpr QColor NoteColors[] = {QColor(106, 164, 234), QColor(60, 113, 219)};
         for (auto &i : midiIntervals.findOverlappingIntervals({leftTime, rightTime}, false)) {
             QString noteDescText;
@@ -648,6 +684,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                 auto pen = painter.pen();
                 pen.setStyle(Qt::DashLine);
                 pen.setColor(NoteColors[0]);
+                pen.setWidth(1);
                 painter.setPen(pen);
                 auto brush = painter.brush();
                 auto fillColor = NoteColors[i.value.isSlur];
@@ -660,6 +697,18 @@ void F0Widget::paintEvent(QPaintEvent *event) {
             }
             // rec.adjust(NotePadding, NotePadding, -NotePadding, -NotePadding);
             // painter.drawText(rec, Qt::AlignVCenter | Qt::AlignLeft, i.value.text);
+            if (showPhonemeTexts) {
+                for (auto &ph : i.value.phonemes) {
+                    auto pen = painter.pen();
+                    pen.setColor(QColor(200, 200, 200, 255));
+                    pen.setStyle(Qt::DotLine);
+                    pen.setWidth(2);
+                    painter.setPen(pen);
+                    auto phTopLeft = QPointF((ph.begin - leftTime) * secondWidth, rec.y() + semitoneHeight);
+                    painter.drawLine(phTopLeft.x() + 1, phTopLeft.y(), phTopLeft.x() + 1, phTopLeft.y() + lh + 3);
+                    phonemeTexts.append({phTopLeft + QPointF(NotePadding, lh - 3), ph.ph});
+                }
+            }
         }
 
         // Drag box / hover box (Do not coexist)
@@ -757,6 +806,11 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         painter.setPen(Qt::white);
         foreach (auto &i, noteDescription) {
             painter.drawText(i.first, i.second);
+        }
+        if (showPhonemeTexts) {
+            foreach (auto &i, phonemeTexts) {
+                painter.drawText(i.first, i.second);
+            }
         }
 
         painter.translate(-KeyWidth, 0);
