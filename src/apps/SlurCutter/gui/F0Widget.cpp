@@ -161,31 +161,25 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
 
     QVector<bool> isRest(noteSeq.size(), false);
 
-    // note_slur is optional. When there's not enough elements in it, consider it invalid and clear it.
-    if (slur.size() < noteDur.size()) {
-        slur = QStringList();
-        for (int i = 0; i < noteDur.size(); i++) {
-            slur.append("0");
-        }
-    }
-    auto wordCount = 0;
-    for (auto &i : slur) {
-        if (i.toInt() == 0) {
-            wordCount++;
-        }
-    }
-    bool phNumValid = (wordCount == phNum.size());
-
     // Sanity check
-    if (noteDur.size() != noteSeq.size()) {
+    if (noteDur.size() != noteSeq.size() || phDur.size() != phSeq.size()) {
         setErrorStatusText(QString("Invalid DS file! Inconsistent element count\n"
                                    "note_dur: %1\n"
                                    "note_seq: %2\n"
-                                   "slur(optional): %3")
+                                   "ph_dur: %3\n"
+                                   "ph_seq: %4\n"
+                                   "slur(optional): %5")
                                .arg(noteDur.size())
                                .arg(noteSeq.size())
+                               .arg(phDur.size())
+                               .arg(phSeq.size())
                                .arg(slur.size()));
         return;
+    }
+
+    // note_slur is optional. When there's not enough elements in it, consider it invalid and clear it.
+    if (slur.size() < noteDur.size()) {
+        slur.clear();
     }
 
 #if 1
@@ -233,12 +227,12 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
             note.pitch = NoteNameToMidiNote(noteSeq[i]);
             note.cents = NAN;
         }
-        note.isSlur = (slur[i].toInt() > 0);
+        note.isSlur = !slur.empty() && (slur[i].toInt() > 0);
         note.isRest = isRest[i];
         if (glide.size() - 1 < i || glide[i] == "none") note.glide = GlideStyle::None;
         else if (glide[i] == "up") note.glide = GlideStyle::Up;
         else if (glide[i] == "down") note.glide = GlideStyle::Down;
-        if (phNumValid && showPhonemeTexts) {
+        if (showPhonemeTexts) {
             while (ph_j < phDur.size() && phBegin >= noteBegin && phBegin < noteBegin + note.duration) {
                 MiniPhonome ph;
                 ph.begin = phBegin;
