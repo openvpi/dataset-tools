@@ -233,7 +233,7 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
         else if (glide[i] == "up") note.glide = GlideStyle::Up;
         else if (glide[i] == "down") note.glide = GlideStyle::Down;
         if (showPhonemeTexts) {
-            while (ph_j < phDur.size() && phBegin >= noteBegin && phBegin < noteBegin + note.duration) {
+            while (ph_j < phDur.size() && phBegin >= noteBegin - 0.01 && phBegin < noteBegin + note.duration - 0.01) {
                 MiniPhonome ph;
                 ph.begin = phBegin;
                 ph.duration = phDur[ph_j].toDouble();
@@ -387,6 +387,8 @@ QString F0Widget::PitchToNotePlusCentsString(double pitch) {
         return "rest";
     int note = std::round(pitch);
     int cents = std::round((pitch - note) * 100);
+    if (cents == 0)
+        return MidiNoteToNoteName(note);
     return QString("%1%2%3").arg(MidiNoteToNoteName(note)).arg(cents >= 0 ? "+" : "").arg(cents);
 }
 
@@ -446,6 +448,16 @@ void F0Widget::splitNoteUnderMouse() {
         leftNote.duration = time - noteInterval.low;
         rightNote.duration = noteInterval.high - time;
         rightNote.isSlur = true;
+        leftNote.phonemes.clear();
+        rightNote.phonemes.clear();
+        for (auto &ph : noteInterval.value.phonemes) {
+            if (ph.begin >= noteInterval.low && ph.begin < time) {
+                leftNote.phonemes.append(ph);
+            }
+            else if (ph.begin >= time && ph.begin < noteInterval.high) {
+                rightNote.phonemes.append(ph);
+            }
+        }
 
         midiIntervals.remove(noteInterval);
         midiIntervals.insert({noteInterval.low, time, leftNote});
@@ -550,6 +562,7 @@ void F0Widget::mergeCurrentSlurToLeftNode(bool checked) {
 
     leftNode.value.duration += noteInterval.value.duration;
     leftNode.high = noteInterval.high;
+    leftNode.value.phonemes.append(noteInterval.value.phonemes);
 
     midiIntervals.insert(leftNode);
     update();
@@ -635,7 +648,11 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         QVector<QPair<QPointF, QString>> noteDescription;
         QVector<QPair<QPointF, QString>> phonemeTexts;
         static constexpr QColor NoteColors[] = {QColor(106, 164, 234), QColor(60, 113, 219)};
-        for (auto &i : midiIntervals.findOverlappingIntervals({leftTime, rightTime}, false)) {
+        auto leftBoundaryIntervals = midiIntervals.findIntervalsContainPoint(leftTime, false);
+        auto deltaLeftTime = 0.0;
+        if (!leftBoundaryIntervals.empty() && !leftBoundaryIntervals.front().value.phonemes.empty())
+            deltaLeftTime = leftBoundaryIntervals.front().value.phonemes.back().duration * secondWidth;
+        for (auto &i : midiIntervals.findOverlappingIntervals({leftTime - deltaLeftTime, rightTime}, false)) {
             QString noteDescText;
 
             if (i.value.pitch == 0)
@@ -651,11 +668,9 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                 painter.setPen(Qt::black);
                 painter.fillRect(rec, NoteColors[i.value.isSlur]);
                 painter.drawRect(rec);
-                if (!std::isnan(i.value.cents)) {
-                    painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
-                    noteDescText += PitchToNotePlusCentsString(i.value.pitch +
-                                                0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
-                }
+                painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
+                noteDescText += PitchToNotePlusCentsString(i.value.pitch +
+                                            0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
                 if (i.value.glide != GlideStyle::None) {
                     /*
                      * Definitions of glide types which cause the difference
@@ -693,14 +708,25 @@ void F0Widget::paintEvent(QPaintEvent *event) {
             // painter.drawText(rec, Qt::AlignVCenter | Qt::AlignLeft, i.value.text);
             if (showPhonemeTexts) {
                 for (auto &ph : i.value.phonemes) {
+                    auto phRec = QRectF(
+                        (ph.begin - leftTime) * secondWidth,
+                        rec.y() + semitoneHeight,
+                        ph.duration * secondWidth, lh + 3);
                     auto pen = painter.pen();
+                    pen.setStyle(Qt::SolidLine);
                     pen.setColor(QColor(200, 200, 200, 255));
-                    pen.setStyle(Qt::DotLine);
                     pen.setWidth(2);
                     painter.setPen(pen);
-                    auto phTopLeft = QPointF((ph.begin - leftTime) * secondWidth, rec.y() + semitoneHeight);
-                    painter.drawLine(phTopLeft.x() + 1, phTopLeft.y(), phTopLeft.x() + 1, phTopLeft.y() + lh + 3);
-                    phonemeTexts.append({phTopLeft + QPointF(NotePadding, lh - 3), ph.ph});
+                    painter.drawLine(phRec.left() + 1, phRec.top() + 1, phRec.left() + 1, phRec.bottom());
+                    pen.setStyle(Qt::NoPen);
+                    painter.setPen(pen);
+                    auto brush = painter.brush();
+                    brush.setColor(QColor(200, 200, 200, 80));
+                    brush.setStyle(Qt::SolidPattern);
+                    painter.setBrush(brush);
+                    painter.drawRect(phRec);
+                    painter.setBrush(Qt::NoBrush);
+                    phonemeTexts.append({phRec.topLeft() + QPointF(NotePadding, lh - 3), ph.ph});
                 }
             }
         }
