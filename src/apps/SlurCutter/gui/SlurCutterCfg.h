@@ -12,7 +12,8 @@ struct SlurCutterCfg {
 
     bool snapToKeys;
     bool showPitchTextOverlay;
+    bool showPhonemeTexts;
 
-    SlurCutterCfg() : snapToKeys(true), showPitchTextOverlay(false) {}
+    SlurCutterCfg() : snapToKeys(true), showPitchTextOverlay(false), showPhonemeTexts(true) {}
 };
 QAS_JSON_NS(SlurCutterCfg);
