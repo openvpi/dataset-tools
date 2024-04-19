@@ -7,3 +7,7 @@ add_subdirectory(ikg2p)
 add_subdirectory(ffmpegdecoder)
 
 add_subdirectory(sdlplayback)
+
+add_subdirectory(r8brain)
+
+add_subdirectory(RapidASR)

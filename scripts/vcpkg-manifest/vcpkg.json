@@ -8,7 +8,8 @@
         },
         "qastool",
         "ffmpeg-fake",
-        "mecab"
+        "mecab",
+        "libfftw3"
     ],
     "vcpkg-configuration": {
         "overlay-ports": [
