@@ -14,16 +14,22 @@ DiffSinger dataset processing tools, including audio processing, labeling.
 + Apple Mac OSX (11+)
 + Linux (Tested on Ubuntu)
 
+## AsrModel
+
+[AsrModel](https://github.com/openvpi/dataset-tools/releases/tag/AsrModel)
+
+Used for LyricFA, only supports Chinese.
+
 ## Build from source
 
 ### Requirements
 
-| Component | Requirement |               Detailed               |
-|:---------:|:-----------:|:------------------------------------:|
-|    Qt     |  \>=5.15.2  |   Core, Gui, Widgets, Svg, Network   |
-| Compiler  |  \>=C++17   |        MSVC 2019, GCC, Clang         |
-|   CMake   |   \>=3.17   |        >=3.20 is recommended         |
-<!-- |  Python   |   \>=3.8    |                  /                   | -->
+| Component | Requirement |             Detailed             |
+|:---------:|:-----------:|:--------------------------------:|
+|    Qt     |  \>=5.15.2  | Core, Gui, Widgets, Svg, Network |
+| Compiler  |  \>=C++17   |      MSVC 2019, GCC, Clang       |
+|   CMake   |   \>=3.17   |      >=3.20 is recommended       |
+   <!--    |   Python    |              \>=3.8              |                  /                   | -->
 
 ### Setup Environment
 
@@ -103,7 +109,7 @@ cmake --build build --target install
 
 + [Qt 5.15.2](https://www.qt.io/)
     + GNU LGPL v2.1 or later
-+ [FFmpeg](https://github.com/FFmpeg/FFmpeg) 
++ [FFmpeg](https://github.com/FFmpeg/FFmpeg)
     + GNU LGPL v2.1 or later
 + [LAME](https://lame.sourceforge.io/)
     + GNU LGPL v2.0
