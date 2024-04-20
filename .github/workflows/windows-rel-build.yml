@@ -18,7 +18,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
+
     # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
     - name: Export Actions runtime info for Actions caching
       uses: actions/github-script@v6
@@ -32,31 +32,25 @@ jobs:
       with:
         version: '5.15.2'
         #cache: true # It never successfully found cache from previous runs, disabling it
-      
+
     - name: Initialize MSVC environment
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: amd64
-    
+
     - name: Configure Qt5 path
       shell: bash
       run: |
         echo "QT_DIR=$Qt5_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
         echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
-    
+
     - name: Install vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 8b04a7bd93bef991818fc372bb83ce00ec1c1c16 # Grabbed on 2023-07-20 18:09 +0800
-    
+
     - name: Install Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
-
-    - name: Install OnnxRuntime
-      shell: cmd
-      working-directory: ${{github.workspace}}/src/libs
-      run: |
-        cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
     - name: Build Vcpkg packages
       shell: cmd
@@ -68,6 +62,12 @@ jobs:
           Qt5_DIR: ${{env.QT_DIR}}
           VCPKG_KEEP_ENV_VARS: 'QT_DIR;Qt5_DIR'
 
+    - name: Install OnnxRuntime
+      shell: cmd
+      working-directory: ${{github.workspace}}/src/libs
+      run: |
+        cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
+
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
@@ -78,10 +78,10 @@ jobs:
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --target all
-      
+
     - name: Deploy
       run: cmake --build ${{github.workspace}}/build --target install
-    
+
     - name: Set Commit ID
       shell: bash
       working-directory: ${{github.workspace}}/build
@@ -89,7 +89,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         export VERSION=`git log --format="%H" -n 1 | head -c 7`
         echo "VERSION="$VERSION >> $GITHUB_ENV
-        
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v2
       with:
