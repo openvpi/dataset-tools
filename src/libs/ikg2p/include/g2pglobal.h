@@ -10,6 +10,7 @@ namespace IKg2p {
 
     void setDictionaryPath(const QString &dir);
 
+    QStringList splitStringToList(const QStringView &input);
     QList<QStringView> splitString(const QStringView &input);
 
     inline QStringList viewList2strList(const QList<QStringView> &viewList) {

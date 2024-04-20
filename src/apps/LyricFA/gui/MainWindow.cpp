@@ -11,7 +11,7 @@
 #include "QMSystem.h"
 #include <QStandardPaths>
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_match(new MatchLyric()) {
     const QString modelFolder = qApp->applicationDirPath() + QDir::separator() + "model";
     if (QDir(modelFolder).exists()) {
         const auto modelPath = modelFolder + QDir::separator() + "model.onnx";
@@ -58,17 +58,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     jsonLayout = new QHBoxLayout();
     lyricLayout = new QHBoxLayout();
 
-    labEdit = new QLineEdit();
+    labEdit = new QLineEdit("D:\\python\\LyricFA\\test_outlab");
     const auto btnLab = new QPushButton("Open Folder");
     labLayout->addWidget(labEdit);
     labLayout->addWidget(btnLab);
 
-    jsonEdit = new QLineEdit();
+    jsonEdit = new QLineEdit("D:\\python\\LyricFA\\test_outjson");
     const auto btnJson = new QPushButton("Open Folder");
     jsonLayout->addWidget(jsonEdit);
     jsonLayout->addWidget(btnJson);
 
-    lyricEdit = new QLineEdit();
+    lyricEdit = new QLineEdit("D:\\python\\LyricFA\\lyrics");
     const auto btnLyric = new QPushButton("Lyric Folder");
     lyricLayout->addWidget(lyricEdit);
     lyricLayout->addWidget(btnLyric);
@@ -92,7 +92,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     btnLayout = new QHBoxLayout();
     remove = new QPushButton("remove");
     clear = new QPushButton("clear");
-    runAsr = new QPushButton("run");
+    runAsr = new QPushButton("runAsr");
     if (!m_asr)
         runAsr->setDisabled(true);
     matchLyric = new QPushButton("match lyric");
@@ -130,9 +130,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(remove, &QPushButton::clicked, this, &MainWindow::slot_removeListItem);
     connect(clear, &QPushButton::clicked, this, &MainWindow::slot_clearTaskList);
     connect(runAsr, &QPushButton::clicked, this, &MainWindow::slot_runAsr);
+    connect(matchLyric, &QPushButton::clicked, this, &MainWindow::slot_matchLyric);
 
     connect(btnLab, &QPushButton::clicked, this, &MainWindow::slot_labPath);
     connect(btnJson, &QPushButton::clicked, this, &MainWindow::slot_jsonPath);
+    connect(btnLyric, &QPushButton::clicked, this, &MainWindow::slot_lyricPath);
 
     resize(960, 720);
 }
@@ -253,6 +255,7 @@ void MainWindow::slot_clearTaskList() const {
 }
 
 void MainWindow::slot_runAsr() const {
+    out->clear();
     const auto labOutPath = labEdit->text();
     if (!QDir(labOutPath).exists()) {
         QMessageBox::information(nullptr, "Warning",
@@ -290,9 +293,29 @@ void MainWindow::slot_runAsr() const {
     }
 }
 
+void MainWindow::slot_matchLyric() const {
+    if (!QDir(lyricEdit->text()).exists()) {
+        QMessageBox::information(nullptr, "Warning",
+                                 "Raw Lyric Path is empty or does not exist. Please set the output directory.");
+        return;
+    }
+    if (!QDir(labEdit->text()).exists()) {
+        QMessageBox::information(nullptr, "Warning",
+                                 "Lab Out Path is empty or does not exist. Please set the output directory.");
+        return;
+    }
+    if (!QDir(jsonEdit->text()).exists()) {
+        QMessageBox::information(nullptr, "Warning",
+                                 "Json Out Path is empty or does not exist. Please set the output directory.");
+        return;
+    }
+    out->clear();
+    m_match->match(out, lyricEdit->text(), labEdit->text(), jsonEdit->text());
+}
+
 void MainWindow::slot_labPath() {
     const QString path = QFileDialog::getExistingDirectory(
-        this, "Add Folder", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
+        this, "Lab Path", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
     if (path.isEmpty()) {
         return;
     }
@@ -301,7 +324,7 @@ void MainWindow::slot_labPath() {
 
 void MainWindow::slot_jsonPath() {
     const QString path = QFileDialog::getExistingDirectory(
-        this, "Add Folder", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
+        this, "Json Path", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
     if (path.isEmpty()) {
         return;
     }
@@ -310,7 +333,7 @@ void MainWindow::slot_jsonPath() {
 
 void MainWindow::slot_lyricPath() {
     const QString path = QFileDialog::getExistingDirectory(
-        this, "Add Folder", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
+        this, "Lyric Path", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
     if (path.isEmpty()) {
         return;
     }

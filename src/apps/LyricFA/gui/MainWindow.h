@@ -13,6 +13,7 @@
 #include <QPushButton>
 
 #include "../util/Asr.h"
+#include "../util/MatchLyric.h"
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -64,6 +65,7 @@ protected:
 
 private:
     LyricFA::Asr *m_asr = nullptr;
+    MatchLyric *m_match = nullptr;
 
     static void initStyleSheet();
 

@@ -5,16 +5,15 @@ FaRes LevenshteinDistance::find_similar_substrings(const QStringList &target, co
                                                    const bool &sub_tip) {
     if (text_list.isEmpty())
         text_list = pinyin_list;
-    Q_ASSERT(target.size() <= pinyin_list.size(),
-             "The length of target must be less than or equal to the length of pinyin_list.");
-    Q_ASSERT(text_list.size() == pinyin_list.size(), "The length of text_list and pinyin_list must be the same.");
+    Q_ASSERT(target.size() <= pinyin_list.size());
+    Q_ASSERT(text_list.size() == pinyin_list.size());
 
     const auto pos = find_best_matches(text_list, pinyin_list, target);
     const auto slider_res = pinyin_list.mid(pos.start, pos.end - pos.start);
-    if (!slider_res.empty() && (slider_res[0] == target[0] || slider_res[-1] == target[-1]) && pos.textDiff.size() <= 1)
-        return {text_list.mid(pos.start, pos.end - pos.start).join(' '),
-                pinyin_list.mid(pos.start, pos.end - pos.start).join(' '), pos.textDiff.join(' '),
-                pos.pinyinDiff.join(' ')};
+    if (!slider_res.empty() && (slider_res.first() == target.first() || slider_res.last() == target.last()) &&
+        pos.textDiff.size() <= 1)
+        return {text_list.mid(pos.start, pos.end - pos.start), pinyin_list.mid(pos.start, pos.end - pos.start),
+                pos.textDiff, pos.pinyinDiff};
 
     QList<CalcuRes> similar_substrings;
 
@@ -32,9 +31,9 @@ FaRes LevenshteinDistance::find_similar_substrings(const QStringList &target, co
 
     const auto calcuRes = findMinEditDistance(similar_substrings);
 
-    return {calcuRes.text_res.join(' '), calcuRes.pinyin_res.join(' '),
-            fill_step_out(calcuRes.corresponding_texts, del_tip, ins_tip, sub_tip).join(' '),
-            fill_step_out(calcuRes.corresponding_characters, del_tip, ins_tip, sub_tip).join(' ')};
+    return {calcuRes.text_res, calcuRes.pinyin_res,
+            fill_step_out(calcuRes.corresponding_texts, del_tip, ins_tip, sub_tip),
+            fill_step_out(calcuRes.corresponding_characters, del_tip, ins_tip, sub_tip)};
 }
 
 
@@ -48,15 +47,14 @@ MacthRes LevenshteinDistance::find_best_matches(const QStringList &text_list, co
         int j = 0;
         while (i + j < source_list.size() && j < sub_list.size()) {
             if (source_list[i + j] == sub_list[j]) {
-
                 match_length++;
-                j++;
             }
-        }
+            j++;
 
-        if (match_length > max_match_length) {
-            max_match_length = match_length;
-            max_match_index = i;
+            if (match_length > max_match_length) {
+                max_match_length = match_length;
+                max_match_index = i;
+            }
         }
     }
 
@@ -70,8 +68,10 @@ MacthRes LevenshteinDistance::find_best_matches(const QStringList &text_list, co
     QStringList pinyinDiff;
     for (int k = 0; k < sub_list.size(); k++) {
         if (source_list[max_match_index + k] != sub_list[k]) {
-            textDiff.append("(" + text_list[max_match_index + k] + "->" + sub_list[k] + ", " + QChar(k) + ")");
-            pinyinDiff.append("(" + source_list[max_match_index + k] + "->" + sub_list[k] + ", " + QChar(k) + ")");
+            textDiff.append("(" + text_list[max_match_index + k] + "->" + sub_list[k] + ", " + QString::number(k) +
+                            ")");
+            pinyinDiff.append("(" + source_list[max_match_index + k] + "->" + sub_list[k] + ", " + QString::number(k) +
+                              ")");
         }
     }
 
@@ -85,12 +85,12 @@ QStringList LevenshteinDistance::fill_step_out(const QList<StepPair> &pairs, con
         const auto first = pairs[i].raw;
         const auto second = pairs[i].res;
         if (first != second) {
-            if (first != '' && second == '' && del_tip)
-                output.append("(" + first + "->, " + QChar(i) + ")");
-            else if (first == '' && second != '' && ins_tip)
-                output.append("(->" + second + ", " + QChar(i) + ")");
-            else if (first != '' && second != '' && sub_tip)
-                output.append("(" + first + "->" + second + ", " + QChar(i) + ")");
+            if (!first.isEmpty() && second.isEmpty() && del_tip)
+                output.append("(" + first + "->, " + QString::number(i) + ")");
+            else if (first.isEmpty() && !second.isEmpty() && ins_tip)
+                output.append("(->" + second + ", " + QString::number(i) + ")");
+            else if (!first.isEmpty() && second.isEmpty() && sub_tip)
+                output.append("(" + first + "->" + second + ", " + QString::number(i) + ")");
         }
     }
     return output;
@@ -118,12 +118,13 @@ int LevenshteinDistance::calculate_edit_distance_dp(matrix dp, const QStringList
                                                     const bool &del_cost, const bool &ins_cost, const bool &sub_cost) {
     const int m = substring.size();
     const int n = target.size();
-    for (int i = 0; i < m + 1; i++) {
-        for (int j = 0; j < n + 1; j++) {
+    for (int i = 1; i < m + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
             if (substring[i - 1] == target[j - 1])
                 dp[i][j] = dp[i - 1][j - 1];
             else {
-                dp[i][j] = std::min(dp[i - 1][j - 1] + sub_cost, dp[i][j - 1] + ins_cost, dp[i - 1][j] + del_cost);
+                dp[i][j] =
+                    std::min(std::min(dp[i - 1][j - 1] + sub_cost, dp[i][j - 1] + ins_cost), dp[i - 1][j] + del_cost);
             }
         }
     }
@@ -146,7 +147,7 @@ QPair<QList<StepPair>, QList<StepPair>> LevenshteinDistance::backtrack_correspon
             i--;
             j--;
         } else {
-            const int min_cost = std::min(dp[i - 1][j - 1], dp[i][j - 1], dp[i - 1][j]);
+            const int min_cost = std::min(std::min(dp[i - 1][j - 1], dp[i][j - 1]), dp[i - 1][j]);
 
             if (dp[i - 1][j - 1] == min_cost) {
                 corresponding_characters.insert(0, {substring[i - 1], target[j - 1]});
@@ -154,12 +155,12 @@ QPair<QList<StepPair>, QList<StepPair>> LevenshteinDistance::backtrack_correspon
                 i--;
                 j--;
             } else if (dp[i][j - 1] == min_cost) {
-                corresponding_characters.insert(0, {'', target[j - 1]});
-                corresponding_texts.insert(0, {'', target[j - 1]});
+                corresponding_characters.insert(0, {QString(), target[j - 1]});
+                corresponding_texts.insert(0, {QString(), target[j - 1]});
                 j--;
             } else {
-                corresponding_characters.insert(0, {substring[i - 1], ''});
-                corresponding_texts.insert(0, {text[i - 1], ''});
+                corresponding_characters.insert(0, {substring[i - 1], QString()});
+                corresponding_texts.insert(0, {text[i - 1], QString()});
                 i--;
             }
         }
@@ -182,16 +183,16 @@ CalcuRes LevenshteinDistance::calculate_edit_distance(const QStringList &_text, 
 
     QStringList text_res;
     QStringList pinyin_res;
-    for (int i = 0; i < m + 1; i++) {
+    for (int i = 0; i < corresponding_texts.size(); i++) {
         const auto &x = corresponding_characters[i];
         const auto &y = corresponding_texts[i];
         if (x.raw == x.res) {
             pinyin_res.append(x.raw);
             text_res.append(y.raw);
-        } else if (x.raw ==''&& x.res !='') {
+        } else if (x.raw.isEmpty() && !x.res.isEmpty()) {
             pinyin_res.append(x.res);
             text_res.append(y.res);
-        } else if (x.raw !=''&& x.res =='') {
+        } else if (!x.raw.isEmpty() && !x.res.isEmpty()) {
             pinyin_res.append(x.raw);
             text_res.append(y.raw);
         }

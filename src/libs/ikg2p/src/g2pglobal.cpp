@@ -64,6 +64,14 @@ namespace IKg2p {
         return res;
     }
 
+    QStringList splitStringToList(const QStringView &input) {
+        QList<QStringView> views = splitString(input);
+        QStringList res;
+        for (const auto &view : views)
+            res.append(view.toString());
+        return res;
+    }
+
     bool loadDict(const QString &dict_dir, const QString &fileName, QHash<QString, QString> &resultMap) {
         QString file_path = QDir::cleanPath(dict_dir + "/" + fileName);
         QFile file(file_path);
