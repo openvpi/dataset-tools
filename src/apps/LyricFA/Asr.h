@@ -13,7 +13,7 @@ namespace LyricFA {
 
     class Asr {
     public:
-        Asr(const QString &modelPath);
+        explicit Asr(const QString &modelPath);
         ~Asr();
 
         [[nodiscard]] QString recognize(const QString &filename) const;

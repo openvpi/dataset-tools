@@ -89,7 +89,7 @@ endif()
 
 set(_arch ${_detected_arch})
 
-set(_version "1.17.0")
+set(_version "1.14.0")
 set(_base_url "https://github.com/microsoft/onnxruntime/releases/download/v${_version}")
 
 if(DEFINED ep AND "${ep}" STREQUAL gpu)

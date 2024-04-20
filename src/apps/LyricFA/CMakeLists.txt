@@ -18,6 +18,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 target_include_directories(${PROJECT_NAME} PRIVATE ../../libs/RapidASR/cpp_onnx/include)
 
+file(GLOB_RECURSE onnx_files ../../libs/onnxruntime/lib/*.*)
+foreach (onnx_file ${onnx_files})
+    file(COPY ${onnx_file} DESTINATION ${CMAKE_BINARY_DIR}/bin)
+endforeach ()
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         APP_VERSION="${PROJECT_VERSION}"
 )
