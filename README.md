@@ -33,7 +33,7 @@ You need to install Qt libraries first. (Tested on Qt 5.15.2 only)
 
 ```sh
 cd /D src/libs
-cmake -Dep=cpu -P scripts/setup-onnxruntime.cmake
+cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
 cd ../../
 set QT_DIR=<dir> # directory `Qt5Config.cmake` locates
@@ -54,7 +54,7 @@ vcpkg install ^
 
 ```sh
 cd /D src/libs
-cmake -Dep=cpu -P scripts/setup-onnxruntime.cmake
+cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
 cd ../../
 export QT_DIR=<dir> # directory `Qt5Config.cmake` locates

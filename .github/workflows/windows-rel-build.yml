@@ -52,6 +52,12 @@ jobs:
     - name: Install Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
 
+    - name: Install OnnxRuntime
+      shell: cmd
+      working-directory: ${{github.workspace}}/src/libs
+      run: |
+        cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
+
     - name: Build Vcpkg packages
       shell: cmd
       working-directory: ${{github.workspace}}/vcpkg
