@@ -54,7 +54,6 @@ namespace LyricFA {
         return qvio->seek;
     }
 
-
     Asr::Asr(const QString &modelPath) {
         m_asrHandle = RapidAsrInit(modelPath.toStdString().c_str(), 4);
 
@@ -69,8 +68,12 @@ namespace LyricFA {
     }
 
     bool Asr::recognize(const QVIO &qvio, QString &msg) const {
-        if (const auto Result = RapidAsrRecogPCMBuffer(m_asrHandle, qvio.byteArray.constData(), qvio.byteArray.size(),
-                                                       RASR_NONE, nullptr)) {
+        if ((qvio.byteArray.size() - 44) / 2 > 40 * 16000) {
+            msg = "Audio exceeds 40s, please split and reprocess.";
+            return false;
+        }
+        if (const auto Result =
+                RapidAsrRecogBuffer(m_asrHandle, qvio.byteArray.constData(), qvio.byteArray.size(), nullptr)) {
             const QString res = RapidAsrGetResult(Result, 0);
             RapidAsrFreeResult(Result);
             if (res.isEmpty()) {
@@ -132,6 +135,8 @@ namespace LyricFA {
             for (int i = 0; i < tmp.size(); i += srcHandle.channels()) {
                 inputBuf[i / srcHandle.channels()] = tmp[i];
             }
+            if (bytesRead < tmp.size())
+                inputBuf.resize(tmp.size() / srcHandle.channels() * 2);
 
             // 处理重采样
             const int outSamples = resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
@@ -143,10 +148,8 @@ namespace LyricFA {
                 qDebug() << "Error writing to output file";
                 break;
             }
-
             total += bytesWritten;
         }
-
         return qvio;
     }
 } // LyricFA

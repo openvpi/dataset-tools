@@ -17,11 +17,6 @@ void AsrThread::run() {
         return;
     }
 
-    if (!QMFs::isFileExist(m_labPath)) {
-        Q_EMIT this->oneFailed(m_filename, "Failed to open lab file.");
-        return;
-    }
-
     QFile labFile(m_labPath);
     if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(nullptr, QApplication::applicationName(), QString("Failed to write lab file."));

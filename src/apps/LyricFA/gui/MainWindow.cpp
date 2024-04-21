@@ -336,7 +336,7 @@ void MainWindow::slot_lyricPath() {
 void MainWindow::slot_oneFailed(const QString &filename, const QString &msg) {
     m_workFinished++;
     m_workError++;
-    m_failIndex.append(filename);
+    m_failIndex.append(filename + ": " + msg);
     progressBar->setValue(m_workFinished);
 
     out->appendPlainText(filename + ": " + msg);
@@ -364,8 +364,8 @@ void MainWindow::slot_threadFinished() {
                          .arg(m_workTotal);
     if (m_workError > 0) {
         QString failSummary = "Failed tasks:\n";
-        for (const QString &filename : m_failIndex) {
-            failSummary += "  " + filename + "\n";
+        for (const QString &fileMsg : m_failIndex) {
+            failSummary += "  " + fileMsg + "\n";
         }
         out->appendPlainText(failSummary);
         m_failIndex.clear();

@@ -1,7 +1,5 @@
-
 file(GLOB_RECURSE _src *.h *.cpp)
 
-# message("${files}")
 add_library(rapidasr ${_src})
 target_include_directories(rapidasr PUBLIC *.h)
 
@@ -14,10 +12,9 @@ target_include_directories(rapidasr PUBLIC ../../../onnxruntime/include)
 target_link_directories(rapidasr PUBLIC ../../../onnxruntime/lib)
 
 if (WIN32)
-    set(EXTRA_LIBS webrtcvad)
     target_compile_definitions(rapidasr PUBLIC -D_RPASR_API_EXPORT)
 else ()
-    set(EXTRA_LIBS webrtcvad pthread)
+    set(EXTRA_LIBS pthread)
     target_include_directories(rapidasr PUBLIC "/usr/local/opt/fftw/include")
     target_link_directories(rapidasr PUBLIC "/usr/local/opt/fftw/lib")
 

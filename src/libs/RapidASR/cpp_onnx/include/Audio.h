@@ -1,33 +1,36 @@
-
 #ifndef AUDIO_H
 #define AUDIO_H
 
-#include <ComDefine.h>
+#include <cstdint>
 #include <queue>
-#include <stdint.h>
+
+#include "ComDefine.h"
 
 using namespace std;
 
 class AudioFrame {
-  private:
-    int start;
-    int end;
-    int len;
-
-  public:
-    AudioFrame();
-    AudioFrame(int len);
-
+public:
+    explicit AudioFrame(const int &len);
     ~AudioFrame();
-    int set_start(int val);
-    int set_end(int val, int max_len);
-    int get_start();
-    int get_len();
-    int disp();
+    int get_start() const;
+    int get_len() const;
+
+private:
+    int start;
+    int len;
 };
 
 class Audio {
-  private:
+public:
+    explicit Audio(const int &data_type);
+    Audio(const int &data_type, const int &size);
+    ~Audio();
+    bool loadwav(const char *buf, const int &nFileLen);
+    int fetch(float *&dout, int &len, int &flag);
+    float get_time_len() const;
+    int get_queue_size() const;
+
+private:
     float *speech_data;
     int16_t *speech_buff;
     int speech_len;
@@ -37,23 +40,6 @@ class Audio {
     float align_size;
     int data_type;
     queue<AudioFrame *> frame_queue;
-
-  public:
-    Audio(int data_type);
-    Audio(int data_type, int size);
-    ~Audio();
-    void disp();
-    bool loadwav(const char* filename);
-    bool loadwav(const char* buf, int nLen);
-    bool loadpcmwav(const char* buf, int nFileLen);
-    bool loadpcmwav(const char* filename);
-    int fetch_chunck(float *&dout, int len);
-    int fetch(float *&dout, int &len, int &flag);
-    void padding();
-    void split();
-    float get_time_len();
-
-    int get_queue_size() { return (int)frame_queue.size(); }
 };
 
 #endif
