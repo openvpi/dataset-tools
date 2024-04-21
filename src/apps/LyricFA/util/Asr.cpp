@@ -85,14 +85,8 @@ namespace LyricFA {
     }
 
     QVIO Asr::resample(const QString &filename) {
-        QFile file(filename);
-        if (!file.open(QIODevice::ReadOnly)) {
-            qDebug() << "Failed to open file:" << file.errorString();
-            return {};
-        }
-
         // 读取WAV文件头信息
-        SndfileHandle srcHandle(file.fileName().toLocal8Bit(), SFM_READ);
+        SndfileHandle srcHandle(filename.toLocal8Bit(), SFM_READ, SF_FORMAT_WAV);
         if (!srcHandle) {
             qDebug() << "Failed to open WAV file:" << sf_strerror(nullptr);
             return {};
@@ -114,7 +108,7 @@ namespace LyricFA {
         }
 
         // 创建 CDSPResampler 对象
-        r8b::CDSPResampler resampler(srcHandle.samplerate(), 16000, srcHandle.samplerate());
+        r8b::CDSPResampler16 resampler(srcHandle.samplerate(), 16000, srcHandle.samplerate());
 
         // 重采样并写入输出文件
         double *op0;
@@ -123,14 +117,20 @@ namespace LyricFA {
 
         // 逐块读取、重采样并写入输出文件
         while (true) {
-            const auto bytesRead =
-                srcHandle.read(tmp.data(), static_cast<sf_count_t>(tmp.size())) / srcHandle.channels();
+            const auto bytesRead = srcHandle.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
             if (bytesRead <= 0) {
                 break; // 读取结束
             }
 
+            // 转单声道
+            std::vector<double> inputBuf(tmp.size() / srcHandle.channels());
+            for (int i = 0; i < tmp.size(); i += srcHandle.channels()) {
+                inputBuf[i / srcHandle.channels()] = tmp[i];
+            }
+
             // 处理重采样
-            const int outSamples = resampler.process(tmp.data(), static_cast<int>(bytesRead), op0);
+            const int outSamples = resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
+
             // 写入输出文件
             const auto bytesWritten = outBuf.write(op0, outSamples);
 
@@ -140,15 +140,7 @@ namespace LyricFA {
             }
 
             total += bytesWritten;
-
-            // 如果读取的数据不足一个块大小，则跳出循环
-            if (bytesRead < srcHandle.samplerate()) {
-                break;
-            }
         }
-
-        qDebug() << "FileName: " + filename +
-                        " Seconds: " + QString::number(static_cast<double>(total)/16000,'f',2)+ "s";
 
         return qvio;
     }
