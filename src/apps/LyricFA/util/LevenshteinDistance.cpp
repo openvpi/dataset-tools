@@ -64,6 +64,11 @@ MacthRes LevenshteinDistance::find_best_matches(const QStringList &text_list, co
         max_match_length = std::min(source_list.size() - max_match_index, sub_list.size());
     }
 
+    if (max_match_index == -1) {
+        max_match_index = 0;
+        max_match_length = sub_list.size();
+    }
+
     QStringList textDiff;
     QStringList pinyinDiff;
     for (int k = 0; k < sub_list.size(); k++) {

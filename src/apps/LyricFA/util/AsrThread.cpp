@@ -25,7 +25,7 @@ void AsrThread::run() {
 
     QTextStream labIn(&labFile);
     labIn.setCodec(QTextCodec::codecForName("UTF-8"));
-    labIn << asrRes;
+    labIn << asrMsg;
     labFile.close();
     Q_EMIT this->oneFinished(m_filename, asrMsg);
 }

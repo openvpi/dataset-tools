@@ -135,8 +135,6 @@ namespace LyricFA {
             for (int i = 0; i < tmp.size(); i += srcHandle.channels()) {
                 inputBuf[i / srcHandle.channels()] = tmp[i];
             }
-            if (bytesRead < tmp.size())
-                inputBuf.resize(tmp.size() / srcHandle.channels() * 2);
 
             // 处理重采样
             const int outSamples = resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
