@@ -11,6 +11,7 @@
 #include <QPluginLoader>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QThreadPool>
 
 #include "../util/Asr.h"
 #include "../util/MatchLyric.h"
@@ -67,6 +68,12 @@ private:
     LyricFA::Asr *m_asr = nullptr;
     MatchLyric *m_match = nullptr;
 
+    int m_workTotal = 0;
+    int m_workFinished = 0;
+    int m_workError = 0;
+    QStringList m_failIndex;
+    QThreadPool *m_threadpool;
+
     static void initStyleSheet();
 
     void slot_labPath();
@@ -75,8 +82,12 @@ private:
 
     void slot_removeListItem() const;
     void slot_clearTaskList() const;
-    void slot_runAsr() const;
+    void slot_runAsr();
     void slot_matchLyric() const;
+
+    void slot_oneFailed(const QString &filename, const QString &msg);
+    void slot_oneFinished(const QString &filename, const QString &msg);
+    void slot_threadFinished();
 
     void _q_fileMenuTriggered(const QAction *action);
     void _q_helpMenuTriggered(const QAction *action);

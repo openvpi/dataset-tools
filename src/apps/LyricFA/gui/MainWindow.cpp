@@ -11,8 +11,10 @@
 #include "QMSystem.h"
 #include <QStandardPaths>
 
+#include "../util/AsrThread.h"
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_match(new MatchLyric()) {
-    const QString modelFolder = qApp->applicationDirPath() + QDir::separator() + "model";
+    const QString modelFolder = QApplication::applicationDirPath() + QDir::separator() + "model";
     if (QDir(modelFolder).exists()) {
         const auto modelPath = modelFolder + QDir::separator() + "model.onnx";
         const auto vocabPath = modelFolder + QDir::separator() + "vocab.txt";
@@ -26,6 +28,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_match(new Match
         QMessageBox::information(this, "Warning",
                                  "Please read ReadMe.md and download asrModel to unzip to the root directory.");
     }
+
+    m_threadpool = new QThreadPool(this);
+    m_threadpool->setMaxThreadCount(1);
+
     initStyleSheet();
     setAcceptDrops(true);
 
@@ -37,7 +43,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_match(new Match
     fileMenu->addAction(addFileAction);
     fileMenu->addAction(addFolderAction);
 
-    aboutAppAction = new QAction(QString("About %1").arg(qApp->applicationName()), this);
+    aboutAppAction = new QAction(QString("About %1").arg(QApplication::applicationName()), this);
     aboutQtAction = new QAction("About Qt", this);
 
     helpMenu = new QMenu("Help(&H)", this);
@@ -58,17 +64,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_match(new Match
     jsonLayout = new QHBoxLayout();
     lyricLayout = new QHBoxLayout();
 
-    labEdit = new QLineEdit("D:\\python\\LyricFA\\test_outlab");
+    labEdit = new QLineEdit(R"(D:\python\LyricFA\test_outlab)");
     const auto btnLab = new QPushButton("Open Folder");
     labLayout->addWidget(labEdit);
     labLayout->addWidget(btnLab);
 
-    jsonEdit = new QLineEdit("D:\\python\\LyricFA\\test_outjson");
+    jsonEdit = new QLineEdit(R"(D:\python\LyricFA\test_outjson)");
     const auto btnJson = new QPushButton("Open Folder");
     jsonLayout->addWidget(jsonEdit);
     jsonLayout->addWidget(btnJson);
 
-    lyricEdit = new QLineEdit("D:\\python\\LyricFA\\lyrics");
+    lyricEdit = new QLineEdit(R"(D:\python\LyricFA\lyrics)");
     const auto btnLyric = new QPushButton("Lyric Folder");
     lyricLayout->addWidget(lyricEdit);
     lyricLayout->addWidget(btnLyric);
@@ -210,7 +216,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
 void MainWindow::initStyleSheet() {
     // qss file: https://github.com/feiyangqingyun/QWidgetDemo/tree/master/ui/styledemo
-    QFile file(qApp->applicationDirPath() + "/qss/flatgray.css");
+    QFile file(QApplication::applicationDirPath() + "/qss/flatgray.css");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qApp->setStyleSheet(file.readAll());
     }
@@ -236,8 +242,9 @@ void MainWindow::_q_fileMenuTriggered(const QAction *action) {
 
 void MainWindow::_q_helpMenuTriggered(const QAction *action) {
     if (action == aboutAppAction) {
-        QMessageBox::information(this, qApp->applicationName(),
-                                 QString("%1 %2, Copyright OpenVPI.").arg(qApp->applicationName(), APP_VERSION));
+        QMessageBox::information(
+            this, QApplication::applicationName(),
+            QString("%1 %2, Copyright OpenVPI.").arg(QApplication::applicationName(), APP_VERSION));
     } else if (action == aboutQtAction) {
         QMessageBox::aboutQt(this);
     }
@@ -254,7 +261,7 @@ void MainWindow::slot_clearTaskList() const {
     taskList->clear();
 }
 
-void MainWindow::slot_runAsr() const {
+void MainWindow::slot_runAsr() {
     out->clear();
     const auto labOutPath = labEdit->text();
     if (!QDir(labOutPath).exists()) {
@@ -263,33 +270,19 @@ void MainWindow::slot_runAsr() const {
         return;
     }
 
+    m_workTotal = taskList->count();
     progressBar->setValue(0);
     progressBar->setMaximum(taskList->count());
 
     for (int i = 0; i < taskList->count(); i++) {
         const auto item = taskList->item(i);
-        const auto res = m_asr->recognize(item->data(Qt::UserRole + 1).toString());
-        out->appendPlainText(item->text() + ": " + res);
+        const QString labFilePath =
+            labOutPath + QDir::separator() + QFileInfo(item->text()).completeBaseName() + ".lab";
 
-        QString labFilePath = labOutPath + QDir::separator() + QFileInfo(item->text()).completeBaseName() + ".lab";
-
-        if (res.isEmpty() && !QMFs::isFileExist(labFilePath)) {
-            return;
-        }
-
-        QFile labFile(labFilePath);
-        if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QMessageBox::critical(nullptr, qApp->applicationName(),
-                                  QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFilePath)));
-            ::exit(-1);
-        }
-
-        QTextStream labIn(&labFile);
-        labIn.setCodec(QTextCodec::codecForName("UTF-8"));
-        labIn << res;
-        labFile.close();
-
-        progressBar->setValue(i + 1);
+        const auto asrTread = new AsrThread(m_asr, item->text(), item->data(Qt::UserRole + 1).toString(), labFilePath);
+        connect(asrTread, &AsrThread::oneFailed, this, &MainWindow::slot_oneFailed);
+        connect(asrTread, &AsrThread::oneFinished, this, &MainWindow::slot_oneFinished);
+        m_threadpool->start(asrTread);
     }
 }
 
@@ -338,4 +331,47 @@ void MainWindow::slot_lyricPath() {
         return;
     }
     lyricEdit->setText(path);
+}
+
+void MainWindow::slot_oneFailed(const QString &filename, const QString &msg) {
+    m_workFinished++;
+    m_workError++;
+    m_failIndex.append(filename);
+    progressBar->setValue(m_workFinished);
+
+    out->appendPlainText(filename + ": " + msg);
+
+    if (m_workFinished == m_workTotal) {
+        slot_threadFinished();
+    }
+}
+
+void MainWindow::slot_oneFinished(const QString &filename, const QString &msg) {
+    m_workFinished++;
+    progressBar->setValue(m_workFinished);
+
+    out->appendPlainText(filename + ": " + msg);
+
+    if (m_workFinished == m_workTotal) {
+        slot_threadFinished();
+    }
+}
+
+void MainWindow::slot_threadFinished() {
+    const auto msg = QString("Asr complete! Total: %3, Success: %1, Failed: %2")
+                         .arg(m_workTotal - m_workError)
+                         .arg(m_workError)
+                         .arg(m_workTotal);
+    if (m_workError > 0) {
+        QString failSummary = "Failed tasks:\n";
+        for (const QString &filename : m_failIndex) {
+            failSummary += "  " + filename + "\n";
+        }
+        out->appendPlainText(failSummary);
+        m_failIndex.clear();
+    }
+    QMessageBox::information(this, QApplication::applicationName(), msg);
+    m_workFinished = 0;
+    m_workError = 0;
+    m_workTotal = 0;
 }

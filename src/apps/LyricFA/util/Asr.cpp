@@ -68,20 +68,25 @@ namespace LyricFA {
         RapidAsrUninit(m_asrHandle);
     }
 
-    QString Asr::recognize(const QVIO &qvio) const {
-        QString msg;
+    bool Asr::recognize(const QVIO &qvio, QString &msg) const {
         if (const auto Result = RapidAsrRecogPCMBuffer(m_asrHandle, qvio.byteArray.constData(), qvio.byteArray.size(),
                                                        RASR_NONE, nullptr)) {
-            msg = RapidAsrGetResult(Result, 0);
+            const QString res = RapidAsrGetResult(Result, 0);
             RapidAsrFreeResult(Result);
+            if (res.isEmpty()) {
+                msg = "Asr fail.";
+                return false;
+            }
+            msg = res;
         } else {
-            qDebug() << ("no return data!");
+            msg = "no return data!";
+            return false;
         }
-        return msg;
+        return true;
     }
 
-    QString Asr::recognize(const QString &filename) const {
-        return recognize(resample(filename));
+    bool Asr::recognize(const QString &filename, QString &msg) const {
+        return recognize(resample(filename), msg);
     }
 
     QVIO Asr::resample(const QString &filename) {

@@ -16,8 +16,8 @@ namespace LyricFA {
         explicit Asr(const QString &modelPath);
         ~Asr();
 
-        [[nodiscard]] QString recognize(const QString &filename) const;
-        [[nodiscard]] QString recognize(const QVIO &qvio) const;
+        [[nodiscard]] bool recognize(const QString &filename, QString &msg) const;
+        [[nodiscard]] bool recognize(const QVIO &qvio, QString &msg) const;
 
     private:
         [[nodiscard]] static QVIO resample(const QString &filename);
