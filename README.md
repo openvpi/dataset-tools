@@ -121,6 +121,12 @@ cmake --build build --target install
     + MIT License
 + [qastool](https://github.com/SineStriker/qt-json-autogen)
     + Apache 2.0 License
++ [r8brain-free-src](https://github.com/avaneev/r8brain-free-src)
+    + MIT License
++ [RapidASR](https://github.com/RapidAI/RapidASR)
+    + MIT License
++ [fftw3](https://github.com/FFTW/fftw3)
+    + GNU GPL v2.0
 
 ## License
 
