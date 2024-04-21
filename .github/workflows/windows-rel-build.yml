@@ -17,94 +17,97 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
-    - name: Export Actions runtime info for Actions caching
-      uses: actions/github-script@v6
-      with:
-        script: |
-          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
+      - name: Export Actions runtime info for Actions caching
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: '5.15.2'
-        #cache: true # It never successfully found cache from previous runs, disabling it
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2'
+          #cache: true # It never successfully found cache from previous runs, disabling it
 
-    - name: Initialize MSVC environment
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: amd64
+      - name: Initialize MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
 
-    - name: Configure Qt5 path
-      shell: bash
-      run: |
-        echo "QT_DIR=$Qt5_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
-        echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
+      - name: Configure Qt5 path
+        shell: bash
+        run: |
+          echo "QT_DIR=$Qt5_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
 
-    - name: Install vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: b346ee32f13f3bf2ef19ac02f982f6938f7a84ea # Grabbed on 2024-04-20 20:49 +0800
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: b346ee32f13f3bf2ef19ac02f982f6938f7a84ea # Grabbed on 2024-04-20 20:49 +0800
 
-    - name: Install Ninja
-      uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
 
-    - name: Build Vcpkg packages
-      shell: cmd
-      working-directory: ${{github.workspace}}/vcpkg
-      run: |
-        vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --binarysource="clear;x-gha,readwrite" --triplet=x64-windows
-      env:
+      - name: Build Vcpkg packages
+        shell: cmd
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --binarysource="clear;x-gha,readwrite" --triplet=x64-windows
+        env:
           QT_DIR: ${{env.QT_DIR}}
           Qt5_DIR: ${{env.QT_DIR}}
           VCPKG_KEEP_ENV_VARS: 'QT_DIR;Qt5_DIR'
 
-    - name: Install OnnxRuntime
-      shell: cmd
-      working-directory: ${{github.workspace}}/src/libs
-      run: |
-        cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
+      - name: Install OnnxRuntime
+        shell: cmd
+        working-directory: ${{github.workspace}}/src/libs
+        run: |
+          cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: cmake -B ${{env.GH_WORKSPACE}}/build -G Ninja -DBUILD_TESTS:BOOL=FALSE -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt5/ -DCMAKE_TOOLCHAIN_FILE=${{env.GH_WORKSPACE}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: cmake -B ${{env.GH_WORKSPACE}}/build -G Ninja -DBUILD_TESTS:BOOL=FALSE -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt5/ -DCMAKE_TOOLCHAIN_FILE=${{env.GH_WORKSPACE}}/vcpkg/scripts/buildsystems/vcpkg.cmake
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --target all
+      - name: Build
+        # Build your program with the given configuration
+        run: cmake --build ${{github.workspace}}/build --target all
 
-    - name: Deploy
-      run: cmake --build ${{github.workspace}}/build --target install
+      - name: Deploy
+        run: cmake --build ${{github.workspace}}/build --target install
 
-    - name: Set Commit ID
-      shell: bash
-      working-directory: ${{github.workspace}}/build
-      run: |
-        cd $GITHUB_WORKSPACE
-        export VERSION=`git log --format="%H" -n 1 | head -c 7`
-        echo "VERSION="$VERSION >> $GITHUB_ENV
+      - name: Set Commit ID
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cd $GITHUB_WORKSPACE
+          export VERSION=`git log --format="%H" -n 1 | head -c 7`
+          echo "VERSION="$VERSION >> $GITHUB_ENV
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: dataset-tools-msvc2022-x64-${{env.VERSION}}
-        path: ${{github.workspace}}/deploy
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dataset-tools-msvc2022-x64-${{env.VERSION}}
+          path: ${{github.workspace}}/deploy
 
-    - name: Compress release archive
-      shell: bash
-      working-directory: ${{env.GH_WORKSPACE}}/deploy/
-      run: |
-        export VERSION=`git log --format="%H" -n 1 | head -c 7`
-        7z a dataset-tools-msvc2022-x64-${VERSION}.zip ./*
+      - name: Compress release archive
+        shell: bash
+        working-directory: ${{env.GH_WORKSPACE}}/deploy/
+        run: |
+          export VERSION=`git log --format="%H" -n 1 | head -c 7`
+          7z a dataset-tools-msvc2022-x64-${VERSION}.zip ./*
 
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          ${{env.GH_WORKSPACE}}/deploy/dataset-tools-msvc2022-x64-${{env.VERSION}}.zip
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{env.GH_WORKSPACE}}/deploy/dataset-tools-msvc2022-x64-${{env.VERSION}}.zip
