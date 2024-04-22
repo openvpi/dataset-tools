@@ -6,7 +6,7 @@
 #include "predefine_coe.h"
 #include "util.h"
 
-namespace paraformer {
+namespace FunAsr {
     ModelImp::ModelImp(const char *path, const int &nNumThread) {
         std::string model_path = pathAppend(path, "model.onnx");
         const std::string vocab_path = pathAppend(path, "vocab.txt");

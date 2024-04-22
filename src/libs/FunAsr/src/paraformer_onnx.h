@@ -8,8 +8,7 @@
 
 #include "Vocab.h"
 
-namespace paraformer {
-
+namespace FunAsr {
     class ModelImp final : public Model {
     private:
         FeatureExtract *fe;

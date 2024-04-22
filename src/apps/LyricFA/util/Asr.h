@@ -22,7 +22,7 @@ namespace LyricFA {
     private:
         [[nodiscard]] static QVIO resample(const QString &filename);
 
-        Model* m_asrHandle;
+        FunAsr::Model *m_asrHandle;
     };
 } // LyricFA
 

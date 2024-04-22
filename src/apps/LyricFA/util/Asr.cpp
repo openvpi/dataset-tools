@@ -57,7 +57,7 @@ namespace LyricFA {
     }
 
     Asr::Asr(const QString &modelPath) {
-        m_asrHandle = create_model(modelPath.toStdString().c_str(), 4);
+        m_asrHandle = FunAsr::create_model(modelPath.toStdString().c_str(), 4);
 
         if (!m_asrHandle) {
             printf("Cannot load ASR Model, there must be files model.onnx and vocab.txt");
@@ -75,7 +75,7 @@ namespace LyricFA {
             return false;
         }
 
-        Audio audio(1);
+        FunAsr::Audio audio(1);
         audio.loadwav(qvio.byteArray.constData(), qvio.byteArray.size());
         // audio.split();
 
