@@ -3,7 +3,7 @@
 
 #include <QString>
 
-#include <librapidasrapi.h>
+#include <Model.h>
 
 namespace LyricFA {
     struct QVIO {
@@ -22,7 +22,7 @@ namespace LyricFA {
     private:
         [[nodiscard]] static QVIO resample(const QString &filename);
 
-        RPASR_HANDLE m_asrHandle;
+        Model* m_asrHandle;
     };
 } // LyricFA
 

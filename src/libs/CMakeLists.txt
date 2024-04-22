@@ -10,4 +10,4 @@ add_subdirectory(sdlplayback)
 
 add_subdirectory(r8brain)
 
-add_subdirectory(RapidASR)
+add_subdirectory(FastASR)

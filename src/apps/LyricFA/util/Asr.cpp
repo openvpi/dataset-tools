@@ -7,6 +7,8 @@
 #include <CDSPResampler.h>
 #include <sndfile.hh>
 
+#include <Audio.h>
+
 namespace LyricFA {
     sf_count_t qvio_get_filelen(void *user_data) {
         const auto *qvio = static_cast<QVIO *>(user_data);
@@ -55,7 +57,7 @@ namespace LyricFA {
     }
 
     Asr::Asr(const QString &modelPath) {
-        m_asrHandle = RapidAsrInit(modelPath.toStdString().c_str(), 4);
+        m_asrHandle = create_model(modelPath.toStdString().c_str(), 4);
 
         if (!m_asrHandle) {
             printf("Cannot load ASR Model, there must be files model.onnx and vocab.txt");
@@ -64,7 +66,7 @@ namespace LyricFA {
     }
 
     Asr::~Asr() {
-        RapidAsrUninit(m_asrHandle);
+        delete m_asrHandle;
     }
 
     bool Asr::recognize(const QVIO &qvio, QString &msg) const {
@@ -72,17 +74,21 @@ namespace LyricFA {
             msg = "Audio exceeds 40s, please split and reprocess.";
             return false;
         }
-        if (const auto Result =
-                RapidAsrRecogBuffer(m_asrHandle, qvio.byteArray.constData(), qvio.byteArray.size(), nullptr)) {
-            const QString res = RapidAsrGetResult(Result);
-            RapidAsrFreeResult(Result);
-            if (res.isEmpty()) {
-                msg = "Asr fail.";
-                return false;
-            }
-            msg = res;
-        } else {
-            msg = "no return data!";
+
+        Audio audio(1);
+        audio.loadwav(qvio.byteArray.constData(), qvio.byteArray.size());
+        // audio.split();
+
+        float *buff;
+        int len;
+        int flag = 0;
+        while (audio.fetch(buff, len, flag) > 0) {
+            m_asrHandle->reset();
+            msg += QString::fromStdString(m_asrHandle->forward(buff, len, flag));
+        }
+
+        if (msg.isEmpty()) {
+            msg = "Asr fail.";
             return false;
         }
         return true;

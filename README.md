@@ -123,8 +123,8 @@ cmake --build build --target install
     + Apache 2.0 License
 + [r8brain-free-src](https://github.com/avaneev/r8brain-free-src)
     + MIT License
-+ [RapidASR](https://github.com/RapidAI/RapidASR)
-    + MIT License
++ [FastASR](https://github.com/chenkui164/FastASR)
+    + Apache-2.0 license
 + [fftw3](https://github.com/FFTW/fftw3)
     + GNU GPL v2.0
 

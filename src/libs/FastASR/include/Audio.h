@@ -23,15 +23,12 @@ public:
     ~Audio();
     bool loadwav(const char *buf, const int &nFileLen);
     int fetch(float *&dout, int &len, int &flag);
-    float get_time_len() const;
-    int get_queue_size() const;
 
 private:
     float *speech_data;
     int16_t *speech_buff;
     int speech_len;
     int speech_align_len;
-    int16_t sample_rate;
     int offset;
     float align_size;
     int data_type;

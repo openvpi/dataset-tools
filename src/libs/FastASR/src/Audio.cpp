@@ -42,10 +42,6 @@ Audio::~Audio() {
     }
 }
 
-float Audio::get_time_len() const {
-    return static_cast<float>(speech_len) / 16000;
-}
-
 bool Audio::loadwav(const char *buf, const int &nFileLen) {
 #define WAV_HEADER_SIZE 44
     if (speech_data != nullptr) {
@@ -94,8 +90,4 @@ int Audio::fetch(float *&dout, int &len, int &flag) {
         return 1;
     }
     return 0;
-}
-
-int Audio::get_queue_size() const {
-    return static_cast<int>(frame_queue.size());
 }

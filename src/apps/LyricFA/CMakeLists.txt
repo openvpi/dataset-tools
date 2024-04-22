@@ -16,7 +16,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         CkIKg2p
         QMCore
         r8brain
-        rapidasr
+        FastASR
 )
 
 file(GLOB_RECURSE onnx_files ../../libs/onnxruntime/lib/*.*)
