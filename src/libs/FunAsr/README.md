@@ -1,567 +1,307 @@
-# FastASR
+[//]: # (<div align="left"><img src="docs/images/funasr_logo.jpg" width="400"/></div>)
 
-这是一个用C++实现ASR推理的项目，它依赖很少，安装也很简单，推理速度很快，在树莓派4B等ARM平台也可以流畅的运行。
-支持的模型是由Google的Transformer模型中优化而来，数据集是开源wenetspeech(10000+小时)或阿里私有数据集(60000+小时)， 所以识别效果也很好，可以媲美许多商用的ASR软件。
+([简体中文](./README_zh.md)|English)
 
-## 项目简介
-
-目前本项目实现了4个模型，3个非流式模型，1个流式模型，如下表所示。
-|       名称       |                                                            来源                                                            |        数据集       |                 模型                |  语言 |
-|:----------------:|:--------------------------------------------------------------------------------------------------------------------------:|:-------------------:|:-----------------------------------:|:-----:|
-|    paraformer    | [阿里达摩院](https://modelscope.cn/models/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/summary) |  私有数据集(60000h) |           Paraformer-large          | zh+en |
-|     k2_rnnt2     |                         [kaldi2](https://github.com/k2-fsa/icefall/tree/master/egs/wenetspeech/ASR)                        | WenetSpeech(10000h) |     pruned_transducer_stateless2    |   zh  |
-|     conformer    |                      [paddlespeech](https://github.com/PaddlePaddle/PaddleSpeech/releases/tag/r1.0.1)                      | WenetSpeech(10000h) |     conformer_wenetspeech-zh-16k    |   zh  |
-| conformer_online |                      [paddlespeech](https://github.com/PaddlePaddle/PaddleSpeech/releases/tag/r1.0.1)                      | WenetSpeech(10000h) | conformer_online_wenetspeech-zh-16k |   zh  |
+# FunASR: A Fundamental End-to-End Speech Recognition Toolkit
 
 
-* **非流式模型**：每次识别是以句子为单位，所以实时性会差一些，但准确率会高一些。
-* **流式模型**：模型的输入是语音流，并实时返回语音识别的结果，但是准确率会下降些。  
-
-conformer_online是流式模型，其它模型为非流式模型。
-目前通过使用VAD技术, 非流式模型支持大段的长语音识别。
-
-上面提到的这些模型都是基于深度学习框架（paddlepaddle或pytorch）实现的, 本身的性能已经很不错了，即使在没有GPU的个人电脑上运行，
-也能满足实时性的要求（如:时长为10s的语音，推理时间小于10s，即可满足实时性）。
-
-但是要把深度学习模型部署在ARM平台，会遇到两个方面的困难。
-* 不容易安装，需要自己编译一些组件。
-* 执行效率很慢，无法满足实时性的要求。
-
-因此就有这个项目，它由纯C++编写，仅实现了模型的推理过程。
-
-* **语言优势**: 由于C++和Python不同，是编译型语言，编译器会根据编译选项针对不同平台的CPU进行优化，更适合在不同CPU平台上面部署，充分利用CPU的计算资源。
-* **独立**: 实现不依赖于现有的深度学习框架如pytorch、paddle、tensorflow等。
-* **依赖少**: 项目仅使用了两个第三方库libfftw3和libopenblas，并无其他依赖，所以在各个平台的可移植行很好，通用性很强。
-* **效率高**：算法中大量使用指针，减少原有算法中reshape和permute的操作，减少不必要的数据拷贝，从而提升算法性能。
+[![PyPI](https://img.shields.io/pypi/v/funasr)](https://pypi.org/project/funasr/)
 
 
-针对C++用户和python用户，本项目分别生成了静态库libfastasr.a和PyFastASR.XXX模块，调用方法可以参考example目录中的例子。
+<strong>FunASR</strong> hopes to build a bridge between academic research and industrial applications on speech recognition. By supporting the training & finetuning of the industrial-grade speech recognition model, researchers and developers can conduct research and production of speech recognition models more conveniently, and promote the development of speech recognition ecology. ASR for Fun！
+
+[**Highlights**](#highlights)
+| [**News**](https://github.com/alibaba-damo-academy/FunASR#whats-new) 
+| [**Installation**](#installation)
+| [**Quick Start**](#quick-start)
+| [**Tutorial**](https://github.com/alibaba-damo-academy/FunASR/blob/main/docs/tutorial/README.md)
+| [**Runtime**](./runtime/readme.md)
+| [**Model Zoo**](#model-zoo)
+| [**Contact**](#contact)
 
 
-### 未完成工作
-* 量化和压缩模型
-
-## python安装
-
-目前fastasr在个平台的支持情况如下表, 其他未支持的平台可通过源码编译获得对应的whl包。
-
-|   | macOS Intel | Windows 64bit | Windows 32bit | Linux x86 | Linux x64 | Linux aarch64 |
-|---------------|----|-----|-----|----|-----|----|
-| CPython 3.6   | ✅ | ✅  | ✅  | ✅ | ✅  | ✅ |
-| CPython 3.7   | ✅ | ✅  | ✅  | ✅ | ✅  | ✅ |
-| CPython 3.8   | ✅ | ✅  | ✅  | ✅ | ✅  | ✅ |
-| CPython 3.9   | ✅ | ✅  | ✅  | ✅ | ✅  | ✅ |
-| CPython 3.10  | ✅ | ✅  | ✅  | ✅ | ✅  | ✅ |
-| CPython 3.11  | ✅ | ✅  | ✅  | ✅ | ✅  | ✅ |
-
-可通过pip直接安装
-```
-pip install fastasr
-```
+<a name="highlights"></a>
+## Highlights
+- FunASR is a fundamental speech recognition toolkit that offers a variety of features, including speech recognition (ASR), Voice Activity Detection (VAD), Punctuation Restoration, Language Models, Speaker Verification, Speaker Diarization and multi-talker ASR. FunASR provides convenient scripts and tutorials, supporting inference and fine-tuning of pre-trained models.
+- We have released a vast collection of academic and industrial pretrained models on the [ModelScope](https://www.modelscope.cn/models?page=1&tasks=auto-speech-recognition) and [huggingface](https://huggingface.co/FunASR), which can be accessed through our [Model Zoo](https://github.com/alibaba-damo-academy/FunASR/blob/main/docs/model_zoo/modelscope_models.md). The representative [Paraformer-large](https://www.modelscope.cn/models/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/summary), a non-autoregressive end-to-end speech recognition model, has the advantages of high accuracy, high efficiency, and convenient deployment, supporting the rapid construction of speech recognition services. For more details on service deployment, please refer to the [service deployment document](runtime/readme_cn.md). 
 
 
-## 源码编译安装指南
-### Ubuntu 安装依赖
+<a name="whats-new"></a>
+## What's new:
+- 2024/03/05：Added the Qwen-Audio and Qwen-Audio-Chat large-scale audio-text multimodal models, which have topped multiple audio domain leaderboards. These models support speech dialogue, [usage](examples/industrial_data_pretraining/qwen_audio).
+- 2024/03/05：Added support for the Whisper-large-v3 model, a multitasking model that can perform multilingual speech recognition, speech translation, and language identification. It can be downloaded from the[modelscope](examples/industrial_data_pretraining/whisper/demo.py), and [openai](examples/industrial_data_pretraining/whisper/demo_from_openai.py).
+- 2024/03/05: Offline File Transcription Service 4.4, Offline File Transcription Service of English 1.5，Real-time Transcription Service 1.9 released，docker image supports ARM64 platform, update modelscope；([docs](runtime/readme.md))
+- 2024/01/30：funasr-1.0 has been released ([docs](https://github.com/alibaba-damo-academy/FunASR/discussions/1319))
+- 2024/01/30：emotion recognition models are new supported. [model link](https://www.modelscope.cn/models/iic/emotion2vec_base_finetuned/summary), modified from [repo](https://github.com/ddlBoJack/emotion2vec).
+- 2024/01/25: Offline File Transcription Service 4.2, Offline File Transcription Service of English 1.3 released，optimized the VAD (Voice Activity Detection) data processing method, significantly reducing peak memory usage, memory leak optimization; Real-time Transcription Service 1.7 released，optimizatized the client-side；([docs](runtime/readme.md))
+- 2024/01/09: The Funasr SDK for Windows version 2.0 has been released, featuring support for The offline file transcription service (CPU) of Mandarin 4.1, The offline file transcription service (CPU) of English 1.2, The real-time transcription service (CPU) of Mandarin 1.6. For more details, please refer to the official documentation or release notes([FunASR-Runtime-Windows](https://www.modelscope.cn/models/damo/funasr-runtime-win-cpu-x64/summary))
+- 2024/01/03: File Transcription Service 4.0 released, Added support for 8k models, optimized timestamp mismatch issues and added sentence-level timestamps, improved the effectiveness of English word FST hotwords, supported automated configuration of thread parameters, and fixed known crash issues as well as memory leak problems, refer to ([docs](runtime/readme.md#file-transcription-service-mandarin-cpu)).
+- 2024/01/03: Real-time Transcription Service 1.6 released，The 2pass-offline mode supports Ngram language model decoding and WFST hotwords, while also addressing known crash issues and memory leak problems, ([docs](runtime/readme.md#the-real-time-transcription-service-mandarin-cpu))
+- 2024/01/03: Fixed known crash issues as well as memory leak problems, ([docs](runtime/readme.md#file-transcription-service-english-cpu)).
+- 2023/12/04: The Funasr SDK for Windows version 1.0 has been released, featuring support for The offline file transcription service (CPU) of Mandarin, The offline file transcription service (CPU) of English, The real-time transcription service (CPU) of Mandarin. For more details, please refer to the official documentation or release notes([FunASR-Runtime-Windows](https://www.modelscope.cn/models/damo/funasr-runtime-win-cpu-x64/summary))
+- 2023/11/08: The offline file transcription service 3.0 (CPU) of Mandarin has been released, adding punctuation large model, Ngram language model, and wfst hot words. For detailed information, please refer to [docs](runtime#file-transcription-service-mandarin-cpu). 
+- 2023/10/17: The offline file transcription service (CPU) of English has been released. For more details, please refer to ([docs](runtime#file-transcription-service-english-cpu)).
+- 2023/10/13: [SlideSpeech](https://slidespeech.github.io/): A large scale multi-modal audio-visual corpus with a significant amount of real-time synchronized slides.
+- 2023/10/10: The ASR-SpeakersDiarization combined pipeline [Paraformer-VAD-SPK](https://github.com/alibaba-damo-academy/FunASR/blob/main/egs_modelscope/asr_vad_spk/speech_paraformer-large-vad-punc-spk_asr_nat-zh-cn/demo.py) is now released. Experience the model to get recognition results with speaker information.
+- 2023/10/07: [FunCodec](https://github.com/alibaba-damo-academy/FunCodec): A Fundamental, Reproducible and Integrable Open-source Toolkit for Neural Speech Codec.
+- 2023/09/01: The offline file transcription service 2.0 (CPU) of Mandarin has been released, with added support for ffmpeg, timestamp, and hotword models. For more details, please refer to ([docs](runtime#file-transcription-service-mandarin-cpu)).
+- 2023/08/07: The real-time transcription service (CPU) of Mandarin has been released. For more details, please refer to ([docs](runtime#the-real-time-transcription-service-mandarin-cpu)).
+- 2023/07/17: BAT is released, which is a low-latency and low-memory-consumption RNN-T model. For more details, please refer to ([BAT](egs/aishell/bat)).
+- 2023/06/26: ASRU2023 Multi-Channel Multi-Party Meeting Transcription Challenge 2.0 completed the competition and announced the results. For more details, please refer to ([M2MeT2.0](https://alibaba-damo-academy.github.io/FunASR/m2met2/index.html)).
 
-安装依赖库libfftw3
-```shell
-sudo apt-get install libfftw3-dev libfftw3-single3
-```
-安装依赖库libopenblas
-```shell
-sudo apt-get install libopenblas-dev
-```
-安装python环境
-```shell
-sudo apt-get install python3 python3-dev
-```
 
-### MacOS 安装依赖
-
-安装依赖库fftw
-```shell
-sudo brew install fftw
-```
-安装依赖库openblas
-```shell
-sudo brew install openblas
-```
-### 编译源码
-
-#### Build for Linux
-下载最新版的源码
-```shell
-git clone https://github.com/chenkui164/FastASR.git
-```
-编译最新版的源码，
-```shell
-cd FastASR/
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make
-```
-编译python的whl安装包
+<a name="Installation"></a>
+## Installation
 
 ```shell
-cd FastASR/
-python -m build
+pip3 install -U funasr
 ```
-
-####  Build for Windows
-
-[Windows编译指南](win/readme.md)
-
-使用VisualStudio 2022打开CMakeLists.txt，选择Release编译。
-需要在vs2022安装linux开发组件。
-
-### 下载预训练模型
-
-#### paraformer预训练模型下载
-
-进入FastASR/models/paraformer_cli文件夹，用于存放下载的预训练模型.
-```shell
-cd ../models/paraformer_cli
+Or install from source code
+``` sh
+git clone https://github.com/alibaba/FunASR.git && cd FunASR
+pip3 install -e ./
 ```
-从modelscope官网下载预训练模型，预训练模型所在的[仓库地址](https://modelscope.cn/models/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/files)
-也可通过命令一键下载。
+Install modelscope for the pretrained models (Optional)
 
 ```shell
-wget --user-agent="Mozilla/5.0" -c "https://www.modelscope.cn/api/v1/models/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/repo?Revision=v1.0.4&FilePath=model.pb"
-
-mv repo\?Revision\=v1.0.4\&FilePath\=model.pb model.pb 
+pip3 install -U modelscope
 ```
 
-将用于Python的模型转换为C++的，这样更方便通过内存映射的方式直接读取参数，加快模型读取速度。
+## Model Zoo
+FunASR has open-sourced a large number of pre-trained models on industrial data. You are free to use, copy, modify, and share FunASR models under the [Model License Agreement](./MODEL_LICENSE). Below are some representative models, for more models please refer to the [Model Zoo](./model_zoo).
+
+(Note: ⭐ represents the ModelScope model zoo, 🤗 represents the Huggingface model zoo, 🍀 represents the OpenAI model zoo)
+
+
+|                                                                                                         Model Name                                                                                                         |                     Task Details                      |          Training Data           | Parameters |
+|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------:|:--------------------------------:|:----------:|
+|          paraformer-zh <br> ([⭐](https://www.modelscope.cn/models/damo/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch/summary)  [🤗](https://huggingface.co/funasr/paraformer-tp) )           |  speech recognition, with timestamps, non-streaming   |      60000 hours, Mandarin       |    220M    |
+| <nobr>paraformer-zh-streaming <br> ( [⭐](https://modelscope.cn/models/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online/summary) [🤗](https://huggingface.co/funasr/paraformer-zh-streaming) )</nobr> |             speech recognition, streaming             |      60000 hours, Mandarin       |    220M    |
+|               paraformer-en <br> ( [⭐](https://www.modelscope.cn/models/damo/speech_paraformer-large-vad-punc_asr_nat-en-16k-common-vocab10020/summary) [🤗](https://huggingface.co/funasr/paraformer-en) )                | speech recognition, without timestamps, non-streaming |       50000 hours, English       |    220M    |
+|                            conformer-en <br> ( [⭐](https://modelscope.cn/models/damo/speech_conformer_asr-en-16k-vocab4199-pytorch/summary) [🤗](https://huggingface.co/funasr/conformer-en) )                             |           speech recognition, non-streaming           |       50000 hours, English       |    220M    |
+|                               ct-punc <br> ( [⭐](https://modelscope.cn/models/damo/punc_ct-transformer_cn-en-common-vocab471067-large/summary) [🤗](https://huggingface.co/funasr/ct-punc) )                               |                punctuation restoration                |    100M, Mandarin and English    |    1.1G    | 
+|                                   fsmn-vad <br> ( [⭐](https://modelscope.cn/models/damo/speech_fsmn_vad_zh-cn-16k-common-pytorch/summary) [🤗](https://huggingface.co/funasr/fsmn-vad) )                                   |               voice activity detection                | 5000 hours, Mandarin and English |    0.4M    | 
+|                                     fa-zh <br> ( [⭐](https://modelscope.cn/models/damo/speech_timestamp_prediction-v1-16k-offline/summary) [🤗](https://huggingface.co/funasr/fa-zh) )                                     |                 timestamp prediction                  |       5000 hours, Mandarin       |    38M     | 
+|                                       cam++ <br> ( [⭐](https://modelscope.cn/models/iic/speech_campplus_sv_zh-cn_16k-common/summary) [🤗](https://huggingface.co/funasr/campplus) )                                        |           speaker verification/diarization            |            5000 hours            |    7.2M    | 
+|                                                  Whisper-large-v2 <br> ([⭐](https://www.modelscope.cn/models/iic/speech_whisper-large_asr_multilingual/summary)  [🍀](https://github.com/openai/whisper) )                                                  |  speech recognition, with timestamps, non-streaming   |          multilingual            |    1.5G    |
+|                                                Whisper-large-v3 <br> ([⭐](https://www.modelscope.cn/models/iic/Whisper-large-v3/summary)  [🍀](https://github.com/openai/whisper) )                                                 |  speech recognition, with timestamps, non-streaming   |          multilingual            |    1.5G    |
+|                                         Qwen-Audio <br> ([⭐](examples/industrial_data_pretraining/qwen_audio/demo.py)  [🤗](https://huggingface.co/Qwen/Qwen-Audio) )                                         |      audio-text multimodal models (pretraining)       |     multilingual      |  8B  |
+|                   Qwen-Audio-Chat <br> ([⭐](examples/industrial_data_pretraining/qwen_audio/demo_chat.py)  [🤗](https://huggingface.co/Qwen/Qwen-Audio-Chat) )                                                |          audio-text multimodal models (chat)          |     multilingual      |  8B  |
+
+
+
+
+[//]: # ()
+[//]: # (FunASR supports pre-trained or further fine-tuned models for deployment as a service. The CPU version of the Chinese offline file conversion service has been released, details can be found in [docs]&#40;funasr/runtime/docs/SDK_tutorial.md&#41;. More detailed information about service deployment can be found in the [deployment roadmap]&#40;funasr/runtime/readme_cn.md&#41;.)
+
+
+<a name="quick-start"></a>
+## Quick Start
+
+Below is a quick start tutorial. Test audio files ([Mandarin](https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/vad_example.wav), [English](https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_en.wav)).
+
+### Command-line usage
 
 ```shell
-../scripts/paraformer_convert.py model.pb
-```
-查看转换后的参数文件wenet_params.bin的md5码，md5码为c77bc27e5758ebdc28a9024460e48602，表示转换正确。
-
-```
-md5sum -b wenet_params.bin
+funasr ++model=paraformer-zh ++vad_model="fsmn-vad" ++punc_model="ct-punc" ++input=asr_example_zh.wav
 ```
 
-#### k2_rnnt2预训练模型下载
+Notes: Support recognition of single audio file, as well as file list in Kaldi-style wav.scp format: `wav_id wav_pat`
 
-进入FastASR/models/k2_rnnt2_cli文件夹，用于存放下载的预训练模型.
+### Speech Recognition (Non-streaming)
+```python
+from funasr import AutoModel
+# paraformer-zh is a multi-functional asr model
+# use vad, punc, spk or not as you need
+model = AutoModel(model="paraformer-zh",  vad_model="fsmn-vad",  punc_model="ct-punc", 
+                  # spk_model="cam++", 
+                  )
+res = model.generate(input=f"{model.model_path}/example/asr_example.wav", 
+                     batch_size_s=300, 
+                     hotword='魔搭')
+print(res)
+```
+Note: `hub`: represents the model repository, `ms` stands for selecting ModelScope download, `hf` stands for selecting Huggingface download.
+
+### Speech Recognition (Streaming)
+```python
+from funasr import AutoModel
+
+chunk_size = [0, 10, 5] #[0, 10, 5] 600ms, [0, 8, 4] 480ms
+encoder_chunk_look_back = 4 #number of chunks to lookback for encoder self-attention
+decoder_chunk_look_back = 1 #number of encoder chunks to lookback for decoder cross-attention
+
+model = AutoModel(model="paraformer-zh-streaming")
+
+import soundfile
+import os
+
+wav_file = os.path.join(model.model_path, "example/asr_example.wav")
+speech, sample_rate = soundfile.read(wav_file)
+chunk_stride = chunk_size[1] * 960 # 600ms
+
+cache = {}
+total_chunk_num = int(len((speech)-1)/chunk_stride+1)
+for i in range(total_chunk_num):
+    speech_chunk = speech[i*chunk_stride:(i+1)*chunk_stride]
+    is_final = i == total_chunk_num - 1
+    res = model.generate(input=speech_chunk, cache=cache, is_final=is_final, chunk_size=chunk_size, encoder_chunk_look_back=encoder_chunk_look_back, decoder_chunk_look_back=decoder_chunk_look_back)
+    print(res)
+```
+Note: `chunk_size` is the configuration for streaming latency.` [0,10,5]` indicates that the real-time display granularity is `10*60=600ms`, and the lookahead information is `5*60=300ms`. Each inference input is `600ms` (sample points are `16000*0.6=960`), and the output is the corresponding text. For the last speech segment input, `is_final=True` needs to be set to force the output of the last word.
+
+### Voice Activity Detection (Non-Streaming)
+```python
+from funasr import AutoModel
+
+model = AutoModel(model="fsmn-vad")
+wav_file = f"{model.model_path}/example/vad_example.wav"
+res = model.generate(input=wav_file)
+print(res)
+```
+Note: The output format of the VAD model is: `[[beg1, end1], [beg2, end2], ..., [begN, endN]]`, where `begN/endN` indicates the starting/ending point of the `N-th` valid audio segment, measured in milliseconds.
+
+### Voice Activity Detection (Streaming)
+```python
+from funasr import AutoModel
+
+chunk_size = 200 # ms
+model = AutoModel(model="fsmn-vad")
+
+import soundfile
+
+wav_file = f"{model.model_path}/example/vad_example.wav"
+speech, sample_rate = soundfile.read(wav_file)
+chunk_stride = int(chunk_size * sample_rate / 1000)
+
+cache = {}
+total_chunk_num = int(len((speech)-1)/chunk_stride+1)
+for i in range(total_chunk_num):
+    speech_chunk = speech[i*chunk_stride:(i+1)*chunk_stride]
+    is_final = i == total_chunk_num - 1
+    res = model.generate(input=speech_chunk, cache=cache, is_final=is_final, chunk_size=chunk_size)
+    if len(res[0]["value"]):
+        print(res)
+```
+Note: The output format for the streaming VAD model can be one of four scenarios:
+- `[[beg1, end1], [beg2, end2], .., [begN, endN]]`：The same as the offline VAD output result mentioned above.
+- `[[beg, -1]]`：Indicates that only a starting point has been detected.
+- `[[-1, end]]`：Indicates that only an ending point has been detected.
+- `[]`：Indicates that neither a starting point nor an ending point has been detected. 
+
+The output is measured in milliseconds and represents the absolute time from the starting point.
+### Punctuation Restoration
+```python
+from funasr import AutoModel
+
+model = AutoModel(model="ct-punc")
+res = model.generate(input="那今天的会就到这里吧 happy new year 明年见")
+print(res)
+```
+### Timestamp Prediction
+```python
+from funasr import AutoModel
+
+model = AutoModel(model="fa-zh")
+wav_file = f"{model.model_path}/example/asr_example.wav"
+text_file = f"{model.model_path}/example/text.txt"
+res = model.generate(input=(wav_file, text_file), data_type=("sound", "text"))
+print(res)
+```
+More usages ref to [docs](docs/tutorial/README_zh.md), 
+more examples ref to [demo](https://github.com/alibaba-damo-academy/FunASR/tree/main/examples/industrial_data_pretraining)
+
+
+## Export ONNX
+
+### Command-line usage
 ```shell
-cd ../models/k2_rnnt2_cli
-```
-从huggingface官网下载预训练模型，预训练模型所在的[仓库地址](https://huggingface.co/luomingshuang/icefall_asr_wenetspeech_pruned_transducer_stateless2)
-也可通过命令一键下载。
-
-```shell
-wget -c https://huggingface.co/luomingshuang/icefall_asr_wenetspeech_pruned_transducer_stateless2/resolve/main/exp/pretrained_epoch_10_avg_2.pt
+funasr-export ++model=paraformer ++quantize=false ++device=cpu
 ```
 
-将用于Python的模型转换为C++的，这样更方便通过内存映射的方式直接读取参数，加快模型读取速度。
+### Python
+```python
+from funasr import AutoModel
 
-```shell
-../scripts/k2_rnnt2_convert.py pretrained_epoch_10_avg_2.pt
-```
-查看转换后的参数文件wenet_params.bin的md5码，md5码为33a941f3c1a20a5adfb6f18006c11513，表示转换正确。
+model = AutoModel(model="paraformer", device="cpu")
 
-```
-md5sum -b wenet_params.bin
-```
-#### conformer_wenetspeech-zh-16k预训练模型下载
-进入FastASR/models/paddlespeech_cli文件夹，用于存放下载的预训练模型.
-```shell
-cd ../models/paddlespeech_cli
-```
-从PaddleSpeech官网下载预训练模型，如果之前已经在运行过PaddleSpeech，
-则可以不用下载，它已经在目录`~/.paddlespeech/models/conformer_wenetspeech-zh-16k`中。
-```shell
-wget -c https://paddlespeech.bj.bcebos.com/s2t/wenetspeech/asr1_conformer_wenetspeech_ckpt_0.1.1.model.tar.gz
+res = model.export(quantize=False)
 ```
 
-将压缩包解压wenetspeech目录下
-```
-mkdir wenetspeech
-tar -xzvf asr1_conformer_wenetspeech_ckpt_0.1.1.model.tar.gz -C wenetspeech
-```
-将用于Python的模型转换为C++的，这样更方便通过内存映射的方式直接读取参数，加快模型读取速度。
+### Test ONNX
+```python
+# pip3 install -U funasr-onnx
+from funasr_onnx import Paraformer
+model_dir = "damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
+model = Paraformer(model_dir, batch_size=1, quantize=True)
 
-```shell
-../scripts/paddlespeech_convert.py wenetspeech/exp/conformer/checkpoints/wenetspeech.pdparams
-```
-查看转换后的参数文件wenet_params.bin的md5码，md5码为9cfcf11ee70cb9423528b1f66a87eafd，表示转换正确。
+wav_path = ['~/.cache/modelscope/hub/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/example/asr_example.wav']
 
-```
-md5sum -b wenet_params.bin
+result = model(wav_path)
+print(result)
 ```
 
-#### 流模式预训练模型下载
-进入FastASR/models/paddlespeech_stream文件夹，用于存放下载的预训练模型.
-```shell
-cd ../models/paddlespeech_stream
+More examples ref to [demo](runtime/python/onnxruntime)
+
+## Deployment Service
+FunASR supports deploying pre-trained or further fine-tuned models for service. Currently, it supports the following types of service deployment:
+- File transcription service, Mandarin, CPU version, done
+- The real-time transcription service, Mandarin (CPU), done
+- File transcription service, English, CPU version, done
+- File transcription service, Mandarin, GPU version, in progress
+- and more.
+
+For more detailed information, please refer to the [service deployment documentation](runtime/readme.md).
+
+
+<a name="contact"></a>
+## Community Communication
+If you encounter problems in use, you can directly raise Issues on the github page.
+
+You can also scan the following DingTalk group or WeChat group QR code to join the community group for communication and discussion.
+
+|                           DingTalk group                            |                     WeChat group                      |
+|:-------------------------------------------------------------------:|:-----------------------------------------------------:|
+| <div align="left"><img src="docs/images/dingding.png" width="250"/> | <img src="docs/images/wechat.png" width="215"/></div> |
+
+## Contributors
+
+| <div align="left"><img src="docs/images/alibaba.png" width="260"/> | <div align="left"><img src="docs/images/nwpu.png" width="260"/> | <img src="docs/images/China_Telecom.png" width="200"/> </div>  | <img src="docs/images/RapidAI.png" width="200"/> </div> | <img src="docs/images/aihealthx.png" width="200"/> </div> | <img src="docs/images/XVERSE.png" width="250"/> </div> |
+|:------------------------------------------------------------------:|:---------------------------------------------------------------:|:--------------------------------------------------------------:|:-------------------------------------------------------:|:-----------------------------------------------------------:|:------------------------------------------------------:|
+
+The contributors can be found in [contributors list](./Acknowledge.md)
+
+## License
+This project is licensed under [The MIT License](https://opensource.org/licenses/MIT). FunASR also contains various third-party components and some code modified from other repos under other open source licenses.
+The use of pretraining model is subject to [model license](./MODEL_LICENSE)
+
+
+## Citations
+``` bibtex
+@inproceedings{gao2023funasr,
+  author={Zhifu Gao and Zerui Li and Jiaming Wang and Haoneng Luo and Xian Shi and Mengzhe Chen and Yabin Li and Lingyun Zuo and Zhihao Du and Zhangyu Xiao and Shiliang Zhang},
+  title={FunASR: A Fundamental End-to-End Speech Recognition Toolkit},
+  year={2023},
+  booktitle={INTERSPEECH},
+}
+@inproceedings{An2023bat,
+  author={Keyu An and Xian Shi and Shiliang Zhang},
+  title={BAT: Boundary aware transducer for memory-efficient and low-latency ASR},
+  year={2023},
+  booktitle={INTERSPEECH},
+}
+@inproceedings{gao22b_interspeech,
+  author={Zhifu Gao and ShiLiang Zhang and Ian McLoughlin and Zhijie Yan},
+  title={Paraformer: Fast and Accurate Parallel Transformer for Non-autoregressive End-to-End Speech Recognition},
+  year=2022,
+  booktitle={Proc. Interspeech 2022},
+  pages={2063--2067},
+  doi={10.21437/Interspeech.2022-9996}
+}
+@inproceedings{shi2023seaco,
+  author={Xian Shi and Yexin Yang and Zerui Li and Yanni Chen and Zhifu Gao and Shiliang Zhang},
+  title={SeACo-Paraformer: A Non-Autoregressive ASR System with Flexible and Effective Hotword Customization Ability},
+  year={2023},
+  booktitle={ICASSP2024}
+}
 ```
-从PaddleSpeech官网下载预训练模型，如果之前已经在运行过PaddleSpeech，
-则可以不用下载，它已经在目录`~/.paddlespeech/models/conformer_online_wenetspeech-zh-16k`中。
-
-```shell
-wget -c https://paddlespeech.bj.bcebos.com/s2t/wenetspeech/asr1/asr1_chunk_conformer_wenetspeech_ckpt_1.0.0a.model.tar.gz
-```
-
-将压缩包解压wenetspeech目录下
-```
-mkdir wenetspeech
-tar -xzvf asr1_chunk_conformer_wenetspeech_ckpt_1.0.0a.model.tar.gz -C wenetspeech
-```
-将用于Python的模型转换为C++的，这样更方便通过内存映射的方式直接读取参数，加快模型读取速度。
-
-```shell
-../scripts/paddlespeech_convert.py wenetspeech/exp/chunk_conformer/checkpoints/avg_10.pdparams
-```
-查看转换后的参数文件wenet_params.bin的md5码，md5码为367a285d43442ecfd9c9e5f5e1145b84，表示转换正确。
-
-```
-md5sum -b wenet_params.bin
-```
-
-
-### 测试例子
-进入项目的根目录FastASR下载用于测试的wav文件
-
-下载时长为5S的测试音频
-
-```shell
-wget -c https://paddlespeech.bj.bcebos.com/PaddleAudio/zh.wav 
-```
-
-下载时长为30min的测试音频
-
-```shell
-wget -c https://github.com/chenkui164/FastASR/releases/download/V0.01/long.wav
-```
-
-#### paraformer模型测试
-
-第一个参数为预训练模型存放的目录;  
-第二个参数为需要识别的语音文件。
-
-```shell
-./build/examples/paraformer_cli models/paraformer_cli/ zh.wav
-```
-
-程序输出
-```
-Audio time is 4.996812 s. len is 79949
-Model initialization takes 0.319781s.
-Result: "我认为跑步最重要的就是给我带来了身体健康".
-Model inference takes 0.695871s.
-```
-
-长语音测试
-
-```shell
-./build/examples/k2_rnnt2_cli models/k2_rnnt2_cli/ long.wav
-```
-
-程序输出
-```
-Audio time is 1781.655518 s. len is 28506489
-Model initialization takes 0.283899s.
-Result: "听众朋友您下面将要听到的是世界文学宝库中的珍品海明威最优秀的作品老人与海
-................................................................................
-................................................................................
-................................................................................
-那么祝你晚安早上我去叫醒你你是我的闹钟男孩说呵呵年纪是我的闹钟老人说为什么老头醒
-醒那么早啊难道是要让白白长一些吗我不知道我只知道少年睡得沉起得晚嗯我记在心上了到
-时候会去叫醒你的我不愿让船主人来叫醒我这样似乎我比他差劲儿了自我懂安睡吧老大爷男
-孩儿走出屋去"
-Model inference takes 238.797095s.
-```
-#### k2_rnnt2模型测试
-
-第一个参数为预训练模型存放的目录;  
-第二个参数为需要识别的语音文件。
-
-```shell
-./build/examples/k2_rnnt2_cli models/k2_rnnt2_cli/ zh.wav
-```
-
-程序输出
-```
-Audio time is 5.015000 s. len is 80240
-Model initialization takes 0.211781s
-result: "我认为跑步最重要的就是给我带来了身体健康"
-Model inference takes 0.570641s.
-```
-
-长语音测试
-
-```shell
-./build/examples/k2_rnnt2_cli models/k2_rnnt2_cli/ long.wav
-```
-
-程序输出
-```
-Audio time is 1781.655518 s. len is 28506489
-Model initialization takes 0.172187s.
-Result: "听众朋友您下面将要听到的是世界文学宝库中的珍品海明威最优秀的作品老人与海
-................................................................................
-................................................................................
-................................................................................
-我也许不像我自以为那样的强壮了可是我懂得不少窍门儿而且有决心啊你该就去睡觉这样明儿
-早上才精神饱满我要把这些东西送回露台饭店去啊哦好那么祝你晚安早上我去叫醒你你是我的
-闹钟男孩说年纪是我的闹钟啊老人说为什么老头儿醒得那么早啊难道是要让白天长些吗我不知
-道我只知道少年睡得沉起得晚啊嗯我记在心上了到时候会去叫醒你的我不愿让船主人来叫醒我
-这样似乎我比他差劲儿了哼我懂安睡吧老大爷男孩儿走出屋去"
-Model inference takes 186.848961s.
-```
-
-python wheel包测试
-
-```shell
-python examples/k2_rnnt2_cli.py models/k2_rnnt2_cli/ zh.wav
-```
-
-程序输出
-```
-Audio time is 4.9968125s. len is 79949.
-Model initialization takes 0.8s.
-Result: "我认为跑步最重要的就是给我带来了身体健康".
-Model inference takes 0.57s.
-```
-
-#### conformer_wenetspeech-zh-16k模型测试
-
-第一个参数为预训练模型存放的目录;  
-第二个参数为需要识别的语音文件。
-
-```shell
-./build/examples/paddlespeech_cli models/paddlespeech_cli/ zh.wav
-```
-
-程序输出
-```
-Audio time is 4.996812 s.
-Model initialization takes 0.217759s
-result: "我认为跑步最重要的就是给我带来了身体健康"
-Model inference takes 1.101319s.
-```
-
-长语音测试
-
-```shell
-./build/examples/paddlespeech_cli models/paddlespeech_cli/ long.wav
-```
-
-程序输出
-```
-Audio time is 1781.655518 s. len is 28506489
-Model initialization takes 0.184894s.
-Result: "听众朋友您下面将要听到的是世界文学宝库中珍品海明威最优秀的作品老人于海老
-................................................................................
-................................................................................
-................................................................................
-好的渔夫是你不我知道还要比我强的哪里好渔夫很多还有些很了不起的不过点呱呱的只有你
-谢谢你了你说得叫我高兴我希望不要来一条大鱼打的能证明我们都讲错了这样的鱼是没有的
-只要你还是像你说的那样强壮嗯我也许不像我自以为那样的强壮可是我懂得不少窍门而且有
-决心你该就去睡觉这样明儿早上才精神饱满我要把这些东西送回露台饭店去好那么祝你晚安
-早上我去叫醒你你是我的闹钟男孩说年纪是我的闹钟老人说为什么老头醒得那么早啊难道是
-要让白天长些吗我不知道我只知道少年睡得沉起得晚嗯我记得心上啦到时候会去叫醒你的我
-不愿让船主人来叫醒我这样似乎我比他差劲儿了我懂安睡吧老大爷男孩走出屋去".
-Model inference takes 351.067497s.
-```
-
-python wheel包测试
-
-```shell
-python examples/paddlespeech_cli.py models/paddlespeech_cli/ zh.wav
-```
-
-程序输出
-```
-Audio time is 4.9968125s. len is 79949.
-Model initialization takes 1.1s.
-Result: "我认为跑步最重要的就是给我带来身体健康".
-Model inference takes 1.1s.
-```
-
-#### conformer_online_wenetspeech-zh-16k模型测试
-
-第一个参数为预训练模型存放的目录;
-第二个参数为需要识别的语音文件。
-
-```shell
-./build/examples/paddlespeech_stream models/paddlespeech_stream/ zh.wav
-```
-
-程序输出
-```
-Model initialization takes 0.222937s
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: ""
-current result: "我认为跑"
-current result: "我认为跑"
-current result: "我认为跑"
-current result: "我认为跑"
-current result: "我认为跑"
-current result: "我认为跑"
-current result: "我认为跑"
-current result: "我认为跑"
-current result: "我认为跑步最重要的"
-current result: "我认为跑步最重要的"
-current result: "我认为跑步最重要的"
-current result: "我认为跑步最重要的"
-current result: "我认为跑步最重要的"
-current result: "我认为跑步最重要的"
-current result: "我认为跑步最重要的"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是"
-current result: "我认为跑步最重要的就是给我"
-current result: "我认为跑步最重要的就是给我"
-current result: "我认为跑步最重要的就是给我"
-current result: "我认为跑步最重要的就是给我"
-current result: "我认为跑步最重要的就是给我"
-current result: "我认为跑步最重要的就是给我"
-current result: "我认为跑步最重要的就是给我"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了"
-current result: "我认为跑步最重要的就是给我带来了身体健康"
-current result: "我认为跑步最重要的就是给我带来了身体健康"
-current result: "我认为跑步最重要的就是给我带来了身体健康"
-current result: "我认为跑步最重要的就是给我带来了身体健康"
-current result: "我认为跑步最重要的就是给我带来了身体健康"
-current result: "我认为跑步最重要的就是给我带来了身体健康"
-final result: "我认为跑步最重要的就是给我带来了身体健康"
-Model inference takes 1.657996s.
-```
-
-
-python wheel包测试
-```shell
-python examples/paddlespeech_stream.py paddlespeech_stream/ zh.wav
-```
-
-## 树莓派4B上优化部署
-由于深度学习推理过程，属于计算密集型算法，所以CPU的指令集对代码的执行效率会有重要影响。
-从纯数值计算角度来看，64bit的指令及要比32bit的指令集执行效率要提升1倍。
-经过测试同样的算法在64bit系统上，确实是要比32bit系统上，执行效率高很多。
-
-### 为树莓派升级64位系统raspios
-到[树莓派官网](https://downloads.raspberrypi.org/)下载最新的raspios 64位系统，
-我下载的是没有桌面的精简版[raspios_lite_arm64](https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2022-04-07/)，
-当然也可以下载有桌面的版本[raspios_arm64](https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2022-04-07/)，
-两者没有太大差别，全凭个人喜好。
-
-下载完成镜像，然后烧写SD卡，保证系统新做的系统能正常启动即可。
-
-### 重新编译依赖库
-
-尽管两个依赖库fftw3和openblas都是可以通过`sudo apt install`直接安装的，
-但是软件源上的版本是通用版本，是兼容树莓派3B等老版本的型号，
-并没有针对树莓派4B的ARM CORTEX A72进行优化，所以执行效率并不高。
-因此我们需要针对树莓派4B重新编译，让其发挥最大效率。
-
-**<span style="color:red">
-注意：以下编译安装步骤都是在树莓派上完成，不使用交叉编译！！！
-</span>**
-
-#### 安装fftw3
-下载源码
-```shell
-wget -c http://www.fftw.org/fftw-3.3.10.tar.gz
-```
-解压
-
-```shell
-tar -xzvf fftw-3.3.10.tar.gz 
-cd fftw-3.3.10/
-```
-配置工程，根据CPU选择适当的编译选项
-```shell
-./configure --enable-shared --enable-float --prefix=/usr
-```
-编译和安装
-```shell
-make -j4
-sudo make install
-```
-
-#### 安装OpenBLAS
-
-下载源码
-```shell
-wget -c https://github.com/xianyi/OpenBLAS/releases/download/v0.3.20/OpenBLAS-0.3.20.tar.gz
-```
-
-解压
-```shell
-tar -xzvf OpenBLAS-0.3.20.tar.gz  
-cd OpenBLAS-0.3.20
-```
-
-编译和安装
-
-```shell
-make -j4
-sudo make PREFIX=/usr install
-```
-
-### 编译和测试
-编译和下载预训练模型的过程，请参考上文的<a href="#%E6%BA%90%E7%A0%81%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85%E6%8C%87%E5%8D%97"> 源码编译安装指南</a>章节。
-
-运行程序
-```shell
-./build/examples/k2_rnnt2_cli models/k2_rnnt2_cli/ zh.wav
-```
-结果
-```shell
-Audio time is 4.996812 s.
-Model initialization takes 10.288784s
-result: "我认为跑步最重要的就是给我带来了身体健康"
-Model inference takes 4.900788s.
-```
-当第一次运行时，发现模型初始化时间就用了10.2s，
-显然不太合理，这是因为预训练模型是在SD卡中，一个450M大小的文件从SD卡读到内存中，主要受限于SD卡的读取速度，所以比较慢。
-得利于linux的缓存机制，第二次运行时，模型已经在内存中，不用在从SD卡读取了，所以只有重启后第一次会比较慢。
-
-第二次运行结果
-```shell
-Audio time is 4.996812 s.
-Model initialization takes 0.797091s
-result: "我认为跑步最重要的就是给我带来了身体健康"
-Model inference takes 4.916471s.
-```
-
-从结果中可以看出，当音频文件为4.99s时，推理时间为4.91秒，推理时间小于音频时间，刚刚好能满足实时性的需求。
-
-### 添加标点符号
-
-由于ASR模型并不能处理语音中的停顿，无法直接输出标点符号，需要使用NLP方式添加标点符号，参见 ： https://github.com/yeyupiaoling/PunctuationModel
-
-相关研究方法： https://blog.csdn.net/LJJ_12/article/details/120077119
-
-上面模型的效果比较好，缺点也明显：模型太大，速度比较慢。用于服务器端没有影响，用于客户端则影响性能。
-
-
