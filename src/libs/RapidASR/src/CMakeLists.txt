@@ -8,8 +8,9 @@ target_include_directories(rapidasr PUBLIC ${FFTW3_INCLUDE_DIRS})
 target_link_directories(rapidasr PUBLIC ${FFTW3_LIBRARY_DIRS})
 target_link_libraries(rapidasr PUBLIC fftw3 fftw3f)
 
-target_include_directories(rapidasr PUBLIC ../../../onnxruntime/include)
-target_link_directories(rapidasr PUBLIC ../../../onnxruntime/lib)
+include_directories(../include)
+target_include_directories(rapidasr PUBLIC ../../onnxruntime/include)
+target_link_directories(rapidasr PUBLIC ../../onnxruntime/lib)
 
 if (WIN32)
     target_compile_definitions(rapidasr PUBLIC -D_RPASR_API_EXPORT)
@@ -26,7 +27,7 @@ else ()
     include_directories(${ONNXRUNTIME_DIR}/include)
 endif ()
 
-include_directories(../include)
+target_include_directories(rapidasr PUBLIC ../include)
 target_link_libraries(rapidasr PUBLIC onnxruntime ${EXTRA_LIBS})
 
 

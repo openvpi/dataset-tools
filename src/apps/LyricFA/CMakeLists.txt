@@ -18,7 +18,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         r8brain
         rapidasr
 )
-target_include_directories(${PROJECT_NAME} PRIVATE ../../libs/RapidASR/cpp_onnx/include)
 
 file(GLOB_RECURSE onnx_files ../../libs/onnxruntime/lib/*.*)
 foreach (onnx_file ${onnx_files})

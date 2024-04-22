@@ -17,7 +17,7 @@
 - 语音识别：
     - rapid_paraformer:
         - [rapid_paraformer-Python](./python/README.md)
-        - [rapid_C++/C](./cpp_onnx/readme.md)
+        - [rapid_C++/C](./cpp_onnx/README_onnx)
     - [rapid_wenet](https://github.com/RapidAI/RapidASR/tree/rapid_wenet)
         - [Python](https://github.com/RapidAI/RapidASR/tree/rapid_wenet/python)
         - [C++](https://github.com/RapidAI/RapidASR/tree/rapid_wenet/cpp)

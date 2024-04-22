@@ -1,17 +1,16 @@
-#pragma once
 #ifndef PARAFORMER_MODELIMP_H
-#    define PARAFORMER_MODELIMP_H
+#define PARAFORMER_MODELIMP_H
+#pragma once
+#include "FeatureExtract.h"
 
-#    include "FeatureExtract.h"
+#include <Model.h>
+#include <onnxruntime_cxx_api.h>
 
-#    include <Model.h>
-#    include <onnxruntime_cxx_api.h>
-
-#    include "Vocab.h"
+#include "Vocab.h"
 
 namespace paraformer {
 
-    class ModelImp : public Model {
+    class ModelImp final : public Model {
     private:
         FeatureExtract *fe;
 
@@ -22,11 +21,11 @@ namespace paraformer {
 
         string greedy_search(float *in, const int &nLen) const;
 
-#    ifdef _WIN_X86
+#ifdef _WIN_X86
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-#    else
+#else
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-#    endif
+#endif
 
         Ort::Session *m_session = nullptr;
         Ort::Env env = Ort::Env(ORT_LOGGING_LEVEL_ERROR, "paraformer");
