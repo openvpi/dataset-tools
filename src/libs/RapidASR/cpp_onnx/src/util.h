@@ -1,9 +1,8 @@
-
-
 #ifndef UTIL_H
 #define UTIL_H
 
-using namespace std;
+#include <string>
+#include "Tensor.h"
 
 extern float *loadparams(const char *filename);
 
@@ -25,6 +24,6 @@ extern void findmax(float *din, int len, float &max_val, int &max_idx);
 
 extern void glu(Tensor<float> *din, Tensor<float> *dout);
 
-string pathAppend(const string &p1, const string &p2);
+std::string pathAppend(const std::string &p1, const std::string &p2);
 
 #endif

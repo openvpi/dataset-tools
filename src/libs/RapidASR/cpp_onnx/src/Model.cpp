@@ -1,11 +1,7 @@
-#include "precomp.h"
+#include "Model.h"
 
-Model *create_model(const char *path,int nThread)
-{
-    Model *mm;
+#include "paraformer_onnx.h"
 
-
-    mm = new paraformer::ModelImp(path, nThread);
-
-    return mm;
+Model *create_model(const char *path, int nThread) {
+    return new paraformer::ModelImp(path, nThread);
 }

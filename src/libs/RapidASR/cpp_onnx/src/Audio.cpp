@@ -1,12 +1,11 @@
+#include "Audio.h"
+
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
-#include "Audio.h"
-
-using namespace std;
+#include "ComDefine.h"
 
 AudioFrame::AudioFrame(const int &len) : len(len) {
     start = 0;

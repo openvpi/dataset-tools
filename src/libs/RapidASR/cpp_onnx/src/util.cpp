@@ -1,8 +1,8 @@
+#include "util.h"
 
-#include "precomp.h"
+#include "alignedmem.h"
 
-float *loadparams(const char *filename)
-{
+float *loadparams(const char *filename) {
 
     FILE *fp;
     fp = fopen(filename, "rb");
@@ -10,37 +10,33 @@ float *loadparams(const char *filename)
     uint32_t nFileLen = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    float *params_addr = (float *)aligned_malloc(32, nFileLen);
+    float *params_addr = (float *) aligned_malloc(32, nFileLen);
     int n = fread(params_addr, 1, nFileLen, fp);
     fclose(fp);
 
     return params_addr;
 }
 
-int val_align(int val, int align)
-{
-    float tmp = ceil((float)val / (float)align) * (float)align;
-    return (int)tmp;
+int val_align(int val, int align) {
+    float tmp = ceil((float) val / (float) align) * (float) align;
+    return (int) tmp;
 }
 
-void disp_params(float *din, int size)
-{
+void disp_params(float *din, int size) {
     int i;
     for (i = 0; i < size; i++) {
         printf("%f ", din[i]);
     }
     printf("\n");
 }
-void SaveDataFile(const char *filename, void *data, uint32_t len)
-{
+void SaveDataFile(const char *filename, void *data, uint32_t len) {
     FILE *fp;
     fp = fopen(filename, "wb+");
     fwrite(data, 1, len, fp);
     fclose(fp);
 }
 
-void basic_norm(Tensor<float> *&din, float norm)
-{
+void basic_norm(Tensor<float> *&din, float norm) {
 
     int Tmax = din->size[2];
 
@@ -59,8 +55,7 @@ void basic_norm(Tensor<float> *&din, float norm)
     }
 }
 
-void findmax(float *din, int len, float &max_val, int &max_idx)
-{
+void findmax(float *din, int len, float &max_val, int &max_idx) {
     int i;
     max_val = -INFINITY;
     max_idx = -1;
@@ -72,25 +67,23 @@ void findmax(float *din, int len, float &max_val, int &max_idx)
     }
 }
 
-string pathAppend(const string &p1, const string &p2)
-{
+string pathAppend(const std::string &p1, const std::string &p2) {
 
     char sep = '/';
-    string tmp = p1;
+    std::string tmp = p1;
 
 #ifdef _WIN32
     sep = '\\';
 #endif
 
-    if (p1[p1.length()-1] != sep) { // Need to add a
-        tmp += sep;               // path separator
+    if (p1[p1.length() - 1] != sep) { // Need to add a
+        tmp += sep;                   // path separator
         return (tmp + p2);
     } else
         return (p1 + p2);
 }
 
-void relu(Tensor<float> *din)
-{
+void relu(Tensor<float> *din) {
     int i;
     for (i = 0; i < din->buff_size; i++) {
         float val = din->buff[i];
@@ -98,8 +91,7 @@ void relu(Tensor<float> *din)
     }
 }
 
-void swish(Tensor<float> *din)
-{
+void swish(Tensor<float> *din) {
     int i;
     for (i = 0; i < din->buff_size; i++) {
         float val = din->buff[i];
@@ -107,8 +99,7 @@ void swish(Tensor<float> *din)
     }
 }
 
-void sigmoid(Tensor<float> *din)
-{
+void sigmoid(Tensor<float> *din) {
     int i;
     for (i = 0; i < din->buff_size; i++) {
         float val = din->buff[i];
@@ -116,8 +107,7 @@ void sigmoid(Tensor<float> *din)
     }
 }
 
-void doubleswish(Tensor<float> *din)
-{
+void doubleswish(Tensor<float> *din) {
     int i;
     for (i = 0; i < din->buff_size; i++) {
         float val = din->buff[i];
@@ -125,9 +115,8 @@ void doubleswish(Tensor<float> *din)
     }
 }
 
-void softmax(float *din, int mask, int len)
-{
-    float *tmp = (float *)malloc(mask * sizeof(float));
+void softmax(float *din, int mask, int len) {
+    float *tmp = (float *) malloc(mask * sizeof(float));
     int i;
     float sum = 0;
     float max = -INFINITY;
@@ -149,9 +138,8 @@ void softmax(float *din, int mask, int len)
     }
 }
 
-void log_softmax(float *din, int len)
-{
-    float *tmp = (float *)malloc(len * sizeof(float));
+void log_softmax(float *din, int len) {
+    float *tmp = (float *) malloc(len * sizeof(float));
     int i;
     float sum = 0;
     for (i = 0; i < len; i++) {
@@ -164,8 +152,7 @@ void log_softmax(float *din, int len)
     free(tmp);
 }
 
-void glu(Tensor<float> *din, Tensor<float> *dout)
-{
+void glu(Tensor<float> *din, Tensor<float> *dout) {
     int mm = din->buff_size / 1024;
     int i, j;
     for (i = 0; i < mm; i++) {

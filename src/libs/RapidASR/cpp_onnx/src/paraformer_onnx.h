@@ -1,16 +1,17 @@
 #pragma once
-
-
 #ifndef PARAFORMER_MODELIMP_H
 #define PARAFORMER_MODELIMP_H
 
+#include "FeatureExtract.h"
 
+#include <onnxruntime_cxx_api.h>
+#include <Model.h>
 
-
+#include "Vocab.h"
 
 namespace paraformer {
 
-    class ModelImp : public Model {
+    class ModelImp final: public Model {
     private:
         FeatureExtract* fe;
 
@@ -19,7 +20,7 @@ namespace paraformer {
         void apply_lfr(Tensor<float>*& din);
         void apply_cmvn(Tensor<float>* din);
 
-        
+
         string greedy_search( float* in, int nLen);
 
 #ifdef _WIN_X86

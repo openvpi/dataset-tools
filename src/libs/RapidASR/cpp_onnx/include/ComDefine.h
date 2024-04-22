@@ -1,4 +1,3 @@
-
 #ifndef COMDEFINE_H
 #define COMDEFINE_H
 

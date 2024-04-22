@@ -6,12 +6,9 @@
 #include <sstream>
 #include <string>
 
-using namespace std;
-
-Vocab::Vocab(const char *filename)
-{
-    ifstream in(filename);
-    string line;
+Vocab::Vocab(const char *filename) {
+    std::ifstream in(filename);
+    std::string line;
 
     if (in) // 有该文件
     {
@@ -26,14 +23,12 @@ Vocab::Vocab(const char *filename)
     //     cout << "no such file" << endl;
     // }
 }
-Vocab::~Vocab()
-{
+Vocab::~Vocab() {
 }
 
-string Vocab::vector2string(vector<int> in)
-{
+std::string Vocab::vector2string(std::vector<int> in) {
     int i;
-    stringstream ss;
+    std::stringstream ss;
     for (auto it = in.begin(); it != in.end(); it++) {
         ss << vocab[*it];
     }
@@ -41,20 +36,16 @@ string Vocab::vector2string(vector<int> in)
     return ss.str();
 }
 
-int str2int(string str)
-{
+int str2int(std::string str) {
     const char *ch_array = str.c_str();
-    if (((ch_array[0] & 0xf0) != 0xe0) || ((ch_array[1] & 0xc0) != 0x80) ||
-        ((ch_array[2] & 0xc0) != 0x80))
+    if (((ch_array[0] & 0xf0) != 0xe0) || ((ch_array[1] & 0xc0) != 0x80) || ((ch_array[2] & 0xc0) != 0x80))
         return 0;
 
-    int val = ((ch_array[0] & 0x0f) << 12) | ((ch_array[1] & 0x3f) << 6) |
-              (ch_array[2] & 0x3f);
+    int val = ((ch_array[0] & 0x0f) << 12) | ((ch_array[1] & 0x3f) << 6) | (ch_array[2] & 0x3f);
     return val;
 }
 
-bool Vocab::isChinese(string ch)
-{
+bool Vocab::isChinese(std::string ch) {
     if (ch.size() != 3) {
         return false;
     }
@@ -68,19 +59,18 @@ bool Vocab::isChinese(string ch)
 }
 
 
-string Vocab::vector2stringV2(vector<int> in)
-{
+std::string Vocab::vector2stringV2(std::vector<int> in) {
     int i;
-    list<string> words;
+    std::list<std::string> words;
 
     int is_pre_english = false;
     int pre_english_len = 0;
 
     int is_combining = false;
-    string combine = "";
+    std::string combine = "";
 
     for (auto it = in.begin(); it != in.end(); it++) {
-        string word = vocab[*it];
+        std::string word = vocab[*it];
 
         // step1 space character skips
         if (word == "<s>" || word == "</s>" || word == "<unk>")
@@ -88,7 +78,7 @@ string Vocab::vector2stringV2(vector<int> in)
 
         // step2 combie phoneme to full word
         {
-            int sub_word = !(word.find("@@") == string::npos);
+            int sub_word = !(word.find("@@") == std::string::npos);
 
             // process word start and middle part
             if (sub_word) {
@@ -108,7 +98,7 @@ string Vocab::vector2stringV2(vector<int> in)
         // step3 process english word deal with space , turn abbreviation to upper case
         {
 
-            // input word is chinese, not need process 
+            // input word is chinese, not need process
             if (isChinese(word)) {
                 words.push_back(word);
                 is_pre_english = false;
@@ -136,8 +126,7 @@ string Vocab::vector2stringV2(vector<int> in)
                         words.push_back(" ");
                         words.push_back(word);
                         pre_english_len = word.size();
-                    } 
-                    else {
+                    } else {
                         if (word.size() > 1) {
                             words.push_back(" ");
                         }
@@ -147,7 +136,6 @@ string Vocab::vector2stringV2(vector<int> in)
                 }
 
                 is_pre_english = true;
-
             }
         }
     }
@@ -156,7 +144,7 @@ string Vocab::vector2stringV2(vector<int> in)
     //     cout << *it << endl;
     // }
 
-    stringstream ss;
+    std::stringstream ss;
     for (auto it = words.begin(); it != words.end(); it++) {
         ss << *it;
     }
@@ -164,7 +152,6 @@ string Vocab::vector2stringV2(vector<int> in)
     return ss.str();
 }
 
-int Vocab::size()
-{
+int Vocab::size() {
     return vocab.size();
 }

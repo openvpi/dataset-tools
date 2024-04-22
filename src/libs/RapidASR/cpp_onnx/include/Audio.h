@@ -4,10 +4,6 @@
 #include <cstdint>
 #include <queue>
 
-#include "ComDefine.h"
-
-using namespace std;
-
 class AudioFrame {
 public:
     explicit AudioFrame(const int &len);
@@ -39,7 +35,7 @@ private:
     int offset;
     float align_size;
     int data_type;
-    queue<AudioFrame *> frame_queue;
+    std::queue<AudioFrame *> frame_queue;
 };
 
 #endif

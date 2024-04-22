@@ -1,24 +1,21 @@
-
 #ifndef VOCAB_H
 #define VOCAB_H
 
-#include <stdint.h>
 #include <string>
 #include <vector>
-using namespace std;
 
 class Vocab {
   private:
-    vector<string> vocab;
-    bool isChinese(string ch);
-    bool isEnglish(string ch);
+    std::vector<std::string> vocab;
+    bool isChinese(std::string ch);
+    bool isEnglish(std::string ch);
 
   public:
     Vocab(const char *filename);
     ~Vocab();
     int size();
-    string vector2string(vector<int> in);
-    string vector2stringV2(vector<int> in);
+    std::string vector2string(std::vector<int> in);
+    std::string vector2stringV2(std::vector<int> in);
 };
 
 #endif

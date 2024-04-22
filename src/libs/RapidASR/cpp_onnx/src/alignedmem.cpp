@@ -1,4 +1,5 @@
-#include "precomp.h"
+#include <string>
+
 void *aligned_malloc(size_t alignment, size_t required_bytes)
 {
     void *p1;  // original block

@@ -1,6 +1,10 @@
-#include "precomp.h"
-#ifdef __cplusplus
+#include "librapidasrapi.h"
 
+#include <Model.h>
+#include <Audio.h>
+#include "commonfunc.h"
+
+#ifdef __cplusplus
 //  void __attribute__ ((visibility ("default"))) fun();
 extern "C" {
 #endif
@@ -11,7 +15,6 @@ _RAPIDASRAPI RPASR_HANDLE RapidAsrInit(const char *szModelDir, int nThreadNum) {
     Model *mm = create_model(szModelDir, nThreadNum);
     return mm;
 }
-
 
 _RAPIDASRAPI RPASR_RESULT RapidAsrRecogBuffer(RPASR_HANDLE handle, const char *szBuf, int nLen,
                                               QM_CALLBACK fnCallback) {
@@ -32,7 +35,7 @@ _RAPIDASRAPI RPASR_RESULT RapidAsrRecogBuffer(RPASR_HANDLE handle, const char *s
     const int nTotal = audio.get_queue_size();
     while (audio.fetch(buff, len, flag) > 0) {
         pRecogObj->reset();
-        const string msg = pRecogObj->forward(buff, len, flag);
+        const std::string msg = pRecogObj->forward(buff, len, flag);
         pResult->msg += msg;
         nStep++;
         if (fnCallback)

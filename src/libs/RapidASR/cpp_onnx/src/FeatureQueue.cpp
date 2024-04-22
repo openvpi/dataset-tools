@@ -1,4 +1,7 @@
-#include "precomp.h"
+#include "FeatureQueue.h"
+
+#include <ComDefine.h>
+
 FeatureQueue::FeatureQueue()
 {
     buff = new Tensor<float>(67, 80);
