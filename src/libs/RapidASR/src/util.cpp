@@ -67,7 +67,7 @@ void findmax(float *din, int len, float &max_val, int &max_idx) {
     }
 }
 
-string pathAppend(const std::string &p1, const std::string &p2) {
+std::string pathAppend(const std::string &p1, const std::string &p2) {
 
     char sep = '/';
     std::string tmp = p1;

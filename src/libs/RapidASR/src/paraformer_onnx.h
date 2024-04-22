@@ -19,7 +19,7 @@ namespace paraformer {
         static void apply_lfr(Tensor<float> *&din);
         static void apply_cmvn(const Tensor<float> *din);
 
-        string greedy_search(float *in, const int &nLen) const;
+        std::string greedy_search(float *in, const int &nLen) const;
 
 #ifdef _WIN_X86
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
@@ -31,15 +31,15 @@ namespace paraformer {
         Ort::Env env = Ort::Env(ORT_LOGGING_LEVEL_ERROR, "paraformer");
         Ort::SessionOptions sessionOptions = Ort::SessionOptions();
 
-        vector<string> m_strInputNames, m_strOutputNames;
-        vector<const char *> m_szInputNames;
-        vector<const char *> m_szOutputNames;
+        std::vector<std::string> m_strInputNames, m_strOutputNames;
+        std::vector<const char *> m_szInputNames;
+        std::vector<const char *> m_szOutputNames;
 
     public:
         explicit ModelImp(const char *path, const int &nNumThread = 0);
         ~ModelImp() override;
         void reset() override;
-        string forward(float *din, int len, int flag) override;
+        std::string forward(float *din, int len, int flag) override;
     };
 
 } // namespace paraformer

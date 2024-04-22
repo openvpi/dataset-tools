@@ -8,8 +8,8 @@
 
 namespace paraformer {
     ModelImp::ModelImp(const char *path, const int &nNumThread) {
-        string model_path = pathAppend(path, "model.onnx");
-        const string vocab_path = pathAppend(path, "vocab.txt");
+        std::string model_path = pathAppend(path, "model.onnx");
+        const std::string vocab_path = pathAppend(path, "vocab.txt");
 
         fe = new FeatureExtract(3);
 
@@ -17,13 +17,13 @@ namespace paraformer {
         sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
 #ifdef _WIN32
-        const wstring wstrPath = strToWstr(model_path);
+        const std::wstring wstrPath = strToWstr(model_path);
         m_session = new Ort::Session(env, wstrPath.c_str(), sessionOptions);
 #else
         m_session = new Ort::Session(env, model_path.c_str(), sessionOptions);
 #endif
 
-        string strName;
+        std::string strName;
         getInputName(m_session, strName);
         m_strInputNames.emplace_back(strName.c_str());
         getInputName(m_session, strName, 1);
@@ -90,8 +90,8 @@ namespace paraformer {
         }
     }
 
-    string ModelImp::greedy_search(float *in, const int &nLen) const {
-        vector<int> hyps;
+    std::string ModelImp::greedy_search(float *in, const int &nLen) const {
+        std::vector<int> hyps;
         const int Tmax = nLen;
         for (int i = 0; i < Tmax; i++) {
             int max_idx;
@@ -103,7 +103,7 @@ namespace paraformer {
         return vocab->vector2stringV2(hyps);
     }
 
-    string ModelImp::forward(float *din, int len, int flag) {
+    std::string ModelImp::forward(float *din, int len, int flag) {
         Tensor<float> *in;
         fe->insert(din, len, flag);
         fe->fetch(in);
@@ -124,7 +124,7 @@ namespace paraformer {
         input_onnx.emplace_back(std::move(onnx_feats));
         input_onnx.emplace_back(std::move(onnx_feats_len));
 
-        string result;
+        std::string result;
         try {
             auto outputTensor = m_session->Run(run_option, m_szInputNames.data(), input_onnx.data(),
                                                m_szInputNames.size(), m_szOutputNames.data(), m_szOutputNames.size());

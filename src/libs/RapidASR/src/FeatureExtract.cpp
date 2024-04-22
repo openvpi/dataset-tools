@@ -18,12 +18,12 @@ void FeatureExtract::reset() {
     fqueue.reset();
 }
 
-int FeatureExtract::size() {
+int FeatureExtract::size() const {
     return fqueue.size();
 }
 
 void FeatureExtract::fftw_init() {
-    int fft_size = 512;
+    constexpr int fft_size = 512;
     fft_input = (float *) fftwf_malloc(sizeof(float) * fft_size);
     fft_out = (fftwf_complex *) fftwf_malloc(sizeof(fftwf_complex) * fft_size);
     memset(fft_input, 0, sizeof(float) * fft_size);
@@ -31,19 +31,18 @@ void FeatureExtract::fftw_init() {
 }
 
 void FeatureExtract::insert(float *din, int len, int flag) {
-    const float *window = (const float *) &window_hex;
+    const auto *window = (const float *) &window_hex;
     if (mode == 3)
         window = (const float *) &window_hamm_hex;
 
-    int window_size = 400;
-    int fft_size = 512;
-    int window_shift = 160;
+    constexpr int window_size = 400;
+    constexpr int window_shift = 160;
 
     speech.load(din, len);
     int i, j;
     float tmp_feature[80];
     if (mode == 0 || mode == 2 || mode == 3) {
-        int ll = (speech.size() - 400) / 160 + 1;
+        const int ll = (speech.size() - 400) / 160 + 1;
         fqueue.reinit(ll);
     }
 
@@ -53,14 +52,14 @@ void FeatureExtract::insert(float *din, int len, int flag) {
             tmp_mean += speech[i + j];
         }
 
-        tmp_mean = tmp_mean / window_size;
+        tmp_mean = tmp_mean / static_cast<float>(window_size);
 
-        float pre_val = (float) speech[i] - tmp_mean;
+        float pre_val = speech[i] - tmp_mean;
 
         for (j = 0; j < window_size; j++) {
-            float win = window[j];
-            float cur_val = (float) speech[i + j] - tmp_mean;
-            fft_input[j] = win * (cur_val - 0.97 * pre_val);
+            const float win = window[j];
+            const float cur_val = speech[i + j] - tmp_mean;
+            fft_input[j] = static_cast<float>(win * (cur_val - 0.97 * pre_val));
             pre_val = cur_val;
         }
 
@@ -79,13 +78,12 @@ void FeatureExtract::insert(float *din, int len, int flag) {
 bool FeatureExtract::fetch(Tensor<float> *&dout) {
     if (fqueue.size() < 1) {
         return false;
-    } else {
-        dout = fqueue.pop();
-        return true;
     }
+    dout = fqueue.pop();
+    return true;
 }
 
-void FeatureExtract::global_cmvn(float *din) {
+void FeatureExtract::global_cmvn(float *din) const {
     const float *std;
     const float *mean;
 
@@ -105,26 +103,22 @@ void FeatureExtract::global_cmvn(float *din) {
             din[i] = (tmp - mean[i]) / std[i];
         }
     } else {
-        int i;
-
         int val = 0x34000000;
-        float min_resol = *((float *) &val);
+        const float min_resol = *((float *) &val);
 
-        for (i = 0; i < 80; i++) {
-            float tmp = din[i] < min_resol ? min_resol : din[i];
+        for (int i = 0; i < 80; i++) {
+            const float tmp = din[i] < min_resol ? min_resol : din[i];
             din[i] = log(tmp);
         }
     }
 }
 
-void FeatureExtract::melspect(float *din, float *dout) {
+void FeatureExtract::melspect(const float *din, float *dout) {
     float fftmag[256];
-    //    float tmp;
-    const float *melcoe = (const float *) melcoe_hex;
-    int i;
-    for (i = 0; i < 256; i++) {
-        float real = din[2 * i];
-        float imag = din[2 * i + 1];
+    const auto *melcoe = (const float *) melcoe_hex;
+    for (int i = 0; i < 256; i++) {
+        const float real = din[2 * i];
+        const float imag = din[2 * i + 1];
         fftmag[i] = real * real + imag * imag;
     }
     dout[0] = melcoe[0] * fftmag[1] + melcoe[1] * fftmag[2];

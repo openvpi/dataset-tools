@@ -6,7 +6,7 @@
 
 class FeatureQueue {
 private:
-    queue<Tensor<float> *> feature_queue;
+    std::queue<Tensor<float> *> feature_queue;
     Tensor<float> *buff;
     int buff_idx;
     int window_size;

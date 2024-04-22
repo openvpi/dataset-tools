@@ -1,8 +1,5 @@
-
 #ifndef SPEECHWRAP_H
 #define SPEECHWRAP_H
-
-#include <stdint.h>
 
 class SpeechWrap {
   private:
