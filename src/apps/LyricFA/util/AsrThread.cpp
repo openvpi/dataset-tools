@@ -4,28 +4,31 @@
 #include <QMSystem.h>
 #include <QMessageBox>
 
-AsrThread::AsrThread(LyricFA::Asr *asr, QString filename, QString wavPath, QString labPath)
-    : m_asr(asr), m_filename(std::move(filename)), m_wavPath(std::move(wavPath)), m_labPath(std::move(labPath)) {
-}
-
-void AsrThread::run() {
-    QString asrMsg;
-    const auto asrRes = m_asr->recognize(m_wavPath, asrMsg);
-
-    if (!asrRes) {
-        Q_EMIT this->oneFailed(m_filename, asrMsg);
-        return;
+namespace LyricFA {
+    AsrThread::AsrThread(Asr *asr, QString filename, QString wavPath, QString labPath)
+        : m_asr(asr), m_filename(std::move(filename)), m_wavPath(std::move(wavPath)), m_labPath(std::move(labPath)) {
     }
 
-    QFile labFile(m_labPath);
-    if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::critical(nullptr, QApplication::applicationName(), QString("Failed to write lab file."));
-        return;
-    }
+    void AsrThread::run() {
+        QString asrMsg;
+        const auto asrRes = m_asr->recognize(m_wavPath, asrMsg);
 
-    QTextStream labIn(&labFile);
-    labIn.setCodec(QTextCodec::codecForName("UTF-8"));
-    labIn << asrMsg;
-    labFile.close();
-    Q_EMIT this->oneFinished(m_filename, asrMsg);
+        if (!asrRes) {
+            Q_EMIT this->oneFailed(m_filename, asrMsg);
+            return;
+        }
+
+        QFile labFile(m_labPath);
+        if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QMessageBox::critical(nullptr, QApplication::applicationName(),
+                                  QString("Failed to write to file %1").arg(QMFs::PathFindFileName(m_labPath)));
+            return;
+        }
+
+        QTextStream labIn(&labFile);
+        labIn.setCodec(QTextCodec::codecForName("UTF-8"));
+        labIn << asrMsg;
+        labFile.close();
+        Q_EMIT this->oneFinished(m_filename, asrMsg);
+    }
 }

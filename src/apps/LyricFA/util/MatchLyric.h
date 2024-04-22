@@ -5,17 +5,24 @@
 #include <QString>
 
 #include <mandarin.h>
+namespace LyricFA {
+    class MatchLyric {
+    public:
+        MatchLyric();
+        ~MatchLyric();
 
-class MatchLyric {
-public:
-    MatchLyric();
-    ~MatchLyric();
+        void initLyric(const QString &lyric_folder);
 
-    void match(QPlainTextEdit *out, const QString &lyric_folder, const QString &lab_folder, const QString &json_folder,
-               const bool &asr_rectify = true) const;
+        bool match(const QString& filename, const QString& labPath, const QString& jsonPath, QString &msg,
+                   const bool &asr_rectify = true) const;
 
-private:
-    IKg2p::Mandarin *m_mandarin;
-};
+    private:
+        struct lyricInfo {
+            QStringList text, pinyin;
+        };
 
+        QMap<QString, lyricInfo> m_lyricDict;
+        IKg2p::Mandarin *m_mandarin;
+    };
+}
 #endif // MATCHLYRIC_H
