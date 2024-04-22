@@ -16,58 +16,40 @@ Vocab::Vocab(const char *filename) {
         {
             vocab.push_back(line);
         }
-        // cout << vocab[1719] << endl;
     }
-    // else // 没有该文件
-    //{
-    //     cout << "no such file" << endl;
-    // }
-}
-Vocab::~Vocab() {
 }
 
-std::string Vocab::vector2string(std::vector<int> in) {
-    int i;
-    std::stringstream ss;
-    for (auto it = in.begin(); it != in.end(); it++) {
-        ss << vocab[*it];
-    }
+Vocab::~Vocab() = default;
 
-    return ss.str();
-}
-
-int str2int(std::string str) {
+int str2int(const std::string &str) {
     const char *ch_array = str.c_str();
     if (((ch_array[0] & 0xf0) != 0xe0) || ((ch_array[1] & 0xc0) != 0x80) || ((ch_array[2] & 0xc0) != 0x80))
         return 0;
 
-    int val = ((ch_array[0] & 0x0f) << 12) | ((ch_array[1] & 0x3f) << 6) | (ch_array[2] & 0x3f);
+    const int val = ((ch_array[0] & 0x0f) << 12) | ((ch_array[1] & 0x3f) << 6) | (ch_array[2] & 0x3f);
     return val;
 }
 
-bool Vocab::isChinese(std::string ch) {
+bool Vocab::isChinese(const std::string &ch) {
     if (ch.size() != 3) {
         return false;
     }
 
-    int unicode = str2int(ch);
+    const int unicode = str2int(ch);
     if (unicode >= 19968 && unicode <= 40959) {
         return true;
     }
-
     return false;
 }
 
-
-std::string Vocab::vector2stringV2(std::vector<int> in) {
-    int i;
+std::string Vocab::vector2stringV2(const std::vector<int> &in) const {
     std::list<std::string> words;
 
     int is_pre_english = false;
     int pre_english_len = 0;
 
     int is_combining = false;
-    std::string combine = "";
+    std::string combine;
 
     for (auto it = in.begin(); it != in.end(); it++) {
         std::string word = vocab[*it];
@@ -78,7 +60,7 @@ std::string Vocab::vector2stringV2(std::vector<int> in) {
 
         // step2 combie phoneme to full word
         {
-            int sub_word = !(word.find("@@") == std::string::npos);
+            const int sub_word = !(word.find("@@") == std::string::npos);
 
             // process word start and middle part
             if (sub_word) {
@@ -87,7 +69,7 @@ std::string Vocab::vector2stringV2(std::vector<int> in) {
                 continue;
             }
             // process word end part
-            else if (is_combining) {
+            if (is_combining) {
                 combine += word;
                 is_combining = false;
                 word = combine;
@@ -140,10 +122,6 @@ std::string Vocab::vector2stringV2(std::vector<int> in) {
         }
     }
 
-    // for (auto it = words.begin(); it != words.end(); it++) {
-    //     cout << *it << endl;
-    // }
-
     std::stringstream ss;
     for (auto it = words.begin(); it != words.end(); it++) {
         ss << *it;
@@ -152,6 +130,6 @@ std::string Vocab::vector2stringV2(std::vector<int> in) {
     return ss.str();
 }
 
-int Vocab::size() {
-    return vocab.size();
+int Vocab::size() const {
+    return static_cast<int>(vocab.size());
 }

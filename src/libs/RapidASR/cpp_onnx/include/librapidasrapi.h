@@ -52,16 +52,16 @@ typedef enum {
 typedef void (*QM_CALLBACK)(int nCurStep, int nTotal); // nTotal: total steps; nCurStep: Current Step.
 
 // APIs for qmasr
-_RAPIDASRAPI RPASR_HANDLE RapidAsrInit(const char *szModelDir, int nThread);
+_RAPIDASRAPI RPASR_HANDLE RapidAsrInit(const char *szModelDir, const int &nThread);
 
 // if not give a fnCallback ,it should be NULL
-_RAPIDASRAPI RPASR_RESULT RapidAsrRecogBuffer(RPASR_HANDLE handle, const char *szBuf, int nLen, QM_CALLBACK fnCallback);
-_RAPIDASRAPI const char *RapidAsrGetResult(RPASR_RESULT Result, int nIndex);
+_RAPIDASRAPI RPASR_RESULT RapidAsrRecogBuffer(const RPASR_HANDLE &handle, const char *szBuf, const int &nLen,
+                                              const QM_CALLBACK &fnCallback);
 
-_RAPIDASRAPI const int RapidAsrGetRetNumber(RPASR_RESULT Result);
-_RAPIDASRAPI void RapidAsrFreeResult(RPASR_RESULT Result);
+_RAPIDASRAPI const char *RapidAsrGetResult(const RPASR_RESULT &Result);
+_RAPIDASRAPI void RapidAsrFreeResult(const RPASR_RESULT &Result);
 
-_RAPIDASRAPI void RapidAsrUninit(RPASR_HANDLE Handle);
+_RAPIDASRAPI void RapidAsrUninit(const RPASR_HANDLE &Handle);
 #ifdef __cplusplus
 }
 #endif

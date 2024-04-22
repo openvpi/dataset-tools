@@ -74,7 +74,7 @@ namespace LyricFA {
         }
         if (const auto Result =
                 RapidAsrRecogBuffer(m_asrHandle, qvio.byteArray.constData(), qvio.byteArray.size(), nullptr)) {
-            const QString res = RapidAsrGetResult(Result, 0);
+            const QString res = RapidAsrGetResult(Result);
             RapidAsrFreeResult(Result);
             if (res.isEmpty()) {
                 msg = "Asr fail.";

@@ -1,52 +1,46 @@
 #pragma once
 #ifndef PARAFORMER_MODELIMP_H
-#define PARAFORMER_MODELIMP_H
+#    define PARAFORMER_MODELIMP_H
 
-#include "FeatureExtract.h"
+#    include "FeatureExtract.h"
 
-#include <onnxruntime_cxx_api.h>
-#include <Model.h>
+#    include <Model.h>
+#    include <onnxruntime_cxx_api.h>
 
-#include "Vocab.h"
+#    include "Vocab.h"
 
 namespace paraformer {
 
-    class ModelImp final: public Model {
+    class ModelImp : public Model {
     private:
-        FeatureExtract* fe;
+        FeatureExtract *fe;
 
-        Vocab* vocab;
+        Vocab *vocab;
 
-        void apply_lfr(Tensor<float>*& din);
-        void apply_cmvn(Tensor<float>* din);
+        static void apply_lfr(Tensor<float> *&din);
+        static void apply_cmvn(const Tensor<float> *din);
 
+        string greedy_search(float *in, const int &nLen) const;
 
-        string greedy_search( float* in, int nLen);
-
-#ifdef _WIN_X86
+#    ifdef _WIN_X86
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-#else
+#    else
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-#endif
+#    endif
 
-        Ort::Session* m_session = nullptr;
+        Ort::Session *m_session = nullptr;
         Ort::Env env = Ort::Env(ORT_LOGGING_LEVEL_ERROR, "paraformer");
         Ort::SessionOptions sessionOptions = Ort::SessionOptions();
 
         vector<string> m_strInputNames, m_strOutputNames;
-        vector<const char*> m_szInputNames;
-        vector<const char*> m_szOutputNames;
-        //string m_strInputName, m_strInputNameLen;
-        //string m_strOutputName, m_strOutputNameLen;
+        vector<const char *> m_szInputNames;
+        vector<const char *> m_szOutputNames;
 
     public:
-        ModelImp(const char* path, int nNumThread=0);
-        ~ModelImp();
-        void reset();
-        string forward_chunk(float* din, int len, int flag);
-        string forward(float* din, int len, int flag);
-        string rescoring();
-
+        explicit ModelImp(const char *path, const int &nNumThread = 0);
+        ~ModelImp() override;
+        void reset() override;
+        string forward(float *din, int len, int flag) override;
     };
 
 } // namespace paraformer

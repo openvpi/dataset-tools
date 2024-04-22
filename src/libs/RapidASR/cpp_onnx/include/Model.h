@@ -4,13 +4,11 @@
 #include <string>
 
 class Model {
-  public:
-    virtual ~Model(){};
+public:
+    virtual ~Model() = default;
     virtual void reset() = 0;
-    virtual std::string forward_chunk(float *din, int len, int flag) = 0;
     virtual std::string forward(float *din, int len, int flag) = 0;
-    virtual std::string rescoring() = 0;
 };
 
-Model *create_model(const char *path,int nThread=0);
+Model *create_model(const char *path, const int &nThread = 0);
 #endif

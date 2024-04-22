@@ -5,17 +5,15 @@
 #include <vector>
 
 class Vocab {
-  private:
+private:
     std::vector<std::string> vocab;
-    bool isChinese(std::string ch);
-    bool isEnglish(std::string ch);
+    static bool isChinese(const std::string &ch);
 
-  public:
-    Vocab(const char *filename);
+public:
+    explicit Vocab(const char *filename);
     ~Vocab();
-    int size();
-    std::string vector2string(std::vector<int> in);
-    std::string vector2stringV2(std::vector<int> in);
+    int size() const;
+    std::string vector2stringV2(const std::vector<int> &in) const;
 };
 
 #endif

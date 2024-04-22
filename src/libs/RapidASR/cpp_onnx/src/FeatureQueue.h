@@ -1,28 +1,24 @@
-
 #ifndef FEATUREQUEUE_H
 #define FEATUREQUEUE_H
 
 #include "Tensor.h"
 #include <queue>
-#include <stdint.h>
-using namespace std;
-
 
 class FeatureQueue {
-  private:
+private:
     queue<Tensor<float> *> feature_queue;
     Tensor<float> *buff;
     int buff_idx;
     int window_size;
 
-  public:
+public:
     FeatureQueue();
     ~FeatureQueue();
-    void reinit(int size);
+    void reinit(const int &size);
     void reset();
-    void push(float *din, int flag);
+    void push(const float *din, const int &flag);
     Tensor<float> *pop();
-    int size();
+    int size() const;
 };
 
 #endif

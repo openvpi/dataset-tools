@@ -1,8 +1,8 @@
 #include "librapidasrapi.h"
 
-#include <Model.h>
-#include <Audio.h>
 #include "commonfunc.h"
+#include <Audio.h>
+#include <Model.h>
 
 #ifdef __cplusplus
 //  void __attribute__ ((visibility ("default"))) fun();
@@ -11,14 +11,14 @@ extern "C" {
 
 
 // APIs for qmasr
-_RAPIDASRAPI RPASR_HANDLE RapidAsrInit(const char *szModelDir, int nThreadNum) {
-    Model *mm = create_model(szModelDir, nThreadNum);
+_RAPIDASRAPI RPASR_HANDLE RapidAsrInit(const char *szModelDir, const int &nThread) {
+    Model *mm = create_model(szModelDir, nThread);
     return mm;
 }
 
-_RAPIDASRAPI RPASR_RESULT RapidAsrRecogBuffer(RPASR_HANDLE handle, const char *szBuf, int nLen,
-                                              QM_CALLBACK fnCallback) {
-    auto *pRecogObj = (Model *) handle;
+_RAPIDASRAPI RPASR_RESULT RapidAsrRecogBuffer(const RPASR_HANDLE &handle, const char *szBuf, const int &nLen,
+                                              const QM_CALLBACK &fnCallback) {
+    auto *pRecogObj = static_cast<Model *>(handle);
     if (!pRecogObj)
         return nullptr;
 
@@ -44,28 +44,27 @@ _RAPIDASRAPI RPASR_RESULT RapidAsrRecogBuffer(RPASR_HANDLE handle, const char *s
     return pResult;
 }
 
-_RAPIDASRAPI const char *RapidAsrGetResult(RPASR_RESULT Result, int nIndex) {
-    const RPASR_RECOG_RESULT *pResult = (RPASR_RECOG_RESULT *) Result;
+_RAPIDASRAPI const char *RapidAsrGetResult(const RPASR_RESULT &Result) {
+    const RPASR_RECOG_RESULT *pResult = static_cast<RPASR_RECOG_RESULT *>(Result);
     if (!pResult)
         return nullptr;
 
     return pResult->msg.c_str();
 }
 
-_RAPIDASRAPI void RapidAsrFreeResult(RPASR_RESULT Result) {
+_RAPIDASRAPI void RapidAsrFreeResult(const RPASR_RESULT &Result) {
     if (Result)
-        delete (RPASR_RECOG_RESULT *) Result;
+        delete static_cast<RPASR_RECOG_RESULT *>(Result);
 }
 
-_RAPIDASRAPI void RapidAsrUninit(RPASR_HANDLE handle) {
-    const Model *pRecogObj = (Model *) handle;
+_RAPIDASRAPI void RapidAsrUninit(const RPASR_HANDLE &handle) {
+    const Model *pRecogObj = static_cast<Model *>(handle);
 
     if (!pRecogObj)
         return;
 
     delete pRecogObj;
 }
-
 
 #ifdef __cplusplus
 }

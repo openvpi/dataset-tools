@@ -3,7 +3,7 @@
 #include "predefine_coe.h"
 #include <ComDefine.h>
 
-FeatureExtract::FeatureExtract(int mode) : mode(mode) {
+FeatureExtract::FeatureExtract(const int &mode) : mode(mode) {
     fftw_init();
 }
 
