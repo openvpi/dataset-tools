@@ -115,7 +115,7 @@ namespace LyricFA {
         virtual_io.write = qvio_write;
         virtual_io.tell = qvio_tell;
 
-        SndfileHandle outBuf(virtual_io, &qvio, SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
+        SndfileHandle outBuf("test_out.wav", SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
         if (!outBuf) {
             qDebug() << "Failed to open output file:" << sf_strerror(nullptr);
             return {};
@@ -127,12 +127,11 @@ namespace LyricFA {
         // 重采样并写入输出文件
         double *op0;
         std::vector<double> tmp(srcHandle.samplerate() * srcHandle.channels());
-        qlonglong total = 0;
+        double total = 0;
 
         // 逐块读取、重采样并写入输出文件
         while (true) {
-            const auto bytesRead = srcHandle.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
-            if (bytesRead <= 0) {
+            if (srcHandle.read(tmp.data(), static_cast<sf_count_t>(tmp.size())) <= 0) {
                 break; // 读取结束
             }
 
@@ -146,7 +145,7 @@ namespace LyricFA {
             const int outSamples = resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
 
             // 写入输出文件
-            const auto bytesWritten = outBuf.write(op0, outSamples);
+            const auto bytesWritten = static_cast<double>(outBuf.write(op0, outSamples));
 
             if (bytesWritten != outSamples) {
                 qDebug() << "Error writing to output file";
@@ -154,6 +153,14 @@ namespace LyricFA {
             }
             total += bytesWritten;
         }
+
+        if (const int endSize =
+                static_cast<int>(static_cast<double>(srcHandle.frames()) / srcHandle.samplerate() * 16000.0 - total)) {
+            std::vector<double> inputBuf(tmp.size() / srcHandle.channels());
+            resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
+            outBuf.write(op0, endSize);
+        }
+
         return qvio;
     }
 } // LyricFA
