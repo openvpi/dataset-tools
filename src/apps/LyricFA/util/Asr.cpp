@@ -115,7 +115,7 @@ namespace LyricFA {
         virtual_io.write = qvio_write;
         virtual_io.tell = qvio_tell;
 
-        SndfileHandle outBuf("test_out.wav", SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
+        SndfileHandle outBuf(virtual_io, &qvio, SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
         if (!outBuf) {
             qDebug() << "Failed to open output file:" << sf_strerror(nullptr);
             return {};
