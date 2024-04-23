@@ -67,7 +67,7 @@ namespace LyricFA {
             }
 
             FunAsr::Audio audio(1);
-            audio.loadwav(sfChunk.data.byteArray.constData(), sfChunk.size());
+            audio.loadwav(sfChunk.constData(), sfChunk.size());
 
             float *buff;
             int len;

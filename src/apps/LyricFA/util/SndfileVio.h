@@ -29,10 +29,10 @@ namespace LyricFA {
             vio.tell = qvio_tell;
         }
 
-        [[nodiscard]] int size()const {
+        [[nodiscard]] int size() const {
             return data.byteArray.size();
         }
-        [[nodiscard]] QByteArray constData() const {
+        [[nodiscard]] const char *constData() const {
             return data.byteArray.constData();
         }
     };
