@@ -20,6 +20,19 @@ namespace FunAsr {
         }
     }
 
+    Vocab::Vocab(const wchar_t *filename) {
+        std::ifstream in(filename);
+        std::string line;
+
+        if (in) // 有该文件
+        {
+            while (getline(in, line)) // line中不包括每行的换行符
+            {
+                vocab.push_back(line);
+            }
+        }
+    }
+
     Vocab::~Vocab() = default;
 
     int str2int(const std::string &str) {

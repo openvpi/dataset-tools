@@ -12,6 +12,7 @@ namespace FunAsr {
 
     public:
         explicit Vocab(const char *filename);
+        explicit Vocab(const wchar_t *filename);
         ~Vocab();
         int size() const;
         std::string vector2stringV2(const std::vector<int> &in) const;

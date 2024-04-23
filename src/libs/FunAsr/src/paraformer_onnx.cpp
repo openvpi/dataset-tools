@@ -6,6 +6,8 @@
 #include "predefine_coe.h"
 #include "util.h"
 
+#include <syscmdline/system.h>
+
 namespace FunAsr {
     ModelImp::ModelImp(const char *path, const int &nNumThread) {
         std::string model_path = pathAppend(path, "model.onnx");
@@ -17,10 +19,13 @@ namespace FunAsr {
         sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
 #ifdef _WIN32
-        const std::wstring wstrPath = strToWstr(model_path);
+        const std::wstring wstrPath = SysCmdLine::utf8ToWide(model_path);
         m_session = new Ort::Session(env, wstrPath.c_str(), sessionOptions);
+        const std::wstring wstrVocabPath = SysCmdLine::utf8ToWide(vocab_path);
+        vocab = new Vocab(wstrVocabPath.c_str());
 #else
         m_session = new Ort::Session(env, model_path.c_str(), sessionOptions);
+        vocab = new Vocab(vocab_path.c_str());
 #endif
 
         std::string strName;
@@ -38,7 +43,6 @@ namespace FunAsr {
             m_szInputNames.push_back(item.c_str());
         for (auto &item : m_strOutputNames)
             m_szOutputNames.push_back(item.c_str());
-        vocab = new Vocab(vocab_path.c_str());
     }
 
     ModelImp::~ModelImp() {
