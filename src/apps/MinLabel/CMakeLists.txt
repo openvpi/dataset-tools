@@ -12,7 +12,7 @@ find_package(mecab CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
-        CkIKg2p mecab::mecab
+        IKg2p mecab::mecab
         QMCore SDLPlayback FFmpegDecoder
         qastool::core
 )

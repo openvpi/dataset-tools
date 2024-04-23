@@ -3,13 +3,12 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QDebug>
-#include <QMessageBox>
 #include <QRegularExpression>
 #include <QTextCodec>
 
 TextWidget::TextWidget(QWidget *parent)
-    : QWidget(parent), g2p_man(new IKg2p::Mandarin()), g2p_jp(new IKg2p::JpG2p()), g2p_en(new IKg2p::EnG2p()),
-      g2p_canton(new IKg2p::Cantonese()), mecabYomi(mecabInit("mecabDict", "yomi")),
+    : QWidget(parent), g2p_man(new IKg2p::MandarinG2p()), g2p_jp(new IKg2p::JapaneseG2p()),
+      g2p_canton(new IKg2p::CantoneseG2p()), mecabYomi(mecabInit("mecabDict", "yomi")),
       mecabWakati(mecabInit("mecabDict", "wakati")) {
     wordsText = new QLineEdit();
     wordsText->setPlaceholderText("Enter mandarin here...");
@@ -37,7 +36,7 @@ TextWidget::TextWidget(QWidget *parent)
     appendButton->setProperty("type", "user");
 
     languageCombo = new QComboBox();
-    languageCombo->addItems({"pinyin", "romaji", "arpabet(test)", "cantonese(test)"});
+    languageCombo->addItems({"pinyin", "romaji", "cantonese"});
 
     optionsLayout = new QHBoxLayout();
 
@@ -89,8 +88,7 @@ TextWidget::TextWidget(QWidget *parent)
     connect(replaceAction, &QAction::triggered, this, &TextWidget::_q_replaceButtonClicked);
 }
 
-TextWidget::~TextWidget() {
-}
+TextWidget::~TextWidget() = default;
 
 QString TextWidget::sentence() const {
     QString words = wordsText->text();
@@ -100,36 +98,37 @@ QString TextWidget::sentence() const {
 }
 
 void TextWidget::_q_pasteButtonClicked() const {
-    auto board = QApplication::clipboard();
-    QString text = board->text();
+    const auto board = QApplication::clipboard();
+    const QString text = board->text();
     if (!text.isEmpty()) {
         wordsText->setText(text);
     }
 }
 
 QString filterSokuon(const QString &input) {
-    QRegularExpression regex("[っッ]");
+    static QRegularExpression regex("[っッ]");
     QString result = input;
     return result.replace(regex, "");
 }
 
-void TextWidget::_q_replaceButtonClicked() {
+void TextWidget::_q_replaceButtonClicked() const {
     QString str;
-    QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
+    const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p_man->convert(sentence(), manTone->isChecked(), covertNum->isChecked(),
-                                   cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_man
+                      ->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
+                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
+                      .join(' ');
             break;
         case 1:
-            str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
+            str = g2p_jp->kanaToRomaji(mecabConvert(jpInput), doubleConsonant->isChecked()).join(' ');
             break;
         case 2:
-            str = g2p_en->word2arpabet(sentence(), removeArpabetNum->isChecked());
-            break;
-        case 3:
-            str = g2p_canton->convert(sentence(), canTone->isChecked(), covertNum->isChecked(),
-                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_canton
+                      ->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
+                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
+                      .join(' ');
             break;
         default:
             break;
@@ -137,29 +136,30 @@ void TextWidget::_q_replaceButtonClicked() {
     contentText->setPlainText(str.trimmed().simplified());
 }
 
-void TextWidget::_q_appendButtonClicked() {
+void TextWidget::_q_appendButtonClicked() const {
     QString str;
-    QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
+    const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p_man->convert(sentence(), manTone->isChecked(), covertNum->isChecked(),
-                                   cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_man
+                      ->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
+                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
+                      .join(' ');
             break;
         case 1:
-            str = g2p_jp->kana2romaji(mecabConvert(jpInput), doubleConsonant->isChecked());
+            str = g2p_jp->kanaToRomaji(mecabConvert(jpInput), doubleConsonant->isChecked()).join(' ');
             break;
         case 2:
-            str = g2p_en->word2arpabet(sentence(), removeArpabetNum->isChecked());
-            break;
-        case 3:
-            str = g2p_canton->convert(sentence(), canTone->isChecked(), covertNum->isChecked(),
-                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_canton
+                      ->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
+                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
+                      .join(' ');
             break;
         default:
             break;
     }
 
-    QString org = contentText->toPlainText();
+    const QString org = contentText->toPlainText();
     contentText->setPlainText((org.isEmpty() ? "" : org + " ") + str.trimmed().simplified());
 }
 
@@ -167,11 +167,10 @@ void TextWidget::_q_onLanguageComboIndexChanged() {
     static QMap<QString, QList<QCheckBox *>> optionMap = {
         {"pinyin",          {manTone, covertNum, cleanRes} },
         {"romaji",          {removeSokuon, doubleConsonant}},
-        {"arpabet(test)",   {removeArpabetNum}             },
-        {"cantonese(test)", {canTone, covertNum, cleanRes} }
+        {"cantonese", {canTone, covertNum, cleanRes} }
     };
 
-    QString selectedLanguage = languageCombo->currentText();
+    const QString selectedLanguage = languageCombo->currentText();
     for (auto it = optionMap.begin(); it != optionMap.end(); ++it) {
         for (QCheckBox *control : it.value()) {
             control->hide();
@@ -185,18 +184,18 @@ void TextWidget::_q_onLanguageComboIndexChanged() {
 }
 
 MeCab::Tagger *TextWidget::mecabInit(const QString &path, const QString &format) {
-    QString args = "-O" + format + " -d " + path + " -r" + path + "/mecabrc";
+    const QString args = "-O" + format + " -d " + path + " -r" + path + "/mecabrc";
     return MeCab::createTagger(args.toUtf8());
 }
 
-QString TextWidget::mecabConvert(const QString &input) {
-    QTextCodec *codec = QTextCodec::codecForName("GBK");
-    QByteArray mecabRes = mecabWakati->parse(codec->fromUnicode(input));
+QString TextWidget::mecabConvert(const QString &input) const {
+    const QTextCodec *codec = QTextCodec::codecForName("GBK");
+    const QByteArray mecabRes = mecabWakati->parse(codec->fromUnicode(input));
 
     QStringList out;
     foreach (auto &it, mecabRes.split(' ')) {
         QString res = codec->toUnicode(mecabYomi->parse(it));
-        QStringList item = res.split("\t");
+        const QStringList item = res.split("\t");
         if (item.size() > 1) {
             out.append(item[1]);
         } else if (!item.empty() && item[0] != "") {

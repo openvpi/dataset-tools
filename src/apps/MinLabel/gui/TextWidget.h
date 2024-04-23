@@ -11,13 +11,12 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-#include "cantonese.h"
-#include "eng2p.h"
-#include "jpg2p.h"
-#include "mandarin.h"
+#include "CantoneseG2p.h"
+#include "JapaneseG2p.h"
+#include "MandarinG2p.h"
 
 #include "mecab/mecab.h"
-class TextWidget : public QWidget {
+class TextWidget final : public QWidget {
     Q_OBJECT
 public:
     explicit TextWidget(QWidget *parent = nullptr);
@@ -49,21 +48,20 @@ protected:
     QHBoxLayout *optionsLayout;
     QVBoxLayout *mainLayout;
 
-    QScopedPointer<IKg2p::Mandarin> g2p_man;
-    QScopedPointer<IKg2p::Cantonese> g2p_canton;
-    QScopedPointer<IKg2p::EnG2p> g2p_en;
-    QScopedPointer<IKg2p::JpG2p> g2p_jp;
+    QScopedPointer<IKg2p::MandarinG2p> g2p_man;
+    QScopedPointer<IKg2p::JapaneseG2p> g2p_jp;
+    QScopedPointer<IKg2p::CantoneseG2p> g2p_canton;
 
 private:
     MeCab::Tagger *mecabYomi;
     MeCab::Tagger *mecabWakati;
-    QString sentence() const;
+    [[nodiscard]] QString sentence() const;
     static MeCab::Tagger *mecabInit(const QString &path = "mecabDict", const QString &format = "wakati");
-    QString mecabConvert(const QString &input);
+    [[nodiscard]] QString mecabConvert(const QString &input) const;
 
     void _q_pasteButtonClicked() const;
-    void _q_replaceButtonClicked();
-    void _q_appendButtonClicked();
+    void _q_replaceButtonClicked() const;
+    void _q_appendButtonClicked() const;
     void _q_onLanguageComboIndexChanged();
 };
 

@@ -4,7 +4,8 @@
 #include <QPlainTextEdit>
 #include <QString>
 
-#include <mandarin.h>
+#include <MandarinG2p.h>
+
 namespace LyricFA {
     class MatchLyric {
     public:
@@ -22,7 +23,7 @@ namespace LyricFA {
         };
 
         QMap<QString, lyricInfo> m_lyricDict;
-        IKg2p::Mandarin *m_mandarin;
+        IKg2p::MandarinG2p *m_mandarin;
     };
 }
 #endif // MATCHLYRIC_H

@@ -17,7 +17,7 @@ namespace LyricFA {
 #else
         IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/dict");
 #endif
-        m_mandarin = new IKg2p::Mandarin();
+        m_mandarin = new IKg2p::MandarinG2p();
     }
 
     MatchLyric::~MatchLyric() = default;
@@ -59,10 +59,9 @@ namespace LyricFA {
         }
 
         for (const auto &lyricPath : lyricPaths) {
-            const auto lyric_name = QFileInfo(lyricPath).completeBaseName();
-            const auto text_list = IKg2p::splitStringToList(get_lyrics_from_txt(lyricPath));
-            m_lyricDict[lyric_name] =
-                lyricInfo{text_list, m_mandarin->convert(text_list.join(' '), false, false).split(' ')};
+            const auto lyricName = QFileInfo(lyricPath).completeBaseName();
+            const auto textList = IKg2p::splitString(get_lyrics_from_txt(lyricPath));
+            m_lyricDict[lyricName] = lyricInfo{textList, m_mandarin->hanziToPinyin(textList.join(' '), false, false)};
         }
     }
 
@@ -76,13 +75,13 @@ namespace LyricFA {
                 msg = "filename: Asr res is empty.";
                 return false;
             }
-            const auto text_list = m_lyricDict[lyricName].text;
-            const auto pinyin_list = m_lyricDict[lyricName].pinyin;
+            const auto textList = m_lyricDict[lyricName].text;
+            const auto pinyinList = m_lyricDict[lyricName].pinyin;
 
-            const auto asrPinyins = m_mandarin->convert(asr_list, false, false).split(' ');
+            const auto asrPinyins = m_mandarin->hanziToPinyin(asr_list, false, false);
             if (!asrPinyins.isEmpty()) {
                 auto faRes =
-                    LevenshteinDistance::find_similar_substrings(asrPinyins, pinyin_list, text_list, true, true, true);
+                    LevenshteinDistance::find_similar_substrings(asrPinyins, pinyinList, textList, true, true, true);
 
                 QStringList asr_rect_list;
                 QStringList asr_rect_diff;
@@ -93,7 +92,7 @@ namespace LyricFA {
                     const auto matchPinyin = faRes.match_pinyin[i];
 
                     if (asrPinyin != matchPinyin) {
-                        QStringList candidate = m_mandarin->getDefaultPinyin(text);
+                        const QStringList candidate = m_mandarin->getDefaultPinyin(text);
                         if (candidate.contains(asrPinyin)) {
                             asr_rect_list.append(asrPinyin);
                             asr_rect_diff.append("(" + matchPinyin + "->" + asrPinyin + ", " +

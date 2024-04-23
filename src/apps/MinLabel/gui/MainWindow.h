@@ -25,15 +25,13 @@
 #include "Api/IAudioDecoder.h"
 #include "Api/IAudioPlayback.h"
 
-class MainWindow : public QMainWindow {
+class MainWindow final: public QMainWindow {
     Q_OBJECT
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
 protected:
-    IKg2p::ZhG2p *g2p_zh;
-
     QMenu *fileMenu;
     QAction *browseAction;
     QAction *covertAction;
