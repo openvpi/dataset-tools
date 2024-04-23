@@ -38,6 +38,7 @@ You need to install Qt libraries first. (Tested on Qt 5.15.2 only)
 #### Windows
 
 ```sh
+git submodule init --recursive
 cd /D src/libs
 cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
@@ -59,6 +60,7 @@ vcpkg install ^
 #### Unix
 
 ```sh
+git submodule init --recursive
 cd /D src/libs
 cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
