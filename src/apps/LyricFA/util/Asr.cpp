@@ -9,52 +9,12 @@
 
 #include <Audio.h>
 
+#include "Slicer.h"
+
 namespace LyricFA {
-    sf_count_t qvio_get_filelen(void *user_data) {
-        const auto *qvio = static_cast<QVIO *>(user_data);
-        return qvio->byteArray.size();
-    }
 
-    sf_count_t qvio_seek(sf_count_t offset, int whence, void *user_data) {
-        auto *qvio = static_cast<QVIO *>(user_data);
-        switch (whence) {
-            case SEEK_SET:
-                qvio->seek = offset;
-                break;
-            case SEEK_CUR:
-                qvio->seek += offset;
-                break;
-            case SEEK_END:
-                qvio->seek = qvio->byteArray.size() + offset;
-                break;
-            default:
-                break;
-        }
-        return qvio->seek;
-    }
 
-    sf_count_t qvio_read(void *ptr, sf_count_t count, void *user_data) {
-        auto *qvio = static_cast<QVIO *>(user_data);
-        const sf_count_t remainingBytes = qvio->byteArray.size() - qvio->seek;
-        const sf_count_t bytesToRead = min(count, remainingBytes);
-        if (bytesToRead > 0) {
-            std::memcpy(ptr, qvio->byteArray.constData() + qvio->seek, bytesToRead);
-            qvio->seek += bytesToRead;
-        }
-        return bytesToRead;
-    }
 
-    sf_count_t qvio_write(const void *ptr, sf_count_t count, void *user_data) {
-        auto *qvio = static_cast<QVIO *>(user_data);
-        auto *data = static_cast<const char *>(ptr);
-        qvio->byteArray.append(data, static_cast<int>(count));
-        return count;
-    }
-
-    sf_count_t qvio_tell(void *user_data) {
-        const auto *qvio = static_cast<QVIO *>(user_data);
-        return qvio->seek;
-    }
 
     Asr::Asr(const QString &modelPath) {
         m_asrHandle = FunAsr::create_model(modelPath.toStdString().c_str(), 4);
@@ -69,22 +29,54 @@ namespace LyricFA {
         delete m_asrHandle;
     }
 
-    bool Asr::recognize(const QVIO &qvio, QString &msg) const {
-        if ((qvio.byteArray.size() - 44) / 2 > 40 * 16000) {
-            msg = "Audio exceeds 40s, please split and reprocess.";
+    bool Asr::recognize(SF_VIO sf_vio, QString &msg) const {
+        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
+        Slicer slicer(&sf, -40, 5000, 300, 10, 1000);
+
+        const auto chunks = slicer.slice();
+
+        if (chunks.empty()) {
+            msg = "slicer: no audio chunks for output!";
             return false;
         }
 
-        FunAsr::Audio audio(1);
-        audio.loadwav(qvio.byteArray.constData(), qvio.byteArray.size());
-        // audio.split();
+        const auto frames = sf.frames();
+        const auto totalSize = frames;
 
-        float *buff;
-        int len;
-        int flag = 0;
-        while (audio.fetch(buff, len, flag) > 0) {
-            m_asrHandle->reset();
-            msg += QString::fromStdString(m_asrHandle->forward(buff, len, flag));
+        int idx = 0;
+        for (const auto &chunk : chunks) {
+            const auto beginFrame = chunk.first;
+            const auto endFrame = chunk.second;
+            const auto frameCount = endFrame - beginFrame;
+            if ((frameCount <= 0) || (beginFrame > totalSize) || (endFrame > totalSize) || (beginFrame < 0) ||
+                (endFrame < 0)) {
+                continue;
+            }
+
+            SF_VIO sfChunk;
+            auto wf = SndfileHandle(sfChunk.vio, &sfChunk.data, SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
+            sf.seek(beginFrame, SEEK_SET);
+            std::vector<double> tmp(frameCount);
+            sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+            const auto bytesWritten = wf.write(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+
+            if (bytesWritten > 60 * 16000) {
+                msg = "The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
+                      "segment and rerun the recognition program.";
+                return false;
+            }
+
+            FunAsr::Audio audio(1);
+            audio.loadwav(sfChunk.data.byteArray.constData(), sfChunk.size());
+
+            float *buff;
+            int len;
+            int flag = 0;
+            while (audio.fetch(buff, len, flag) > 0) {
+                m_asrHandle->reset();
+                msg += QString::fromStdString(m_asrHandle->forward(buff, len, flag));
+            }
+            idx++;
         }
 
         if (msg.isEmpty()) {
@@ -98,7 +90,7 @@ namespace LyricFA {
         return recognize(resample(filename), msg);
     }
 
-    QVIO Asr::resample(const QString &filename) {
+    SF_VIO Asr::resample(const QString &filename) {
         // 读取WAV文件头信息
         SndfileHandle srcHandle(filename.toLocal8Bit(), SFM_READ, SF_FORMAT_WAV);
         if (!srcHandle) {
@@ -107,15 +99,8 @@ namespace LyricFA {
         }
 
         // 临时文件
-        QVIO qvio;
-        SF_VIRTUAL_IO virtual_io;
-        virtual_io.get_filelen = qvio_get_filelen;
-        virtual_io.seek = qvio_seek;
-        virtual_io.read = qvio_read;
-        virtual_io.write = qvio_write;
-        virtual_io.tell = qvio_tell;
-
-        SndfileHandle outBuf(virtual_io, &qvio, SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
+        SF_VIO sf_vio;
+        SndfileHandle outBuf(sf_vio.vio, &sf_vio.data, SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
         if (!outBuf) {
             qDebug() << "Failed to open output file:" << sf_strerror(nullptr);
             return {};
@@ -164,6 +149,6 @@ namespace LyricFA {
             outBuf.write(op0, endSize);
         }
 
-        return qvio;
+        return sf_vio;
     }
 } // LyricFA

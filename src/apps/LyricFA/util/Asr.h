@@ -5,11 +5,9 @@
 
 #include <Model.h>
 
+#include "SndfileVio.h"
+
 namespace LyricFA {
-    struct QVIO {
-        qint64 seek{};
-        QByteArray byteArray;
-    };
 
     class Asr {
     public:
@@ -17,10 +15,10 @@ namespace LyricFA {
         ~Asr();
 
         [[nodiscard]] bool recognize(const QString &filename, QString &msg) const;
-        [[nodiscard]] bool recognize(const QVIO &qvio, QString &msg) const;
+        [[nodiscard]] bool recognize(SF_VIO sf_vio, QString &msg) const;
 
     private:
-        [[nodiscard]] static QVIO resample(const QString &filename);
+        [[nodiscard]] static SF_VIO resample(const QString &filename);
 
         FunAsr::Model *m_asrHandle;
     };
