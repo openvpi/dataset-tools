@@ -131,7 +131,8 @@ namespace LyricFA {
 
         // 逐块读取、重采样并写入输出文件
         while (true) {
-            if (srcHandle.read(tmp.data(), static_cast<sf_count_t>(tmp.size())) <= 0) {
+            const auto bytesRead = srcHandle.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+            if (bytesRead <= 0) {
                 break; // 读取结束
             }
 
@@ -142,7 +143,8 @@ namespace LyricFA {
             }
 
             // 处理重采样
-            const int outSamples = resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
+            const int outSamples =
+                resampler.process(inputBuf.data(), static_cast<int>(bytesRead) / srcHandle.channels(), op0);
 
             // 写入输出文件
             const auto bytesWritten = static_cast<double>(outBuf.write(op0, outSamples));
@@ -154,8 +156,9 @@ namespace LyricFA {
             total += bytesWritten;
         }
 
-        if (const int endSize =
-                static_cast<int>(static_cast<double>(srcHandle.frames()) / srcHandle.samplerate() * 16000.0 - total)) {
+        if (const int endSize = static_cast<int>(static_cast<double>(srcHandle.frames()) /
+                                                     static_cast<double>(srcHandle.samplerate()) * 16000.0 -
+                                                 total)) {
             std::vector<double> inputBuf(tmp.size() / srcHandle.channels());
             resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
             outBuf.write(op0, endSize);
