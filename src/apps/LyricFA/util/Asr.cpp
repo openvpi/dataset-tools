@@ -3,6 +3,7 @@
 #include <QBuffer>
 #include <QDebug>
 #include <QFile>
+#include <QMessageBox>
 
 #include <CDSPResampler.h>
 #include <sndfile.hh>
@@ -13,15 +14,11 @@
 
 namespace LyricFA {
 
-
-
-
     Asr::Asr(const QString &modelPath) {
-        m_asrHandle = FunAsr::create_model(modelPath.toStdString().c_str(), 4);
+        m_asrHandle = FunAsr::create_model(modelPath.toLocal8Bit().toStdString().c_str(), 4);
 
         if (!m_asrHandle) {
-            printf("Cannot load ASR Model, there must be files model.onnx and vocab.txt");
-            exit(-1);
+            qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";
         }
     }
 
