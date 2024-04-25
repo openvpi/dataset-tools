@@ -61,7 +61,7 @@ vcpkg install ^
 
 ```sh
 git submodule init --recursive
-cd /D src/libs
+cd src/libs
 cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
 cd ../../

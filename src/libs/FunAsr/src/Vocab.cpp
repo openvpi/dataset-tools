@@ -15,11 +15,15 @@ namespace FunAsr {
         {
             while (getline(in, line)) // line中不包括每行的换行符
             {
+                // handle CRLF line endings on Linux and macOS
+                if (!line.empty() && line[line.size() - 1] == '\r')
+                    line.erase(line.size() - 1);
                 vocab.push_back(line);
             }
         }
     }
 
+#ifdef _WIN32
     Vocab::Vocab(const wchar_t *filename) {
         std::ifstream in(filename);
         std::string line;
@@ -32,6 +36,7 @@ namespace FunAsr {
             }
         }
     }
+#endif
 
     Vocab::~Vocab() = default;
 

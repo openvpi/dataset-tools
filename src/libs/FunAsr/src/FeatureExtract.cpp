@@ -1,5 +1,7 @@
 #include "FeatureExtract.h"
 
+#include <cmath>
+
 #include "predefine_coe.h"
 #include <ComDefine.h>
 

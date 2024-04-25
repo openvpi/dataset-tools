@@ -1,5 +1,7 @@
 #include "util.h"
 
+#include <cmath>
+
 #include "alignedmem.h"
 namespace FunAsr {
     float *loadparams(const char *filename) {
