@@ -93,11 +93,17 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
 
     // Stored DS file data
+    struct MiniPhonome {
+        QString ph;
+        double begin;
+        double duration;
+    };
     struct MiniNote {
         double duration;
         int pitch;    // Semitone from A0
         double cents; // nan if no cent deviation
         QString text;
+        QVector<MiniPhonome> phonemes;
         bool isSlur, isRest;
         GlideStyle glide;
 
@@ -128,6 +134,7 @@ protected:
     bool clampPitchToF0Bounds = true; // Also affects scroll bar range // TODO: INCOMPLETE
     bool snapToKey = true;
     bool showPitchTextOverlay = false;
+    bool showPhonemeTexts = true;
 
     bool hasError;
     QString errorStatusText;
@@ -156,6 +163,7 @@ protected:
     QAction *bgMenu_OptionPrompt;
     QAction *bgMenuSnapByDefault;
     QAction *bgMenuShowPitchTextOverlay;
+    QAction *bgMenuShowPhonemeTexts;
     QAction *bgMenu_ModePrompt;
     QAction *bgMenuModeNote;
     QAction *bgMenuModeGlide;
