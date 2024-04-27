@@ -78,15 +78,28 @@ elseif(APPLE)
         ")
     endforeach()
 
-    foreach(_target ${_targets})
-        install(CODE "
-            execute_process(
-                COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
-                \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>.app\"
-                -verbose=0
-                -always-overwrite
-                WORKING_DIRECTORY \"${_install_dir}\"
-            )
-        ")
-    endforeach()
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        foreach(_target ${_targets})
+            install(CODE "
+                execute_process(
+                    COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
+                    \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>.app\"
+                    -verbose=0
+                    -codesign=-
+                    WORKING_DIRECTORY \"${_install_dir}\"
+                )
+            ")
+        endforeach()
+    else()
+        foreach(_target ${_targets})
+            install(CODE "
+                execute_process(
+                    COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
+                    \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>.app\"
+                    -verbose=0
+                    WORKING_DIRECTORY \"${_install_dir}\"
+                )
+            ")
+        endforeach()
+    endif()
 endif()

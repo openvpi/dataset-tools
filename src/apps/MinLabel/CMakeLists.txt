@@ -33,6 +33,10 @@ if (WIN32)
     endif ()
 endif ()
 
+if (APPLE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE TRUE)
+endif ()
+
 set(DIRECTORIES_TO_COPY
         dict
         mecabDict
@@ -41,8 +45,6 @@ set(DIRECTORIES_TO_COPY
 
 foreach (dir ${DIRECTORIES_TO_COPY})
     if (APPLE)
-        set_target_properties(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE TRUE)
-
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND
                 ${CMAKE_COMMAND} -E copy_directory

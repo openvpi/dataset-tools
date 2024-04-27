@@ -38,8 +38,21 @@ if (WIN32)
     endif ()
 endif ()
 
+set(DIRECTORIES_TO_COPY
+        dict
+)
+
 if (APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE TRUE)
+
+    foreach (dir ${DIRECTORIES_TO_COPY})
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                COMMAND
+                ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_BINARY_DIR}/bin/${dir}
+                $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}>/Resources/${dir}
+        )
+    endforeach ()
 endif ()
 
 set_property(TARGET DeployedTargets APPEND PROPERTY TARGETS ${PROJECT_NAME})
