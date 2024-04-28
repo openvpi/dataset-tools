@@ -1,6 +1,8 @@
 #ifndef ASR_H
 #define ASR_H
 
+#include <memory>
+
 #include <QString>
 
 #include <Model.h>
@@ -20,7 +22,7 @@ namespace LyricFA {
     private:
         [[nodiscard]] static SF_VIO resample(const QString &filename);
 
-        FunAsr::Model *m_asrHandle;
+        std::unique_ptr<FunAsr::Model> m_asrHandle;
     };
 } // LyricFA
 

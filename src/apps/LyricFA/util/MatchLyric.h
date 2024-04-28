@@ -1,6 +1,8 @@
 #ifndef MATCHLYRIC_H
 #define MATCHLYRIC_H
 
+#include <memory>
+
 #include <QPlainTextEdit>
 #include <QString>
 
@@ -23,7 +25,7 @@ namespace LyricFA {
         };
 
         QMap<QString, lyricInfo> m_lyricDict;
-        IKg2p::MandarinG2p *m_mandarin;
+        std::unique_ptr<IKg2p::MandarinG2p> m_mandarin;
     };
 }
 #endif // MATCHLYRIC_H

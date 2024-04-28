@@ -16,7 +16,13 @@
 
 namespace LyricFA {
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_match(new MatchLyric()) {
-        const QString modelFolder = QApplication::applicationDirPath() + QDir::separator() + "model";
+        const QString modelFolder = QDir::cleanPath(
+#ifdef Q_OS_MAC
+            QApplication::applicationDirPath() + "/../Resources/model"
+#else
+            QApplication::applicationDirPath() + QDir::separator() + "model"
+#endif
+        );
         if (QDir(modelFolder).exists()) {
             const auto modelPath = modelFolder + QDir::separator() + "model.onnx";
             const auto vocabPath = modelFolder + QDir::separator() + "vocab.txt";
@@ -27,8 +33,13 @@ namespace LyricFA {
             else
                 m_asr = new Asr(modelFolder);
         } else {
+#ifdef Q_OS_MAC
+            QMessageBox::information(this, "Warning",
+                                     "Please read ReadMe.md and download asrModel to unzip to app bundle's Resources directory.");
+#else
             QMessageBox::information(this, "Warning",
                                      "Please read ReadMe.md and download asrModel to unzip to the root directory.");
+#endif
         }
 
         m_threadpool = new QThreadPool(this);

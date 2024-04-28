@@ -5,7 +5,7 @@
 #include <QApplication>
 #include <QMessageBox>
 
-#include "g2pglobal.h"
+#include "G2pglobal.h"
 
 #ifdef Q_OS_WINDOWS
 #    include <Windows.h>

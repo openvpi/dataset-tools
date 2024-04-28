@@ -6,8 +6,8 @@
 
 #include <sndfile.hh>
 
-#include "Mathutils.h"
-#include "slicer.h"
+#include "MathUtils.h"
+#include "Slicer.h"
 
 template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end);

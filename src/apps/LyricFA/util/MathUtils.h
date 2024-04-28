@@ -1,5 +1,5 @@
-#ifndef MATHUTILS_H
-#define MATHUTILS_H
+#ifndef LYRICFA_MATHUTILS_H
+#define LYRICFA_MATHUTILS_H
 
 template<class T>
 inline T divIntRound(T n, T d);
@@ -15,4 +15,4 @@ inline T divIntRound(T n, T d) {
                                ((n + (d / 2)) / d);
 }
 
-#endif // AUDIO_SLICER_MATHUTILS_H
+#endif // LYRICFA_MATHUTILS_H

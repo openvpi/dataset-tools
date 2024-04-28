@@ -15,18 +15,20 @@
 namespace LyricFA {
 
     Asr::Asr(const QString &modelPath) {
-        m_asrHandle = FunAsr::create_model(modelPath.toUtf8().toStdString().c_str(), 4);
+        m_asrHandle = std::unique_ptr<FunAsr::Model>(
+            FunAsr::create_model(modelPath.toUtf8().toStdString().c_str(), 4));
 
         if (!m_asrHandle) {
             qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";
         }
     }
 
-    Asr::~Asr() {
-        delete m_asrHandle;
-    }
+    Asr::~Asr() = default;
 
     bool Asr::recognize(SF_VIO sf_vio, QString &msg) const {
+        if (!m_asrHandle) {
+            return false;
+        }
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
         Slicer slicer(&sf, -40, 5000, 300, 10, 1000);
 

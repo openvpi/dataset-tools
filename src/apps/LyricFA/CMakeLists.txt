@@ -1,4 +1,4 @@
-project(LyricFA VERSION 0.0.0.1)
+project(LyricFA VERSION 0.0.0.2)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

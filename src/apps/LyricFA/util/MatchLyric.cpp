@@ -6,7 +6,7 @@
 #include <QJsonObject>
 #include <QMap>
 #include <QMessageBox>
-#include <g2pglobal.h>
+#include <G2pglobal.h>
 
 #include "../util/LevenshteinDistance.h"
 
@@ -17,7 +17,7 @@ namespace LyricFA {
 #else
         IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/dict");
 #endif
-        m_mandarin = new IKg2p::MandarinG2p();
+        m_mandarin = std::make_unique<IKg2p::MandarinG2p>();
     }
 
     MatchLyric::~MatchLyric() = default;

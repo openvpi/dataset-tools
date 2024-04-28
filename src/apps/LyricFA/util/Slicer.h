@@ -1,5 +1,5 @@
-#ifndef SLICER_H
-#define SLICER_H
+#ifndef LYRICFA_SLICER_H
+#define LYRICFA_SLICER_H
 
 #include <vector>
 
@@ -31,4 +31,4 @@ public:
     QString getErrorMsg();
 };
 
-#endif // AUDIO_SLICER_SLICER_H
+#endif // LYRICFA_SLICER_H
