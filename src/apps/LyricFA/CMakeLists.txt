@@ -5,7 +5,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 file(GLOB_RECURSE _src *.h *.cpp)
-add_executable(${PROJECT_NAME} ${_src})
+add_executable(${PROJECT_NAME} ${_src} res/qss.qrc)
 
 find_package(SndFile CONFIG REQUIRED)
 

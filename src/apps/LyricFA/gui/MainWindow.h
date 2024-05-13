@@ -7,7 +7,7 @@
 #include <QListWidget>
 #include <QMainWindow>
 #include <QMenu>
-#include <QPlainTextEdit>
+#include <QCheckBox>
 #include <QPluginLoader>
 #include <QProgressBar>
 #include <QPushButton>
@@ -55,6 +55,8 @@ namespace LyricFA {
         QLineEdit *jsonEdit;
         QLineEdit *lyricEdit;
 
+        QCheckBox *pinyinBox;
+
         QLabel *progressLabel;
         QHBoxLayout *progressLayout;
 
@@ -67,6 +69,7 @@ namespace LyricFA {
 
     private:
         Asr *m_asr = nullptr;
+        QSharedPointer<IKg2p::MandarinG2p> m_mandarin = nullptr;
         MatchLyric *m_match = nullptr;
 
         int m_workTotal = 0;

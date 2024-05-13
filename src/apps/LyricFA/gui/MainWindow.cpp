@@ -1,5 +1,7 @@
 #include "MainWindow.h"
 
+#include "G2pglobal.h"
+
 #include <QApplication>
 #include <QDragEnterEvent>
 #include <QFileDialog>
@@ -34,13 +36,21 @@ namespace LyricFA {
                 m_asr = new Asr(modelFolder);
         } else {
 #ifdef Q_OS_MAC
-            QMessageBox::information(this, "Warning",
-                                     "Please read ReadMe.md and download asrModel to unzip to app bundle's Resources directory.");
+            QMessageBox::information(
+                this, "Warning",
+                "Please read ReadMe.md and download asrModel to unzip to app bundle's Resources directory.");
 #else
             QMessageBox::information(this, "Warning",
                                      "Please read ReadMe.md and download asrModel to unzip to the root directory.");
 #endif
         }
+
+#ifdef Q_OS_MAC
+        IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/../Resources/dict");
+#else
+        IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/dict");
+#endif
+        m_mandarin = QSharedPointer<IKg2p::MandarinG2p>(new IKg2p::MandarinG2p());
 
         m_threadpool = new QThreadPool(this);
         m_threadpool->setMaxThreadCount(1);
@@ -102,6 +112,9 @@ namespace LyricFA {
         rightLayout->addLayout(jsonLayout);
         rightLayout->addWidget(lyricLabel);
         rightLayout->addLayout(lyricLayout);
+
+        pinyinBox = new QCheckBox("ASR result saved as pinyin");
+        rightLayout->addWidget(pinyinBox);
 
         rightLayout->addStretch(1);
 
@@ -291,13 +304,15 @@ namespace LyricFA {
         progressBar->setValue(0);
         progressBar->setMaximum(taskList->count());
 
+        const bool toPinyin = pinyinBox->isChecked();
+
         for (int i = 0; i < taskList->count(); i++) {
             const auto item = taskList->item(i);
             const QString labFilePath =
                 labOutPath + QDir::separator() + QFileInfo(item->text()).completeBaseName() + ".lab";
 
-            const auto asrTread =
-                new AsrThread(m_asr, item->text(), item->data(Qt::UserRole + 1).toString(), labFilePath);
+            const auto asrTread = new AsrThread(m_asr, item->text(), item->data(Qt::UserRole + 1).toString(),
+                                                labFilePath, toPinyin ? m_mandarin : nullptr);
             connect(asrTread, &AsrThread::oneFailed, this, &MainWindow::slot_oneFailed);
             connect(asrTread, &AsrThread::oneFinished, this, &MainWindow::slot_oneFinished);
             m_threadpool->start(asrTread);
