@@ -18,7 +18,7 @@ DiffSinger dataset processing tools, including audio processing, labeling.
 
 [AsrModel](https://github.com/openvpi/dataset-tools/releases/tag/AsrModel)
 
-Used for LyricFA, only supports Chinese.
+Used for LyricFA, only supports Chinese. [jp&&en version(beta)](https://github.com/wolfgitpr/LyricFA)
 
 ## Build from source
 
