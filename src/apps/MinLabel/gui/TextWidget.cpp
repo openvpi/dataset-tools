@@ -113,22 +113,23 @@ QString filterSokuon(const QString &input) {
 
 void TextWidget::_q_replaceButtonClicked() const {
     QString str;
+    QList<IKg2p::G2pRes> g2pRes;
     const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p_man
-                      ->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
-                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
-                      .join(' ');
+            g2pRes =
+                g2p_man->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
+                                       cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_man->resToStringList(g2pRes).join(' ');
             break;
         case 1:
             str = g2p_jp->kanaToRomaji(mecabConvert(jpInput), doubleConsonant->isChecked()).join(' ');
             break;
         case 2:
-            str = g2p_canton
-                      ->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
-                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
-                      .join(' ');
+            g2pRes =
+                g2p_canton->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
+                                          cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_canton->resToStringList(g2pRes).join(' ');
             break;
         default:
             break;
@@ -138,22 +139,23 @@ void TextWidget::_q_replaceButtonClicked() const {
 
 void TextWidget::_q_appendButtonClicked() const {
     QString str;
+    QList<IKg2p::G2pRes> g2pRes;
     const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
         case 0:
-            str = g2p_man
-                      ->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
-                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
-                      .join(' ');
+            g2pRes =
+                g2p_man->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
+                                       cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_man->resToStringList(g2pRes).join(' ');
             break;
         case 1:
             str = g2p_jp->kanaToRomaji(mecabConvert(jpInput), doubleConsonant->isChecked()).join(' ');
             break;
         case 2:
-            str = g2p_canton
-                      ->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
-                                      cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default)
-                      .join(' ');
+            g2pRes =
+                g2p_canton->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
+                                          cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
+            str = g2p_canton->resToStringList(g2pRes).join(' ');
             break;
         default:
             break;
@@ -165,8 +167,8 @@ void TextWidget::_q_appendButtonClicked() const {
 
 void TextWidget::_q_onLanguageComboIndexChanged() {
     static QMap<QString, QList<QCheckBox *>> optionMap = {
-        {"pinyin",          {manTone, covertNum, cleanRes} },
-        {"romaji",          {removeSokuon, doubleConsonant}},
+        {"pinyin",    {manTone, covertNum, cleanRes} },
+        {"romaji",    {removeSokuon, doubleConsonant}},
         {"cantonese", {canTone, covertNum, cleanRes} }
     };
 

@@ -1,12 +1,12 @@
 #include "MatchLyric.h"
 #include "QMSystem.h"
+#include <G2pglobal.h>
 #include <QApplication>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
 #include <QMessageBox>
-#include <G2pglobal.h>
 
 #include "../util/LevenshteinDistance.h"
 
@@ -61,7 +61,9 @@ namespace LyricFA {
         for (const auto &lyricPath : lyricPaths) {
             const auto lyricName = QFileInfo(lyricPath).completeBaseName();
             const auto textList = IKg2p::splitString(get_lyrics_from_txt(lyricPath));
-            m_lyricDict[lyricName] = lyricInfo{textList, m_mandarin->hanziToPinyin(textList.join(' '), false, false)};
+            const auto g2pRes = m_mandarin->hanziToPinyin(textList.join(' '), false, false);
+            const auto pinyin = m_mandarin->resToStringList(g2pRes);
+            m_lyricDict[lyricName] = lyricInfo{textList, pinyin};
         }
     }
 
@@ -78,7 +80,8 @@ namespace LyricFA {
             const auto textList = m_lyricDict[lyricName].text;
             const auto pinyinList = m_lyricDict[lyricName].pinyin;
 
-            const auto asrPinyins = m_mandarin->hanziToPinyin(asr_list, false, false);
+            const auto asrG2pRes = m_mandarin->hanziToPinyin(asr_list, false, false);
+            const auto asrPinyins = m_mandarin->resToStringList(asrG2pRes);
             if (!asrPinyins.isEmpty()) {
                 auto faRes =
                     LevenshteinDistance::find_similar_substrings(asrPinyins, pinyinList, textList, true, true, true);

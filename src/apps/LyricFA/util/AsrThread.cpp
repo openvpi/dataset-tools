@@ -29,8 +29,11 @@ namespace LyricFA {
 
         QTextStream labIn(&labFile);
         labIn.setCodec(QTextCodec::codecForName("UTF-8"));
-        if (m_g2p)
-            asrMsg = m_g2p->hanziToPinyin(asrMsg, false, false).join(" ");
+        if (m_g2p) {
+            const auto g2pRes = m_g2p->hanziToPinyin(asrMsg, false, false);
+            asrMsg = m_g2p->resToStringList(g2pRes).join(" ");
+        }
+
         labIn << asrMsg;
         labFile.close();
         Q_EMIT this->oneFinished(m_filename, asrMsg);
