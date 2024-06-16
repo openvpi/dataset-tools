@@ -1,22 +1,23 @@
 {
-    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-    "dependencies": [
-        "sdl2",
-        {
-            "name": "libsndfile",
-            "default-features": false
-        },
-        "qastool",
-        "ffmpeg-fake",
-        "mecab",
-        "fftw3"
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "dependencies": [
+    "sdl2",
+    {
+      "name": "libsndfile",
+      "default-features": false
+    },
+    "qastool",
+    "ffmpeg-fake",
+    "mecab",
+    "fftw3",
+    "yaml-cpp"
+  ],
+  "vcpkg-configuration": {
+    "overlay-ports": [
+      "../vcpkg/ports"
     ],
-    "vcpkg-configuration": {
-        "overlay-ports": [
-            "../vcpkg/ports"
-        ],
-        "overlay-triplets": [
-            "../vcpkg/triplets"
-        ]
-    }
+    "overlay-triplets": [
+      "../vcpkg/triplets"
+    ]
+  }
 }
