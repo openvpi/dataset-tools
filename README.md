@@ -20,6 +20,12 @@ DiffSinger dataset processing tools, including audio processing, labeling.
 
 Used for LyricFA, only supports Chinese. [jp&&en version(beta)](https://github.com/wolfgitpr/LyricFA)
 
+## FblModel
+
+[FblModel](https://github.com/openvpi/dataset-tools/releases/tag/FblModel)
+
+Currently, FoxBreatheLabeler only supports annotating breathing using TextGrid files output from SOFA(i.e. overlaying new "AP" annotations on intervals already marked as "SP").
+
 ## Build from source
 
 ### Requirements
@@ -129,6 +135,12 @@ cmake --build build --target install
     + MIT License
 + [fftw3](https://github.com/FFTW/fftw3)
     + GNU GPL v2.0
++ [yaml-cpp](https://github.com/jbeder/yaml-cpp)
+    + MIT License
++ [FoxBreatheLabeler](https://github.com/autumn-DL/FoxBreatheLabeler)
+    + GNU AGPL v3.0
++ [textgrid.hpp](https://github.com/eiichiroi/textgrid.hpp)
+  + MIT License
 
 ## License
 
