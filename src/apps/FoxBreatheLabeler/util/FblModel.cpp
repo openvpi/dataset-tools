@@ -18,6 +18,12 @@ namespace FBL {
 #endif
     }
 
+    FblModel::~FblModel() {
+        delete m_session;
+        m_input_name = {};
+        m_output_name = {};
+    }
+
     bool FblModel::forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
                            std::string &msg) const {
         // 假设输入数据是二维的，形状为 (num_channels, height)

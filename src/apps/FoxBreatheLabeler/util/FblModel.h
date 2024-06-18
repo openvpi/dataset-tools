@@ -9,6 +9,7 @@ namespace FBL {
     class FblModel {
     public:
         explicit FblModel(const std::string &model_path);
+        ~FblModel();
         bool forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
                      std::string &msg) const;
 
