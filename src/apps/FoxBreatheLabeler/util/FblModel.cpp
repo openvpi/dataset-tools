@@ -4,24 +4,22 @@
 
 namespace FBL {
     FblModel::FblModel(const std::string &model_path)
-        : m_env(std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "FblModel")),
-          m_session_options(std::make_unique<Ort::SessionOptions>()) {
+        : m_env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "FblModel")), m_session_options(Ort::SessionOptions()),
+          m_session(nullptr) {
 
         m_input_name = "mel";
         m_output_name = "ap_probability";
 
 #ifdef _WIN32
         const std::wstring wstrPath = SysCmdLine::utf8ToWide(model_path);
-        m_session = std::make_unique<Ort::Session>(*m_env, wstrPath.c_str(), *m_session_options);
+        m_session = new Ort::Session(m_env, wstrPath.c_str(), m_session_options);
 #else
-        m_session = new Ort::Session(env, model_path.c_str(), sessionOptions);
+        m_session = new Ort::Session(m_env, model_path.c_str(), m_session_options);
 #endif
-
-        m_input_dims = m_session->GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
-        m_output_dims = m_session->GetOutputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
     }
 
-    std::vector<float> FblModel::forward(const std::vector<std::vector<float>> &input_data) const {
+    bool FblModel::forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
+                           std::string &msg) const {
         // 假设输入数据是二维的，形状为 (num_channels, height)
         const size_t num_channels = input_data.size();
         if (num_channels == 0) {
@@ -48,34 +46,12 @@ namespace FBL {
                 m_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1, &m_output_name, 1);
 
             const float *float_array = output_tensors.front().GetTensorMutableData<float>();
-            std::vector<float> results(
+            result = std::vector<float>(
                 float_array, float_array + output_tensors.front().GetTensorTypeAndShapeInfo().GetElementCount());
-
-            // validate_output(results);
-
-            return results;
+            return true;
         } catch (const Ort::Exception &e) {
-            throw std::runtime_error("Error during model inference: " + std::string(e.what()));
-        }
-    }
-
-    void FblModel::validate_input(const std::vector<float> &input_data) const {
-        size_t expected_size = 1;
-        for (const auto dim : m_input_dims) {
-            expected_size *= dim;
-        }
-        if (input_data.size() != expected_size) {
-            throw std::invalid_argument("Input data size does not match the model's expected input size.");
-        }
-    }
-
-    void FblModel::validate_output(const std::vector<float> &output_data) const {
-        size_t expected_size = 1;
-        for (const auto dim : m_output_dims) {
-            expected_size *= dim;
-        }
-        if (output_data.size() != expected_size) {
-            throw std::runtime_error("Output data size does not match the model's expected output size.");
+            msg = "Error during model inference: " + std::string(e.what());
+            return false;
         }
     }
 } // FBL

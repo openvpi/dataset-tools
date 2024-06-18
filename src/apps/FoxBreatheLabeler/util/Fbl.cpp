@@ -138,10 +138,16 @@ namespace FBL {
             return false;
         }
 
-        const auto modelRes = m_fblModel->forward(get_music_chunk(tmp, m_spec_win, m_hop_size));
-        res =
-            findSegmentsDynamic(sigmoid(modelRes), m_time_scale, ap_threshold, static_cast<int>(ap_dur / m_time_scale));
-        return true;
+        std::string modelMsg;
+        std::vector<float> modelRes;
+        if (m_fblModel->forward(get_music_chunk(tmp, m_spec_win, m_hop_size), modelRes, modelMsg)) {
+            res = findSegmentsDynamic(sigmoid(modelRes), m_time_scale, ap_threshold,
+                                      static_cast<int>(ap_dur / m_time_scale));
+            return true;
+        } else {
+            msg = QString::fromStdString(modelMsg);
+            return false;
+        }
     }
 
     bool FBL::recognize(const QString &filename, std::vector<std::pair<float, float>> &res, QString &msg,
