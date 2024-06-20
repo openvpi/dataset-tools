@@ -19,7 +19,7 @@ namespace FBL {
     FBL::FBL(const QString &modelDir) {
         const auto modelPath = modelDir + QDir::separator() + "model.onnx";
         const auto configPath = modelDir + QDir::separator() + "config.yaml";
-        m_fblModel = std::make_unique<FblModel>(FblModel(modelPath.toUtf8().toStdString()));
+        m_fblModel = std::make_unique<FblModel>(modelPath.toUtf8().toStdString());
 
         YAML::Node config = YAML::LoadFile(configPath.toUtf8().toStdString());
 
