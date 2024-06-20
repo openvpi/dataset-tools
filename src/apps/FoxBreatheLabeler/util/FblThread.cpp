@@ -146,8 +146,10 @@ namespace FBL {
                     cursor = sp.start;
                     for (int i = 0; i < overlappingSegments.size(); i++) {
                         const auto ap = overlappingSegments[i];
-                        if (ap.first > cursor)
+                        if (ap.first > cursor) {
                             out.append(Word{cursor, ap.first, "SP"});
+                            cursor = ap.first;
+                        }
 
                         if (i == 0) {
                             if (sp.start + sp_dur <= ap.first && ap.first < sp.end) {
