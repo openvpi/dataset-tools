@@ -7,7 +7,7 @@ namespace FBL {
         : m_env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "FblModel")), m_session_options(Ort::SessionOptions()),
           m_session(nullptr) {
 
-        m_input_name = "mel";
+        m_input_name = "waveform";
         m_output_name = "ap_probability";
 
 #ifdef _WIN32
@@ -26,22 +26,27 @@ namespace FBL {
 
     bool FblModel::forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
                            std::string &msg) const {
-        // 假设输入数据是二维的，形状为 (num_channels, height)
-        const size_t num_channels = input_data.size();
-        if (num_channels == 0) {
-            throw std::invalid_argument("Input data cannot be empty.");
+        const size_t batch_size = input_data.size();
+        if (batch_size == 0) {
+            throw std::invalid_argument("输入数据不能为空。");
         }
 
-        const size_t height = input_data[0].size();
-
-        // 将输入数据展平成一维数组
-        std::vector<float> flattened_input;
+        // 确定输入数据中最大的长度
+        size_t max_height = 0;
         for (const auto &channel_data : input_data) {
-            flattened_input.insert(flattened_input.end(), channel_data.begin(), channel_data.end());
+            max_height = std::max(max_height, channel_data.size());
         }
 
-        // 定义输入张量的形状，batch size 固定为 1
-        const std::array<int64_t, 3> input_shape_{1, static_cast<int64_t>(num_channels), static_cast<int64_t>(height)};
+        // 创建一个用于存放扁平化后的输入数据的向量
+        std::vector<float> flattened_input(batch_size * max_height, 0.0f);
+
+        // 将输入数据扁平化并填充到flattened_input中
+        for (size_t i = 0; i < batch_size; ++i) {
+            std::copy(input_data[i].begin(), input_data[i].end(), flattened_input.begin() + i * max_height);
+        }
+
+        // 定义输入张量的形状
+        const std::array<int64_t, 2> input_shape_{static_cast<int64_t>(batch_size), static_cast<int64_t>(max_height)};
 
         // 创建输入张量
         const Ort::Value input_tensor = Ort::Value::CreateTensor<float>(

@@ -152,7 +152,7 @@ namespace FBL {
                         }
 
                         if (i == 0) {
-                            if (sp.start + sp_dur <= ap.first && ap.first < sp.end) {
+                            if (cursor < ap.first && sp.start + sp_dur <= ap.first && ap.first < sp.end) {
                                 out.append(Word{cursor, ap.first, "SP"});
                                 cursor = ap.first;
                             }
