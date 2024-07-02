@@ -36,20 +36,6 @@ namespace FBL {
 
     FBL::~FBL() = default;
 
-    // Function to pad the signal
-    std::vector<float> pad_signal(const std::vector<float> &y, const std::pair<int, int> &padding,
-                                  const std::string &pad_mode = "constant") {
-        if (pad_mode == "constant") {
-            const int left_pad = padding.first;
-            const int right_pad = padding.second;
-            std::vector<float> y_padded(left_pad + y.size() + right_pad, 0.0);
-            std::copy(y.begin(), y.end(), y_padded.begin() + left_pad);
-            return y_padded;
-        } else {
-            throw std::invalid_argument("Unsupported pad_mode");
-        }
-    }
-
     static std::vector<std::pair<float, float>> findSegmentsDynamic(const std::vector<float> &arr, double time_scale,
                                                                     double threshold = 0.5, int max_gap = 5,
                                                                     int ap_threshold = 10) {
@@ -110,7 +96,7 @@ namespace FBL {
         std::string modelMsg;
         std::vector<float> modelRes;
         if (m_fblModel->forward(std::vector<std::vector<float>>{tmp}, modelRes, modelMsg)) {
-            res = findSegmentsDynamic(modelRes, m_time_scale, ap_threshold, static_cast<int>(ap_dur / m_time_scale));
+            res = findSegmentsDynamic(modelRes, m_time_scale, ap_threshold, 5, static_cast<int>(ap_dur / m_time_scale));
             return true;
         } else {
             msg = QString::fromStdString(modelMsg);
