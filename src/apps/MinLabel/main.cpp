@@ -3,17 +3,16 @@
 #include "QMSystem.h"
 
 #include <QApplication>
-#include <QMessageBox>
 
-#include "G2pglobal.h"
+#include <cpp-pinyin/G2pglobal.h>
 
 #ifdef Q_OS_WINDOWS
 #    include <Windows.h>
 #endif
 
 int main(int argc, char *argv[]) {
-    //QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    //QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    // QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    // QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
 
     if (QMOs::isUserRoot() && !a.arguments().contains("--allow-root")) {
@@ -52,9 +51,9 @@ int main(int argc, char *argv[]) {
 //     IKg2p::setDictionaryPath(qApp->applicationDirPath() + "/../share/ChorusKit/g2p/dict");
 // #endif
 #ifdef Q_OS_MAC
-    IKg2p::setDictionaryPath(qApp->applicationDirPath() + "/../Resources/dict");
+    Pinyin::setDictionaryPath(qApp->applicationDirPath().toUtf8().toStdString() + "/../Resources/dict");
 #else
-    IKg2p::setDictionaryPath(qApp->applicationDirPath() + "/dict");
+    Pinyin::setDictionaryPath(qApp->applicationDirPath().toUtf8().toStdString() + "/dict");
 #endif
 
     MainWindow w;

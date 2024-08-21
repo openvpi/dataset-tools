@@ -3,13 +3,15 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QDebug>
+#include <QLineEdit>
 #include <QRegularExpression>
 #include <QTextCodec>
 
+#include <cpp-kana/Kana.h>
+
 TextWidget::TextWidget(QWidget *parent)
-    : QWidget(parent), g2p_man(new IKg2p::MandarinG2p()), g2p_jp(new IKg2p::JapaneseG2p()),
-      g2p_canton(new IKg2p::CantoneseG2p()), mecabYomi(mecabInit("mecabDict", "yomi")),
-      mecabWakati(mecabInit("mecabDict", "wakati")) {
+    : QWidget(parent), g2p_man(new Pinyin::Pinyin()), g2p_canton(new Pinyin::Jyutping()),
+      mecabYomi(mecabInit("mecabDict", "yomi")), mecabWakati(mecabInit("mecabDict", "wakati")) {
     wordsText = new QLineEdit();
     wordsText->setPlaceholderText("Enter mandarin here...");
 
@@ -113,24 +115,31 @@ QString filterSokuon(const QString &input) {
 
 void TextWidget::_q_replaceButtonClicked() const {
     QString str;
-    QList<IKg2p::G2pRes> g2pRes;
     const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
-        case 0:
-            g2pRes =
-                g2p_man->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
-                                       cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
-            str = g2p_man->resToStringList(g2pRes).join(' ');
+        case 0: {
+            const auto manRes = g2p_man->hanziToPinyin(
+                sentence().toUtf8().toStdString(),
+                manTone->isChecked() ? Pinyin::ManTone::TONE3 : Pinyin::ManTone::NORMAL,
+                cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default, false, true);
+            str = QString::fromUtf8(manRes.toStdStr().c_str());
             break;
-        case 1:
-            str = g2p_jp->kanaToRomaji(mecabConvert(jpInput), doubleConsonant->isChecked()).join(' ');
+        }
+        case 1: {
+            str = QString::fromUtf8(Kana::kanaToRomaji(mecabConvert(jpInput).toUtf8().toStdString(),
+                                                       Kana::Error::Default, doubleConsonant->isChecked())
+                                        .toStdStr()
+                                        .c_str());
             break;
-        case 2:
-            g2pRes =
-                g2p_canton->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
-                                          cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
-            str = g2p_canton->resToStringList(g2pRes).join(' ');
+        }
+        case 2: {
+            const auto jyutRes =
+                g2p_canton->hanziToPinyin(sentence().toUtf8().toStdString(),
+                                          canTone->isChecked() ? Pinyin::CanTone::TONE3 : Pinyin::CanTone::NORMAL,
+                                          cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default);
+            str = QString::fromUtf8(jyutRes.toStdStr().c_str());
             break;
+        }
         default:
             break;
     }
@@ -139,24 +148,31 @@ void TextWidget::_q_replaceButtonClicked() const {
 
 void TextWidget::_q_appendButtonClicked() const {
     QString str;
-    QList<IKg2p::G2pRes> g2pRes;
     const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
-        case 0:
-            g2pRes =
-                g2p_man->hanziToPinyin(sentence(), manTone->isChecked(), covertNum->isChecked(),
-                                       cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
-            str = g2p_man->resToStringList(g2pRes).join(' ');
+        case 0: {
+            const auto manRes = g2p_man->hanziToPinyin(
+                sentence().toUtf8().toStdString(),
+                manTone->isChecked() ? Pinyin::ManTone::TONE3 : Pinyin::ManTone::NORMAL,
+                cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default, false, true);
+            str = QString::fromUtf8(manRes.toStdStr().c_str());
             break;
-        case 1:
-            str = g2p_jp->kanaToRomaji(mecabConvert(jpInput), doubleConsonant->isChecked()).join(' ');
+        }
+        case 1: {
+            str = QString::fromUtf8(Kana::kanaToRomaji(mecabConvert(jpInput).toUtf8().toStdString(),
+                                                       Kana::Error::Default, doubleConsonant->isChecked())
+                                        .toStdStr()
+                                        .c_str());
             break;
-        case 2:
-            g2pRes =
-                g2p_canton->hanziToPinyin(sentence(), canTone->isChecked(), covertNum->isChecked(),
-                                          cleanRes->isChecked() ? IKg2p::errorType::Ignore : IKg2p::errorType::Default);
-            str = g2p_canton->resToStringList(g2pRes).join(' ');
+        }
+        case 2: {
+            const auto jyutRes =
+                g2p_canton->hanziToPinyin(sentence().toUtf8().toStdString(),
+                                          canTone->isChecked() ? Pinyin::CanTone::TONE3 : Pinyin::CanTone::NORMAL,
+                                          cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default);
+            str = QString::fromUtf8(jyutRes.toStdStr().c_str());
             break;
+        }
         default:
             break;
     }

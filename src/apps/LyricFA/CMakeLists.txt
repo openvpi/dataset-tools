@@ -8,12 +8,13 @@ file(GLOB_RECURSE _src *.h *.cpp)
 add_executable(${PROJECT_NAME} ${_src} res/qss.qrc)
 
 find_package(SndFile CONFIG REQUIRED)
+find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
-        IKg2p
+        cpp-pinyin::cpp-pinyin
         QMCore
         r8brain
         FunAsr

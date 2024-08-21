@@ -6,7 +6,7 @@
 
 #include <QSharedPointer>
 
-#include <MandarinG2p.h>
+#include <cpp-pinyin/Pinyin.h>
 
 #include "Asr.h"
 
@@ -15,7 +15,7 @@ namespace LyricFA {
         Q_OBJECT
     public:
         AsrThread(Asr *asr, QString filename, QString wavPath, QString labPath,
-                  const QSharedPointer<IKg2p::MandarinG2p> &g2p);
+                  const QSharedPointer<Pinyin::Pinyin> &g2p);
         void run() override;
 
     private:
@@ -23,7 +23,7 @@ namespace LyricFA {
         QString m_filename;
         QString m_wavPath;
         QString m_labPath;
-        QSharedPointer<IKg2p::MandarinG2p> m_g2p = nullptr;
+        QSharedPointer<Pinyin::Pinyin> m_g2p = nullptr;
 
     signals:
         void oneFailed(const QString &filename, const QString &msg);

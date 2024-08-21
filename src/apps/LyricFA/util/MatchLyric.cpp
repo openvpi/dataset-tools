@@ -1,6 +1,5 @@
 #include "MatchLyric.h"
 #include "QMSystem.h"
-#include <G2pglobal.h>
 #include <QApplication>
 #include <QFile>
 #include <QJsonDocument>
@@ -8,16 +7,18 @@
 #include <QMap>
 #include <QMessageBox>
 
+#include <cpp-pinyin/G2pglobal.h>
+
 #include "../util/LevenshteinDistance.h"
 
 namespace LyricFA {
     MatchLyric::MatchLyric() {
 #ifdef Q_OS_MAC
-        IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/../Resources/dict");
+        Pinyin::setDictionaryPath(QApplication::applicationDirPath() + "/../Resources/dict");
 #else
-        IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/dict");
+        Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/dict");
 #endif
-        m_mandarin = std::make_unique<IKg2p::MandarinG2p>();
+        m_mandarin = std::make_unique<Pinyin::Pinyin>();
     }
 
     MatchLyric::~MatchLyric() = default;
@@ -60,10 +61,17 @@ namespace LyricFA {
 
         for (const auto &lyricPath : lyricPaths) {
             const auto lyricName = QFileInfo(lyricPath).completeBaseName();
-            const auto textList = IKg2p::splitString(get_lyrics_from_txt(lyricPath));
-            const auto g2pRes = m_mandarin->hanziToPinyin(textList.join(' '), false, false);
-            const auto pinyin = m_mandarin->resToStringList(g2pRes);
-            m_lyricDict[lyricName] = lyricInfo{textList, pinyin};
+            const auto text = get_lyrics_from_txt(lyricPath).toUtf8().toStdString();
+            const auto g2pRes =
+                m_mandarin->hanziToPinyin(text, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, false, true);
+
+            QStringList textList;
+            QStringList pinyinList;
+            for (const auto &item : g2pRes) {
+                textList.append(QString::fromUtf8(item.hanzi.c_str()));
+                pinyinList.append(QString::fromUtf8(item.pinyin.c_str()));
+            }
+            m_lyricDict[lyricName] = lyricInfo{textList, pinyinList};
         }
     }
 
@@ -80,8 +88,13 @@ namespace LyricFA {
             const auto textList = m_lyricDict[lyricName].text;
             const auto pinyinList = m_lyricDict[lyricName].pinyin;
 
-            const auto asrG2pRes = m_mandarin->hanziToPinyin(asr_list, false, false);
-            const auto asrPinyins = m_mandarin->resToStringList(asrG2pRes);
+            const auto asrG2pRes = m_mandarin->hanziToPinyin(asr_list.toUtf8().toStdString(), Pinyin::ManTone::NORMAL,
+                                                             Pinyin::Error::Default, false, true);
+
+            QStringList asrPinyins;
+            for (const auto &item : asrG2pRes)
+                asrPinyins.append(QString::fromUtf8(item.pinyin.c_str()));
+
             if (!asrPinyins.isEmpty()) {
                 auto faRes =
                     LevenshteinDistance::find_similar_substrings(asrPinyins, pinyinList, textList, true, true, true);
@@ -95,8 +108,12 @@ namespace LyricFA {
                     const auto matchPinyin = faRes.match_pinyin[i];
 
                     if (asrPinyin != matchPinyin) {
-                        const QStringList candidate = m_mandarin->getDefaultPinyin(text);
-                        if (candidate.contains(asrPinyin)) {
+                        const std::vector<std::string> candidates =
+                            m_mandarin->getDefaultPinyin(text.toUtf8().toStdString(), Pinyin::ManTone::NORMAL, true);
+                        const auto it =
+                            std::find(candidates.begin(), candidates.end(), asrPinyin.toUtf8().toStdString());
+
+                        if (it != candidates.end()) {
                             asr_rect_list.append(asrPinyin);
                             asr_rect_diff.append("(" + matchPinyin + "->" + asrPinyin + ", " +
                                                  QString::number(asrPinyins.indexOf(asrPinyin)) + ")");

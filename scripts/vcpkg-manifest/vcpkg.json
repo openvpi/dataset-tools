@@ -10,7 +10,9 @@
     "ffmpeg-fake",
     "mecab",
     "fftw3",
-    "yaml-cpp"
+    "yaml-cpp",
+    "cpp-pinyin",
+    "cpp-kana"
   ],
   "vcpkg-configuration": {
     "overlay-ports": [

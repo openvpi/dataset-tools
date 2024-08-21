@@ -6,7 +6,7 @@
 #include <QPlainTextEdit>
 #include <QString>
 
-#include <MandarinG2p.h>
+#include <cpp-pinyin/Pinyin.h>
 
 namespace LyricFA {
     class MatchLyric {
@@ -16,7 +16,7 @@ namespace LyricFA {
 
         void initLyric(const QString &lyric_folder);
 
-        bool match(const QString& filename, const QString& labPath, const QString& jsonPath, QString &msg,
+        bool match(const QString &filename, const QString &labPath, const QString &jsonPath, QString &msg,
                    const bool &asr_rectify = true) const;
 
     private:
@@ -25,7 +25,7 @@ namespace LyricFA {
         };
 
         QMap<QString, lyricInfo> m_lyricDict;
-        std::unique_ptr<IKg2p::MandarinG2p> m_mandarin;
+        std::unique_ptr<Pinyin::Pinyin> m_mandarin;
     };
 }
 #endif // MATCHLYRIC_H

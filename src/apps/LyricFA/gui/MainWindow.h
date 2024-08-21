@@ -2,12 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QBoxLayout>
+#include <QCheckBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMainWindow>
 #include <QMenu>
-#include <QCheckBox>
 #include <QPluginLoader>
 #include <QProgressBar>
 #include <QPushButton>
@@ -69,7 +69,7 @@ namespace LyricFA {
 
     private:
         Asr *m_asr = nullptr;
-        QSharedPointer<IKg2p::MandarinG2p> m_mandarin = nullptr;
+        QSharedPointer<Pinyin::Pinyin> m_mandarin = nullptr;
         MatchLyric *m_match = nullptr;
 
         int m_workTotal = 0;

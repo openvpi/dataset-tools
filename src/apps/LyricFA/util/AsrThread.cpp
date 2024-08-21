@@ -6,7 +6,7 @@
 
 namespace LyricFA {
     AsrThread::AsrThread(Asr *asr, QString filename, QString wavPath, QString labPath,
-                         const QSharedPointer<IKg2p::MandarinG2p> &g2p)
+                         const QSharedPointer<Pinyin::Pinyin> &g2p)
         : m_asr(asr), m_filename(std::move(filename)), m_wavPath(std::move(wavPath)), m_labPath(std::move(labPath)),
           m_g2p(g2p) {
     }
@@ -30,8 +30,9 @@ namespace LyricFA {
         QTextStream labIn(&labFile);
         labIn.setCodec(QTextCodec::codecForName("UTF-8"));
         if (m_g2p) {
-            const auto g2pRes = m_g2p->hanziToPinyin(asrMsg, false, false);
-            asrMsg = m_g2p->resToStringList(g2pRes).join(" ");
+            const auto g2pRes = m_g2p->hanziToPinyin(asrMsg.toUtf8().toStdString(), Pinyin::ManTone::NORMAL,
+                                                     Pinyin::Error::Default, true);
+            asrMsg = QString::fromUtf8(g2pRes.toStdStr().c_str());
         }
 
         labIn << asrMsg;

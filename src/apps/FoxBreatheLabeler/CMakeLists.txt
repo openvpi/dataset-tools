@@ -19,7 +19,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
         QMCore
-        r8brain yaml-cpp::yaml-cpp
+        r8brain yaml-cpp
         onnxruntime
         syscmdline
 )

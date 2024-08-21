@@ -1,9 +1,6 @@
 [submodule "src/libs/r8brain/r8brain-free-src"]
 	path = src/libs/r8brain/r8brain-free-src
 	url = https://github.com/avaneev/r8brain-free-src
-[submodule "src/libs/IkG2p"]
-	path = src/libs/IkG2p
-	url = https://github.com/wolfgitpr/IkG2p
 [submodule "src/libs/syscmdline"]
 	path = src/libs/syscmdline
 	url = https://github.com/SineStriker/syscmdline

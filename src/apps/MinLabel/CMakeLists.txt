@@ -8,11 +8,15 @@ file(GLOB_RECURSE _src *.h *.cpp)
 add_executable(${PROJECT_NAME} ${_src} res.qrc res/qss.qrc)
 
 find_package(mecab CONFIG REQUIRED)
+find_package(cpp-pinyin CONFIG REQUIRED)
+find_package(cpp-kana CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
-        IKg2p mecab::mecab
+        mecab::mecab
+        cpp-pinyin::cpp-pinyin
+        cpp-kana::cpp-kana
         QMCore SDLPlayback FFmpegDecoder
         qastool::core
 )
@@ -38,7 +42,6 @@ if (APPLE)
 endif ()
 
 set(DIRECTORIES_TO_COPY
-        dict
         mecabDict
         qss
 )
@@ -65,5 +68,17 @@ foreach (dir ${DIRECTORIES_TO_COPY})
         )
     endif ()
 endforeach ()
+
+if (WIN32)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/cpp-pinyin/dict
+            ${CMAKE_BINARY_DIR}/bin/dict
+    )
+
+    install(DIRECTORY ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/cpp-pinyin/dict
+            DESTINATION .
+    )
+endif ()
 
 set_property(TARGET DeployedTargets APPEND PROPERTY TARGETS ${PROJECT_NAME})

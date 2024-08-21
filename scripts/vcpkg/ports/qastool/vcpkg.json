@@ -1,6 +1,6 @@
 {
   "name": "qastool",
-  "version": "0.0.2.3",
+  "version": "0.0.2.4",
   "port-version": 1,
   "description": "A compile time tool to generate source codes for class serialization.",
   "homepage": "https://github.com/SineStriker/qt-json-autogen",

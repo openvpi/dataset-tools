@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-#include "G2pglobal.h"
+#include <cpp-pinyin/G2pglobal.h>
 
 #include <QApplication>
 #include <QDragEnterEvent>
@@ -46,11 +46,11 @@ namespace LyricFA {
         }
 
 #ifdef Q_OS_MAC
-        IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/../Resources/dict");
+        Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/../Resources/dict");
 #else
-        IKg2p::setDictionaryPath(QApplication::applicationDirPath() + "/dict");
+        Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/dict");
 #endif
-        m_mandarin = QSharedPointer<IKg2p::MandarinG2p>(new IKg2p::MandarinG2p());
+        m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
 
         m_threadpool = new QThreadPool(this);
         m_threadpool->setMaxThreadCount(1);

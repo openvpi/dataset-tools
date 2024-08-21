@@ -4,18 +4,16 @@
 #include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QLineEdit>
 #include <QPlainTextEdit>
-#include <QProcess>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
 
-#include "CantoneseG2p.h"
-#include "JapaneseG2p.h"
-#include "MandarinG2p.h"
+#include <cpp-pinyin/Jyutping.h>
+#include <cpp-pinyin/Pinyin.h>
 
-#include "mecab/mecab.h"
+#include <mecab/mecab.h>
+
 class TextWidget final : public QWidget {
     Q_OBJECT
 public:
@@ -48,9 +46,8 @@ protected:
     QHBoxLayout *optionsLayout;
     QVBoxLayout *mainLayout;
 
-    QScopedPointer<IKg2p::MandarinG2p> g2p_man;
-    QScopedPointer<IKg2p::JapaneseG2p> g2p_jp;
-    QScopedPointer<IKg2p::CantoneseG2p> g2p_canton;
+    QScopedPointer<Pinyin::Pinyin> g2p_man;
+    QScopedPointer<Pinyin::Jyutping> g2p_canton;
 
 private:
     MeCab::Tagger *mecabYomi;
