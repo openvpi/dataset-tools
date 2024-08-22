@@ -68,6 +68,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenuSnapByDefault = new QAction("&Snap to piano keys by default");
     bgMenuShowPitchTextOverlay = new QAction("Show pitch text &overlay");
     bgMenuShowPhonemeTexts = new QAction("Show &phonemes");
+    bgMenuShowCrosshairAndPitch = new QAction("Show &crosshair and pitch");
     bgMenu_ModePrompt = new QAction("Edit Mode");
     bgMenuModeNote = new QAction("&Note");
     bgMenuModeGlide = new QAction("Ornament: &Glide");
@@ -79,6 +80,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu_ModePrompt->setDisabled(true);
     bgMenuShowPitchTextOverlay->setCheckable(true);
     bgMenuShowPhonemeTexts->setCheckable(true);
+    bgMenuShowCrosshairAndPitch->setCheckable(true);
     bgMenuSnapByDefault->setCheckable(true);
     bgMenuModeNote->setCheckable(true);
     bgMenuModeGlide->setCheckable(true);
@@ -95,6 +97,7 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     bgMenu->addAction(bgMenuSnapByDefault);
     bgMenu->addAction(bgMenuShowPitchTextOverlay);
     bgMenu->addAction(bgMenuShowPhonemeTexts);
+    bgMenu->addAction(bgMenuShowCrosshairAndPitch);
 
     // Mode selector
     selectedDragMode = Note;
@@ -127,6 +130,10 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
     });
     connect(bgMenuSnapByDefault, &QAction::triggered, [=]() {
         snapToKey = bgMenuSnapByDefault->isChecked();
+        update();
+    });
+    connect(bgMenuShowCrosshairAndPitch, &QAction::triggered, [=]() {
+        showCrosshairAndPitch = bgMenuShowCrosshairAndPitch->isChecked();
         update();
     });
     connect(bgMenuModeNote, &QAction::triggered, this, &F0Widget::modeChanged);
@@ -229,9 +236,12 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
         }
         note.isSlur = !slur.empty() && (slur[i].toInt() > 0);
         note.isRest = isRest[i];
-        if (glide.size() - 1 < i || glide[i] == "none") note.glide = GlideStyle::None;
-        else if (glide[i] == "up") note.glide = GlideStyle::Up;
-        else if (glide[i] == "down") note.glide = GlideStyle::Down;
+        if (glide.size() - 1 < i || glide[i] == "none")
+            note.glide = GlideStyle::None;
+        else if (glide[i] == "up")
+            note.glide = GlideStyle::Up;
+        else if (glide[i] == "down")
+            note.glide = GlideStyle::Down;
         if (showPhonemeTexts) {
             while (ph_j < phDur.size() && phBegin >= noteBegin - 0.01 && phBegin < noteBegin + note.duration - 0.01) {
                 MiniPhonome ph;
@@ -272,10 +282,12 @@ void F0Widget::loadConfig(const SlurCutterCfg &cfg) {
     bgMenuShowPitchTextOverlay->setChecked(cfg.showPitchTextOverlay);
     bgMenuShowPhonemeTexts->setChecked(cfg.showPhonemeTexts);
     bgMenuSnapByDefault->setChecked(cfg.snapToKeys);
+    bgMenuShowCrosshairAndPitch->setChecked(cfg.showCrosshairAndPitch);
 
     snapToKey = cfg.snapToKeys;
     showPitchTextOverlay = cfg.showPitchTextOverlay;
     showPhonemeTexts = cfg.showPhonemeTexts;
+    showCrosshairAndPitch = cfg.showCrosshairAndPitch;
 
     update();
 }
@@ -310,12 +322,17 @@ F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() {
         if (i.value.isRest) {
             // rest notes must have no glides
             ret.note_glide += "none ";
-        }
-        else {
+        } else {
             switch (i.value.glide) {
-                case GlideStyle::None: ret.note_glide += "none "; break;
-                case GlideStyle::Up: ret.note_glide += "up "; break;
-                case GlideStyle::Down: ret.note_glide += "down "; break;
+                case GlideStyle::None:
+                    ret.note_glide += "none ";
+                    break;
+                case GlideStyle::Up:
+                    ret.note_glide += "up ";
+                    break;
+                case GlideStyle::Down:
+                    ret.note_glide += "down ";
+                    break;
             }
         }
     }
@@ -453,8 +470,7 @@ void F0Widget::splitNoteUnderMouse() {
         for (auto &ph : noteInterval.value.phonemes) {
             if (ph.begin >= noteInterval.low && ph.begin < time) {
                 leftNote.phonemes.append(ph);
-            }
-            else if (ph.begin >= time && ph.begin < noteInterval.high) {
+            } else if (ph.begin >= time && ph.begin < noteInterval.high) {
                 rightNote.phonemes.append(ph);
             }
         }
@@ -500,7 +516,7 @@ void F0Widget::setDraggedNotePitch(int pitch) {
 }
 
 void F0Widget::setDraggedNoteGlide(GlideStyle style) {
-        auto intervals =
+    auto intervals =
         midiIntervals.findInnerIntervals({std::get<0>(draggingNoteInterval), std::get<1>(draggingNoteInterval)});
     if (intervals.empty())
         return;
@@ -514,7 +530,7 @@ void F0Widget::setDraggedNoteGlide(GlideStyle style) {
 
 void F0Widget::modeChanged(bool checked) {
     // Fuck this what the hell is this bloody cast chain
-    selectedDragMode = ((decltype(Note))((QAction*)sender())->data().toInt());
+    selectedDragMode = ((decltype(Note)) ((QAction *) sender())->data().toInt());
 }
 
 void F0Widget::convertAllRestsToNormal() {
@@ -533,15 +549,12 @@ void F0Widget::setMenuFromCurrentNote() {
     noteMenuSetGlideType->setEnabled(!note.isRest);
     if (note.isRest) {
         noteMenuSetGlideNone->setChecked(true);
-    }
-    else {
+    } else {
         if (note.glide == GlideStyle::None) {
             noteMenuSetGlideNone->setChecked(true);
-        }
-        else if (note.glide == GlideStyle::Up) {
+        } else if (note.glide == GlideStyle::Up) {
             noteMenuSetGlideUp->setChecked(true);
-        }
-        else if (note.glide == GlideStyle::Down) {
+        } else if (note.glide == GlideStyle::Down) {
             noteMenuSetGlideDown->setChecked(true);
         }
     }
@@ -581,11 +594,9 @@ void F0Widget::setCurrentNoteGlideType(QAction *action) {
     GlideStyle style;
     if (action == this->noteMenuSetGlideUp) {
         style = GlideStyle::Up;
-    }
-    else if (action == this->noteMenuSetGlideDown) {
+    } else if (action == this->noteMenuSetGlideDown) {
         style = GlideStyle::Down;
-    }
-    else {
+    } else {
         style = GlideStyle::None;
     }
     auto noteInterval = contextMenuNoteInterval;
@@ -669,8 +680,8 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                 painter.fillRect(rec, NoteColors[i.value.isSlur]);
                 painter.drawRect(rec);
                 painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
-                noteDescText += PitchToNotePlusCentsString(i.value.pitch +
-                                            0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
+                noteDescText +=
+                    PitchToNotePlusCentsString(i.value.pitch + 0.01 * (std::isnan(i.value.cents) ? 0 : i.value.cents));
                 if (i.value.glide != GlideStyle::None) {
                     /*
                      * Definitions of glide types which cause the difference
@@ -708,10 +719,8 @@ void F0Widget::paintEvent(QPaintEvent *event) {
             // painter.drawText(rec, Qt::AlignVCenter | Qt::AlignLeft, i.value.text);
             if (showPhonemeTexts) {
                 for (auto &ph : i.value.phonemes) {
-                    auto phRec = QRectF(
-                        (ph.begin - leftTime) * secondWidth,
-                        rec.y() + semitoneHeight,
-                        ph.duration * secondWidth, lh + 3);
+                    auto phRec = QRectF((ph.begin - leftTime) * secondWidth, rec.y() + semitoneHeight,
+                                        ph.duration * secondWidth, lh + 3);
                     auto pen = painter.pen();
                     pen.setStyle(Qt::SolidLine);
                     pen.setColor(QColor(200, 200, 200, 255));
@@ -744,14 +753,14 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                     pen.setWidth(0);
                     painter.setPen(pen);
                     auto noteLeft = (std::get<0>(draggingNoteInterval) - leftTime) * secondWidth,
-                        noteRight = (std::get<1>(draggingNoteInterval) - leftTime) * secondWidth;
+                         noteRight = (std::get<1>(draggingNoteInterval) - leftTime) * secondWidth;
                     painter.drawLine(noteLeft, 0, noteLeft, h);
                     painter.drawLine(noteRight, 0, noteRight, h);
                     if (draggingNoteInCents) {
-                        auto dragPitch =
-                            mousePitch - draggingNoteStartPitch + draggingNoteBeginCents * 0.01 + draggingNoteBeginPitch;
+                        auto dragPitch = mousePitch - draggingNoteStartPitch + draggingNoteBeginCents * 0.01 +
+                                         draggingNoteBeginPitch;
                         auto rec = QRectF(noteLeft, lowestPitchY - (dragPitch - lowestPitch) * semitoneHeight,
-                                        noteRight - noteLeft, semitoneHeight);
+                                          noteRight - noteLeft, semitoneHeight);
                         painter.fillRect(rec, QColor(255, 255, 255, 60));
                         painter.drawLine(rec.left(), rec.center().y(), rec.right(), rec.center().y());
                         painter.drawRect(rec);
@@ -759,7 +768,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                     } else {
                         auto dragPitch = ::floor(mousePitch + 0.5); // Key center pitch -> key bottom pitch
                         auto rec = QRectF(noteLeft, lowestPitchY - (dragPitch - lowestPitch) * semitoneHeight,
-                                        noteRight - noteLeft, semitoneHeight);
+                                          noteRight - noteLeft, semitoneHeight);
                         painter.fillRect(rec, QColor(255, 255, 255, 60));
                         painter.drawRect(rec);
                     }
@@ -770,21 +779,21 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                     auto pos = mapFromGlobal(QCursor::pos());
                     auto mousePitch = pitchOnWidgetY(pos.y());
                     auto noteLeft = (std::get<0>(draggingNoteInterval) - leftTime) * secondWidth,
-                        noteRight = (std::get<1>(draggingNoteInterval) - leftTime) * secondWidth;
+                         noteRight = (std::get<1>(draggingNoteInterval) - leftTime) * secondWidth;
                     auto noteCenter = (noteLeft + noteRight) / 2;
                     auto pen = painter.pen();
                     pen.setColor(Qt::white);
                     pen.setStyle(Qt::SolidLine);
                     pen.setWidth(0);
                     painter.setPen(pen);
-                    painter.drawLine(noteCenter,
-                                     lowestPitchY - (draggingNoteBeginPitch - lowestPitch - 0.5) * semitoneHeight,
-                                     noteCenter,
-                                     lowestPitchY - (std::round(mousePitch) - lowestPitch - 0.5) * semitoneHeight);
+                    painter.drawLine(
+                        noteCenter, lowestPitchY - (draggingNoteBeginPitch - lowestPitch - 0.5) * semitoneHeight,
+                        noteCenter, lowestPitchY - (std::round(mousePitch) - lowestPitch - 0.5) * semitoneHeight);
                     break;
                 }
 
-                default: break;
+                default:
+                    break;
             }
         } else if (mouseOnNote(mapFromGlobal(QCursor::pos()), &note)) {
             auto rec =
@@ -838,9 +847,12 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         w += KeyWidth;
 
         // Debug text
+        painter.translate(0, -TimelineHeight);
+        h += TimelineHeight;
+        painter.setClipRect(0, 0, w, h);
+        auto mousePos = mapFromGlobal(QCursor::pos());
+        auto mousePitch = pitchOnWidgetY(mousePos.y());
         if (showPitchTextOverlay) {
-            auto mousePos = mapFromGlobal(QCursor::pos());
-            auto mousePitch = centerPitch + h / 2 / semitoneHeight - (mousePos.y() - TimelineHeight) / semitoneHeight;
             painter.setPen(Qt::white);
             painter.drawText(KeyWidth, TimelineHeight,
                              QString("CenterPitch %1 (%2)  LowestPitch %3 (%4) MousePitch %5 MousePos (%6, %7)")
@@ -853,9 +865,36 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                                  .arg(mousePos.y()));
         }
 
-        // Piano keys
-        auto prevfont = painter.font();
+        // Playhead (playheadPos)
+        painter.setPen(QColor(255, 180, 0));
+        painter.drawLine((playheadPos - leftTime) * secondWidth + KeyWidth, TimelineHeight,
+                         (playheadPos - leftTime) * secondWidth + KeyWidth, h);
 
+        // Mouse hover crosshair
+        if (showCrosshairAndPitch) {
+            QString crosshairText = PitchToNotePlusCentsString(mousePitch);
+            QRectF crosshairTextRect = painter.fontMetrics().boundingRect(crosshairText);
+            painter.setClipRect(KeyWidth, TimelineHeight, w - KeyWidth, h - TimelineHeight);
+            painter.setPen(QColor(255, 255, 255, 96));
+            painter.drawLine(mousePos.x(), TimelineHeight, mousePos.x(), h);
+            painter.drawLine(0, mousePos.y(), w, mousePos.y());
+            painter.translate(mousePos);
+            painter.fillRect(QRectF(CrosshairTextMargin, -CrosshairTextMargin,
+                                    CrosshairTextPadding * 2 + crosshairTextRect.width(),
+                                    -(CrosshairTextPadding * 2 + crosshairTextRect.height())),
+                             QColor(0, 0, 0, 160));
+            painter.setPen(QColor(255, 255, 255));
+            painter.drawText(crosshairTextRect.translated(QPointF(CrosshairTextPadding + CrosshairTextMargin,
+                                                                  -(CrosshairTextPadding + CrosshairTextMargin))),
+                             PitchToNotePlusCentsString(mousePitch));
+            painter.translate(-mousePos);
+        }
+
+        // Piano keys
+        painter.translate(0, TimelineHeight);
+        h -= TimelineHeight;
+        painter.setClipRect(0, 0, w, h);
+        auto prevfont = painter.font();
         do {
             lowestPitch++;
             lowestPitchY -= semitoneHeight;
@@ -881,11 +920,6 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         painter.translate(0, -TimelineHeight);
         painter.setClipRect(0, 0, w, height());
         h += TimelineHeight;
-
-        // Playhead (playheadPos)
-        painter.setPen(QColor(255, 180, 0));
-        painter.drawLine((playheadPos - leftTime) * secondWidth + KeyWidth, TimelineHeight,
-                         (playheadPos - leftTime) * secondWidth + KeyWidth, h);
     } while (false);
 
     painter.end();
@@ -980,7 +1014,8 @@ void F0Widget::mousePressEvent(QMouseEvent *event) {
             case Glide:
                 draggingMode = Glide;
                 break;
-            default: break;
+            default:
+                break;
         }
 
         // This may be less useful for glide labeling but anyways

@@ -1,14 +1,15 @@
 
 #pragma once
 
-#include "intervaltree.hpp"
 #include "SlurCutterCfg.h"
+#include "intervaltree.hpp"
+#include <QActionGroup>
 #include <QFrame>
 #include <QMenu>
 #include <QScrollBar>
-#include <QActionGroup>
 #include <QtWidgets/qactiongroup.h>
 #include <tuple>
+
 
 
 class F0Widget : public QFrame {
@@ -81,7 +82,6 @@ protected slots:
     void setCurrentNoteGlideType(QAction *action);
 
 protected:
-
     // Events
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
@@ -124,6 +124,7 @@ protected:
     static constexpr int TimeAxisHeight = 40, HorizontalScrollHeight = ScrollBarWidth,
                          TimelineHeight = TimeAxisHeight + HorizontalScrollHeight;
     static constexpr int NotePadding = 4;
+    static constexpr int CrosshairTextMargin = 8, CrosshairTextPadding = 5;
 
     // Display state
     double semitoneHeight = 30.0, secondWidth = 200.0;
@@ -135,6 +136,7 @@ protected:
     bool snapToKey = true;
     bool showPitchTextOverlay = false;
     bool showPhonemeTexts = true;
+    bool showCrosshairAndPitch = true;
 
     bool hasError;
     QString errorStatusText;
@@ -148,14 +150,15 @@ protected:
         None,
         Note,
         Glide,
-    } draggingMode, selectedDragMode;
+    } draggingMode,
+        selectedDragMode;
     bool dragging = false;
     bool draggingNoteInCents = false;
     double draggingNoteStartPitch = 0.0, draggingNoteBeginCents = 0, draggingNoteBeginPitch = 0;
 
     // Embedded widgets
     QScrollBar *horizontalScrollBar, *verticalScrollBar;
-    
+
     QMenu *bgMenu;
     QAction *bgMenuReloadSentence;
     QAction *bgMenu_CautionPrompt;
@@ -164,6 +167,7 @@ protected:
     QAction *bgMenuSnapByDefault;
     QAction *bgMenuShowPitchTextOverlay;
     QAction *bgMenuShowPhonemeTexts;
+    QAction *bgMenuShowCrosshairAndPitch;
     QAction *bgMenu_ModePrompt;
     QAction *bgMenuModeNote;
     QAction *bgMenuModeGlide;
