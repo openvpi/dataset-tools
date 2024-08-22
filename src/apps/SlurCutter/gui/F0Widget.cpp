@@ -1014,6 +1014,7 @@ void F0Widget::mouseReleaseEvent(QMouseEvent *event) {
                     setDraggedNoteGlide(GlideStyle::Up);
                 else if (deltaPitch < 0)
                     setDraggedNoteGlide(GlideStyle::Down);
+                setCursor(Qt::ArrowCursor);
             }
 
             case None:
