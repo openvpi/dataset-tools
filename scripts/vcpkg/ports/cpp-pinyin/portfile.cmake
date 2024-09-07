@@ -1,8 +1,8 @@
 vcpkg_from_github(
         OUT_SOURCE_PATH SOURCE_PATH
         REPO wolfgitpr/cpp-pinyin
-        REF  c6fb0a9fd706fe4a5bb6c9bae614561ca7b5c043
-        SHA512 aaa5247268e8f74544e09f1c611dbb42eff0db1a3dce6dbdaac74893f6a01bb25ecadc16d229ae7972dfb23de42c01337ff393279c5a03bba258da4a07f3cb9e
+        REF  2c87514e809e878bce5b1b3661b96033c807e6d6
+        SHA512 7d5143d215789779c531523a7ac44773f3acd3de0f354471c559e78f96bc7a60883c059f721d80d7d1980a215775ad255db11c64c704b2177847f09e5a311dd2
         HEAD_REF main
 )
 
