@@ -394,7 +394,7 @@ void PlayWidget::_q_sliderReleased() {
     reloadFinePlayheadStatus(sliderPos);
 }
 
-void PlayWidget::_q_deviceActionTriggered(QAction *action) {
+void PlayWidget::_q_deviceActionTriggered(const QAction *action) {
     if (playing) {
         QMessageBox::warning(this, qApp->applicationName(), "Stop sound first!");
     } else {

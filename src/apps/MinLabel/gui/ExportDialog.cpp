@@ -20,13 +20,13 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     outputDirButton->setMaximumWidth(100);
 
     connect(outputDirButton, &QPushButton::clicked, this, [=]() {
-        QString dirname = QFileDialog::getExistingDirectory(this, "Select Directory", outputDirEdit->text());
+        const QString dirname = QFileDialog::getExistingDirectory(this, "Select Directory", outputDirEdit->text());
         if (!dirname.isEmpty()) {
             outputDirEdit->setText(dirname);
         }
     });
 
-    auto hLayout = new QHBoxLayout();
+    const auto hLayout = new QHBoxLayout();
     hLayout->addWidget(outputDirEdit);
     hLayout->addWidget(outputDirButton);
 
@@ -68,5 +68,4 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     resize(500, 300);
 }
 
-ExportDialog::~ExportDialog() {
-}
+ExportDialog::~ExportDialog() = default;

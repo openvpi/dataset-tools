@@ -1,31 +1,18 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QAction>
-#include <QBoxLayout>
-#include <QCheckBox>
-#include <QFileSystemModel>
-#include <QLabel>
 #include <QMainWindow>
-#include <QMenu>
-#include <QPluginLoader>
 #include <QProgressBar>
-#include <QPushButton>
-#include <QSet>
-#include <QSlider>
 #include <QSplitter>
-#include <QTreeWidget>
 
 #include "Common.h"
-#include "ExportDialog.h"
 #include "PlayWidget.h"
 #include "TextWidget.h"
 #include "inc/MinLabelCfg.h"
 
 #include "Api/IAudioDecoder.h"
-#include "Api/IAudioPlayback.h"
 
-class MainWindow final: public QMainWindow {
+class MainWindow final : public QMainWindow {
     Q_OBJECT
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -87,10 +74,10 @@ private:
     void applyConfig();
 
     void _q_fileMenuTriggered(QAction *action);
-    void _q_editMenuTriggered(QAction *action);
-    void _q_playMenuTriggered(QAction *action);
+    void _q_editMenuTriggered(const QAction *action) const;
+    void _q_playMenuTriggered(const QAction *action) const;
     void _q_helpMenuTriggered(QAction *action);
-    void _q_updateProgress();
+    void _q_updateProgress() const;
     void _q_treeCurrentChanged(const QModelIndex &current);
 };
 

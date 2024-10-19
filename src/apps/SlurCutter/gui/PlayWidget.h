@@ -86,7 +86,7 @@ private:
     void _q_stopButtonClicked();
     void _q_devButtonClicked();
     void _q_sliderReleased();
-    void _q_deviceActionTriggered(QAction *action);
+    void _q_deviceActionTriggered(const QAction *action);
     void _q_playStateChanged();
     void _q_audioDeviceChanged();
     void _q_audioDeviceAdded();

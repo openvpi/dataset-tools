@@ -1,5 +1,7 @@
 #include "MainWindow.h"
 
+#include "ExportDialog.h"
+
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
@@ -7,18 +9,17 @@
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QJsonDocument>
+#include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QStatusBar>
 #include <QStyledItemDelegate>
-#include <QTime>
 #include <utility>
 
 #include "QMSystem.h"
-#include "qasglobal.h"
 
-class CustomDelegate : public QStyledItemDelegate {
+class CustomDelegate final : public QStyledItemDelegate {
 public:
     explicit CustomDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {
     }
@@ -29,8 +30,8 @@ public:
             return;
         }
 
-        QFileInfo fileInfo(model->filePath(index));
-        QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
+        const QFileInfo fileInfo(model->filePath(index));
+        const QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
 
         QStyleOptionViewItem modifiedOption(option);
         if (QFile::exists(jsonFilePath) && fileInfo.isFile() && QFileInfo(jsonFilePath).size() > 0) {
@@ -80,7 +81,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     playMenu = new QMenu("Playback(&P)", this);
     playMenu->addAction(playAction);
 
-    aboutAppAction = new QAction(QString("About %1").arg(qApp->applicationName()), this);
+    aboutAppAction = new QAction(QString("About %1").arg(QApplication::applicationName()), this);
     aboutQtAction = new QAction("About Qt", this);
 
     helpMenu = new QMenu("Help(&H)", this);
@@ -157,10 +158,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     reloadWindowTitle();
     resize(1280, 720);
 
-    QString keyConfPath = qApp->applicationDirPath() + "/minlabel_config.json";
+    QString keyConfPath = QApplication::applicationDirPath() + "/minlabel_config.json";
     QJsonDocument cfgDoc;
     try {
-        if (qApp->arguments().contains("--reset-keys")) {
+        if (QApplication::arguments().contains("--reset-keys")) {
             throw std::exception();
         }
 
@@ -194,7 +195,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
             file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
             file.close();
         } else {
-            QMessageBox::critical(this, qApp->applicationName(), "Failed to create config file.");
+            QMessageBox::critical(this, QApplication::applicationName(), "Failed to create config file.");
         }
     }
 }
@@ -251,7 +252,7 @@ void MainWindow::saveFile(const QString &filename) {
     writeData["lab_without_tone"] = withoutTone.replace(QRegExp("\\s+"), " ");
 
     if (!writeJsonFile(jsonFilePath, writeData)) {
-        QMessageBox::critical(this, qApp->applicationName(),
+        QMessageBox::critical(this, QApplication::applicationName(),
                               QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
         ::exit(-1);
     }
@@ -264,7 +265,7 @@ void MainWindow::saveFile(const QString &filename) {
 
     QFile labFile(labFilePath);
     if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, qApp->applicationName(),
+        QMessageBox::critical(this, QApplication::applicationName(),
                               QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFilePath)));
         ::exit(-1);
     }
@@ -277,8 +278,8 @@ void MainWindow::saveFile(const QString &filename) {
 
 void MainWindow::reloadWindowTitle() {
     setWindowTitle(dirname.isEmpty()
-                       ? qApp->applicationName()
-                       : QString("%1 - %2").arg(qApp->applicationName(),
+                       ? QApplication::applicationName()
+                       : QString("%1 - %2").arg(QApplication::applicationName(),
                                                 QDir::toNativeSeparators(QMFs::PathFindFileName(dirname))));
 }
 
@@ -337,7 +338,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     // Pull and save config
-    QString keyConfPath = qApp->applicationDirPath() + "/minlabel_config.json";
+    QString keyConfPath = QApplication::applicationDirPath() + "/minlabel_config.json";
     QFile file(keyConfPath);
 
     if (file.open(QIODevice::WriteOnly)) {
@@ -408,7 +409,7 @@ void MainWindow::_q_fileMenuTriggered(QAction *action) {
     reloadWindowTitle();
 }
 
-void MainWindow::_q_editMenuTriggered(QAction *action) {
+void MainWindow::_q_editMenuTriggered(const QAction *action) const {
     if (action == prevAction) {
         QKeyEvent e(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
         QApplication::sendEvent(treeView, &e);
@@ -418,7 +419,7 @@ void MainWindow::_q_editMenuTriggered(QAction *action) {
     }
 }
 
-void MainWindow::_q_playMenuTriggered(QAction *action) {
+void MainWindow::_q_playMenuTriggered(const QAction *action) const {
     if (action == playAction) {
         playerWidget->setPlaying(!playerWidget->isPlaying());
     }
@@ -426,16 +427,17 @@ void MainWindow::_q_playMenuTriggered(QAction *action) {
 
 void MainWindow::_q_helpMenuTriggered(QAction *action) {
     if (action == aboutAppAction) {
-        QMessageBox::information(this, qApp->applicationName(),
-                                 QString("%1 %2, Copyright OpenVPI.").arg(qApp->applicationName(), APP_VERSION));
+        QMessageBox::information(
+            this, QApplication::applicationName(),
+            QString("%1 %2, Copyright OpenVPI.").arg(QApplication::applicationName(), APP_VERSION));
     } else if (action == aboutQtAction) {
         QMessageBox::aboutQt(this);
     }
 }
 
-void MainWindow::_q_updateProgress() {
-    int count = jsonCount(dirname);
-    int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
+void MainWindow::_q_updateProgress() const {
+    const int count = jsonCount(dirname);
+    const int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     double progress = 0.0;
     if (totalRowCount > 0) {
         progress = (static_cast<double>(count) / totalRowCount) * 100.0;
@@ -456,13 +458,13 @@ void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
 }
 
 void MainWindow::exportAudio(ExportInfo &exportInfo) {
-    int count = jsonCount(dirname);
-    int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
+    const int count = jsonCount(dirname);
+    const int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     if (totalRowCount != count) {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, qApp->applicationName(),
-                                      QString("%1 file are not labeled, continue?").arg(totalRowCount - count),
-                                      QMessageBox::Yes | QMessageBox::No);
+        const QMessageBox::StandardButton reply =
+            QMessageBox::question(this, QApplication::applicationName(),
+                                  QString("%1 file are not labeled, continue?").arg(totalRowCount - count),
+                                  QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::No) {
             return;
         }
@@ -471,13 +473,13 @@ void MainWindow::exportAudio(ExportInfo &exportInfo) {
     mkdir(exportInfo);
     QList<CopyInfo> copyList = mkCopylist(dirname, exportInfo.outputDir + "/" + exportInfo.folderName);
     if (copyFile(copyList, exportInfo)) {
-        QMessageBox::information(this, qApp->applicationName(), QString("Successfully exported files."));
+        QMessageBox::information(this, QApplication::applicationName(), QString("Successfully exported files."));
     } else {
-        QMessageBox::critical(this, qApp->applicationName(), QString("Failed to export files."));
+        QMessageBox::critical(this, QApplication::applicationName(), QString("Failed to export files."));
     }
 }
 void MainWindow::labToJson(const QString &dirName) {
-    QDir directory(dirName);
+    const QDir directory(dirName);
     QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
 
     int count = 0;
@@ -489,10 +491,10 @@ void MainWindow::labToJson(const QString &dirName) {
         QString jsonFilePath = fileInfo.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) + ".json";
         if (fileInfo.suffix() == "lab" && !QMFs::isFileExist(jsonFilePath)) {
             QFile file(labFilePath);
-            QString labContent, txtContent;
             if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QString labContent;
                 labContent = QString::fromUtf8(file.readAll());
-                txtContent = labContent;
+                const QString txtContent = labContent;
 
                 if (audioToOtherSuffix(currentFilePath, "lab") == labFilePath) {
                     textWidget->contentText->setPlainText(labContent);
@@ -515,7 +517,7 @@ void MainWindow::labToJson(const QString &dirName) {
 
                     if (!writeJsonFile(jsonFilePath, writeData)) {
                         QMessageBox::critical(
-                            this, qApp->applicationName(),
+                            this, QApplication::applicationName(),
                             QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
                         ::exit(-1);
                     }
@@ -525,6 +527,6 @@ void MainWindow::labToJson(const QString &dirName) {
         }
     }
     _q_updateProgress();
-    QMessageBox::information(this, qApp->applicationName(),
+    QMessageBox::information(this, QApplication::applicationName(),
                              QString("Convert %1 lab files to current project file.").arg(count));
 }

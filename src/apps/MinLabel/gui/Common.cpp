@@ -1,25 +1,27 @@
 #include "Common.h"
 #include <QDebug>
+#include <QDir>
+#include <QJsonObject>
 #include <QMessageBox>
 
 typedef QString string;
 QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix) {
-    QFileInfo info(filename);
-    QString suffix = info.suffix().toLower();
-    QString name = info.fileName();
+    const QFileInfo info(filename);
+    const QString suffix = info.suffix().toLower();
+    const QString name = info.fileName();
     return info.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) +
            (suffix != "wav" ? "_" + suffix : "") + "." + tarSuffix;
 }
 
 QString labFileToAudioFile(const QString &filename) {
-    QFileInfo info(filename);
+    const QFileInfo info(filename);
 
-    QString dirPath = info.absolutePath();
-    QString suffix = info.suffix().toLower();
-    QString fileName = info.fileName();
-    QString baseName = fileName.mid(0, fileName.size() - suffix.size() - 1);
+    const QString dirPath = info.absolutePath();
+    const QString suffix = info.suffix().toLower();
+    const QString fileName = info.fileName();
+    const QString baseName = fileName.mid(0, fileName.size() - suffix.size() - 1);
 
-    QDir directory(dirPath);
+    const QDir directory(dirPath);
     QStringList fileTypes;
     fileTypes << "*.wav"
               << "*.mp3"
@@ -69,17 +71,16 @@ int jsonCount(const QString &dirName) {
     return count;
 }
 
-bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo) {
+bool copyFile(QList<CopyInfo> &copyList, const ExportInfo &exportInfo) {
     bool overwriteAll = false;
     bool skipAll = false;
 
     for (const CopyInfo &copyInfo : copyList) {
         if (copyInfo.exist && !overwriteAll && !skipAll) {
-            QMessageBox::StandardButton reply;
-            reply = QMessageBox::question(nullptr, "Overwrite?",
-                                          QString("File %1 already exists, overwrite?").arg(copyInfo.rawName),
-                                          QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel |
-                                              QMessageBox::YesToAll | QMessageBox::NoToAll);
+            QMessageBox::StandardButton reply = QMessageBox::question(
+                nullptr, "Overwrite?", QString("File %1 already exists, overwrite?").arg(copyInfo.rawName),
+                QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel | QMessageBox::YesToAll |
+                    QMessageBox::NoToAll);
             if (reply == QMessageBox::Cancel) {
                 return false;
             } else if (reply == QMessageBox::No) {
@@ -145,7 +146,7 @@ bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo) {
     return true;
 }
 
-void mkItem(bool opt, QString &folderPath, const QString &folderName) {
+void mkItem(bool opt, const QString &folderPath, const QString &folderName) {
     if (opt) {
         QString tarDir = folderPath + "/" + folderName;
         if (!QDir(tarDir).exists() && !QDir(folderPath).mkdir(folderName)) {
@@ -155,17 +156,17 @@ void mkItem(bool opt, QString &folderPath, const QString &folderName) {
     }
 }
 
-void mkdir(ExportInfo &exportInfo) {
-    QString folderPath = exportInfo.outputDir + "/" + exportInfo.folderName;
+void mkdir(const ExportInfo &exportInfo) {
+    const QString folderPath = exportInfo.outputDir + "/" + exportInfo.folderName;
     if (exportInfo.outputDir.isEmpty()) {
         QMessageBox::critical(nullptr, "Warning", "Output directory name is empty.");
         return;
     }
 
     if (QDir(folderPath).exists()) {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(nullptr, "Warning", "Output directory already exists, do you want to use it?",
-                                      QMessageBox::Yes | QMessageBox::No);
+        QMessageBox::StandardButton reply =
+            QMessageBox::question(nullptr, "Warning", "Output directory already exists, do you want to use it?",
+                                  QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::No) {
             return;
         }
@@ -183,14 +184,14 @@ void mkdir(ExportInfo &exportInfo) {
 }
 
 QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir) {
-    QDir source(sourcePath);
-    QDir output(outputDir);
+    const QDir source(sourcePath);
+    const QDir output(outputDir);
     QFileInfoList fileInfoList = source.entryInfoList(QDir::Files);
 
     QList<CopyInfo> copyList;
     foreach (const QFileInfo &fileInfo, fileInfoList) {
         if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
-            QString audioPath = labFileToAudioFile(fileInfo.absoluteFilePath());
+            const QString audioPath = labFileToAudioFile(fileInfo.absoluteFilePath());
 
             if (QFile(audioPath).exists()) {
                 QFileInfo audioInfo = QFileInfo(audioPath);
@@ -236,8 +237,8 @@ bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject) {
         return false;
     }
 
-    QJsonDocument jsonDoc(jsonObject);
-    QByteArray jsonData = jsonDoc.toJson();
+    const QJsonDocument jsonDoc(jsonObject);
+    const QByteArray jsonData = jsonDoc.toJson();
 
     if (file.write(jsonData) == -1) {
         return false;

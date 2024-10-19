@@ -1,12 +1,8 @@
 #ifndef DATASET_TOOLS_COMMON_H
 #define DATASET_TOOLS_COMMON_H
 
-#include <QDir>
 #include <QFileInfo>
-#include <QJsonArray>
 #include <QJsonDocument>
-#include <QJsonObject>
-#include <QMap>
 #include <QString>
 #include <QStringList>
 #include <utility>
@@ -34,15 +30,15 @@ struct CopyInfo {
     CopyInfo(QString rawName, const QString &tarName, QString sourceDir, QString targetDir, bool isExist)
         : rawName(std::move(rawName)), tarName(tarName), sourceDir(std::move(sourceDir)),
           targetDir(std::move(targetDir)), exist(isExist) {
-        QString filename = QFileInfo(tarName).fileName();
-        QString suffix = QFileInfo(tarName).suffix();
+        const QString filename = QFileInfo(tarName).fileName();
+        const QString suffix = QFileInfo(tarName).suffix();
         tarBasename = filename.mid(0, filename.size() - suffix.size() - 1);
     }
 };
 
-bool copyFile(QList<CopyInfo> &copyList, ExportInfo &exportInfo);
+bool copyFile(QList<CopyInfo> &copyList, const ExportInfo &exportInfo);
 int jsonCount(const QString &dirName);
-void mkdir(ExportInfo &exportInfo);
+void mkdir(const ExportInfo &exportInfo);
 QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir);
 bool readJsonFile(const QString &fileName, QJsonObject &jsonObject);
 bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject);

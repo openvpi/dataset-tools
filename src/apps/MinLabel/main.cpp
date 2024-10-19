@@ -11,17 +11,15 @@
 #endif
 
 int main(int argc, char *argv[]) {
-    // QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    // QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
 
-    if (QMOs::isUserRoot() && !a.arguments().contains("--allow-root")) {
-        QString title = qApp->applicationName();
+    if (QMOs::isUserRoot() && !QApplication::arguments().contains("--allow-root")) {
+        QString title = QApplication::applicationName();
         QString msg = QString("You're trying to start %1 as the %2, which may cause "
                               "security problem and isn't recommended.")
-                          .arg(qApp->applicationName(), "Administrator");
+                          .arg(QApplication::applicationName(), "Administrator");
 #ifdef Q_OS_WINDOWS
-        ::MessageBoxW(0, msg.toStdWString().data(), title.toStdWString().data(),
+        ::MessageBoxW(nullptr, msg.toStdWString().data(), title.toStdWString().data(),
                       MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONWARNING);
 #elif defined(Q_OS_LINUX)
         fputs(qPrintable(msg), stdout);
@@ -34,30 +32,17 @@ int main(int argc, char *argv[]) {
 #ifdef Q_OS_WINDOWS
     QFont f("Microsoft YaHei");
     f.setPointSize(9);
-    a.setFont(f);
+    QApplication::setFont(f);
 #endif
 
-// Set library loading info
-// #ifdef Q_OS_MAC
-//     qApp->addLibraryPath(qApp->applicationDirPath() + "/../Frameworks/ChorusKit/plugins");
-// #else
-//     qApp->addLibraryPath(qApp->applicationDirPath() + "/../lib/ChorusKit/plugins");
-// #endif
-
-// Initialize g2p
-// #ifdef Q_OS_MAC
-//     IKg2p::setDictionaryPath(qApp->applicationDirPath() + "/../Resources/ChorusKit/g2p/dict");
-// #else
-//     IKg2p::setDictionaryPath(qApp->applicationDirPath() + "/../share/ChorusKit/g2p/dict");
-// #endif
 #ifdef Q_OS_MAC
-    Pinyin::setDictionaryPath(qApp->applicationDirPath().toUtf8().toStdString() + "/../Resources/dict");
+    Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/../Resources/dict");
 #else
-    Pinyin::setDictionaryPath(qApp->applicationDirPath().toUtf8().toStdString() + "/dict");
+    Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/dict");
 #endif
 
     MainWindow w;
     w.show();
 
-    return a.exec();
+    return QApplication::exec();
 }

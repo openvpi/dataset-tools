@@ -8,7 +8,7 @@
 
 #include "Common.h"
 
-class ExportDialog : public QDialog {
+class ExportDialog final : public QDialog {
     Q_OBJECT
 public:
     explicit ExportDialog(QWidget *parent = nullptr);
@@ -20,7 +20,7 @@ public:
     QPushButton *outputDirButton;
 
     QLineEdit *folderNameEdit;
-    QCheckBox *convertFilename;
+    QCheckBox *convertFilename{};
     QCheckBox *expAudio;
     QCheckBox *labFile;
     QCheckBox *rawText;
