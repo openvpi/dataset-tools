@@ -12,6 +12,7 @@
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QTreeWidget>
 #include <QMimeData>
 #include <QStatusBar>
 #include <QStyledItemDelegate>

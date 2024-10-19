@@ -90,7 +90,7 @@ TextWidget::TextWidget(QWidget *parent)
     connect(replaceAction, &QAction::triggered, this, &TextWidget::_q_replaceButtonClicked);
 }
 
-TextWidget::~TextWidget() = default;
+TextWidget::~TextWidget(){};
 
 QString TextWidget::sentence() const {
     QString words = wordsText->text();
