@@ -58,7 +58,7 @@ protected:
     MinLabelCfg cfg;
 
     void openDirectory(const QString &dirName);
-    void openFile(const QString &filename);
+    void openFile(const QString &filename) const;
     void saveFile(const QString &filename);
     void labToJson(const QString &dirName);
     void exportAudio(ExportInfo &exportInfo);

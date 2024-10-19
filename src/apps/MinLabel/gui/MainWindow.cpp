@@ -211,7 +211,7 @@ void MainWindow::openDirectory(const QString &dirName) {
     treeView->setRootIndex(fsModel->index(dirName));
 }
 
-void MainWindow::openFile(const QString &filename) {
+void MainWindow::openFile(const QString &filename) const {
     QString labContent, txtContent;
 
     QString jsonFilePath = audioToOtherSuffix(filename, "json");
@@ -250,6 +250,7 @@ void MainWindow::saveFile(const QString &filename) {
     writeData["lab"] = labContent.replace(QRegExp("\\s+"), " ");
     writeData["raw_text"] = txtContent;
     writeData["lab_without_tone"] = withoutTone.replace(QRegExp("\\s+"), " ");
+    writeData["isCheck"] = true;
 
     if (!writeJsonFile(jsonFilePath, writeData)) {
         QMessageBox::critical(this, QApplication::applicationName(),

@@ -4,7 +4,6 @@
 #include <QJsonObject>
 #include <QMessageBox>
 
-typedef QString string;
 QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix) {
     const QFileInfo info(filename);
     const QString suffix = info.suffix().toLower();
@@ -43,7 +42,7 @@ QString labFileToAudioFile(const QString &filename) {
 }
 
 bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffix, const QString &data) {
-    QString target = copyInfo.targetDir + "/" + item + "/" + copyInfo.tarBasename + "." + suffix;
+    const QString target = copyInfo.targetDir + "/" + item + "/" + copyInfo.tarBasename + "." + suffix;
     if (QFile::exists(target)) {
         QFile::remove(target);
     }
@@ -59,13 +58,23 @@ bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffi
 }
 
 int jsonCount(const QString &dirName) {
-    QDir directory(dirName);
+    const QDir directory(dirName);
     QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
 
     int count = 0;
     foreach (const QFileInfo &fileInfo, fileInfoList) {
         if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
-            count++;
+            QFile file(fileInfo.filePath());
+            if (file.open(QIODevice::ReadOnly)) {
+                const QJsonDocument jsonDoc = QJsonDocument::fromJson(file.readAll());
+                if (jsonDoc.isObject()) {
+                    const QJsonObject jsonObj = jsonDoc.object();
+                    if (jsonObj.contains("isCheck") && jsonObj["isCheck"].toBool() == true) {
+                        count++;
+                    }
+                }
+                file.close();
+            }
         }
     }
     return count;
@@ -94,7 +103,7 @@ bool copyFile(QList<CopyInfo> &copyList, const ExportInfo &exportInfo) {
 
         if (!(copyInfo.exist && skipAll)) {
             QString sourceAudio = copyInfo.sourceDir + "/" + copyInfo.rawName;
-            string sourceJson = audioToOtherSuffix(sourceAudio, "json");
+            QString sourceJson = audioToOtherSuffix(sourceAudio, "json");
 
             QString labContent, txtContent, unToneLab;
             QJsonObject readData;
