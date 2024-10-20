@@ -12,10 +12,10 @@
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QTreeWidget>
 #include <QMimeData>
 #include <QStatusBar>
 #include <QStyledItemDelegate>
+#include <QTreeWidget>
 #include <utility>
 
 #include "QMSystem.h"
@@ -34,11 +34,26 @@ public:
         const QFileInfo fileInfo(model->filePath(index));
         const QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
 
+        // 默认设置为黑色
         QStyleOptionViewItem modifiedOption(option);
-        if (QFile::exists(jsonFilePath) && fileInfo.isFile() && QFileInfo(jsonFilePath).size() > 0) {
-            modifiedOption.palette.setColor(QPalette::Text, Qt::gray);
-        } else {
-            modifiedOption.palette.setColor(QPalette::Text, Qt::black);
+        modifiedOption.palette.setColor(QPalette::Text, Qt::black);
+
+        // 如果 JSON 文件存在且可读
+        if (QFile::exists(jsonFilePath) && fileInfo.isFile()) {
+            QFile jsonFile(jsonFilePath);
+            if (jsonFile.open(QIODevice::ReadOnly)) {
+                const QByteArray jsonData = jsonFile.readAll();
+                jsonFile.close();
+
+                const QJsonDocument jsonDoc(QJsonDocument::fromJson(jsonData));
+                if (jsonDoc.isObject()) {
+                    const QJsonObject jsonObj = jsonDoc.object();
+                    // 判断 isCheck 是否存在且为 true
+                    if (jsonObj.value("isCheck").toBool(false)) {
+                        modifiedOption.palette.setColor(QPalette::Text, Qt::gray);
+                    }
+                }
+            }
         }
 
         QStyledItemDelegate::paint(painter, modifiedOption, index);
