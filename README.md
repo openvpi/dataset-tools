@@ -20,6 +20,10 @@ DiffSinger dataset processing tools, including audio processing, labeling.
 
 Used for LyricFA, only supports Chinese. [jp&&en version(beta)](https://github.com/wolfgitpr/LyricFA)
 
+## SomeModel
+
+[SomeModel](https://github.com/openvpi/dataset-tools/releases/tag/SomeModel)
+
 ## FblModel
 
 [FblModel](https://github.com/openvpi/dataset-tools/releases/tag/FblModel)
@@ -46,7 +50,7 @@ You need to install Qt libraries first. (Tested on Qt 5.15.2 only)
 ```sh
 git submodule init --recursive
 cd /D src/libs
-cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
+cmake -Dep=dml -P ../../scripts/setup-onnxruntime.cmake
 
 cd ../../
 set QT_DIR=<dir> # directory `Qt5Config.cmake` locates
