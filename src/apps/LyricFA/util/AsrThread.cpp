@@ -20,7 +20,7 @@ namespace LyricFA {
             return;
         }
 
-        QFile labFile(m_labPath);
+        QFile labFile(m_labPath.toLocal8Bit());
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::critical(nullptr, QApplication::applicationName(),
                                   QString("Failed to write to file %1").arg(QMFs::PathFindFileName(m_labPath)));

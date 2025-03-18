@@ -24,7 +24,7 @@ namespace LyricFA {
     MatchLyric::~MatchLyric() = default;
 
     static QString get_lyrics_from_txt(const QString &lyricPath) {
-        QFile lyricFile(lyricPath);
+        QFile lyricFile(lyricPath.toLocal8Bit());
         if (lyricFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
             return QString::fromUtf8(lyricFile.readAll());
         }
@@ -32,7 +32,7 @@ namespace LyricFA {
     }
 
     static bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject) {
-        QFile file(fileName);
+        QFile file(fileName.toLocal8Bit());
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             return false;
         }
@@ -142,7 +142,7 @@ namespace LyricFA {
 
                 Q_ASSERT(faRes.match_text.size() == faRes.match_pinyin.size());
 
-                QFile jsonFile(jsonPath);
+                QFile jsonFile(jsonPath.toLocal8Bit());
                 QJsonObject writeData;
                 writeData["lab"] = faRes.match_pinyin.join(' ');
                 writeData["raw_text"] = faRes.match_text.join(' ');

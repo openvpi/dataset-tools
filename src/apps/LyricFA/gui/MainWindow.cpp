@@ -242,8 +242,8 @@ namespace LyricFA {
 
     void MainWindow::initStyleSheet() {
         // qss file: https://github.com/feiyangqingyun/QWidgetDemo/tree/master/ui/styledemo
-        QFile file(QApplication::applicationDirPath() + "/qss/flatgray.css");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (QFile file((QApplication::applicationDirPath() + "/qss/flatgray.css").toLocal8Bit());
+            file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             qApp->setStyleSheet(file.readAll());
         }
     }
