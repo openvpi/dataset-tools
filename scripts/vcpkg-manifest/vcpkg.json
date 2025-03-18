@@ -12,7 +12,10 @@
     "fftw3",
     "yaml-cpp",
     "cpp-pinyin",
-    "cpp-kana"
+    "cpp-kana",
+    "soxr",
+    "wolf-midi",
+    "libsndfile"
   ],
   "vcpkg-configuration": {
     "overlay-ports": [

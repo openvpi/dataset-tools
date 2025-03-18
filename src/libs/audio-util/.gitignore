@@ -1,0 +1,57 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+.DS_Store
+*/.DS_Store
+
+build-src*
+build/
+cmake-build*
+*.user
+*.lnk
+Libs/*
+_workingDir*
+.vscode
+.idea
+.cache
+cache
+.vs
+out/
+CMakeSettings.json
+/vcpkg
+/data
+/*.natvis
+
+*.sublime-*
+setup-vcpkg.json
+setup-vcpkg-temp*
