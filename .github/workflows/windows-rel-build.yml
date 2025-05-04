@@ -44,7 +44,7 @@ jobs:
       - name: Configure Qt6 path
         shell: bash
         run: |
-          echo "QT_DIR=$Qt6_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "QT_DIR=$QT6_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
           echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
 
       - name: Install vcpkg
