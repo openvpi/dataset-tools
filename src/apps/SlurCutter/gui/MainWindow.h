@@ -90,10 +90,10 @@ protected:
 private:
     void initStyleSheet();
 
-    void _q_fileMenuTriggered(QAction *action);
+    void _q_fileMenuTriggered(const QAction *action);
     void _q_editMenuTriggered(QAction *action);
     void _q_playMenuTriggered(QAction *action);
-    void _q_helpMenuTriggered(QAction *action);
+    void _q_helpMenuTriggered(const QAction *action);
     void _q_treeCurrentChanged(const QModelIndex &current, const QModelIndex &previous);
     void _q_sentenceChanged(int currentRow);
 };

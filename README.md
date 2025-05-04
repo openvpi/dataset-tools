@@ -28,7 +28,8 @@ Used for LyricFA, only supports Chinese. [jp&&en version(beta)](https://github.c
 
 [FblModel](https://github.com/openvpi/dataset-tools/releases/tag/FblModel)
 
-Currently, FoxBreatheLabeler only supports annotating breathing using TextGrid files output from SOFA(i.e. overlaying new "AP" annotations on intervals already marked as "SP").
+Currently, FoxBreatheLabeler only supports annotating breathing using TextGrid files output from SOFA(i.e. overlaying
+new "AP" annotations on intervals already marked as "SP").
 
 ## Build from source
 
@@ -36,26 +37,25 @@ Currently, FoxBreatheLabeler only supports annotating breathing using TextGrid f
 
 | Component | Requirement |             Detailed             |
 |:---------:|:-----------:|:--------------------------------:|
-|    Qt     |  \>=5.15.2  | Core, Gui, Widgets, Svg, Network |
-| Compiler  |  \>=C++17   |      MSVC 2019, GCC, Clang       |
+|    Qt     |  \>=6.8.0   | Core, Gui, Widgets, Svg, Network |
+| Compiler  |  \>=C++17   |      MSVC 2022, GCC, Clang       |
 |   CMake   |   \>=3.17   |      >=3.20 is recommended       |
-   <!--    |   Python    |              \>=3.8              |                  /                   | -->
+|  Python   |   \>=3.8    |                                  |
 
 ### Setup Environment
 
-You need to install Qt libraries first. (Tested on Qt 5.15.2 only)
+You need to install Qt libraries first. (Tested on Qt 6.8.3 only)
 
 #### Windows
 
 ```sh
-git submodule init --recursive
 cd /D src/libs
 cmake -Dep=dml -P ../../scripts/setup-onnxruntime.cmake
 
 cd ../../
-set QT_DIR=<dir> # directory `Qt5Config.cmake` locates
-set Qt5_DIR=%QT_DIR%
-set VCPKG_KEEP_ENV_VARS=QT_DIR;Qt5_DIR
+set QT_DIR=<dir> # directory `Qt6Config.cmake` locates
+set Qt6_DIR=%QT_DIR%
+set VCPKG_KEEP_ENV_VARS=QT_DIR;Qt6_DIR
 
 git clone https://github.com/microsoft/vcpkg.git
 cd /D vcpkg
@@ -70,14 +70,13 @@ vcpkg install ^
 #### Unix
 
 ```sh
-git submodule init --recursive
 cd src/libs
 cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
 
 cd ../../
-export QT_DIR=<dir> # directory `Qt5Config.cmake` locates
-export Qt5_DIR=$QT_DIR
-export VCPKG_KEEP_ENV_VARS="QT_DIR;Qt5_DIR"
+export QT_DIR=<dir> # directory `Qt6Config.cmake` locates
+export Qt6_DIR=$QT_DIR
+export VCPKG_KEEP_ENV_VARS="QT_DIR;Qt6_DIR"
 
 git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg
@@ -119,7 +118,7 @@ cmake --build build --target install
 
 ### Dependencies
 
-+ [Qt 5.15.2](https://www.qt.io/)
++ [Qt 6.8.3](https://www.qt.io/)
     + GNU LGPL v2.1 or later
 + [FFmpeg](https://github.com/FFmpeg/FFmpeg)
     + GNU LGPL v2.1 or later
@@ -131,8 +130,6 @@ cmake --build build --target install
     + GNU LGPL v2.1 or later
 + [vcpkg](https://github.com/microsoft/vcpkg)
     + MIT License
-+ [qastool](https://github.com/SineStriker/qt-json-autogen)
-    + Apache 2.0 License
 + [r8brain-free-src](https://github.com/avaneev/r8brain-free-src)
     + MIT License
 + [FunASR](https://github.com/alibaba-damo-academy/FunASR)
@@ -144,7 +141,7 @@ cmake --build build --target install
 + [FoxBreatheLabeler](https://github.com/autumn-DL/FoxBreatheLabeler)
     + GNU AGPL v3.0
 + [textgrid.hpp](https://github.com/eiichiroi/textgrid.hpp)
-  + MIT License
+    + MIT License
 
 ## License
 

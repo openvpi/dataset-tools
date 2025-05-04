@@ -420,7 +420,7 @@ void MainWindow::initStyleSheet() {
     }
 }
 
-void MainWindow::_q_fileMenuTriggered(QAction *action) {
+void MainWindow::_q_fileMenuTriggered(const QAction *action) {
     if (action == browseAction) {
         playerWidget->setPlaying(false);
 
@@ -449,7 +449,7 @@ void MainWindow::_q_playMenuTriggered(QAction *action) {
     }
 }
 
-void MainWindow::_q_helpMenuTriggered(QAction *action) {
+void MainWindow::_q_helpMenuTriggered(const QAction *action) {
     if (action == aboutAppAction) {
         QMessageBox::information(this, qApp->applicationName(),
                                  QString("%1 %2, Copyright OpenVPI.").arg(qApp->applicationName(), APP_VERSION));

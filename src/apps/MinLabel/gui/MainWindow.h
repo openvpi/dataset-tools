@@ -3,14 +3,12 @@
 
 #include <QMainWindow>
 #include <QProgressBar>
+#include <QSettings>
 #include <QSplitter>
 
 #include "Common.h"
 #include "PlayWidget.h"
 #include "TextWidget.h"
-#include "inc/MinLabelCfg.h"
-
-#include "Api/IAudioDecoder.h"
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -55,13 +53,13 @@ protected:
 
     QString lastFile;
 
-    MinLabelCfg cfg;
+    QSettings *cfg{};
 
-    void openDirectory(const QString &dirName);
+    void openDirectory(const QString &dirName) const;
     void openFile(const QString &filename) const;
     void saveFile(const QString &filename);
     void labToJson(const QString &dirName);
-    void exportAudio(ExportInfo &exportInfo);
+    void exportAudio(const ExportInfo &exportInfo);
 
     void reloadWindowTitle();
 
@@ -73,10 +71,10 @@ private:
     static void initStyleSheet();
     void applyConfig();
 
-    void _q_fileMenuTriggered(QAction *action);
+    void _q_fileMenuTriggered(const QAction *action);
     void _q_editMenuTriggered(const QAction *action) const;
     void _q_playMenuTriggered(const QAction *action) const;
-    void _q_helpMenuTriggered(QAction *action);
+    void _q_helpMenuTriggered(const QAction *action);
     void _q_updateProgress() const;
     void _q_treeCurrentChanged(const QModelIndex &current);
 };

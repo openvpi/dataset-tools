@@ -2,11 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "dependencies": [
     "sdl2",
-    {
-      "name": "libsndfile",
-      "default-features": false
-    },
-    "qastool",
     "ffmpeg-fake",
     "mecab",
     "fftw3",

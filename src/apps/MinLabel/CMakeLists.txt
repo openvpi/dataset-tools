@@ -18,7 +18,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         cpp-pinyin::cpp-pinyin
         cpp-kana::cpp-kana
         QMCore SDLPlayback FFmpegDecoder
-        qastool::core
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -26,8 +25,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
-
-include(qasc_exec.cmake)
 
 if (WIN32)
     include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)

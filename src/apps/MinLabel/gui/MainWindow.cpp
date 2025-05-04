@@ -174,46 +174,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     reloadWindowTitle();
     resize(1280, 720);
 
-    QString keyConfPath = QApplication::applicationDirPath() + "/minlabel_config.json";
-    QJsonDocument cfgDoc;
-    try {
-        if (QApplication::arguments().contains("--reset-keys")) {
-            throw std::exception();
-        }
-
-        QFile file(keyConfPath);
-        if (!file.open(QIODevice::ReadOnly)) {
-            throw std::exception();
-        }
-
-        QJsonParseError err{};
-        cfgDoc = QJsonDocument::fromJson(file.readAll(), &err);
-
-        file.close();
-
-        if (err.error != QJsonParseError::NoError || !cfgDoc.isObject()) {
-            throw std::exception();
-        }
-
-        QAS::JsonStream stream(cfgDoc.object());
-        stream >> cfg;
-        applyConfig();
-    } catch (...) {
-        QFile file(keyConfPath);
-        if (file.open(QIODevice::WriteOnly)) {
-            cfg.open = browseAction->shortcut().toString();
-            cfg.exportAudio = exportAction->shortcut().toString();
-            cfg.next = nextAction->shortcut().toString();
-            cfg.prev = prevAction->shortcut().toString();
-            cfg.play = playAction->shortcut().toString();
-            cfg.rootDir = dirname;
-            applyConfig();
-            file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
-            file.close();
-        } else {
-            QMessageBox::critical(this, QApplication::applicationName(), "Failed to create config file.");
+    QString configDirPath = QApplication::applicationDirPath() + "/config";
+    if (QDir configDir(configDirPath); !configDir.exists()) {
+        if (!configDir.mkpath(".")) {
+            QMessageBox::critical(this, QApplication::applicationName(),
+                                  "Failed to create config directory: " + configDir.absolutePath());
+            return;
         }
     }
+
+    applyConfig();
 }
 
 MainWindow::~MainWindow() {
@@ -222,7 +192,7 @@ MainWindow::~MainWindow() {
     }
 }
 
-void MainWindow::openDirectory(const QString &dirName) {
+void MainWindow::openDirectory(const QString &dirName) const {
     fsModel->setRootPath(dirName);
     treeView->setRootIndex(fsModel->index(dirName));
 }
@@ -230,9 +200,8 @@ void MainWindow::openDirectory(const QString &dirName) {
 void MainWindow::openFile(const QString &filename) const {
     QString labContent, txtContent;
 
-    QString jsonFilePath = audioToOtherSuffix(filename, "json");
-    QJsonObject readData;
-    if (readJsonFile(jsonFilePath, readData)) {
+    const QString jsonFilePath = audioToOtherSuffix(filename, "json");
+    if (QJsonObject readData; readJsonFile(jsonFilePath, readData)) {
         txtContent = readData.contains("raw_text") ? readData["raw_text"].toString() : "";
         labContent = readData.contains("lab") ? readData["lab"].toString() : "";
     }
@@ -243,29 +212,32 @@ void MainWindow::openFile(const QString &filename) const {
 }
 
 void MainWindow::saveFile(const QString &filename) {
-    QString txtContent = textWidget->wordsText->text();
+    const QString txtContent = textWidget->wordsText->text();
     QString labContent = textWidget->contentText->toPlainText();
     QString withoutTone = "";
+    static QRegularExpression rm_alpha("[^a-z]");
     if (!labContent.isEmpty() && labContent.contains(" ")) {
         QStringList inputList = labContent.split(" ");
         for (QString &item : inputList) {
-            item.remove(QRegularExpression("[^a-z]"));
+            item.remove(rm_alpha);
         }
         withoutTone = inputList.join(" ");
     }
 
 
-    QString jsonFilePath = audioToOtherSuffix(filename, "json");
+    const QString jsonFilePath = audioToOtherSuffix(filename, "json");
 
     if (labContent.isEmpty() && txtContent.isEmpty() && !QMFs::isFileExist(jsonFilePath)) {
         return;
     }
 
+    static QRegularExpression rm_s("\\s+");
+
     QFile jsonFile(jsonFilePath);
     QJsonObject writeData;
-    writeData["lab"] = labContent.replace(QRegularExpression("\\s+"), " ");
+    writeData["lab"] = labContent.replace(rm_s, " ");
     writeData["raw_text"] = txtContent;
-    writeData["lab_without_tone"] = withoutTone.replace(QRegularExpression("\\s+"), " ");
+    writeData["lab_without_tone"] = withoutTone.replace(rm_s, " ");
     writeData["isCheck"] = true;
 
     if (!writeJsonFile(jsonFilePath, writeData)) {
@@ -312,8 +284,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
         }
         bool ok = false;
         if (filenames.size() == 1) {
-            QString filename = filenames.front();
-            if (QMFs::isDirExist(filename)) {
+            if (const QString &filename = filenames.front(); QMFs::isDirExist(filename)) {
                 ok = true;
             }
         }
@@ -324,9 +295,8 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void MainWindow::dropEvent(QDropEvent *event) {
-    auto e = static_cast<QDropEvent *>(event);
-    const QMimeData *mime = e->mimeData();
-    if (mime->hasUrls()) {
+    const auto e = static_cast<QDropEvent *>(event);
+    if (const QMimeData *mime = e->mimeData(); mime->hasUrls()) {
         auto urls = mime->urls();
         QStringList filenames;
         for (auto &url : urls) {
@@ -336,13 +306,12 @@ void MainWindow::dropEvent(QDropEvent *event) {
         }
         bool ok = false;
         if (filenames.size() == 1) {
-            QString filename = filenames.front();
-            if (QMFs::isDirExist(filename)) {
+            if (const QString &filename = filenames.front(); QMFs::isDirExist(filename)) {
                 ok = true;
                 openDirectory(filename);
 
                 dirname = filename;
-                cfg.rootDir = dirname;
+                cfg->setValue("General/LastDir", dirname);
                 _q_updateProgress();
             }
         }
@@ -353,61 +322,67 @@ void MainWindow::dropEvent(QDropEvent *event) {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-    // Pull and save config
-    QString keyConfPath = QApplication::applicationDirPath() + "/minlabel_config.json";
-    QFile file(keyConfPath);
+    QSettings settings(QApplication::applicationDirPath() + "/config/minlabel.ini", QSettings::IniFormat);
 
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
+    settings.setValue("Shortcuts/Open", browseAction->shortcut().toString());
+    settings.setValue("Shortcuts/Export", exportAction->shortcut().toString());
+    settings.setValue("Navigation/Prev", prevAction->shortcut().toString());
+    settings.setValue("Navigation/Next", nextAction->shortcut().toString());
+    settings.setValue("Playback/Play", playAction->shortcut().toString());
+
+    if (!dirname.isEmpty()) {
+        settings.setValue("General/LastDir", dirname);
     }
 
-    // Quit
     event->accept();
 }
 
 void MainWindow::initStyleSheet() {
     // qss file: https://github.com/feiyangqingyun/QWidgetDemo/tree/master/ui/styledemo
-    QFile file(":/qss/flatgray.css");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (QFile file(":/qss/flatgray.css"); file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qApp->setStyleSheet(file.readAll());
     }
 }
 
 void MainWindow::applyConfig() {
-    browseAction->setShortcut(QKeySequence(cfg.open));
-    exportAction->setShortcut(QKeySequence(cfg.exportAudio));
-    prevAction->setShortcut(QKeySequence(cfg.prev));
-    nextAction->setShortcut(QKeySequence(cfg.next));
-    playAction->setShortcut(QKeySequence(cfg.play));
-    dirname = cfg.rootDir;
-    if (dirname.isEmpty()) {
-        return;
+    const QSettings settings(QApplication::applicationDirPath() + "/config/minlabel.ini", QSettings::IniFormat);
+
+    browseAction->setShortcut(QKeySequence(settings.value("Shortcuts/Open", "Ctrl+O").toString()));
+    exportAction->setShortcut(QKeySequence(settings.value("Shortcuts/Export", "Ctrl+E").toString()));
+    prevAction->setShortcut(QKeySequence(settings.value("Navigation/Prev", "PgUp").toString()));
+    nextAction->setShortcut(QKeySequence(settings.value("Navigation/Next", "PgDown").toString()));
+    playAction->setShortcut(QKeySequence(settings.value("Playback/Play", "F5").toString()));
+
+    if (const QString savedDir = settings.value("General/LastDir").toString();
+        !savedDir.isEmpty() && QDir(savedDir).exists()) {
+        dirname = savedDir;
+        openDirectory(dirname);
+        _q_updateProgress();
     }
-    openDirectory(dirname);
-    _q_updateProgress();
+
     reloadWindowTitle();
 }
 
-void MainWindow::_q_fileMenuTriggered(QAction *action) {
+void MainWindow::_q_fileMenuTriggered(const QAction *action) {
     if (action == browseAction) {
         playerWidget->setPlaying(false);
 
-        QString path = QFileDialog::getExistingDirectory(this, "Open Folder", QFileInfo(dirname).absolutePath());
+        const QString path = QFileDialog::getExistingDirectory(this, "Open Folder", QFileInfo(dirname).absolutePath());
         if (path.isEmpty()) {
             return;
         }
         openDirectory(path);
 
         dirname = path;
-        cfg.rootDir = dirname;
+        cfg->setValue("General/LastDir", dirname);
         _q_updateProgress();
     } else if (action == covertAction) {
         playerWidget->setPlaying(false);
-        int choice = QMessageBox::question(this, "Covert lab to project file.",
-                                           "Do you want to covert lab to project file in target folder?",
-                                           QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        const int choice = QMessageBox::question(this, "Covert lab to project file.",
+                                                 "Do you want to covert lab to project file in target folder?",
+                                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (choice == QMessageBox::Yes) {
-            QString path =
+            const QString path =
                 QFileDialog::getExistingDirectory(this, "Open Lab Folder", QFileInfo(dirname).absolutePath());
             if (path.isEmpty()) {
                 return;
@@ -441,7 +416,7 @@ void MainWindow::_q_playMenuTriggered(const QAction *action) const {
     }
 }
 
-void MainWindow::_q_helpMenuTriggered(QAction *action) {
+void MainWindow::_q_helpMenuTriggered(const QAction *action) {
     if (action == aboutAppAction) {
         QMessageBox::information(
             this, QApplication::applicationName(),
@@ -473,10 +448,9 @@ void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
     }
 }
 
-void MainWindow::exportAudio(ExportInfo &exportInfo) {
+auto MainWindow::exportAudio(const ExportInfo &exportInfo) -> void {
     const int count = jsonCount(dirname);
-    const int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
-    if (totalRowCount != count) {
+    if (const int totalRowCount = static_cast<int>(fsModel->rootDirectory().count()); totalRowCount != count) {
         const QMessageBox::StandardButton reply =
             QMessageBox::question(this, QApplication::applicationName(),
                                   QString("%1 file are not labeled, continue?").arg(totalRowCount - count),
@@ -504,10 +478,10 @@ void MainWindow::labToJson(const QString &dirName) {
         QString labFilePath = fileInfo.absoluteFilePath();
         QString suffix = fileInfo.suffix().toLower();
         QString name = fileInfo.fileName();
-        QString jsonFilePath = fileInfo.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) + ".json";
-        if (fileInfo.suffix() == "lab" && !QMFs::isFileExist(jsonFilePath)) {
-            QFile file(labFilePath);
-            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (QString jsonFilePath =
+                fileInfo.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) + ".json";
+            fileInfo.suffix() == "lab" && !QMFs::isFileExist(jsonFilePath)) {
+            if (QFile file(labFilePath); file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                 QString labContent;
                 labContent = QString::fromUtf8(file.readAll());
                 const QString txtContent = labContent;
