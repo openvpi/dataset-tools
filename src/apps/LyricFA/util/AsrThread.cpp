@@ -12,11 +12,11 @@ namespace LyricFA {
     }
 
     void AsrThread::run() {
-        QString asrMsg;
-        const auto asrRes = m_asr->recognize(m_wavPath, asrMsg);
+        std::string asrMsg;
+        const auto asrRes = m_asr->recognize(m_wavPath.toLocal8Bit().toStdString(), asrMsg);
 
         if (!asrRes) {
-            Q_EMIT this->oneFailed(m_filename, asrMsg);
+            Q_EMIT this->oneFailed(m_filename, QString::fromStdString(asrMsg));
             return;
         }
 
@@ -28,15 +28,13 @@ namespace LyricFA {
         }
 
         QTextStream labIn(&labFile);
-        labIn.setCodec(QTextCodec::codecForName("UTF-8"));
         if (m_g2p) {
-            const auto g2pRes = m_g2p->hanziToPinyin(asrMsg.toUtf8().toStdString(), Pinyin::ManTone::NORMAL,
-                                                     Pinyin::Error::Default, true);
-            asrMsg = QString::fromUtf8(g2pRes.toStdStr().c_str());
+            const auto g2pRes = m_g2p->hanziToPinyin(asrMsg, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, true);
+            asrMsg = g2pRes.toStdStr().c_str();
         }
 
-        labIn << asrMsg;
+        labIn << QString::fromStdString(asrMsg);
         labFile.close();
-        Q_EMIT this->oneFinished(m_filename, asrMsg);
+        Q_EMIT this->oneFinished(m_filename, QString::fromStdString(asrMsg));
     }
 }

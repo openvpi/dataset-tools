@@ -35,7 +35,7 @@ namespace FunAsr {
         std::vector<const char *> m_szOutputNames;
 
     public:
-        explicit ModelImp(const char *path, const int &nNumThread = 0);
+        explicit ModelImp(const std::filesystem::path &, const int &nNumThread = 0);
         ~ModelImp() override;
         void reset() override;
         std::string forward(float *din, int len, int flag) override;

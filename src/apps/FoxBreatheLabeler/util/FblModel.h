@@ -1,6 +1,7 @@
 #ifndef FBLMODEL_H
 #define FBLMODEL_H
 
+#include <filesystem>
 #include <onnxruntime_cxx_api.h>
 #include <string>
 #include <vector>
@@ -8,7 +9,7 @@ namespace FBL {
 
     class FblModel {
     public:
-        explicit FblModel(const std::string &model_path);
+        explicit FblModel(const std::filesystem::path &model_path);
         ~FblModel();
         bool forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
                      std::string &msg) const;

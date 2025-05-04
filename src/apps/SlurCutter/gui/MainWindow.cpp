@@ -313,8 +313,8 @@ void MainWindow::loadDsContent(const QString &content) {
         if (noteDuration.isEmpty()) {
             continue;
         }
-        auto noteDur = noteDuration.split(' ', QString::SkipEmptyParts);
-        double offset = obj.value("offset").toDouble(-1);
+        auto noteDur = noteDuration.split(' ', Qt::SkipEmptyParts);
+        const double offset = obj.value("offset").toDouble(-1);
         if (offset == -1) {
             continue;
         }
@@ -324,7 +324,8 @@ void MainWindow::loadDsContent(const QString &content) {
             dur += durStr.toDouble();
         }
 
-        auto item = new QListWidgetItem(QString("%1-%2").arg(offset, 0, 'f', 2, QChar('0')).arg(text.replace(' ', "")));
+        const auto item =
+            new QListWidgetItem(QString("%1-%2").arg(offset, 0, 'f', 2, QChar('0')).arg(text.replace(' ', "")));
         item->setData(Qt::UserRole + 1, offset);
         item->setData(Qt::UserRole + 2, dur);
         sentenceWidget->addItem(item);

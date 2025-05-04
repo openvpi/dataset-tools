@@ -1,17 +1,16 @@
 #include "Fbl.h"
 
+#include "audio-util/Slicer.h"
+
 #include <QBuffer>
-#include <QDebug>
 #include <QMessageBox>
 
-#include <CDSPResampler.h>
 #include <QDir>
-#include <sndfile.hh>
 
-#include <cmath>
 #include <stdexcept>
 #include <vector>
 
+#include <audio-util/Util.h>
 #include <yaml-cpp/yaml.h>
 
 namespace FBL {
@@ -73,21 +72,22 @@ namespace FBL {
         return segments;
     }
 
-    bool FBL::recognize(SF_VIO sf_vio, std::vector<std::pair<float, float>> &res, QString &msg, float ap_threshold,
-                        float ap_dur) const {
+    bool FBL::recognize(const std::filesystem::path &filepath, std::vector<std::pair<float, float>> &res,
+                        std::string &msg, float ap_threshold, float ap_dur) const {
         if (!m_fblModel) {
             return false;
         }
-        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, m_audio_sample_rate);
 
-        const auto frames = sf.frames();
+        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, 16000);
 
-        SF_VIO sfChunk;
+        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
+        const auto totalSize = sf.frames();
+
+        std::vector<float> audio(totalSize);
         sf.seek(0, SEEK_SET);
-        std::vector<float> tmp(frames);
-        sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+        sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
 
-        if (static_cast<double>(frames) / m_audio_sample_rate > 60) {
+        if (static_cast<double>(sf.frames()) / m_audio_sample_rate > 60) {
             msg = "The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
                   "segment and rerun the recognition program.";
             return false;
@@ -95,80 +95,12 @@ namespace FBL {
 
         std::string modelMsg;
         std::vector<float> modelRes;
-        if (m_fblModel->forward(std::vector<std::vector<float>>{tmp}, modelRes, modelMsg)) {
+        if (m_fblModel->forward(std::vector<std::vector<float>>{audio}, modelRes, modelMsg)) {
             res = findSegmentsDynamic(modelRes, m_time_scale, ap_threshold, 5, static_cast<int>(ap_dur / m_time_scale));
             return true;
         } else {
-            msg = QString::fromStdString(modelMsg);
+            msg = modelMsg;
             return false;
         }
-    }
-
-    bool FBL::recognize(const QString &filename, std::vector<std::pair<float, float>> &res, QString &msg,
-                        float ap_threshold, float ap_dur) const {
-        return recognize(resample(filename), res, msg, ap_threshold, ap_dur);
-    }
-
-    SF_VIO FBL::resample(const QString &filename) const {
-        // 读取WAV文件头信息
-        SndfileHandle srcHandle(filename.toLocal8Bit(), SFM_READ, SF_FORMAT_WAV);
-        if (!srcHandle) {
-            qDebug() << "Failed to open WAV file:" << sf_strerror(nullptr);
-            return {};
-        }
-
-        // 临时文件
-        SF_VIO sf_vio;
-        SndfileHandle outBuf(sf_vio.vio, &sf_vio.data, SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
-                             m_audio_sample_rate);
-        if (!outBuf) {
-            qDebug() << "Failed to open output file:" << sf_strerror(nullptr);
-            return {};
-        }
-
-        // 创建 CDSPResampler 对象
-        r8b::CDSPResampler16 resampler(srcHandle.samplerate(), m_audio_sample_rate, srcHandle.samplerate());
-
-        // 重采样并写入输出文件
-        double *op0;
-        std::vector<double> tmp(srcHandle.samplerate() * srcHandle.channels());
-        double total = 0;
-
-        // 逐块读取、重采样并写入输出文件
-        while (true) {
-            const auto bytesRead = srcHandle.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
-            if (bytesRead <= 0) {
-                break; // 读取结束
-            }
-
-            // 转单声道
-            std::vector<double> inputBuf(tmp.size() / srcHandle.channels());
-            for (int i = 0; i < tmp.size(); i += srcHandle.channels()) {
-                inputBuf[i / srcHandle.channels()] = tmp[i];
-            }
-
-            // 处理重采样
-            const int outSamples =
-                resampler.process(inputBuf.data(), static_cast<int>(bytesRead) / srcHandle.channels(), op0);
-
-            // 写入输出文件
-            const auto bytesWritten = static_cast<double>(outBuf.write(op0, outSamples));
-
-            if (bytesWritten != outSamples) {
-                qDebug() << "Error writing to output file";
-                break;
-            }
-            total += bytesWritten;
-        }
-
-        if (const int endSize = static_cast<int>(static_cast<double>(srcHandle.frames()) /
-                                                     static_cast<double>(srcHandle.samplerate()) * m_audio_sample_rate -
-                                                 total)) {
-            std::vector<double> inputBuf(tmp.size() / srcHandle.channels());
-            resampler.process(inputBuf.data(), srcHandle.samplerate(), op0);
-            outBuf.write(op0, endSize);
-        }
-
-        return sf_vio;
     }
 } // LyricFA

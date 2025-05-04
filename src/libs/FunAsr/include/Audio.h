@@ -23,6 +23,7 @@ namespace FunAsr {
         Audio(const int &data_type, const int &size);
         ~Audio();
         bool loadwav(const char *buf, const int &nFileLen);
+        bool loadPcmFloat(const float *buf, int num_samples);
         int fetch(float *&dout, int &len, int &flag);
 
     private:

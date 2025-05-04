@@ -6,8 +6,7 @@
 #include <QString>
 
 #include "FblModel.h"
-
-#include "SndfileVio.h"
+#include <filesystem>
 
 namespace FBL {
 
@@ -16,14 +15,10 @@ namespace FBL {
         explicit FBL(const QString &modelDir);
         ~FBL();
 
-        [[nodiscard]] bool recognize(const QString &filename, std::vector<std::pair<float, float>> &res, QString &msg,
-                                     float ap_threshold = 0.4, float ap_dur = 0.1) const;
-        [[nodiscard]] bool recognize(SF_VIO sf_vio, std::vector<std::pair<float, float>> &res, QString &msg,
-                                     float ap_threshold = 0.4, float ap_dur = 0.08) const;
+        bool recognize(const std::filesystem::path &filepath, std::vector<std::pair<float, float>> &res,
+                       std::string &msg, float ap_threshold = 0.4, float ap_dur = 0.08) const;
 
     private:
-        [[nodiscard]] SF_VIO resample(const QString &filename) const;
-
         std::unique_ptr<FblModel> m_fblModel;
 
         int m_audio_sample_rate;

@@ -1,6 +1,0 @@
-[submodule "src/libs/r8brain/r8brain-free-src"]
-	path = src/libs/r8brain/r8brain-free-src
-	url = https://github.com/avaneev/r8brain-free-src
-[submodule "src/libs/syscmdline"]
-	path = src/libs/syscmdline
-	url = https://github.com/SineStriker/syscmdline

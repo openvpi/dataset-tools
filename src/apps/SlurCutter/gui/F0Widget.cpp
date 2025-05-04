@@ -151,19 +151,19 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
     QAS::JsonStream stream(content);
     stream >> sentence;
 
-    auto f0Seq = sentence.f0_seq.split(" ", QString::SkipEmptyParts);
+    auto f0Seq = sentence.f0_seq.split(" ", Qt::SkipEmptyParts);
     foreach (auto f0, f0Seq) {
         f0Values.append(FrequencyToMidiNote(f0.toDouble()));
     }
     f0Timestep = sentence.f0_timestep.toDouble();
 
-    auto phSeq = sentence.ph_seq.split(" ", QString::SkipEmptyParts);
-    auto phDur = sentence.ph_dur.split(" ", QString::SkipEmptyParts);
-    auto phNum = sentence.ph_num.split(" ", QString::SkipEmptyParts);
-    auto noteSeq = sentence.note_seq.split(" ", QString::SkipEmptyParts);
-    auto noteDur = sentence.note_dur.split(" ", QString::SkipEmptyParts);
-    auto text = sentence.text.split(" ", QString::SkipEmptyParts);
-    auto slur = sentence.note_slur.split(" ", QString::SkipEmptyParts);
+    auto phSeq = sentence.ph_seq.split(" ", Qt::SkipEmptyParts);
+    auto phDur = sentence.ph_dur.split(" ", Qt::SkipEmptyParts);
+    auto phNum = sentence.ph_num.split(" ", Qt::SkipEmptyParts);
+    auto noteSeq = sentence.note_seq.split(" ", Qt::SkipEmptyParts);
+    auto noteDur = sentence.note_dur.split(" ", Qt::SkipEmptyParts);
+    auto text = sentence.text.split(" ", Qt::SkipEmptyParts);
+    auto slur = sentence.note_slur.split(" ", Qt::SkipEmptyParts);
     auto glide = sentence.note_glide.split(" ");
 
     QVector<bool> isRest(noteSeq.size(), false);
@@ -410,8 +410,8 @@ QString F0Widget::PitchToNotePlusCentsString(double pitch) {
 }
 
 std::tuple<size_t, size_t> F0Widget::refF0IndexRange(double startTime, double endTime) const {
-    return {std::min((size_t)::floor(std::max(0.0, startTime / f0Timestep)), (size_t) f0Values.size() - 1),
-            std::min((size_t)::ceil(endTime / f0Timestep), (size_t) f0Values.size() - 1)};
+    return {std::min((size_t) ::floor(std::max(0.0, startTime / f0Timestep)), (size_t) f0Values.size() - 1),
+            std::min((size_t) ::ceil(endTime / f0Timestep), (size_t) f0Values.size() - 1)};
 }
 
 

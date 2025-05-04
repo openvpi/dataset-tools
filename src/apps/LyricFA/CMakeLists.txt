@@ -11,12 +11,11 @@ find_package(SndFile CONFIG REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
         cpp-pinyin::cpp-pinyin
         QMCore
-        r8brain
+        audio-util
         FunAsr
 )
 

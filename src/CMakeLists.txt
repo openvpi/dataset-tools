@@ -1,43 +1,48 @@
-if(NOT DEFINED BUILD_TESTS)
+if (NOT DEFINED BUILD_TESTS)
     set(BUILD_TESTS on)
-endif()
+endif ()
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Svg REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Svg REQUIRED)
 find_package(QasTool REQUIRED)
+
+if (QT_VERSION_MAJOR GREATER_EQUAL 6)
+    message(STATUS "Qt6 detected, adding Core5Compat module")
+    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core5Compat REQUIRED)
+endif ()
 
 add_custom_target(DeployedTargets)
 
 add_subdirectory(apps)
 add_subdirectory(libs)
 
-if(BUILD_TESTS)
+if (BUILD_TESTS)
     add_subdirectory(tests)
-endif()
+endif ()
 
 # "QT_QMAKE_EXECUTABLE" is usually defined by QtCreator.
-if(NOT DEFINED QT_QMAKE_EXECUTABLE)
+if (NOT DEFINED QT_QMAKE_EXECUTABLE)
     get_target_property(QT_QMAKE_EXECUTABLE Qt::qmake IMPORTED_LOCATION)
-endif()
+endif ()
 
-if(NOT EXISTS "${QT_QMAKE_EXECUTABLE}")
+if (NOT EXISTS "${QT_QMAKE_EXECUTABLE}")
     message(WARNING "deploy_qt_runtime: Can't locate the QMake executable.")
     return()
-endif()
+endif ()
 
 cmake_path(GET QT_QMAKE_EXECUTABLE PARENT_PATH __qt_bin_dir)
 find_program(QT_DEPLOY_EXECUTABLE NAMES windeployqt macdeployqt HINTS "${__qt_bin_dir}")
 
-if(NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
+if (NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
     message(WARNING "deploy_qt_runtime: Can't locate the deployqt tool.")
     return()
-endif()
+endif ()
 
-if(NOT CMAKE_INSTALL_PREFIX)
+if (NOT CMAKE_INSTALL_PREFIX)
     return()
-endif()
+endif ()
 
-if(WIN32)
+if (WIN32)
     string(REPLACE "\\" "/" _install_dir ${CMAKE_INSTALL_PREFIX})
 
     install(CODE "
@@ -49,7 +54,7 @@ if(WIN32)
 
     get_target_property(_targets DeployedTargets TARGETS)
 
-    foreach(_target ${_targets})
+    foreach (_target ${_targets})
         install(CODE "
             set(ENV{PATH} \"${__qt_bin_dir};\$ENV{PATH}\")
             execute_process(
@@ -66,20 +71,20 @@ if(WIN32)
                 WORKING_DIRECTORY \"${_install_dir}\"
             )
         ")
-    endforeach()
-elseif(APPLE)
+    endforeach ()
+elseif (APPLE)
     set(_install_dir ${CMAKE_INSTALL_PREFIX})
 
     get_target_property(_targets DeployedTargets TARGETS)
 
-    foreach(_target ${_targets})
+    foreach (_target ${_targets})
         install(CODE "
             file(COPY \"$<TARGET_BUNDLE_DIR:${_target}>\" DESTINATION \"${_install_dir}\")
         ")
-    endforeach()
+    endforeach ()
 
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        foreach(_target ${_targets})
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        foreach (_target ${_targets})
             install(CODE "
                 execute_process(
                     COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
@@ -89,9 +94,9 @@ elseif(APPLE)
                     WORKING_DIRECTORY \"${_install_dir}\"
                 )
             ")
-        endforeach()
-    else()
-        foreach(_target ${_targets})
+        endforeach ()
+    else ()
+        foreach (_target ${_targets})
             install(CODE "
                 execute_process(
                     COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
@@ -100,6 +105,6 @@ elseif(APPLE)
                     WORKING_DIRECTORY \"${_install_dir}\"
                 )
             ")
-        endforeach()
-    endif()
-endif()
+        endforeach ()
+    endif ()
+endif ()

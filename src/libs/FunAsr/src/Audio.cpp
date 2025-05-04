@@ -43,6 +43,32 @@ namespace FunAsr {
         }
     }
 
+    bool Audio::loadPcmFloat(const float *buf, const int num_samples) {
+        if (speech_buff != nullptr) {
+            free(speech_buff);
+            speech_buff = nullptr;
+        }
+        if (speech_data != nullptr) {
+            free(speech_data);
+            speech_data = nullptr;
+        }
+        offset = 0;
+
+        speech_len = num_samples;
+        speech_align_len = static_cast<int>(ceil(static_cast<float>(speech_len) / align_size) * align_size);
+
+        speech_data = static_cast<float *>(malloc(sizeof(float) * speech_align_len));
+        if (speech_data) {
+            memset(speech_data, 0, sizeof(float) * speech_align_len);
+            memcpy(speech_data, buf, sizeof(float) * speech_len);
+
+            auto *frame = new AudioFrame(speech_len);
+            frame_queue.push(frame);
+            return true;
+        }
+        return false;
+    }
+
     bool Audio::loadwav(const char *buf, const int &nFileLen) {
 #define WAV_HEADER_SIZE 44
         if (speech_data != nullptr) {

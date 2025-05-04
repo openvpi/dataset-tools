@@ -9,7 +9,7 @@
 
 namespace FBL {
     FblThread::FblThread(FBL *fbl, QString filename, QString wavPath, QString rawTgPath, QString outTgPath,
-                         float ap_threshold, float ap_dur, float sp_dur)
+                         const float ap_threshold, const float ap_dur, const float sp_dur)
         : m_asr(fbl), m_filename(std::move(filename)), m_wavPath(std::move(wavPath)), m_rawTgPath(std::move(rawTgPath)),
           m_outTgPath(std::move(outTgPath)), ap_threshold(ap_threshold), ap_dur(ap_dur), sp_dur(sp_dur) {
     }
@@ -73,19 +73,20 @@ namespace FBL {
     }
 
     void FblThread::run() {
-        QString fblMsg;
+        std::string fblMsg;
         std::vector<std::pair<float, float>> segment;
-        const auto fblRes = m_asr->recognize(m_wavPath, segment, fblMsg, ap_threshold, ap_dur);
+        const auto fblRes = m_asr->recognize(m_wavPath.toStdString(), segment, fblMsg, ap_threshold, ap_dur);
 
         if (!fblRes) {
-            Q_EMIT this->oneFailed(m_filename, fblMsg);
+            Q_EMIT this->oneFailed(m_filename, QString::fromStdString(fblMsg));
             return;
         }
 
         QFile file(m_rawTgPath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            fblMsg = QString("Cannot open file: filename = ") + m_rawTgPath + ", error = " + file.errorString();
-            Q_EMIT this->oneFailed(m_filename, fblMsg);
+            fblMsg = (QString("Cannot open file: filename = ") + m_rawTgPath + ", error = " + file.errorString())
+                         .toStdString();
+            Q_EMIT this->oneFailed(m_filename, QString::fromStdString(fblMsg));
             return;
         }
 
@@ -209,6 +210,6 @@ namespace FBL {
 
         fblMsg = "success.";
 
-        Q_EMIT this->oneFinished(m_filename, fblMsg);
+        Q_EMIT this->oneFinished(m_filename, QString::fromStdString(fblMsg));
     }
 }

@@ -1,5 +1,6 @@
 #include "PlayWidget.h"
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QDebug>
 #include <QDir>

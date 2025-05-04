@@ -3,7 +3,7 @@
 
 #include "SlurCutterCfg.h"
 #include "intervaltree.hpp"
-#include <QActionGroup>
+
 #include <QFrame>
 #include <QMenu>
 #include <QScrollBar>
@@ -12,11 +12,11 @@
 
 
 
-class F0Widget : public QFrame {
+class F0Widget final : public QFrame {
     Q_OBJECT
 public:
     explicit F0Widget(QWidget *parent = nullptr);
-    ~F0Widget();
+    ~F0Widget() override;
 
     void setDsSentenceContent(const QJsonObject &content);
     void setErrorStatusText(const QString &text);

@@ -1,9 +1,7 @@
 #include "FblModel.h"
 
-#include <syscmdline/system.h>
-
 namespace FBL {
-    FblModel::FblModel(const std::string &model_path)
+    FblModel::FblModel(const std::filesystem::path &model_path)
         : m_env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "FblModel")), m_session_options(Ort::SessionOptions()),
           m_session(nullptr) {
 
@@ -11,8 +9,7 @@ namespace FBL {
         m_output_name = "ap_probability";
 
 #ifdef _WIN32
-        const std::wstring wstrPath = SysCmdLine::utf8ToWide(model_path);
-        m_session = new Ort::Session(m_env, wstrPath.c_str(), m_session_options);
+        m_session = new Ort::Session(m_env, model_path.wstring().c_str(), m_session_options);
 #else
         m_session = new Ort::Session(m_env, model_path.c_str(), m_session_options);
 #endif

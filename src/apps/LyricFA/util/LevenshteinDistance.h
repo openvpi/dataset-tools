@@ -1,11 +1,12 @@
 #ifndef LEVENSHTEINDISTANCE_H
 #define LEVENSHTEINDISTANCE_H
 
-#include <QMatrix>
+#include <QObject>
 #include <QStringList>
+#include <QTransform>
 
 namespace LyricFA {
-    struct MacthRes {
+    struct MatchRes {
         int start = 0;
         int end = 0;
         QStringList textDiff;
@@ -39,7 +40,7 @@ namespace LyricFA {
                                              const bool &ins_tip = false, const bool &sub_tip = false);
 
     private:
-        static MacthRes find_best_matches(const QStringList &text_list, const QStringList &source_list,
+        static MatchRes find_best_matches(const QStringList &text_list, const QStringList &source_list,
                                           const QStringList &sub_list);
         static QStringList fill_step_out(const QList<StepPair> &pairs, const bool &del_tip, const bool &ins_tip,
                                          const bool &sub_tip);

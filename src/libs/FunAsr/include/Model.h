@@ -2,6 +2,7 @@
 #define MODEL_H
 
 #include <string>
+#include <filesystem>
 
 namespace FunAsr {
     class Model {
@@ -11,6 +12,6 @@ namespace FunAsr {
         virtual std::string forward(float *din, int len, int flag) = 0;
     };
 
-    Model *create_model(const char *path, const int &nThread = 0);
+    Model *create_model(const std::filesystem::path &path, const int &nThread = 0);
 }
 #endif

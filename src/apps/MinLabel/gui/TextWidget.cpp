@@ -21,7 +21,6 @@ TextWidget::TextWidget(QWidget *parent)
     pasteButton->setIcon(QIcon(":/res/clipboard.svg"));
 
     lineLayout = new QHBoxLayout();
-    lineLayout->setMargin(0);
     lineLayout->addWidget(wordsText);
     lineLayout->addWidget(pasteButton);
 
@@ -68,7 +67,6 @@ TextWidget::TextWidget(QWidget *parent)
     optionsLayout->addWidget(cleanRes);
 
     buttonsLayout = new QHBoxLayout();
-    buttonsLayout->setMargin(0);
     buttonsLayout->addWidget(replaceButton);
     buttonsLayout->addWidget(appendButton);
     buttonsLayout->addWidget(languageCombo);

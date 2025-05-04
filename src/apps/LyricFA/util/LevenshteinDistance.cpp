@@ -22,8 +22,8 @@ namespace LyricFA {
         for (int sub_length = target.size(); sub_length < std::min(target.size() + 10, pinyin_list.size() + 1);
              sub_length++) {
 
-            for (int i = std::max(0, pos.start - 10); i < std::min(pos.end + 10, pinyin_list.size() - sub_length + 1);
-                 i++) {
+            for (int i = std::max(0, pos.start - 10);
+                 i < std::min(pos.end + 10, static_cast<const int &>(pinyin_list.size() - sub_length + 1)); i++) {
 
                 similar_substrings.append(
                     calculate_edit_distance(text_list.mid(i, sub_length), pinyin_list.mid(i, sub_length), target));
@@ -38,7 +38,7 @@ namespace LyricFA {
     }
 
 
-    MacthRes LevenshteinDistance::find_best_matches(const QStringList &text_list, const QStringList &source_list,
+    MatchRes LevenshteinDistance::find_best_matches(const QStringList &text_list, const QStringList &source_list,
                                                     const QStringList &sub_list) {
         int max_match_length = 0;
         int max_match_index = -1;
@@ -61,7 +61,8 @@ namespace LyricFA {
 
         max_match_length = std::min(source_list.size() - max_match_index, sub_list.size());
         if (max_match_length < sub_list.size()) {
-            max_match_index = std::max(0, max_match_index - (sub_list.size() - max_match_length));
+            max_match_index =
+                std::max(0, static_cast<const int &>(max_match_index - (sub_list.size() - max_match_length)));
             max_match_length = std::min(source_list.size() - max_match_index, sub_list.size());
         }
 
@@ -106,7 +107,7 @@ namespace LyricFA {
         matrix dp;
         dp.resize(m + 1);
         for (int i = 0; i < m + 1; i++) {
-            dp[i] = QVector(n + 1, 0);
+            dp[i] = QVector<int>(n + 1, 0);
         }
 
         for (int i = 0; i < m + 1; i++) {
@@ -225,4 +226,5 @@ namespace LyricFA {
         }
 
         return *min_edit_res;
-}}
+    }
+}

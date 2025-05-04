@@ -249,7 +249,7 @@ void MainWindow::saveFile(const QString &filename) {
     if (!labContent.isEmpty() && labContent.contains(" ")) {
         QStringList inputList = labContent.split(" ");
         for (QString &item : inputList) {
-            item.remove(QRegExp("[^a-z]"));
+            item.remove(QRegularExpression("[^a-z]"));
         }
         withoutTone = inputList.join(" ");
     }
@@ -263,9 +263,9 @@ void MainWindow::saveFile(const QString &filename) {
 
     QFile jsonFile(jsonFilePath);
     QJsonObject writeData;
-    writeData["lab"] = labContent.replace(QRegExp("\\s+"), " ");
+    writeData["lab"] = labContent.replace(QRegularExpression("\\s+"), " ");
     writeData["raw_text"] = txtContent;
-    writeData["lab_without_tone"] = withoutTone.replace(QRegExp("\\s+"), " ");
+    writeData["lab_without_tone"] = withoutTone.replace(QRegularExpression("\\s+"), " ");
     writeData["isCheck"] = true;
 
     if (!writeJsonFile(jsonFilePath, writeData)) {
@@ -288,7 +288,6 @@ void MainWindow::saveFile(const QString &filename) {
     }
 
     QTextStream labIn(&labFile);
-    labIn.setCodec(QTextCodec::codecForName("UTF-8"));
     labIn << labContent;
     labFile.close();
 }
@@ -521,16 +520,16 @@ void MainWindow::labToJson(const QString &dirName) {
                     if (!labContent.isEmpty() && labContent.contains(" ")) {
                         QStringList inputList = labContent.split(" ");
                         for (QString &item : inputList) {
-                            item.remove(QRegExp("[^a-z]"));
+                            item.remove(QRegularExpression("[^a-z]"));
                         }
                         withoutTone = inputList.join(" ");
                     }
 
                     QFile jsonFile(jsonFilePath);
                     QJsonObject writeData;
-                    writeData["lab"] = labContent.replace(QRegExp("\\s+"), " ");
+                    writeData["lab"] = labContent.replace(QRegularExpression("\\s+"), " ");
                     writeData["raw_text"] = txtContent;
-                    writeData["lab_without_tone"] = withoutTone.replace(QRegExp("\\s+"), " ");
+                    writeData["lab_without_tone"] = withoutTone.replace(QRegularExpression("\\s+"), " ");
 
                     if (!writeJsonFile(jsonFilePath, writeData)) {
                         QMessageBox::critical(

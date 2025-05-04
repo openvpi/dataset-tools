@@ -28,7 +28,7 @@ else ()
 endif ()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ../include)
-target_link_libraries(${PROJECT_NAME} PUBLIC onnxruntime syscmdline ${EXTRA_LIBS})
+target_link_libraries(${PROJECT_NAME} PUBLIC onnxruntime ${EXTRA_LIBS})
 
 
 

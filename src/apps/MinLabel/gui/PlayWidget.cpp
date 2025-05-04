@@ -1,5 +1,6 @@
 #include "PlayWidget.h"
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QDir>
 #include <QDragEnterEvent>
@@ -11,7 +12,7 @@
 
 // https://iconduck.com/icons
 
-class MySlider : public QSlider {
+class MySlider final : public QSlider {
 public:
     explicit MySlider(const Qt::Orientation orientation, QWidget *parent = nullptr) : QSlider(orientation, parent) {
     }

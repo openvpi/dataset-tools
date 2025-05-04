@@ -4,10 +4,10 @@
 #include <memory>
 
 #include <QString>
+#include <filesystem>
 
 #include <Model.h>
 
-#include "SndfileVio.h"
 
 namespace LyricFA {
 
@@ -16,12 +16,9 @@ namespace LyricFA {
         explicit Asr(const QString &modelPath);
         ~Asr();
 
-        [[nodiscard]] bool recognize(const QString &filename, QString &msg) const;
-        [[nodiscard]] bool recognize(SF_VIO sf_vio, QString &msg) const;
+        bool recognize(const std::filesystem::path &filepath, std::string &msg) const;
 
     private:
-        [[nodiscard]] static SF_VIO resample(const QString &filename);
-
         std::unique_ptr<FunAsr::Model> m_asrHandle;
     };
 } // LyricFA
