@@ -33,7 +33,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: '5.15.2'
+          version: '6.8.0'
           #cache: true # It never successfully found cache from previous runs, disabling it
 
       - name: Initialize MSVC environment
@@ -41,10 +41,10 @@ jobs:
         with:
           arch: amd64
 
-      - name: Configure Qt5 path
+      - name: Configure Qt6 path
         shell: bash
         run: |
-          echo "QT_DIR=$Qt5_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "QT_DIR=$Qt6_Dir" | sed 's/\\/\//g' >> $GITHUB_ENV
           echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
 
       - name: Install vcpkg
@@ -62,8 +62,8 @@ jobs:
           vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --binarysource="clear;x-gha,readwrite" --triplet=x64-windows
         env:
           QT_DIR: ${{env.QT_DIR}}
-          Qt5_DIR: ${{env.QT_DIR}}
-          VCPKG_KEEP_ENV_VARS: 'QT_DIR;Qt5_DIR'
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'QT_DIR;Qt6_DIR'
 
       - name: Install OnnxRuntime
         shell: cmd
@@ -76,7 +76,7 @@ jobs:
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         shell: bash
         working-directory: ${{github.workspace}}
-        run: cmake -B ${{env.GH_WORKSPACE}}/build -G Ninja -DBUILD_TESTS:BOOL=FALSE -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt5/ -DCMAKE_TOOLCHAIN_FILE=${{env.GH_WORKSPACE}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: cmake -B ${{env.GH_WORKSPACE}}/build -G Ninja -DBUILD_TESTS:BOOL=FALSE -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.GH_WORKSPACE}}/deploy -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ -DCMAKE_TOOLCHAIN_FILE=${{env.GH_WORKSPACE}}/vcpkg/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         # Build your program with the given configuration
