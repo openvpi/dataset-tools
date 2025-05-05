@@ -1,6 +1,5 @@
 #include "MidiWidget.h"
 #include <QFileDialog>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -37,14 +36,15 @@ static void makeMidiFile(const std::filesystem::path &midi_path, std::vector<Som
 }
 
 
-MidiWidget::MidiWidget(std::shared_ptr<Some::Some> some, SomeCfg *cfg, QWidget *parent)
+MidiWidget::MidiWidget(std::shared_ptr<Some::Some> some, QSettings *cfg, QWidget *parent)
     : QWidget(parent), m_cfg(cfg), m_some(std::move(some)) {
     const auto mainLayout = new QVBoxLayout(this);
 
     const auto wavPathLayout = new QHBoxLayout();
     const auto wavPathLabel = new QLabel("wav文件", this);
     m_wavPathLineEdit = new QLineEdit(this);
-    m_wavPathLineEdit->setText(m_cfg->wavPath);
+    m_wavPathLineEdit->setText(m_cfg->value("MidiWidget/wavPath", "").toString());
+    ;
     m_wavPathButton = new QPushButton("浏览...", this);
     wavPathLayout->addWidget(wavPathLabel);
     wavPathLayout->addWidget(m_wavPathLineEdit);
@@ -57,7 +57,7 @@ MidiWidget::MidiWidget(std::shared_ptr<Some::Some> some, SomeCfg *cfg, QWidget *
     const auto tempoLayout = new QHBoxLayout();
     const auto tempoLabel = new QLabel("tempo：", this);
     m_tempoLineEdit = new QLineEdit(this);
-    m_tempoLineEdit->setText(m_cfg->tempo);
+    m_tempoLineEdit->setText(m_cfg->value("MidiWidget/tempo", "120").toString());
     tempoLayout->addWidget(tempoLabel);
     tempoLayout->addWidget(m_tempoLineEdit);
     tempoLayout->addStretch();
@@ -66,7 +66,7 @@ MidiWidget::MidiWidget(std::shared_ptr<Some::Some> some, SomeCfg *cfg, QWidget *
     const auto outputMidiLayout = new QHBoxLayout();
     const auto outputMidiLabel = new QLabel("输出midi：", this);
     m_outputMidiLineEdit = new QLineEdit(this);
-    m_outputMidiLineEdit->setText(m_cfg->outMidiPath);
+    m_outputMidiLineEdit->setText(m_cfg->value("MidiWidget/outMidiPath", "").toString());
     m_outputMidiButton = new QPushButton("浏览...", this);
     outputMidiLayout->addWidget(outputMidiLabel);
     outputMidiLayout->addWidget(m_outputMidiLineEdit);
@@ -90,7 +90,8 @@ MidiWidget::MidiWidget(std::shared_ptr<Some::Some> some, SomeCfg *cfg, QWidget *
 
     connect(m_runButton, &QPushButton::clicked, this, &MidiWidget::onExportMidiTask);
 
-    connect(m_tempoLineEdit, &QLineEdit::textChanged, [this](const QString &text) { m_cfg->tempo = text; });
+    connect(m_tempoLineEdit, &QLineEdit::textChanged,
+            [this](const QString &text) { m_cfg->setValue("MidiWidget/tempo", text.toDouble()); });
 }
 
 void MidiWidget::onBrowseWavPath() {
@@ -99,15 +100,15 @@ void MidiWidget::onBrowseWavPath() {
         "音频文件 (*.wav *.flac *.mp3);;WAV文件 (*.wav);;FLAC文件 (*.flac);;MP3文件 (*.mp3)");
     if (!wavPath.isEmpty()) {
         m_wavPathLineEdit->setText(wavPath);
-        m_cfg->wavPath = wavPath;
+        m_cfg->setValue("MidiWidget/wavPath", wavPath);
     }
 }
 
 void MidiWidget::onBrowseOutputMidi() {
-    const QString file = QFileDialog::getSaveFileName(this, "选择输出midi文件", "", "MIDI文件 (*.mid)");
-    if (!file.isEmpty()) {
+    if (const QString file = QFileDialog::getSaveFileName(this, "选择输出midi文件", "", "MIDI文件 (*.mid)");
+        !file.isEmpty()) {
         m_outputMidiLineEdit->setText(file);
-        m_cfg->outMidiPath = file;
+        m_cfg->setValue("MidiWidget/outMidiPath", file);
     }
 }
 

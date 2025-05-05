@@ -2,21 +2,17 @@
 #include <QApplication>
 #include <QDebug>
 #include <QJsonDocument>
-#include <QJsonObject>
-#include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
 #include <QWheelEvent>
 
-
-#include <QtWidgets/qaction.h>
 #include <cmath>
 
 
 #include "DsSentence.h"
 #include "F0Widget.h"
-#include "gui/F0Widget.h"
-#include "qjsonstream.h"
+
+#include <QSettings>
 
 
 F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0), contextMenuNoteInterval(0, 0, {}) {
@@ -147,9 +143,7 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
     hasError = false;
     clear();
 
-    DsSentence sentence;
-    QAS::JsonStream stream(content);
-    stream >> sentence;
+    DsSentence sentence = loadDsSentencesFromJsonObj(content);
 
     auto f0Seq = sentence.f0_seq.split(" ", Qt::SkipEmptyParts);
     foreach (auto f0, f0Seq) {
@@ -278,24 +272,24 @@ void F0Widget::setErrorStatusText(const QString &text) {
     update();
 }
 
-void F0Widget::loadConfig(const SlurCutterCfg &cfg) {
-    bgMenuShowPitchTextOverlay->setChecked(cfg.showPitchTextOverlay);
-    bgMenuShowPhonemeTexts->setChecked(cfg.showPhonemeTexts);
-    bgMenuSnapByDefault->setChecked(cfg.snapToKeys);
-    bgMenuShowCrosshairAndPitch->setChecked(cfg.showCrosshairAndPitch);
+void F0Widget::loadConfig(const QSettings &cfg) {
+    snapToKey = cfg.value("F0Widget/snapToKeys", snapToKey).toBool();
+    showPitchTextOverlay = cfg.value("F0Widget/showPitchTextOverlay", showPitchTextOverlay).toBool();
+    showPhonemeTexts = cfg.value("F0Widget/showPhonemeTexts", showPhonemeTexts).toBool();
+    showCrosshairAndPitch = cfg.value("F0Widget/showCrosshairAndPitch", showCrosshairAndPitch).toBool();
 
-    snapToKey = cfg.snapToKeys;
-    showPitchTextOverlay = cfg.showPitchTextOverlay;
-    showPhonemeTexts = cfg.showPhonemeTexts;
-    showCrosshairAndPitch = cfg.showCrosshairAndPitch;
+    bgMenuShowPitchTextOverlay->setChecked(showPitchTextOverlay);
+    bgMenuShowPhonemeTexts->setChecked(showPhonemeTexts);
+    bgMenuSnapByDefault->setChecked(snapToKey);
+    bgMenuShowCrosshairAndPitch->setChecked(showCrosshairAndPitch);
 
     update();
 }
 
-void F0Widget::pullConfig(SlurCutterCfg &cfg) const {
-    cfg.showPitchTextOverlay = bgMenuShowPitchTextOverlay->isChecked();
-    cfg.showPhonemeTexts = bgMenuShowPhonemeTexts->isChecked();
-    cfg.snapToKeys = bgMenuSnapByDefault->isChecked();
+void F0Widget::pullConfig(QSettings &cfg) const {
+    cfg.setValue("F0Widget/snapToKey", snapToKey);
+    cfg.setValue("F0Widget/showPitchTextOverlay", showPitchTextOverlay);
+    cfg.setValue("F0Widget/showPhonemeTexts", showPhonemeTexts);
 }
 
 void F0Widget::clear() {

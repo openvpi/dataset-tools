@@ -12,7 +12,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     SndFile::sndfile
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
-    qastool::core
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

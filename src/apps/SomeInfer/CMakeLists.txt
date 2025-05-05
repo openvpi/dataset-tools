@@ -12,7 +12,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
         some-infer::some-infer
-        qastool::core
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -21,7 +20,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 
-include(qasc_exec.cmake)
 
 if (WIN32)
     include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)

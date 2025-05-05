@@ -10,14 +10,14 @@
 #include <iostream>
 
 #include <wolf-midi/MidiFile.h>
-BatchWidget::BatchWidget(std::shared_ptr<Some::Some> some, SomeCfg *cfg, QWidget *parent)
+BatchWidget::BatchWidget(std::shared_ptr<Some::Some> some, QSettings *cfg, QWidget *parent)
     : QWidget(parent), m_cfg(cfg), m_some(std::move(some)) {
     const auto mainLayout = new QVBoxLayout(this);
 
     const auto wavPathLayout = new QHBoxLayout();
     const auto wavPathLabel = new QLabel("wav文件", this);
     m_wavPathLineEdit = new QLineEdit(this);
-    m_wavPathLineEdit->setText(m_cfg->wavPath);
+    m_wavPathLineEdit->setText(m_cfg->value("BatchWidget/wavPath", "").toString());
     m_wavPathButton = new QPushButton("浏览...", this);
     wavPathLayout->addWidget(wavPathLabel);
     wavPathLayout->addWidget(m_wavPathLineEdit);
@@ -27,7 +27,7 @@ BatchWidget::BatchWidget(std::shared_ptr<Some::Some> some, SomeCfg *cfg, QWidget
     const auto outputCsvLayout = new QHBoxLayout();
     const auto outputMidiLabel = new QLabel("输出csv：", this);
     m_csvLineEdit = new QLineEdit(this);
-    m_csvLineEdit->setText(m_cfg->outMidiPath);
+    m_csvLineEdit->setText(m_cfg->value("BatchWidget/outCsvPath", "").toString());
     m_csvButton = new QPushButton("浏览...", this);
     outputCsvLayout->addWidget(outputMidiLabel);
     outputCsvLayout->addWidget(m_csvLineEdit);
@@ -58,18 +58,18 @@ BatchWidget::BatchWidget(std::shared_ptr<Some::Some> some, SomeCfg *cfg, QWidget
 }
 
 void BatchWidget::onBrowseWavPath() {
-    const QString wavPath = QFileDialog::getOpenFileName(this, "选择输入wav文件", "", "WAV文件 (*.wav)");
-    if (!wavPath.isEmpty()) {
+    if (const QString wavPath = QFileDialog::getOpenFileName(this, "选择输入wav文件", "", "WAV文件 (*.wav)");
+        !wavPath.isEmpty()) {
         m_wavPathLineEdit->setText(wavPath);
-        m_cfg->wavPath = wavPath;
+        m_cfg->setValue("BatchWidget/wavPath", wavPath);
     }
 }
 
 void BatchWidget::onBrowseOutputCsv() {
-    const QString file = QFileDialog::getSaveFileName(this, "选择输出csv文件", "", "CSV文件 (*.csv)");
-    if (!file.isEmpty()) {
+    if (const QString file = QFileDialog::getSaveFileName(this, "选择输出csv文件", "", "CSV文件 (*.csv)");
+        !file.isEmpty()) {
         m_csvLineEdit->setText(file);
-        m_cfg->outMidiPath = file;
+        m_cfg->setValue("BatchWidget/outCsvPath", file);
     }
 }
 

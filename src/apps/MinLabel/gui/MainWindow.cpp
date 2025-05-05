@@ -322,7 +322,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-    QSettings settings(QApplication::applicationDirPath() + "/config/minlabel.ini", QSettings::IniFormat);
+    QSettings settings(QApplication::applicationDirPath() + "/config/MinLabel.ini", QSettings::IniFormat);
 
     settings.setValue("Shortcuts/Open", browseAction->shortcut().toString());
     settings.setValue("Shortcuts/Export", exportAction->shortcut().toString());
@@ -345,7 +345,7 @@ void MainWindow::initStyleSheet() {
 }
 
 void MainWindow::applyConfig() {
-    const QSettings settings(QApplication::applicationDirPath() + "/config/minlabel.ini", QSettings::IniFormat);
+    const QSettings settings(QApplication::applicationDirPath() + "/config/MinLabel.ini", QSettings::IniFormat);
 
     browseAction->setShortcut(QKeySequence(settings.value("Shortcuts/Open", "Ctrl+O").toString()));
     exportAction->setShortcut(QKeySequence(settings.value("Shortcuts/Export", "Ctrl+E").toString()));

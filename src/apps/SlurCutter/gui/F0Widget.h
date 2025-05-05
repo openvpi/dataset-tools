@@ -1,15 +1,14 @@
 
 #pragma once
 
-#include "SlurCutterCfg.h"
 #include "intervaltree.hpp"
 
 #include <QFrame>
 #include <QMenu>
 #include <QScrollBar>
+#include <QSettings>
 #include <QtWidgets/qactiongroup.h>
 #include <tuple>
-
 
 
 class F0Widget final : public QFrame {
@@ -20,8 +19,8 @@ public:
 
     void setDsSentenceContent(const QJsonObject &content);
     void setErrorStatusText(const QString &text);
-    void loadConfig(const SlurCutterCfg &cfg);
-    void pullConfig(SlurCutterCfg &cfg) const;
+    void loadConfig(const QSettings &cfg);
+    void pullConfig(QSettings &cfg) const;
 
     void clear();
 

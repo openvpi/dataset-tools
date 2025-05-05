@@ -2,8 +2,6 @@
 
 #include <QApplication>
 
-#include <QPainter>
-#include <QStyleOptionTab>
 #include <QStylePainter>
 
 #include <QDir>
@@ -14,8 +12,7 @@
 #include <iostream>
 
 #include <QJsonDocument>
-#include <QLineEdit>
-#include <qjsonstream.h>
+#include <QSettings>
 
 static bool isDmlAvailable(int &recommendedIndex) {
     const GpuInfo recommendedGpu = DmlGpuUtils::getRecommendedGpu();
@@ -27,16 +24,6 @@ static bool isDmlAvailable(int &recommendedIndex) {
     recommendedIndex = recommendedGpu.index;
 
     return recommendedGpu.memory > 0;
-}
-
-static void saveConfig(const QString &keyConfPath, const SomeCfg &cfg) {
-    QFile file(keyConfPath);
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
-        file.close();
-    } else {
-        QMessageBox::critical(nullptr, QApplication::applicationName(), "Failed to create config file.");
-    }
 }
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
@@ -87,35 +74,21 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 #endif
     }
 
-    const QString keyConfPath = QApplication::applicationDirPath() + "/some_config.json";
-    try {
-        if (QApplication::arguments().contains("--reset-keys")) {
-            throw std::exception();
+    const QString configDirPath = QApplication::applicationDirPath() + "/config";
+    if (const QDir configDir(configDirPath); !configDir.exists()) {
+        if (!configDir.mkpath(".")) {
+            QMessageBox::critical(this, QApplication::applicationName(),
+                                  "Failed to create config directory: " + configDir.absolutePath());
+            return;
         }
-
-        QFile file(keyConfPath);
-        if (!file.open(QIODevice::ReadOnly)) {
-            throw std::exception();
-        }
-
-        QJsonParseError err{};
-        const QJsonDocument cfgDoc = QJsonDocument::fromJson(file.readAll(), &err);
-
-        file.close();
-
-        if (err.error != QJsonParseError::NoError || !cfgDoc.isObject()) {
-            throw std::exception();
-        }
-
-        QAS::JsonStream stream(cfgDoc.object());
-        stream >> cfg;
-    } catch (const std::exception &e) {
     }
+
+    cfg = new QSettings(configDirPath + "/SomeInfer.ini", QSettings::IniFormat);
 
     parentWidget = new QTabWidget();
 
     // const auto batchWidget = new QWidget();
-    const auto midiWidget = new MidiWidget(m_some, &cfg);
+    const auto midiWidget = new MidiWidget(m_some, cfg);
     // parentWidget->addTab(batchWidget, "制作数据集");
     parentWidget->addTab(midiWidget, "wav转midi");
 
@@ -123,6 +96,4 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     resize(600, 300);
 }
 
-MainWindow::~MainWindow() {
-    saveConfig(QApplication::applicationDirPath() + "/some_config.json", cfg);
-};
+MainWindow::~MainWindow() = default;

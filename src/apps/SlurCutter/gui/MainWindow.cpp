@@ -1,5 +1,4 @@
 #include "MainWindow.h"
-#include "SlurCutterCfg.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -16,7 +15,7 @@
 #include <QTime>
 
 #include <QJsonArray>
-#include <qasglobal.h>
+#include <QSettings>
 
 // #include "Common/CodecArguments.h"
 // #include "Common/SampleFormat.h"
@@ -142,50 +141,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     reloadWindowTitle();
     resize(1280, 720);
 
-    QString keyConfPath = qApp->applicationDirPath() + "/slurcutter_config.json";
-    QFile rfile(keyConfPath);
-    if (!rfile.open(QIODevice::ReadOnly) || qApp->arguments().contains("--reset-keys")) {
-        QFile file(keyConfPath);
-        if (file.open(QIODevice::WriteOnly)) {
-            SlurCutterCfg cfg;
-            QAS::JsonStream stream;
-            cfg.open = browseAction->shortcut().toString();
-            cfg.next = nextAction->shortcut().toString();
-            cfg.prev = prevAction->shortcut().toString();
-            cfg.play = playAction->shortcut().toString();
-            file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
+    QString configDirPath = QApplication::applicationDirPath() + "/config";
+    if (QDir configDir(configDirPath); !configDir.exists()) {
+        if (!configDir.mkpath(".")) {
+            QMessageBox::critical(this, QApplication::applicationName(),
+                                  "Failed to create config directory: " + configDir.absolutePath());
+            return;
         }
     }
-    {
-        // Read actions
-        rfile.close();
-        if (rfile.open(QIODevice::ReadOnly)) {
-            QJsonParseError err;
-            QJsonDocument doc = QJsonDocument::fromJson(rfile.readAll(), &err);
 
-            rfile.close();
-
-            QAS::JsonStream stream(doc.object());
-            if (err.error == QJsonParseError::NoError && doc.isObject()) {
-                stream >> cfg;
-            }
-        }
-
-        if (!cfg.open.isEmpty()) {
-            browseAction->setShortcut(QKeySequence(cfg.open));
-        }
-        if (!cfg.next.isEmpty()) {
-            nextAction->setShortcut(QKeySequence(cfg.next));
-        }
-        if (!cfg.prev.isEmpty()) {
-            prevAction->setShortcut(QKeySequence(cfg.prev));
-        }
-        if (!cfg.play.isEmpty()) {
-            playAction->setShortcut(QKeySequence(cfg.play));
-        }
-
-        f0Widget->loadConfig(cfg);
-    }
+    applyConfig();
 }
 
 MainWindow::~MainWindow() {
@@ -193,6 +158,23 @@ MainWindow::~MainWindow() {
     if (QMFs::isFileExist(lastFile)) {
         saveFile(lastFile);
     }
+}
+
+void MainWindow::applyConfig() {
+    const QSettings settings(QApplication::applicationDirPath() + "/config/SlurCutter.ini", QSettings::IniFormat);
+
+    browseAction->setShortcut(QKeySequence(settings.value("Shortcuts/Open", "Ctrl+O").toString()));
+    prevAction->setShortcut(QKeySequence(settings.value("Navigation/Prev", "PgUp").toString()));
+    nextAction->setShortcut(QKeySequence(settings.value("Navigation/Next", "PgDown").toString()));
+    playAction->setShortcut(QKeySequence(settings.value("Playback/Play", "F5").toString()));
+
+    if (const QString savedDir = settings.value("General/LastDir").toString();
+        !savedDir.isEmpty() && QDir(savedDir).exists()) {
+        dirname = savedDir;
+        openDirectory(dirname);
+    }
+
+    reloadWindowTitle();
 }
 
 void MainWindow::openDirectory(const QString &dirname) {
@@ -402,14 +384,17 @@ void MainWindow::dropEvent(QDropEvent *event) {
 void MainWindow::closeEvent(QCloseEvent *event) {
     // Pull and save config
     f0Widget->pullConfig(cfg);
-    QString keyConfPath = qApp->applicationDirPath() + "/slurcutter_config.json";
-    QFile file(keyConfPath);
-    QAS::JsonStream stream;
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(QJsonDocument(qAsClassToJson(cfg)).toJson());
+    QSettings settings(QApplication::applicationDirPath() + "/config/SlurCutter.ini", QSettings::IniFormat);
+
+    settings.setValue("Shortcuts/Open", browseAction->shortcut().toString());
+    settings.setValue("Navigation/Prev", prevAction->shortcut().toString());
+    settings.setValue("Navigation/Next", nextAction->shortcut().toString());
+    settings.setValue("Playback/Play", playAction->shortcut().toString());
+
+    if (!dirname.isEmpty()) {
+        settings.setValue("General/LastDir", dirname);
     }
 
-    // Quit
     event->accept();
 }
 

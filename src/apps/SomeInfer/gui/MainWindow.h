@@ -7,8 +7,6 @@
 
 #include <some-infer/Some.h>
 
-#include "inc/SomeCfg.h"
-
 #include "MidiWidget.h"
 
 class MainWindow final : public QMainWindow {
@@ -19,11 +17,13 @@ public:
     ~MainWindow() override;
 
 private:
+    void applyConfig();
+
     QHBoxLayout *mainLayout;
     QTabWidget *parentWidget;
     MidiWidget *midiWidget;
 
-    SomeCfg cfg;
+    QSettings *cfg;
 
     std::shared_ptr<Some::Some> m_some;
 };

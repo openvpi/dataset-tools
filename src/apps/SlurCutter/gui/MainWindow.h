@@ -5,6 +5,7 @@
 #include <QBoxLayout>
 #include <QFileSystemModel>
 #include <QLabel>
+#include <QListWidget>
 #include <QMainWindow>
 #include <QMenu>
 #include <QPluginLoader>
@@ -13,13 +14,14 @@
 #include <QSlider>
 #include <QSplitter>
 #include <QTreeWidget>
-#include <QListWidget>
 
-#include "PlayWidget.h"
 #include "F0Widget.h"
+#include "PlayWidget.h"
 
 #include "Api/IAudioDecoder.h"
 #include "Api/IAudioPlayback.h"
+
+#include <QSettings>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -68,7 +70,7 @@ protected:
     int currentRow = -1;
 
     // Cached application configuration
-    SlurCutterCfg cfg;
+    QSettings cfg;
 
     void openDirectory(const QString &dirname);
     void openFile(const QString &filename);
@@ -89,6 +91,7 @@ protected:
 
 private:
     void initStyleSheet();
+    void applyConfig();
 
     void _q_fileMenuTriggered(const QAction *action);
     void _q_editMenuTriggered(QAction *action);

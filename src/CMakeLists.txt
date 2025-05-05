@@ -4,7 +4,6 @@ endif ()
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Svg REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Svg REQUIRED)
-find_package(QasTool REQUIRED)
 
 if (QT_VERSION_MAJOR GREATER_EQUAL 6)
     message(STATUS "Qt6 detected, adding Core5Compat module")
