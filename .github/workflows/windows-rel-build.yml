@@ -34,7 +34,6 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.3'
-          modules: qtbase qtcore5compat
           #cache: true # It never successfully found cache from previous runs, disabling it
 
       - name: Initialize MSVC environment
