@@ -12,8 +12,6 @@
 #include <cpp-pinyin/Jyutping.h>
 #include <cpp-pinyin/Pinyin.h>
 
-#include <mecab/mecab.h>
-
 class TextWidget final : public QWidget {
     Q_OBJECT
 public:
@@ -50,11 +48,7 @@ protected:
     QScopedPointer<Pinyin::Jyutping> g2p_canton;
 
 private:
-    MeCab::Tagger *mecabYomi;
-    MeCab::Tagger *mecabWakati;
-    [[nodiscard]] QString sentence() const;
-    static MeCab::Tagger *mecabInit(const QString &path = "mecabDict", const QString &format = "wakati");
-    [[nodiscard]] QString mecabConvert(const QString &input) const;
+    QString sentence() const;
 
     void _q_pasteButtonClicked() const;
     void _q_replaceButtonClicked() const;

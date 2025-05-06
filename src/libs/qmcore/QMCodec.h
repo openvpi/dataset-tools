@@ -2,7 +2,7 @@
 #define QMCODEC_H
 
 #include <QByteArray>
-#include <QTextCodec>
+// #include <QTextCodec>
 
 #include "QMGlobal.h"
 
@@ -15,7 +15,7 @@ namespace QMCodec {
      * @param determined If the target codec is determined
      * @return
      */
-    QMCORE_EXPORT QTextCodec *GetUtfCodec(const QByteArray &data, bool *determined = nullptr);
+    // QMCORE_EXPORT QTextCodec *GetUtfCodec(const QByteArray &data, bool *determined = nullptr);
 
     /**
      * @brief Convert escaped string in C++ to literal

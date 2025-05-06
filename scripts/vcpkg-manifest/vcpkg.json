@@ -3,7 +3,6 @@
   "dependencies": [
     "sdl2",
     "ffmpeg-fake",
-    "mecab",
     "fftw3",
     "yaml-cpp",
     "cpp-pinyin",

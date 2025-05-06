@@ -1,7 +1,8 @@
 #include "QMCodec.h"
+#include <QString>
 
 namespace QMCodec {
-
+    /*
     QTextCodec *GetUtfCodec(const QByteArray &data, bool *determined) {
         QTextCodec *autoCodec = QTextCodec::codecForUtfText(data);
         QString name = autoCodec->name();
@@ -27,6 +28,7 @@ namespace QMCodec {
         determined ? (*determined = false) : 0; // Not certain
         return autoCodec;
     }
+    */
 
     QString unescape(const QString &s) {
         QString res;

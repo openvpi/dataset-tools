@@ -15,10 +15,3 @@ target_include_directories(${PROJECT_NAME} PUBLIC .)
 target_link_libraries(${PROJECT_NAME} PUBLIC
         Qt${QT_VERSION_MAJOR}::Core
 )
-
-if (QT_VERSION_MAJOR GREATER_EQUAL 6)
-    message(STATUS "Qt6 detected, adding Core5Compat module")
-    target_link_libraries(${PROJECT_NAME} PUBLIC
-            Qt${QT_VERSION_MAJOR}::Core5Compat
-    )
-endif ()

@@ -7,14 +7,12 @@ set(CMAKE_AUTOUIC ON)
 file(GLOB_RECURSE _src *.h *.cpp)
 add_executable(${PROJECT_NAME} ${_src} res.qrc res/qss.qrc)
 
-find_package(mecab CONFIG REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
 find_package(cpp-kana CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
-        mecab::mecab
         cpp-pinyin::cpp-pinyin
         cpp-kana::cpp-kana
         QMCore SDLPlayback FFmpegDecoder
@@ -39,7 +37,6 @@ if (APPLE)
 endif ()
 
 set(DIRECTORIES_TO_COPY
-        mecabDict
         qss
 )
 

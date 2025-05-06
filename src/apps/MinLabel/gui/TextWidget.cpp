@@ -5,13 +5,11 @@
 #include <QDebug>
 #include <QLineEdit>
 #include <QRegularExpression>
-#include <QTextCodec>
 
 #include <cpp-kana/Kana.h>
 
 TextWidget::TextWidget(QWidget *parent)
-    : QWidget(parent), g2p_man(new Pinyin::Pinyin()), g2p_canton(new Pinyin::Jyutping()),
-      mecabYomi(mecabInit("mecabDict", "yomi")), mecabWakati(mecabInit("mecabDict", "wakati")) {
+    : QWidget(parent), g2p_man(new Pinyin::Pinyin()), g2p_canton(new Pinyin::Jyutping()) {
     wordsText = new QLineEdit();
     wordsText->setPlaceholderText("Enter mandarin here...");
 
@@ -88,19 +86,18 @@ TextWidget::TextWidget(QWidget *parent)
     connect(replaceAction, &QAction::triggered, this, &TextWidget::_q_replaceButtonClicked);
 }
 
-TextWidget::~TextWidget(){};
+TextWidget::~TextWidget() = default;
 
 QString TextWidget::sentence() const {
     QString words = wordsText->text();
-    words.replace("\r\n", " ");
-    words.replace("\n", " ");
+    words.replace(QRegularExpression(R"([\r\n]+)"), " ");
+    words = words.simplified();
     return words;
 }
 
 void TextWidget::_q_pasteButtonClicked() const {
     const auto board = QApplication::clipboard();
-    const QString text = board->text();
-    if (!text.isEmpty()) {
+    if (const QString text = board->text(); !text.isEmpty()) {
         wordsText->setText(text);
     }
 }
@@ -124,7 +121,7 @@ void TextWidget::_q_replaceButtonClicked() const {
             break;
         }
         case 1: {
-            str = QString::fromUtf8(Kana::kanaToRomaji(mecabConvert(jpInput).toUtf8().toStdString(),
+            str = QString::fromUtf8(Kana::kanaToRomaji(jpInput.toUtf8().toStdString(),
                                                        Kana::Error::Default, doubleConsonant->isChecked())
                                         .toStdStr()
                                         .c_str());
@@ -157,7 +154,7 @@ void TextWidget::_q_appendButtonClicked() const {
             break;
         }
         case 1: {
-            str = QString::fromUtf8(Kana::kanaToRomaji(mecabConvert(jpInput).toUtf8().toStdString(),
+            str = QString::fromUtf8(Kana::kanaToRomaji(jpInput.toUtf8().toStdString(),
                                                        Kana::Error::Default, doubleConsonant->isChecked())
                                         .toStdStr()
                                         .c_str());
@@ -197,26 +194,4 @@ void TextWidget::_q_onLanguageComboIndexChanged() {
     for (QCheckBox *control : optionMap[selectedLanguage]) {
         control->show();
     }
-}
-
-MeCab::Tagger *TextWidget::mecabInit(const QString &path, const QString &format) {
-    const QString args = "-O" + format + " -d " + path + " -r" + path + "/mecabrc";
-    return MeCab::createTagger(args.toUtf8());
-}
-
-QString TextWidget::mecabConvert(const QString &input) const {
-    const QTextCodec *codec = QTextCodec::codecForName("GBK");
-    const QByteArray mecabRes = mecabWakati->parse(codec->fromUnicode(input));
-
-    QStringList out;
-    foreach (auto &it, mecabRes.split(' ')) {
-        QString res = codec->toUnicode(mecabYomi->parse(it));
-        const QStringList item = res.split("\t");
-        if (item.size() > 1) {
-            out.append(item[1]);
-        } else if (!item.empty() && item[0] != "") {
-            out.append(item[0]);
-        }
-    }
-    return out.join(" ");
 }
