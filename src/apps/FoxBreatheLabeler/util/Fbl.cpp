@@ -7,7 +7,6 @@
 
 #include <QDir>
 
-#include <stdexcept>
 #include <vector>
 
 #include <audio-util/Util.h>
@@ -35,9 +34,10 @@ namespace FBL {
 
     FBL::~FBL() = default;
 
-    static std::vector<std::pair<float, float>> findSegmentsDynamic(const std::vector<float> &arr, double time_scale,
-                                                                    double threshold = 0.5, int max_gap = 5,
-                                                                    int ap_threshold = 10) {
+    static std::vector<std::pair<float, float>> findSegmentsDynamic(const std::vector<float> &arr,
+                                                                    const double time_scale,
+                                                                    const double threshold = 0.5, const int max_gap = 5,
+                                                                    const int ap_threshold = 10) {
         std::vector<std::pair<float, float>> segments;
         int start = -1;
         int gap_count = 0;
@@ -54,7 +54,7 @@ namespace FBL {
                         gap_count++;
                     } else {
                         const int end = i - gap_count - 1;
-                        if (end >= start && (end - start) >= ap_threshold) {
+                        if (end >= start && end - start >= ap_threshold) {
                             segments.emplace_back(start * time_scale, end * time_scale);
                         }
                         start = -1;
@@ -65,15 +65,15 @@ namespace FBL {
         }
 
         // Handle the case where the array ends with a segment
-        if (start != -1 && (arr.size() - start) >= ap_threshold) {
-            segments.emplace_back(start * time_scale, (arr.size() - 1) * time_scale);
+        if (start != -1 && arr.size() - start >= ap_threshold) {
+            segments.emplace_back(start * time_scale, (static_cast<double>(arr.size()) - 1) * time_scale);
         }
 
         return segments;
     }
 
     bool FBL::recognize(const std::filesystem::path &filepath, std::vector<std::pair<float, float>> &res,
-                        std::string &msg, float ap_threshold, float ap_dur) const {
+                        std::string &msg, const float ap_threshold, const float ap_dur) const {
         if (!m_fblModel) {
             return false;
         }
@@ -98,9 +98,8 @@ namespace FBL {
         if (m_fblModel->forward(std::vector<std::vector<float>>{audio}, modelRes, modelMsg)) {
             res = findSegmentsDynamic(modelRes, m_time_scale, ap_threshold, 5, static_cast<int>(ap_dur / m_time_scale));
             return true;
-        } else {
-            msg = modelMsg;
-            return false;
         }
+        msg = modelMsg;
+        return false;
     }
 } // LyricFA

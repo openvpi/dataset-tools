@@ -51,7 +51,7 @@ private:
     void initPlugins();
     void uninitPlugins() const;
 
-    void reloadDevices();
+    void reloadDevices() const;
     void reloadButtonStatus() const;
     void reloadSliderStatus() const;
     void reloadDeviceActionStatus() const;
@@ -63,8 +63,8 @@ private:
     void _q_deviceActionTriggered(const QAction *action);
     void _q_playStateChanged();
     void _q_audioDeviceChanged() const;
-    void _q_audioDeviceAdded();
-    void _q_audioDeviceRemoved();
+    void _q_audioDeviceAdded() const;
+    void _q_audioDeviceRemoved() const;
 };
 
 #endif // PLAYWIDGET_H

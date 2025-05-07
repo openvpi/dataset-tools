@@ -44,7 +44,6 @@ namespace LyricFA {
         }
 
         int idx = 0;
-        const auto frames = sf.frames();
 
         for (const auto &[fst, snd] : chunks) {
             const auto beginFrame = fst;
@@ -54,7 +53,7 @@ namespace LyricFA {
                 continue;
             }
 
-            sf.seek(static_cast<sf_count_t>(beginFrame), SEEK_SET);
+            sf.seek(beginFrame, SEEK_SET);
             std::vector<float> tmp(frameCount);
             const auto bytesWritten = sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
 
@@ -64,13 +63,13 @@ namespace LyricFA {
                 return false;
             }
 
-            FunAsr::Audio audio(1);
-            audio.loadPcmFloat(tmp.data(), tmp.size());
+            FunAsr::Audio asr_audio(1);
+            asr_audio.loadPcmFloat(tmp.data(), static_cast<int>(tmp.size()));
 
             float *buff;
             int len;
             int flag = 0;
-            while (audio.fetch(buff, len, flag) > 0) {
+            while (asr_audio.fetch(buff, len, flag) > 0) {
                 m_asrHandle->reset();
                 msg += m_asrHandle->forward(buff, len, flag);
             }

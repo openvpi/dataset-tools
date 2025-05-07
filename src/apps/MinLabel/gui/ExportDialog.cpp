@@ -19,7 +19,7 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     outputDirButton = new QPushButton("...", this);
     outputDirButton->setMaximumWidth(100);
 
-    connect(outputDirButton, &QPushButton::clicked, this, [=]() {
+    connect(outputDirButton, &QPushButton::clicked, this, [=] {
         const QString dirname = QFileDialog::getExistingDirectory(this, "Select Directory", outputDirEdit->text());
         if (!dirname.isEmpty()) {
             outputDirEdit->setText(dirname);
@@ -56,7 +56,7 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
     connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    connect(this, &QDialog::accepted, this, [=]() {
+    connect(this, &QDialog::accepted, this, [=] {
         exportInfo.outputDir = outputDirEdit->text();
         exportInfo.folderName = folderNameEdit->text();
         exportInfo.exportAudio = expAudio->isChecked();

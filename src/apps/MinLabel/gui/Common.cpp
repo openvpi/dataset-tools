@@ -1,6 +1,7 @@
 #include "Common.h"
 #include <QDebug>
 #include <QDir>
+#include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
 
@@ -86,7 +87,7 @@ bool copyFile(QList<CopyInfo> &copyList, const ExportInfo &exportInfo) {
 
     for (const CopyInfo &copyInfo : copyList) {
         if (copyInfo.exist && !overwriteAll && !skipAll) {
-            QMessageBox::StandardButton reply = QMessageBox::question(
+            const QMessageBox::StandardButton reply = QMessageBox::question(
                 nullptr, "Overwrite?", QString("File %1 already exists, overwrite?").arg(copyInfo.rawName),
                 QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel | QMessageBox::YesToAll |
                     QMessageBox::NoToAll);
@@ -155,12 +156,11 @@ bool copyFile(QList<CopyInfo> &copyList, const ExportInfo &exportInfo) {
     return true;
 }
 
-void mkItem(bool opt, const QString &folderPath, const QString &folderName) {
+void mkItem(const bool opt, const QString &folderPath, const QString &folderName) {
     if (opt) {
-        QString tarDir = folderPath + "/" + folderName;
+        const QString tarDir = folderPath + "/" + folderName;
         if (!QDir(tarDir).exists() && !QDir(folderPath).mkdir(folderName)) {
             QMessageBox::critical(nullptr, "Warning", "Failed to create " + folderName + " directory.");
-            return;
         }
     }
 }
@@ -173,7 +173,7 @@ void mkdir(const ExportInfo &exportInfo) {
     }
 
     if (QDir(folderPath).exists()) {
-        QMessageBox::StandardButton reply =
+        const QMessageBox::StandardButton reply =
             QMessageBox::question(nullptr, "Warning", "Output directory already exists, do you want to use it?",
                                   QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::No) {
@@ -203,7 +203,7 @@ QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir) 
             const QString audioPath = labFileToAudioFile(fileInfo.absoluteFilePath());
 
             if (QFile(audioPath).exists()) {
-                QFileInfo audioInfo = QFileInfo(audioPath);
+                auto audioInfo = QFileInfo(audioPath);
                 QString audioName = audioInfo.fileName();
 
                 QString targetPath = output.absolutePath() + "/wav/" + audioName;
@@ -222,11 +222,11 @@ bool readJsonFile(const QString &fileName, QJsonObject &jsonObject) {
         return false;
     }
 
-    QByteArray jsonData = file.readAll();
+    const QByteArray jsonData = file.readAll();
     file.close();
 
     QJsonParseError parseError{};
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData, &parseError);
+    const QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData, &parseError);
 
     if (parseError.error != QJsonParseError::NoError) {
         return false;

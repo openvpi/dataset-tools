@@ -121,10 +121,10 @@ void TextWidget::_q_replaceButtonClicked() const {
             break;
         }
         case 1: {
-            str = QString::fromUtf8(Kana::kanaToRomaji(jpInput.toUtf8().toStdString(),
-                                                       Kana::Error::Default, doubleConsonant->isChecked())
-                                        .toStdStr()
-                                        .c_str());
+            str = QString::fromUtf8(
+                Kana::kanaToRomaji(jpInput.toUtf8().toStdString(), Kana::Error::Default, doubleConsonant->isChecked())
+                    .toStdStr()
+                    .c_str());
             break;
         }
         case 2: {
@@ -154,18 +154,18 @@ void TextWidget::_q_appendButtonClicked() const {
             break;
         }
         case 1: {
-            str = QString::fromUtf8(Kana::kanaToRomaji(jpInput.toUtf8().toStdString(),
-                                                       Kana::Error::Default, doubleConsonant->isChecked())
-                                        .toStdStr()
-                                        .c_str());
+            str = QString::fromUtf8(
+                Kana::kanaToRomaji(jpInput.toUtf8().toStdString(), Kana::Error::Default, doubleConsonant->isChecked())
+                    .toStdStr()
+                    .c_str());
             break;
         }
         case 2: {
-            const auto jyutRes =
+            const auto jyutpingRes =
                 g2p_canton->hanziToPinyin(sentence().toUtf8().toStdString(),
                                           canTone->isChecked() ? Pinyin::CanTone::TONE3 : Pinyin::CanTone::NORMAL,
                                           cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default);
-            str = QString::fromUtf8(jyutRes.toStdStr().c_str());
+            str = QString::fromUtf8(jyutpingRes.toStdStr().c_str());
             break;
         }
         default:

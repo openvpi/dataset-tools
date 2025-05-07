@@ -2,7 +2,7 @@
 #include <QApplication>
 
 #ifdef Q_OS_WIN
-#include <Windows.h>
+#    include <Windows.h>
 #endif
 
 using namespace LyricFA;
@@ -21,8 +21,7 @@ int main(int argc, char *argv[]) {
 
         // Font point size
         qreal fontPointSize = 0.0;
-        HDC hDC = GetDC(nullptr);
-        if (hDC) {
+        if (HDC hDC = GetDC(nullptr)) {
             // To get font point size, we first get font height (in logical units) and device DPI,
             // then calculate the point size.
             // Here, we use message text font.

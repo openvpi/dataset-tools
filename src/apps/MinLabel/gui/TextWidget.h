@@ -1,7 +1,6 @@
 #ifndef TEXTWIDGET_H
 #define TEXTWIDGET_H
 
-#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QPlainTextEdit>

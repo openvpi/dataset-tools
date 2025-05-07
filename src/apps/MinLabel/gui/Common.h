@@ -2,9 +2,7 @@
 #define DATASET_TOOLS_COMMON_H
 
 #include <QFileInfo>
-#include <QJsonDocument>
 #include <QString>
-#include <QStringList>
 #include <utility>
 
 QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix);

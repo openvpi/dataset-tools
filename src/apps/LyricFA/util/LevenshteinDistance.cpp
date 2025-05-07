@@ -9,21 +9,20 @@ namespace LyricFA {
         Q_ASSERT(target.size() <= pinyin_list.size());
         Q_ASSERT(text_list.size() == pinyin_list.size());
 
-        const auto pos = find_best_matches(text_list, pinyin_list, target);
-        const auto slider_res = pinyin_list.mid(pos.start, pos.end - pos.start);
+        const auto [start, end, textDiff, pinyinDiff] = find_best_matches(text_list, pinyin_list, target);
+        const auto slider_res = pinyin_list.mid(start, end - start);
         if (!slider_res.empty() && (slider_res.first() == target.first() || slider_res.last() == target.last()) &&
-            pos.textDiff.size() <= 1)
-            return {text_list.mid(pos.start, pos.end - pos.start), pinyin_list.mid(pos.start, pos.end - pos.start),
-                    pos.textDiff, pos.pinyinDiff};
+            textDiff.size() <= 1)
+            return {text_list.mid(start, end - start), pinyin_list.mid(start, end - start), textDiff, pinyinDiff};
 
         QList<CalcuRes> similar_substrings;
 
         // 扩展匹配范围，最多扩展10个字符
-        for (int sub_length = target.size(); sub_length < std::min(target.size() + 10, pinyin_list.size() + 1);
-             sub_length++) {
+        for (int sub_length = static_cast<int>(target.size());
+             sub_length < std::min(target.size() + 10, pinyin_list.size() + 1); sub_length++) {
 
-            for (int i = std::max(0, pos.start - 10);
-                 i < std::min(pos.end + 10, static_cast<const int &>(pinyin_list.size() - sub_length + 1)); i++) {
+            for (int i = std::max(0, start - 10);
+                 i < std::min(end + 10, static_cast<int>(pinyin_list.size()) - sub_length + 1); i++) {
 
                 similar_substrings.append(
                     calculate_edit_distance(text_list.mid(i, sub_length), pinyin_list.mid(i, sub_length), target));
@@ -68,7 +67,7 @@ namespace LyricFA {
 
         if (max_match_index == -1) {
             max_match_index = 0;
-            max_match_length = sub_list.size();
+            max_match_length = static_cast<int>(sub_list.size());
         }
 
         QStringList textDiff;
@@ -124,8 +123,8 @@ namespace LyricFA {
     int LevenshteinDistance::calculate_edit_distance_dp(matrix dp, const QStringList &substring,
                                                         const QStringList &target, const bool &del_cost,
                                                         const bool &ins_cost, const bool &sub_cost) {
-        const int m = substring.size();
-        const int n = target.size();
+        const int m = static_cast<int>(substring.size());
+        const int n = static_cast<int>(target.size());
         for (int i = 1; i < m + 1; i++) {
             for (int j = 1; j < n + 1; j++) {
                 if (substring[i - 1] == target[j - 1])
@@ -146,8 +145,8 @@ namespace LyricFA {
                                                                                          const QStringList &target) {
         QList<StepPair> corresponding_texts;
         QList<StepPair> corresponding_characters;
-        int i = substring.size();
-        int j = target.size();
+        int i = static_cast<int>(substring.size());
+        int j = static_cast<int>(target.size());
 
         while (i > 0 && j > 0) {
             if (substring[i - 1] == target[j - 1]) {
@@ -182,13 +181,13 @@ namespace LyricFA {
                                                           const QStringList &target, const int &del_cost,
                                                           const int &ins_cost, const int &sub_cost) {
 
-        const int m = substring.size();
-        const int n = target.size();
+        const int m = static_cast<int>(substring.size());
+        const int n = static_cast<int>(target.size());
         const matrix dp = init_dp_matrix(m, n, del_cost, ins_cost);
         const int edit_distance = calculate_edit_distance_dp(dp, substring, target, del_cost, ins_cost, sub_cost);
-        const auto pair = backtrack_corresponding(dp, _text, substring, target);
-        const auto corresponding_texts = pair.first;
-        const auto corresponding_characters = pair.second;
+        const auto [fst, snd] = backtrack_corresponding(dp, _text, substring, target);
+        const auto corresponding_texts = fst;
+        const auto corresponding_characters = snd;
 
         QStringList text_res;
         QStringList pinyin_res;

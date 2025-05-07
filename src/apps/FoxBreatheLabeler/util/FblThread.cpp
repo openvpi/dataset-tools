@@ -18,6 +18,7 @@ namespace FBL {
         double start, end;
         std::string text;
     };
+
     struct Word {
         double start{}, end{};
         std::string text;
@@ -25,15 +26,15 @@ namespace FBL {
     };
 
     static std::vector<std::pair<float, float>>
-        find_overlapping_segments(double start, double end, const std::vector<std::pair<float, float>> &segments,
-                                  float sp_dur = 0.1) {
+        find_overlapping_segments(const double start, const double end,
+                                  const std::vector<std::pair<float, float>> &segments, const float sp_dur = 0.1) {
         std::vector<std::pair<float, float>> overlapping_segments;
         std::vector<std::pair<float, float>> merged_segments;
 
         // Find overlapping segments
         for (const auto &segment : segments) {
-            float segment_start = segment.first;
-            float segment_end = segment.second;
+            const float segment_start = segment.first;
+            const float segment_end = segment.second;
             // Check if there is any overlap
             if (!(segment_end <= start || segment_start >= end)) {
                 overlapping_segments.push_back(segment);
@@ -130,45 +131,45 @@ namespace FBL {
                 if (overlappingSegments.empty())
                     out.append(v);
                 else if (overlappingSegments.size() == 1) {
-                    const auto ap = overlappingSegments[0];
+                    const auto [fst, snd] = overlappingSegments[0];
                     cursor = sp.start;
-                    if (sp.start + sp_dur <= ap.first && ap.first < sp.end) {
-                        out.append(Word{cursor, ap.first, "SP"});
-                        cursor = ap.first;
+                    if (sp.start + sp_dur <= fst && fst < sp.end) {
+                        out.append(Word{cursor, fst, "SP"});
+                        cursor = fst;
                     }
 
-                    if (ap.second <= sp.end - sp_dur) {
-                        out.append(Word{cursor, ap.second, "AP"});
-                        out.append(Word{ap.second, sp.end, "SP"});
+                    if (snd <= sp.end - sp_dur) {
+                        out.append(Word{cursor, snd, "AP"});
+                        out.append(Word{snd, sp.end, "SP"});
                     } else {
                         out.append(Word{cursor, sp.end, "AP"});
                     }
                 } else {
                     cursor = sp.start;
                     for (int i = 0; i < overlappingSegments.size(); i++) {
-                        const auto ap = overlappingSegments[i];
-                        if (ap.first > cursor) {
-                            out.append(Word{cursor, ap.first, "SP"});
-                            cursor = ap.first;
+                        const auto [fst, snd] = overlappingSegments[i];
+                        if (fst > cursor) {
+                            out.append(Word{cursor, fst, "SP"});
+                            cursor = fst;
                         }
 
                         if (i == 0) {
-                            if (cursor < ap.first && sp.start + sp_dur <= ap.first && ap.first < sp.end) {
-                                out.append(Word{cursor, ap.first, "SP"});
-                                cursor = ap.first;
+                            if (cursor < fst && sp.start + sp_dur <= fst && fst < sp.end) {
+                                out.append(Word{cursor, fst, "SP"});
+                                cursor = fst;
                             }
-                            out.append(Word{cursor, ap.second, "AP"});
-                            cursor = ap.second;
+                            out.append(Word{cursor, snd, "AP"});
+                            cursor = snd;
                         } else if (overlappingSegments.size() - 1) {
-                            if (ap.second <= sp.end - sp_dur) {
-                                out.append(Word{cursor, ap.second, "AP"});
-                                out.append(Word{ap.second, sp.end, "SP"});
+                            if (snd <= sp.end - sp_dur) {
+                                out.append(Word{cursor, snd, "AP"});
+                                out.append(Word{snd, sp.end, "SP"});
                             } else {
                                 out.append(Word{cursor, sp.end, "AP"});
                             }
                         } else {
-                            out.append(Word{cursor, ap.second, "AP"});
-                            cursor = ap.second;
+                            out.append(Word{cursor, snd, "AP"});
+                            cursor = snd;
                         }
                     }
                 }
@@ -182,16 +183,16 @@ namespace FBL {
         auto tierWords = std::make_shared<textgrid::IntervalTier>("words", 0.0, wordCursor);
         auto tierPhones = std::make_shared<textgrid::IntervalTier>("phones", 0.0, wordCursor);
 
-        for (const auto &item : out) {
-            tierWords->AppendInterval(textgrid::Interval(item.start, item.end, item.text));
+        for (const auto &[start, end, text, phones] : out) {
+            tierWords->AppendInterval(textgrid::Interval(start, end, text));
 
-            if (item.text == "SP" || item.text == "AP") {
-                tierPhones->AppendInterval(textgrid::Interval(item.start, item.end, item.text));
+            if (text == "SP" || text == "AP") {
+                tierPhones->AppendInterval(textgrid::Interval(start, end, text));
                 continue;
             }
 
-            for (const auto &phone : item.phones) {
-                tierPhones->AppendInterval(textgrid::Interval(phone.start, phone.end, phone.text));
+            for (const auto &[start, end, text] : phones) {
+                tierPhones->AppendInterval(textgrid::Interval(start, end, text));
             }
         }
 
@@ -206,6 +207,7 @@ namespace FBL {
             outTgStream << QString::fromStdString(oss.str());
         } else {
             fblMsg = "Failed to open file for writing.";
+            Q_EMIT this->oneFailed(m_filename, QString::fromStdString(fblMsg));
         }
 
         fblMsg = "success.";

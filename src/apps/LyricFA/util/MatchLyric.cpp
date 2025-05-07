@@ -96,7 +96,7 @@ namespace LyricFA {
                 asrPinyins.append(QString::fromUtf8(item.pinyin.c_str()));
 
             if (!asrPinyins.isEmpty()) {
-                auto faRes =
+                auto [match_text, match_pinyin, text_step, pinyin_step] =
                     LevenshteinDistance::find_similar_substrings(asrPinyins, pinyinList, textList, true, true, true);
 
                 QStringList asr_rect_list;
@@ -104,8 +104,8 @@ namespace LyricFA {
 
                 for (int i = 0; i < asrPinyins.size(); i++) {
                     const auto &asrPinyin = asrPinyins[i];
-                    const auto text = faRes.match_text[i];
-                    const auto matchPinyin = faRes.match_pinyin[i];
+                    const auto text = match_text[i];
+                    const auto matchPinyin = match_pinyin[i];
 
                     if (asrPinyin != matchPinyin) {
                         const std::vector<std::string> candidates =
@@ -124,29 +124,29 @@ namespace LyricFA {
                 }
 
                 if (asr_rectify)
-                    faRes.match_pinyin = asr_rect_list;
+                    match_pinyin = asr_rect_list;
 
-                if (asrPinyins != faRes.match_pinyin && !faRes.pinyin_step.empty()) {
+                if (asrPinyins != match_pinyin && !pinyin_step.empty()) {
                     msg += "\n";
                     msg += "filename: " + filename + "\n";
                     msg += "asr_lab: " + asrPinyins.join(' ') + "\n";
-                    msg += "text_res: " + faRes.match_text.join(' ') + "\n";
-                    msg += "pyin_res: " + faRes.match_pinyin.join(' ') + "\n";
-                    msg += "text_step: " + faRes.text_step.join(' ') + "\n";
-                    msg += "pyin_step: " + faRes.pinyin_step.join(' ') + "\n";
+                    msg += "text_res: " + match_text.join(' ') + "\n";
+                    msg += "pyin_res: " + match_pinyin.join(' ') + "\n";
+                    msg += "text_step: " + text_step.join(' ') + "\n";
+                    msg += "pyin_step: " + pinyin_step.join(' ') + "\n";
 
                     if (asr_rectify && !asr_rect_diff.isEmpty())
                         msg += "asr_rect_diff: " + asr_rect_diff.join(' ');
                     msg += "------------------------";
                 }
 
-                Q_ASSERT(faRes.match_text.size() == faRes.match_pinyin.size());
+                Q_ASSERT(match_text.size() == match_pinyin.size());
 
                 QFile jsonFile(jsonPath.toLocal8Bit());
                 QJsonObject writeData;
-                writeData["lab"] = faRes.match_pinyin.join(' ');
-                writeData["raw_text"] = faRes.match_text.join(' ');
-                writeData["lab_without_tone"] = faRes.match_pinyin.join(' ');
+                writeData["lab"] = match_pinyin.join(' ');
+                writeData["raw_text"] = match_text.join(' ');
+                writeData["lab_without_tone"] = match_pinyin.join(' ');
 
                 if (!writeJsonFile(jsonPath, writeData)) {
                     QMessageBox::critical(nullptr, QApplication::applicationName(),

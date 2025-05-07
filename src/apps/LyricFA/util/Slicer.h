@@ -12,7 +12,6 @@ class SndfileHandle;
 enum SlicerErrorCode { SLICER_OK = 0, SLICER_INVALID_ARGUMENT, SLICER_AUDIO_ERROR };
 
 class Slicer {
-private:
     double m_threshold;
     qint64 m_hopSize;
     qint64 m_winSize;

@@ -30,7 +30,7 @@ namespace LyricFA {
         QTextStream labIn(&labFile);
         if (m_g2p) {
             const auto g2pRes = m_g2p->hanziToPinyin(asrMsg, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, true);
-            asrMsg = g2pRes.toStdStr().c_str();
+            asrMsg = g2pRes.toStdStr();
         }
 
         labIn << QString::fromStdString(asrMsg);

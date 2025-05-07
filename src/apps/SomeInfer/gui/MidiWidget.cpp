@@ -44,7 +44,6 @@ MidiWidget::MidiWidget(std::shared_ptr<Some::Some> some, QSettings *cfg, QWidget
     const auto wavPathLabel = new QLabel("wav文件", this);
     m_wavPathLineEdit = new QLineEdit(this);
     m_wavPathLineEdit->setText(m_cfg->value("MidiWidget/wavPath", "").toString());
-    ;
     m_wavPathButton = new QPushButton("浏览...", this);
     wavPathLayout->addWidget(wavPathLabel);
     wavPathLayout->addWidget(m_wavPathLineEdit);
@@ -115,7 +114,7 @@ void MidiWidget::onBrowseOutputMidi() {
 void MidiWidget::onExportMidiTask() const {
     m_runButton->setEnabled(false);
 
-    QFuture<void> future = QtConcurrent::run([this]() {
+    QFuture<void> future = QtConcurrent::run([this] {
         std::vector<Some::Midi> midis;
         std::string msg;
         m_progressBar->setValue(0);

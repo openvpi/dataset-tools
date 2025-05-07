@@ -21,11 +21,11 @@ protected:
     void mousePressEvent(QMouseEvent *ev) override {
         bool isMoved = false;
 
-        const auto conn = connect(this, &QSlider::actionTriggered, this, [&](int action) {
+        const auto conn = connect(this, &QSlider::actionTriggered, this, [&](const int action) {
             switch (action) {
-                case QSlider::SliderMove:
-                case QSlider::SliderPageStepAdd:
-                case QSlider::SliderPageStepSub:
+                case SliderMove:
+                case SliderPageStepAdd:
+                case SliderPageStepSub:
                     isMoved = true;
                     break;
                 default:
@@ -48,7 +48,7 @@ protected:
     }
 
 private:
-    int pixelPosToRangeValue(int pos) const {
+    int pixelPosToRangeValue(const int pos) const {
         QStyleOptionSlider opt;
         initStyleOption(&opt);
         const QRect gr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderGroove, this);
@@ -167,7 +167,7 @@ bool PlayWidget::isPlaying() const {
     return playing;
 }
 
-void PlayWidget::setPlaying(bool playing) {
+void PlayWidget::setPlaying(const bool playing) {
     if (this->playing == playing) {
         return;
     }
@@ -215,7 +215,7 @@ void PlayWidget::initPlugins() {
 
 out:
     uninitPlugins();
-    ::exit(-1);
+    exit(-1);
 }
 
 void PlayWidget::uninitPlugins() const {
@@ -223,11 +223,11 @@ void PlayWidget::uninitPlugins() const {
     delete decoder;
 }
 
-void PlayWidget::reloadDevices() {
+void PlayWidget::reloadDevices() const {
     deviceMenu->clear();
 
     QStringList devices = playback->devices();
-    for (const QString &dev : qAsConst(devices)) {
+    for (const QString &dev : std::as_const(devices)) {
         const auto action = new QAction(dev, deviceMenu);
         action->setCheckable(true);
         action->setData(dev);
@@ -251,10 +251,10 @@ void PlayWidget::reloadSliderStatus() const {
     }
 
     const auto fmt = decoder->Format();
-    const int len_msecs = (static_cast<double>(max) / fmt.SampleRate() / 4 / fmt.Channels()) * 1000;
-    const int pos_msecs = (static_cast<double>(pos) / fmt.SampleRate() / 4 / fmt.Channels()) * 1000;
+    const int len_msecs = static_cast<double>(max) / fmt.SampleRate() / 4 / fmt.Channels() * 1000;
+    const int pos_msecs = static_cast<double>(pos) / fmt.SampleRate() / 4 / fmt.Channels() * 1000;
 
-    QTime time(0, 0, 0);
+    const QTime time(0, 0, 0);
     timeLabel->setText(time.addMSecs(pos_msecs).toString("mm:ss") + "/" + time.addMSecs(len_msecs).toString("mm:ss"));
 }
 
@@ -330,10 +330,10 @@ void PlayWidget::_q_audioDeviceChanged() const {
     reloadDeviceActionStatus();
 }
 
-void PlayWidget::_q_audioDeviceAdded() {
+void PlayWidget::_q_audioDeviceAdded() const {
     reloadDevices();
 }
 
-void PlayWidget::_q_audioDeviceRemoved() {
+void PlayWidget::_q_audioDeviceRemoved() const {
     reloadDevices();
 }
