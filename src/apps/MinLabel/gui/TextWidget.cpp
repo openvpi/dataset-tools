@@ -78,12 +78,11 @@ TextWidget::TextWidget(QWidget *parent)
     setLayout(mainLayout);
 
     connect(pasteButton, &QPushButton::clicked, this, &TextWidget::_q_pasteButtonClicked);
-    connect(replaceButton, &QPushButton::clicked, this, &TextWidget::_q_replaceButtonClicked);
-    connect(appendButton, &QPushButton::clicked, this, &TextWidget::_q_appendButtonClicked);
+    connect(replaceButton, &QPushButton::clicked, this, &TextWidget::_q_textToPronunciation);
+    connect(replaceAction, &QAction::triggered, this, &TextWidget::_q_textToPronunciation);
 
+    connect(appendButton, &QPushButton::clicked, this, [this] { _q_textToPronunciation(true); });
     connect(languageCombo, &QComboBox::currentTextChanged, this, &TextWidget::_q_onLanguageComboIndexChanged);
-
-    connect(replaceAction, &QAction::triggered, this, &TextWidget::_q_replaceButtonClicked);
 }
 
 TextWidget::~TextWidget() = default;
@@ -95,20 +94,13 @@ QString TextWidget::sentence() const {
     return words;
 }
 
-void TextWidget::_q_pasteButtonClicked() const {
-    const auto board = QApplication::clipboard();
-    if (const QString text = board->text(); !text.isEmpty()) {
-        wordsText->setText(text);
-    }
-}
-
-QString filterSokuon(const QString &input) {
+static QString filterSokuon(const QString &input) {
     static QRegularExpression regex("[っッ]");
     QString result = input;
     return result.replace(regex, "");
 }
 
-void TextWidget::_q_replaceButtonClicked() const {
+void TextWidget::_q_textToPronunciation(const bool append) const {
     QString str;
     const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
     switch (languageCombo->currentIndex()) {
@@ -138,42 +130,20 @@ void TextWidget::_q_replaceButtonClicked() const {
         default:
             break;
     }
-    contentText->setPlainText(str.trimmed().simplified());
+
+    if (append) {
+        const QString org = contentText->toPlainText();
+        contentText->setPlainText((org.isEmpty() ? "" : org + " ") + str.trimmed().simplified());
+    } else {
+        contentText->setPlainText(str.trimmed().simplified());
+    }
 }
 
-void TextWidget::_q_appendButtonClicked() const {
-    QString str;
-    const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
-    switch (languageCombo->currentIndex()) {
-        case 0: {
-            const auto manRes = g2p_man->hanziToPinyin(
-                sentence().toUtf8().toStdString(),
-                manTone->isChecked() ? Pinyin::ManTone::TONE3 : Pinyin::ManTone::NORMAL,
-                cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default, false, true);
-            str = QString::fromUtf8(manRes.toStdStr().c_str());
-            break;
-        }
-        case 1: {
-            str = QString::fromUtf8(
-                Kana::kanaToRomaji(jpInput.toUtf8().toStdString(), Kana::Error::Default, doubleConsonant->isChecked())
-                    .toStdStr()
-                    .c_str());
-            break;
-        }
-        case 2: {
-            const auto jyutpingRes =
-                g2p_canton->hanziToPinyin(sentence().toUtf8().toStdString(),
-                                          canTone->isChecked() ? Pinyin::CanTone::TONE3 : Pinyin::CanTone::NORMAL,
-                                          cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default);
-            str = QString::fromUtf8(jyutpingRes.toStdStr().c_str());
-            break;
-        }
-        default:
-            break;
+void TextWidget::_q_pasteButtonClicked() const {
+    const auto board = QApplication::clipboard();
+    if (const QString text = board->text(); !text.isEmpty()) {
+        wordsText->setText(text);
     }
-
-    const QString org = contentText->toPlainText();
-    contentText->setPlainText((org.isEmpty() ? "" : org + " ") + str.trimmed().simplified());
 }
 
 void TextWidget::_q_onLanguageComboIndexChanged() {

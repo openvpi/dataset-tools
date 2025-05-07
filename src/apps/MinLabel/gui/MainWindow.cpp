@@ -243,10 +243,10 @@ void MainWindow::saveFile(const QString &filename) {
     if (!writeJsonFile(jsonFilePath, writeData)) {
         QMessageBox::critical(this, QApplication::applicationName(),
                               QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
-        ::exit(-1);
+        exit(-1);
     }
 
-    QString labFilePath = audioToOtherSuffix(filename, "lab");
+    const QString labFilePath = audioToOtherSuffix(filename, "lab");
 
     if (labContent.isEmpty() && !QMFs::isFileExist(labFilePath)) {
         return;
@@ -256,7 +256,7 @@ void MainWindow::saveFile(const QString &filename) {
     if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(this, QApplication::applicationName(),
                               QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFilePath)));
-        ::exit(-1);
+        exit(-1);
     }
 
     QTextStream labIn(&labFile);
@@ -272,8 +272,7 @@ void MainWindow::reloadWindowTitle() {
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
-    auto e = static_cast<QDragEnterEvent *>(event);
-    const QMimeData *mime = e->mimeData();
+    const QMimeData *mime = event->mimeData();
     if (mime->hasUrls()) {
         auto urls = mime->urls();
         QStringList filenames;
@@ -289,14 +288,13 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
             }
         }
         if (ok) {
-            e->acceptProposedAction();
+            event->acceptProposedAction();
         }
     }
 }
 
 void MainWindow::dropEvent(QDropEvent *event) {
-    const auto e = static_cast<QDropEvent *>(event);
-    if (const QMimeData *mime = e->mimeData(); mime->hasUrls()) {
+    if (const QMimeData *mime = event->mimeData(); mime->hasUrls()) {
         auto urls = mime->urls();
         QStringList filenames;
         for (auto &url : urls) {
@@ -316,7 +314,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
             }
         }
         if (ok) {
-            e->acceptProposedAction();
+            event->acceptProposedAction();
         }
     }
 }
@@ -431,13 +429,13 @@ void MainWindow::_q_updateProgress() const {
     const int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
     double progress = 0.0;
     if (totalRowCount > 0) {
-        progress = (static_cast<double>(count) / totalRowCount) * 100.0;
+        progress = static_cast<double>(count) / totalRowCount * 100.0;
     }
     progressBar->setValue(static_cast<int>(progress));
 }
 
 void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
-    QFileInfo info = fsModel->fileInfo(current);
+    const QFileInfo info = fsModel->fileInfo(current);
     if (info.isFile()) {
         if (QMFs::isFileExist(lastFile)) {
             saveFile(lastFile);

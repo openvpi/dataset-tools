@@ -49,9 +49,9 @@ protected:
 private:
     QString sentence() const;
 
+    void _q_textToPronunciation(const bool append = false) const;
+
     void _q_pasteButtonClicked() const;
-    void _q_replaceButtonClicked() const;
-    void _q_appendButtonClicked() const;
     void _q_onLanguageComboIndexChanged();
 };
 
