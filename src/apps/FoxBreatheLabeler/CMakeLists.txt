@@ -18,7 +18,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
-        QMCore
         audio-util yaml-cpp::yaml-cpp
         onnxruntime
 )

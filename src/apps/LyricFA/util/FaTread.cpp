@@ -1,7 +1,6 @@
 #include "FaTread.h"
 
 #include <QApplication>
-#include <QMSystem.h>
 
 namespace LyricFA {
     FaTread::FaTread(MatchLyric *match, QString filename, QString labPath, QString jsonPath, const bool &asr_rectify)

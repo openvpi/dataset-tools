@@ -1,27 +1,33 @@
 #include "gui/MainWindow.h"
 
-#include "QMSystem.h"
-
 #include <QApplication>
-#include <QMessageBox>
 
 #ifdef Q_OS_WINDOWS
+#    include <ShlObj.h>
 #    include <Windows.h>
 #endif
 
+bool isUserRoot() {
+#ifdef Q_OS_WINDOWS
+    return IsUserAnAdmin();
+#else
+    return geteuid() == 0;
+#endif
+}
+
 int main(int argc, char *argv[]) {
-    //QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    //QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    // QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    // QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
 
-    if (QMOs::isUserRoot() && !a.arguments().contains("--allow-root")) {
+    if (isUserRoot() && !a.arguments().contains("--allow-root")) {
         QString title = qApp->applicationName();
         QString msg = QString("You're trying to start %1 as the %2, which may cause "
                               "security problem and isn't recommended.")
                           .arg(qApp->applicationName(), "Administrator");
 #ifdef Q_OS_WINDOWS
-        ::MessageBoxW(0, msg.toStdWString().data(), title.toStdWString().data(),
-                      MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONWARNING);
+        MessageBoxW(0, msg.toStdWString().data(), title.toStdWString().data(),
+                    MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONWARNING);
 #elif defined(Q_OS_LINUX)
         fputs(qPrintable(msg), stdout);
 #else

@@ -1,7 +1,7 @@
 #include "AsrThread.h"
 
 #include <QApplication>
-#include <QMSystem.h>
+#include <QFile>
 #include <QMessageBox>
 
 namespace LyricFA {
@@ -23,7 +23,7 @@ namespace LyricFA {
         QFile labFile(m_labPath.toLocal8Bit());
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::critical(nullptr, QApplication::applicationName(),
-                                  QString("Failed to write to file %1").arg(QMFs::PathFindFileName(m_labPath)));
+                                  QString("Failed to write to file %1").arg(m_labPath));
             return;
         }
 

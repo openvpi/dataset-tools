@@ -1,5 +1,4 @@
 #include "MatchLyric.h"
-#include "QMSystem.h"
 #include <QApplication>
 #include <QFile>
 #include <QJsonDocument>
@@ -10,6 +9,9 @@
 #include <cpp-pinyin/G2pglobal.h>
 
 #include "../util/LevenshteinDistance.h"
+
+#include <QDir>
+#include <QFileInfo>
 
 namespace LyricFA {
     MatchLyric::MatchLyric() {
@@ -150,7 +152,7 @@ namespace LyricFA {
 
                 if (!writeJsonFile(jsonPath, writeData)) {
                     QMessageBox::critical(nullptr, QApplication::applicationName(),
-                                          QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonPath)));
+                                          QString("Failed to write to file %1").arg(jsonPath));
                     return false;
                 }
             }

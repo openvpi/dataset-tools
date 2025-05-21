@@ -1,5 +1,3 @@
-add_subdirectory(qmcore)
-
 add_subdirectory(qsmedia)
 
 add_subdirectory(ffmpegdecoder)

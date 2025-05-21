@@ -12,7 +12,6 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPluginLoader>
-#include <QTime>
 
 #include <QJsonArray>
 #include <QSettings>
@@ -21,7 +20,6 @@
 // #include "Common/SampleFormat.h"
 
 // #include "MathHelper.h"
-#include "QMSystem.h"
 
 // https://iconduck.com/icons
 
@@ -155,7 +153,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
 MainWindow::~MainWindow() {
     pullEditedMidi();
-    if (QMFs::isFileExist(lastFile)) {
+    if (QFile::exists(lastFile)) {
         saveFile(lastFile);
     }
 }
@@ -326,10 +324,9 @@ void MainWindow::reloadDsSentenceRequested() {
 }
 
 void MainWindow::reloadWindowTitle() {
-    setWindowTitle(dirname.isEmpty()
-                       ? qApp->applicationName()
-                       : QString("%1 - %2").arg(qApp->applicationName(),
-                                                QDir::toNativeSeparators(QMFs::PathFindFileName(dirname))));
+    setWindowTitle(dirname.isEmpty() ? qApp->applicationName()
+                                     : QString("%1 - %2").arg(qApp->applicationName(),
+                                                              QDir::toNativeSeparators(QFileInfo(dirname).baseName())));
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
@@ -340,13 +337,13 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
         QStringList filenames;
         for (auto it = urls.begin(); it != urls.end(); ++it) {
             if (it->isLocalFile()) {
-                filenames.append(QMFs::removeTailSlashes(it->toLocalFile()));
+                filenames.append(it->toLocalFile());
             }
         }
         bool ok = false;
         if (filenames.size() == 1) {
             QString filename = filenames.front();
-            if (QMFs::isDirExist(filename)) {
+            if (QFile::exists(filename)) {
                 ok = true;
             }
         }
@@ -364,13 +361,13 @@ void MainWindow::dropEvent(QDropEvent *event) {
         QStringList filenames;
         for (auto it = urls.begin(); it != urls.end(); ++it) {
             if (it->isLocalFile()) {
-                filenames.append(QMFs::removeTailSlashes(it->toLocalFile()));
+                filenames.append(it->toLocalFile());
             }
         }
         bool ok = false;
         if (filenames.size() == 1) {
             QString filename = filenames.front();
-            if (QMFs::isDirExist(filename)) {
+            if (QFile::exists(filename)) {
                 ok = true;
                 openDirectory(filename);
             }
@@ -447,7 +444,7 @@ void MainWindow::_q_treeCurrentChanged(const QModelIndex &current, const QModelI
     pullEditedMidi();
     QFileInfo info = fsModel->fileInfo(current);
     if (info.isFile()) {
-        if (QMFs::isFileExist(lastFile)) {
+        if (QFile::exists(lastFile)) {
             if (!saveFile(lastFile)) {
                 return;
             }

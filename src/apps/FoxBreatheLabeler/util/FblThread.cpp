@@ -1,10 +1,10 @@
 #include "FblThread.h"
 
-#include <QMSystem.h>
 #include <QMessageBox>
 
 #include "textgrid.hpp"
 
+#include <QFile>
 #include <sstream>
 
 namespace FBL {

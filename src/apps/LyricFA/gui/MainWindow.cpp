@@ -10,7 +10,6 @@
 #include <QMimeData>
 #include <QStatusBar>
 
-#include "QMSystem.h"
 #include <QStandardPaths>
 
 #include "../util/AsrThread.h"
