@@ -16,9 +16,6 @@
 #include <QStatusBar>
 #include <QStyledItemDelegate>
 #include <QTreeWidget>
-#include <utility>
-
-#include "QMSystem.h"
 
 class CustomDelegate final : public QStyledItemDelegate {
 public:
@@ -187,7 +184,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 }
 
 MainWindow::~MainWindow() {
-    if (QMFs::isFileExist(lastFile)) {
+    if (QFile::exists(lastFile)) {
         saveFile(lastFile);
     }
 }
@@ -227,7 +224,7 @@ void MainWindow::saveFile(const QString &filename) {
 
     const QString jsonFilePath = audioToOtherSuffix(filename, "json");
 
-    if (labContent.isEmpty() && txtContent.isEmpty() && !QMFs::isFileExist(jsonFilePath)) {
+    if (labContent.isEmpty() && txtContent.isEmpty() && !QFile::exists(jsonFilePath)) {
         return;
     }
 
@@ -242,20 +239,20 @@ void MainWindow::saveFile(const QString &filename) {
 
     if (!writeJsonFile(jsonFilePath, writeData)) {
         QMessageBox::critical(this, QApplication::applicationName(),
-                              QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
+                              QString("Failed to write to file %1").arg(jsonFilePath));
         exit(-1);
     }
 
     const QString labFilePath = audioToOtherSuffix(filename, "lab");
 
-    if (labContent.isEmpty() && !QMFs::isFileExist(labFilePath)) {
+    if (labContent.isEmpty() && !QFile::exists(labFilePath)) {
         return;
     }
 
     QFile labFile(labFilePath);
     if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(this, QApplication::applicationName(),
-                              QString("Failed to write to file %1").arg(QMFs::PathFindFileName(labFilePath)));
+                              QString("Failed to write to file %1").arg(labFilePath));
         exit(-1);
     }
 
@@ -265,10 +262,9 @@ void MainWindow::saveFile(const QString &filename) {
 }
 
 void MainWindow::reloadWindowTitle() {
-    setWindowTitle(dirname.isEmpty()
-                       ? QApplication::applicationName()
-                       : QString("%1 - %2").arg(QApplication::applicationName(),
-                                                QDir::toNativeSeparators(QMFs::PathFindFileName(dirname))));
+    setWindowTitle(dirname.isEmpty() ? QApplication::applicationName()
+                                     : QString("%1 - %2").arg(QApplication::applicationName(),
+                                                              QDir::toNativeSeparators(QFileInfo(dirname).baseName())));
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
@@ -278,12 +274,12 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
         QStringList filenames;
         for (auto &url : urls) {
             if (url.isLocalFile()) {
-                filenames.append(QMFs::removeTailSlashes(url.toLocalFile()));
+                filenames.append(url.toLocalFile());
             }
         }
         bool ok = false;
         if (filenames.size() == 1) {
-            if (const QString &filename = filenames.front(); QMFs::isDirExist(filename)) {
+            if (const QString &filename = filenames.front(); QFile::exists(filename)) {
                 ok = true;
             }
         }
@@ -299,12 +295,12 @@ void MainWindow::dropEvent(QDropEvent *event) {
         QStringList filenames;
         for (auto &url : urls) {
             if (url.isLocalFile()) {
-                filenames.append(QMFs::removeTailSlashes(url.toLocalFile()));
+                filenames.append(url.toLocalFile());
             }
         }
         bool ok = false;
         if (filenames.size() == 1) {
-            if (const QString &filename = filenames.front(); QMFs::isDirExist(filename)) {
+            if (const QString &filename = filenames.front(); QFile::exists(filename)) {
                 ok = true;
                 openDirectory(filename);
 
@@ -437,7 +433,7 @@ void MainWindow::_q_updateProgress() const {
 void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
     const QFileInfo info = fsModel->fileInfo(current);
     if (info.isFile()) {
-        if (QMFs::isFileExist(lastFile)) {
+        if (QFile::exists(lastFile)) {
             saveFile(lastFile);
         }
         lastFile = info.absoluteFilePath();
@@ -478,7 +474,7 @@ void MainWindow::labToJson(const QString &dirName) {
         QString name = fileInfo.fileName();
         if (QString jsonFilePath =
                 fileInfo.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) + ".json";
-            fileInfo.suffix() == "lab" && !QMFs::isFileExist(jsonFilePath)) {
+            fileInfo.suffix() == "lab" && !QFile::exists(jsonFilePath)) {
             if (QFile file(labFilePath); file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                 QString labContent;
                 labContent = QString::fromUtf8(file.readAll());
@@ -504,10 +500,9 @@ void MainWindow::labToJson(const QString &dirName) {
                     writeData["lab_without_tone"] = withoutTone.replace(QRegularExpression("\\s+"), " ");
 
                     if (!writeJsonFile(jsonFilePath, writeData)) {
-                        QMessageBox::critical(
-                            this, QApplication::applicationName(),
-                            QString("Failed to write to file %1").arg(QMFs::PathFindFileName(jsonFilePath)));
-                        ::exit(-1);
+                        QMessageBox::critical(this, QApplication::applicationName(),
+                                              QString("Failed to write to file %1").arg(jsonFilePath));
+                        exit(-1);
                     }
                 }
                 count++;

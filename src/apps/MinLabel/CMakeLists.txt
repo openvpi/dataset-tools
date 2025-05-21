@@ -15,7 +15,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
         cpp-pinyin::cpp-pinyin
         cpp-kana::cpp-kana
-        QMCore SDLPlayback FFmpegDecoder
+        SDLPlayback FFmpegDecoder
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
