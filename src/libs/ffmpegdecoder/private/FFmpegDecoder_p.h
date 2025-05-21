@@ -102,7 +102,7 @@ public:
 
     qint64 dest2src_bytes(qint64 bytes) const;
 
-    void error_on_channel_copy(int code) const;
+    static void error_on_channel_copy(int code);
 };
 
 #endif // FFMPEGDECODERPRIVATE_H

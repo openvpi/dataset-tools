@@ -31,10 +31,10 @@ public:
     bool switchDevId(const QString &dev);
     bool switchDriver(const QString &drv);
 
-    void notifyGetAudioFrame();
-    void notifyStop();
-    void notifyPlay();
-    void notifyQuitPoll();
+    static void notifyGetAudioFrame();
+    static void notifyStop();
+    static void notifyPlay();
+    static void notifyQuitPoll();
 
     void workCallback(quint8 *stream, int len);
 

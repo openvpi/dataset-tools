@@ -7,12 +7,12 @@ QSAPI_USING_NAMESPACE
 
 class FFmpegDecoderPrivate;
 
-class FFmpegDecoder : public IAudioDecoder {
+class FFmpegDecoder final : public IAudioDecoder {
     Q_OBJECT
     Q_DECLARE_PRIVATE(FFmpegDecoder)
 public:
     explicit FFmpegDecoder(QObject *parent = nullptr);
-    ~FFmpegDecoder();
+    ~FFmpegDecoder() override;
 
     bool open(const QString &filename, const QsMedia::WaveArguments &args = {}) override;
     void close() override;
@@ -21,7 +21,6 @@ public:
 
     NAudio::WaveFormat inFormat() const override;
 
-public:
     NAudio::WaveFormat Format() const override;
 
     void SetPosition(qint64 pos) override;
@@ -36,8 +35,6 @@ protected:
     FFmpegDecoder(FFmpegDecoderPrivate &d, QObject *parent = nullptr);
 
     QScopedPointer<FFmpegDecoderPrivate> d_ptr;
-
-signals:
 };
 
 

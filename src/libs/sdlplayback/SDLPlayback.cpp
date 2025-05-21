@@ -15,7 +15,7 @@ SDLPlayback::~SDLPlayback() {
 
 QStringList SDLPlayback::drivers() const {
     QStringList res;
-    int cnt = SDL_GetNumAudioDrivers();
+    const int cnt = SDL_GetNumAudioDrivers();
     for (int i = 0; i < cnt; i++) {
         QString drv = QString::fromStdString(SDL_GetAudioDriver(i));
         if (drv == "dummy" || drv == "disk") {
@@ -46,7 +46,7 @@ bool SDLPlayback::setDriver(const QString &driver) {
 
 QStringList SDLPlayback::devices() const {
     QStringList res;
-    int cnt = SDL_GetNumAudioDevices(0);
+    const int cnt = SDL_GetNumAudioDevices(0);
     for (int i = 0; i < cnt; i++) {
         res.append(QString::fromStdString(SDL_GetAudioDeviceName(i, 0)));
     }

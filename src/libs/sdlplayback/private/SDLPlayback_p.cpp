@@ -2,18 +2,18 @@
 
 #include <QDebug>
 
-static const ushort PLAYBACK_SAMPLE_FORMAT = AUDIO_F32SYS; // 32位浮点
+static constexpr ushort PLAYBACK_SAMPLE_FORMAT = AUDIO_F32SYS; // 32位浮点
 
-static const ushort PLAYBACK_BUFFER_SAMPLES = 1024; // 默认缓冲区长度
+static constexpr ushort PLAYBACK_BUFFER_SAMPLES = 1024; // 默认缓冲区长度
 
-static const ushort PLAYBACK_SAMPLE_RATE = 44100; // 默认采样率
+static constexpr ushort PLAYBACK_SAMPLE_RATE = 44100; // 默认采样率
 
-static const uint PLAYBACK_POLL_INTERVAL_PLAYING = 1; // 播放轮循时间间隔(ms)
+static constexpr uint PLAYBACK_POLL_INTERVAL_PLAYING = 1; // 播放轮循时间间隔(ms)
 
-static const uint PLAYBACK_POLL_INTERVAL_IDLE = 1; // 空闲轮循时间间隔(ms)
+static constexpr uint PLAYBACK_POLL_INTERVAL_IDLE = 1; // 空闲轮循时间间隔(ms)
 
-static void workCallback(void *udata, quint8 *stream, int len) {
-    auto d = (SDLPlaybackPrivate *) udata;
+static void workCallback(void *udata, quint8 *stream, const int len) {
+    const auto d = static_cast<SDLPlaybackPrivate *>(udata);
     d->workCallback(stream, len);
 }
 
@@ -65,7 +65,7 @@ bool SDLPlaybackPrivate::setup(const QVariantMap &args) {
     spec.silence = 0;
     spec.samples = bufferSamples; //缓冲区字节数/单个采样字节数/声道数
     spec.callback = ::workCallback;
-    spec.userdata = (void *) this; // 回调到成员函数
+    spec.userdata = static_cast<void *>(this); // 回调到成员函数
 
     // 缓冲区
     pcm_buffer_size = bufferSamples * channels;
@@ -124,10 +124,10 @@ void SDLPlaybackPrivate::stop() {
     }
 }
 
-void SDLPlaybackPrivate::switchState(IAudioPlayback::PlaybackState newState) {
+void SDLPlaybackPrivate::switchState(const IAudioPlayback::PlaybackState newState) {
     Q_Q(SDLPlayback);
 
-    auto orgState = state;
+    const auto orgState = state;
     state = newState;
 
     // 通知播放状态已更改
@@ -156,7 +156,7 @@ bool SDLPlaybackPrivate::switchDevId(const QString &dev) {
     }
     curDevId = id;
 
-    auto orgDev = device;
+    const auto orgDev = device;
     device = dev;
 
     // 通知音频设备已更改
@@ -195,25 +195,25 @@ bool SDLPlaybackPrivate::switchDriver(const QString &drv) {
 
 void SDLPlaybackPrivate::notifyGetAudioFrame() {
     SDL_Event e;
-    e.type = (SDL_EventType) SDL_EVENT_BUFFER_END;
+    e.type = static_cast<SDL_EventType>(SDL_EVENT_BUFFER_END);
     SDL_PushEvent(&e);
 }
 
 void SDLPlaybackPrivate::notifyStop() {
     SDL_Event e;
-    e.type = (SDL_EventType) SDL_EVENT_MANUAL_STOP;
+    e.type = static_cast<SDL_EventType>(SDL_EVENT_MANUAL_STOP);
     SDL_PushEvent(&e);
 }
 
 void SDLPlaybackPrivate::notifyPlay() {
     SDL_Event e;
-    e.type = (SDL_EventType) SDL_EVENT_MANUAL_PLAY;
+    e.type = static_cast<SDL_EventType>(SDL_EVENT_MANUAL_PLAY);
     SDL_PushEvent(&e);
 }
 
 void SDLPlaybackPrivate::notifyQuitPoll() {
     SDL_Event e;
-    e.type = (SDL_EventType) SDL_EVENT_QUIT_POLL;
+    e.type = static_cast<SDL_EventType>(SDL_EVENT_QUIT_POLL);
     SDL_PushEvent(&e);
 }
 
@@ -228,8 +228,8 @@ void SDLPlaybackPrivate::workCallback(quint8 *stream, int len) {
         len = qMin(len, scb.audio_len);
 
         // 将缓冲区中的声音写入流
-        SDL_MixAudioFormat(stream, (quint8 *) (scb.audio_chunk + scb.audio_pos), spec.format,
-                           (uint) len, SDL_MIX_MAXVOLUME);
+        SDL_MixAudioFormat(stream, reinterpret_cast<quint8 *>(scb.audio_chunk + scb.audio_pos), spec.format,
+                           static_cast<uint>(len), SDL_MIX_MAXVOLUME);
 
         scb.audio_pos += len;
         scb.audio_len -= len;
@@ -256,7 +256,7 @@ void SDLPlaybackPrivate::poll() {
         // 不停地获取事件
         SDL_Event e;
         while (SDL_PollEvent(&e) > 0) {
-            switch ((int) e.type) {
+            switch (static_cast<int>(e.type)) {
                 // 缓存用完
                 case SDL_EVENT_BUFFER_END: {
                     // 上锁
@@ -266,13 +266,13 @@ void SDLPlaybackPrivate::poll() {
 
                     // 从文件中读取数据，剩下的就交给音频设备去完成了
                     // 它播放完一段数据后会执行回调函数，获取等多的数据
-                    int samples = decoder->Read(pcm_buffer, 0, spec.samples * spec.channels);
+                    const int samples = decoder->Read(pcm_buffer, 0, spec.samples * spec.channels);
                     if (samples <= 0) {
                         // 播放完毕
                         over = true;
                     } else {
                         // 重置缓冲区
-                        scb.audio_chunk = (char *) pcm_buffer;
+                        scb.audio_chunk = reinterpret_cast<char *>(pcm_buffer);
                         scb.audio_len =
                             samples * 4; // 长度为读出数据长度，在read_audio_data中做减法
                         scb.audio_pos = 0; // 设置当前位置为缓冲区头部
@@ -311,7 +311,7 @@ void SDLPlaybackPrivate::poll() {
                 case SDL_AUDIODEVICEREMOVED: {
                     emit q->deviceRemoved();
 
-                    quint32 dev = e.adevice.which;
+                    const quint32 dev = e.adevice.which;
                     if (dev == curDevId) {
                         switchDevId(QString());
                         over = true;

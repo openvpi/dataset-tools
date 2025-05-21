@@ -7,12 +7,12 @@ QSAPI_USING_NAMESPACE
 
 class SDLPlaybackPrivate;
 
-class SDLPlayback : public IAudioPlayback {
+class SDLPlayback final : public IAudioPlayback {
     Q_OBJECT
     Q_DECLARE_PRIVATE(SDLPlayback)
 public:
     explicit SDLPlayback(QObject *parent = nullptr);
-    ~SDLPlayback();
+    ~SDLPlayback() override;
 
 public:
     QStringList drivers() const override;
@@ -24,7 +24,7 @@ public:
     bool setDevice(const QString &device) override;
 
 protected:
-    SDLPlayback(SDLPlaybackPrivate &d, QObject *parent = nullptr);
+    explicit SDLPlayback(SDLPlaybackPrivate &d, QObject *parent = nullptr);
 };
 
 #endif // SDLPLAYBACK_H
