@@ -28,7 +28,10 @@ namespace LyricFA {
     static QString get_lyrics_from_txt(const QString &lyricPath) {
         QFile lyricFile(lyricPath.toLocal8Bit());
         if (lyricFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            return QString::fromUtf8(lyricFile.readAll());
+            auto words = QString::fromUtf8(lyricFile.readAll());
+            words.replace(QRegularExpression(R"([\r\n]+)"), " ");
+            words = words.simplified();
+            return words;
         }
         return {};
     }
