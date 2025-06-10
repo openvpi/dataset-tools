@@ -5,7 +5,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 file(GLOB_RECURSE _src *.h *.cpp)
-add_executable(${PROJECT_NAME} ${_src} res.qrc res/qss.qrc)
+add_executable(${PROJECT_NAME} ${_src} res.qrc)
 
 find_package(cpp-pinyin CONFIG REQUIRED)
 find_package(cpp-kana CONFIG REQUIRED)
@@ -37,7 +37,6 @@ if (APPLE)
 endif ()
 
 set(DIRECTORIES_TO_COPY
-        qss
 )
 
 foreach (dir ${DIRECTORIES_TO_COPY})
