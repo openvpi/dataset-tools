@@ -70,7 +70,7 @@ protected:
     int currentRow = -1;
 
     // Cached application configuration
-    QSettings cfg;
+    QSettings *cfg{};
 
     void openDirectory(const QString &dirname);
     void openFile(const QString &filename);

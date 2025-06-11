@@ -159,14 +159,14 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::applyConfig() {
-    const QSettings settings(QApplication::applicationDirPath() + "/config/SlurCutter.ini", QSettings::IniFormat);
+    cfg = new QSettings(QApplication::applicationDirPath() + "/config/SlurCutter.ini", QSettings::IniFormat);
 
-    browseAction->setShortcut(QKeySequence(settings.value("Shortcuts/Open", "Ctrl+O").toString()));
-    prevAction->setShortcut(QKeySequence(settings.value("Navigation/Prev", "PgUp").toString()));
-    nextAction->setShortcut(QKeySequence(settings.value("Navigation/Next", "PgDown").toString()));
-    playAction->setShortcut(QKeySequence(settings.value("Playback/Play", "F5").toString()));
+    browseAction->setShortcut(QKeySequence(cfg->value("Shortcuts/Open", "Ctrl+O").toString()));
+    prevAction->setShortcut(QKeySequence(cfg->value("Navigation/Prev", "PgUp").toString()));
+    nextAction->setShortcut(QKeySequence(cfg->value("Navigation/Next", "PgDown").toString()));
+    playAction->setShortcut(QKeySequence(cfg->value("Playback/Play", "F5").toString()));
 
-    if (const QString savedDir = settings.value("General/LastDir").toString();
+    if (const QString savedDir = cfg->value("General/LastDir").toString();
         !savedDir.isEmpty() && QDir(savedDir).exists()) {
         dirname = savedDir;
         openDirectory(dirname);
@@ -380,8 +380,8 @@ void MainWindow::dropEvent(QDropEvent *event) {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     // Pull and save config
-    f0Widget->pullConfig(cfg);
     QSettings settings(QApplication::applicationDirPath() + "/config/SlurCutter.ini", QSettings::IniFormat);
+    f0Widget->pullConfig(settings);
 
     settings.setValue("Shortcuts/Open", browseAction->shortcut().toString());
     settings.setValue("Navigation/Prev", prevAction->shortcut().toString());
