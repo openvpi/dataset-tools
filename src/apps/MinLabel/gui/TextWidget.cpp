@@ -108,7 +108,7 @@ void TextWidget::_q_textToPronunciation(const bool append) const {
             const auto manRes = g2p_man->hanziToPinyin(
                 sentence().toUtf8().toStdString(),
                 manTone->isChecked() ? Pinyin::ManTone::TONE3 : Pinyin::ManTone::NORMAL,
-                cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default, false, true);
+                cleanRes->isChecked() ? Pinyin::Error::Ignore : Pinyin::Error::Default, false, false);
             str = QString::fromUtf8(manRes.toStdStr().c_str());
             break;
         }

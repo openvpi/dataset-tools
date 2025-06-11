@@ -68,7 +68,7 @@ namespace LyricFA {
             const auto lyricName = QFileInfo(lyricPath).completeBaseName();
             const auto text = get_lyrics_from_txt(lyricPath).toUtf8().toStdString();
             const auto g2pRes =
-                m_mandarin->hanziToPinyin(text, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, false, true);
+                m_mandarin->hanziToPinyin(text, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, false, false);
 
             QStringList textList;
             QStringList pinyinList;
