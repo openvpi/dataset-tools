@@ -89,9 +89,10 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cd $GITHUB_WORKSPACE
-          export VERSION=`git log --format="%H" -n 1 | head -c 7`
-          echo "VERSION="$VERSION >> $GITHUB_ENV
+          BUILD_DATE=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+          SHORT_HASH=$(git log --format="%H" -n 1 | head -c 7)
+          VERSION="${BUILD_DATE}-${SHORT_HASH}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -103,8 +104,7 @@ jobs:
         shell: bash
         working-directory: ${{env.GH_WORKSPACE}}/deploy/
         run: |
-          export VERSION=`git log --format="%H" -n 1 | head -c 7`
-          7z a dataset-tools-msvc2022-x64-${VERSION}.zip ./*
+          7z a dataset-tools-msvc2022-x64-${{env.VERSION}}.zip ./*
 
       - name: Release
         uses: softprops/action-gh-release@v1
