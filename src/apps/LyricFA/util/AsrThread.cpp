@@ -13,14 +13,14 @@ namespace LyricFA {
 
     void AsrThread::run() {
         std::string asrMsg;
-        const auto asrRes = m_asr->recognize(m_wavPath.toLocal8Bit().toStdString(), asrMsg);
+        const auto asrRes = m_asr->recognize(m_wavPath.toStdString(), asrMsg);
 
         if (!asrRes) {
             Q_EMIT this->oneFailed(m_filename, QString::fromStdString(asrMsg));
             return;
         }
 
-        QFile labFile(m_labPath.toLocal8Bit());
+        QFile labFile(m_labPath);
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::critical(nullptr, QApplication::applicationName(),
                                   QString("Failed to write to file %1").arg(m_labPath));

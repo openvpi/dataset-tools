@@ -1,6 +1,5 @@
 #include "MatchLyric.h"
 #include <QApplication>
-#include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
@@ -29,15 +28,14 @@ namespace LyricFA {
         QFile lyricFile(lyricPath.toLocal8Bit());
         if (lyricFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
             auto words = QString::fromUtf8(lyricFile.readAll());
-            words.replace(QRegularExpression(R"([\r\n]+)"), " ");
-            words = words.simplified();
+            words.remove(QRegularExpression(u8"[^\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]"));
             return words;
         }
         return {};
     }
 
     static bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject) {
-        QFile file(fileName.toLocal8Bit());
+        QFile file(fileName);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             return false;
         }
@@ -147,7 +145,7 @@ namespace LyricFA {
 
                 Q_ASSERT(match_text.size() == match_pinyin.size());
 
-                QFile jsonFile(jsonPath.toLocal8Bit());
+                QFile jsonFile(jsonPath);
                 QJsonObject writeData;
                 writeData["lab"] = match_pinyin.join(' ');
                 writeData["raw_text"] = match_text.join(' ');
