@@ -31,9 +31,7 @@ public:
         const QFileInfo fileInfo(model->filePath(index));
         const QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
 
-        // 默认设置为黑色
         QStyleOptionViewItem modifiedOption(option);
-        modifiedOption.palette.setColor(QPalette::Text, Qt::black);
 
         // 如果 JSON 文件存在且可读
         if (QFile::exists(jsonFilePath) && fileInfo.isFile()) {
@@ -61,8 +59,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     playing = false;
 
     setAcceptDrops(true);
-
-    initStyleSheet();
 
     // Init menus
     browseAction = new QAction("Open Folder", this);
@@ -329,13 +325,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     }
 
     event->accept();
-}
-
-void MainWindow::initStyleSheet() {
-    // qss file: https://github.com/feiyangqingyun/QWidgetDemo/tree/master/ui/styledemo
-    if (QFile file(":/qss/flatgray.css"); file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qApp->setStyleSheet(file.readAll());
-    }
 }
 
 void MainWindow::applyConfig() {

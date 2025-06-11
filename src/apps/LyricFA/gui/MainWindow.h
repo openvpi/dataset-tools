@@ -78,8 +78,6 @@ namespace LyricFA {
         QStringList m_failIndex;
         QThreadPool *m_threadpool;
 
-        static void initStyleSheet();
-
         void slot_labPath();
         void slot_jsonPath();
         void slot_lyricPath();

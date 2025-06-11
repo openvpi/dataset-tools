@@ -45,7 +45,6 @@ namespace FBL {
         m_threadpool = new QThreadPool(this);
         m_threadpool->setMaxThreadCount(1);
 
-        initStyleSheet();
         setAcceptDrops(true);
 
         // Init menus
@@ -241,14 +240,6 @@ namespace FBL {
     void MainWindow::closeEvent(QCloseEvent *event) {
         // Quit
         event->accept();
-    }
-
-    void MainWindow::initStyleSheet() {
-        // qss file: https://github.com/feiyangqingyun/QWidgetDemo/tree/master/ui/styledemo
-        QFile file(QApplication::applicationDirPath() + "/qss/flatgray.css");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            qApp->setStyleSheet(file.readAll());
-        }
     }
 
     void MainWindow::_q_fileMenuTriggered(const QAction *action) {

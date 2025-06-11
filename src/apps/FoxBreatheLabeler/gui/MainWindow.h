@@ -83,11 +83,8 @@ namespace FBL {
         QStringList m_failIndex;
         QThreadPool *m_threadpool;
 
-        static void initStyleSheet();
-
         void slot_rawTgPath();
         void slot_outTgPath();
-        void slot_lyricPath();
 
         void slot_removeListItem() const;
         void slot_clearTaskList() const;
