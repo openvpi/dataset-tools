@@ -9,6 +9,7 @@ add_executable(${PROJECT_NAME} ${_src} res.qrc)
 
 find_package(cpp-pinyin CONFIG REQUIRED)
 find_package(cpp-kana CONFIG REQUIRED)
+find_package(qBreakpad CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
@@ -16,6 +17,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         cpp-pinyin::cpp-pinyin
         cpp-kana::cpp-kana
         SDLPlayback FFmpegDecoder
+        qBreakpad::qBreakpad
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

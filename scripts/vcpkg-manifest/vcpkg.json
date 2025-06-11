@@ -9,7 +9,8 @@
     "cpp-kana",
     "soxr",
     "wolf-midi",
-    "libsndfile"
+    "libsndfile",
+    "qbreakpad"
   ],
   "vcpkg-configuration": {
     "overlay-ports": [
