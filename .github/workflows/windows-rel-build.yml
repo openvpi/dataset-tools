@@ -47,6 +47,12 @@ jobs:
           echo "QT_DIR=$QT6_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
           echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
 
+      - name: Verify Qt Installation
+        shell: bash
+        run: |
+          echo "QT_DIR: $QT6_DIR"
+          ls -l "$QT6_DIR/lib/cmake/Qt6"
+
       - name: Install vcpkg
         uses: lukka/run-vcpkg@v11
         with:
@@ -61,9 +67,10 @@ jobs:
         run: |
           vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --binarysource="clear;x-gha,readwrite" --triplet=x64-windows
         env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
           Qt6_DIR: ${{env.QT_DIR}}
-          VCPKG_KEEP_ENV_VARS: 'QT_DIR;Qt6_DIR'
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
 
       - name: Install OnnxRuntime
         shell: cmd
