@@ -44,7 +44,8 @@ jobs:
       - name: Configure Qt6 path
         shell: bash
         run: |
-          echo "QT_DIR=$QT6_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "QT_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
           echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
 
       - name: Verify Qt Installation
