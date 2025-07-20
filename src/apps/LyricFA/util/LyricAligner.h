@@ -57,7 +57,7 @@ namespace LyricFA {
         static std::pair<std::vector<Step>, std::vector<Step>> traceAlignmentPath(
             const std::vector<std::vector<int>> &dp, const std::vector<std::string> &referenceTextTokens,
             const std::vector<std::string> &sourcePronunciation, const std::vector<std::string> &targetPronunciation,
-            const std::vector<std::string> &searchText);
+            const std::vector<std::string> &searchText, int deletionCost, int insertionCost, int substitutionCost);
 
         static AlignmentDetails computeAlignmentDetails(const std::vector<std::string> &referenceTextTokens,
                                                         const std::vector<std::string> &sourcePronunciation,

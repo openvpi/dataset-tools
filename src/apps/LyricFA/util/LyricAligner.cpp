@@ -1,7 +1,7 @@
 #include "LyricAligner.h"
-
 #include <algorithm>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -31,32 +31,42 @@ namespace LyricFA {
                                                       const std::vector<std::string> &referencePronunciation,
                                                       const std::vector<std::string> &searchPronunciation,
                                                       const std::vector<std::string> &searchText) {
-
         int maxMatchLength = 0;
         int bestStartIdx = -1;
         const int n = referencePronunciation.size();
         const int m = searchPronunciation.size();
 
+        // 修复: 处理n < m的情况
+        if (n < m) {
+            return {0, std::min(n, m), {}, {}};
+        }
+
         for (int startIdx = 0; startIdx <= n - m; ++startIdx) {
-            std::vector<std::string> window(referencePronunciation.begin() + startIdx,
-                                            referencePronunciation.begin() + startIdx + m);
+            std::vector<std::string> window;
+            if (startIdx + m <= n) {
+                window = std::vector<std::string>(referencePronunciation.begin() + startIdx,
+                                                  referencePronunciation.begin() + startIdx + m);
+            } else {
+                window =
+                    std::vector<std::string>(referencePronunciation.begin() + startIdx, referencePronunciation.end());
+            }
 
             const int currentMatchLength = longestCommonSubsequence(searchPronunciation, window);
-            if (currentMatchLength > maxMatchLength) {
+            if (currentMatchLength >= maxMatchLength) { // 修复: 使用>=而不是>
                 maxMatchLength = currentMatchLength;
                 bestStartIdx = startIdx;
             }
         }
 
-        maxMatchLength = std::min(n - bestStartIdx, m);
-        if (maxMatchLength < m) {
-            bestStartIdx = std::max(0, bestStartIdx - (m - maxMatchLength));
-            maxMatchLength = std::min(n - bestStartIdx, m);
-        }
-
         if (bestStartIdx == -1) {
             bestStartIdx = 0;
-            maxMatchLength = m;
+            maxMatchLength = std::min(n, m);
+        } else {
+            maxMatchLength = std::min(n - bestStartIdx, m);
+            if (maxMatchLength < m) {
+                bestStartIdx = std::max(0, bestStartIdx - (m - maxMatchLength));
+                maxMatchLength = std::min(n - bestStartIdx, m);
+            }
         }
 
         std::vector<std::string> textDiffs;
@@ -65,10 +75,8 @@ namespace LyricFA {
         for (int position = 0; position < maxMatchLength; ++position) {
             if (position < maxMatchLength &&
                 referencePronunciation[bestStartIdx + position] != searchPronunciation[position]) {
-
                 textDiffs.push_back("(" + searchText[position] + "->" + referenceTextTokens[bestStartIdx + position] +
                                     ", " + std::to_string(position) + ")");
-
                 pronunciationDiffs.push_back("(" + searchPronunciation[position] + "->" +
                                              referencePronunciation[bestStartIdx + position] + ", " +
                                              std::to_string(position) + ")");
@@ -100,7 +108,6 @@ namespace LyricFA {
         const std::vector<std::string> matchedPronunciation(referencePronunciation.begin() + startIdx,
                                                             referencePronunciation.begin() + endIdx);
 
-        // Check if initial match is acceptable
         if (!matchedPronunciation.empty() &&
             (matchedPronunciation.front() == searchPronunciation.front() ||
              matchedPronunciation.back() == searchPronunciation.back()) &&
@@ -111,17 +118,18 @@ namespace LyricFA {
             return {matchedText, matchedPronunciation, join(textChanges, " "), join(pronunciationChanges, " ")};
         }
 
-        // Find the best alignment using edit distance
         std::vector<AlignmentDetails> alignmentCandidates;
         const int windowSize = searchPronunciation.size();
 
-        // Expand search window around initial match
-        const int maxWindow = std::min(windowSize + 10, static_cast<int>(referencePronunciation.size()) + 1);
-        for (int window = windowSize; window < maxWindow; ++window) {
+        const int maxWindow = std::min(windowSize + 10, static_cast<int>(referencePronunciation.size()));
+        for (int window = windowSize; window <= maxWindow; ++window) {
             const int startRange = std::max(0, startIdx - 10);
-            const int endRange = std::min(endIdx + 10, static_cast<int>(referencePronunciation.size()) - window + 1);
+            const int endRange = std::min(static_cast<int>(referencePronunciation.size()) - window, endIdx + 10);
 
-            for (int start_idx = startRange; start_idx < endRange; ++start_idx) {
+            for (int start_idx = startRange; start_idx <= endRange; ++start_idx) {
+                if (start_idx + window > referencePronunciation.size())
+                    continue;
+
                 std::vector<std::string> windowPronunciation(referencePronunciation.begin() + start_idx,
                                                              referencePronunciation.begin() + start_idx + window);
 
@@ -132,7 +140,6 @@ namespace LyricFA {
             }
         }
 
-        // Select best candidate
         if (alignmentCandidates.empty()) {
             return {{}, {}, "", ""};
         }
@@ -141,7 +148,7 @@ namespace LyricFA {
             alignmentCandidates.begin(), alignmentCandidates.end(),
             [](const AlignmentDetails &a, const AlignmentDetails &b) { return a.editDistance < b.editDistance; });
 
-        const AlignmentDetails bestAlignment = *bestIt;
+        const AlignmentDetails &bestAlignment = *bestIt;
 
         return {
             bestAlignment.alignedText, bestAlignment.alignedPronunciation,
@@ -213,7 +220,8 @@ namespace LyricFA {
     std::pair<std::vector<Step>, std::vector<Step>> LyricAligner::traceAlignmentPath(
         const std::vector<std::vector<int>> &dp, const std::vector<std::string> &referenceTextTokens,
         const std::vector<std::string> &sourcePronunciation, const std::vector<std::string> &targetPronunciation,
-        const std::vector<std::string> &searchText) {
+        const std::vector<std::string> &searchText, const int deletionCost, const int insertionCost,
+        const int substitutionCost) {
 
         std::vector<Step> textOperations;
         std::vector<Step> pronunciationOperations;
@@ -221,30 +229,28 @@ namespace LyricFA {
         int i = sourcePronunciation.size();
         int j = targetPronunciation.size();
 
-        while (i > 0 && j > 0) {
-            if (sourcePronunciation[i - 1] == targetPronunciation[j - 1]) {
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && sourcePronunciation[i - 1] == targetPronunciation[j - 1]) {
                 pronunciationOperations.insert(pronunciationOperations.begin(),
-                                               {targetPronunciation[j - 1], targetPronunciation[j - 1]});
-                textOperations.insert(textOperations.begin(), {referenceTextTokens[i - 1], referenceTextTokens[i - 1]});
-                --i;
-                --j;
+                                               {sourcePronunciation[i - 1], targetPronunciation[j - 1]});
+                textOperations.insert(textOperations.begin(), {referenceTextTokens[i - 1], searchText[j - 1]});
+                i--;
+                j--;
             } else {
-                const int minVal = std::min({dp[i - 1][j - 1], dp[i][j - 1], dp[i - 1][j]});
-
-                if (dp[i - 1][j - 1] == minVal) {
+                if (i > 0 && j > 0 && dp[i][j] == dp[i - 1][j - 1] + substitutionCost) {
                     pronunciationOperations.insert(pronunciationOperations.begin(),
                                                    {sourcePronunciation[i - 1], targetPronunciation[j - 1]});
                     textOperations.insert(textOperations.begin(), {referenceTextTokens[i - 1], searchText[j - 1]});
-                    --i;
-                    --j;
-                } else if (dp[i][j - 1] == minVal) {
+                    i--;
+                    j--;
+                } else if (j > 0 && dp[i][j] == dp[i][j - 1] + insertionCost) {
                     pronunciationOperations.insert(pronunciationOperations.begin(), {"", targetPronunciation[j - 1]});
                     textOperations.insert(textOperations.begin(), {"", searchText[j - 1]});
-                    --j;
-                } else {
+                    j--;
+                } else if (i > 0 && dp[i][j] == dp[i - 1][j] + deletionCost) {
                     pronunciationOperations.insert(pronunciationOperations.begin(), {sourcePronunciation[i - 1], ""});
                     textOperations.insert(textOperations.begin(), {referenceTextTokens[i - 1], ""});
-                    --i;
+                    i--;
                 }
             }
         }
@@ -266,8 +272,8 @@ namespace LyricFA {
         const int editDistance =
             fillDpTable(dp, sourcePronunciation, targetPronunciation, deletionCost, insertionCost, substitutionCost);
 
-        auto [textOps, pronOps] =
-            traceAlignmentPath(dp, referenceTextTokens, sourcePronunciation, targetPronunciation, searchText);
+        auto [textOps, pronOps] = traceAlignmentPath(dp, referenceTextTokens, sourcePronunciation, targetPronunciation,
+                                                     searchText, deletionCost, insertionCost, substitutionCost);
 
         std::vector<std::string> alignedText;
         std::vector<std::string> alignedPronunciation;
@@ -276,18 +282,18 @@ namespace LyricFA {
             const auto &pOp = pronOps[idx];
             const auto &tOp = textOps[idx];
 
-            if (pOp.original == pOp.modified) {
-                alignedPronunciation.push_back(pOp.original);
-                alignedText.push_back(tOp.original);
+            if (!pOp.original.empty() && !pOp.modified.empty() && pOp.original != pOp.modified) {
+                alignedPronunciation.push_back(pOp.modified);
+                alignedText.push_back(tOp.modified);
             } else if (pOp.original.empty() && !pOp.modified.empty()) {
                 alignedPronunciation.push_back(pOp.modified);
                 alignedText.push_back(tOp.modified);
-            } else if (!pOp.original.empty() && !pOp.modified.empty()) {
-                alignedPronunciation.push_back(pOp.original);
-                alignedText.push_back(tOp.original);
+            } else if (!pOp.original.empty() && pOp.modified.empty()) {
+                alignedPronunciation.push_back(pOp.modified);
+                alignedText.push_back(tOp.modified);
             }
         }
 
         return {editDistance, alignedText, alignedPronunciation, textOps, pronOps};
     }
-} // LyricFA
+}
