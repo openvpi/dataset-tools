@@ -5,9 +5,10 @@
 #include <QMap>
 #include <QMessageBox>
 
-#include <cpp-pinyin/G2pglobal.h>
+#include "Utils.h"
 
-#include "../util/LevenshteinDistance.h"
+#include <cpp-pinyin/G2pglobal.h>
+#include <cpp-pinyin/U16Str.h>
 
 #include <QDir>
 #include <QFileInfo>
@@ -20,6 +21,7 @@ namespace LyricFA {
         Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/dict");
 #endif
         m_mandarin = std::make_unique<Pinyin::Pinyin>();
+        m_lyricAligner = new LyricAligner();
     }
 
     MatchLyric::~MatchLyric() = default;
@@ -68,11 +70,10 @@ namespace LyricFA {
             const auto g2pRes =
                 m_mandarin->hanziToPinyin(text, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, false, false);
 
-            QStringList textList;
-            QStringList pinyinList;
+            std::vector<std::string> textList, pinyinList;
             for (const auto &item : g2pRes) {
-                textList.append(QString::fromUtf8(item.hanzi.c_str()));
-                pinyinList.append(QString::fromUtf8(item.pinyin.c_str()));
+                textList.push_back(item.hanzi.c_str());
+                pinyinList.push_back(item.pinyin.c_str());
             }
             m_lyricDict[lyricName] = lyricInfo{textList, pinyinList};
         }
@@ -91,39 +92,45 @@ namespace LyricFA {
             const auto textList = m_lyricDict[lyricName].text;
             const auto pinyinList = m_lyricDict[lyricName].pinyin;
 
+            const auto asrTextU16str = Pinyin::utf8strToU16str(asr_list.toUtf8().toStdString());
+            const auto asrTextVecU16str = splitString(asrTextU16str);
+
+            std::vector<std::string> asrTextVec(asrTextVecU16str.size());
+            for (const auto &item : asrTextVecU16str) {
+                asrTextVec.push_back(Pinyin::u16strToUtf8str(item.c_str()));
+            }
+
             const auto asrG2pRes = m_mandarin->hanziToPinyin(asr_list.toUtf8().toStdString(), Pinyin::ManTone::NORMAL,
                                                              Pinyin::Error::Default, false, true);
 
-            QStringList asrPinyins;
+            std::vector<std::string> asrPinyins;
             for (const auto &item : asrG2pRes)
-                asrPinyins.append(QString::fromUtf8(item.pinyin.c_str()));
+                asrPinyins.push_back(item.pinyin.c_str());
 
-            if (!asrPinyins.isEmpty()) {
+            if (!asrPinyins.empty()) {
                 auto [match_text, match_pinyin, text_step, pinyin_step] =
-                    LevenshteinDistance::find_similar_substrings(asrPinyins, pinyinList, textList, true, true, true);
+                    m_lyricAligner->alignSequences(asrTextVec, asrPinyins, pinyinList, textList, true, true, true);
 
-                QStringList asr_rect_list;
-                QStringList asr_rect_diff;
+                std::vector<std::string> asr_rect_list, asr_rect_diff;
 
                 for (int i = 0; i < asrPinyins.size(); i++) {
-                    const auto &asrPinyin = asrPinyins[i];
+                    const auto asrPinyin = asrPinyins[i];
                     const auto text = match_text[i];
                     const auto matchPinyin = match_pinyin[i];
 
                     if (asrPinyin != matchPinyin) {
                         const std::vector<std::string> candidates =
-                            m_mandarin->getDefaultPinyin(text.toUtf8().toStdString(), Pinyin::ManTone::NORMAL, true);
-                        const auto it =
-                            std::find(candidates.begin(), candidates.end(), asrPinyin.toUtf8().toStdString());
+                            m_mandarin->getDefaultPinyin(text, Pinyin::ManTone::NORMAL, true);
+                        const auto it = std::find(candidates.begin(), candidates.end(), asrPinyin);
 
                         if (it != candidates.end()) {
-                            asr_rect_list.append(asrPinyin);
-                            asr_rect_diff.append("(" + matchPinyin + "->" + asrPinyin + ", " +
-                                                 QString::number(asrPinyins.indexOf(asrPinyin)) + ")");
+                            asr_rect_list.push_back(asrPinyin);
+                            asr_rect_diff.push_back("(" + matchPinyin + "->" + asrPinyin + ", " + static_cast<char>(i) +
+                                                    ")");
                         } else
-                            asr_rect_list.append(matchPinyin);
+                            asr_rect_list.push_back(matchPinyin);
                     } else if (asrPinyin == matchPinyin)
-                        asr_rect_list.append(asrPinyin);
+                        asr_rect_list.push_back(asrPinyin);
                 }
 
                 if (asr_rectify)
@@ -132,14 +139,14 @@ namespace LyricFA {
                 if (asrPinyins != match_pinyin && !pinyin_step.empty()) {
                     msg += "\n";
                     msg += "filename: " + filename + "\n";
-                    msg += "asr_lab: " + asrPinyins.join(' ') + "\n";
-                    msg += "text_res: " + match_text.join(' ') + "\n";
-                    msg += "pyin_res: " + match_pinyin.join(' ') + "\n";
-                    msg += "text_step: " + text_step.join(' ') + "\n";
-                    msg += "pyin_step: " + pinyin_step.join(' ') + "\n";
+                    msg += "asr_lab: " + LyricAligner::join(asrPinyins, " ") + "\n";
+                    msg += "text_res: " + LyricAligner::join(match_text, " ") + "\n";
+                    msg += "pyin_res: " + LyricAligner::join(match_pinyin, " ") + "\n";
+                    msg += "text_step: " + text_step + "\n";
+                    msg += "pyin_step: " + pinyin_step + "\n";
 
-                    if (asr_rectify && !asr_rect_diff.isEmpty())
-                        msg += "asr_rect_diff: " + asr_rect_diff.join(' ');
+                    if (asr_rectify && !asr_rect_diff.empty())
+                        msg += "asr_rect_diff: " + LyricAligner::join(asr_rect_diff, " ");
                     msg += "------------------------";
                 }
 
@@ -147,9 +154,9 @@ namespace LyricFA {
 
                 QFile jsonFile(jsonPath);
                 QJsonObject writeData;
-                writeData["lab"] = match_pinyin.join(' ');
-                writeData["raw_text"] = match_text.join(' ');
-                writeData["lab_without_tone"] = match_pinyin.join(' ');
+                writeData["lab"] = QString::fromUtf8(LyricAligner::join(match_pinyin, " "));
+                writeData["raw_text"] = QString::fromUtf8(LyricAligner::join(match_text, " "));
+                writeData["lab_without_tone"] = QString::fromUtf8(LyricAligner::join(match_pinyin, " "));
 
                 if (!writeJsonFile(jsonPath, writeData)) {
                     QMessageBox::critical(nullptr, QApplication::applicationName(),

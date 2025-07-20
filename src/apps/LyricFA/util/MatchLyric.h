@@ -8,6 +8,9 @@
 
 #include <cpp-pinyin/Pinyin.h>
 
+#include "../util/LyricAligner.h"
+
+
 namespace LyricFA {
     class MatchLyric {
     public:
@@ -21,9 +24,10 @@ namespace LyricFA {
 
     private:
         struct lyricInfo {
-            QStringList text, pinyin;
+            std::vector<std::string> text, pinyin;
         };
 
+        LyricAligner *m_lyricAligner;
         QMap<QString, lyricInfo> m_lyricDict;
         std::unique_ptr<Pinyin::Pinyin> m_mandarin;
     };
