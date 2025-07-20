@@ -36,7 +36,6 @@ namespace LyricFA {
         const int n = referencePronunciation.size();
         const int m = searchPronunciation.size();
 
-        // 修复: 处理n < m的情况
         if (n < m) {
             return {0, std::min(n, m), {}, {}};
         }
@@ -52,7 +51,7 @@ namespace LyricFA {
             }
 
             const int currentMatchLength = longestCommonSubsequence(searchPronunciation, window);
-            if (currentMatchLength >= maxMatchLength) { // 修复: 使用>=而不是>
+            if (currentMatchLength >= maxMatchLength) {
                 maxMatchLength = currentMatchLength;
                 bestStartIdx = startIdx;
             }
@@ -171,13 +170,14 @@ namespace LyricFA {
         std::vector<std::string> formattedOps;
         for (size_t position = 0; position < operations.size(); ++position) {
             const auto &[original, modified] = operations[position];
-
-            if (!original.empty() && modified.empty() && showDel) {
-                formattedOps.push_back("(" + original + "->, " + std::to_string(position) + ")");
-            } else if (original.empty() && !modified.empty() && showIns) {
-                formattedOps.push_back("(->" + modified + ", " + std::to_string(position) + ")");
-            } else if (!original.empty() && !modified.empty() && showSub) {
-                formattedOps.push_back("(" + original + "->" + modified + ", " + std::to_string(position) + ")");
+            if (original != modified) {
+                if (!original.empty() && modified.empty() && showDel) {
+                    formattedOps.push_back("(" + original + "->, " + std::to_string(position) + ")");
+                } else if (original.empty() && !modified.empty() && showIns) {
+                    formattedOps.push_back("(->" + modified + ", " + std::to_string(position) + ")");
+                } else if (!original.empty() && !modified.empty() && showSub) {
+                    formattedOps.push_back("(" + modified + "->" + original + ", " + std::to_string(position) + ")");
+                }
             }
         }
         return join(formattedOps, " ");
@@ -232,8 +232,8 @@ namespace LyricFA {
         while (i > 0 || j > 0) {
             if (i > 0 && j > 0 && sourcePronunciation[i - 1] == targetPronunciation[j - 1]) {
                 pronunciationOperations.insert(pronunciationOperations.begin(),
-                                               {sourcePronunciation[i - 1], targetPronunciation[j - 1]});
-                textOperations.insert(textOperations.begin(), {referenceTextTokens[i - 1], searchText[j - 1]});
+                                               {targetPronunciation[j - 1], targetPronunciation[j - 1]});
+                textOperations.insert(textOperations.begin(), {referenceTextTokens[i - 1], referenceTextTokens[i - 1]});
                 i--;
                 j--;
             } else {
@@ -282,15 +282,21 @@ namespace LyricFA {
             const auto &pOp = pronOps[idx];
             const auto &tOp = textOps[idx];
 
-            if (!pOp.original.empty() && !pOp.modified.empty() && pOp.original != pOp.modified) {
-                alignedPronunciation.push_back(pOp.modified);
-                alignedText.push_back(tOp.modified);
+            if (pOp.original == pOp.modified) {
+                // 匹配操作：添加参考文本和参考发音
+                alignedText.push_back(tOp.original);
+                alignedPronunciation.push_back(pOp.original);
             } else if (pOp.original.empty() && !pOp.modified.empty()) {
-                alignedPronunciation.push_back(pOp.modified);
+                // 插入操作：添加目标文本和目标发音
                 alignedText.push_back(tOp.modified);
+                alignedPronunciation.push_back(pOp.modified);
             } else if (!pOp.original.empty() && pOp.modified.empty()) {
-                alignedPronunciation.push_back(pOp.modified);
-                alignedText.push_back(tOp.modified);
+                // 删除操作：跳过，不添加
+                // 什么也不做
+            } else if (!pOp.original.empty() && !pOp.modified.empty()) {
+                // 替换操作：添加参考文本和参考发音
+                alignedText.push_back(tOp.original);
+                alignedPronunciation.push_back(pOp.original);
             }
         }
 

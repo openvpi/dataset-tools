@@ -84,24 +84,25 @@ namespace LyricFA {
         const auto lyricName = filename.left(filename.lastIndexOf('_'));
 
         if (m_lyricDict.contains(lyricName)) {
-            const auto asr_list = get_lyrics_from_txt(labPath);
-            if (asr_list.isEmpty()) {
+            const auto asr_list = get_lyrics_from_txt(labPath).toUtf8().toStdString();
+            if (asr_list.empty()) {
                 msg = "filename: Asr res is empty.";
                 return false;
             }
             const auto textList = m_lyricDict[lyricName].text;
             const auto pinyinList = m_lyricDict[lyricName].pinyin;
 
-            const auto asrTextU16str = Pinyin::utf8strToU16str(asr_list.toUtf8().toStdString());
+            const auto asrTextU16str = Pinyin::utf8strToU16str(asr_list);
             const auto asrTextVecU16str = splitString(asrTextU16str);
 
-            std::vector<std::string> asrTextVec(asrTextVecU16str.size());
+            std::vector<std::string> asrTextVec;
             for (const auto &item : asrTextVecU16str) {
-                asrTextVec.push_back(Pinyin::u16strToUtf8str(item.c_str()));
+                if (!item.empty())
+                    asrTextVec.push_back(Pinyin::u16strToUtf8str(item.c_str()));
             }
 
-            const auto asrG2pRes = m_mandarin->hanziToPinyin(asr_list.toUtf8().toStdString(), Pinyin::ManTone::NORMAL,
-                                                             Pinyin::Error::Default, false, true);
+            const auto asrG2pRes =
+                m_mandarin->hanziToPinyin(asrTextVec, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, false, true);
 
             std::vector<std::string> asrPinyins;
             for (const auto &item : asrG2pRes)
@@ -139,7 +140,7 @@ namespace LyricFA {
                 if (asrPinyins != match_pinyin && !pinyin_step.empty()) {
                     msg += "\n";
                     msg += "filename: " + filename + "\n";
-                    msg += "asr_lab: " + LyricAligner::join(asrPinyins, " ") + "\n";
+                    msg += "asr_lab: " + LyricAligner::join(asrTextVec, " ") + "\n";
                     msg += "text_res: " + LyricAligner::join(match_text, " ") + "\n";
                     msg += "pyin_res: " + LyricAligner::join(match_pinyin, " ") + "\n";
                     msg += "text_step: " + text_step + "\n";
