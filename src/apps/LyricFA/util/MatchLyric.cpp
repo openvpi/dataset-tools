@@ -27,7 +27,7 @@ namespace LyricFA {
     MatchLyric::~MatchLyric() = default;
 
     static QString get_lyrics_from_txt(const QString &lyricPath) {
-        QFile lyricFile(lyricPath.toLocal8Bit());
+        QFile lyricFile(lyricPath);
         if (lyricFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
             auto words = QString::fromUtf8(lyricFile.readAll());
             words.remove(QRegularExpression(u8"[^\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]"));
