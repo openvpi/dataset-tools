@@ -7,7 +7,7 @@
 
 namespace AudioUtil
 {
-    SF_VIO resample_to_vio(const std::filesystem::path &filepath, std::string &msg, const int tar_channels,
+    SF_VIO resample_to_vio(const std::filesystem::path &filepath, std::string &msg, const int tar_channel,
                            const int tar_samplerate) {
         SF_VIO sf_vio_in;
         const std::string extension = filepath.extension().string();
@@ -34,20 +34,20 @@ namespace AudioUtil
 
         SF_VIO sf_vio;
         sf_vio.info = sf_vio_in.info;
-        sf_vio.info.channels = tar_channels;
+        sf_vio.info.channels = tar_channel;
         sf_vio.info.samplerate = tar_samplerate;
         if (!srcHandle) {
             std::cout << "Failed to open WAV file:" << sf_strerror(nullptr) << std::endl;
             return {};
         }
 
-        const sf_count_t estimated_frames = (srcHandle.frames() * tar_samplerate) / srcHandle.samplerate();
+        const sf_count_t estimated_frames = srcHandle.frames() * tar_samplerate / srcHandle.samplerate();
         const size_t estimated_size = estimated_frames * srcHandle.channels() * sizeof(float);
 
         sf_vio.data.byteArray.reserve(estimated_size);
 
         auto dstHandle =
-            SndfileHandle(sf_vio.vio, &sf_vio.data, SFM_WRITE, sf_vio_in.info.format, tar_channels, tar_samplerate);
+            SndfileHandle(sf_vio.vio, &sf_vio.data, SFM_WRITE, sf_vio_in.info.format, tar_channel, tar_samplerate);
         if (!dstHandle) {
             std::cout << "Failed to open output file:" << sf_strerror(nullptr) << std::endl;
             return {};
@@ -83,23 +83,39 @@ namespace AudioUtil
                 break;
             }
 
-            std::vector<float> processedBuf(outputDone * tar_channels);
+            std::vector<float> processedBuf(outputDone * tar_channel);
             const auto src_channels = srcHandle.channels();
-            for (size_t i = 0; i < outputDone; ++i) {
-                for (size_t tar_ch = 0; tar_ch < tar_channels; ++tar_ch) {
-                    if (tar_channels > src_channels) {
-                        const size_t src_ch = tar_ch % src_channels;
-                        processedBuf[i * tar_channels + tar_ch] = outputBuf[i * src_channels + src_ch];
-                    } else {
-                        const size_t src_ch = tar_ch;
-                        processedBuf[i * tar_channels + tar_ch] = outputBuf[i * src_channels + src_ch];
+
+            if (tar_channel == 1 && src_channels > 1) {
+                for (size_t i = 0; i < outputDone; ++i) {
+                    float mix = 0.0f;
+                    for (size_t ch = 0; ch < src_channels; ++ch) {
+                        mix += outputBuf[i * src_channels + ch];
+                    }
+                    processedBuf[i] = mix / static_cast<float>(src_channels);
+                }
+            } else if (src_channels == 1 && tar_channel > 1) {
+                for (size_t i = 0; i < outputDone; ++i) {
+                    const float sample = outputBuf[i];
+                    for (size_t ch = 0; ch < tar_channel; ++ch) {
+                        processedBuf[i * tar_channel + ch] = sample;
+                    }
+                }
+            } else {
+                const size_t min_channels = std::min(src_channels, tar_channel);
+                for (size_t i = 0; i < outputDone; ++i) {
+                    for (size_t ch = 0; ch < min_channels; ++ch) {
+                        processedBuf[i * tar_channel + ch] = outputBuf[i * src_channels + ch];
+                    }
+                    for (size_t ch = min_channels; ch < tar_channel; ++ch) {
+                        processedBuf[i * tar_channel + ch] = 0.0f;
                     }
                 }
             }
 
             const size_t bytesWritten =
-                dstHandle.write(processedBuf.data(), static_cast<sf_count_t>(outputDone * tar_channels));
-            if (bytesWritten != outputDone * tar_channels) {
+                dstHandle.write(processedBuf.data(), static_cast<sf_count_t>(outputDone * tar_channel));
+            if (bytesWritten != outputDone * tar_channel) {
                 std::cout << "Error writing to output file" << std::endl;
                 break;
             }
@@ -127,13 +143,31 @@ namespace AudioUtil
         while ((readFrames = static_cast<int>(
                     readBuf.readf(buffer.data(), static_cast<sf_count_t>(buffer.size()) / channels))) > 0) {
             if (tar_channel != channels) {
-                std::vector<float> convertedBuffer(1024 * tar_channel, 0);
-                for (int i = 0; i < readFrames; ++i) {
-                    for (int ch = 0; ch < tar_channel; ++ch) {
-                        if (ch < channels) {
+                std::vector<float> convertedBuffer(static_cast<size_t>(readFrames) * tar_channel, 0);
+
+                if (tar_channel == 1 && channels > 1) {
+                    for (int i = 0; i < readFrames; ++i) {
+                        float mix = 0.0f;
+                        for (int ch = 0; ch < channels; ++ch) {
+                            mix += buffer[i * channels + ch];
+                        }
+                        convertedBuffer[i] = mix / static_cast<float>(channels);
+                    }
+                } else if (channels == 1 && tar_channel > 1) {
+                    for (int i = 0; i < readFrames; ++i) {
+                        const float sample = buffer[i];
+                        for (int ch = 0; ch < tar_channel; ++ch) {
+                            convertedBuffer[i * tar_channel + ch] = sample;
+                        }
+                    }
+                } else {
+                    const int min_channels = std::min(channels, tar_channel);
+                    for (int i = 0; i < readFrames; ++i) {
+                        for (int ch = 0; ch < min_channels; ++ch) {
                             convertedBuffer[i * tar_channel + ch] = buffer[i * channels + ch];
-                        } else {
-                            convertedBuffer[i * tar_channel + ch] = 0;
+                        }
+                        for (int ch = min_channels; ch < tar_channel; ++ch) {
+                            convertedBuffer[i * tar_channel + ch] = 0.0f;
                         }
                     }
                 }
