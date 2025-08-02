@@ -51,7 +51,7 @@ namespace AudioUtil
         constexpr int buffer_size = 1024;
         std::vector<float> buffer(buffer_size * sf_vio.info.channels);
 
-        int frames_read;
+        sf_count_t frames_read;
         while ((frames_read = infile.read(&buffer[0], buffer_size)) > 0) {
             if (outfile.write(&buffer[0], frames_read) != frames_read) {
                 std::cerr << "Error writing data to VIO." << std::endl;

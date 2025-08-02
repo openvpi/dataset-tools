@@ -32,7 +32,7 @@ namespace AudioUtil
             vio.tell = qvio_tell;
         }
 
-        int size() const { return data.byteArray.size(); }
+        size_t size() const { return data.byteArray.size(); }
         const char *constData() const { return data.byteArray.data(); }
     };
 } // namespace AudioUtil
