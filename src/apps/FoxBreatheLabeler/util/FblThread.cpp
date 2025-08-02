@@ -14,7 +14,7 @@ namespace FBL {
           m_outTgPath(std::move(outTgPath)), ap_threshold(ap_threshold), ap_dur(ap_dur), sp_dur(sp_dur) {
     }
 
-    struct Phone {
+    struct Phoneme {
         double start, end;
         std::string text;
     };
@@ -22,7 +22,7 @@ namespace FBL {
     struct Word {
         double start{}, end{};
         std::string text;
-        QList<Phone> phones;
+        QList<Phoneme> phones;
     };
 
     static std::vector<std::pair<float, float>>
@@ -99,7 +99,7 @@ namespace FBL {
         ifs >> textgrid;
 
         const auto wordIntervals = textgrid.GetTierAs<textgrid::IntervalTier>("words")->GetAllIntervals();
-        const auto phonesIntervals = textgrid.GetTierAs<textgrid::IntervalTier>("phones")->GetAllIntervals();
+        const auto phonesIntervals = textgrid.GetTierAs<textgrid::IntervalTier>("phonemes")->GetAllIntervals();
 
 
 
@@ -116,9 +116,9 @@ namespace FBL {
             const double wordStart = interval.min_time;
             const double wordEnd = interval.max_time;
 
-            for (const auto &phone : phonesIntervals) {
-                if (phone.min_time >= wordStart && phone.max_time <= wordEnd)
-                    wordsDict[interval.min_time].phones.append(Phone{phone.min_time, phone.max_time, phone.text});
+            for (const auto &phoneme : phonesIntervals) {
+                if (phoneme.min_time >= wordStart && phoneme.max_time <= wordEnd)
+                    wordsDict[interval.min_time].phones.append(Phoneme{phoneme.min_time, phoneme.max_time, phoneme.text});
             }
         }
 
@@ -181,23 +181,23 @@ namespace FBL {
         textgrid::TextGrid outTg(0.0, wordCursor);
 
         auto tierWords = std::make_shared<textgrid::IntervalTier>("words", 0.0, wordCursor);
-        auto tierPhones = std::make_shared<textgrid::IntervalTier>("phones", 0.0, wordCursor);
+        auto tierPhonemes = std::make_shared<textgrid::IntervalTier>("phonemes", 0.0, wordCursor);
 
         for (const auto &[start, end, text, phones] : out) {
             tierWords->AppendInterval(textgrid::Interval(start, end, text));
 
             if (text == "SP" || text == "AP") {
-                tierPhones->AppendInterval(textgrid::Interval(start, end, text));
+                tierPhonemes->AppendInterval(textgrid::Interval(start, end, text));
                 continue;
             }
 
             for (const auto &[start, end, text] : phones) {
-                tierPhones->AppendInterval(textgrid::Interval(start, end, text));
+                tierPhonemes->AppendInterval(textgrid::Interval(start, end, text));
             }
         }
 
         outTg.AppendTier(tierWords);
-        outTg.AppendTier(tierPhones);
+        outTg.AppendTier(tierPhonemes);
 
         QFile outFile(m_outTgPath);
         if (outFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
