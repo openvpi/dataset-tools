@@ -16,20 +16,20 @@
 
 // https://iconduck.com/icons
 
-class MySlider : public QSlider {
+class MySlider final : public QSlider {
 public:
-    explicit MySlider(Qt::Orientation orientation, QWidget *parent = nullptr) : QSlider(orientation, parent) {
+    explicit MySlider(const Qt::Orientation orientation, QWidget *parent = nullptr) : QSlider(orientation, parent) {
     }
 
 protected:
     void mousePressEvent(QMouseEvent *ev) override {
         bool isMoved = false;
 
-        auto conn = connect(this, &QSlider::actionTriggered, this, [&](int action) {
+        const auto conn = connect(this, &QSlider::actionTriggered, this, [&](const int action) {
             switch (action) {
-                case QSlider::SliderMove:
-                case QSlider::SliderPageStepAdd:
-                case QSlider::SliderPageStepSub:
+                case SliderMove:
+                case SliderPageStepAdd:
+                case SliderPageStepSub:
                     isMoved = true;
                     break;
                 default:
@@ -52,11 +52,11 @@ protected:
     }
 
 private:
-    int pixelPosToRangeValue(int pos) const {
+    int pixelPosToRangeValue(const int pos) const {
         QStyleOptionSlider opt;
         initStyleOption(&opt);
-        QRect gr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderGroove, this);
-        QRect sr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, this);
+        const QRect gr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderGroove, this);
+        const QRect sr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, this);
         int sliderMin, sliderMax, sliderLength;
 
         if (orientation() == Qt::Horizontal) {
@@ -72,7 +72,7 @@ private:
                                                opt.upsideDown);
     }
 
-    inline int pick(const QPoint &pt) const {
+    int pick(const QPoint &pt) const {
         return orientation() == Qt::Horizontal ? pt.x() : pt.y();
     }
 };
@@ -171,7 +171,7 @@ bool PlayWidget::isPlaying() const {
     return playing;
 }
 
-void PlayWidget::setPlaying(bool playing) {
+void PlayWidget::setPlaying(const bool playing) {
     if (this->playing == playing) {
         return;
     }
@@ -180,7 +180,7 @@ void PlayWidget::setPlaying(bool playing) {
 
     if (playing) {
         if (decoder->CurrentTime() > rangeEnd * 1000.0 || decoder->CurrentTime() < rangeBegin * 1000.0)
-            decoder->SetCurrentTime((pauseAtTime = rangeBegin * 1000.0));
+            decoder->SetCurrentTime(pauseAtTime = rangeBegin * 1000.0);
         else
             decoder->SetCurrentTime(pauseAtTime);
         playback->play();
@@ -198,7 +198,7 @@ void PlayWidget::setPlaying(bool playing) {
     reloadSliderStatus();
 }
 
-void PlayWidget::setRange(double start, double end) {
+void PlayWidget::setRange(const double start, const double end) {
     rangeBegin = start;
     rangeEnd = end;
     qDebug() << "range" << start << end;
@@ -209,10 +209,10 @@ void PlayWidget::setRange(double start, double end) {
     reloadSliderStatus();
 }
 
-uint64_t PlayWidget::estimatedTimeMs() {
-    return (lastObtainedTimeMs + std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     std::chrono::steady_clock::now() - lastObtainedTimePoint)
-                                     .count());
+uint64_t PlayWidget::estimatedTimeMs() const {
+    return lastObtainedTimeMs + std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                                                      lastObtainedTimePoint)
+                                    .count();
 }
 
 void PlayWidget::timerEvent(QTimerEvent *event) {
@@ -225,39 +225,6 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
 #include "SDLPlayback.h"
 
 void PlayWidget::initPlugins() {
-    // #ifdef Q_OS_LINUX
-    //     decoderLoader.setFileName("audiodecoders/libFFmpegDecoder");
-    //     playbackLoader.setFileName("audioplaybacks/libSDLPlayback");
-    // #else
-    //     decoderLoader.setFileName("audiodecoders/FFmpegDecoder");
-    //     playbackLoader.setFileName("audioplaybacks/SDLPlayback");
-    // #endif
-
-    //     decoder = nullptr;
-    //     playback = nullptr;
-
-    // decoder_plugin = qobject_cast<QsApi::IAudioDecoderPlugin *>(decoderLoader.instance());
-    // playback_plugin = qobject_cast<QsApi::IAudioPlaybackPlugin *>(playbackLoader.instance());
-
-    // if (!decoder_plugin || !playback_plugin) {
-    //     QMessageBox::critical(
-    //         this, qApp->applicationName(),
-    //         QString("Failed to load plugins: %1!").arg(decoderLoader.errorString()));
-    //     goto out;
-    // }
-
-    // decoder = decoder_plugin->create({}, this);
-    // if (!decoder) {
-    //     QMessageBox::critical(this, qApp->applicationName(), QString("Failed to create decoder object!"));
-    //     goto out2;
-    // }
-
-    // playback = playback_plugin->create({}, this);
-    // if (!playback) {
-    //     QMessageBox::critical(this, qApp->applicationName(), QString("Failed to create playback object!"));
-    //     goto out2;
-    // }
-
     decoder = new FFmpegDecoder();
     playback = new SDLPlayback();
 
@@ -272,30 +239,22 @@ void PlayWidget::initPlugins() {
     playback->setDecoder(decoder);
     return;
 
-out2:
-    // Must delete before uninitializing the plugins.
-    // If rely on the destructor of QWidget we would be calling unloaded code upon exit and crash the program
-    delete playback;
-    delete decoder;
-
 out:
     uninitPlugins();
-    ::exit(-1);
+    exit(-1);
 }
 
-void PlayWidget::uninitPlugins() {
+void PlayWidget::uninitPlugins() const {
     delete playback;
     delete decoder;
-    // decoderLoader.unload();
-    // playbackLoader.unload();
 }
 
-void PlayWidget::reloadDevices() {
+void PlayWidget::reloadDevices() const {
     deviceMenu->clear();
 
     QStringList devices = playback->devices();
-    for (const QString &dev : qAsConst(devices)) {
-        auto action = new QAction(dev, deviceMenu);
+    for (const QString &dev : std::as_const(devices)) {
+        const auto action = new QAction(dev, deviceMenu);
         action->setCheckable(true);
         action->setData(dev);
         deviceMenu->addAction(action);
@@ -305,30 +264,30 @@ void PlayWidget::reloadDevices() {
     reloadDeviceActionStatus();
 }
 
-void PlayWidget::reloadButtonStatus() {
+void PlayWidget::reloadButtonStatus() const {
     playButton->setIcon(QIcon(!playing ? ":/res/play.svg" : ":/res/pause.svg"));
 }
 
 void PlayWidget::reloadSliderStatus() {
-    qint64 max = decoder->Length();
-    qint64 pos = decoder->Position();
+    const qint64 max = decoder->Length();
+    const qint64 pos = decoder->Position();
 
     if (!slider->isSliderDown()) {
         slider->setValue(decoder->CurrentTime() - 1000.0 * rangeBegin);
     }
 
-    auto fmt = decoder->Format();
-    int len_msecs = (double(max) / fmt.SampleRate() / 4 / fmt.Channels()) * 1000;
-    int pos_msecs = (double(pos) / fmt.SampleRate() / 4 / fmt.Channels()) * 1000;
+    const auto fmt = decoder->Format();
+    const int len_msecs = static_cast<double>(max) / fmt.SampleRate() / 4 / fmt.Channels() * 1000;
+    const int pos_msecs = static_cast<double>(pos) / fmt.SampleRate() / 4 / fmt.Channels() * 1000;
 
-    QTime time(0, 0, 0);
+    const QTime time(0, 0, 0);
     timeLabel->setText(time.addMSecs(pos_msecs).toString("mm:ss") + "/" + time.addMSecs(len_msecs).toString("mm:ss"));
 
     reloadFinePlayheadStatus();
 }
 
-void PlayWidget::reloadDeviceActionStatus() {
-    QString dev = playback->currentDevice();
+void PlayWidget::reloadDeviceActionStatus() const {
+    const QString dev = playback->currentDevice();
     const auto &actions = deviceMenu->actions();
 
     for (QAction *action : actions) {
@@ -342,10 +301,10 @@ void PlayWidget::reloadDeviceActionStatus() {
     }
 }
 
-void PlayWidget::reloadFinePlayheadStatus(uint64_t timeMs) {
+void PlayWidget::reloadFinePlayheadStatus(const uint64_t timeMs) {
     if (timeMs == UINT64_MAX) {
         if (lastObtainedTimeMs == decoder->CurrentTime()) {
-            auto estimatedPos = estimatedTimeMs() / 1000.0;
+            const auto estimatedPos = estimatedTimeMs() / 1000.0;
             if (estimatedPos > rangeEnd)
                 setPlaying(false);
             emit playheadChanged(estimatedPos - rangeBegin);
@@ -376,7 +335,7 @@ void PlayWidget::_q_stopButtonClicked() {
     reloadFinePlayheadStatus(rangeBegin * 1000.0);
 }
 
-void PlayWidget::_q_devButtonClicked() {
+void PlayWidget::_q_devButtonClicked() const {
     deviceMenu->exec(QCursor::pos());
 }
 
@@ -386,10 +345,8 @@ void PlayWidget::_q_sliderReleased() {
         return;
     }
 
-    // double percentage = double(slider->value()) / slider->maximum();
-
-    auto sliderPos = slider->value();
-    pauseAtTime = (sliderPos + rangeBegin * 1000.0);
+    const auto sliderPos = slider->value();
+    pauseAtTime = sliderPos + rangeBegin * 1000.0;
     decoder->SetCurrentTime(pauseAtTime);
     setPlaying(true);
     reloadFinePlayheadStatus(sliderPos);
@@ -399,7 +356,7 @@ void PlayWidget::_q_deviceActionTriggered(const QAction *action) {
     if (playing) {
         QMessageBox::warning(this, qApp->applicationName(), "Stop sound first!");
     } else {
-        QString dev = action->data().toString();
+        const QString dev = action->data().toString();
         playback->setDevice(dev);
     }
 
@@ -407,7 +364,7 @@ void PlayWidget::_q_deviceActionTriggered(const QAction *action) {
 }
 
 void PlayWidget::_q_playStateChanged() {
-    bool isPlaying = playback->isPlaying();
+    const bool isPlaying = playback->isPlaying();
     if (playing != isPlaying) {
         setPlaying(isPlaying);
         if (decoder->Position() == decoder->Length()) {
@@ -420,14 +377,14 @@ void PlayWidget::_q_playStateChanged() {
     }
 }
 
-void PlayWidget::_q_audioDeviceChanged() {
+void PlayWidget::_q_audioDeviceChanged() const {
     reloadDeviceActionStatus();
 }
 
-void PlayWidget::_q_audioDeviceAdded() {
+void PlayWidget::_q_audioDeviceAdded() const {
     reloadDevices();
 }
 
-void PlayWidget::_q_audioDeviceRemoved() {
+void PlayWidget::_q_audioDeviceRemoved() const {
     reloadDevices();
 }

@@ -1,25 +1,12 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QAction>
-#include <QBoxLayout>
-#include <QFileSystemModel>
-#include <QLabel>
 #include <QListWidget>
 #include <QMainWindow>
-#include <QMenu>
-#include <QPluginLoader>
-#include <QPushButton>
-#include <QSet>
-#include <QSlider>
 #include <QSplitter>
-#include <QTreeWidget>
 
 #include "F0Widget.h"
 #include "PlayWidget.h"
-
-#include "Api/IAudioDecoder.h"
-#include "Api/IAudioPlayback.h"
 
 #include <QSettings>
 
@@ -72,7 +59,7 @@ protected:
     // Cached application configuration
     QSettings *cfg{};
 
-    void openDirectory(const QString &dirname);
+    void openDirectory(const QString &dirname) const;
     void openFile(const QString &filename);
     bool saveFile(const QString &filename);
 
@@ -90,14 +77,14 @@ protected:
     void closeEvent(QCloseEvent *event) override;
 
 private:
-    void initStyleSheet();
+    static void initStyleSheet();
     void applyConfig();
 
     void _q_fileMenuTriggered(const QAction *action);
-    void _q_editMenuTriggered(QAction *action);
-    void _q_playMenuTriggered(QAction *action);
+    void _q_editMenuTriggered(const QAction *action);
+    void _q_playMenuTriggered(const QAction *action) const;
     void _q_helpMenuTriggered(const QAction *action);
-    void _q_treeCurrentChanged(const QModelIndex &current, const QModelIndex &previous);
+    void _q_treeCurrentChanged(const QModelIndex &current);
     void _q_sentenceChanged(int currentRow);
 };
 

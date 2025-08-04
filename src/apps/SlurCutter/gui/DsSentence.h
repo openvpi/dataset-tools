@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <QString>
@@ -33,7 +32,7 @@ inline DsSentence::DsSentence(QString text, QString ph_seq, QString ph_dur, QStr
       f0_seq(std::move(f0_seq)), f0_timestep(std::move(f0_timestep)), note_glide(std::move(note_glide)) {
 }
 
-inline DsSentence loadDsSentencesFromJsonObj(const QJsonObject &content, QString *error = nullptr) {
+inline DsSentence loadDsSentencesFromJsonObj(const QJsonObject &content) {
     DsSentence sentence;
     sentence.text = content.value("text").toString();
     sentence.ph_seq = content.value("ph_seq").toString();
@@ -45,6 +44,5 @@ inline DsSentence loadDsSentencesFromJsonObj(const QJsonObject &content, QString
     sentence.f0_seq = content.value("f0_seq").toString();
     sentence.f0_timestep = content.value("f0_timestep").toString();
     sentence.note_glide = content.value("note_glide").toString();
-
     return sentence;
 }

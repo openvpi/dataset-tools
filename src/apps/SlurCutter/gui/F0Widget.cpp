@@ -116,19 +116,19 @@ F0Widget::F0Widget(QWidget *parent) : QFrame(parent), draggingNoteInterval(0, 0)
 
     connect(bgMenuReloadSentence, &QAction::triggered, this, &F0Widget::requestReloadSentence);
     connect(bgMenuConvRestsToNormal, &QAction::triggered, this, &F0Widget::convertAllRestsToNormal);
-    connect(bgMenuShowPitchTextOverlay, &QAction::triggered, [=]() {
+    connect(bgMenuShowPitchTextOverlay, &QAction::triggered, [=] {
         showPitchTextOverlay = bgMenuShowPitchTextOverlay->isChecked();
         update();
     });
-    connect(bgMenuShowPhonemeTexts, &QAction::triggered, [=]() {
+    connect(bgMenuShowPhonemeTexts, &QAction::triggered, [=] {
         showPhonemeTexts = bgMenuShowPhonemeTexts->isChecked();
         update();
     });
-    connect(bgMenuSnapByDefault, &QAction::triggered, [=]() {
+    connect(bgMenuSnapByDefault, &QAction::triggered, [=] {
         snapToKey = bgMenuSnapByDefault->isChecked();
         update();
     });
-    connect(bgMenuShowCrosshairAndPitch, &QAction::triggered, [=]() {
+    connect(bgMenuShowCrosshairAndPitch, &QAction::triggered, [=] {
         showCrosshairAndPitch = bgMenuShowCrosshairAndPitch->isChecked();
         update();
     });
@@ -223,12 +223,12 @@ void F0Widget::setDsSentenceContent(const QJsonObject &content) {
             auto splitPitch = notePitch.split(QRegularExpression(R"((\+|\-))"));
             note.pitch = NoteNameToMidiNote(splitPitch[0]);
             note.cents = splitPitch[1].toDouble();
-            note.cents *= (notePitch[splitPitch[0].length()] == '+' ? 1 : -1);
+            note.cents *= notePitch[splitPitch[0].length()] == '+' ? 1 : -1;
         } else {
             note.pitch = NoteNameToMidiNote(noteSeq[i]);
             note.cents = NAN;
         }
-        note.isSlur = !slur.empty() && (slur[i].toInt() > 0);
+        note.isSlur = !slur.empty() && slur[i].toInt() > 0;
         note.isRest = isRest[i];
         if (glide.size() - 1 < i || glide[i] == "none")
             note.glide = GlideStyle::None;
@@ -298,21 +298,18 @@ void F0Widget::clear() {
     midiIntervals.clear();
     f0Values.clear();
     isEmpty = true;
-    // phonemeIntervals.clear();
-    // textIntervals.clear();
     update();
 }
 
-F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() {
+F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() const {
     ReturnedDsString ret;
-    for (auto &i : midiIntervals.intervals()) {
+    for (const auto &i : midiIntervals.intervals()) {
         ret.note_dur += QString::number(i.value.duration, 'g', 3) + ' ';
         ret.note_slur += i.value.isSlur ? "1 " : "0 ";
-        ret.note_seq += i.value.isRest
-                            ? "rest "
-                            : (std::isnan(i.value.cents)
-                                   ? (MidiNoteToNoteName(i.value.pitch) + ' ')
-                                   : (PitchToNotePlusCentsString(i.value.pitch + 0.01 * i.value.cents) + ' '));
+        ret.note_seq += i.value.isRest ? "rest "
+                        : std::isnan(i.value.cents)
+                            ? MidiNoteToNoteName(i.value.pitch) + ' '
+                            : PitchToNotePlusCentsString(i.value.pitch + 0.01 * i.value.cents) + ' ';
         if (i.value.isRest) {
             // rest notes must have no glides
             ret.note_glide += "none ";
@@ -337,17 +334,18 @@ F0Widget::ReturnedDsString F0Widget::getSavedDsStrings() {
     return ret;
 };
 
-bool F0Widget::empty() {
+bool F0Widget::empty() const {
     return isEmpty;
 }
 
-void F0Widget::setPlayheadPos(double time) {
-    qDebug() << time;
-    playheadPos = time;
-    auto w = width() - KeyWidth - ScrollBarWidth;
-    double leftTime = centerTime - w / 2 / secondWidth, rightTime = centerTime + w / 2 / secondWidth;
-    if (time > rightTime || time < leftTime)
-        setTimeAxisCenterAndSyncScrollbar(time + (rightTime - leftTime) / 2);
+void F0Widget::setPlayHeadPos(const double pos) {
+    qDebug() << pos;
+    playheadPos = pos;
+    const auto w = width() - KeyWidth - ScrollBarWidth;
+    const double leftTime = centerTime - w / 2 / secondWidth;
+    const double rightTime = centerTime + w / 2 / secondWidth;
+    if (pos > rightTime || pos < leftTime)
+        setTimeAxisCenterAndSyncScrollbar(pos + (rightTime - leftTime) / 2);
     update();
 }
 
@@ -368,24 +366,24 @@ int F0Widget::NoteNameToMidiNote(const QString &noteName) {
         {"A#", 11},
         {"B",  12},
     };
-    int octave = noteName.right(1).toInt();
+    const int octave = noteName.right(1).toInt();
     return 11 + 12 * octave + noteNameToMidiNote[noteName.left(noteName.size() - 1)];
 }
 
-QString F0Widget::MidiNoteToNoteName(int note) {
+QString F0Widget::MidiNoteToNoteName(int midiNote) {
     // A0 = MIDI 21, C8 = 108. Return empty when out of range
     static const char *NoteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    if (note > 108 || note < 21)
+    if (midiNote > 108 || midiNote < 21)
         return QString();
-    note -= 12;
-    return QString("%1%2").arg(NoteNames[note % 12]).arg(note / 12);
+    midiNote -= 12;
+    return QString("%1%2").arg(NoteNames[midiNote % 12]).arg(midiNote / 12);
 }
 
-double F0Widget::FrequencyToMidiNote(double freq) {
-    return 69 + 12 * log2(freq / 440);
+double F0Widget::FrequencyToMidiNote(const double f) {
+    return 69 + 12 * log2(f / 440);
 }
 
-std::tuple<int, double> F0Widget::PitchToNoteAndCents(double pitch) {
+std::tuple<int, double> F0Widget::PitchToNoteAndCents(const double pitch) {
     if (pitch == 0)
         return {0, 0};
     int note = std::round(pitch);
@@ -393,33 +391,33 @@ std::tuple<int, double> F0Widget::PitchToNoteAndCents(double pitch) {
     return {note, cents};
 }
 
-QString F0Widget::PitchToNotePlusCentsString(double pitch) {
+QString F0Widget::PitchToNotePlusCentsString(const double pitch) {
     if (pitch == 0)
         return "rest";
-    int note = std::round(pitch);
-    int cents = std::round((pitch - note) * 100);
+    const int note = std::round(pitch);
+    const int cents = std::round((pitch - note) * 100);
     if (cents == 0)
         return MidiNoteToNoteName(note);
     return QString("%1%2%3").arg(MidiNoteToNoteName(note)).arg(cents >= 0 ? "+" : "").arg(cents);
 }
 
-std::tuple<size_t, size_t> F0Widget::refF0IndexRange(double startTime, double endTime) const {
-    return {std::min((size_t) ::floor(std::max(0.0, startTime / f0Timestep)), (size_t) f0Values.size() - 1),
-            std::min((size_t) ::ceil(endTime / f0Timestep), (size_t) f0Values.size() - 1)};
+auto F0Widget::refF0IndexRange(const double startTime, const double endTime) const -> std::tuple<size_t, size_t> {
+    return {std::min(static_cast<size_t>(::floor(std::max(0.0, startTime / f0Timestep))),
+                     static_cast<size_t>(f0Values.size()) - 1),
+            std::min(static_cast<size_t>(::ceil(endTime / f0Timestep)), static_cast<size_t>(f0Values.size()) - 1)};
 }
 
 
 bool F0Widget::mouseOnNote(const QPoint &mousePos, MiniNoteInterval *returnNote) const {
-    auto w = width() - KeyWidth - ScrollBarWidth, h = height() - TimelineHeight;
     auto mouseTime = timeOnWidgetX(mousePos.x());
-    auto mousePitch = pitchOnWidgetY(mousePos.y());
+    const auto mousePitch = pitchOnWidgetY(mousePos.y());
 
-    auto matchedNotes = midiIntervals.findOverlappingIntervals({mouseTime, mouseTime}, true);
+    const auto matchedNotes = midiIntervals.findOverlappingIntervals({mouseTime, mouseTime}, true);
     if (matchedNotes.empty())
         return false;
 
     for (auto &i : matchedNotes) {
-        double pitch = i.value.pitch + (std::isnan(i.value.cents) ? 0 : i.value.cents / 100);
+        const double pitch = i.value.pitch + (std::isnan(i.value.cents) ? 0 : i.value.cents / 100);
         if (mousePitch >= pitch - 0.5 && mousePitch <= pitch + 0.5) {
             if (returnNote)
                 *returnNote = i;
@@ -429,19 +427,18 @@ bool F0Widget::mouseOnNote(const QPoint &mousePos, MiniNoteInterval *returnNote)
     return false;
 }
 
-double F0Widget::pitchOnWidgetY(int y) const {
-    auto h = height() - TimelineHeight;
+double F0Widget::pitchOnWidgetY(const int y) const {
+    const auto h = height() - TimelineHeight;
     return centerPitch + h / 2 / semitoneHeight - (y - TimelineHeight) / semitoneHeight;
 }
 
-double F0Widget::timeOnWidgetX(int x) const {
-    auto w = width() - KeyWidth - ScrollBarWidth;
+double F0Widget::timeOnWidgetX(const int x) const {
+    const auto w = width() - KeyWidth - ScrollBarWidth;
     return centerTime - w / 2 / secondWidth + (x - KeyWidth) / secondWidth;
 }
 
-void F0Widget::setNoteContextMenuEntriesEnabled() {
+void F0Widget::setNoteContextMenuEntriesEnabled() const {
     auto noteInterval = contextMenuNoteInterval;
-    // auto leftIntervals = midiIntervals.findOverlappingIntervals({noteInterval.low - 0.1, noteInterval.low}, false);
     auto rightIntervals = midiIntervals.findOverlappingIntervals({noteInterval.high, noteInterval.high + 0.1}, false);
 
     // Only slurs can be merged to left
@@ -450,7 +447,7 @@ void F0Widget::setNoteContextMenuEntriesEnabled() {
 
 void F0Widget::splitNoteUnderMouse() {
     MiniNoteInterval noteInterval{-1, -1};
-    auto cursorPos = mapFromGlobal(QCursor::pos());
+    const auto cursorPos = mapFromGlobal(QCursor::pos());
 
     if (mouseOnNote(cursorPos, &noteInterval) && !noteInterval.value.isRest) {
         auto time = timeOnWidgetX(cursorPos.x());
@@ -477,16 +474,16 @@ void F0Widget::splitNoteUnderMouse() {
     }
 }
 
-void F0Widget::shiftDraggedNoteByPitch(double pitchDelta) {
+void F0Widget::shiftDraggedNoteByPitch(const double pitchDelta) {
     auto intervals =
         midiIntervals.findInnerIntervals({std::get<0>(draggingNoteInterval), std::get<1>(draggingNoteInterval)});
     if (intervals.empty())
         return;
 
     auto &note = intervals[0].value;
-    double addedCents = draggingNoteInCents ? (std::isnan(note.cents) ? 0 : note.cents) : 0;
-    double semitoneDelta, newCents;
-    newCents = 100 * ::modf(pitchDelta + 0.01 * addedCents, &semitoneDelta);
+    const double addedCents = draggingNoteInCents ? (std::isnan(note.cents) ? 0 : note.cents) : 0;
+    double semitoneDelta;
+    const double newCents = 100 * modf(pitchDelta + 0.01 * addedCents, &semitoneDelta);
 
     note.cents = newCents;
     note.pitch += semitoneDelta;
@@ -495,7 +492,7 @@ void F0Widget::shiftDraggedNoteByPitch(double pitchDelta) {
     midiIntervals.insert(intervals[0]);
 }
 
-void F0Widget::setDraggedNotePitch(int pitch) {
+void F0Widget::setDraggedNotePitch(const int pitch) {
     auto intervals =
         midiIntervals.findInnerIntervals({std::get<0>(draggingNoteInterval), std::get<1>(draggingNoteInterval)});
     if (intervals.empty())
@@ -509,7 +506,7 @@ void F0Widget::setDraggedNotePitch(int pitch) {
     midiIntervals.insert(intervals[0]);
 }
 
-void F0Widget::setDraggedNoteGlide(GlideStyle style) {
+void F0Widget::setDraggedNoteGlide(const GlideStyle style) {
     auto intervals =
         midiIntervals.findInnerIntervals({std::get<0>(draggingNoteInterval), std::get<1>(draggingNoteInterval)});
     if (intervals.empty())
@@ -522,9 +519,9 @@ void F0Widget::setDraggedNoteGlide(GlideStyle style) {
     midiIntervals.insert(intervals[0]);
 }
 
-void F0Widget::modeChanged(bool checked) {
+void F0Widget::modeChanged() {
     // Fuck this what the hell is this bloody cast chain
-    selectedDragMode = ((decltype(Note)) ((QAction *) sender())->data().toInt());
+    selectedDragMode = static_cast<decltype(Note)>(static_cast<QAction *>(sender())->data().toInt());
 }
 
 void F0Widget::convertAllRestsToNormal() {
@@ -538,28 +535,28 @@ void F0Widget::convertAllRestsToNormal() {
     update();
 }
 
-void F0Widget::setMenuFromCurrentNote() {
-    auto note = contextMenuNoteInterval.value;
-    noteMenuSetGlideType->setEnabled(!note.isRest);
-    if (note.isRest) {
+void F0Widget::setMenuFromCurrentNote() const {
+    auto [duration, pitch, cents, text, phonemes, isSlur, isRest, glide] = contextMenuNoteInterval.value;
+    noteMenuSetGlideType->setEnabled(!isRest);
+    if (isRest) {
         noteMenuSetGlideNone->setChecked(true);
     } else {
-        if (note.glide == GlideStyle::None) {
+        if (glide == GlideStyle::None) {
             noteMenuSetGlideNone->setChecked(true);
-        } else if (note.glide == GlideStyle::Up) {
+        } else if (glide == GlideStyle::Up) {
             noteMenuSetGlideUp->setChecked(true);
-        } else if (note.glide == GlideStyle::Down) {
+        } else if (glide == GlideStyle::Down) {
             noteMenuSetGlideDown->setChecked(true);
         }
     }
 }
 
-void F0Widget::mergeCurrentSlurToLeftNode(bool checked) {
+void F0Widget::mergeCurrentSlurToLeftNode(const bool checked) {
     Q_UNUSED(checked);
 
     auto noteInterval = contextMenuNoteInterval;
 
-    auto intervals = midiIntervals.findOverlappingIntervals({noteInterval.low - 0.1, noteInterval.low}, false);
+    const auto intervals = midiIntervals.findOverlappingIntervals({noteInterval.low - 0.1, noteInterval.low}, false);
     if (intervals.empty())
         return;
     auto leftNode = intervals.back();
@@ -573,7 +570,7 @@ void F0Widget::mergeCurrentSlurToLeftNode(bool checked) {
 
     midiIntervals.insert(leftNode);
     update();
-};
+}
 
 void F0Widget::toggleCurrentNoteRest() {
     auto noteInterval = contextMenuNoteInterval;
@@ -584,7 +581,7 @@ void F0Widget::toggleCurrentNoteRest() {
     update();
 }
 
-void F0Widget::setCurrentNoteGlideType(QAction *action) {
+void F0Widget::setCurrentNoteGlideType(const QAction *action) {
     GlideStyle style;
     if (action == this->noteMenuSetGlideUp) {
         style = GlideStyle::Up;
@@ -611,8 +608,8 @@ void F0Widget::paintEvent(QPaintEvent *event) {
 
         // Convenience references
         auto w = width(), h = height();
-        const Qt::GlobalColor keyColor[] = {Qt::white, Qt::black, Qt::white, Qt::black, Qt::white, Qt::white,
-                                            Qt::black, Qt::white, Qt::black, Qt::white, Qt::black, Qt::white};
+        constexpr Qt::GlobalColor keyColor[] = {Qt::white, Qt::black, Qt::white, Qt::black, Qt::white, Qt::white,
+                                                Qt::black, Qt::white, Qt::black, Qt::white, Qt::black, Qt::white};
 
         // Print centered red error string if the error flag is set
         if (hasError) {
@@ -634,9 +631,9 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         painter.setClipRect(0, 0, w, h);
 
         painter.setPen(Qt::black);
-        double keyReferenceY = h / 2 - (1 - ::fmod(centerPitch, 1)) * semitoneHeight; // Top of center pitch's key
-        int lowestPitch = ::floor(centerPitch) - ::ceil((h - keyReferenceY) / semitoneHeight);
-        double lowestPitchY = keyReferenceY + (int(centerPitch - lowestPitch) + 0.5) * semitoneHeight;
+        double keyReferenceY = h / 2 - (1 - fmod(centerPitch, 1)) * semitoneHeight; // Top of center pitch's key
+        int lowestPitch = floor(centerPitch) - ceil((h - keyReferenceY) / semitoneHeight);
+        double lowestPitchY = keyReferenceY + (static_cast<int>(centerPitch - lowestPitch) + 0.5) * semitoneHeight;
 
         // Grid
         painter.setPen(QColor(80, 80, 80));
@@ -658,7 +655,6 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         if (!leftBoundaryIntervals.empty() && !leftBoundaryIntervals.front().value.phonemes.empty())
             deltaLeftTime = leftBoundaryIntervals.front().value.phonemes.back().duration * secondWidth;
         for (auto &i : midiIntervals.findOverlappingIntervals({leftTime - deltaLeftTime, rightTime}, false)) {
-            QString noteDescText;
 
             if (i.value.pitch == 0)
                 continue; // Skip rests (pitch 0)
@@ -670,6 +666,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
             if (rec.bottom() < 0 || rec.top() > h)
                 continue;
             if (!i.value.isRest) {
+                QString noteDescText;
                 painter.setPen(Qt::black);
                 painter.fillRect(rec, NoteColors[i.value.isSlur]);
                 painter.drawRect(rec);
@@ -712,9 +709,9 @@ void F0Widget::paintEvent(QPaintEvent *event) {
             // rec.adjust(NotePadding, NotePadding, -NotePadding, -NotePadding);
             // painter.drawText(rec, Qt::AlignVCenter | Qt::AlignLeft, i.value.text);
             if (showPhonemeTexts) {
-                for (auto &ph : i.value.phonemes) {
-                    auto phRec = QRectF((ph.begin - leftTime) * secondWidth, rec.y() + semitoneHeight,
-                                        ph.duration * secondWidth, lh + 3);
+                for (auto &[ph, begin, duration] : i.value.phonemes) {
+                    auto phRec = QRectF((begin - leftTime) * secondWidth, rec.y() + semitoneHeight,
+                                        duration * secondWidth, lh + 3);
                     auto pen = painter.pen();
                     pen.setStyle(Qt::SolidLine);
                     pen.setColor(QColor(200, 200, 200, 255));
@@ -729,7 +726,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                     painter.setBrush(brush);
                     painter.drawRect(phRec);
                     painter.setBrush(Qt::NoBrush);
-                    phonemeTexts.append({phRec.topLeft() + QPointF(NotePadding, lh - 3), ph.ph});
+                    phonemeTexts.append({phRec.topLeft() + QPointF(NotePadding, lh - 3), ph});
                 }
             }
         }
@@ -760,7 +757,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                         painter.drawRect(rec);
                         painter.drawText(rec.topLeft() + QPointF(0, -3), PitchToNotePlusCentsString(dragPitch));
                     } else {
-                        auto dragPitch = ::floor(mousePitch + 0.5); // Key center pitch -> key bottom pitch
+                        auto dragPitch = floor(mousePitch + 0.5); // Key center pitch -> key bottom pitch
                         auto rec = QRectF(noteLeft, lowestPitchY - (dragPitch - lowestPitch) * semitoneHeight,
                                           noteRight - noteLeft, semitoneHeight);
                         painter.fillRect(rec, QColor(255, 255, 255, 60));
@@ -812,8 +809,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
 
             auto visibleF0 = refF0IndexRange(leftTime, rightTime);
             QPainterPath path;
-            double f0X = (std::get<0>(visibleF0) - leftTime / f0Timestep) * f0Timestep * secondWidth,
-                   f0Ybase = lowestPitchY + lowestPitch * semitoneHeight;
+            double f0X = (std::get<0>(visibleF0) - leftTime / f0Timestep) * f0Timestep * secondWidth;
             path.moveTo(f0X, lowestPitchY - (f0Values[std::get<0>(visibleF0)] - lowestPitch) * semitoneHeight);
             for (int i = std::get<0>(visibleF0) + 1; i < std::get<1>(visibleF0); i++) {
                 f0X += f0Timestep * secondWidth;
@@ -859,7 +855,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
                                  .arg(mousePos.y()));
         }
 
-        // Playhead (playheadPos)
+        // PlayHead (playHeadPos)
         painter.setPen(QColor(255, 180, 0));
         painter.drawLine((playheadPos - leftTime) * secondWidth + KeyWidth, TimelineHeight,
                          (playheadPos - leftTime) * secondWidth + KeyWidth, h);
@@ -888,7 +884,7 @@ void F0Widget::paintEvent(QPaintEvent *event) {
         painter.translate(0, TimelineHeight);
         h -= TimelineHeight;
         painter.setClipRect(0, 0, w, h);
-        auto prevfont = painter.font();
+        auto prevFont = painter.font();
         do {
             lowestPitch++;
             lowestPitchY -= semitoneHeight;
@@ -901,15 +897,15 @@ void F0Widget::paintEvent(QPaintEvent *event) {
             painter.fillRect(rec, color);
             painter.setPen(color == Qt::white ? Qt::black : Qt::white);
             if (lowestPitch % 12 == 0) {
-                auto font = prevfont;
+                auto font = prevFont;
                 font.setBold(true);
                 painter.setFont(font);
             } else {
-                painter.setFont(prevfont);
+                painter.setFont(prevFont);
             }
             painter.drawText(rec, Qt::AlignRight | Qt::AlignVCenter, MidiNoteToNoteName(lowestPitch));
         } while (lowestPitchY > 0 && lowestPitch <= 108);
-        painter.setFont(prevfont);
+        painter.setFont(prevFont);
 
         painter.translate(0, -TimelineHeight);
         painter.setClipRect(0, 0, w, height());
@@ -922,8 +918,9 @@ void F0Widget::paintEvent(QPaintEvent *event) {
 }
 
 void F0Widget::resizeEvent(QResizeEvent *event) {
+    const auto w = width();
     // Update the scrollbars
-    auto w = width(), h = height();
+    const auto h = height();
     horizontalScrollBar->setGeometry(0, 0, w, HorizontalScrollHeight);
     horizontalScrollBar->setPageStep(w / secondWidth * 1000);
     verticalScrollBar->setGeometry(w - ScrollBarWidth, TimelineHeight, ScrollBarWidth, h - TimelineHeight);
@@ -933,30 +930,31 @@ void F0Widget::resizeEvent(QResizeEvent *event) {
 }
 
 void F0Widget::wheelEvent(QWheelEvent *event) {
-    constexpr double ScrollFactorX = 10, ScrollFactorY = 2, WheelFactor = 0.1;
     auto xDelta = event->angleDelta().x(), yDelta = event->angleDelta().y();
-    bool isMouseWheel = (xDelta == 0 && yDelta % 120 == 0);
 
-    if (isMouseWheel) {
+    if (xDelta == 0 && yDelta % 120 == 0) {
+        constexpr double WheelFactor = 0.1;
         yDelta *= WheelFactor;
         xDelta = yDelta;
     }
 
     if (event->modifiers() & Qt::ControlModifier && !(event->modifiers() & Qt::ShiftModifier)) {
         // Zoom vertical
-        double level = yDelta / 12.0;
+        const double level = yDelta / 12.0;
         semitoneHeight = std::pow(1.1, level) * semitoneHeight;
         update();
     } else if (event->modifiers() & Qt::ControlModifier && event->modifiers() & Qt::ShiftModifier) {
         // Zoom time
-        double level = xDelta / 12.0;
+        const double level = xDelta / 12.0;
         secondWidth = std::pow(1.1, level) * secondWidth;
         update();
     } else {
         if (event->modifiers() & Qt::ShiftModifier) {
-            setTimeAxisCenterAndSyncScrollbar(centerTime - (xDelta * ScrollFactorX) / secondWidth);
+            constexpr double ScrollFactorX = 10;
+            setTimeAxisCenterAndSyncScrollbar(centerTime - xDelta * ScrollFactorX / secondWidth);
         } else {
-            setF0CenterAndSyncScrollbar(centerPitch + (yDelta * ScrollFactorY) / semitoneHeight);
+            constexpr double ScrollFactorY = 2;
+            setF0CenterAndSyncScrollbar(centerPitch + yDelta * ScrollFactorY / semitoneHeight);
         }
     }
 
@@ -1012,8 +1010,8 @@ void F0Widget::mousePressEvent(QMouseEvent *event) {
                 break;
         }
 
-        // This may be less useful for glide labeling but anyways
-        draggingNoteStartPitch = pitchOnWidgetY(event->y());
+        // This may be less useful for glide labeling but anyway
+        draggingNoteStartPitch = pitchOnWidgetY(event->position().y());
         draggingNoteInterval = {noteInterval.low, noteInterval.high};
         draggingNoteBeginCents = std::isnan(noteInterval.value.cents) ? 0 : noteInterval.value.cents;
         draggingNoteBeginPitch = noteInterval.value.pitch;
@@ -1027,16 +1025,17 @@ void F0Widget::mouseReleaseEvent(QMouseEvent *event) {
         switch (draggingMode) {
             case Note: {
                 if (draggingNoteInCents) {
-                    shiftDraggedNoteByPitch(pitchOnWidgetY(event->y()) - draggingNoteStartPitch);
+                    shiftDraggedNoteByPitch(pitchOnWidgetY(event->position().y()) - draggingNoteStartPitch);
                 } else {
-                    setDraggedNotePitch(pitchOnWidgetY(event->y()) + 0.5); // Key center pitch -> key bottom pitch
+                    setDraggedNotePitch(pitchOnWidgetY(event->position().y()) +
+                                        0.5); // Key center pitch -> key bottom pitch
                 }
                 setCursor(Qt::ArrowCursor);
                 break;
             }
 
             case Glide: {
-                int deltaPitch = std::round(pitchOnWidgetY(event->y())) - draggingNoteStartPitch;
+                const int deltaPitch = std::round(pitchOnWidgetY(event->position().y())) - draggingNoteStartPitch;
                 if (deltaPitch == 0)
                     setDraggedNoteGlide(GlideStyle::None);
                 else if (deltaPitch > 0)
@@ -1072,22 +1071,22 @@ void F0Widget::contextMenuEvent(QContextMenuEvent *event) {
     }
 }
 
-void F0Widget::setTimeAxisCenterAndSyncScrollbar(double time) {
+void F0Widget::setTimeAxisCenterAndSyncScrollbar(const double time) {
     centerTime = std::clamp(time, std::get<0>(timeRange), std::get<1>(timeRange));
     horizontalScrollBar->setValue(centerTime * 1000);
 }
 
-void F0Widget::setF0CenterAndSyncScrollbar(double pitch) {
+auto F0Widget::setF0CenterAndSyncScrollbar(const double pitch) -> void {
     centerPitch = clampPitchToF0Bounds ? std::clamp(pitch, std::get<0>(pitchRange), std::get<1>(pitchRange)) : pitch;
     verticalScrollBar->setValue(centerPitch * 100);
 }
 
-void F0Widget::onHorizontalScroll(int value) {
+void F0Widget::onHorizontalScroll(const int value) {
     centerTime = value / 1000.0;
     update();
 }
 
-void F0Widget::onVerticalScroll(int value) {
+void F0Widget::onVerticalScroll(const int value) {
     centerPitch = value / 100.0;
     update();
 }

@@ -30,11 +30,11 @@ public:
         QString note_slur;
         QString note_glide;
     };
-    ReturnedDsString getSavedDsStrings();
-    bool empty();
+    ReturnedDsString getSavedDsStrings() const;
+    bool empty() const;
 
 public slots:
-    void setPlayheadPos(double pos);
+    void setPlayHeadPos(double pos);
 
 signals:
     void requestReloadSentence();
@@ -61,7 +61,7 @@ protected:
     // Convenience methods
     double pitchOnWidgetY(int y) const;
     double timeOnWidgetX(int x) const;
-    void setNoteContextMenuEntriesEnabled();
+    void setNoteContextMenuEntriesEnabled() const;
 
     // Data manipulation methods
     void splitNoteUnderMouse();
@@ -71,14 +71,14 @@ protected:
 
 protected slots:
     // Data manip (global)
-    void modeChanged(bool checked);
+    void modeChanged();
     void convertAllRestsToNormal();
 
     // (Note)
-    void setMenuFromCurrentNote();
+    void setMenuFromCurrentNote() const;
     void mergeCurrentSlurToLeftNode(bool checked);
     void toggleCurrentNoteRest();
-    void setCurrentNoteGlideType(QAction *action);
+    void setCurrentNoteGlideType(const QAction *action);
 
 protected:
     // Events

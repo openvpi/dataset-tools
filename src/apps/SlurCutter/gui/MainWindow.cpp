@@ -24,9 +24,9 @@
 // https://iconduck.com/icons
 
 static QString audioFileToDsFile(const QString &filename) {
-    QFileInfo info(filename);
-    QString suffix = info.suffix().toLower();
-    QString name = info.fileName();
+    const QFileInfo info(filename);
+    const QString suffix = info.suffix().toLower();
+    const QString name = info.fileName();
     return info.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) +
            (suffix != "wav" ? "_" + suffix : "") + ".ds";
 }
@@ -134,7 +134,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(sentenceWidget, &QListWidget::currentRowChanged, this, &MainWindow::_q_sentenceChanged);
     connect(f0Widget, &F0Widget::requestReloadSentence, this, &MainWindow::reloadDsSentenceRequested);
 
-    connect(playerWidget, &PlayWidget::playheadChanged, f0Widget, &F0Widget::setPlayheadPos);
+    connect(playerWidget, &PlayWidget::playheadChanged, f0Widget, &F0Widget::setPlayHeadPos);
 
     reloadWindowTitle();
     resize(1280, 720);
@@ -175,13 +175,12 @@ void MainWindow::applyConfig() {
     reloadWindowTitle();
 }
 
-void MainWindow::openDirectory(const QString &dirname) {
+void MainWindow::openDirectory(const QString &dirname) const {
     fsModel->setRootPath(dirname);
     treeView->setRootIndex(fsModel->index(dirname));
 }
 
 void MainWindow::openFile(const QString &filename) {
-    QString content;
 
     f0Widget->clear();
     sentenceWidget->clear();
@@ -189,10 +188,10 @@ void MainWindow::openFile(const QString &filename) {
 
     playerWidget->openFile(filename);
 
-    QString labFile = audioFileToDsFile(filename);
+    const QString labFile = audioFileToDsFile(filename);
     QFile file(labFile);
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        content = QString::fromUtf8(file.readAll());
+        const QString content = QString::fromUtf8(file.readAll());
         loadDsContent(content);
     } else {
         f0Widget->setErrorStatusText("No DS file can be opened");
@@ -206,35 +205,34 @@ bool MainWindow::saveFile(const QString &filename) {
     foreach (auto &i, dsContent) {
         docArr.append(i);
     }
-    QJsonDocument doc(docArr);
-    auto labFile = audioFileToDsFile(filename);
+    const QJsonDocument doc(docArr);
+    const auto labFile = audioFileToDsFile(filename);
     QFile file(labFile);
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         file.write(doc.toJson(QJsonDocument::Indented));
         return true;
-    } else {
-        QMessageBox::critical(this, "Save error",
-                              QString("Cannot open %1 to write!\n\n"
-                                      "File switch was not performed. If you were to address the save problem,\n"
-                                      "later you can switch file again and saving will be attempted again.")
-                                  .arg(file.fileName()));
-        return false;
     }
+    QMessageBox::critical(this, "Save error",
+                          QString("Cannot open %1 to write!\n\n"
+                                  "File switch was not performed. If you were to address the save problem,\n"
+                                  "later you can switch file again and saving will be attempted again.")
+                              .arg(file.fileName()));
+    return false;
 }
 
 void MainWindow::pullEditedMidi() {
     if (currentRow < 0 || f0Widget->empty())
         return;
     auto &currentSentence = dsContent[currentRow];
-    auto editedSentence = f0Widget->getSavedDsStrings();
+    const auto [note_seq, note_dur, note_slur, note_glide] = f0Widget->getSavedDsStrings();
 
-    currentSentence["note_seq"] = editedSentence.note_seq;
-    currentSentence["note_slur"] = editedSentence.note_slur;
-    currentSentence["note_dur"] = editedSentence.note_dur;
-    currentSentence["note_glide"] = editedSentence.note_glide;
+    currentSentence["note_seq"] = note_seq;
+    currentSentence["note_slur"] = note_slur;
+    currentSentence["note_dur"] = note_dur;
+    currentSentence["note_glide"] = note_glide;
 }
 
-void MainWindow::switchFile(bool next) {
+void MainWindow::switchFile(const bool next) {
     fileSwitchDirection = next;
     if (next) {
         QKeyEvent e(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
@@ -245,7 +243,7 @@ void MainWindow::switchFile(bool next) {
     }
 }
 
-void MainWindow::switchSentence(bool next) {
+void MainWindow::switchSentence(const bool next) {
     if (next) {
         if (currentRow == sentenceWidget->count() - 1) {
             switchFile(next);
@@ -266,7 +264,7 @@ void MainWindow::switchSentence(bool next) {
 void MainWindow::loadDsContent(const QString &content) {
     // Parse as JSON array
     QJsonParseError err;
-    QJsonDocument doc = QJsonDocument::fromJson(content.toUtf8(), &err);
+    const QJsonDocument doc = QJsonDocument::fromJson(content.toUtf8(), &err);
 
     if (err.error != QJsonParseError::NoError || !doc.isArray()) {
         f0Widget->setErrorStatusText(QString("Failed to parse JSON: %1").arg(err.errorString()));
@@ -314,7 +312,7 @@ void MainWindow::loadDsContent(const QString &content) {
     }
 
     // Set the initial sentence of the file
-    sentenceWidget->setCurrentRow(fileSwitchDirection ? 0 : (dsContent.size() - 1));
+    sentenceWidget->setCurrentRow(fileSwitchDirection ? 0 : dsContent.size() - 1);
     fileSwitchDirection = true; // Reset the direction state
 }
 
@@ -330,7 +328,7 @@ void MainWindow::reloadWindowTitle() {
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
-    auto e = static_cast<QDragEnterEvent *>(event);
+    const auto e = event;
     const QMimeData *mime = e->mimeData();
     if (mime->hasUrls()) {
         auto urls = mime->urls();
@@ -342,7 +340,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
         }
         bool ok = false;
         if (filenames.size() == 1) {
-            QString filename = filenames.front();
+            const QString filename = filenames.front();
             if (QFile::exists(filename)) {
                 ok = true;
             }
@@ -354,7 +352,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void MainWindow::dropEvent(QDropEvent *event) {
-    auto e = static_cast<QDropEvent *>(event);
+    const auto e = event;
     const QMimeData *mime = e->mimeData();
     if (mime->hasUrls()) {
         auto urls = mime->urls();
@@ -366,7 +364,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
         }
         bool ok = false;
         if (filenames.size() == 1) {
-            QString filename = filenames.front();
+            const QString filename = filenames.front();
             if (QFile::exists(filename)) {
                 ok = true;
                 openDirectory(filename);
@@ -406,7 +404,7 @@ void MainWindow::_q_fileMenuTriggered(const QAction *action) {
     if (action == browseAction) {
         playerWidget->setPlaying(false);
 
-        QString path = QFileDialog::getExistingDirectory(this, "Open Folder", QFileInfo(dirname).absolutePath());
+        const QString path = QFileDialog::getExistingDirectory(this, "Open Folder", QFileInfo(dirname).absolutePath());
         if (path.isEmpty()) {
             return;
         }
@@ -417,7 +415,7 @@ void MainWindow::_q_fileMenuTriggered(const QAction *action) {
     reloadWindowTitle();
 }
 
-void MainWindow::_q_editMenuTriggered(QAction *action) {
+void MainWindow::_q_editMenuTriggered(const QAction *action) {
     if (action == prevAction) {
         switchSentence(false);
     } else if (action == nextAction) {
@@ -425,7 +423,7 @@ void MainWindow::_q_editMenuTriggered(QAction *action) {
     }
 }
 
-void MainWindow::_q_playMenuTriggered(QAction *action) {
+void MainWindow::_q_playMenuTriggered(const QAction *action) const {
     if (action == playAction) {
         playerWidget->setPlaying(!playerWidget->isPlaying());
     }
@@ -440,9 +438,9 @@ void MainWindow::_q_helpMenuTriggered(const QAction *action) {
     }
 }
 
-void MainWindow::_q_treeCurrentChanged(const QModelIndex &current, const QModelIndex &previous) {
+void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
     pullEditedMidi();
-    QFileInfo info = fsModel->fileInfo(current);
+    const QFileInfo info = fsModel->fileInfo(current);
     if (info.isFile()) {
         if (QFile::exists(lastFile)) {
             if (!saveFile(lastFile)) {
@@ -455,14 +453,15 @@ void MainWindow::_q_treeCurrentChanged(const QModelIndex &current, const QModelI
 }
 
 
-void MainWindow::_q_sentenceChanged(int currentRow) {
+void MainWindow::_q_sentenceChanged(const int currentRow) {
     if (currentRow < 0)
         return;
     pullEditedMidi();
     this->currentRow = currentRow;
     f0Widget->setDsSentenceContent(dsContent[currentRow]);
-    auto item = sentenceWidget->item(currentRow);
-    double offset = item->data(Qt::UserRole + 1).toDouble(), dur = item->data(Qt::UserRole + 2).toDouble();
+    const auto item = sentenceWidget->item(currentRow);
+    const double offset = item->data(Qt::UserRole + 1).toDouble();
+    const double dur = item->data(Qt::UserRole + 2).toDouble();
     playerWidget->setRange(offset, offset + dur);
-    f0Widget->setPlayheadPos(0.0);
+    f0Widget->setPlayHeadPos(0.0);
 }
