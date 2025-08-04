@@ -12,59 +12,61 @@
 #include "Api/IAudioDecoder.h"
 #include "Api/IAudioPlayback.h"
 
-class PlayWidget : public QWidget {
-    Q_OBJECT
-public:
-    explicit PlayWidget(QWidget *parent = nullptr);
-    ~PlayWidget() override;
 
-    void openFile(const QString &filename);
+namespace Minlabel {
+    class PlayWidget : public QWidget {
+        Q_OBJECT
+    public:
+        explicit PlayWidget(QWidget *parent = nullptr);
+        ~PlayWidget() override;
 
-    bool isPlaying() const;
-    void setPlaying(bool playing);
+        void openFile(const QString &filename);
 
-protected:
-    QsApi::IAudioDecoder *decoder{};
-    QsApi::IAudioPlayback *playback{};
+        bool isPlaying() const;
+        void setPlaying(bool playing);
 
-    QMenu *deviceMenu;
-    QActionGroup *deviceActionGroup;
+    protected:
+        QsApi::IAudioDecoder *decoder{};
+        QsApi::IAudioPlayback *playback{};
 
-    int notifyTimerId;
-    bool playing;
-    QString filename;
+        QMenu *deviceMenu;
+        QActionGroup *deviceActionGroup;
 
-    QLabel *fileLabel;
-    QSlider *slider;
-    QLabel *timeLabel;
+        int notifyTimerId;
+        bool playing;
+        QString filename;
 
-    QPushButton *playButton;
-    QPushButton *stopButton;
-    QPushButton *devButton;
+        QLabel *fileLabel;
+        QSlider *slider;
+        QLabel *timeLabel;
 
-    QVBoxLayout *mainLayout;
-    QHBoxLayout *buttonsLayout;
+        QPushButton *playButton;
+        QPushButton *stopButton;
+        QPushButton *devButton;
 
-    void timerEvent(QTimerEvent *event) override;
+        QVBoxLayout *mainLayout;
+        QHBoxLayout *buttonsLayout;
 
-private:
-    void initPlugins();
-    void uninitPlugins() const;
+        void timerEvent(QTimerEvent *event) override;
 
-    void reloadDevices() const;
-    void reloadButtonStatus() const;
-    void reloadSliderStatus() const;
-    void reloadDeviceActionStatus() const;
+    private:
+        void initPlugins();
+        void uninitPlugins() const;
 
-    void _q_playButtonClicked();
-    void _q_stopButtonClicked();
-    void _q_devButtonClicked() const;
-    void _q_sliderReleased();
-    void _q_deviceActionTriggered(const QAction *action);
-    void _q_playStateChanged();
-    void _q_audioDeviceChanged() const;
-    void _q_audioDeviceAdded() const;
-    void _q_audioDeviceRemoved() const;
-};
+        void reloadDevices() const;
+        void reloadButtonStatus() const;
+        void reloadSliderStatus() const;
+        void reloadDeviceActionStatus() const;
 
+        void _q_playButtonClicked();
+        void _q_stopButtonClicked();
+        void _q_devButtonClicked() const;
+        void _q_sliderReleased();
+        void _q_deviceActionTriggered(const QAction *action);
+        void _q_playStateChanged();
+        void _q_audioDeviceChanged() const;
+        void _q_audioDeviceAdded() const;
+        void _q_audioDeviceRemoved() const;
+    };
+}
 #endif // PLAYWIDGET_H

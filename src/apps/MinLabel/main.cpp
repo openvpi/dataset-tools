@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/dict");
 #endif
 
-    MainWindow w;
+    Minlabel::MainWindow w;
     w.show();
 
     return QApplication::exec();

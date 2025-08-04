@@ -8,24 +8,24 @@
 
 #include "Common.h"
 
-class ExportDialog final : public QDialog {
-    Q_OBJECT
-public:
-    explicit ExportDialog(QWidget *parent = nullptr);
-    ~ExportDialog() override;
+namespace Minlabel {
+    class ExportDialog final : public QDialog {
+        Q_OBJECT
+    public:
+        explicit ExportDialog(QWidget *parent = nullptr);
+        ~ExportDialog() override;
 
-    ExportInfo exportInfo;
+        ExportInfo exportInfo;
 
-    QLineEdit *outputDirEdit;
-    QPushButton *outputDirButton;
+        QLineEdit *outputDirEdit;
+        QPushButton *outputDirButton;
 
-    QLineEdit *folderNameEdit;
-    QCheckBox *convertFilename{};
-    QCheckBox *expAudio;
-    QCheckBox *labFile;
-    QCheckBox *rawText;
-    QCheckBox *removeTone;
-};
-
-
+        QLineEdit *folderNameEdit;
+        QCheckBox *convertFilename{};
+        QCheckBox *expAudio;
+        QCheckBox *labFile;
+        QCheckBox *rawText;
+        QCheckBox *removeTone;
+    };
+}
 #endif // DATASET_TOOLS_EXPORTDIALOG_H

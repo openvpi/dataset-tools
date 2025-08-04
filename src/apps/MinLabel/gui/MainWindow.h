@@ -10,72 +10,73 @@
 #include "PlayWidget.h"
 #include "TextWidget.h"
 
-class MainWindow final : public QMainWindow {
-    Q_OBJECT
-public:
-    explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
+namespace Minlabel {
+    class MainWindow final : public QMainWindow {
+        Q_OBJECT
+    public:
+        explicit MainWindow(QWidget *parent = nullptr);
+        ~MainWindow() override;
 
-protected:
-    QMenu *fileMenu;
-    QAction *browseAction;
-    QAction *covertAction;
-    QAction *exportAction;
+    protected:
+        QMenu *fileMenu;
+        QAction *browseAction;
+        QAction *covertAction;
+        QAction *exportAction;
 
-    QMenu *editMenu;
-    QAction *nextAction;
-    QAction *prevAction;
+        QMenu *editMenu;
+        QAction *nextAction;
+        QAction *prevAction;
 
-    QMenu *playMenu;
-    QAction *playAction;
+        QMenu *playMenu;
+        QAction *playAction;
 
-    QMenu *helpMenu;
-    QAction *aboutAppAction;
-    QAction *aboutQtAction;
+        QMenu *helpMenu;
+        QAction *aboutAppAction;
+        QAction *aboutQtAction;
 
-    bool playing;
-    QString dirname;
+        bool playing;
+        QString dirname;
 
-    PlayWidget *playerWidget;
-    TextWidget *textWidget;
+        PlayWidget *playerWidget;
+        TextWidget *textWidget;
 
-    QTreeView *treeView;
-    QFileSystemModel *fsModel;
+        QTreeView *treeView;
+        QFileSystemModel *fsModel;
 
-    QProgressBar *progressBar;
+        QProgressBar *progressBar;
 
-    QSplitter *mainSplitter;
+        QSplitter *mainSplitter;
 
-    QVBoxLayout *rightLayout;
-    QLabel *progressLabel;
-    QHBoxLayout *progressLayout;
-    QWidget *rightWidget;
+        QVBoxLayout *rightLayout;
+        QLabel *progressLabel;
+        QHBoxLayout *progressLayout;
+        QWidget *rightWidget;
 
-    QString lastFile;
+        QString lastFile;
 
-    QSettings *cfg{};
+        QSettings *cfg{};
 
-    void openDirectory(const QString &dirName) const;
-    void openFile(const QString &filename) const;
-    void saveFile(const QString &filename);
-    void labToJson(const QString &dirName);
-    void exportAudio(const ExportInfo &exportInfo);
+        void openDirectory(const QString &dirName) const;
+        void openFile(const QString &filename) const;
+        void saveFile(const QString &filename);
+        void labToJson(const QString &dirName);
+        void exportAudio(const ExportInfo &exportInfo);
 
-    void reloadWindowTitle();
+        void reloadWindowTitle();
 
-    void dragEnterEvent(QDragEnterEvent *event) override;
-    void dropEvent(QDropEvent *event) override;
-    void closeEvent(QCloseEvent *event) override;
+        void dragEnterEvent(QDragEnterEvent *event) override;
+        void dropEvent(QDropEvent *event) override;
+        void closeEvent(QCloseEvent *event) override;
 
-private:
-    void applyConfig();
+    private:
+        void applyConfig();
 
-    void _q_fileMenuTriggered(const QAction *action);
-    void _q_editMenuTriggered(const QAction *action) const;
-    void _q_playMenuTriggered(const QAction *action) const;
-    void _q_helpMenuTriggered(const QAction *action);
-    void _q_updateProgress() const;
-    void _q_treeCurrentChanged(const QModelIndex &current);
-};
-
+        void _q_fileMenuTriggered(const QAction *action);
+        void _q_editMenuTriggered(const QAction *action) const;
+        void _q_playMenuTriggered(const QAction *action) const;
+        void _q_helpMenuTriggered(const QAction *action);
+        void _q_updateProgress() const;
+        void _q_treeCurrentChanged(const QModelIndex &current);
+    };
+}
 #endif // MAINWINDOW_H
