@@ -8,89 +8,81 @@
 #include <QMenu>
 #include <QPluginLoader>
 #include <QPushButton>
-#include <QSet>
-#include <QSlider>
 #include <QTreeView>
 #include <chrono>
 
 #include "Api/IAudioDecoder.h"
 #include "Api/IAudioPlayback.h"
 
-#include "Api/interfaces/IAudioDecoderPlugin.h"
-#include "Api/interfaces/IAudioPlaybackPlugin.h"
+namespace SlurCutter {
+    class PlayWidget final : public QWidget {
+        Q_OBJECT
+    public:
+        explicit PlayWidget(QWidget *parent = nullptr);
+        ~PlayWidget() override;
 
-class PlayWidget : public QWidget {
-    Q_OBJECT
-public:
-    PlayWidget(QWidget *parent = nullptr);
-    ~PlayWidget();
+        void openFile(const QString &filename);
 
-    void openFile(const QString &filename);
+        bool isPlaying() const;
+        void setPlaying(bool playing);
 
-    bool isPlaying() const;
-    void setPlaying(bool playing);
+        void setRange(double start, double end);
 
-    void setRange(double start, double end);
+    signals:
+        void playheadChanged(double position);
 
-signals:
-    void playheadChanged(double position);
+    protected:
+        QsApi::IAudioDecoder *decoder;
+        QsApi::IAudioPlayback *playback;
 
-protected:
-    // QPluginLoader decoderLoader, playbackLoader;
+        QMenu *deviceMenu;
+        QActionGroup *deviceActionGroup;
 
-    // QsApi::IAudioDecoderPlugin *decoder_plugin;
-    // QsApi::IAudioPlaybackPlugin *playback_plugin;
-    QsApi::IAudioDecoder *decoder;
-    QsApi::IAudioPlayback *playback;
+        int notifyTimerId;
+        bool playing;
+        QString filename;
 
-    QMenu *deviceMenu;
-    QActionGroup *deviceActionGroup;
+        QLabel *fileLabel;
+        QSlider *slider;
+        QLabel *timeLabel;
 
-    int notifyTimerId;
-    bool playing;
-    QString filename;
+        QPushButton *playButton;
+        QPushButton *stopButton;
+        QPushButton *devButton;
 
-    QLabel *fileLabel;
-    QSlider *slider;
-    QLabel *timeLabel;
-
-    QPushButton *playButton;
-    QPushButton *stopButton;
-    QPushButton *devButton;
-
-    QVBoxLayout *mainLayout;
-    QHBoxLayout *buttonsLayout;
+        QVBoxLayout *mainLayout;
+        QHBoxLayout *buttonsLayout;
 
 
-    // Manually maintained time
-    uint64_t lastObtainedTimeMs = 0, pauseAtTime = 0;
-    std::chrono::time_point<std::chrono::steady_clock> lastObtainedTimePoint;
-    uint64_t estimatedTimeMs() const;
+        // Manually maintained time
+        uint64_t lastObtainedTimeMs = 0, pauseAtTime = 0;
+        std::chrono::time_point<std::chrono::steady_clock> lastObtainedTimePoint;
+        uint64_t estimatedTimeMs() const;
 
-    // Limited time range
-    double rangeBegin = 0.0, rangeEnd = 0.0;
+        // Limited time range
+        double rangeBegin = 0.0, rangeEnd = 0.0;
 
-    void timerEvent(QTimerEvent *event) override;
+        void timerEvent(QTimerEvent *event) override;
 
-private:
-    void initPlugins();
-    void uninitPlugins() const;
+    private:
+        void initPlugins();
+        void uninitPlugins() const;
 
-    void reloadDevices() const;
-    void reloadButtonStatus() const;
-    void reloadSliderStatus();
-    void reloadDeviceActionStatus() const;
-    void reloadFinePlayheadStatus(uint64_t timeMs = UINT64_MAX);
+        void reloadDevices() const;
+        void reloadButtonStatus() const;
+        void reloadSliderStatus();
+        void reloadDeviceActionStatus() const;
+        void reloadFinePlayheadStatus(uint64_t timeMs = UINT64_MAX);
 
-    void _q_playButtonClicked();
-    void _q_stopButtonClicked();
-    void _q_devButtonClicked() const;
-    void _q_sliderReleased();
-    void _q_deviceActionTriggered(const QAction *action);
-    void _q_playStateChanged();
-    void _q_audioDeviceChanged() const;
-    void _q_audioDeviceAdded() const;
-    void _q_audioDeviceRemoved() const;
-};
-
+        void _q_playButtonClicked();
+        void _q_stopButtonClicked();
+        void _q_devButtonClicked() const;
+        void _q_sliderReleased();
+        void _q_deviceActionTriggered(const QAction *action);
+        void _q_playStateChanged();
+        void _q_audioDeviceChanged() const;
+        void _q_audioDeviceAdded() const;
+        void _q_audioDeviceRemoved() const;
+    };
+}
 #endif // PLAYWIDGET_H

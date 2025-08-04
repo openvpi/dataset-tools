@@ -16,8 +16,6 @@ bool isUserRoot() {
 }
 
 int main(int argc, char *argv[]) {
-    // QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    // QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
 
     if (isUserRoot() && !a.arguments().contains("--allow-root")) {
@@ -26,7 +24,7 @@ int main(int argc, char *argv[]) {
                               "security problem and isn't recommended.")
                           .arg(qApp->applicationName(), "Administrator");
 #ifdef Q_OS_WINDOWS
-        MessageBoxW(0, msg.toStdWString().data(), title.toStdWString().data(),
+        MessageBoxW(nullptr, msg.toStdWString().data(), title.toStdWString().data(),
                     MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONWARNING);
 #elif defined(Q_OS_LINUX)
         fputs(qPrintable(msg), stdout);
@@ -42,14 +40,7 @@ int main(int argc, char *argv[]) {
     a.setFont(f);
 #endif
 
-    // Set library loading info
-    // #ifdef Q_OS_MAC
-    //     qApp->addLibraryPath(qApp->applicationDirPath() + "/../Frameworks/ChorusKit/plugins");
-    // #else
-    //     qApp->addLibraryPath(qApp->applicationDirPath() + "/../lib/ChorusKit/plugins");
-    // #endif
-
-    MainWindow w;
+    SlurCutter::MainWindow w;
     w.show();
 
     return a.exec();
