@@ -19,15 +19,15 @@ namespace HFA {
         try {
             HfaLogits hfaRes;
             if (!QFile(m_wavPath).exists()) {
-                fblMsg = "File does not exist: " + m_wavPath.toStdString();
+                fblMsg = "File does not exist: " + m_wavPath.toLocal8Bit().toStdString();
                 Q_EMIT this->oneFailed(m_filename, QString::fromStdString(fblMsg));
                 return;
             }
 
             WordList words;
-            if (m_hfa->recognize(m_wavPath.toStdString(), m_language, m_non_speech_ph, words, fblMsg)) {
+            if (m_hfa->recognize(m_wavPath.toLocal8Bit().toStdString(), m_language, m_non_speech_ph, words, fblMsg)) {
                 if (words.empty()) {
-                    fblMsg = "No words recognized in audio: " + m_wavPath.toStdString() + "-" + fblMsg;
+                    fblMsg = "No words recognized in audio: " + m_wavPath.toLocal8Bit().toStdString() + "-" + fblMsg;
                     Q_EMIT this->oneFailed(m_filename, QString::fromStdString(fblMsg));
                     return;
                 }
