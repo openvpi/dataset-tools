@@ -13,7 +13,7 @@ namespace LyricFA {
 
     void AsrThread::run() {
         std::string asrMsg;
-        const auto asrRes = m_asr->recognize(m_wavPath.toStdString(), asrMsg);
+        const auto asrRes = m_asr->recognize(m_wavPath.toLocal8Bit().toStdString(), asrMsg);
 
         if (!asrRes) {
             Q_EMIT this->oneFailed(m_filename, QString::fromStdString(asrMsg));
