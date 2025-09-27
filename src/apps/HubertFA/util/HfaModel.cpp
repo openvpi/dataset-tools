@@ -10,13 +10,9 @@ namespace HFA {
     static bool initDirectML(Ort::SessionOptions &options, int deviceIndex, std::string *errorMessage = nullptr);
     static bool initCUDA(Ort::SessionOptions &options, int deviceIndex, std::string *errorMessage = nullptr);
 
-    HfaModel::HfaModel(const std::filesystem::path &encoder_Path, const std::filesystem::path &predictor_Path,
-                       const ExecutionProvider provider, int device_id)
+    HfaModel::HfaModel(const std::filesystem::path &model_Path, const ExecutionProvider provider, const int device_id)
         : m_env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "HfaModel")), m_session_options(Ort::SessionOptions()),
-          m_encoder_session(nullptr), m_predictor_session(nullptr) {
-
-        m_input_name = "waveform";
-
+          m_model_session(nullptr) {
         m_session_options.SetInterOpNumThreads(4);
 
         // Choose execution provider based on the provided option
@@ -52,11 +48,9 @@ namespace HFA {
         // Create ONNX Runtime Session
         try {
 #ifdef _WIN32
-            m_encoder_session = new Ort::Session(m_env, encoder_Path.wstring().c_str(), m_session_options);
-            m_predictor_session = new Ort::Session(m_env, predictor_Path.wstring().c_str(), m_session_options);
+            m_model_session = new Ort::Session(m_env, model_Path.wstring().c_str(), m_session_options);
 #else
-            m_encoder_session = new Ort::Session(m_env, encoder_Path.c_str(), m_session_options);
-            m_predictor_session = new Ort::Session(m_env, predictor_Path.c_str(), m_session_options); // Fixed extra dot
+            m_model_session = new Ort::Session(m_env, model_Path.c_str(), m_session_options);
 #endif
         } catch (const Ort::Exception &e) {
             std::cout << "Failed to create session: " << e.what() << std::endl;
@@ -64,8 +58,7 @@ namespace HFA {
     }
 
     HfaModel::~HfaModel() {
-        delete m_encoder_session;
-        delete m_predictor_session;
+        delete m_model_session;
         m_input_name = {};
     }
 
@@ -76,7 +69,6 @@ namespace HFA {
             return false;
         }
 
-        // 1. 准备输入张量
         const size_t batch_size = input_data.size();
         size_t max_len = 0;
         for (const auto &vec : input_data) {
@@ -87,7 +79,6 @@ namespace HFA {
         flattened_input.reserve(batch_size * max_len);
         for (const auto &vec : input_data) {
             flattened_input.insert(flattened_input.end(), vec.begin(), vec.end());
-            // 填充不足部分
             flattened_input.insert(flattened_input.end(), max_len - vec.size(), 0.0f);
         }
 
@@ -96,34 +87,13 @@ namespace HFA {
         const Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             m_memoryInfo, flattened_input.data(), flattened_input.size(), input_shape.data(), input_shape.size());
 
-        // 2. 运行编码器
-        std::vector<Ort::Value> encoder_outputs;
         try {
-            encoder_outputs = m_encoder_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1,
-                                                     &m_encoder_output_name, 1);
-        } catch (const Ort::Exception &e) {
-            msg = "编码器推理错误: " + std::string(e.what());
-            return false;
-        }
-
-        // 检查编码器输出是否有效
-        if (encoder_outputs.empty()) {
-            msg = "编码器未返回输出";
-            return false;
-        }
-
-        // 3. 运行预测器
-        try {
-            // 准备输出节点名称
             const std::vector<const char *> output_names = {m_predictor_output_name[0], m_predictor_output_name[1],
                                                             m_predictor_output_name[2]};
 
-            // 直接使用编码器输出作为预测器输入
-            auto predictor_outputs =
-                m_predictor_session->Run(Ort::RunOptions{nullptr}, &m_encoder_output_name, &encoder_outputs[0], 1,
-                                         output_names.data(), output_names.size());
+            auto predictor_outputs = m_model_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1,
+                                                          output_names.data(), output_names.size());
 
-            // 4. 解析输出结果
             // ph_frame_logits [batch, time, classes]
             auto parse_3d_output = [](Ort::Value &tensor) {
                 const auto shape = tensor.GetTensorTypeAndShapeInfo().GetShape();

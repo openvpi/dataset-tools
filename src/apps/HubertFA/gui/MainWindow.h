@@ -78,7 +78,7 @@ namespace HFA {
 
         void slot_removeListItem() const;
         void slot_clearTaskList() const;
-        void slot_runFbl();
+        void slot_runHfa();
 
         void slot_oneFailed(const QString &filename, const QString &msg);
         void slot_oneFinished(const QString &filename, const QString &msg);

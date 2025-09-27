@@ -27,11 +27,8 @@ namespace HFA {
         const auto melspec_config = config["melspec_config"].as<std::map<std::string, float>>();
         hfa_input_sample_rate = static_cast<int>(melspec_config.find("sample_rate")->second);
 
-        const fs::path encoder_path = model_folder / (config["hubert_config"]["encoder"].as<std::string>() + "-" +
-                                                      config["hubert_config"]["channel"].as<std::string>() + ".onnx");
-        const fs::path predictor_path = model_folder / "model.onnx";
-
-        m_hfa = std::make_unique<HfaModel>(encoder_path, predictor_path, provider, device_id);
+        const fs::path model_path = model_folder / "model.onnx";
+        m_hfa = std::make_unique<HfaModel>(model_path, provider, device_id);
 
         const fs::path vocab_file = model_folder / "vocab.yaml";
         YAML::Node vocab = YAML::LoadFile(vocab_file.string());

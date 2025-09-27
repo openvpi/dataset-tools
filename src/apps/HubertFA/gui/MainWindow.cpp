@@ -55,14 +55,6 @@ namespace HFA {
             return false;
         }
 
-        YAML::Node config = YAML::LoadFile(config_file.string());
-        const fs::path encoder_path = model_path / (config["hubert_config"]["encoder"].as<std::string>() + "-" +
-                                                    config["hubert_config"]["channel"].as<std::string>() + ".onnx");
-        if (!fs::exists(encoder_path)) {
-            error = encoder_path.string() + " does not exist";
-            return false;
-        }
-
         YAML::Node vocab = YAML::LoadFile(vocab_file.string());
         const YAML::Node &dictionaries = vocab["dictionaries"];
         if (dictionaries) {
@@ -234,7 +226,7 @@ namespace HFA {
 
         connect(remove, &QPushButton::clicked, this, &MainWindow::slot_removeListItem);
         connect(clear, &QPushButton::clicked, this, &MainWindow::slot_clearTaskList);
-        connect(runHfa, &QPushButton::clicked, this, &MainWindow::slot_runFbl);
+        connect(runHfa, &QPushButton::clicked, this, &MainWindow::slot_runHfa);
 
         connect(btnOutTg, &QPushButton::clicked, this, &MainWindow::slot_outTgPath);
 
@@ -349,7 +341,7 @@ namespace HFA {
         taskList->clear();
     }
 
-    void MainWindow::slot_runFbl() {
+    void MainWindow::slot_runHfa() {
         out->clear();
         m_threadpool->clear();
 
@@ -422,7 +414,7 @@ namespace HFA {
     }
 
     void MainWindow::slot_threadFinished() {
-        const auto msg = QString("Fbl complete! Total: %3, Success: %1, Failed: %2")
+        const auto msg = QString("Hfa complete! Total: %3, Success: %1, Failed: %2")
                              .arg(m_workTotal - m_workError)
                              .arg(m_workError)
                              .arg(m_workTotal);

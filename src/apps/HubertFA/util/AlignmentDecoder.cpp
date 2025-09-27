@@ -44,7 +44,7 @@ namespace HFA {
                                        const std::vector<std::string> &class_names,
                                        const std::map<std::string, float> &mel_spec_config)
         : vocab_(vocab), non_speech_phs_(class_names) {
-        melspec_config_.hop_length = mel_spec_config.at("hop_length");
+        melspec_config_.hop_length = mel_spec_config.at("hop_size");
         melspec_config_.sample_rate = mel_spec_config.at("sample_rate");
         frame_length_ = static_cast<float>(melspec_config_.hop_length) / melspec_config_.sample_rate;
     }

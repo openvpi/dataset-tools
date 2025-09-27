@@ -17,19 +17,18 @@ namespace HFA {
 
     class HfaModel {
     public:
-        explicit HfaModel(const std::filesystem::path &encoder_Path, const std::filesystem::path &predictor_Path, ExecutionProvider provider, int device_id);
+        explicit HfaModel(const std::filesystem::path &model_Path, ExecutionProvider provider, int device_id);
         ~HfaModel();
         bool forward(const std::vector<std::vector<float>> &input_data, HfaLogits &result, std::string &msg) const;
 
     private:
         Ort::Env m_env;
         Ort::SessionOptions m_session_options;
-        Ort::Session *m_encoder_session;
-        Ort::Session *m_predictor_session;
+        Ort::Session *m_model_session;
         Ort::AllocatorWithDefaultOptions m_allocator;
-        const char *m_input_name;
-        const char *m_encoder_output_name = "input_feature";
-        const char* m_predictor_output_name[3] = {"ph_frame_logits", "ph_edge_logits", "cvnt_logits"};
+
+        const char *m_input_name = "waveform";
+        const char *m_predictor_output_name[3] = {"ph_frame_logits", "ph_edge_logits", "cvnt_logits"};
 
 #ifdef _WIN_X86
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
