@@ -22,14 +22,6 @@ jobs:
         with:
           submodules: recursive
 
-      # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
-      - name: Export Actions runtime info for Actions caching
-        uses: actions/github-script@v6
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
@@ -66,7 +58,7 @@ jobs:
         shell: cmd
         working-directory: ${{github.workspace}}/vcpkg
         run: |
-          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --binarysource="clear;x-gha,readwrite" --triplet=x64-windows
+          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --triplet=x64-windows
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
