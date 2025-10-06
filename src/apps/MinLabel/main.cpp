@@ -53,9 +53,9 @@ int main(int argc, char *argv[]) {
 #endif
 
 #ifdef Q_OS_MAC
-    Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/../Resources/dict");
+    Pinyin::setDictionaryPath(QApplication::applicationDirPath().toLocal8Bit().toStdString() + "/../Resources/dict");
 #else
-    Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/dict");
+    Pinyin::setDictionaryPath(QApplication::applicationDirPath().toLocal8Bit().toStdString() + "/dict");
 #endif
 
     Minlabel::MainWindow w;
