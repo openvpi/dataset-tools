@@ -13,9 +13,8 @@ namespace LyricFA {
 
     void AsrThread::run() {
         std::string asrMsg;
-        const auto asrRes = m_asr->recognize(m_wavPath.toLocal8Bit().toStdString(), asrMsg);
 
-        if (!asrRes) {
+        if (const auto asrRes = m_asr->recognize(m_wavPath.toLocal8Bit().toStdString(), asrMsg); !asrRes) {
             Q_EMIT this->oneFailed(m_filename, QString::fromStdString(asrMsg));
             return;
         }
@@ -28,7 +27,7 @@ namespace LyricFA {
         }
 
         QTextStream labIn(&labFile);
-        if (m_g2p) {
+        if (m_g2p != nullptr) {
             const auto g2pRes = m_g2p->hanziToPinyin(asrMsg, Pinyin::ManTone::NORMAL, Pinyin::Error::Default, true);
             asrMsg = g2pRes.toStdStr();
         }

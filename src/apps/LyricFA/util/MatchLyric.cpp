@@ -27,10 +27,9 @@ namespace LyricFA {
     MatchLyric::~MatchLyric() = default;
 
     static QString get_lyrics_from_txt(const QString &lyricPath) {
-        QFile lyricFile(lyricPath);
-        if (lyricFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (QFile lyricFile(lyricPath); lyricFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
             auto words = QString::fromUtf8(lyricFile.readAll());
-            words.remove(QRegularExpression(u8"[^\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]"));
+            words.remove(QRegularExpression(u8"[^\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF a-zA-Z]"));
             return words;
         }
         return {};
@@ -43,9 +42,8 @@ namespace LyricFA {
         }
 
         const QJsonDocument jsonDoc(jsonObject);
-        const QByteArray jsonData = jsonDoc.toJson();
 
-        if (file.write(jsonData) == -1) {
+        if (const QByteArray jsonData = jsonDoc.toJson(); file.write(jsonData) == -1) {
             return false;
         }
 
@@ -72,8 +70,8 @@ namespace LyricFA {
 
             std::vector<std::string> textList, pinyinList;
             for (const auto &item : g2pRes) {
-                textList.push_back(item.hanzi.c_str());
-                pinyinList.push_back(item.pinyin.c_str());
+                textList.emplace_back(item.hanzi.c_str());
+                pinyinList.emplace_back(item.pinyin.c_str());
             }
             m_lyricDict[lyricName] = lyricInfo{textList, pinyinList};
         }
@@ -81,12 +79,11 @@ namespace LyricFA {
 
     bool MatchLyric::match(const QString &filename, const QString &labPath, const QString &jsonPath, QString &msg,
                            const bool &asr_rectify) const {
-        const auto lyricName = filename.left(filename.lastIndexOf('_'));
 
-        if (m_lyricDict.contains(lyricName)) {
+        if (const auto lyricName = filename.left(filename.lastIndexOf('_')); m_lyricDict.contains(lyricName)) {
             const auto asr_list = get_lyrics_from_txt(labPath).toUtf8().toStdString();
             if (asr_list.empty()) {
-                msg = "filename: Asr res is empty.";
+                msg = QString("%1: Asr result is empty.").arg(lyricName);
                 return false;
             }
             const auto textList = m_lyricDict[lyricName].text;
@@ -106,7 +103,7 @@ namespace LyricFA {
 
             std::vector<std::string> asrPinyins;
             for (const auto &item : asrG2pRes)
-                asrPinyins.push_back(item.pinyin.c_str());
+                asrPinyins.emplace_back(item.pinyin.c_str());
 
             if (!asrPinyins.empty()) {
                 auto [match_text, match_pinyin, text_step, pinyin_step] =
@@ -117,14 +114,13 @@ namespace LyricFA {
                 for (int i = 0; i < asrPinyins.size(); i++) {
                     const auto asrPinyin = asrPinyins[i];
                     const auto text = match_text[i];
-                    const auto matchPinyin = match_pinyin[i];
 
-                    if (asrPinyin != matchPinyin) {
+                    if (const auto matchPinyin = match_pinyin[i]; asrPinyin != matchPinyin) {
                         const std::vector<std::string> candidates =
                             m_mandarin->getDefaultPinyin(text, Pinyin::ManTone::NORMAL, true);
-                        const auto it = std::find(candidates.begin(), candidates.end(), asrPinyin);
 
-                        if (it != candidates.end()) {
+                        if (const auto it = std::find(candidates.begin(), candidates.end(), asrPinyin);
+                            it != candidates.end()) {
                             asr_rect_list.push_back(asrPinyin);
                             asr_rect_diff.push_back("(" + matchPinyin + "->" + asrPinyin + ", " + static_cast<char>(i) +
                                                     ")");
