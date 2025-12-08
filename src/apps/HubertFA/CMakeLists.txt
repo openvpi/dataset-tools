@@ -8,7 +8,7 @@ file(GLOB_RECURSE _src *.h *.hpp *.cpp)
 add_executable(${PROJECT_NAME} ${_src})
 
 find_package(SndFile CONFIG REQUIRED)
-find_package(yaml-cpp CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 include_directories(../../libs/onnxruntime/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ../../libs/onnxruntime/include)
@@ -18,7 +18,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
-        audio-util yaml-cpp::yaml-cpp
+        audio-util nlohmann_json::nlohmann_json
         onnxruntime
 )
 
@@ -35,7 +35,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE .)
 
 if (ONNXRUNTIME_ENABLE_DML)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ONNXRUNTIME_ENABLE_DML)
-endif()
+endif ()
 
 if (WIN32)
     include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)

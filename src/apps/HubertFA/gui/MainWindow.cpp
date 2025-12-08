@@ -1,6 +1,5 @@
 #include "MainWindow.h"
 
-
 #include <QApplication>
 #include <QDragEnterEvent>
 #include <QFileDialog>
@@ -15,14 +14,14 @@
 #include <fstream>
 #include <iostream>
 
-#include <yaml-cpp/yaml.h>
+#include <nlohmann/json.hpp>
 
 #include "../util/DmlGpuUtils.h"
 #include "../util/HfaThread.h"
 #include "../util/Provider.h"
 
-
 namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 namespace HFA {
     static bool isDmlAvailable(int &recommendedIndex) {
@@ -37,13 +36,13 @@ namespace HFA {
 
     static bool check_configs(const std::string &model_dir, std::string &error) {
         const fs::path model_path(model_dir);
-        const fs::path vocab_file = model_path / "vocab.yaml";
+        const fs::path vocab_file = model_path / "vocab.json";
         if (!fs::exists(vocab_file)) {
             error = vocab_file.string() + " does not exist";
             return false;
         }
 
-        const fs::path config_file = model_path / "config.yaml";
+        const fs::path config_file = model_path / "config.json";
         if (!fs::exists(config_file)) {
             error = config_file.string() + " does not exist";
             return false;
@@ -55,14 +54,14 @@ namespace HFA {
             return false;
         }
 
-        YAML::Node vocab = YAML::LoadFile(vocab_file.string());
-        const YAML::Node &dictionaries = vocab["dictionaries"];
-        if (dictionaries) {
-            for (const auto &entry : dictionaries) {
-                const YAML::Node &dict_node = entry.second;
+        std::ifstream vocab_stream(vocab_file);
+        json vocab = json::parse(vocab_stream);
+        const auto dictionaries = vocab["dictionaries"];
 
-                if (dict_node && !dict_node.IsNull()) {
-                    auto dict_path_str = dict_node.as<std::string>();
+        if (dictionaries.is_object()) {
+            for (const auto &[key, dict_node] : dictionaries.items()) {
+                if (!dict_node.is_null()) {
+                    auto dict_path_str = dict_node.get<std::string>();
                     fs::path dict_path = model_path / dict_path_str;
 
                     if (!fs::exists(dict_path)) {
@@ -111,11 +110,12 @@ namespace HFA {
         }
 
         const fs::path model_path(modelFolder.toStdString());
-        const fs::path vocab_file = model_path / "vocab.yaml";
-        YAML::Node vocab = YAML::LoadFile(vocab_file.string());
+        const fs::path vocab_file = model_path / "vocab.json";
+        std::ifstream vocab_stream(vocab_file);
+        json vocab = json::parse(vocab_stream);
 
-        const auto nonSpeechPh = vocab["non_speech_phonemes"].as<std::vector<std::string>>();
-        const auto languages = vocab["dictionaries"].as<std::map<std::string, std::string>>();
+        const auto nonLexicalPh = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
+        const auto languages = vocab["dictionaries"].get<std::map<std::string, std::string>>();
 
         m_threadpool = new QThreadPool(this);
         m_threadpool->setMaxThreadCount(1);
@@ -155,7 +155,7 @@ namespace HFA {
         outTgLayout->addWidget(btnOutTg);
 
         nonSpeechPhLayout = new QHBoxLayout();
-        for (const auto &ph : nonSpeechPh) {
+        for (const auto &ph : nonLexicalPh) {
             const auto label = new QCheckBox(QString::fromStdString(ph));
             nonSpeechPhLayout->addWidget(label);
         }

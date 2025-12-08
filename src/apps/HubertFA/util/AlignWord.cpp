@@ -1,7 +1,7 @@
 #include "AlignWord.h"
 
 #include <algorithm>
-#include <cmath> // 添加cmath头文件用于fabs
+#include <cmath>
 #include <iostream>
 
 namespace HFA {
@@ -25,10 +25,17 @@ namespace HFA {
 
     Phoneme::Phoneme(const float start, const float end, const std::string &text)
         : start(std::max(0.0f, start)), end(std::max(0.0f, end)), text(text) {
+        if (!(0 <= start && start < end)) {
+            std::cerr << "Warning: Phoneme Invalid: text=" << text << " start=" << start << ", end=" << end
+                      << std::endl;
+        }
     }
 
     Word::Word(float start, float end, const std::string &text, const bool init_phoneme)
         : start(std::max(0.0f, start)), end(std::max(0.0f, end)), text(text) {
+        if (!(0 <= start && start < end)) {
+            std::cerr << "Warning: Word Invalid: text=" << text << " start=" << start << ", end=" << end << std::endl;
+        }
         if (init_phoneme) {
             phonemes.emplace_back(start, end, text);
         }
@@ -39,59 +46,66 @@ namespace HFA {
     }
 
     void Word::add_phoneme(const Phoneme &phoneme) {
-        if (f_geq(phoneme.start, start) && f_leq(phoneme.end, end)) {
+        if (phoneme.start == phoneme.end) {
+            std::cerr << "Warning: " << phoneme.text << " phoneme长度为0，非法" << std::endl;
+            return;
+        }
+        if (phoneme.start >= start && phoneme.end <= end) {
             phonemes.push_back(phoneme);
         } else {
-            std::cerr << "Warning: phoneme boundaries exceed word, add failed\n";
+            std::cerr << "Warning: " << phoneme.text << ": phoneme边界超出word，添加失败" << std::endl;
         }
     }
 
     void Word::append_phoneme(const Phoneme &phoneme) {
+        if (phoneme.start == phoneme.end) {
+            std::cerr << "Warning: " << phoneme.text << " phoneme长度为0，非法" << std::endl;
+            return;
+        }
         if (phonemes.empty()) {
-            if (f_equal(phoneme.start, start)) {
+            if (phoneme.start == start) {
                 phonemes.push_back(phoneme);
                 end = phoneme.end;
             } else {
-                std::cerr << "Warning: phoneme left boundary exceeds word, add failed\n";
+                std::cerr << "Warning: " << phoneme.text << ": phoneme左边界超出word，添加失败" << std::endl;
             }
         } else {
-            if (phonemes.empty())
-                std::cerr << "Warning: phonemes empty, cannot append\n";
-
-            if (f_equal(phoneme.start, phonemes.back().end)) {
+            if (phoneme.start == phonemes.back().end) {
                 phonemes.push_back(phoneme);
                 end = phoneme.end;
             } else {
-                std::cerr << "Warning: phoneme add failed\n";
+                std::cerr << "Warning: " << phoneme.text << ": phoneme添加失败" << std::endl;
             }
         }
     }
 
     void Word::move_start(float new_start) {
         new_start = std::max(0.0f, new_start);
-        if (f_geq(new_start, 0) && f_less(new_start, phonemes.front().end)) {
+        if (0 <= new_start && new_start < phonemes.front().end) {
             start = new_start;
             phonemes.front().start = new_start;
         } else {
-            std::cerr << "Warning: start >= first_phone_end, cannot adjust word boundary\n";
+            std::cerr << "Warning: " << text << ": start >= first_phone_end，无法调整word边界" << std::endl;
         }
     }
 
     void Word::move_end(float new_end) {
         new_end = std::max(0.0f, new_end);
-        if (f_greater(new_end, phonemes.back().start) && f_geq(new_end, 0)) {
+        if (new_end > phonemes.back().start && new_end >= 0) {
             end = new_end;
             phonemes.back().end = new_end;
         } else {
-            std::cerr << "Warning: new_end <= last_phone_start, cannot adjust word boundary\n";
+            std::cerr << "Warning: " << text << ": new_end <= last_phone_start，无法调整word边界" << std::endl;
         }
     }
 
     std::vector<Word *> WordList::overlapping_words(const Word *new_word) const {
         std::vector<Word *> result;
         for (const auto &word : *this) {
-            if ((f_less(word->start, new_word->start) && f_less(new_word->start, word->end)) ||
-                (f_less(word->start, new_word->end) && f_less(new_word->end, word->end))) {
+            if (!word)
+                continue;
+            if ((word->start < new_word->start && new_word->start < word->end) ||
+                (word->start < new_word->end && new_word->end < word->end)) {
                 result.push_back(word);
             }
         }
@@ -100,7 +114,7 @@ namespace HFA {
 
     void WordList::append(Word *word) {
         if (word->phonemes.empty()) {
-            std::cerr << "Warning: phones empty, illegal word\n";
+            std::cerr << "Warning: phones为空，非法word" << std::endl;
             return;
         }
 
@@ -112,51 +126,124 @@ namespace HFA {
         if (overlapping_words(word).empty()) {
             this->push_back(word);
         } else {
-            std::cerr << "Warning: interval overlap, cannot add word\n";
+            std::cerr << "Warning: 区间重叠，无法添加word" << std::endl;
         }
-    }
-
-    float WordList::duration() const {
-        return this->back()->end;
     }
 
     void WordList::add_AP(Word *ap, const float min_dur) {
         if (ap->phonemes.empty()) {
-            std::cerr << "Warning: phones empty, illegal word\n";
+            std::cerr << "Warning: AP phonemes为空，非法word" << std::endl;
             return;
         }
 
         if (this->empty()) {
-            this->push_back(ap);
+            this->append(ap);
             return;
         }
 
-        // 检查AP是否包含整个单词（在整个列表上检查）
-        for (const auto &word : *this) {
-            if (f_leq(ap->start, word->start) && f_leq(word->end, ap->end)) {
-                std::cerr << "Warning: AP includes entire word, cannot add\n";
-                return;
+        if (overlapping_words(ap).empty()) {
+            this->append(ap);
+            this->sort_by_start();
+        } else {
+            // 检查AP是否包含整个单词
+            for (const auto &word : *this) {
+                if (ap->start <= word->start && word->end <= ap->end) {
+                    std::cerr << "Warning: AP包括整个word，无法添加" << std::endl;
+                    return;
+                }
+            }
+
+            // 调整AP边界
+            for (const auto &word : *this) {
+                if (word->start <= ap->start && ap->start < word->end) {
+                    ap->move_start(word->end);
+                }
+                if (word->start < ap->end && ap->end <= word->end) {
+                    ap->move_end(word->start);
+                }
+            }
+
+            // 检查调整后的AP是否有效
+            if (ap->start < ap->end && ap->dur() > min_dur && overlapping_words(ap).empty()) {
+                this->push_back(ap);
+                sort_by_start();
+            }
+        }
+    }
+
+    void WordList::fill_small_gaps(const float wav_length, const float gap_length) const {
+        if (this->empty())
+            return;
+
+        Word *first_word = this->front();
+        if (first_word->start < 0) {
+            first_word->start = 0;
+        }
+
+        if (first_word->start > 0) {
+            if (std::fabs(first_word->start) < gap_length && gap_length < first_word->dur()) {
+                first_word->move_start(0);
             }
         }
 
-        Word *modified_ap = ap;
-
-        // 遍历整个列表调整边界（与Python逻辑一致）
-        for (const auto &word : *this) {
-            if (f_leq(word->start, modified_ap->start) && f_less(modified_ap->start, word->end)) {
-                modified_ap->move_start(word->end);
-            }
-            if (f_less(word->start, modified_ap->end) && f_leq(modified_ap->end, word->end)) {
-                modified_ap->move_end(word->start);
-            }
+        Word *last_word = this->back();
+        if (last_word->end >= wav_length - gap_length) {
+            last_word->move_end(wav_length);
         }
 
-        // 检查调整后的AP是否有效
-        if (f_less(modified_ap->start, modified_ap->end) && f_greater(modified_ap->dur(), min_dur) &&
-            overlapping_words(modified_ap).empty()) {
-            this->push_back(modified_ap);
-            sort_by_start();
+        for (size_t i = 1; i < this->size(); i++) {
+            Word *prev_word = (*this)[i - 1];
+            const Word *curr_word = (*this)[i];
+            const float gap = curr_word->start - prev_word->end;
+            if (0 < gap && gap <= gap_length) {
+                prev_word->move_end(curr_word->start);
+            }
         }
+    }
+
+    void WordList::add_SP(const float wav_length, const std::string &add_phone) {
+        WordList words_res;
+
+        if (!this->empty()) {
+            Word *first_word = this->front();
+            if (first_word->start > 0) {
+                words_res.push_back(new Word(0, first_word->start, add_phone, true));
+            }
+            words_res.push_back(first_word);
+
+            for (size_t i = 1; i < this->size(); i++) {
+                Word *word = (*this)[i];
+                if (word->start > words_res.back()->end) {
+                    words_res.push_back(new Word(words_res.back()->end, word->start, add_phone, true));
+                }
+                words_res.push_back(word);
+            }
+
+            const Word *last_word = this->back();
+            if (last_word->end < wav_length) {
+                words_res.push_back(new Word(last_word->end, wav_length, add_phone, true));
+            }
+        } else {
+            // 如果列表为空，添加一个完整的SP单词
+            words_res.push_back(new Word(0, wav_length, add_phone, true));
+        }
+
+        // 清空当前列表（但不删除内存，因为指针会转移到words_res）
+        this->clear();
+
+        // 将结果转移到当前列表
+        for (auto word : words_res) {
+            this->push_back(word);
+        }
+
+        // 清空临时列表（但不删除内存，因为指针已转移）
+        words_res.clear();
+    }
+
+    float WordList::duration() const {
+        if (this->empty())
+            return 0.0f;
+        return this->back()->end;
     }
 
     std::vector<std::string> WordList::phonemes() const {
@@ -189,7 +276,7 @@ namespace HFA {
     }
 
     void WordList::sort_by_start() {
-        std::sort(this->begin(), this->end(), [](const Word *a, const Word *b) { return f_less(a->start, b->start); });
+        std::sort(this->begin(), this->end(), [](const Word *a, const Word *b) { return a->start < b->start; });
     }
 
 } // namespace HFA

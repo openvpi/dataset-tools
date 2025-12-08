@@ -9,6 +9,7 @@
 #include "AlignWord.h"
 #include "AlignmentDecoder.h"
 #include "DictionaryG2P.h"
+#include "NonLexicalDecoder.h"
 
 #include <unordered_set>
 
@@ -28,6 +29,7 @@ namespace HFA {
         std::unique_ptr<HfaModel> m_hfa;
         std::map<std::string, DictionaryG2P *> m_dictG2p;
         AlignmentDecoder *m_alignmentDecoder;
+        NonLexicalDecoder *m_nonLexicalDecoder;
         std::unordered_set<std::string> m_silent_phonemes;
 
         int hfa_input_sample_rate = 44100;

@@ -94,28 +94,37 @@ namespace HFA {
             auto predictor_outputs = m_model_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1,
                                                           output_names.data(), output_names.size());
 
-            // ph_frame_logits [batch, time, classes]
             auto parse_3d_output = [](Ort::Value &tensor) {
                 const auto shape = tensor.GetTensorTypeAndShapeInfo().GetShape();
-                const float *data = tensor.GetTensorMutableData<float>();
+
+                if (shape.size() != 3) {
+                    throw std::runtime_error("Expected 3D tensor (BCT) but got " + std::to_string(shape.size()) + "D");
+                }
+
                 const size_t batch = shape[0];
-                const size_t time = shape[1];
-                const size_t classes = shape[2];
+                const size_t classes = shape[1];
+                const size_t time = shape[2];
 
-                std::vector<std::vector<std::vector<float>>> output;
-                output.resize(batch);
+                const float *data = tensor.GetTensorMutableData<float>();
 
-                for (size_t b = 0; b < batch; b++) {
-                    output[b].resize(time);
-                    for (size_t t = 0; t < time; t++) {
-                        output[b][t].assign(data + (b * time * classes + t * classes),
-                                            data + (b * time * classes + (t + 1) * classes));
+                std::vector<std::vector<std::vector<float>>> output(batch);
+
+                for (size_t b = 0; b < batch; ++b) {
+                    output[b].resize(classes);
+
+                    for (size_t c = 0; c < classes; ++c) {
+                        output[b][c].resize(time);
+
+                        for (size_t t = 0; t < time; ++t) {
+                            const size_t index = b * (classes * time) + c * time + t;
+                            output[b][c][t] = data[index];
+                        }
                     }
                 }
+
                 return output;
             };
 
-            // ph_edge_logits [batch, time]
             auto parse_2d_output = [](Ort::Value &tensor) {
                 const auto shape = tensor.GetTensorTypeAndShapeInfo().GetShape();
                 const float *data = tensor.GetTensorMutableData<float>();
@@ -142,7 +151,7 @@ namespace HFA {
         }
     }
 
-    static bool initDirectML(Ort::SessionOptions &options, int deviceIndex, std::string *errorMessage) {
+    static bool initDirectML(Ort::SessionOptions &options, const int deviceIndex, std::string *errorMessage) {
 #ifdef ONNXRUNTIME_ENABLE_DML
         if (!options) {
             if (errorMessage) {
@@ -160,7 +169,7 @@ namespace HFA {
 
         const OrtApi &ortApi = Ort::GetApi();
         const OrtDmlApi *ortDmlApi;
-        Ort::Status getApiStatus(
+        const Ort::Status getApiStatus(
             (ortApi.GetExecutionProviderApi("DML", ORT_API_VERSION, reinterpret_cast<const void **>(&ortDmlApi))));
         if (!getApiStatus.IsOK()) {
             // Failed to get DirectML API.
@@ -174,7 +183,7 @@ namespace HFA {
         options.DisableMemPattern();
         options.SetExecutionMode(ORT_SEQUENTIAL);
 
-        Ort::Status appendStatus(ortDmlApi->SessionOptionsAppendExecutionProvider_DML(options, deviceIndex));
+        const Ort::Status appendStatus(ortDmlApi->SessionOptionsAppendExecutionProvider_DML(options, deviceIndex));
         if (!appendStatus.IsOK()) {
             if (errorMessage) {
                 *errorMessage = appendStatus.GetErrorMessage();

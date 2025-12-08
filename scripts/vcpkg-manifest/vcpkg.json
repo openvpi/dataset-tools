@@ -4,13 +4,13 @@
     "sdl2",
     "ffmpeg-fake",
     "fftw3",
-    "yaml-cpp",
     "cpp-pinyin",
     "cpp-kana",
     "soxr",
     "wolf-midi",
     "libsndfile",
-    "qbreakpad"
+    "qbreakpad",
+    "nlohmann-json"
   ],
   "vcpkg-configuration": {
     "overlay-ports": [

@@ -1,7 +1,5 @@
 #include "Hfa.h"
 
-#include "audio-util/Slicer.h"
-
 #include <QBuffer>
 #include <QMessageBox>
 
@@ -12,53 +10,51 @@
 #include <vector>
 
 #include <audio-util/Util.h>
-#include <yaml-cpp/yaml.h>
+#include <nlohmann/json.hpp>
 
-#include "PostProcessing.h"
 
 namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 namespace HFA {
 
     HFA::HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id) {
-        const fs::path config_file = model_folder / "config.yaml";
-        YAML::Node config = YAML::LoadFile(config_file.string());
+        const fs::path config_file = model_folder / "config.json";
+        std::ifstream config_stream(config_file);
+        json config = json::parse(config_stream);
 
-        const auto melspec_config = config["melspec_config"].as<std::map<std::string, float>>();
-        hfa_input_sample_rate = static_cast<int>(melspec_config.find("sample_rate")->second);
+        const auto mel_spec_config = config["mel_spec_config"].get<std::map<std::string, float>>();
+        hfa_input_sample_rate = static_cast<int>(mel_spec_config.at("sample_rate"));
 
         const fs::path model_path = model_folder / "model.onnx";
         m_hfa = std::make_unique<HfaModel>(model_path, provider, device_id);
 
-        const fs::path vocab_file = model_folder / "vocab.yaml";
-        YAML::Node vocab = YAML::LoadFile(vocab_file.string());
+        const fs::path vocab_file = model_folder / "vocab.json";
+        std::ifstream vocab_stream(vocab_file);
+        json vocab = json::parse(vocab_stream);
         const auto dictionaries = vocab["dictionaries"];
 
-        for (const auto &entry : dictionaries) {
-            const YAML::Node &dict_node = entry.second;
-            const auto language = entry.first.as<std::string>();
-
-            if (dict_node && !dict_node.IsNull()) {
-                auto dict_path_str = dict_node.as<std::string>();
+        for (const auto &[language, dict_node] : dictionaries.items()) {
+            if (!dict_node.is_null()) {
+                auto dict_path_str = dict_node.get<std::string>();
                 fs::path dict_path = model_folder / dict_path_str;
 
                 if (!fs::exists(dict_path)) {
                     std::cerr << dict_path.string() << " does not exist" << std::endl;
                 } else {
-                    m_dictG2p[entry.first.as<std::string>()] = new DictionaryG2P(dict_path.string(), language);
+                    m_dictG2p[language] = new DictionaryG2P(dict_path.string(), language);
                 }
             }
         }
 
-        const auto silent_phonemes = vocab["silent_phonemes"].as<std::vector<std::string>>();
-
+        const auto silent_phonemes = vocab["silent_phonemes"].get<std::vector<std::string>>();
         m_silent_phonemes = std::unordered_set(silent_phonemes.begin(), silent_phonemes.end());
 
-        const auto vocab_dict = vocab["vocab"].as<std::map<std::string, int>>();
-        auto non_speech_phonemes = vocab["non_speech_phonemes"].as<std::vector<std::string>>();
-        non_speech_phonemes.insert(non_speech_phonemes.begin(), "None");
-        m_alignmentDecoder = new AlignmentDecoder(vocab_dict, non_speech_phonemes, melspec_config);
-
+        const auto vocab_dict = vocab["vocab"].get<std::map<std::string, int>>();
+        auto non_lexical_phonemes = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
+        non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
+        m_alignmentDecoder = new AlignmentDecoder(vocab_dict, mel_spec_config);
+        m_nonLexicalDecoder = new NonLexicalDecoder(non_lexical_phonemes, mel_spec_config);
 
         if (!m_hfa) {
             qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";
@@ -124,17 +120,20 @@ namespace HFA {
                 return false;
             }
 
-            std::vector<float> confidence;
-            if (!m_alignmentDecoder->decode(hfaRes.ph_frame_logits, hfaRes.ph_edge_logits, hfaRes.cvnt_logits,
-                                            wav_length, ph_seq, words, confidence, msg, word_seq, ph_idx_to_word_idx,
-                                            true, non_speech_ph))
+            if (!m_alignmentDecoder->decode(hfaRes.ph_frame_logits, hfaRes.ph_edge_logits, wav_length, ph_seq, words,
+                                            msg, word_seq, ph_idx_to_word_idx, true))
                 return false;
-            fillSmallGaps(words, wav_length);
-            words = addSP(words, wav_length, "SP");
+            const auto word_lists = m_nonLexicalDecoder->decode(hfaRes.cvnt_logits, wav_length, non_speech_ph);
+
+            for (const auto &word_list : word_lists)
+                for (const auto &word : word_list)
+                    words.add_AP(word);
+
             words.clear_language_prefix();
+            words.add_SP(wav_length, "SP");
             return true;
         }
         msg = modelMsg;
         return false;
     }
-} // LyricFA
+} // namespace HFA

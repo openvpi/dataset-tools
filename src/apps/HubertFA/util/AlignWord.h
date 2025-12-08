@@ -36,6 +36,8 @@ namespace HFA {
         std::vector<Word *> overlapping_words(const Word *new_word) const;
         void append(Word *word);
         void add_AP(Word *ap, float min_dur = 0.1f);
+        void fill_small_gaps(float wav_length, float gap_length = 0.1f) const;
+        void add_SP(float wav_length, const std::string &add_phone = "SP");
 
         float duration() const;
         std::vector<std::string> phonemes() const;
