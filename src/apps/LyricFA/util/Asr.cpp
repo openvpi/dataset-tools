@@ -55,9 +55,9 @@ namespace LyricFA {
 
             sf.seek(beginFrame, SEEK_SET);
             std::vector<float> tmp(frameCount);
-            const auto bytesWritten = sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
 
-            if (bytesWritten > 60 * 16000) {
+            if (const auto bytesWritten = sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+                bytesWritten > 60 * 16000) {
                 msg = "The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
                       "segment and rerun the recognition program.";
                 return false;
