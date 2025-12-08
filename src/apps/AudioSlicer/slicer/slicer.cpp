@@ -68,16 +68,15 @@ qint64 MovingRMS::size() {
     return m_numElements;
 }
 
-Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 minLength, qint64 minInterval, qint64 hopSize, qint64 maxSilKept)
+Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 maxLength, qint64 minInterval, qint64 hopSize, qint64 maxSilKept)
 {
     m_errCode = SlicerErrorCode::SLICER_OK;
-    if ((!((minLength >= minInterval) && (minInterval >= hopSize))) || (maxSilKept < hopSize))
+    if (!((minInterval >= hopSize) && (maxSilKept >= hopSize) && (maxLength >= maxSilKept * 2)))
     {
-        // The following condition must be satisfied: m_minLength >= m_minInterval >= m_hopSize
-        // The following condition must be satisfied: m_maxSilKept >= m_hopSize
+        // The following condition must be satisfied: (m_minInterval >= m_hopSize) and (m_maxLength / 2 >= m_maxSilKept >= m_hopSize)
         m_errCode = SlicerErrorCode::SLICER_INVALID_ARGUMENT;
         m_errMsg = "ValueError: The following conditions must be satisfied: "
-                   "(min_length >= min_interval >= hop_size) and (max_sil_kept >= hop_size).";
+                   "(min_interval >= hop_size) and (max_length / 2 >= max_sil_kept >= hop_size).";
         return;
     }
 
@@ -99,7 +98,7 @@ Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 minLength, qint6
     m_threshold = std::pow(10, threshold / 20.0);
     m_hopSize = divIntRound<qint64>(hopSize * (qint64)sr, (qint64)1000);
     m_winSize = std::min(divIntRound<qint64>(minInterval * (qint64)sr, (qint64)1000), (qint64)4 * m_hopSize);
-    m_minLength = divIntRound<qint64>(minLength * (qint64)sr, (qint64)1000 * m_hopSize);
+    m_maxLength = divIntRound<qint64>(maxLength * (qint64)sr, (qint64)1000 * m_hopSize);
     m_minInterval = divIntRound<qint64>(minInterval * (qint64)sr, (qint64)1000 * m_hopSize);
     m_maxSilKept = divIntRound<qint64>(maxSilKept * (qint64)sr, (qint64)1000 * m_hopSize);
 }
@@ -115,7 +114,7 @@ MarkerList Slicer::slice()
     qint64 frames = m_decoder->frames();
     int channels = m_decoder->channels();
 
-    if ((frames + m_hopSize - 1) / m_hopSize <= m_minLength)
+    if ((frames + m_hopSize - 1) / m_hopSize <= m_maxLength)
     {
         return {{ 0, frames }};
     }
@@ -181,119 +180,86 @@ MarkerList Slicer::slice()
 
     //std::vector<double> rms_list = get_rms<float>(samples, (qint64) m_winSize, (qint64) m_hopSize);
 
-    MarkerList sil_tags;
-    qint64 silence_start = 0;
-    bool has_silence_start = false;
-    qint64 clip_start = 0;
+    // Scan for silence
 
-    qint64 pos = 0, pos_l = 0, pos_r = 0;
+    MarkerList silences;
+    qint64 silence_start = -1<<30;
+    bool was_silent = true; // If 0 is not silent, it detects an inf-length silence [-inf, 0) as opening guard.
 
     for (qint64 i = 0; i < rms_list.size(); i++)
     {
-        double rms = rms_list[i];
-        // Keep looping while frame is silent.
-        if (rms < m_threshold)
-        {
-            // Record start of silent frames.
-            if (!has_silence_start)
-            {
+        if (rms_list[i] < m_threshold)
+        { // This frame is silent.
+            if (!was_silent)
+            { // Start of silence.
+                was_silent = true;
                 silence_start = i;
-                has_silence_start = true;
             }
-            continue;
         }
-        // Keep looping while frame is not silent and silence start has not been recorded.
-        if (!has_silence_start)
-        {
-            continue;
-        }
-        // Clear recorded silence start if interval is not enough or clip is too short
-        bool is_leading_silence = ((silence_start == 0) && (i > m_maxSilKept));
-        bool need_slice_middle = (
-                ( (i - silence_start) >= m_minInterval) &&
-                ( (i - clip_start) >= m_minLength) );
-        if ((!is_leading_silence) && (!need_slice_middle))
-        {
-            has_silence_start = false;
-            continue;
+        else
+        { // This frame is not silent.
+            if (was_silent)
+            { // End of silence range [silence_start, i).
+                was_silent = false;
+                if (silence_start < 0)
+                { // Prepend inf-length silence as left boundary guard.
+                    qint64 pos_r = argmin_range_view<double>(rms_list, i - m_maxSilKept, i + 1);
+                    silences.emplace_back(-1<<30, pos_r);
+                }
+                else
+                {
+                    // Find break points in this silence.
+                    qint64 pos_l = argmin_range_view<double>(rms_list, silence_start, std::min(silence_start + m_maxSilKept, i) + 1);
+                    qint64 pos_r = argmin_range_view<double>(rms_list, std::max(silence_start, i - m_maxSilKept), i + 1);
+                    // assert(pos_l <= pos_r); // by simple mathematics
+                    silences.emplace_back(pos_l, pos_r);
+                }
+            }
         }
 
-        // Need slicing. Record the range of silent frames to be removed.
-        if ((i - silence_start) <= m_maxSilKept)
+    if (silences.empty()) {
+        return {}; // entirely silent
+    }
+    // Append inf-length silence as right boundary guard.
+    if (!was_silent)
+    {
+        silence_start = rms_list.size();
+    }
+    qint64 pos_l = argmin_range_view<double>(rms_list, silence_start, silence_start + m_maxSilKept + 1);
+    silences.emplace_back(pos_l, 1<<30);
+
+    std::vector<std::pair<qint64, qint64>> order(silences.size());
+    std::vector<qint64> prev(silences.size()), next(silences.size()); // doubly linked list of silences
+    for (qint64 i = 0; i < silences.size(); i++)
+    {
+        auto sil = silence[i];
+        order[i] = std::make_pair(std::max(sil.second - sil.first, 0), i);
+        prev[i] = i - 1;
+        next[i] = i + 1;
+    }
+    std::sort(order.start(), order.end()); // sort silences from short to long
+
+    for (auto o : order)
+    {
+        if (o.first >> 29) // length is inf
         {
-            pos = argmin_range_view<double>(rms_list, silence_start, i + 1) + silence_start;
-            if (silence_start == 0)
-            {
-                sil_tags.emplace_back(0, pos);
-            }
-            else
-            {
-                sil_tags.emplace_back(pos, pos);
-            }
-            clip_start = pos;
+            break;
         }
-        else if ((i - silence_start) <= (m_maxSilKept * 2))
-        {
-            pos = argmin_range_view<double>(rms_list, i - m_maxSilKept, silence_start + m_maxSilKept + 1);
-            pos += i - m_maxSilKept;
-            pos_l = argmin_range_view<double>(rms_list, silence_start, silence_start + m_maxSilKept + 1) + silence_start;
-            pos_r = argmin_range_view<double>(rms_list, i - m_maxSilKept, i + 1) + i - m_maxSilKept;
-            if (silence_start == 0)
-            {
-                clip_start = pos_r;
-                sil_tags.emplace_back(0, clip_start);
-            }
-            else
-            {
-                clip_start = std::max(pos_r, pos);
-                sil_tags.emplace_back(std::min(pos_l, pos), clip_start);
-            }
+        qint64 i = o.second;
+        qint64 pr = prev[i], nx = next[i];
+        if (silences[nx].first - silences[pr].second <= m_maxLength)
+        { // If possible, remove this short silence.
+            next[pr] = nx;
+            prev[nx] = pr;
         }
-        else {
-            pos_l = argmin_range_view<double>(rms_list, silence_start, silence_start + m_maxSilKept + 1) + silence_start;
-            pos_r = argmin_range_view<double>(rms_list, i - m_maxSilKept, i + 1) + i - m_maxSilKept;
-            if (silence_start == 0) {
-                sil_tags.emplace_back(0, pos_r);
-            }
-            else {
-                sil_tags.emplace_back(pos_l, pos_r);
-            }
-            clip_start = pos_r;
-        }
-        has_silence_start = false;
     }
-    // Deal with trailing silence.
-    qint64 total_frames = rms_list.size();
-    if (has_silence_start && ((total_frames - silence_start) >= m_minInterval)) {
-        qint64 silence_end = std::min(total_frames - 1, silence_start + m_maxSilKept);
-        pos = argmin_range_view<double>(rms_list, silence_start, silence_end + 1) + silence_start;
-        sil_tags.emplace_back(pos, total_frames + 1);
+
+    MarkerList chunks;
+    for (qint64 i = 0; next[i] < silences.size(); i = next[i])
+    {
+        chunks.emplace_back(silences[i].second * m_hopSize, std::min(frames, silences[next[i]].first * m_hopSize));
     }
-    // Apply and return slices.
-    if (sil_tags.empty()) {
-        return {{ 0, frames }};
-    }
-    else {
-        MarkerList chunks;
-        qint64 begin = 0, end = 0;
-        qint64 s0 = sil_tags[0].first;
-        if (s0 > 0) {
-            begin = 0;
-            end = s0;
-            chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
-        }
-        for (auto i = 0; i < sil_tags.size() - 1; i++) {
-            begin = sil_tags[i].second;
-            end = sil_tags[i + 1].first;
-            chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
-        }
-        if (sil_tags.back().second < total_frames) {
-            begin = sil_tags.back().second;
-            end = total_frames;
-            chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
-        }
-        return chunks;
-    }
+    return chunks;
 }
 
 SlicerErrorCode Slicer::getErrorCode() {
@@ -378,14 +344,15 @@ inline std::vector<double> get_rms(const std::vector<T>& arr, qint64 frame_lengt
 
 template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end) {
+    // Return the absolute index in v, which is in range [begin, end) if possible
     // Ensure vector access is not out of bound
     auto size = v.size();
-    if (begin > size)  begin = size;
+    if (begin < 0)     begin = 0;
     if (end > size)    end = size;
-    if (begin >= end)  return 0;
+    if (begin >= end)  return begin;
 
     auto min_it = std::min_element(v.begin() + begin, v.begin() + end);
-    return std::distance(v.begin() + begin, min_it);
+    return std::distance(v.begin(), min_it);
 }
 
 template<class T>
