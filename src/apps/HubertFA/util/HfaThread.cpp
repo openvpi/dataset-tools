@@ -39,9 +39,10 @@ namespace HFA {
                 auto tierPhones = std::make_shared<textgrid::IntervalTier>("phonemes", 0.0, words.duration());
 
                 for (auto word : words) {
-                    tierWords->AppendInterval(textgrid::Interval(word->start, word->end, word->text));
+                    tierWords->AppendInterval(textgrid::Interval(std::max(0.0f, word->start), word->end, word->text));
                     for (auto phoneme : word->phonemes) {
-                        tierPhones->AppendInterval(textgrid::Interval(phoneme.start, phoneme.end, phoneme.text));
+                        tierPhones->AppendInterval(
+                            textgrid::Interval(std::max(0.0f, phoneme.start), phoneme.end, phoneme.text));
                     }
                 }
 

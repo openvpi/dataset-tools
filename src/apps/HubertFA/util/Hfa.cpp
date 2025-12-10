@@ -79,7 +79,7 @@ namespace HFA {
         sf.seek(0, SEEK_SET);
         sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
 
-        const auto wav_length = static_cast<double>(sf.frames()) / hfa_input_sample_rate;
+        const float wav_length = static_cast<float>(sf.frames()) / hfa_input_sample_rate;
 
         if (wav_length > 60) {
             msg = "The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
@@ -129,6 +129,7 @@ namespace HFA {
                 for (const auto &word : word_list)
                     words.add_AP(word);
 
+            words.fill_small_gaps(wav_length);
             words.clear_language_prefix();
             words.add_SP(wav_length, "SP");
             return true;

@@ -23,21 +23,22 @@ namespace HFA {
         return a >= b - EPS;
     }
 
-    Phoneme::Phoneme(const float start, const float end, const std::string &text)
-        : start(std::max(0.0f, start)), end(std::max(0.0f, end)), text(text) {
+    Phoneme::Phoneme(const float p_start, const float p_end, const std::string &text)
+        : start(std::max(0.0f, p_start)), end(std::max(0.0f, p_end)), text(text) {
         if (!(0 <= start && start < end)) {
-            std::cerr << "Warning: Phoneme Invalid: text=" << text << " start=" << start << ", end=" << end
+            std::cerr << "Warning: Phoneme Invalid: text=" << text << " p_start=" << start << ", p_end=" << end
                       << std::endl;
         }
     }
 
-    Word::Word(float start, float end, const std::string &text, const bool init_phoneme)
-        : start(std::max(0.0f, start)), end(std::max(0.0f, end)), text(text) {
+    Word::Word(float w_start, float w_end, const std::string &text, const bool init_phoneme)
+        : start(std::max(0.0f, w_start)), end(std::max(0.0f, w_end)), text(text) {
         if (!(0 <= start && start < end)) {
-            std::cerr << "Warning: Word Invalid: text=" << text << " start=" << start << ", end=" << end << std::endl;
+            std::cerr << "Warning: Word Invalid: text=" << text << " w_start=" << start << ", w_end=" << end
+                      << std::endl;
         }
         if (init_phoneme) {
-            phonemes.emplace_back(start, end, text);
+            phonemes.emplace_back(w_start, w_end, text);
         }
     }
 

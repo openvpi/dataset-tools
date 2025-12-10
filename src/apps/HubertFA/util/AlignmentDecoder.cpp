@@ -208,9 +208,6 @@ namespace HFA {
                 word_idx_last = word_idx;
             }
         }
-
-        // 填充小间隙
-        words.fill_small_gaps(wav_length);
         return true;
     }
 

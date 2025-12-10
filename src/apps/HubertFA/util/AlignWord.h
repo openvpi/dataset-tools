@@ -12,7 +12,7 @@ namespace HFA {
         float end;
         std::string text;
 
-        Phoneme(float start, float end, const std::string &text);
+        Phoneme(float p_start, float p_end, const std::string &text);
     };
 
     class Word {
@@ -22,7 +22,7 @@ namespace HFA {
         std::string text;
         std::vector<Phoneme> phonemes;
 
-        Word(float start, float end, const std::string &text, bool init_phoneme = false);
+        Word(float w_start, float w_end, const std::string &text, bool init_phoneme = false);
 
         float dur() const;
         void add_phoneme(const Phoneme &phoneme);
