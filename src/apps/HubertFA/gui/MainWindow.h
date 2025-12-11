@@ -13,6 +13,7 @@
 #include <QPluginLoader>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QTextCharFormat> // 添加这行
 #include <QThreadPool>
 
 #include "../util/Hfa.h"
@@ -74,6 +75,8 @@ namespace HFA {
         QStringList m_failIndex;
         QThreadPool *m_threadpool;
 
+        QTextCharFormat m_errorFormat;
+
         void slot_outTgPath();
 
         void slot_removeListItem() const;
@@ -86,6 +89,8 @@ namespace HFA {
 
         void _q_fileMenuTriggered(const QAction *action);
         void _q_helpMenuTriggered(const QAction *action);
+
+        void appendErrorMessage(const QString &message) const;
     };
 }
 #endif // MAINWINDOW_H

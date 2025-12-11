@@ -132,6 +132,11 @@ namespace HFA {
             words.fill_small_gaps(wav_length);
             words.clear_language_prefix();
             words.add_SP(wav_length, "SP");
+            const auto error_log = words.get_log();
+            if (!(words.check() && error_log.empty())) {
+                msg = error_log;
+                return false;
+            }
             return true;
         }
         msg = modelMsg;

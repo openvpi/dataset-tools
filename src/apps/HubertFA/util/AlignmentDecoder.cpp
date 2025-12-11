@@ -173,10 +173,9 @@ namespace HFA {
             ph_intervals.emplace_back(ph_time_pred[i], ph_time_pred[i + 1]);
         }
 
-        // 构建WordList
         std::vector<std::string> ph_seq_decoded;
         int word_idx_last = -1;
-        Word *current_word = nullptr;
+        Word current_word(0, 1, "temp");
 
         for (size_t i = 0; i < ph_idx_seq.size(); ++i) {
             int ph_idx = ph_idx_seq[i];
@@ -191,22 +190,31 @@ namespace HFA {
                 continue;
 
             Phoneme phoneme(ph_intervals[i].first, ph_intervals[i].second, ph_text);
-            int word_idx =
-                ph_idx_to_word_idx.empty()
-                    ? ph_idx
-                    : (ph_idx < static_cast<int>(ph_idx_to_word_idx.size()) ? ph_idx_to_word_idx[ph_idx] : ph_idx);
-            std::string word_text = word_seq.empty()
-                                        ? ph_text
-                                        : (word_idx < static_cast<int>(word_seq.size()) ? word_seq[word_idx] : ph_text);
+            int word_idx = ph_idx_to_word_idx.empty()                             ? ph_idx
+                           : ph_idx < static_cast<int>(ph_idx_to_word_idx.size()) ? ph_idx_to_word_idx[ph_idx]
+                                                                                  : ph_idx;
+            std::string word_text = word_seq.empty()                               ? ph_text
+                                    : word_idx < static_cast<int>(word_seq.size()) ? word_seq[word_idx]
+                                                                                   : ph_text;
 
-            if (word_idx == word_idx_last && current_word != nullptr) {
-                current_word->append_phoneme(phoneme);
+            if (word_idx == word_idx_last && !current_word.phonemes.empty()) {
+                current_word.append_phoneme(phoneme);
+                current_word.end = phoneme.end;
             } else {
-                current_word = new Word(ph_intervals[i].first, ph_intervals[i].second, word_text);
-                current_word->add_phoneme(phoneme);
-                words.append(current_word);
+                // 保存前一个word
+                if (!current_word.phonemes.empty()) {
+                    words.append(current_word);
+                }
+                // 创建新的word
+                current_word = Word(ph_intervals[i].first, ph_intervals[i].second, word_text);
+                current_word.add_phoneme(phoneme);
                 word_idx_last = word_idx;
             }
+        }
+
+        // 添加最后一个word
+        if (!current_word.phonemes.empty()) {
+            words.append(current_word);
         }
         return true;
     }
@@ -214,7 +222,7 @@ namespace HFA {
     void AlignmentDecoder::_decode(const std::vector<int> &ph_seq_id,
                                    const std::vector<std::vector<float>> &ph_prob_log, // [vocab_size][T]
                                    const std::vector<float> &edge_prob, std::vector<int> &ph_idx_seq,
-                                   std::vector<int> &ph_time_int, std::vector<float> &frame_confidence, int T) {
+                                   std::vector<int> &ph_time_int, std::vector<float> &frame_confidence, const int T) {
         const int S = static_cast<int>(ph_seq_id.size());
 
         // 检查维度

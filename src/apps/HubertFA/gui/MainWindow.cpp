@@ -75,6 +75,9 @@ namespace HFA {
     }
 
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+        // 初始化错误文本格式为红色
+        m_errorFormat.setForeground(Qt::red);
+
         auto rmProvider = ExecutionProvider::CPU;
         int device_id = -1;
         if (isDmlAvailable(device_id)) {
@@ -394,7 +397,7 @@ namespace HFA {
         m_failIndex.append(filename + ": " + msg);
         progressBar->setValue(m_workFinished);
 
-        out->appendPlainText(filename + ": " + msg);
+        appendErrorMessage(filename + ": " + msg);
 
         if (m_workFinished == m_workTotal) {
             slot_threadFinished();
@@ -404,9 +407,6 @@ namespace HFA {
     void MainWindow::slot_oneFinished(const QString &filename, const QString &msg) {
         m_workFinished++;
         progressBar->setValue(m_workFinished);
-
-        if (!msg.isEmpty())
-            out->appendPlainText(filename + ": " + msg);
 
         if (m_workFinished == m_workTotal) {
             slot_threadFinished();
@@ -418,17 +418,18 @@ namespace HFA {
                              .arg(m_workTotal - m_workError)
                              .arg(m_workError)
                              .arg(m_workTotal);
-        if (m_workError > 0) {
-            QString failSummary = "Failed tasks:\n";
-            for (const QString &fileMsg : m_failIndex) {
-                failSummary += "  " + fileMsg + "\n";
-            }
-            out->appendPlainText(failSummary);
-            m_failIndex.clear();
-        }
+
         QMessageBox::information(this, QApplication::applicationName(), msg);
+
         m_workFinished = 0;
         m_workError = 0;
         m_workTotal = 0;
+    }
+
+    void MainWindow::appendErrorMessage(const QString &message) const {
+        QTextCursor cursor = out->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        cursor.insertText(message + "\n", m_errorFormat);
+        out->ensureCursorVisible();
     }
 }
