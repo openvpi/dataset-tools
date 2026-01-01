@@ -7,7 +7,7 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: RelWithDebInfo
+  BUILD_TYPE: Release
 
 jobs:
   build:
@@ -25,7 +25,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.3'
+          version: '6.9.3'
           #cache: true # It never successfully found cache from previous runs, disabling it
 
       - name: Initialize MSVC environment
@@ -49,7 +49,7 @@ jobs:
       - name: Install vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: 0d9d4684352ba8de70bdf251c6fc9a3c464fa12b # Grabbed on 2025-09-29 13:30 +0800
+          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958 # Grabbed on 2026-01-01 23:00
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@master

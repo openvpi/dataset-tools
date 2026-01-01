@@ -1,7 +1,4 @@
-
 #include <QApplication>
-#include <QDebug>
-#include <QJsonDocument>
 #include <QPainter>
 #include <QPainterPath>
 #include <QWheelEvent>
@@ -240,7 +237,7 @@ namespace SlurCutter {
             if (showPhonemeTexts) {
                 while (ph_j < phDur.size() && phBegin >= noteBegin - 0.01 &&
                        phBegin < noteBegin + note.duration - 0.01) {
-                    MiniPhonome ph;
+                    MiniPhoneme ph;
                     ph.begin = phBegin;
                     ph.duration = phDur[ph_j].toDouble();
                     ph.ph = phSeq[ph_j];
@@ -274,11 +271,11 @@ namespace SlurCutter {
         update();
     }
 
-    void F0Widget::loadConfig(const QSettings &cfg) {
-        snapToKey = cfg.value("F0Widget/snapToKeys", snapToKey).toBool();
-        showPitchTextOverlay = cfg.value("F0Widget/showPitchTextOverlay", showPitchTextOverlay).toBool();
-        showPhonemeTexts = cfg.value("F0Widget/showPhonemeTexts", showPhonemeTexts).toBool();
-        showCrosshairAndPitch = cfg.value("F0Widget/showCrosshairAndPitch", showCrosshairAndPitch).toBool();
+    void F0Widget::loadConfig(const QSettings *cfg) {
+        snapToKey = cfg->value("F0Widget/snapToKey", snapToKey).toBool();
+        showPitchTextOverlay = cfg->value("F0Widget/showPitchTextOverlay", showPitchTextOverlay).toBool();
+        showPhonemeTexts = cfg->value("F0Widget/showPhonemeTexts", showPhonemeTexts).toBool();
+        showCrosshairAndPitch = cfg->value("F0Widget/showCrosshairAndPitch", showCrosshairAndPitch).toBool();
 
         bgMenuShowPitchTextOverlay->setChecked(showPitchTextOverlay);
         bgMenuShowPhonemeTexts->setChecked(showPhonemeTexts);
@@ -292,6 +289,7 @@ namespace SlurCutter {
         cfg.setValue("F0Widget/snapToKey", snapToKey);
         cfg.setValue("F0Widget/showPitchTextOverlay", showPitchTextOverlay);
         cfg.setValue("F0Widget/showPhonemeTexts", showPhonemeTexts);
+        cfg.setValue("F0Widget/showCrosshairAndPitch", showCrosshairAndPitch);
     }
 
     void F0Widget::clear() {
@@ -334,7 +332,7 @@ namespace SlurCutter {
         ret.note_slur = ret.note_slur.trimmed();
         ret.note_glide = ret.note_glide.trimmed();
         return ret;
-    };
+    }
 
     bool F0Widget::empty() const {
         return isEmpty;
@@ -404,9 +402,9 @@ namespace SlurCutter {
     }
 
     auto F0Widget::refF0IndexRange(const double startTime, const double endTime) const -> std::tuple<size_t, size_t> {
-        return {std::min(static_cast<size_t>(::floor(std::max(0.0, startTime / f0Timestep))),
+        return {std::min(static_cast<size_t>(floor(std::max(0.0, startTime / f0Timestep))),
                          static_cast<size_t>(f0Values.size()) - 1),
-                std::min(static_cast<size_t>(::ceil(endTime / f0Timestep)), static_cast<size_t>(f0Values.size()) - 1)};
+                std::min(static_cast<size_t>(ceil(endTime / f0Timestep)), static_cast<size_t>(f0Values.size()) - 1)};
     }
 
 
@@ -966,6 +964,19 @@ namespace SlurCutter {
         event->accept();
     }
 
+    void F0Widget::contextMenuEvent(QContextMenuEvent *event) {
+        MiniNoteInterval noteInterval{-1, -1};
+        if (mouseOnNote(event->pos(), &contextMenuNoteInterval)) {
+            // Has to determine whether some actions should be enabled
+            setNoteContextMenuEntriesEnabled();
+            noteMenu->exec(event->globalPos());
+        } else if (QRectF(KeyWidth, TimelineHeight, width() - KeyWidth - ScrollBarWidth, height() - TimelineHeight)
+                       .contains(event->pos())) {
+            // In piano roll but not on note
+            bgMenu->exec(event->globalPos());
+        }
+    }
+
     void F0Widget::mouseMoveEvent(QMouseEvent *event) {
         if (draggingStartPos.x() >= 0 && draggingMode != None) {
             if (!dragging) {
@@ -1024,6 +1035,7 @@ namespace SlurCutter {
             draggingMode = None;
     }
 
+
     void F0Widget::mouseReleaseEvent(QMouseEvent *event) {
         // Commit changes
         if (dragging) {
@@ -1060,20 +1072,6 @@ namespace SlurCutter {
         draggingMode = None;
         dragging = false;
         update();
-    }
-
-
-    void F0Widget::contextMenuEvent(QContextMenuEvent *event) {
-        MiniNoteInterval noteInterval{-1, -1};
-        if (mouseOnNote(event->pos(), &contextMenuNoteInterval)) {
-            // Has to determine whether some actions should be enabled
-            setNoteContextMenuEntriesEnabled();
-            noteMenu->exec(event->globalPos());
-        } else if (QRectF(KeyWidth, TimelineHeight, width() - KeyWidth - ScrollBarWidth, height() - TimelineHeight)
-                       .contains(event->pos())) {
-            // In piano roll but not on note
-            bgMenu->exec(event->globalPos());
-        }
     }
 
     void F0Widget::setTimeAxisCenterAndSyncScrollbar(const double time) {

@@ -5,9 +5,6 @@
 #include <QDebug>
 #include <QDir>
 #include <QDragEnterEvent>
-#include <QFileDialog>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
@@ -134,10 +131,10 @@ namespace SlurCutter {
         connect(slider, &QSlider::sliderReleased, this, &PlayWidget::_q_sliderReleased);
         connect(deviceMenu, &QMenu::triggered, this, &PlayWidget::_q_deviceActionTriggered);
 
-        connect(playback, &QsApi::IAudioPlayback::stateChanged, this, &PlayWidget::_q_playStateChanged);
-        connect(playback, &QsApi::IAudioPlayback::deviceChanged, this, &PlayWidget::_q_audioDeviceChanged);
-        connect(playback, &QsApi::IAudioPlayback::deviceAdded, this, &PlayWidget::_q_audioDeviceAdded);
-        connect(playback, &QsApi::IAudioPlayback::deviceRemoved, this, &PlayWidget::_q_audioDeviceRemoved);
+        connect(playback, &IAudioPlayback::stateChanged, this, &PlayWidget::_q_playStateChanged);
+        connect(playback, &IAudioPlayback::deviceChanged, this, &PlayWidget::_q_audioDeviceChanged);
+        connect(playback, &IAudioPlayback::deviceAdded, this, &PlayWidget::_q_audioDeviceAdded);
+        connect(playback, &IAudioPlayback::deviceRemoved, this, &PlayWidget::_q_audioDeviceRemoved);
 
         reloadDevices();
         reloadButtonStatus();

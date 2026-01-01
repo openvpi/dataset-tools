@@ -19,7 +19,7 @@ namespace SlurCutter {
 
         void setDsSentenceContent(const QJsonObject &content);
         void setErrorStatusText(const QString &text);
-        void loadConfig(const QSettings &cfg);
+        void loadConfig(const QSettings *cfg);
         void pullConfig(QSettings &cfg) const;
 
         void clear();
@@ -92,7 +92,7 @@ namespace SlurCutter {
         void mouseReleaseEvent(QMouseEvent *event) override;
 
         // Stored DS file data
-        struct MiniPhonome {
+        struct MiniPhoneme {
             QString ph;
             double begin;
             double duration;
@@ -102,7 +102,7 @@ namespace SlurCutter {
             int pitch;    // Semitone from A0
             double cents; // nan if no cent deviation
             QString text;
-            QVector<MiniPhonome> phonemes;
+            QVector<MiniPhoneme> phonemes;
             bool isSlur, isRest;
             GlideStyle glide;
 
