@@ -73,6 +73,8 @@ namespace LyricFA {
                 textList.emplace_back(item.hanzi.c_str());
                 pinyinList.emplace_back(item.pinyin.c_str());
             }
+            if (textList.empty() || pinyinList.empty())
+                continue;
             m_lyricDict[lyricName] = lyricInfo{textList, pinyinList};
         }
     }
@@ -162,7 +164,7 @@ namespace LyricFA {
                 }
             }
         } else {
-            msg = "filename: Miss lyric " + lyricName + ".txt";
+            msg = "filename: Miss lyric " + lyricName + ".txt or lyric file is empty";
             return false;
         }
         return true;
