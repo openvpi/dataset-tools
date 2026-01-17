@@ -24,16 +24,6 @@ namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 namespace HFA {
-    static bool isDmlAvailable(int &recommendedIndex) {
-        const GpuInfo recommendedGpu = DmlGpuUtils::getRecommendedGpu();
-
-        if (recommendedGpu.index == -1)
-            return false;
-
-        recommendedIndex = recommendedGpu.index;
-        return recommendedGpu.memory > 0;
-    }
-
     static bool check_configs(const std::string &model_dir, std::string &error) {
         const fs::path model_path(model_dir);
         const fs::path vocab_file = model_path / "vocab.json";
@@ -78,15 +68,6 @@ namespace HFA {
         // 初始化错误文本格式为红色
         m_errorFormat.setForeground(Qt::red);
 
-        auto rmProvider = ExecutionProvider::CPU;
-        int device_id = -1;
-        if (isDmlAvailable(device_id)) {
-            rmProvider = ExecutionProvider::DML;
-            std::cout << "DML is available. Recommended GPU index: " << device_id << std::endl;
-        } else {
-            std::cout << "DML is not available." << std::endl;
-        }
-
         const QString modelFolder = QDir::cleanPath(
 #ifdef Q_OS_MAC
             QApplication::applicationDirPath() + "/../Resources/hfa_model"
@@ -99,7 +80,7 @@ namespace HFA {
             if (!check_configs(modelFolder.toStdString(), error))
                 QMessageBox::information(this, "Warning", QString::fromStdString(error));
             else {
-                m_hfa = new HFA(modelFolder.toStdString(), rmProvider, device_id);
+                m_hfa = new HFA(modelFolder.toStdString(), ExecutionProvider::CPU, -1);
             }
         } else {
 #ifdef Q_OS_MAC

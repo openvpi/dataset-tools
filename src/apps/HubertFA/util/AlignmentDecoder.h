@@ -22,15 +22,14 @@ namespace HFA {
         std::vector<int> ph_idx_seq_;
         std::vector<std::vector<float>> ph_frame_pred_;
         std::vector<int> ph_time_int_pred_;
-
-        std::vector<Phoneme> ph_seq_pred_;
-        std::vector<std::pair<float, float>> ph_intervals_pred_;
         std::vector<float> edge_prob_;
         std::vector<float> frame_confidence_;
+        float total_confidence_ = 0.0f;
 
         static float sigmoid(float x);
-        static std::vector<float> softmax(const std::vector<float> &x);
-        static std::vector<float> log_softmax(const std::vector<float> &x);
+
+        static std::vector<std::vector<float>> softmax_2d(const std::vector<std::vector<float>> &x, int axis);
+        static std::vector<std::vector<float>> log_softmax_2d(const std::vector<std::vector<float>> &x, int axis);
 
         static void forward_pass(int T, int S, const std::vector<std::vector<float>> &prob_log,
                                  const std::vector<float> &edge_prob, std::vector<float> &curr_ph_max_prob_log,
@@ -51,6 +50,7 @@ namespace HFA {
                     const std::vector<std::string> &word_seq = {}, const std::vector<int> &ph_idx_to_word_idx = {},
                     bool ignore_sp = true);
 
+        // Getter 函数
         const std::vector<std::vector<float>> &get_ph_frame_pred() const {
             return ph_frame_pred_;
         }
@@ -68,6 +68,9 @@ namespace HFA {
         }
         const std::vector<int> &get_ph_time_int_pred() const {
             return ph_time_int_pred_;
+        }
+        float get_total_confidence() const {
+            return total_confidence_;
         }
     };
 

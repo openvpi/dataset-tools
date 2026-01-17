@@ -7,7 +7,6 @@
 
 namespace HFA {
 
-    // Phoneme
     Phoneme::Phoneme(const float start, const float end, const std::string &text)
         : start(std::max(0.0f, start)), end(end), text(text) {
         if (!(this->start < this->end)) {
@@ -17,7 +16,6 @@ namespace HFA {
         }
     }
 
-    // Word
     Word::Word(const float start, const float end, const std::string &text, const bool init_phoneme)
         : start(std::max(0.0f, start)), end(end), text(text) {
         if (!(this->start < this->end)) {
@@ -272,7 +270,7 @@ namespace HFA {
     void WordList::add_SP(const float wav_length, const std::string &add_phone) {
         try {
             WordList words_res;
-            words_res.log_ = log_; // 共享日志
+            words_res.log_ = log_;
 
             if (!empty()) {
                 if (front().start > 0) {
@@ -307,7 +305,6 @@ namespace HFA {
             }
 
             words_ = std::move(words_res.words_);
-            // 日志已经共享，不需要移动
             check();
         } catch (const std::exception &e) {
             _add_log("ERROR in add_SP: " + std::string(e.what()));
@@ -429,4 +426,4 @@ namespace HFA {
         log_.clear();
     }
 
-} // namespace HFA
+}
