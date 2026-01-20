@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     auto validator = new QRegularExpressionValidator(QRegularExpression("\\d+"));
     ui->lineEditThreshold->setValidator(new QDoubleValidator());
-    ui->lineEditMinLen->setValidator(validator);
+    ui->lineEditMaxLen->setValidator(validator);
     ui->lineEditMinInterval->setValidator(validator);
     ui->lineEditHopSize->setValidator(validator);
     ui->lineEditMaxSilence->setValidator(validator);
@@ -272,7 +272,7 @@ void MainWindow::slot_start() {
         auto runnable =
             new WorkThread(path, ui->lineEditOutputDir->text(),
                            ui->lineEditThreshold->text().toDouble(),
-                           ui->lineEditMinLen->text().toLongLong(),
+                           ui->lineEditMaxLen->text().toLongLong(),
                            ui->lineEditMinInterval->text().toLongLong(),
                            ui->lineEditHopSize->text().toLongLong(),
                            ui->lineEditMaxSilence->text().toLongLong(),
@@ -404,7 +404,7 @@ void MainWindow::setProcessing(bool processing) {
     ui->btnRemoveListItem->setEnabled(enabled);
     ui->btnClearList->setEnabled(enabled);
     ui->lineEditThreshold->setEnabled(enabled);
-    ui->lineEditMinLen->setEnabled(enabled);
+    ui->lineEditMaxLen->setEnabled(enabled);
     ui->lineEditMinInterval->setEnabled(enabled);
     ui->lineEditHopSize->setEnabled(enabled);
     ui->lineEditMaxSilence->setEnabled(enabled);

@@ -111,16 +111,16 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
 
     formLayout->setWidget(0, QFormLayout::FieldRole, lineEditThreshold);
 
-    lblMinLen = new QLabel(gBoxParameters);
-    lblMinLen->setObjectName("lblMinLen");
+    lblMaxLen = new QLabel(gBoxParameters);
+    lblMaxLen->setObjectName("lblMaxLen");
 
-    formLayout->setWidget(1, QFormLayout::LabelRole, lblMinLen);
+    formLayout->setWidget(1, QFormLayout::LabelRole, lblMaxLen);
 
-    lineEditMinLen = new QLineEdit(gBoxParameters);
-    lineEditMinLen->setObjectName("lineEditMinLen");
-    lineEditMinLen->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
+    lineEditMaxLen = new QLineEdit(gBoxParameters);
+    lineEditMaxLen->setObjectName("lineEditMaxLen");
+    lineEditMaxLen->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
-    formLayout->setWidget(1, QFormLayout::FieldRole, lineEditMinLen);
+    formLayout->setWidget(1, QFormLayout::FieldRole, lineEditMaxLen);
 
     lblMinInterval = new QLabel(gBoxParameters);
     lblMinInterval->setObjectName("lblMinInterval");
@@ -373,8 +373,8 @@ void Ui_MainWindow::retranslateUi(QMainWindow *MainWindow)
     gBoxParameters->setTitle(QCoreApplication::translate("MainWindow", "Parameters", nullptr));
     lblThreshold->setText(QCoreApplication::translate("MainWindow", "Threshold (dB)", nullptr));
     lineEditThreshold->setText(QCoreApplication::translate("MainWindow", "-40", nullptr));
-    lblMinLen->setText(QCoreApplication::translate("MainWindow", "Minimum Length (ms)", nullptr));
-    lineEditMinLen->setText(QCoreApplication::translate("MainWindow", "5000", nullptr));
+    lblMaxLen->setText(QCoreApplication::translate("MainWindow", "Maximum Length (ms)", nullptr));
+    lineEditMaxLen->setText(QCoreApplication::translate("MainWindow", "20000", nullptr));
     lblMinInterval->setText(QCoreApplication::translate("MainWindow", "Minimum Interval (ms)", nullptr));
     lineEditMinInterval->setText(QCoreApplication::translate("MainWindow", "300", nullptr));
     lblHopSize->setText(QCoreApplication::translate("MainWindow", "Hop Size (ms)", nullptr));

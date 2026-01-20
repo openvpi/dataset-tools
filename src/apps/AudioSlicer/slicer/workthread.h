@@ -15,7 +15,7 @@ public:
     WorkThread(const QString &filename,
                const QString &outPath,
                double threshold,
-               qint64 minLength,
+               qint64 maxLength,
                qint64 minInterval,
                qint64 hopSize,
                qint64 maxSilKept,
@@ -32,7 +32,7 @@ private:
     QString m_filename;
     QString m_outPath;
     double m_threshold;
-    qint64 m_minLength;
+    qint64 m_maxLength;
     qint64 m_minInterval;
     qint64 m_hopSize;
     qint64 m_maxSilKept;

@@ -47,11 +47,11 @@ inline QString samplesToDecimalFormat(qint64 samples, int sampleRate);
 inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampleRate, bool *ok = nullptr);
 inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRate, bool *ok = nullptr);
 
-WorkThread::WorkThread(const QString &filename, const QString &outPath, double threshold, qint64 minLength, qint64 minInterval,
+WorkThread::WorkThread(const QString &filename, const QString &outPath, double threshold, qint64 maxLength, qint64 minInterval,
                        qint64 hopSize, qint64 maxSilKept, int outputWaveFormat,
                        bool saveAudio, bool saveMarkers, bool loadMarkers, bool overwriteMarkers,
                        int minimumDigits, int listIndex)
-    : m_filename(filename), m_outPath(outPath), m_threshold(threshold), m_minLength(minLength),
+    : m_filename(filename), m_outPath(outPath), m_threshold(threshold), m_maxLength(maxLength),
       m_minInterval(minInterval), m_hopSize(hopSize), m_maxSilKept(maxSilKept), m_outputWaveFormat(outputWaveFormat),
       m_saveAudio(saveAudio), m_saveMarkers(saveMarkers), m_loadMarkers(loadMarkers), m_overwriteMarkers(overwriteMarkers),
       m_minimumDigits(minimumDigits), m_listIndex(listIndex) {}
@@ -117,7 +117,7 @@ void WorkThread::run() {
     }
     if (!hasExistingMarkers) {
         emit oneInfo(QString("%1: calculating markers").arg(m_filename));
-        Slicer slicer(&sf, m_threshold, m_minLength, m_minInterval, m_hopSize, m_maxSilKept);
+        Slicer slicer(&sf, m_threshold, m_maxLength, m_minInterval, m_hopSize, m_maxSilKept);
 
         if (slicer.getErrorCode() != SlicerErrorCode::SLICER_OK) {
             emit oneError("slicer: " + slicer.getErrorMsg());
