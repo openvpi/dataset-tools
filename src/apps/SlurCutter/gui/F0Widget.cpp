@@ -61,7 +61,7 @@ namespace SlurCutter {
         bgMenu_OptionPrompt = new QAction("Options");
         bgMenuSnapByDefault = new QAction("&Snap to piano keys by default");
         bgMenuShowPitchTextOverlay = new QAction("Show pitch text &overlay");
-        bgMenuShowPhonemeTexts = new QAction("Show &phonemes");
+        bgMenuShowPhonemeTexts = new QAction("Show &phones");
         bgMenuShowCrosshairAndPitch = new QAction("Show &crosshair and pitch");
         bgMenu_ModePrompt = new QAction("Edit Mode");
         bgMenuModeNote = new QAction("&Note");
@@ -237,11 +237,11 @@ namespace SlurCutter {
             if (showPhonemeTexts) {
                 while (ph_j < phDur.size() && phBegin >= noteBegin - 0.01 &&
                        phBegin < noteBegin + note.duration - 0.01) {
-                    MiniPhoneme ph;
+                    MiniPhone ph;
                     ph.begin = phBegin;
                     ph.duration = phDur[ph_j].toDouble();
                     ph.ph = phSeq[ph_j];
-                    note.phonemes.append(ph);
+                    note.phones.append(ph);
                     ph_j++;
                     phBegin += ph.duration;
                 }
@@ -457,13 +457,13 @@ namespace SlurCutter {
             leftNote.duration = time - noteInterval.low;
             rightNote.duration = noteInterval.high - time;
             rightNote.isSlur = true;
-            leftNote.phonemes.clear();
-            rightNote.phonemes.clear();
-            for (auto &ph : noteInterval.value.phonemes) {
+            leftNote.phones.clear();
+            rightNote.phones.clear();
+            for (auto &ph : noteInterval.value.phones) {
                 if (ph.begin >= noteInterval.low && ph.begin < time) {
-                    leftNote.phonemes.append(ph);
+                    leftNote.phones.append(ph);
                 } else if (ph.begin >= time && ph.begin < noteInterval.high) {
-                    rightNote.phonemes.append(ph);
+                    rightNote.phones.append(ph);
                 }
             }
 
@@ -568,7 +568,7 @@ namespace SlurCutter {
 
         leftNode.value.duration += noteInterval.value.duration;
         leftNode.high = noteInterval.high;
-        leftNode.value.phonemes.append(noteInterval.value.phonemes);
+        leftNode.value.phones.append(noteInterval.value.phones);
 
         midiIntervals.insert(leftNode);
         update();
@@ -654,8 +654,8 @@ namespace SlurCutter {
             static constexpr QColor NoteColors[] = {QColor(106, 164, 234), QColor(60, 113, 219)};
             auto leftBoundaryIntervals = midiIntervals.findIntervalsContainPoint(leftTime, false);
             auto deltaLeftTime = 0.0;
-            if (!leftBoundaryIntervals.empty() && !leftBoundaryIntervals.front().value.phonemes.empty())
-                deltaLeftTime = leftBoundaryIntervals.front().value.phonemes.back().duration * secondWidth;
+            if (!leftBoundaryIntervals.empty() && !leftBoundaryIntervals.front().value.phones.empty())
+                deltaLeftTime = leftBoundaryIntervals.front().value.phones.back().duration * secondWidth;
             for (auto &i : midiIntervals.findOverlappingIntervals({leftTime - deltaLeftTime, rightTime}, false)) {
 
                 if (i.value.pitch == 0)
@@ -712,7 +712,7 @@ namespace SlurCutter {
                 // rec.adjust(NotePadding, NotePadding, -NotePadding, -NotePadding);
                 // painter.drawText(rec, Qt::AlignVCenter | Qt::AlignLeft, i.value.text);
                 if (showPhonemeTexts) {
-                    for (auto &[ph, begin, duration] : i.value.phonemes) {
+                    for (auto &[ph, begin, duration] : i.value.phones) {
                         auto phRec = QRectF((begin - leftTime) * secondWidth, rec.y() + semitoneHeight,
                                             duration * secondWidth, lh + 3);
                         auto pen = painter.pen();

@@ -92,7 +92,7 @@ namespace SlurCutter {
         void mouseReleaseEvent(QMouseEvent *event) override;
 
         // Stored DS file data
-        struct MiniPhoneme {
+        struct MiniPhone {
             QString ph;
             double begin;
             double duration;
@@ -102,7 +102,7 @@ namespace SlurCutter {
             int pitch;    // Semitone from A0
             double cents; // nan if no cent deviation
             QString text;
-            QVector<MiniPhoneme> phonemes;
+            QVector<MiniPhone> phones;
             bool isSlur, isRest;
             GlideStyle glide;
 

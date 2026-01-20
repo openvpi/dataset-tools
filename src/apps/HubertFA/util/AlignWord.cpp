@@ -7,16 +7,16 @@
 
 namespace HFA {
 
-    Phoneme::Phoneme(const float start, const float end, const std::string &text)
+    Phone::Phone(const float start, const float end, const std::string &text)
         : start(std::max(0.0f, start)), end(end), text(text) {
         if (!(this->start < this->end)) {
-            const std::string error_msg = "Phoneme Invalid: text=" + text + " start=" + std::to_string(this->start) +
+            const std::string error_msg = "Phone Invalid: text=" + text + " start=" + std::to_string(this->start) +
                                           ", end=" + std::to_string(this->end);
             throw std::runtime_error(error_msg);
         }
     }
 
-    Word::Word(const float start, const float end, const std::string &text, const bool init_phoneme)
+    Word::Word(const float start, const float end, const std::string &text, const bool init_phone)
         : start(std::max(0.0f, start)), end(end), text(text) {
         if (!(this->start < this->end)) {
             const std::string error_msg = "Word Invalid: text=" + text + " start=" + std::to_string(this->start) +
@@ -24,8 +24,8 @@ namespace HFA {
             throw std::runtime_error(error_msg);
         }
 
-        if (init_phoneme) {
-            phonemes.emplace_back(this->start, this->end, this->text);
+        if (init_phone) {
+            phones.emplace_back(this->start, this->end, this->text);
         }
     }
 
@@ -33,41 +33,41 @@ namespace HFA {
         return end - start;
     }
 
-    void Word::add_phoneme(const Phoneme &phoneme) {
-        if (phoneme.start == phoneme.end) {
-            const std::string warning_msg = phoneme.text + " phoneme长度为0，非法";
+    void Word::add_phone(const Phone &phone) {
+        if (phone.start == phone.end) {
+            const std::string warning_msg = phone.text + " phone长度为0，非法";
             _add_log("WARNING: " + warning_msg);
             return;
         }
-        if (phoneme.start >= start && phoneme.end <= end) {
-            phonemes.push_back(phoneme);
+        if (phone.start >= start && phone.end <= end) {
+            phones.push_back(phone);
         } else {
-            const std::string warning_msg = phoneme.text + ": phoneme边界超出word，添加失败";
+            const std::string warning_msg = phone.text + ": phone边界超出word，添加失败";
             _add_log("WARNING: " + warning_msg);
         }
     }
 
-    void Word::append_phoneme(const Phoneme &phoneme) {
-        if (phoneme.start == phoneme.end) {
-            const std::string warning_msg = phoneme.text + " phoneme长度为0，非法";
+    void Word::append_phone(const Phone &phone) {
+        if (phone.start == phone.end) {
+            const std::string warning_msg = phone.text + " phone长度为0，非法";
             _add_log("WARNING: " + warning_msg);
             return;
         }
 
-        if (phonemes.empty()) {
-            if (std::abs(phoneme.start - start) < 1e-6) {
-                phonemes.push_back(phoneme);
-                end = phoneme.end;
+        if (phones.empty()) {
+            if (std::abs(phone.start - start) < 1e-6) {
+                phones.push_back(phone);
+                end = phone.end;
             } else {
-                const std::string warning_msg = phoneme.text + ": phoneme左边界超出word，添加失败";
+                const std::string warning_msg = phone.text + ": phone左边界超出word，添加失败";
                 _add_log("WARNING: " + warning_msg);
             }
         } else {
-            if (std::abs(phoneme.start - phonemes.back().end) < 1e-6) {
-                phonemes.push_back(phoneme);
-                end = phoneme.end;
+            if (std::abs(phone.start - phones.back().end) < 1e-6) {
+                phones.push_back(phone);
+                end = phone.end;
             } else {
-                const std::string warning_msg = phoneme.text + ": phoneme添加失败";
+                const std::string warning_msg = phone.text + ": phone添加失败";
                 _add_log("WARNING: " + warning_msg);
             }
         }
@@ -75,9 +75,9 @@ namespace HFA {
 
     void Word::move_start(float new_start) {
         new_start = std::max(0.0f, new_start);
-        if (0 <= new_start && new_start < phonemes[0].end) {
+        if (0 <= new_start && new_start < phones[0].end) {
             start = new_start;
-            phonemes[0].start = new_start;
+            phones[0].start = new_start;
         } else {
             const std::string warning_msg = text + ": start >= first_phone_end，无法调整word边界";
             _add_log("WARNING: " + warning_msg);
@@ -86,9 +86,9 @@ namespace HFA {
 
     void Word::move_end(float new_end) {
         new_end = std::max(0.0f, new_end);
-        if (new_end > phonemes.back().start && new_end >= 0) {
+        if (new_end > phones.back().start && new_end >= 0) {
             end = new_end;
-            phonemes.back().end = new_end;
+            phones.back().end = new_end;
         } else {
             const std::string warning_msg = text + ": new_end <= first_phone_start，无法调整word边界";
             _add_log("WARNING: " + warning_msg);
@@ -165,7 +165,7 @@ namespace HFA {
     }
 
     void WordList::append(const Word &word) {
-        if (word.phonemes.empty()) {
+        if (word.phones.empty()) {
             const std::string warning_msg = word.text + ": phones为空，非法word";
             _add_log("WARNING: " + warning_msg);
             return;
@@ -186,8 +186,8 @@ namespace HFA {
 
     void WordList::add_AP(const Word &new_word, float min_dur) {
         try {
-            if (new_word.phonemes.empty()) {
-                const std::string warning_msg = new_word.text + " phonemes为空，非法word";
+            if (new_word.phones.empty()) {
+                const std::string warning_msg = new_word.text + " phones为空，非法word";
                 _add_log("WARNING: " + warning_msg);
                 return;
             }
@@ -311,10 +311,10 @@ namespace HFA {
         }
     }
 
-    std::vector<std::string> WordList::phonemes() const {
+    std::vector<std::string> WordList::phones() const {
         std::vector<std::string> result;
         for (const auto &word : words_) {
-            for (const auto &ph : word.phonemes) {
+            for (const auto &ph : word.phones) {
                 result.push_back(ph.text);
             }
         }
@@ -332,10 +332,10 @@ namespace HFA {
 
     void WordList::clear_language_prefix() {
         for (auto &word : words_) {
-            for (auto &phoneme : word.phonemes) {
-                const size_t pos = phoneme.text.find_last_of('/');
+            for (auto &phone : word.phones) {
+                const size_t pos = phone.text.find_last_of('/');
                 if (pos != std::string::npos) {
-                    phoneme.text = phoneme.text.substr(pos + 1);
+                    phone.text = phone.text.substr(pos + 1);
                 }
             }
         }
@@ -357,44 +357,43 @@ namespace HFA {
                 return false;
             }
 
-            if (word.phonemes.empty()) {
-                const std::string warning_msg = "Word '" + word.text + "' has no phonemes";
+            if (word.phones.empty()) {
+                const std::string warning_msg = "Word '" + word.text + "' has no phones";
                 _add_log("WARNING: " + warning_msg);
                 return false;
             }
 
-            if (std::abs(word.phonemes[0].start - word.start) > 1e-6) {
-                const std::string warning_msg = "Word '" + word.text + "' first phoneme start(" +
-                                                std::to_string(word.phonemes[0].start) + ") != word start(" +
+            if (std::abs(word.phones[0].start - word.start) > 1e-6) {
+                const std::string warning_msg = "Word '" + word.text + "' first phone start(" +
+                                                std::to_string(word.phones[0].start) + ") != word start(" +
                                                 std::to_string(word.start) + ")";
                 _add_log("WARNING: " + warning_msg);
                 return false;
             }
 
-            if (std::abs(word.phonemes.back().end - word.end) > 1e-6) {
-                const std::string warning_msg = "Word '" + word.text + "' last phoneme end(" +
-                                                std::to_string(word.phonemes.back().end) + ") != word end(" +
+            if (std::abs(word.phones.back().end - word.end) > 1e-6) {
+                const std::string warning_msg = "Word '" + word.text + "' last phone end(" +
+                                                std::to_string(word.phones.back().end) + ") != word end(" +
                                                 std::to_string(word.end) + ")";
                 _add_log("WARNING: " + warning_msg);
                 return false;
             }
 
-            for (size_t j = 0; j < word.phonemes.size(); j++) {
-                if (!(word.phonemes[j].start < word.phonemes[j].end)) {
+            for (size_t j = 0; j < word.phones.size(); j++) {
+                if (!(word.phones[j].start < word.phones[j].end)) {
                     const std::string warning_msg =
-                        "Word '" + word.text + "' phoneme '" + word.phonemes[j].text +
-                        "' has invalid time order: start=" + std::to_string(word.phonemes[j].start) +
-                        ", end=" + std::to_string(word.phonemes[j].end);
+                        "Word '" + word.text + "' phone '" + word.phones[j].text +
+                        "' has invalid time order: start=" + std::to_string(word.phones[j].start) +
+                        ", end=" + std::to_string(word.phones[j].end);
                     _add_log("WARNING: " + warning_msg);
                     return false;
                 }
 
-                if (j < word.phonemes.size() - 1 &&
-                    std::abs(word.phonemes[j].end - word.phonemes[j + 1].start) > 1e-6) {
-                    const std::string warning_msg = "Word '" + word.text + "' phoneme '" + word.phonemes[j].text +
-                                                    "' end(" + std::to_string(word.phonemes[j].end) +
-                                                    ") != next phoneme '" + word.phonemes[j + 1].text + "' start(" +
-                                                    std::to_string(word.phonemes[j + 1].start) + ")";
+                if (j < word.phones.size() - 1 && std::abs(word.phones[j].end - word.phones[j + 1].start) > 1e-6) {
+                    const std::string warning_msg = "Word '" + word.text + "' phone '" + word.phones[j].text +
+                                                    "' end(" + std::to_string(word.phones[j].end) +
+                                                    ") != next phone '" + word.phones[j + 1].text + "' start(" +
+                                                    std::to_string(word.phones[j + 1].start) + ")";
                     _add_log("WARNING: " + warning_msg);
                     return false;
                 }

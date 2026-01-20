@@ -117,7 +117,7 @@ namespace HFA {
                         const float start_time = start * frame_length_;
                         const float end_time = end * frame_length_;
                         auto word = Word(start_time, end_time, tag);
-                        word.add_phoneme(Phoneme(start_time, end_time, tag));
+                        word.add_phone(Phone(start_time, end_time, tag));
                         words.push_back(word);
                     }
                     start = -1;
@@ -131,7 +131,7 @@ namespace HFA {
             const float start_time = start * frame_length_;
             const float end_time = (prob.size() - 1) * frame_length_;
             auto word = Word(start_time, end_time, tag);
-            word.add_phoneme(Phoneme(start_time, end_time, tag));
+            word.add_phone(Phone(start_time, end_time, tag));
             words.push_back(word);
         }
 

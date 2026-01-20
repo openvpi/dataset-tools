@@ -6,13 +6,13 @@
 
 namespace HFA {
 
-    class Phoneme {
+    class Phone {
     public:
         float start;
         float end;
         std::string text;
 
-        Phoneme(float start, float end, const std::string &text);
+        Phone(float start, float end, const std::string &text);
     };
 
     class Word {
@@ -20,14 +20,14 @@ namespace HFA {
         float start;
         float end;
         std::string text;
-        std::vector<Phoneme> phonemes;
+        std::vector<Phone> phones;
         std::vector<std::string> log;
 
-        Word(float start, float end, const std::string &text, bool init_phoneme = false);
+        Word(float start, float end, const std::string &text, bool init_phone = false);
 
         float dur() const;
-        void add_phoneme(const Phoneme &phoneme);
-        void append_phoneme(const Phoneme &phoneme);
+        void add_phone(const Phone &phone);
+        void append_phone(const Phone &phoneme);
         void move_start(float new_start);
         void move_end(float new_end);
 
@@ -38,7 +38,7 @@ namespace HFA {
 
     class WordList {
         std::vector<Word> words_;
-        std::vector<std::string> log_; // 日志列表
+        std::vector<std::string> log_;
 
         void _add_log(const std::string &message);
         static std::vector<std::pair<float, float>>
@@ -50,7 +50,6 @@ namespace HFA {
         WordList(const WordList &) = default;
         WordList &operator=(const WordList &) = default;
 
-        // 标准容器接口
         using iterator = std::vector<Word>::iterator;
         using const_iterator = std::vector<Word>::const_iterator;
 
@@ -122,20 +121,17 @@ namespace HFA {
             return 0.0;
         }
 
-        // 核心功能方法
         std::vector<Word> overlapping_words(const Word &new_word) const;
         void append(const Word &word);
         void add_AP(const Word &new_word, float min_dur = 0.1f);
         void fill_small_gaps(float wav_length, float gap_length = 0.1f);
         void add_SP(float wav_length, const std::string &add_phone = "SP");
 
-        // 获取方法
-        std::vector<std::string> phonemes() const;
+        std::vector<std::string> phones() const;
         std::vector<std::pair<float, float>> intervals() const;
         void clear_language_prefix();
         bool check();
 
-        // 日志相关方法
         std::string get_log() const;
         void clear_log();
     };

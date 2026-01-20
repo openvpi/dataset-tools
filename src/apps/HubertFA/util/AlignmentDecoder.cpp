@@ -154,7 +154,7 @@ namespace HFA {
             std::vector<int> ph_seq_id;
             for (const auto &ph : ph_seq) {
                 if (vocab_.find(ph) == vocab_.end()) {
-                    msg = "Phoneme '" + ph + "' not found in vocabulary.";
+                    msg = "Phone '" + ph + "' not found in vocabulary.";
                     return false;
                 }
                 ph_seq_id.push_back(vocab_.at(ph));
@@ -292,7 +292,7 @@ namespace HFA {
                 float start = ph_intervals[i].first;
                 float end = ph_intervals[i].second;
 
-                Phoneme phoneme(start, end, ph_text);
+                Phone phoneme(start, end, ph_text);
 
                 int word_idx;
                 if (ph_idx_to_word_idx.empty()) {
@@ -313,13 +313,13 @@ namespace HFA {
                 }
 
                 if (word_idx == word_idx_last && has_current_word) {
-                    current_word.append_phoneme(phoneme);
+                    current_word.append_phone(phoneme);
                     current_word.end = phoneme.end;
                 } else {
                     if (has_current_word)
                         words.append(current_word);
                     current_word = Word(start, end, word_text);
-                    current_word.add_phoneme(phoneme);
+                    current_word.add_phone(phoneme);
                     has_current_word = true;
                     word_idx_last = word_idx;
                 }
