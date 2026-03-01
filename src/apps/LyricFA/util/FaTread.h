@@ -11,7 +11,7 @@ namespace LyricFA {
     class FaTread final : public QObject, public QRunnable {
         Q_OBJECT
     public:
-        FaTread(MatchLyric *match, QString filename, QString labPath, QString jsonPath, const bool &asr_rectify = true);
+        FaTread(MatchLyric *match, QString filename, QString labPath, QString jsonPath);
         void run() override;
 
     private:
@@ -19,7 +19,6 @@ namespace LyricFA {
         QString m_filename;
         QString m_labPath;
         QString m_jsonPath;
-        bool m_asr_rectify;
 
     signals:
         void oneFailed(const QString &filename, const QString &msg);

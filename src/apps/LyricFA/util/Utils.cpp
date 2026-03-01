@@ -1,62 +1,77 @@
 #include "Utils.h"
-
-#include <iostream>
 #include <unordered_set>
 
 namespace LyricFA {
-    bool isLetter(const char16_t &c) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+
+    bool isLetter(const QChar &c) {
+        const ushort uc = c.unicode();
+        return (uc >= 'a' && uc <= 'z') || (uc >= 'A' && uc <= 'Z');
     }
 
-    bool isHanzi(const char16_t &c) {
-        return c >= 0x4e00 && c <= 0x9fa5;
+    bool isSpecialLetter(const QChar &c) {
+        static auto specialLetter = QList<QChar>({QChar('\''), QChar('-')});
+        for (const QChar &s : specialLetter) {
+            if (c == s)
+                return true;
+        }
+        return false;
     }
 
-    bool isKana(const char16_t &c) {
-        return (c >= 0x3040 && c <= 0x309F) || (c >= 0x30A0 && c <= 0x30FF);
+    bool isHanzi(const QChar &c) {
+        const ushort uc = c.unicode();
+        return uc >= 0x4e00 && uc <= 0x9fa5;
     }
 
-    bool isDigit(const char16_t &c) {
-        return c >= '0' && c <= '9';
+    bool isKana(const QChar &c) {
+        const ushort uc = c.unicode();
+        return (uc >= 0x3040 && uc <= 0x309F) || (uc >= 0x30A0 && uc <= 0x30FF);
     }
 
-    bool isSpace(const char16_t &c) {
-        return c == ' ';
+    bool isDigit(const QChar &c) {
+        return c.isDigit();
     }
 
-    bool isSpecialKana(const char16_t &c) {
-        static const std::unordered_set<char16_t> specialKana = {u'ャ', u'ュ', u'ョ', u'ゃ', u'ゅ', u'ょ',
-                                                                 u'ァ', u'ィ', u'ゥ', u'ェ', u'ォ', u'ぁ',
-                                                                 u'ぃ', u'ぅ', u'ぇ', u'ぉ'};
-        return specialKana.find(c) != specialKana.end();
+    bool isSpace(const QChar &c) {
+        return c.isSpace();
     }
 
-    std::vector<std::u16string> splitString(const std::u16string &input) {
-        std::vector<std::u16string> res;
-        res.reserve(input.size());
-        auto start = input.begin();
-        const auto end = input.end();
+    bool isSpecialKana(const QChar &c) {
+        static const std::unordered_set<ushort> specialKana = {
+            0x30E3, 0x30E5, 0x30E7, 0x3083, 0x3085, 0x3087, // ャュョゃゅょ
+            0x30A1, 0x30A3, 0x30A5, 0x30A7, 0x30A9,         // ァィゥェォ
+            0x3041, 0x3043, 0x3045, 0x3047, 0x3049          // ぁぃぅぇぉ
+        };
+        return specialKana.find(c.unicode()) != specialKana.end();
+    }
 
-        while (start != end) {
-            const auto &currentChar = *start;
-            if (isLetter(currentChar)) {
-                auto letterStart = start;
-                while (start != end && isLetter(*start)) {
-                    ++start;
+    QVector<QString> splitString(const QString &input) {
+        QVector<QString> result;
+        int pos = 0;
+        const int len = input.length();
+
+        while (pos < len) {
+            QChar cur = input[pos];
+            if (isLetter(cur) || isSpecialLetter(cur)) {
+                const int start = pos;
+                while (pos < len && (isLetter(input[pos]) || isSpecialLetter(input[pos]))) {
+                    ++pos;
                 }
-                res.emplace_back(letterStart, start);
-            } else if (isHanzi(currentChar) || isDigit(currentChar) || !isSpace(currentChar)) {
-                res.emplace_back(1, currentChar);
-                ++start;
-            } else if (isKana(currentChar)) {
-                const int length = start + 1 != end && isSpecialKana(*(start + 1)) ? 2 : 1;
-                res.emplace_back(start, start + length);
-                std::advance(start, length);
+                result.append(input.mid(start, pos - start));
+            } else if (isHanzi(cur) || isDigit(cur)) {
+                result.append(QString(cur));
+                ++pos;
+            } else if (isKana(cur)) {
+                int length = 1;
+                if (pos + 1 < len && isSpecialKana(input[pos + 1])) {
+                    length = 2;
+                }
+                result.append(input.mid(pos, length));
+                pos += length;
             } else {
-                ++start;
+                ++pos;
             }
         }
-        return res;
+        return result;
     }
 
-}
+} // namespace LyricFA

@@ -3,14 +3,14 @@
 #include <QApplication>
 
 namespace LyricFA {
-    FaTread::FaTread(MatchLyric *match, QString filename, QString labPath, QString jsonPath, const bool &asr_rectify)
+    FaTread::FaTread(MatchLyric *match, QString filename, QString labPath, QString jsonPath)
         : m_match(match), m_filename(std::move(filename)), m_labPath(std::move(labPath)),
-          m_jsonPath(std::move(jsonPath)), m_asr_rectify(asr_rectify) {
+          m_jsonPath(std::move(jsonPath)) {
     }
 
     void FaTread::run() {
         QString matchMsg;
-        const auto matchRes = m_match->match(m_filename, m_labPath, m_jsonPath, matchMsg, m_asr_rectify);
+        const auto matchRes = m_match->match(m_filename, m_labPath, m_jsonPath, matchMsg);
 
         if (!matchRes) {
             Q_EMIT this->oneFailed(m_filename, matchMsg);

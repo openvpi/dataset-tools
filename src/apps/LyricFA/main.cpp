@@ -5,9 +5,19 @@
 #    include <Windows.h>
 #endif
 
+#include <cpp-pinyin/G2pglobal.h>
+
 using namespace LyricFA;
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
+
+    std::filesystem::path dictPath =
+#ifdef Q_OS_MAC
+        std::filesystem::path(QApplication::applicationDirPath().toStdString()) / ".." / "Resources" / "dict";
+#else
+        std::filesystem::path(QApplication::applicationDirPath().toStdString()) / "dict";
+#endif
+    Pinyin::setDictionaryPath(dictPath.make_preferred());
 
 #ifdef Q_OS_WIN
     // For Windows only.

@@ -1,15 +1,10 @@
 #ifndef MATCHLYRIC_H
 #define MATCHLYRIC_H
 
-#include <memory>
-
-#include <QPlainTextEdit>
+#include "LyricMatcher.h"
+#include <QMap>
 #include <QString>
-
-#include <cpp-pinyin/Pinyin.h>
-
-#include "../util/LyricAligner.h"
-
+#include <memory>
 
 namespace LyricFA {
     class MatchLyric {
@@ -18,18 +13,17 @@ namespace LyricFA {
         ~MatchLyric();
 
         void initLyric(const QString &lyric_folder);
-
-        bool match(const QString &filename, const QString &labPath, const QString &jsonPath, QString &msg,
-                   const bool &asr_rectify = true) const;
+        bool match(const QString &filename, const QString &labPath, const QString &jsonPath, QString &msg) const;
 
     private:
-        struct lyricInfo {
-            std::vector<std::string> text, pinyin;
+        struct LyricInfo {
+            QVector<QString> text;
+            QVector<QString> pinyin;
         };
 
-        LyricAligner *m_lyricAligner;
-        QMap<QString, lyricInfo> m_lyricDict;
-        std::unique_ptr<Pinyin::Pinyin> m_mandarin;
+        QMap<QString, LyricInfo> m_lyricDict;
+        std::unique_ptr<LyricMatcher> m_matcher;
+        int m_diffThreshold = 1;
     };
 }
 #endif // MATCHLYRIC_H

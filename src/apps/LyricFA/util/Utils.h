@@ -1,23 +1,19 @@
 #ifndef LFA_UTIL_H
 #define LFA_UTIL_H
 
-#include <string>
-#include <vector>
-
+#include <QString>
+#include <QVector>
 
 namespace LyricFA {
-    std::vector<std::u16string> splitString(const std::u16string &input);
+    bool isLetter(const QChar &c);
+    bool isSpecialLetter(const QChar &c);
+    bool isHanzi(const QChar &c);
+    bool isKana(const QChar &c);
+    bool isDigit(const QChar &c);
+    bool isSpace(const QChar &c);
+    bool isSpecialKana(const QChar &c);
 
-    bool isLetter(const char16_t &c);
-
-    bool isHanzi(const char16_t &c);
-
-    bool isKana(const char16_t &c);
-
-    bool isDigit(const char16_t &c);
-
-    bool isSpace(const char16_t &c);
-
-    bool isSpecialKana(const char16_t &c);
+    QVector<QString> splitString(const QString &input);
 }
+
 #endif // LFA_UTIL_H

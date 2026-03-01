@@ -44,11 +44,6 @@ namespace LyricFA {
 #endif
         }
 
-#ifdef Q_OS_MAC
-        Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/../Resources/dict");
-#else
-        Pinyin::setDictionaryPath(QApplication::applicationDirPath().toUtf8().toStdString() + "/dict");
-#endif
         m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
 
         m_threadpool = new QThreadPool(this);
@@ -407,8 +402,10 @@ namespace LyricFA {
         m_workFinished++;
         progressBar->setValue(m_workFinished);
 
-        if (!msg.isEmpty())
+        if (!msg.isEmpty()) {
             out->appendPlainText(filename + ": " + msg);
+            out->appendHtml("<hr>");
+        }
 
         if (m_workFinished == m_workTotal) {
             slot_threadFinished();

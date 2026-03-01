@@ -8,6 +8,7 @@
 #include <QListWidget>
 #include <QMainWindow>
 #include <QMenu>
+#include <QPlainTextEdit>
 #include <QPluginLoader>
 #include <QProgressBar>
 #include <QPushButton>
