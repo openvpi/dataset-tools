@@ -1,4 +1,3 @@
-#include "gui/MainWindow.h"
 #include <QApplication>
 
 #ifdef Q_OS_WIN
@@ -7,7 +6,8 @@
 
 #include <cpp-pinyin/G2pglobal.h>
 
-using namespace LyricFA;
+#include "gui/LyricFAWindow.h"
+
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
 
@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 #ifdef Q_OS_MAC
         std::filesystem::path(QApplication::applicationDirPath().toStdString()) / ".." / "Resources" / "dict";
 #else
-        std::filesystem::path(QApplication::applicationDirPath().toStdString()) / "dict";
+        std::filesystem::path(QApplication::applicationDirPath().toStdWString()) / "dict";
 #endif
     Pinyin::setDictionaryPath(dictPath.make_preferred());
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    MainWindow w;
+    LyricFA::LyricFAWindow w;
     w.show();
     return QApplication::exec();
 }

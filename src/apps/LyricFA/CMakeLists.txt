@@ -11,6 +11,7 @@ find_package(SndFile CONFIG REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+        AsyncTaskWindow::AsyncTaskWindow
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
         cpp-pinyin::cpp-pinyin
