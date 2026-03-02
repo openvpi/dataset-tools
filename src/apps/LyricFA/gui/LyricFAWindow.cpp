@@ -126,7 +126,7 @@ namespace LyricFA {
                 labOutPath + QDir::separator() + QFileInfo(filename).completeBaseName() + ".lab";
 
             auto *asrThread = new AsrThread(m_asr, filename, filePath, labFilePath,
-                                            QSharedPointer<Pinyin::Pinyin>(toPinyin ? m_mandarin.data() : nullptr));
+                                            QSharedPointer<Pinyin::Pinyin>(toPinyin ? m_mandarin : nullptr));
             connect(asrThread, &AsrThread::oneFailed, this, &AsyncTaskWindow::slot_oneFailed);
             connect(asrThread, &AsrThread::oneFinished, this, &AsyncTaskWindow::slot_oneFinished);
             m_threadPool->start(asrThread);
