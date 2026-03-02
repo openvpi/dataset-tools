@@ -100,13 +100,11 @@ namespace AsyncTask {
         auto *mainLayout = new QVBoxLayout(central);
 
         auto *splitLayout = new QHBoxLayout();
+
+        auto *leftLayout = new QVBoxLayout();
         m_taskList = new QListWidget();
         m_taskList->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        splitLayout->addWidget(m_taskList, 3);
-
-        m_rightPanel = new QVBoxLayout();
-        splitLayout->addLayout(m_rightPanel, 2);
-        mainLayout->addLayout(splitLayout);
+        leftLayout->addWidget(m_taskList, 1);
 
         auto *btnLayout = new QHBoxLayout();
         auto *removeBtn = new QPushButton("移除选中");
@@ -115,11 +113,16 @@ namespace AsyncTask {
         btnLayout->addWidget(removeBtn);
         btnLayout->addWidget(clearBtn);
         btnLayout->addWidget(m_runBtn);
-        mainLayout->addLayout(btnLayout);
+        leftLayout->addLayout(btnLayout);
 
-        connect(removeBtn, &QPushButton::clicked, this, &AsyncTaskWindow::slot_removeSelected);
-        connect(clearBtn, &QPushButton::clicked, this, &AsyncTaskWindow::slot_clearList);
-        connect(m_runBtn, &QPushButton::clicked, this, &AsyncTaskWindow::runTask);
+        splitLayout->addLayout(leftLayout, 3);
+
+        m_rightPanel = new QVBoxLayout();
+        splitLayout->addLayout(m_rightPanel, 2);
+
+        m_topLayout = new QVBoxLayout();
+        mainLayout->addLayout(m_topLayout);
+        mainLayout->addLayout(splitLayout);
 
         m_logOutput = new QPlainTextEdit();
         m_logOutput->setReadOnly(true);
@@ -133,9 +136,12 @@ namespace AsyncTask {
         mainLayout->addLayout(progressLayout);
 
         setCentralWidget(central);
+
+        connect(removeBtn, &QPushButton::clicked, this, &AsyncTaskWindow::slot_removeSelected);
+        connect(clearBtn, &QPushButton::clicked, this, &AsyncTaskWindow::slot_clearList);
+        connect(m_runBtn, &QPushButton::clicked, this, &AsyncTaskWindow::runTask);
     }
 
-    // 拖拽事件
     void AsyncTaskWindow::dragEnterEvent(QDragEnterEvent *event) {
         bool accept = false;
         for (const QUrl &url : event->mimeData()->urls()) {

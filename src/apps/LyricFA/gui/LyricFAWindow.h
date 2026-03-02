@@ -3,11 +3,14 @@
 
 #include "AsyncTaskWindow.h"
 #include <QCheckBox>
+#include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSharedPointer>
 
 #include "../util/Asr.h"
 #include "../util/MatchLyric.h"
+
 namespace LyricFA {
 
     class LyricFAWindow : public AsyncTask::AsyncTaskWindow {
@@ -26,6 +29,8 @@ namespace LyricFA {
         void slot_labPath();
         void slot_jsonPath();
         void slot_lyricPath();
+        void slot_browseModel();
+        void slot_loadModel();
 
     private:
         QLineEdit *m_labEdit;
@@ -33,6 +38,9 @@ namespace LyricFA {
         QLineEdit *m_lyricEdit;
         QCheckBox *m_pinyinBox;
         QPushButton *m_matchBtn;
+
+        QLineEdit *m_modelEdit;
+        QLabel *m_modelStatusLabel;
 
         Asr *m_asr = nullptr;
         QSharedPointer<Pinyin::Pinyin> m_mandarin;

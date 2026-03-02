@@ -77,8 +77,8 @@ namespace AudioUtil
         const auto quality_spec = soxr_quality_spec(SOXR_HQ, 0);
         const auto runtime_spec = soxr_runtime_spec(1); // 单线程
 
-        const auto resampler = soxr_create(static_cast<double>(srcHandle.samplerate()), // 输入采样率
-                                           static_cast<double>(tar_samplerate), // 输出采样率
+        const auto resampler = soxr_create(srcHandle.samplerate(), // 输入采样率
+                                           tar_samplerate, // 输出采样率
                                            srcHandle.channels(), // 通道数
                                            &error, // 错误信息
                                            &io_spec, // I/O 规格
@@ -257,20 +257,20 @@ namespace AudioUtil
             while (output_done > 0 && !error);
         }
 
-        // 清理重采样器
         soxr_delete(resampler);
 
-        // 更新输出VIO的帧数信息
         sf_vio_out.info.frames = total_output_frames;
 
-        // 计算并显示时长信息
         const double input_duration = static_cast<double>(total_input_frames) / srcHandle.samplerate();
         const double output_duration = static_cast<double>(total_output_frames) / tar_samplerate;
 
-        std::cout << "Resample success." << std::endl;
-        std::cout << "Input duration: " << input_duration << "s (" << total_input_frames << " frames)" << std::endl;
-        std::cout << "Output duration: " << output_duration << "s (" << total_output_frames << " frames)" << std::endl;
-        std::cout << "Duration difference: " << (output_duration - input_duration) << "s" << std::endl;
+        if (input_duration != output_duration) {
+            std::cout << "Resample Warning." << std::endl;
+            std::cout << "Input duration: " << input_duration << "s (" << total_input_frames << " frames)" << std::endl;
+            std::cout << "Output duration: " << output_duration << "s (" << total_output_frames << " frames)"
+                      << std::endl;
+            std::cout << "Duration difference: " << (output_duration - input_duration) << "s" << std::endl;
+        }
 
         return sf_vio_out;
     }

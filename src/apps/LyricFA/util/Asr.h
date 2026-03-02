@@ -8,7 +8,6 @@
 
 #include <Model.h>
 
-
 namespace LyricFA {
 
     class Asr {
@@ -17,6 +16,10 @@ namespace LyricFA {
         ~Asr();
 
         bool recognize(const std::filesystem::path &filepath, std::string &msg) const;
+
+        bool initialized() const {
+            return m_asrHandle != nullptr;
+        }
 
     private:
         std::unique_ptr<FunAsr::Model> m_asrHandle;

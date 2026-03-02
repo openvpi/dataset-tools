@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QFileDialog>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -13,33 +14,6 @@
 namespace LyricFA {
 
     LyricFAWindow::LyricFAWindow(QWidget *parent) : AsyncTaskWindow(parent) {
-        const QString modelFolder = QDir::cleanPath(
-#ifdef Q_OS_MAC
-            QApplication::applicationDirPath() + "/../Resources/model"
-#else
-            QApplication::applicationDirPath() + QDir::separator() + "model"
-#endif
-        );
-        if (QDir(modelFolder).exists()) {
-            const auto modelPath = modelFolder + QDir::separator() + "model.onnx";
-            const auto vocabPath = modelFolder + QDir::separator() + "vocab.txt";
-            if (!QFile(modelPath).exists() || !QFile(vocabPath).exists())
-                QMessageBox::information(
-                    this, "Warning",
-                    "Missing model.onnx or vocab.txt, please read ReadMe.md and download the model again.");
-            else
-                m_asr = new Asr(modelFolder);
-        } else {
-#ifdef Q_OS_MAC
-            QMessageBox::information(
-                this, "Warning",
-                "Please read ReadMe.md and download asrModel to unzip to app bundle's Resources directory.");
-#else
-            QMessageBox::information(this, "Warning",
-                                     "Please read ReadMe.md and download asrModel to unzip to the root directory.");
-#endif
-        }
-
         m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
         m_match = new MatchLyric();
 
@@ -91,9 +65,44 @@ namespace LyricFA {
         connect(btnLab, &QPushButton::clicked, this, &LyricFAWindow::slot_labPath);
         connect(btnJson, &QPushButton::clicked, this, &LyricFAWindow::slot_jsonPath);
         connect(btnLyric, &QPushButton::clicked, this, &LyricFAWindow::slot_lyricPath);
+
+        const QString defaultModelPath = QDir::cleanPath(
+#ifdef Q_OS_MAC
+            QApplication::applicationDirPath() + "/../Resources/model"
+#else
+            QApplication::applicationDirPath() + QDir::separator() + "model" + QDir::separator() + "ParaformerAsrModel"
+#endif
+        );
+
+        auto *modelLabel = new QLabel("ASR Model Folder:", this);
+        m_modelEdit = new QLineEdit(this);
+        m_modelEdit->setText(defaultModelPath);
+
+        auto *browseBtn = new QPushButton("Browse...", this);
+        auto *loadBtn = new QPushButton("Load Model", this);
+        m_modelStatusLabel = new QLabel("Model not loaded", this);
+
+        auto *loadModelLayout = new QHBoxLayout();
+        loadModelLayout->addWidget(modelLabel);
+        loadModelLayout->addWidget(m_modelEdit);
+        loadModelLayout->addWidget(browseBtn);
+        loadModelLayout->addWidget(loadBtn);
+        loadModelLayout->addWidget(m_modelStatusLabel);
+        m_topLayout->addLayout(loadModelLayout);
+
+        connect(browseBtn, &QPushButton::clicked, this, &LyricFAWindow::slot_browseModel);
+        connect(loadBtn, &QPushButton::clicked, this, &LyricFAWindow::slot_loadModel);
+
+        slot_loadModel();
     }
 
     void LyricFAWindow::runTask() {
+        if (!m_asr || !m_asr->initialized()) {
+            QMessageBox::warning(this, "Warning",
+                                 "ASR model is not loaded or invalid. Please load a valid model first.");
+            return;
+        }
+
         m_logOutput->clear();
         m_threadPool->clear();
 
@@ -224,6 +233,63 @@ namespace LyricFA {
             this, "Select Raw Lyric Directory", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
         if (!path.isEmpty())
             m_lyricEdit->setText(path);
+    }
+
+    void LyricFAWindow::slot_browseModel() {
+        const QString path =
+            QFileDialog::getExistingDirectory(this, "Select ASR Model Folder", m_modelEdit->text(),
+                                              QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+        if (!path.isEmpty())
+            m_modelEdit->setText(path);
+    }
+
+    void LyricFAWindow::slot_loadModel() {
+        const QString modelFolder = m_modelEdit->text().trimmed();
+        if (modelFolder.isEmpty()) {
+            m_modelStatusLabel->setText("Model folder path is empty.");
+            m_runBtn->setEnabled(false);
+            return;
+        }
+
+        const QDir dir(modelFolder);
+        if (!dir.exists()) {
+            m_modelStatusLabel->setText("Model folder does not exist.");
+            m_runBtn->setEnabled(false);
+            return;
+        }
+
+        const QString modelPath = dir.absoluteFilePath("model.onnx");
+        const QString vocabPath = dir.absoluteFilePath("vocab.txt");
+        const bool modelExists = QFile::exists(modelPath);
+        const bool vocabExists = QFile::exists(vocabPath);
+        if (!modelExists || !vocabExists) {
+            QString missing;
+            if (!modelExists && !vocabExists)
+                missing = "model.onnx and vocab.txt";
+            else if (!modelExists)
+                missing = "model.onnx";
+            else
+                missing = "vocab.txt";
+            m_modelStatusLabel->setText("Missing required file: " + missing);
+            m_runBtn->setEnabled(false);
+            return;
+        }
+
+        if (m_asr) {
+            delete m_asr;
+            m_asr = nullptr;
+        }
+
+        m_asr = new Asr(modelFolder);
+        if (m_asr->initialized()) {
+            m_modelStatusLabel->setText("Model loaded successfully.");
+            m_runBtn->setEnabled(true);
+        } else {
+            m_modelStatusLabel->setText("Failed to load model (initialization error).");
+            delete m_asr;
+            m_asr = nullptr;
+            m_runBtn->setEnabled(false);
+        }
     }
 
 } // namespace LyricFA

@@ -51,12 +51,13 @@ namespace AsyncTask {
         QPlainTextEdit *m_logOutput;
         QProgressBar *m_progressBar;
         QThreadPool *m_threadPool;
+        QVBoxLayout *m_topLayout;
+        QPushButton *m_runBtn;
 
         int m_totalTasks = 0;
         int m_finishedTasks = 0;
         int m_errorTasks = 0;
         QStringList m_errorDetails;
-
 
     private:
         void setupCommonUI();
@@ -73,7 +74,6 @@ namespace AsyncTask {
         QAction *m_aboutQtAction;
 
         QListWidget *m_taskList;
-        QPushButton *m_runBtn;
     };
 
 } // namespace AsyncTask
