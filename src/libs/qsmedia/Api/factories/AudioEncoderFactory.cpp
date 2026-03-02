@@ -1,41 +1,106 @@
 #include "AudioEncoderFactory.h"
-
-#include "IAudioEncoder.h"
 #include "Api/interfaces/IAudioEncoderPlugin.h"
+#include "IAudioEncoder.h"
 
-#include <private/qfactoryloader_p.h>
+#include <QCoreApplication>
+#include <QDir>
+#include <QGlobalStatic>
+#include <QJsonArray>
+#include <QList>
+#include <QPluginLoader>
 
 QSAPI_BEGIN_NAMESPACE
 
-#if QT_CONFIG(settings)
-Q_GLOBAL_STATIC_WITH_ARGS(QFactoryLoader, loader,
-                          (QsApi_IAudioEncoderPlugin_IID, QLatin1String("/audioencoders"), Qt::CaseInsensitive))
-#endif
+struct PluginInfo {
+    QPluginLoader *loader;
+    IAudioEncoderPlugin *instance;
+    QStringList keys;
+};
+
+Q_GLOBAL_STATIC(QList<PluginInfo>, pluginList)
+
+static void ensurePluginsLoaded() {
+    if (!pluginList()->isEmpty())
+        return;
+
+    const QStringList paths = QCoreApplication::libraryPaths();
+    for (const QString &path : paths) {
+        QDir pluginDir(path + QLatin1String("/audioencoders"));
+        if (!pluginDir.exists())
+            continue;
+
+        const QStringList entries = pluginDir.entryList(QDir::Files);
+        for (const QString &fileName : entries) {
+            if (!QLibrary::isLibrary(fileName))
+                continue;
+
+            QString filePath = pluginDir.absoluteFilePath(fileName);
+            auto *loader = new QPluginLoader(filePath);
+            if (!loader->load()) {
+                delete loader;
+                continue;
+            }
+
+            QObject *root = loader->instance();
+            if (!root) {
+                loader->unload();
+                delete loader;
+                continue;
+            }
+
+            auto *plugin = qobject_cast<IAudioEncoderPlugin *>(root);
+            if (!plugin) {
+                loader->unload();
+                delete loader;
+                continue;
+            }
+
+            QJsonObject meta = loader->metaData().value("MetaData").toObject();
+            QJsonValue keysVal = meta.value("Keys");
+            QStringList keys;
+            if (keysVal.isArray()) {
+                for (const QJsonValue &v : keysVal.toArray())
+                    keys << v.toString();
+            } else if (keysVal.isString()) {
+                keys << keysVal.toString();
+            }
+
+            if (keys.isEmpty()) {
+                loader->unload();
+                delete loader;
+                continue;
+            }
+
+            PluginInfo info;
+            info.loader = loader;
+            info.instance = plugin;
+            info.keys = keys;
+            pluginList()->append(info);
+        }
+    }
+}
 
 QStringList AudioEncoderFactory::keys() {
-#if QT_CONFIG(settings)
-    return loader()->keyMap().values();
-#else
-    return QStringList();
-#endif
+    ensurePluginsLoaded();
+    QStringList result;
+    for (const PluginInfo &info : *pluginList())
+        result.append(info.keys);
+    return result;
 }
 
 QString AudioEncoderFactory::requested() {
-    QByteArray env = qgetenv("QSAPI_AUDIO_ENCODER");
+    const QByteArray env = qgetenv("QSAPI_AUDIO_ENCODER");
     return env.isNull() ? "FFmpegEncoder" : QString::fromLocal8Bit(env);
 }
 
 IAudioEncoder *AudioEncoderFactory::create(const QString &key, QObject *parent) {
-#if QT_CONFIG(settings)
-    if (!key.isEmpty()) {
-        IAudioEncoder *inst = qLoadPlugin<IAudioEncoder, IAudioEncoderPlugin>(loader(), key, parent);
-        if (inst)
-            return inst;
-        delete inst;
+    ensurePluginsLoaded();
+    for (const PluginInfo &info : *pluginList()) {
+        if (std::any_of(info.keys.begin(), info.keys.end(),
+                        [&key](const QString &k) { return k.compare(key, Qt::CaseInsensitive) == 0; })) {
+            return info.instance->create(key, parent);
+        }
     }
-#else
-    Q_UNUSED(key);
-#endif
     return nullptr;
 }
 
