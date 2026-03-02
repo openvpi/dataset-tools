@@ -1,11 +1,11 @@
-#include "gui/MainWindow.h"
 #include <QApplication>
 
 #ifdef Q_OS_WIN
-#include <Windows.h>
+#    include <Windows.h>
 #endif
 
-using namespace HFA;
+#include "gui/HubertFAWindow.h"
+
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
 
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    MainWindow w;
+    HFA::HubertFAWindow w;
     w.show();
     return QApplication::exec();
 }

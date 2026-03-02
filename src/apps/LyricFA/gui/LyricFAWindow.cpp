@@ -17,7 +17,7 @@ namespace LyricFA {
         m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
         m_match = new MatchLyric();
 
-        setRunButtonText("运行 ASR");
+        setRunButtonText("Run ASR");
         LyricFAWindow::init();
     }
 
@@ -49,7 +49,7 @@ namespace LyricFA {
         lyricLayout->addWidget(btnLyric);
 
         m_pinyinBox = new QCheckBox("ASR result saved as pinyin", this);
-        m_matchBtn = new QPushButton("匹配歌词", this);
+        m_matchBtn = new QPushButton("Match Lyrics", this);
         connect(m_matchBtn, &QPushButton::clicked, this, &LyricFAWindow::slot_matchLyric);
 
         m_rightPanel->addWidget(labLabel);
@@ -145,19 +145,19 @@ namespace LyricFA {
     void LyricFAWindow::onTaskFinished() {
         QString msg;
         if (m_currentMode == Mode_Asr) {
-            msg = QString("ASR 任务完成！总数: %3, 成功: %1, 失败: %2")
+            msg = QString("ASR tasks completed! Total: %3, Succeeded: %1, Failed: %2")
                       .arg(m_totalTasks - m_errorTasks)
                       .arg(m_errorTasks)
                       .arg(m_totalTasks);
         } else {
-            msg = QString("歌词匹配完成！总数: %3, 成功: %1, 失败: %2")
+            msg = QString("Lyric matching completed! Total: %3, Succeeded: %1, Failed: %2")
                       .arg(m_totalTasks - m_errorTasks)
                       .arg(m_errorTasks)
                       .arg(m_totalTasks);
         }
 
         if (m_errorTasks > 0) {
-            m_logOutput->appendPlainText("失败任务列表：");
+            m_logOutput->appendPlainText("Failed tasks list:");
             for (const QString &detail : m_errorDetails)
                 m_logOutput->appendPlainText("  " + detail);
             m_errorDetails.clear();
@@ -292,4 +292,4 @@ namespace LyricFA {
         }
     }
 
-} // namespace LyricFA
+}

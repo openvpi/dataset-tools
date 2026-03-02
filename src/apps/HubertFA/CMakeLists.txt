@@ -20,6 +20,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
         audio-util nlohmann_json::nlohmann_json
         onnxruntime
+        AsyncTaskWindow::AsyncTaskWindow
 )
 
 file(GLOB_RECURSE onnx_files ../../libs/onnxruntime/lib/*.*)

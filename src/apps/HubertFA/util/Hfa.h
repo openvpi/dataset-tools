@@ -25,6 +25,10 @@ namespace HFA {
         bool recognize(std::filesystem::path wavPath, const std::string &language,
                        const std::vector<std::string> &non_speech_ph, WordList &words, std::string &msg) const;
 
+        bool initialized() const {
+            return m_hfa != nullptr;
+        }
+
     private:
         std::unique_ptr<HfaModel> m_hfa;
         std::map<std::string, DictionaryG2P *> m_dictG2p;

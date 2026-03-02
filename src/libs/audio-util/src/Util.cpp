@@ -67,10 +67,6 @@ namespace AudioUtil
             return {};
         }
 
-        std::cout << "Start resample from " << srcHandle.samplerate() << "Hz to " << tar_samplerate << "Hz"
-                  << std::endl;
-        std::cout << "Channels: " << srcHandle.channels() << " -> " << tar_channel << std::endl;
-
         // 创建 SoX 重采样器
         soxr_error_t error;
         const auto io_spec = soxr_io_spec(SOXR_FLOAT32_I, SOXR_FLOAT32_I);
