@@ -12,4 +12,6 @@ add_subdirectory(some-infer)
 
 add_subdirectory(rmvpe-infer)
 
+add_subdirectory(game-infer)
+
 add_subdirectory(AsyncTaskWindow)
