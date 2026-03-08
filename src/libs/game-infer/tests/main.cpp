@@ -25,7 +25,7 @@ std::vector<std::string> parseCommaSeparated(const std::string &val) {
 }
 
 // Helper function to generate D3PM time steps
-std::vector<float> t0_n_step_to_ts(const float t0, int n_steps) {
+std::vector<float> t0_n_step_to_ts(const float t0, const int n_steps) {
     if (n_steps <= 0)
         return {};
     const float step = (1.0f - t0) / n_steps;
@@ -91,18 +91,13 @@ int main(int argc, char *argv[]) {
 
     // Default values
     std::string language;
-    int batchSize = 1;
-    int numWorkers = 0;
     float segThreshold = 0.2f;
     float segRadius = 0.02f;
     float segD3PMT0 = 0.0f;
     int segD3PMNSteps = 8;
     std::string segD3PMTsStr; // Will be parsed later
     float estThreshold = 0.2f;
-    std::vector<std::string> inputFormats = {"wav", "flac", "mp3", "aac", "ogg"};
-    std::vector<std::string> outputFormats = {"mid"};
     float tempo = 120.0f;
-    std::string pitchFormat = "name";
     bool roundPitch = false;
     std::string provider = "cpu";
     int deviceId = 0;
@@ -117,10 +112,6 @@ int main(int argc, char *argv[]) {
 
         if (arg == "--language") {
             language = val;
-        } else if (arg == "--batch-size") {
-            batchSize = std::stoi(val);
-        } else if (arg == "--num-workers") {
-            numWorkers = std::stoi(val);
         } else if (arg == "--seg-threshold") {
             segThreshold = std::stof(val);
         } else if (arg == "--seg-radius") {
@@ -133,14 +124,8 @@ int main(int argc, char *argv[]) {
             segD3PMTsStr = val;
         } else if (arg == "--est-threshold") {
             estThreshold = std::stof(val);
-        } else if (arg == "--input-formats") {
-            inputFormats = parseCommaSeparated(val);
-        } else if (arg == "--output-formats") {
-            outputFormats = parseCommaSeparated(val);
         } else if (arg == "--tempo") {
             tempo = std::stof(val);
-        } else if (arg == "--pitch-format") {
-            pitchFormat = val;
         } else if (arg == "--provider") {
             provider = val;
         } else if (arg == "--device-id") {
@@ -224,9 +209,8 @@ int main(int argc, char *argv[]) {
     std::vector<Game::GameMidi> midis;
 
     std::cout << "Processing audio file: " << audioPath << std::endl;
-    bool success = game.get_midi(audioPath, midis, tempo, msg, progressChanged);
 
-    if (success) {
+    if (game.get_midi(audioPath, midis, tempo, msg, progressChanged)) {
         Midi::MidiFile midi;
         midi.setFileFormat(1);
         midi.setDivisionType(Midi::MidiFile::DivisionType::PPQ);

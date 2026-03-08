@@ -12,7 +12,7 @@
 namespace Game
 {
     Game::Game(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) {
-        m_game = std::make_unique<GameModel>(modelPath, provider, device_id);
+        m_gameModel = std::make_unique<GameModel>(modelPath, provider, device_id);
 
         if (!is_open()) {
         }
@@ -20,7 +20,7 @@ namespace Game
 
     Game::~Game() = default;
 
-    bool Game::is_open() const { return m_game && m_game->is_open(); }
+    bool Game::is_open() const { return m_gameModel && m_gameModel->is_open(); }
 
     std::vector<double> cumulativeSum(const std::vector<float> &durations) {
         std::vector<double> cumsum(durations.size());
@@ -87,7 +87,7 @@ namespace Game
 
     bool Game::get_midi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, const float tempo,
                         std::string &msg, const std::function<void(int)> &progressChanged) const {
-        if (!m_game) {
+        if (!m_gameModel) {
             return false;
         }
 
@@ -129,7 +129,7 @@ namespace Game
             std::vector<float> presence;
             std::vector<float> scores;
 
-            const bool success = m_game->forward(tmp, boundaries, durations, presence, scores, msg);
+            const bool success = m_gameModel->forward(tmp, boundaries, durations, presence, scores, msg);
             if (!success)
                 return false;
 
@@ -150,36 +150,41 @@ namespace Game
         return true;
     }
 
-    void Game::terminate() const { m_game->terminate(); }
+    void Game::terminate() const { m_gameModel->terminate(); }
 
     // Implementation of parameter setting methods
     void Game::set_seg_threshold(const float threshold) const {
-        if (m_game) {
-            m_game->set_seg_threshold(threshold);
+        if (m_gameModel) {
+            m_gameModel->set_seg_threshold(threshold);
         }
     }
 
     void Game::set_seg_radius_seconds(const float radius) const {
-        if (m_game) {
-            m_game->set_seg_radius_seconds(radius);
+        if (m_gameModel) {
+            m_gameModel->set_seg_radius_seconds(radius);
+        }
+    }
+    void Game::set_seg_radius_frames(const float radiusFrames) const {
+        if (m_gameModel) {
+            m_gameModel->set_seg_radius_seconds(radiusFrames);
         }
     }
 
     void Game::set_est_threshold(const float threshold) const {
-        if (m_game) {
-            m_game->set_est_threshold(threshold);
+        if (m_gameModel) {
+            m_gameModel->set_est_threshold(threshold);
         }
     }
 
     void Game::set_d3pm_ts(const std::vector<float> &ts) const {
-        if (m_game) {
-            m_game->set_d3pm_ts(ts);
+        if (m_gameModel) {
+            m_gameModel->set_d3pm_ts(ts);
         }
     }
 
     void Game::set_language(const int language) const {
-        if (m_game) {
-            m_game->set_language(language);
+        if (m_gameModel) {
+            m_gameModel->set_language(language);
         }
     }
 } // namespace Game

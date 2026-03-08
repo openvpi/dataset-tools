@@ -39,13 +39,14 @@ namespace Game
 
         bool forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                      std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
-                     std::string &msg);
+                     std::string &msg) const;
 
         static std::vector<float> generate_d3pm_ts(float t0, int n_steps);
 
         // Parameter setter methods
         void set_seg_threshold(float threshold);
         void set_seg_radius_seconds(float radius);
+        void set_seg_radius_frames(float radiusFrames);
         void set_est_threshold(float threshold);
         void set_d3pm_ts(const std::vector<float> &ts);
         void set_language(int language);
@@ -98,6 +99,6 @@ namespace Game
 
         InferenceOutput inferSlice(const InferenceInput &input, float segThreshold,
                                    int segRadius, // 帧单位
-                                   float estThreshold, const std::vector<float> &d3pmTs);
+                                   float estThreshold, const std::vector<float> &d3pmTs) const;
     };
 } // namespace Game

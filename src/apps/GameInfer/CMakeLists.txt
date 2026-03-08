@@ -1,4 +1,4 @@
-project(SomeInfer VERSION 0.0.0.1)
+project(GameInfer VERSION 0.0.0.1)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -11,7 +11,7 @@ find_package(SndFile CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
-        some-infer::some-infer
+        game-infer::game-infer
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

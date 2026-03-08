@@ -2,11 +2,135 @@
 
 #include <cmath>
 #include <fstream>
+#include <iostream>
 
 #include <nlohmann/json.hpp>
 
+#ifdef ONNXRUNTIME_ENABLE_DML
+#include <dml_provider_factory.h>
+#endif
+
 namespace Game
 {
+    // 初始化DirectML执行提供者
+    static inline bool initDirectML(Ort::SessionOptions &options, const int deviceIndex,
+                                    std::string *errorMessage = nullptr) {
+#ifdef ONNXRUNTIME_ENABLE_DML
+        if (!options) {
+            if (errorMessage) {
+                *errorMessage = "SessionOptions must not be nullptr!";
+            }
+            return false;
+        }
+
+        if (deviceIndex < 0) {
+            if (errorMessage) {
+                *errorMessage = "GPU device index must be a non-negative integer!";
+            }
+            return false;
+        }
+
+        const OrtApi &ortApi = Ort::GetApi();
+        const OrtDmlApi *ortDmlApi;
+        const Ort::Status getApiStatus(
+            (ortApi.GetExecutionProviderApi("DML", ORT_API_VERSION, reinterpret_cast<const void **>(&ortDmlApi))));
+        if (!getApiStatus.IsOK()) {
+            // Failed to get DirectML API.
+            if (errorMessage) {
+                *errorMessage = getApiStatus.GetErrorMessage();
+            }
+            return false;
+        }
+
+        // Successfully get DirectML API
+        options.DisableMemPattern();
+        options.SetExecutionMode(ORT_SEQUENTIAL);
+
+        const Ort::Status appendStatus(ortDmlApi->SessionOptionsAppendExecutionProvider_DML(options, deviceIndex));
+        if (!appendStatus.IsOK()) {
+            if (errorMessage) {
+                *errorMessage = appendStatus.GetErrorMessage();
+            }
+            return false;
+        }
+        return true;
+#else
+        if (errorMessage) {
+            *errorMessage = "The library is not built with DirectML support.";
+        }
+        return false;
+#endif
+    }
+
+    // 初始化CUDA执行提供者
+    static inline bool initCUDA(Ort::SessionOptions &options, int deviceIndex, std::string *errorMessage = nullptr) {
+#ifdef ONNXRUNTIME_ENABLE_CUDA
+        if (!options) {
+            if (errorMessage) {
+                *errorMessage = "SessionOptions must not be nullptr!";
+            }
+            return false;
+        }
+
+        if (deviceIndex < 0) {
+            if (errorMessage) {
+                *errorMessage = "GPU device index must be a non-negative integer!";
+            }
+            return false;
+        }
+
+        const OrtApi &ortApi = Ort::GetApi();
+
+        OrtCUDAProviderOptionsV2 *cudaOptionsPtr = nullptr;
+        Ort::Status createStatus(ortApi.CreateCUDAProviderOptions(&cudaOptionsPtr));
+
+        // Currently, ORT C++ API does not have a wrapper for CUDAProviderOptionsV2.
+        // Let the smart pointer take ownership of cudaOptionsPtr so it will be released when it
+        // goes out of scope.
+        std::unique_ptr<OrtCUDAProviderOptionsV2, decltype(ortApi.ReleaseCUDAProviderOptions)> cudaOptions(
+            cudaOptionsPtr, ortApi.ReleaseCUDAProviderOptions);
+
+        if (!createStatus.IsOK()) {
+            if (errorMessage) {
+                *errorMessage = createStatus.GetErrorMessage();
+            }
+            return false;
+        }
+
+        // The following block of code sets device_id
+        {
+            // Device ID from int to string
+            auto cudaDeviceIdStr = std::to_string(deviceIndex);
+            auto cudaDeviceIdCStr = cudaDeviceIdStr.c_str();
+
+            constexpr int CUDA_OPTIONS_SIZE = 2;
+            const char *cudaOptionsKeys[CUDA_OPTIONS_SIZE] = {"device_id", "cudnn_conv_algo_search"};
+            const char *cudaOptionsValues[CUDA_OPTIONS_SIZE] = {cudaDeviceIdCStr, "DEFAULT"};
+            Ort::Status updateStatus(ortApi.UpdateCUDAProviderOptions(cudaOptions.get(), cudaOptionsKeys,
+                                                                      cudaOptionsValues, CUDA_OPTIONS_SIZE));
+            if (!updateStatus.IsOK()) {
+                if (errorMessage) {
+                    *errorMessage = updateStatus.GetErrorMessage();
+                }
+                return false;
+            }
+        }
+        Ort::Status appendStatus(ortApi.SessionOptionsAppendExecutionProvider_CUDA_V2(options, cudaOptions.get()));
+        if (!appendStatus.IsOK()) {
+            if (errorMessage) {
+                *errorMessage = appendStatus.GetErrorMessage();
+            }
+            return false;
+        }
+        return true;
+#else
+        if (errorMessage) {
+            *errorMessage = "The library is not built with CUDA support.";
+        }
+        return false;
+#endif
+    }
+
     GameModel::GameModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) :
         env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "GameModel")), sessionOptions(Ort::SessionOptions()) {
         modelDir = modelPath;
@@ -37,10 +161,46 @@ namespace Game
         sessionOptions.SetInterOpNumThreads(4);
         sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
 
+        // Choose execution provider based on the provided option
+        switch (provider) {
+#ifdef ONNXRUNTIME_ENABLE_DML
+        case ExecutionProvider::DML:
+            {
+                std::string errorMessage;
+                if (!initDirectML(sessionOptions, device_id, &errorMessage)) {
+                    std::cout << "Failed to enable Dml: " << errorMessage << ". Falling back to CPU." << std::endl;
+                } else {
+                    std::cout << "Use Dml execution provider" << std::endl;
+                }
+                break;
+            }
+#endif
+
+#ifdef ONNXRUNTIME_ENABLE_CUDA
+        case ExecutionProvider::CUDA:
+            {
+                std::string errorMessage;
+                if (!initCUDA(sessionOptions, device_id, &errorMessage)) {
+                    std::cout << "Failed to enable CUDA: " << errorMessage << std::endl;
+                } else {
+                    std::cout << "Using CUDA execution provider" << std::endl;
+                }
+                break;
+            }
+#endif
+
+        default:
+            break;
+        }
+
         auto loadSession = [&](const std::string &name)
         {
             const std::filesystem::path model_path = modelDir / name;
+#ifdef _WIN32
             return std::make_unique<Ort::Session>(env, model_path.wstring().c_str(), sessionOptions);
+#else
+            return std::make_unique<Ort::Session>(env, model_path.c_str(), sessionOptions);
+#endif
         };
         sessEncoder = loadSession("encoder.onnx");
         sessSegmenter = loadSession("segmenter.onnx");
@@ -61,7 +221,7 @@ namespace Game
 
     bool GameModel::forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                             std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
-                            std::string &msg) {
+                            std::string &msg) const {
         try {
             InferenceInput input;
             input.waveform = waveform_data;
@@ -115,6 +275,7 @@ namespace Game
     void GameModel::set_seg_threshold(const float threshold) { m_seg_threshold = threshold; }
 
     void GameModel::set_seg_radius_seconds(const float radius) { m_seg_radius_seconds = radius; }
+    void GameModel::set_seg_radius_frames(const float radiusFrames) { m_est_threshold = radiusFrames * m_timestep; }
 
     void GameModel::set_est_threshold(const float threshold) { m_est_threshold = threshold; }
 
@@ -280,10 +441,13 @@ namespace Game
                 Ort::Value::CreateTensor<int64_t>(memInfo, &langVal, 1, langShape.data(), langShape.size());
 
             Ort::Value threshTensor = Ort::Value::CreateTensor<float>(memInfo, &threshold, 1, nullptr, 0);
-            int64_t radiusVal = radius;
-            Ort::Value radiusTensor = Ort::Value::CreateTensor<int64_t>(memInfo, &radiusVal, 1, nullptr, 0);
+
+            int64_t radius_64 = radius;
+            Ort::Value radiusTensor = Ort::Value::CreateTensor<int64_t>(memInfo, &radius_64, 1, nullptr, 0);
+
+            std::array<int64_t, 1> tShape = {1};
             float tVal = t;
-            Ort::Value tTensor = Ort::Value::CreateTensor<float>(memInfo, &tVal, 1, nullptr, 0);
+            Ort::Value tTensor = Ort::Value::CreateTensor<float>(memInfo, &tVal, 1, tShape.data(), tShape.size());
 
             std::vector<const char *> inputNames;
             std::vector<Ort::Value> inputTensors;
@@ -503,7 +667,7 @@ namespace Game
     }
 
     InferenceOutput GameModel::inferSlice(const InferenceInput &input, float segThreshold, int segRadius,
-                                          float estThreshold, const std::vector<float> &d3pmTs) {
+                                          float estThreshold, const std::vector<float> &d3pmTs) const {
         InferenceOutput output;
 
         auto [xSegVal, xEstVal, maskTVal] = runEncoder(input.waveform, input.duration, input.language);
