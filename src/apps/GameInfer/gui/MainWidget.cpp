@@ -95,6 +95,7 @@ void MainWidget::setupModelGroup() {
     // Device selection
     layout->addWidget(new QLabel("Execution Device:"), 1, 2);
     m_deviceCombo = new QComboBox();
+    m_deviceCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     m_deviceCombo->addItem("Default (CPU)", -1);
     layout->addWidget(m_deviceCombo, 1, 3);
 
@@ -170,7 +171,7 @@ void MainWidget::setupProcessingGroup() {
     m_segRadiusFrameSpin = new QSpinBox();
     m_segRadiusFrameSpin->setRange(1, 1000);
     m_segRadiusFrameSpin->setSingleStep(1);
-    m_segRadiusFrameSpin->setValue(40);
+    m_segRadiusFrameSpin->setValue(2);
     layout->addWidget(m_segRadiusFrameSpin, 0, 3);
 
     m_segRadiusMsLabel = new QLabel("(ms)");
@@ -556,14 +557,14 @@ void MainWidget::updateParameterValues() {
 
 void MainWidget::resetToDefaults() const {
     m_segThresholdSpin->setValue(0.2);
-    m_segRadiusFrameSpin->setValue(40);
+    m_segRadiusFrameSpin->setValue(2);
     m_estThresholdSpin->setValue(0.2);
     m_segD3PMNStepsCombo->setCurrentIndex(3);
     m_languageCombo->setCurrentIndex(0);
     m_tempoSpin->setValue(120.0);
 
     // Reset ms label as well
-    const double ms = 40 * (m_timeStepSeconds * 1000.0);
+    const double ms = 2 * (m_timeStepSeconds * 1000.0);
     m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
 }
 

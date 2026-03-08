@@ -166,7 +166,7 @@ namespace Game
     }
     void Game::set_seg_radius_frames(const float radiusFrames) const {
         if (m_gameModel) {
-            m_gameModel->set_seg_radius_seconds(radiusFrames);
+            m_gameModel->set_seg_radius_frames(radiusFrames);
         }
     }
 

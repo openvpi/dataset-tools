@@ -12,7 +12,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_settings(nullptr), m_statusLabel(nullptr), m_progressBar(nullptr) {
 
     setWindowTitle("GameInfer - 音频转MIDI工具");
-    resize(600, 400);
+    resize(800, 450);
 
     // Setup settings
     const QString configDirPath = QApplication::applicationDirPath() + "/config";
