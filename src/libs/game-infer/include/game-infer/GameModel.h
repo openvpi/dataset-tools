@@ -33,6 +33,7 @@ namespace Game
     public:
         GameModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id);
         ~GameModel();
+        int get_target_sample_rate() const;
 
         static bool is_open();
         static void terminate();
@@ -73,6 +74,7 @@ namespace Game
 
         float m_timestep = 0.01f;
         int m_language = 0;
+        int m_target_sample_rate;
 
         std::tuple<Ort::Value, Ort::Value, Ort::Value> runEncoder(const std::vector<float> &waveform, float duration,
                                                                   int language) const;

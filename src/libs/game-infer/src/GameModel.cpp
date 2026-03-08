@@ -147,6 +147,7 @@ namespace Game
         timestep = config.value("timestep", 0.01f);
         sampleRate = config.value("samplerate", 44100);
         embeddingDim = config.value("embedding_dim", 256);
+        m_target_sample_rate = config.value("samplerate", 44100);
 
         // Set initial parameter values from config or defaults
         m_timestep = timestep;
@@ -214,6 +215,8 @@ namespace Game
     }
 
     GameModel::~GameModel() = default;
+
+    int GameModel::get_target_sample_rate() const { return m_target_sample_rate; }
 
     bool GameModel::is_open() { return true; }
 

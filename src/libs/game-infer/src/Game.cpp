@@ -91,7 +91,8 @@ namespace Game
             return false;
         }
 
-        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, 44100);
+        const auto tar_sr = m_gameModel->get_target_sample_rate();
+        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, tar_sr);
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
                          sf_vio.info.samplerate);
@@ -101,7 +102,7 @@ namespace Game
         sf.seek(0, SEEK_SET);
         sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
 
-        const AudioUtil::Slicer slicer(44100, 0.02f, 441, 441 * 4, 500, 30, 50);
+        const AudioUtil::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
         const auto chunks = slicer.slice(audio);
 
         if (chunks.empty()) {
@@ -116,6 +117,15 @@ namespace Game
             const auto beginFrame = fst;
             const auto endFrame = snd;
             const auto frameCount = endFrame - beginFrame;
+
+            double sliceDuration = static_cast<double>(frameCount) / tar_sr;
+
+            if (sliceDuration > 60.0) {
+                msg = "Slice duration exceeds 60 seconds: " + std::to_string(sliceDuration) +
+                    "s.\nPlease check whether the accompaniment has been removed from the current audio.";
+                return false;
+            }
+
             if (frameCount <= 0 || beginFrame > totalSize || endFrame > totalSize) {
                 continue;
             }
@@ -133,7 +143,7 @@ namespace Game
             if (!success)
                 return false;
 
-            const auto start_tick = std::max(static_cast<int>(static_cast<double>(fst) / 44100.0 * tempo * 480 / 60),
+            const auto start_tick = std::max(static_cast<int>(static_cast<double>(fst) / tar_sr * tempo * 480 / 60),
                                              !midis.empty() ? midis.back().start + midis.back().duration : 0);
 
             std::vector<GameMidi> temp_midis = build_midi_note(start_tick, durations, presence, scores, tempo);

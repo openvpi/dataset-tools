@@ -632,12 +632,11 @@ void MainWidget::onExportMidiTask() {
     }
 
     m_runButton->setEnabled(false);
-    m_progressBar->setVisible(true);
+    m_progressBar->setValue(0);
 
     QFuture<void> future = QtConcurrent::run([this] {
         std::vector<Game::GameMidi> midis;
         std::string msg;
-        m_progressBar->setValue(0);
 
         const bool success = m_game->get_midi(
             m_wavPathLineEdit->text().toLocal8Bit().toStdString(), midis, static_cast<float>(m_tempoSpin->value()), msg,
@@ -662,6 +661,5 @@ void MainWidget::onExportMidiTask() {
         }
 
         QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
-        QMetaObject::invokeMethod(m_progressBar, "setVisible", Qt::QueuedConnection, Q_ARG(bool, false));
     });
 }
