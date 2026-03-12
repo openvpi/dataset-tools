@@ -1,6 +1,6 @@
 #include <audio-util/Util.h>
-
 #include <iostream>
+#include <memory>
 #include <soxr.h>
 #include "FlacDecoder.h"
 #include "Mp3Decoder.h"
@@ -50,6 +50,10 @@ namespace AudioUtil
         const int original_src_channels = srcHandle.channels();
         const int original_src_samplerate = srcHandle.samplerate();
 
+        // 确定输入数据类型
+        int input_format = sf_vio_in.info.format & SF_FORMAT_SUBMASK;
+        bool is_float_input = (input_format == SF_FORMAT_FLOAT || input_format == SF_FORMAT_DOUBLE);
+
         SF_VIO sf_vio_out;
         sf_vio_out.info = sf_vio_in.info;
         sf_vio_out.info.channels = tar_channel;
@@ -59,21 +63,43 @@ namespace AudioUtil
         // 计算估计的输出帧数
         const double ratio = static_cast<double>(tar_samplerate) / original_src_samplerate;
         const sf_count_t estimated_frames = static_cast<sf_count_t>(srcHandle.frames() * ratio + 0.5);
-        const size_t estimated_size = estimated_frames * tar_channel * sizeof(float);
+        const size_t estimated_size = static_cast<size_t>(estimated_frames * tar_channel * sizeof(float));
 
         sf_vio_out.data.byteArray.reserve(estimated_size);
 
         // 创建输出VIO的SndfileHandle
-        auto dstHandle = SndfileHandle(sf_vio_out.vio, &sf_vio_out.data, SFM_WRITE, sf_vio_in.info.format, tar_channel,
-                                       tar_samplerate);
+        auto dstHandle = SndfileHandle(sf_vio_out.vio, &sf_vio_out.data, SFM_WRITE, (SF_FORMAT_WAV | SF_FORMAT_FLOAT),
+                                       tar_channel, tar_samplerate);
         if (!dstHandle) {
             msg = "Failed to open output VIO: " + std::string(sf_strerror(nullptr));
             return {};
         }
 
-        // 创建 SoX 重采样器
+        // 创建 SoX 重采样器 - 使用正确的I/O规格
         soxr_error_t error = nullptr;
-        const auto io_spec = soxr_io_spec(SOXR_FLOAT32_I, SOXR_FLOAT32_I);
+        soxr_io_spec_t io_spec;
+
+        // 根据输入数据类型设置正确的I/O规格
+        if (is_float_input) {
+            io_spec = soxr_io_spec(SOXR_FLOAT32_I, SOXR_FLOAT32_I);
+        } else {
+            // 对于整数格式，使用正确的位深度
+            int input_bits = 0;
+            if (input_format == SF_FORMAT_PCM_16)
+                input_bits = 16;
+            else if (input_format == SF_FORMAT_PCM_24)
+                input_bits = 24;
+            else if (input_format == SF_FORMAT_PCM_32)
+                input_bits = 32;
+
+            if (input_bits == 16) {
+                io_spec = soxr_io_spec(SOXR_INT16_I, SOXR_FLOAT32_I);
+            } else {
+                // 24位和32位数据都使用INT32处理
+                io_spec = soxr_io_spec(SOXR_INT32_I, SOXR_FLOAT32_I);
+            }
+        }
+
         const auto quality_spec = soxr_quality_spec(SOXR_HQ, 0);
         const auto runtime_spec = soxr_runtime_spec(1); // 单线程
 
@@ -92,13 +118,34 @@ namespace AudioUtil
             return {};
         }
 
-        // 使用适当的缓冲区大小
-        constexpr size_t BUFFER_FRAMES = 4096;
+        // 使用较小的缓冲区以避免内存问题
+        constexpr size_t BUFFER_FRAMES = 2048; // 减小缓冲区大小
         const size_t input_buffer_size = BUFFER_FRAMES * original_src_channels;
-        const size_t output_buffer_size = static_cast<size_t>(BUFFER_FRAMES * ratio * original_src_channels) + 1024;
+        const size_t output_buffer_size =
+            static_cast<size_t>((static_cast<double>(BUFFER_FRAMES) * ratio * original_src_channels) + 1024);
 
-        std::vector<float> input_buffer(input_buffer_size);
+        // 根据输入格式分配正确的输入缓冲区
+        std::unique_ptr<float[]> float_input_buffer;
+        std::unique_ptr<short[]> short_input_buffer;
+        std::unique_ptr<int[]> int_input_buffer;
         std::vector<float> output_buffer(output_buffer_size);
+
+        void *input_buffer_ptr = nullptr;
+
+        if (is_float_input) {
+            float_input_buffer = std::make_unique<float[]>(input_buffer_size);
+            input_buffer_ptr = float_input_buffer.get();
+        } else {
+            // 检查位深度以决定输入缓冲区类型
+            if (input_format == SF_FORMAT_PCM_16) {
+                short_input_buffer = std::make_unique<short[]>(input_buffer_size);
+                input_buffer_ptr = short_input_buffer.get();
+            } else {
+                // 对于24位和32位数据，都使用int缓冲区
+                int_input_buffer = std::make_unique<int[]>(input_buffer_size);
+                input_buffer_ptr = int_input_buffer.get();
+            }
+        }
 
         sf_count_t total_input_frames = 0;
         sf_count_t total_output_frames = 0;
@@ -106,7 +153,20 @@ namespace AudioUtil
 
         while (!processing_error) {
             // 从源文件读取数据
-            const sf_count_t frames_read = srcHandle.readf(input_buffer.data(), BUFFER_FRAMES);
+            sf_count_t frames_read = 0;
+            if (is_float_input) {
+                frames_read = srcHandle.readf(static_cast<float *>(input_buffer_ptr), BUFFER_FRAMES);
+            } else {
+                if (input_format == SF_FORMAT_PCM_16) {
+                    frames_read = srcHandle.readf(static_cast<short *>(input_buffer_ptr), BUFFER_FRAMES);
+                } else {
+                    // 对于24位和32位数据，使用read函数而非readf
+                    sf_count_t items_read =
+                        srcHandle.read(static_cast<int *>(input_buffer_ptr),
+                                       static_cast<sf_count_t>(BUFFER_FRAMES * original_src_channels));
+                    frames_read = items_read / original_src_channels;
+                }
+            }
 
             if (frames_read <= 0) {
                 break;
@@ -115,7 +175,7 @@ namespace AudioUtil
             total_input_frames += frames_read;
 
             // 计算这次读取的实际输入样本数（样本数 = 帧数 × 通道数）
-            const size_t input_samples = frames_read * original_src_channels;
+            const size_t input_samples = static_cast<size_t>(frames_read) * original_src_channels;
 
             // 处理重采样
             size_t input_done_total = 0; // 跟踪本次读取的总处理量
@@ -130,8 +190,13 @@ namespace AudioUtil
                 size_t input_done = 0;
                 size_t output_done = 0;
 
-                error = soxr_process(resampler,
-                                     input_buffer.data() + input_done_total, // 输入指针
+                // 确保输入指针偏移正确
+                void *current_input_ptr = static_cast<char *>(input_buffer_ptr) +
+                    (input_done_total *
+                     (is_float_input ? sizeof(float)
+                                     : (input_format == SF_FORMAT_PCM_16 ? sizeof(short) : sizeof(int))));
+
+                error = soxr_process(resampler, current_input_ptr,
                                      input_to_process, // 输入样本数
                                      &input_done, // 实际处理的输入样本数
                                      output_buffer.data(), // 输出缓冲区
@@ -340,13 +405,13 @@ namespace AudioUtil
         }
 
         // 创建输出WAV文件
-        SndfileHandle outBuf(filepath.string(), SFM_WRITE, format, tar_channel, samplerate);
+        SndfileHandle outBuf(filepath.string(), SFM_WRITE, (SF_FORMAT_WAV | SF_FORMAT_FLOAT), tar_channel, samplerate);
         if (!outBuf) {
             std::cerr << "Failed to open output WAV file: " << sf_strerror(nullptr) << std::endl;
             return false;
         }
 
-        constexpr size_t BUFFER_FRAMES = 4096;
+        constexpr size_t BUFFER_FRAMES = 2048; // 减小缓冲区大小
         std::vector<float> buffer(BUFFER_FRAMES * channels);
         sf_count_t readFrames;
 
