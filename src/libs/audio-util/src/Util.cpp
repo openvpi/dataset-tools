@@ -1,4 +1,5 @@
 #include <audio-util/Util.h>
+#include <cstdint> // 添加，用于 uint32_t
 #include <iostream>
 #include <memory>
 #include <soxr.h>
@@ -398,6 +399,7 @@ namespace AudioUtil
             tar_channel = channels;
 
         // 从VIO读取
+        sf_vio_in.data.seek = 0;
         SndfileHandle readBuf(sf_vio_in.vio, &sf_vio_in.data, SFM_READ, format, channels, samplerate);
         if (!readBuf) {
             std::cerr << "Failed to open input VIO for reading: " << sf_strerror(nullptr) << std::endl;
