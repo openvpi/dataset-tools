@@ -34,16 +34,21 @@ namespace Game
     std::vector<int> calculateNoteTicks(const std::vector<float> &note_durations, const float tempo) {
         const std::vector<double> cumsum = cumulativeSum(note_durations);
 
-        std::vector<int> scaled_ticks(cumsum.size());
+        // 使用更高精度的时间计算
+        std::vector<double> scaled_ticks_double(cumsum.size());
         for (size_t i = 0; i < cumsum.size(); ++i) {
-            scaled_ticks[i] = static_cast<int>(cumsum[i] * tempo * 480 / 60);
+            // 使用double类型保持精度
+            scaled_ticks_double[i] = cumsum[i] * tempo * 480.0 / 60.0;
         }
 
-        std::vector<int> note_ticks(scaled_ticks.size());
-        if (!scaled_ticks.empty()) {
-            note_ticks[0] = scaled_ticks[0];
-            for (size_t i = 1; i < scaled_ticks.size(); ++i) {
-                note_ticks[i] = scaled_ticks[i] - scaled_ticks[i - 1];
+        // 将差值转换为ticks，避免累积误差
+        std::vector<int> note_ticks(scaled_ticks_double.size());
+        if (!scaled_ticks_double.empty()) {
+            note_ticks[0] = static_cast<int>(std::round(scaled_ticks_double[0]));
+            for (size_t i = 1; i < scaled_ticks_double.size(); ++i) {
+                // 计算相邻时间点的差值，这样可以保留更多精度
+                const double tick_diff = scaled_ticks_double[i] - scaled_ticks_double[i - 1];
+                note_ticks[i] = static_cast<int>(std::round(tick_diff));
             }
         }
 
@@ -54,7 +59,7 @@ namespace Game
                                                  const std::vector<float> &presence, const std::vector<float> &scores,
                                                  const float tempo) {
         std::vector<GameMidi> midi_data;
-        int start_tick_temp = start_tick;
+        int current_tick = start_tick;
 
         const std::vector<int> note_ticks = calculateNoteTicks(durations, tempo);
 
@@ -64,12 +69,12 @@ namespace Game
 
                 const int duration_ticks = note_ticks[i];
 
-                midi_data.push_back(GameMidi{pitch, start_tick_temp, duration_ticks});
+                midi_data.push_back(GameMidi{pitch, current_tick, duration_ticks});
 
-                start_tick_temp += duration_ticks;
+                current_tick += duration_ticks;
             } else {
                 if (i < note_ticks.size()) {
-                    start_tick_temp += note_ticks[i];
+                    current_tick += note_ticks[i];
                 }
             }
         }
@@ -143,8 +148,11 @@ namespace Game
             if (!success)
                 return false;
 
-            const auto start_tick = std::max(static_cast<int>(static_cast<double>(fst) / tar_sr * tempo * 480 / 60),
-                                             !midis.empty() ? midis.back().start + midis.back().duration : 0);
+            // 改进开始tick的计算，使用更高精度
+            int previous_end_tick = !midis.empty() ? midis.back().start + midis.back().duration : 0;
+            int chunk_start_time_ticks =
+                static_cast<int>(std::round(static_cast<double>(fst) / tar_sr * tempo * 480.0 / 60.0));
+            const auto start_tick = std::max(chunk_start_time_ticks, previous_end_tick);
 
             std::vector<GameMidi> temp_midis = build_midi_note(start_tick, durations, presence, scores, tempo);
             midis.insert(midis.end(), temp_midis.begin(), temp_midis.end());
