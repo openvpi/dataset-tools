@@ -23,14 +23,16 @@ namespace Game
 
     class GAME_INFER_EXPORT Game {
     public:
-        Game(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id);
+        Game();
         ~Game();
 
+        bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
+                        std::string &msg) const;
         bool is_open() const;
         void terminate() const;
 
         bool get_midi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, float tempo,
-                      std::string &msg, const std::function<void(int)> &progressChanged) const;
+                      std::string &msg, const std::function<void(int)> &progressChanged, int max_audio_length) const;
 
         // Methods to update model parameters
         void set_seg_threshold(float threshold) const;

@@ -31,11 +31,13 @@ namespace Game
 
     class GameModel {
     public:
-        GameModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id);
+        GameModel();
         ~GameModel();
         int get_target_sample_rate() const;
 
-        static bool is_open();
+        bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
+                        std::string &msg);
+        bool is_open() const;
         static void terminate();
 
         bool forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,

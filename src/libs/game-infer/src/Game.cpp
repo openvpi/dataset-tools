@@ -11,14 +11,15 @@
 
 namespace Game
 {
-    Game::Game(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) {
-        m_gameModel = std::make_unique<GameModel>(modelPath, provider, device_id);
-
-        if (!is_open()) {
-        }
-    }
+    Game::Game() { m_gameModel = std::make_unique<GameModel>(); }
 
     Game::~Game() = default;
+
+    bool Game::load_model(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int device_id,
+                          std::string &msg) const {
+        m_gameModel->load_model(modelPath, provider, device_id, msg);
+        return m_gameModel->is_open();
+    }
 
     bool Game::is_open() const { return m_gameModel && m_gameModel->is_open(); }
 
@@ -91,7 +92,7 @@ namespace Game
     }
 
     bool Game::get_midi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, const float tempo,
-                        std::string &msg, const std::function<void(int)> &progressChanged) const {
+                        std::string &msg, const std::function<void(int)> &progressChanged, int max_audio_length) const {
         if (!m_gameModel) {
             return false;
         }
@@ -125,8 +126,9 @@ namespace Game
 
             double sliceDuration = static_cast<double>(frameCount) / tar_sr;
 
-            if (sliceDuration > 60.0) {
-                msg = "Slice duration exceeds 60 seconds: " + std::to_string(sliceDuration) +
+            if (sliceDuration > max_audio_length) {
+                msg = "Slice duration exceeds " + std::to_string(max_audio_length) +
+                    " seconds: " + std::to_string(sliceDuration) +
                     "s.\nPlease check whether the accompaniment has been removed from the current audio.";
                 return false;
             }

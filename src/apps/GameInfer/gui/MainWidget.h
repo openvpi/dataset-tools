@@ -25,7 +25,7 @@ public:
 
 private slots:
     void browseModelPath();
-    void loadModel();
+    bool loadModel(std::string &message);
     void resetToDefaults() const;
     void onBrowseWavPath();
     void onBrowseOutputMidi();
@@ -39,11 +39,11 @@ private:
     void setupActionButtons();
     void updateDeviceList() const;
     void setupProcessingGroup();
-    void updateParameterValues();
+    bool updateParameterValues() const;
     void loadLanguagesFromConfig(const std::filesystem::path &modelPath);
     void updateLanguageCombo();
     void updateTimeStepInfo(const std::filesystem::path &modelPath);
-    void setModelLoadingStatus(const QString &status, bool isLoading = false);
+    void setModelLoadingStatus(const QString &status);
 
     // Model group widgets
     QLineEdit *m_modelPathEdit;
@@ -83,18 +83,17 @@ private:
     QSettings *m_settings;
 
     // Game instance
-    std::shared_ptr<Game::Game> m_game;
+    std::shared_ptr<Game::Game> m_game = nullptr;
 
     // Language mapping
     std::map<int, std::string> m_languageIdToName;
     std::map<std::string, int> m_languageNameToId;
 
+    int max_audio_seg_length = 60;
+
     // Time step information
     float m_timeStepSeconds;
     double m_framesPerSecond;
-
-    // Loading state
-    bool m_isLoading;
 };
 
 #endif // MAINWIDGET_H

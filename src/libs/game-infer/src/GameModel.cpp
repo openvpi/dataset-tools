@@ -131,13 +131,20 @@ namespace Game
 #endif
     }
 
-    GameModel::GameModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) :
-        env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "GameModel")), sessionOptions(Ort::SessionOptions()) {
-        modelDir = modelPath;
+    GameModel::GameModel() :
+        env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "GameModel")), sessionOptions(Ort::SessionOptions()) {}
 
-        std::ifstream configFile(modelDir / "config.json");
+    GameModel::~GameModel() = default;
+
+    int GameModel::get_target_sample_rate() const { return m_target_sample_rate; }
+
+    bool GameModel::load_model(const std::filesystem::path &modelPath, const ExecutionProvider provider,
+                               const int device_id, std::string &msg) {
+        modelDir = modelPath;
+        std::ifstream configFile(modelPath / "config.json");
         if (!configFile.is_open()) {
-            throw std::runtime_error("Could not open config.json: " + (modelDir / "config.json").string());
+            msg = "Could not open config.json: " + (modelPath / "config.json").string();
+            return false;
         }
         nlohmann::json config;
         configFile >> config;
@@ -194,31 +201,31 @@ namespace Game
             break;
         }
 
-        auto loadSession = [&](const std::string &name)
+        auto loadSession = [&](const std::string &name, std::unique_ptr<Ort::Session> &session)
         {
             const std::filesystem::path model_path = modelDir / name;
+            if (!std::filesystem::exists(model_path)) {
+                msg = model_path.string() + "not exist!";
+                return false;
+            }
 #ifdef _WIN32
-            return std::make_unique<Ort::Session>(env, model_path.wstring().c_str(), sessionOptions);
+            session = std::make_unique<Ort::Session>(env, model_path.wstring().c_str(), sessionOptions);
 #else
-            return std::make_unique<Ort::Session>(env, model_path.c_str(), sessionOptions);
+            session = std::make_unique<Ort::Session>(env, model_path.c_str(), sessionOptions);
 #endif
+            return true;
         };
-        sessEncoder = loadSession("encoder.onnx");
-        sessSegmenter = loadSession("segmenter.onnx");
-        sessEstimator = loadSession("estimator.onnx");
-        sessDur2bd = loadSession("bd2dur.onnx");
 
         // Set default values from config or keep defaults
         m_seg_threshold = config.value("seg_threshold", 0.2f);
         m_seg_radius_seconds = config.value("seg_radius_seconds", 0.02f);
         m_est_threshold = config.value("est_threshold", 0.2f);
+
+        return loadSession("encoder.onnx", sessEncoder) && loadSession("segmenter.onnx", sessSegmenter) &&
+            loadSession("estimator.onnx", sessEstimator) && loadSession("bd2dur.onnx", sessDur2bd);
     }
 
-    GameModel::~GameModel() = default;
-
-    int GameModel::get_target_sample_rate() const { return m_target_sample_rate; }
-
-    bool GameModel::is_open() { return true; }
+    bool GameModel::is_open() const { return sessDur2bd && sessEncoder && sessEstimator && sessSegmenter; }
 
     void GameModel::terminate() {}
 

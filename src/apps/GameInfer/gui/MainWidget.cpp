@@ -51,8 +51,9 @@ static void makeMidiFile(const std::filesystem::path &midi_path, std::vector<Gam
 }
 
 MainWidget::MainWidget(QSettings *settings, QWidget *parent)
-    : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.02322), m_framesPerSecond(1.0 / 0.02322),
-      m_isLoading(false) {
+    : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.01), m_framesPerSecond(1.0 / 0.01) {
+    m_game = std::make_shared<Game::Game>();
+
     auto *mainLayout = new QVBoxLayout(this);
 
     setupModelGroup();
@@ -62,7 +63,17 @@ MainWidget::MainWidget(QSettings *settings, QWidget *parent)
 
     mainLayout->addStretch();
 
-    setModelLoadingStatus("Not loaded", false);
+    setModelLoadingStatus("Not loaded");
+
+    max_audio_seg_length = m_settings->value("MainWidget/max_audio_seg_length", 60).toInt();
+    m_settings->setValue("MainWidget/max_audio_seg_length", max_audio_seg_length);
+
+    // Automatically load config when widget is initialized
+    const QString modelPath = m_modelPathEdit->text();
+    if (!modelPath.isEmpty()) {
+        loadLanguagesFromConfig(std::filesystem::path(modelPath.toStdWString()));
+        updateTimeStepInfo(std::filesystem::path(modelPath.toStdWString()));
+    }
 }
 
 void MainWidget::setupModelGroup() {
@@ -75,7 +86,7 @@ void MainWidget::setupModelGroup() {
 
     const QString savedModelPath = m_settings->value("MainWidget/modelPath", "").toString();
     if (savedModelPath.isEmpty()) {
-        m_modelPathEdit->setText(QApplication::applicationDirPath() + "/model/GAME-1.0-small-onnx");
+        m_modelPathEdit->setText(QApplication::applicationDirPath() + "/model/GAME-1.0.3-small-onnx");
     } else {
         m_modelPathEdit->setText(savedModelPath);
     }
@@ -102,38 +113,32 @@ void MainWidget::setupModelGroup() {
     // Refresh devices when provider changes
     connect(m_providerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { updateDeviceList(); });
 
-    // Status label and Load model button in last row
+    // Status label
     m_modelStatusLabel = new QLabel("Not loaded");
     m_modelStatusLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
     layout->addWidget(m_modelStatusLabel, 2, 0, 1, 3);
 
-    m_loadModelBtn = new QPushButton("Load Model");
-    connect(m_loadModelBtn, &QPushButton::clicked, this, &MainWidget::loadModel);
-    layout->addWidget(m_loadModelBtn, 2, 4);
+    // Removed Load Model button
 
     auto *mainLayout = qobject_cast<QVBoxLayout *>(this->layout());
     mainLayout->addWidget(group);
 }
 
-void MainWidget::setModelLoadingStatus(const QString &status, const bool isLoading) {
-    m_isLoading = isLoading;
+void MainWidget::setModelLoadingStatus(const QString &status) {
+    QMetaObject::invokeMethod(
+        this,
+        [this, status] {
+            if (status.contains("Success") || status.contains("successfully")) {
+                m_modelStatusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
+            } else if (status.contains("Failed") || status.contains("failed") || status.contains("Error")) {
+                m_modelStatusLabel->setStyleSheet("QLabel { color: red; font-weight: bold; }");
+            } else {
+                m_modelStatusLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
+            }
 
-    if (isLoading) {
-        m_modelStatusLabel->setText(status);
-        m_modelStatusLabel->setStyleSheet("QLabel { color: blue; font-weight: bold; }");
-        m_loadModelBtn->setEnabled(false);
-    } else {
-        if (status.contains("Success") || status.contains("successfully")) {
-            m_modelStatusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
-        } else if (status.contains("Failed") || status.contains("Error")) {
-            m_modelStatusLabel->setStyleSheet("QLabel { color: red; font-weight: bold; }");
-        } else {
-            m_modelStatusLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
-        }
-
-        m_modelStatusLabel->setText(status);
-        m_loadModelBtn->setEnabled(true);
-    }
+            m_modelStatusLabel->setText(status);
+        },
+        Qt::QueuedConnection);
 }
 
 void MainWidget::updateDeviceList() const {
@@ -165,6 +170,10 @@ void MainWidget::setupProcessingGroup() {
     m_segThresholdSpin->setSingleStep(0.01);
     m_segThresholdSpin->setValue(0.2);
     layout->addWidget(m_segThresholdSpin, 0, 1);
+    m_segThresholdSpin->setValue(m_settings->value("MainWidget/segThreshold", 0.2).toFloat());
+
+    connect(m_segThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            [this](const double value) { m_settings->setValue("MainWidget/segThreshold", value); });
 
     // Segmentation radius in frames
     layout->addWidget(new QLabel("分割半径(帧, ms):"), 0, 2);
@@ -173,6 +182,10 @@ void MainWidget::setupProcessingGroup() {
     m_segRadiusFrameSpin->setSingleStep(1);
     m_segRadiusFrameSpin->setValue(2);
     layout->addWidget(m_segRadiusFrameSpin, 0, 3);
+    m_segRadiusFrameSpin->setValue(m_settings->value("MainWidget/segRadiusFrame", 2).toInt());
+
+    connect(m_segRadiusFrameSpin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+            [this](const int value) { m_settings->setValue("MainWidget/segRadiusFrame", value); });
 
     m_segRadiusMsLabel = new QLabel("(ms)");
     layout->addWidget(m_segRadiusMsLabel, 0, 4);
@@ -183,18 +196,6 @@ void MainWidget::setupProcessingGroup() {
         m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
     });
 
-    // Connect segmentation parameters to update immediately
-    connect(m_segThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](const double value) {
-        if (m_game) {
-            m_game->set_seg_threshold(value);
-        }
-    });
-    connect(m_segRadiusFrameSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](const int value) {
-        if (m_game) {
-            m_game->set_seg_radius_frames(value);
-        }
-    });
-
     // Row 1: Estimation threshold
     layout->addWidget(new QLabel("估计阈值 (--est-threshold):"), 1, 0);
     m_estThresholdSpin = new QDoubleSpinBox();
@@ -202,13 +203,10 @@ void MainWidget::setupProcessingGroup() {
     m_estThresholdSpin->setSingleStep(0.01);
     m_estThresholdSpin->setValue(0.2);
     layout->addWidget(m_estThresholdSpin, 1, 1);
+    m_estThresholdSpin->setValue(m_settings->value("MainWidget/estThreshold", 0.2).toFloat());
 
-    // Connect estimation parameter to update immediately
-    connect(m_estThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](const double value) {
-        if (m_game) {
-            m_game->set_est_threshold(value);
-        }
-    });
+    connect(m_estThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            [this](const double value) { m_settings->setValue("MainWidget/estThreshold", value); });
 
     // D3PM nsteps
     layout->addWidget(new QLabel("采样步数 (--seg-d3pm-nsteps):"), 1, 2);
@@ -221,22 +219,11 @@ void MainWidget::setupProcessingGroup() {
     m_segD3PMNStepsCombo->setCurrentIndex(3);
     layout->addWidget(m_segD3PMNStepsCombo, 1, 3);
 
-    // Connect D3PM parameter to update immediately
-    connect(m_segD3PMNStepsCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
-        if (m_game) {
-            const int nSteps = m_segD3PMNStepsCombo->currentData().toInt();
-            std::vector<float> generatedTs;
+    m_segD3PMNStepsCombo->setCurrentIndex(m_settings->value("MainWidget/segD3PMNSteps", 3).toInt());
 
-            if (nSteps > 0) {
-                constexpr float t0 = 0.0f;
-                const float step = (1.0f - t0) / nSteps;
-                for (int i = 0; i < nSteps; ++i) {
-                    generatedTs.push_back(t0 + i * step);
-                }
-            }
-            m_game->set_d3pm_ts(generatedTs);
-        }
-    });
+    // Connect D3PM parameter to update immediately
+    connect(m_segD3PMNStepsCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+            [this](const int value) { m_settings->setValue("MainWidget/segD3PMNSteps", value); });
 
     // Row 2: Language
     layout->addWidget(new QLabel("语言ID (--language):"), 2, 0);
@@ -251,17 +238,6 @@ void MainWidget::setupProcessingGroup() {
     m_tempoSpin->setSingleStep(1.0);
     m_tempoSpin->setValue(120.0);
     layout->addWidget(m_tempoSpin, 2, 3);
-
-    // Connect language parameter to update immediately
-    connect(m_languageCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
-        if (m_game) {
-            const int languageId = m_languageCombo->currentData().toInt();
-            m_game->set_language(languageId);
-        }
-    });
-
-    connect(m_tempoSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            [this](const double value) { m_settings->setValue("MainWidget/tempo", value); });
 
     layout->setColumnStretch(1, 1);
     layout->setColumnStretch(3, 1);
@@ -335,17 +311,16 @@ void MainWidget::setupActionButtons() {
 }
 
 void MainWidget::browseModelPath() {
-    if (m_isLoading) {
-        QMessageBox::information(this, "Info", "Model is loading, please wait...");
-        return;
-    }
-
     const QString dir = QFileDialog::getExistingDirectory(this, "Select Model Directory", m_modelPathEdit->text(),
                                                           QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if (!dir.isEmpty()) {
         m_modelPathEdit->setText(dir);
         m_settings->setValue("MainWidget/modelPath", dir);
+
+        // Auto-load config when model path changes
+        loadLanguagesFromConfig(std::filesystem::path(dir.toStdWString()));
+        updateTimeStepInfo(std::filesystem::path(dir.toStdWString()));
     }
 }
 
@@ -384,8 +359,8 @@ void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
 
         configFile.close();
     } else {
-        m_timeStepSeconds = 0.02322;
-        m_framesPerSecond = 1.0 / 0.02322;
+        m_timeStepSeconds = 0.01;
+        m_framesPerSecond = 1.0 / 0.01;
     }
 
     // Update ms label display
@@ -394,70 +369,36 @@ void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
     m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
 }
 
-void MainWidget::loadModel() {
-    if (m_isLoading) {
-        QMessageBox::information(this, "Info", "Model is already loading, please wait...");
-        return;
-    }
-
+bool MainWidget::loadModel(std::string &message) {
     if (m_modelPathEdit->text().isEmpty()) {
-        setModelLoadingStatus("Please select model path", false);
-        QMessageBox::warning(this, "Warning", "Please select model path");
-        return;
+        setModelLoadingStatus("Please select model path");
+        message = "Please select model path";
+        return false;
     }
 
-    setModelLoadingStatus("Loading model, please wait a few seconds...", true);
+    std::filesystem::path modelPath = m_modelPathEdit->text().toStdWString();
 
-    const auto res = QtConcurrent::run([this] {
-        try {
-            std::filesystem::path modelPath = m_modelPathEdit->text().toStdWString();
-
-            // Get execution provider from combo box
-            auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-
-            int deviceId = m_deviceCombo->currentData().toInt();
-
-            // Create new instance
-            auto game = std::make_shared<Game::Game>(modelPath, provider, deviceId);
-
-            if (game->is_open()) {
-                // Successfully loaded, update UI
-                QMetaObject::invokeMethod(
-                    this,
-                    [this, game, modelPath] {
-                        m_game = game;
-
-                        // Load timestep info from config after successful model loading
-                        updateTimeStepInfo(modelPath);
-
-                        // Load languages from config after successful model loading
-                        loadLanguagesFromConfig(modelPath);
-
-                        setModelLoadingStatus("Model loaded successfully!", false);
-                        m_settings->setValue("MainWidget/modelPath", QString::fromStdString(modelPath.string()));
-
-                        updateParameterValues();
-                    },
-                    Qt::QueuedConnection);
-            } else {
-                QMetaObject::invokeMethod(
-                    this,
-                    [this] {
-                        setModelLoadingStatus("Model loading failed!", false);
-                        QMessageBox::critical(this, "Error", "Model loading failed!");
-                    },
-                    Qt::QueuedConnection);
-            }
-        } catch (const std::exception &e) {
-            QMetaObject::invokeMethod(
-                this,
-                [this, e] {
-                    setModelLoadingStatus("Error loading model: " + QString(e.what()), false);
-                    QMessageBox::critical(this, "Error", QString("Error loading model: %1").arg(e.what()));
-                },
-                Qt::QueuedConnection);
-        }
-    });
+    // Get execution provider from combo box
+    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
+    const int deviceId = m_deviceCombo->currentData().toInt();
+    std::string msg;
+    if (m_game->load_model(modelPath, provider, deviceId, msg)) {
+        updateParameterValues();
+        // Successfully loaded, update UI
+        QMetaObject::invokeMethod(
+            this,
+            [this, modelPath] {
+                setModelLoadingStatus("Model loaded successfully!");
+                m_settings->setValue("MainWidget/modelPath", QString::fromStdString(modelPath.string()));
+            },
+            Qt::QueuedConnection);
+    } else {
+        message = "Model loading failed: " + msg;
+        QMetaObject::invokeMethod(
+            this, [this] { setModelLoadingStatus("Model loaded failed!"); }, Qt::QueuedConnection);
+        return false;
+    }
+    return true;
 }
 
 void MainWidget::loadLanguagesFromConfig(const std::filesystem::path &modelPath) {
@@ -519,40 +460,37 @@ void MainWidget::updateLanguageCombo() {
     }
 }
 
-void MainWidget::updateParameterValues() {
-    if (!m_game) {
-        return;
-    }
+bool MainWidget::updateParameterValues() const {
+    if (!m_game)
+        return false;
 
-    try {
-        // Update segmentation threshold
-        m_game->set_seg_threshold(m_segThresholdSpin->value());
+    // Update segmentation threshold
+    m_game->set_seg_threshold(m_segThresholdSpin->value());
 
-        // Update segmentation radius in frames
-        m_game->set_seg_radius_frames(m_segRadiusFrameSpin->value());
+    // Update segmentation radius in frames
+    m_game->set_seg_radius_frames(m_segRadiusFrameSpin->value());
 
-        // Update estimation threshold
-        m_game->set_est_threshold(m_estThresholdSpin->value());
+    // Update estimation threshold
+    m_game->set_est_threshold(m_estThresholdSpin->value());
 
-        // Update D3PM nsteps (generate time steps automatically with t0=0)
-        const int nSteps = m_segD3PMNStepsCombo->currentData().toInt();
-        std::vector<float> generatedTs;
+    // Update D3PM nsteps (generate time steps automatically with t0=0)
+    const int nSteps = m_segD3PMNStepsCombo->currentData().toInt();
+    std::vector<float> generatedTs;
 
-        if (nSteps > 0) {
-            constexpr float t0 = 0.0f;
-            const float step = (1.0f - t0) / nSteps;
-            for (int i = 0; i < nSteps; ++i) {
-                generatedTs.push_back(t0 + i * step);
-            }
+    if (nSteps > 0) {
+        constexpr float t0 = 0.0f;
+        const float step = (1.0f - t0) / nSteps;
+        for (int i = 0; i < nSteps; ++i) {
+            generatedTs.push_back(t0 + i * step);
         }
-        m_game->set_d3pm_ts(generatedTs);
-
-        // Update language - get the selected ID from the combo box
-        const int languageId = m_languageCombo->currentData().toInt();
-        m_game->set_language(languageId);
-    } catch (const std::exception &e) {
-        QMessageBox::critical(this, "Error", QString("Error updating parameters: %1").arg(e.what()));
     }
+    m_game->set_d3pm_ts(generatedTs);
+
+    // Update language - get the selected ID from the combo box
+    const int languageId = m_languageCombo->currentData().toInt();
+    m_game->set_language(languageId);
+
+    return true;
 }
 
 void MainWidget::resetToDefaults() const {
@@ -569,11 +507,6 @@ void MainWidget::resetToDefaults() const {
 }
 
 void MainWidget::onBrowseWavPath() {
-    if (m_isLoading) {
-        QMessageBox::information(this, "Info", "Model is loading, please wait...");
-        return;
-    }
-
     const QString wavPath = QFileDialog::getOpenFileName(
         this, "Select Input Audio File", "",
         "Audio Files (*.wav *.flac *.mp3);;WAV Files (*.wav);;FLAC Files (*.flac);;MP3 Files (*.mp3)");
@@ -585,11 +518,6 @@ void MainWidget::onBrowseWavPath() {
 }
 
 void MainWidget::onBrowseOutputMidi() {
-    if (m_isLoading) {
-        QMessageBox::information(this, "Info", "Model is loading, please wait...");
-        return;
-    }
-
     if (const QString file = QFileDialog::getSaveFileName(this, "Select Output MIDI File", "", "MIDI Files (*.mid)");
         !file.isEmpty()) {
         m_outputMidiLineEdit->setText(file);
@@ -613,36 +541,50 @@ void MainWidget::generateMidiOutputPath(const QString &wavPath) const {
 }
 
 void MainWidget::onExportMidiTask() {
-    if (m_isLoading) {
-        QMessageBox::information(this, "Info", "Model is loading, please wait...");
-        return;
-    }
-
-    if (!m_game) {
-        QMessageBox::warning(this, "Warning", "Please load model first");
-        return;
-    }
-
-    // Update parameters before running
-    updateParameterValues();
-
     if (m_wavPathLineEdit->text().isEmpty() || m_outputMidiLineEdit->text().isEmpty()) {
         QMessageBox::warning(this, "Warning", "Please fill input audio file and output MIDI file paths");
         return;
     }
 
-    m_runButton->setEnabled(false);
     m_progressBar->setValue(0);
 
     QFuture<void> future = QtConcurrent::run([this] {
         std::vector<Game::GameMidi> midis;
         std::string msg;
 
+        if (!exists(std::filesystem::path(m_wavPathLineEdit->text().toLocal8Bit().toStdString()))) {
+            QMetaObject::invokeMethod(
+                this,
+                [this] {
+                    QMessageBox::critical(this, "Error",
+                                          QString("Audio file is not exists: %1")
+                                              .arg(m_wavPathLineEdit->text().toLocal8Bit().toStdString()));
+                },
+                Qt::QueuedConnection);
+            return;
+        }
+
+        if (!m_game->is_open()) {
+            std::string msg_;
+            if (!loadModel(msg_)) {
+                QMetaObject::invokeMethod(
+                    this,
+                    [this, msg_] {
+                        QMessageBox::information(this, "Fail", "Model load failed! - " + QString::fromStdString(msg_));
+                    },
+                    Qt::QueuedConnection);
+                return;
+            }
+        }
+
+        updateParameterValues();
+        QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, false));
         const bool success = m_game->get_midi(
             m_wavPathLineEdit->text().toLocal8Bit().toStdString(), midis, static_cast<float>(m_tempoSpin->value()), msg,
             [this](const int progress) {
                 QMetaObject::invokeMethod(m_progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, progress));
-            });
+            },
+            max_audio_seg_length);
 
         if (success) {
             makeMidiFile(m_outputMidiLineEdit->text().toLocal8Bit().toStdString(), midis,

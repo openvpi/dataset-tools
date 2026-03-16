@@ -159,7 +159,9 @@ int main(int argc, char *argv[]) {
     std::cout << "Using provider: " << provider << ", device ID: " << deviceId << std::endl;
 
     // Create the GAME instance
-    Game::Game game(modelDir, gameProvider, deviceId);
+    Game::Game game;
+    std::string msg;
+    game.load_model(modelDir, gameProvider, deviceId, msg);
 
     if (!game.is_open()) {
         std::cerr << "Cannot load GAME Model from " << modelDir << std::endl;
@@ -205,12 +207,11 @@ int main(int argc, char *argv[]) {
     }
 
     // Load and process audio file
-    std::string msg;
     std::vector<Game::GameMidi> midis;
 
     std::cout << "Processing audio file: " << audioPath << std::endl;
 
-    if (game.get_midi(audioPath, midis, tempo, msg, progressChanged)) {
+    if (game.get_midi(audioPath, midis, tempo, msg, progressChanged, 60)) {
         Midi::MidiFile midi;
         midi.setFileFormat(1);
         midi.setDivisionType(Midi::MidiFile::DivisionType::PPQ);
