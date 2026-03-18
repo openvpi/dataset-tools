@@ -69,10 +69,10 @@ MainWidget::MainWidget(QSettings *settings, QWidget *parent)
     m_settings->setValue("MainWidget/max_audio_seg_length", max_audio_seg_length);
 
     // Automatically load config when widget is initialized
-    const QString modelPath = m_modelPathEdit->text();
-    if (!modelPath.isEmpty()) {
-        loadLanguagesFromConfig(std::filesystem::path(modelPath.toStdWString()));
-        updateTimeStepInfo(std::filesystem::path(modelPath.toStdWString()));
+    const auto modelPath = std::filesystem::path(m_modelPathEdit->text().toLocal8Bit().toStdString());
+    if (!modelPath.empty()) {
+        loadLanguagesFromConfig(modelPath);
+        updateTimeStepInfo(modelPath);
     }
 }
 
@@ -132,6 +132,8 @@ void MainWidget::setModelLoadingStatus(const QString &status) {
                 m_modelStatusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
             } else if (status.contains("Failed") || status.contains("failed") || status.contains("Error")) {
                 m_modelStatusLabel->setStyleSheet("QLabel { color: red; font-weight: bold; }");
+            } else if (status.contains("Loading") || status.contains("loading")) {
+                m_modelStatusLabel->setStyleSheet("QLabel { color: blue; font-weight: bold; }");
             } else {
                 m_modelStatusLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
             }
@@ -311,8 +313,10 @@ void MainWidget::setupActionButtons() {
 }
 
 void MainWidget::browseModelPath() {
-    const QString dir = QFileDialog::getExistingDirectory(this, "Select Model Directory", m_modelPathEdit->text(),
-                                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    const QString dir =
+        QFileDialog::getExistingDirectory(this, "Select Model Directory", m_modelPathEdit->text().toLocal8Bit(),
+                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks)
+            .toLocal8Bit();
 
     if (!dir.isEmpty()) {
         m_modelPathEdit->setText(dir);
@@ -376,12 +380,15 @@ bool MainWidget::loadModel(std::string &message) {
         return false;
     }
 
-    std::filesystem::path modelPath = m_modelPathEdit->text().toStdWString();
+    std::filesystem::path modelPath = m_modelPathEdit->text().toLocal8Bit().toStdString();
 
     // Get execution provider from combo box
     const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
     const int deviceId = m_deviceCombo->currentData().toInt();
     std::string msg;
+
+    QMetaObject::invokeMethod(
+        this, [this] { setModelLoadingStatus("Model is loading, please wait 3-10 seconds!"); }, Qt::QueuedConnection);
     if (m_game->load_model(modelPath, provider, deviceId, msg)) {
         updateParameterValues();
         // Successfully loaded, update UI
@@ -389,7 +396,7 @@ bool MainWidget::loadModel(std::string &message) {
             this,
             [this, modelPath] {
                 setModelLoadingStatus("Model loaded successfully!");
-                m_settings->setValue("MainWidget/modelPath", QString::fromStdString(modelPath.string()));
+                m_settings->setValue("MainWidget/modelPath", QString::fromStdWString(modelPath.wstring()));
             },
             Qt::QueuedConnection);
     } else {
@@ -546,6 +553,7 @@ void MainWidget::onExportMidiTask() {
         return;
     }
 
+    m_runButton->setEnabled(false);
     m_progressBar->setValue(0);
 
     QFuture<void> future = QtConcurrent::run([this] {
@@ -561,6 +569,7 @@ void MainWidget::onExportMidiTask() {
                                               .arg(m_wavPathLineEdit->text().toLocal8Bit().toStdString()));
                 },
                 Qt::QueuedConnection);
+            QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
             return;
         }
 
@@ -570,15 +579,15 @@ void MainWidget::onExportMidiTask() {
                 QMetaObject::invokeMethod(
                     this,
                     [this, msg_] {
-                        QMessageBox::information(this, "Fail", "Model load failed! - " + QString::fromStdString(msg_));
+                        QMessageBox::information(this, "Fail", "Model load failed! - " + QString::fromLocal8Bit(msg_));
                     },
                     Qt::QueuedConnection);
+                QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
                 return;
             }
         }
 
         updateParameterValues();
-        QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, false));
         const bool success = m_game->get_midi(
             m_wavPathLineEdit->text().toLocal8Bit().toStdString(), midis, static_cast<float>(m_tempoSpin->value()), msg,
             [this](const int progress) {

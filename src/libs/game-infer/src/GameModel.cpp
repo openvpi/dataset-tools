@@ -1,6 +1,7 @@
 #include <game-infer/GameModel.h>
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -141,7 +142,7 @@ namespace Game
     bool GameModel::load_model(const std::filesystem::path &modelPath, const ExecutionProvider provider,
                                const int device_id, std::string &msg) {
         modelDir = modelPath;
-        std::ifstream configFile(modelPath / "config.json");
+        std::ifstream configFile((modelPath / "config.json").wstring());
         if (!configFile.is_open()) {
             msg = "Could not open config.json: " + (modelPath / "config.json").string();
             return false;
@@ -166,6 +167,7 @@ namespace Game
             m_language = 0;
         }
 
+        sessionOptions = Ort::SessionOptions();
         sessionOptions.SetInterOpNumThreads(4);
         sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
 
