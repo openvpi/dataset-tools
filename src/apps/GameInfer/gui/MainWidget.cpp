@@ -315,8 +315,7 @@ void MainWidget::setupActionButtons() {
 void MainWidget::browseModelPath() {
     const QString dir =
         QFileDialog::getExistingDirectory(this, "Select Model Directory", m_modelPathEdit->text().toLocal8Bit(),
-                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks)
-            .toLocal8Bit();
+                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
     if (!dir.isEmpty()) {
         m_modelPathEdit->setText(dir);
