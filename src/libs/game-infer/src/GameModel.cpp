@@ -287,7 +287,9 @@ namespace Game
     void GameModel::set_seg_threshold(const float threshold) { m_seg_threshold = threshold; }
 
     void GameModel::set_seg_radius_seconds(const float radius) { m_seg_radius_seconds = radius; }
-    void GameModel::set_seg_radius_frames(const float radiusFrames) { m_est_threshold = radiusFrames * m_timestep; }
+    void GameModel::set_seg_radius_frames(const float radiusFrames) {
+        m_seg_radius_seconds = radiusFrames * m_timestep;
+    }
 
     void GameModel::set_est_threshold(const float threshold) { m_est_threshold = threshold; }
 
