@@ -527,7 +527,7 @@ void MainWindow::showEvent(QShowEvent *event) {
 }
 
 void MainWindow::slot_slicingModeChanged(int index) {
-    auto slicingMode = ui->cmbOutputWaveFormat->itemData(index).value<SlicingMode>();
+    auto slicingMode = ui->cmbSlicingMode->itemData(index).value<SlicingMode>();
     if ((slicingMode == SlicingMode::MarkersOnly) || (slicingMode == SlicingMode::AudioAndMarkers)) {
         ui->cbOverwriteMarkers->setVisible(true);
     } else {
