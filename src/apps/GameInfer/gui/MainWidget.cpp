@@ -537,11 +537,15 @@ void MainWidget::onWavPathChanged(const QString &wavPath) const {
     }
 }
 
+static QString replaceFileExtension(const QString &filePath, const QString &newExt) {
+    const QFileInfo info(filePath);
+    return info.absolutePath() + QDir::separator() + info.completeBaseName() + "." + newExt;
+}
+
 void MainWidget::generateMidiOutputPath(const QString &wavPath) const {
     const QFileInfo fileInfo(wavPath);
-    const QString baseName = fileInfo.baseName();
     const QString dir = fileInfo.absolutePath();
-    const QString midiPath = dir + "/" + baseName + ".mid";
+    const QString midiPath = replaceFileExtension(wavPath, "mid");
     m_outputMidiLineEdit->setText(midiPath);
     m_settings->setValue("MainWidget/outMidiPath", midiPath);
 }
