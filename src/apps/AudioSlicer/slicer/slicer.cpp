@@ -1,8 +1,9 @@
 #include <QString>
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <queue>
-#include <tuple>
+#include <utility>
 #include <vector>
 
 #include <sndfile.hh>
@@ -12,12 +13,6 @@
 
 template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end);
-
-template<class T>
-inline std::vector<T> multichannel_to_mono(const std::vector<T>& v, unsigned int channels);
-
-template<class T>
-inline std::vector<double> get_rms(const std::vector<T>& arr, qint64 frame_length = 2048, qint64 hop_length = 512);
 
 class MovingRMS {
 private:
@@ -135,12 +130,12 @@ MarkerList Slicer::slice()
         std::vector<double> initialBuffer(padding * channels);
         samplesRead = m_decoder->read(initialBuffer.data(), padding * channels);
         qint64 framesRead = samplesRead / channels;
-        for (qint64 i = 0; i < framesRead; i++) {
-            double monoSample = 0.0;
-            for (int j = 0; j < channels; j++) {
-                monoSample += initialBuffer[i * channels + j] / static_cast<double>(channels);
+        for (qint64 frame = 0; frame < framesRead; frame++) {
+            double channelSum = 0.0;
+            for (int ch = 0; ch < channels; ch++) {
+                channelSum += initialBuffer[frame * channels + ch];
             }
-            movingRms.push(monoSample);
+            movingRms.push(channelSum / static_cast<double>(channels));
         }
     }
 
@@ -154,14 +149,14 @@ MarkerList Slicer::slice()
             break;
         }
         qint64 framesRead = samplesRead / channels;
-        for (qint64 i = 0; i < framesRead; i++) {
-            double monoSample = 0.0;
-            for (int j = 0; j < channels; j++) {
-                monoSample += buffer[i * channels + j] / static_cast<double>(channels);
+        for (qint64 frame = 0; frame < framesRead; frame++) {
+            double channelSum = 0.0;
+            for (int ch = 0; ch < channels; ch++) {
+                channelSum += buffer[frame * channels + ch];
             }
-            movingRms.push(monoSample);
+            movingRms.push(channelSum / static_cast<double>(channels));
         }
-        for (qint64 i = framesRead; i < buffer.size() / channels; i++) {
+        for (qint64 frame = framesRead; frame < buffer.size() / channels; frame++) {
             movingRms.push(0.0);
         }
         rms_list[rms_index++] = movingRms.rms();
@@ -174,12 +169,6 @@ MarkerList Slicer::slice()
         }
         rms_list[rms_index++] = movingRms.rms();
     }
-
-    //qint64 frames = waveform.size() / channels;
-    //std::vector<float> samples = multichannel_to_mono<float>(waveform, channels);
-
-
-    //std::vector<double> rms_list = get_rms<float>(samples, (qint64) m_winSize, (qint64) m_hopSize);
 
     MarkerList sil_tags;
     qint64 silence_start = 0;
@@ -305,78 +294,6 @@ QString Slicer::getErrorMsg() {
 }
 
 template<class T>
-inline std::vector<double> get_rms(const std::vector<T>& arr, qint64 frame_length, qint64 hop_length) {
-    qint64 arr_length = arr.size();
-
-    qint64 padding = frame_length / 2;
-
-    qint64 rms_size = arr_length / hop_length + 1;
-
-    std::vector<double> rms = std::vector<double>(rms_size);
-
-    qint64 left = 0;
-    qint64 right = 0;
-    qint64 hop_count = 0;
-
-    qint64 rms_index = 0;
-    double val = 0;
-
-    // Initial condition: the frame is at the beginning of padded array
-    while ((right < padding) && (right < arr_length)) {
-        val += (double)arr[right] * arr[right];
-        right++;
-    }
-    rms[rms_index++] = (std::sqrt(std::max(0.0, (double)val / (double)frame_length)));
-
-    // Left side or right side of the frame has not touched the sides of original array
-    while ((right < frame_length) && (right < arr_length) && (rms_index < rms_size)) {
-        val += (double)arr[right] * arr[right];
-        hop_count++;
-        if (hop_count == hop_length) {
-            rms[rms_index++] = (std::sqrt(std::max(0.0, (double)val / (double)frame_length)));
-            hop_count = 0;
-        }
-        right++;  // Move right 1 step at a time.
-    }
-
-    if (frame_length < arr_length) {
-        while ((right < arr_length) && (rms_index < rms_size)) {
-            val += (double)arr[right] * arr[right] - (double)arr[left] * arr[left];
-            hop_count++;
-            if (hop_count == hop_length) {
-                rms[rms_index++] = (std::sqrt(std::max(0.0, (double)val / (double)frame_length)));
-                hop_count = 0;
-            }
-            left++;
-            right++;
-        }
-    }
-    else {
-        while ((right < frame_length) && (rms_index < rms_size)) {
-            hop_count++;
-            if (hop_count == hop_length) {
-                rms[rms_index++] = (std::sqrt(std::max(0.0, (double)val / (double)frame_length)));
-                hop_count = 0;
-            }
-            right++;
-        }
-    }
-
-    while ((left < arr_length) && (rms_index < rms_size)/* && (right < arr_length + padding)*/) {
-        val -= (double)arr[left] * arr[left];
-        hop_count++;
-        if (hop_count == hop_length) {
-            rms[rms_index++] = (std::sqrt(std::max(0.0, (double)val / (double)frame_length)));
-            hop_count = 0;
-        }
-        left++;
-        right++;
-    }
-
-    return rms;
-}
-
-template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end) {
     // Ensure vector access is not out of bound
     auto size = v.size();
@@ -386,20 +303,4 @@ inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 en
 
     auto min_it = std::min_element(v.begin() + begin, v.begin() + end);
     return std::distance(v.begin() + begin, min_it);
-}
-
-template<class T>
-inline std::vector<T> multichannel_to_mono(const std::vector<T>& v, unsigned int channels) {
-    qint64 frames = v.size() / channels;
-    std::vector<T> out(frames);
-
-    for (qint64 i = 0; i < frames; i++) {
-        T s = 0;
-        for (unsigned int j = 0; j < channels; j++) {
-            s += (T)v[i * channels + j] / (T)channels;
-        }
-        out[i] = s;
-    }
-
-    return out;
 }

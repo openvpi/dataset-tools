@@ -1,6 +1,4 @@
 #include <string>
-#include <tuple>
-#include <cmath>
 #include <utility>
 #include <vector>
 #include <limits>
@@ -136,18 +134,18 @@ void WorkThread::run() {
         MarkerError saveOk = writeCSVMarkers(chunks, markerFilePath, sr, m_overwriteMarkers, MarkerTimeFormat::Samples, totalSize);
         switch (saveOk) {
             case MarkerError::Success:
-                oneInfo(QString("%1: saved markers to %2").arg(m_filename, markerFilePath));
+                emit oneInfo(QString("%1: saved markers to %2").arg(m_filename, markerFilePath));
                 break;
             case MarkerError::Skipped:
-                oneInfo(QString("%1: marker file %2 exists, skipping").arg(m_filename, markerFilePath));
+                emit oneInfo(QString("%1: marker file %2 exists, skipping").arg(m_filename, markerFilePath));
                 break;
             case MarkerError::IOError:
                 isMarkerWriteError = true;
-                oneError(QString("%1: could not write markers to %2").arg(m_filename, markerFilePath));
+                emit oneError(QString("%1: could not write markers to %2").arg(m_filename, markerFilePath));
                 break;
             case MarkerError::NothingToOutputError:
                 isMarkerWriteError = true;
-                oneError(QString("%1: no markers to save").arg(m_filename));
+                emit oneError(QString("%1: no markers to save").arg(m_filename));
                 break;
             default:
                 break;
@@ -200,8 +198,10 @@ void WorkThread::run() {
             std::vector<double> tmp(frameCount * channels);
             auto bytesRead = sf.read(tmp.data(), tmp.size());
             auto bytesWritten = wf.write(tmp.data(), tmp.size());
-            if (bytesWritten == 0) {
+            if (bytesWritten != static_cast<sf_count_t>(tmp.size())) {
                 isAudioWriteError = true;
+                idx++;
+                break;
             }
             idx++;
         }
@@ -321,8 +321,9 @@ inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outF
         }
         idx++;
     }
+    auto fileError = writeFile.error();
     writeFile.close();
-    return (writeFile.error() == QFile::FileError::NoError) ? \
+    return (fileError == QFile::FileError::NoError) ? \
             MarkerError::Success : MarkerError::IOError;
 }
 
