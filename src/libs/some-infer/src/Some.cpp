@@ -23,6 +23,7 @@ namespace Some
     bool Some::is_open() const { return m_some && m_some->is_open(); }
 
     std::vector<double> cumulativeSum(const std::vector<float> &durations) {
+        if (durations.empty()) return {};
         std::vector<double> cumsum(durations.size());
         cumsum[0] = static_cast<double>(durations[0]);
         for (size_t i = 1; i < durations.size(); ++i) {
