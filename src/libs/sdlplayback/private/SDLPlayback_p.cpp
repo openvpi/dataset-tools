@@ -105,6 +105,10 @@ void SDLPlaybackPrivate::play() {
     // 如果没有打开音频设备那么打开第一个音频设备
     if (curDevId == 0) {
         QStringList devices = q->devices();
+        if (devices.isEmpty()) {
+            qWarning() << "SDLPlayback: No audio output devices available";
+            return;
+        }
         q->setDevice(devices.front());
     }
 
