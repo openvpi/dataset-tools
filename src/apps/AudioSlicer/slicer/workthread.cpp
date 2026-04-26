@@ -258,11 +258,11 @@ inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampl
     }
     bool hasParseError = false;
     bool parseOk;
-    qint64 mm = match.capturedView(0).toLongLong(&parseOk);
+    qint64 mm = match.capturedView(1).toLongLong(&parseOk);
     hasParseError |= !parseOk;
-    qint64 ss = match.capturedView(1).toLongLong(&parseOk);
+    qint64 ss = match.capturedView(2).toLongLong(&parseOk);
     hasParseError |= !parseOk;
-    qint64 zzz = match.capturedView(2).toLongLong(&parseOk);
+    qint64 zzz = match.capturedView(3).toLongLong(&parseOk);
     hasParseError |= !parseOk;
     if (hasParseError) {
         if (ok) *ok = false;

@@ -28,21 +28,21 @@ namespace LyricFA {
 
     void LyricFAWindow::init() {
         auto *labLabel = new QLabel("Lab Out Path:", this);
-        m_labEdit = new QLineEdit(R"(D:\python\LyricFA\test_outlab)", this);
+        m_labEdit = new QLineEdit("", this);
         auto *btnLab = new QPushButton("Open Folder", this);
         auto *labLayout = new QHBoxLayout();
         labLayout->addWidget(m_labEdit);
         labLayout->addWidget(btnLab);
 
         auto *jsonLabel = new QLabel("Json Out Path:", this);
-        m_jsonEdit = new QLineEdit(R"(D:\python\LyricFA\test_outjson)", this);
+        m_jsonEdit = new QLineEdit("", this);
         auto *btnJson = new QPushButton("Open Folder", this);
         auto *jsonLayout = new QHBoxLayout();
         jsonLayout->addWidget(m_jsonEdit);
         jsonLayout->addWidget(btnJson);
 
         auto *lyricLabel = new QLabel("Raw Lyric Path:", this);
-        m_lyricEdit = new QLineEdit(R"(D:\python\LyricFA\lyrics)", this);
+        m_lyricEdit = new QLineEdit("", this);
         auto *btnLyric = new QPushButton("Lyric Folder", this);
         auto *lyricLayout = new QHBoxLayout();
         lyricLayout->addWidget(m_lyricEdit);

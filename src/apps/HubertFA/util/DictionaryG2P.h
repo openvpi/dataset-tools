@@ -21,4 +21,4 @@ namespace HFA {
     };
 
 } // namespace HFA
-#endif DICTIONARY_G2P_H
+#endif // DICTIONARY_G2P_H

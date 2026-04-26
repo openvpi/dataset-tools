@@ -2,7 +2,6 @@
 
 #include <QApplication>
 #include <QFile>
-#include <QMessageBox>
 
 namespace LyricFA {
     AsrThread::AsrThread(Asr *asr, QString filename, QString wavPath, QString labPath,
@@ -21,8 +20,8 @@ namespace LyricFA {
 
         QFile labFile(m_labPath);
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QMessageBox::critical(nullptr, QApplication::applicationName(),
-                                  QString("Failed to write to file %1").arg(m_labPath));
+            Q_EMIT this->oneFailed(m_filename,
+                                   QString("Failed to write to file %1").arg(m_labPath));
             return;
         }
 

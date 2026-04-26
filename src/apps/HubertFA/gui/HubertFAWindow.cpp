@@ -72,7 +72,7 @@ namespace HFA {
     void HubertFAWindow::init() {
         auto *outLabel = new QLabel("Output TextGrid directory:", this);
         m_outTgEdit = new QLineEdit(this);
-        m_outTgEdit->setText(R"(C:\Users\99662\Desktop\hfa测试wav\wav\TextGrid)");
+        m_outTgEdit->setText("");
         auto *outBtn = new QPushButton("Browse...", this);
         auto *outLayout = new QHBoxLayout();
         outLayout->addWidget(outLabel);
