@@ -1,37 +1,48 @@
-# Data-set Tools
+# DiffSinger Dataset Tools
 
-DiffSinger dataset processing tools, including audio processing, labeling.
+DiffSinger dataset processing tools for singing voice synthesis data preparation, including audio slicing, labeling, forced alignment, and audio-to-MIDI transcription.
 
 ## Applications
 
-+ MinLabel
-+ SlurCutter
-+ AudioSlicer
+| Application | Description |
+|---|---|
+| **MinLabel** | Audio labeling tool with G2P conversion (Mandarin/Cantonese/Japanese) |
+| **SlurCutter** | DiffSinger sentence/MIDI editor with piano roll F0 visualization |
+| **AudioSlicer** | RMS-based automatic audio slicing with Audacity CSV marker support |
+| **LyricFA** | Lyric forced alignment using FunASR Paraformer (Chinese) |
+| **HubertFA** | HuBERT phoneme forced alignment with Praat TextGrid output |
+| **GameInfer** | GAME audio-to-MIDI transcription (4-model ONNX pipeline) |
 
 ## Supported Platforms
 
-+ Microsoft Windows (Vista ~ 11)
-+ Apple Mac OSX (11+)
++ Microsoft Windows (10 ~ 11) — primary, with DirectML GPU acceleration
++ Apple macOS (11+)
 + Linux (Tested on Ubuntu)
 
-## AsrModel
+## Models
+
+### AsrModel
 
 [AsrModel](https://github.com/openvpi/dataset-tools/releases/tag/AsrModel)
 
 Used for LyricFA, only supports Chinese. [jp&&en version(beta)](https://github.com/wolfgitpr/LyricFA)
 
-## SomeModel
+### SomeModel
 
 [SomeModel](https://github.com/openvpi/dataset-tools/releases/tag/SomeModel)
 
-## FblModel
+### FblModel
 
 [FblModel](https://github.com/openvpi/dataset-tools/releases/tag/FblModel)
 
-Currently, FoxBreatheLabeler only supports annotating breathing using TextGrid files output from SOFA(i.e. overlaying
+Currently, FoxBreatheLabeler only supports annotating breathing using TextGrid files output from SOFA (i.e. overlaying
 new "AP" annotations on intervals already marked as "SP").
 
-## Build from source
+### GAME Model
+
+Required for GameInfer. Place the model directory (containing `config.json`, `encoder.onnx`, `segmenter.onnx`, `bd2dur.onnx`, `dur2bd.onnx`, `estimator.onnx`) under `<app_dir>/model/`.
+
+## Build from Source
 
 ### Requirements
 
@@ -40,11 +51,12 @@ new "AP" annotations on intervals already marked as "SP").
 |    Qt     |  \>=6.8.0   | Core, Gui, Widgets, Svg, Network |
 | Compiler  |  \>=C++17   |      MSVC 2022, GCC, Clang       |
 |   CMake   |   \>=3.17   |      >=3.20 is recommended       |
-|  Python   |   \>=3.8    |                                  |
+
+> Tested with Qt 6.8.3 and Qt 6.9.3. CI builds use Qt 6.9.3.
 
 ### Setup Environment
 
-You need to install Qt libraries first. (Tested on Qt 6.8.3 only)
+You need to install Qt libraries first.
 
 #### Windows
 
@@ -96,8 +108,8 @@ cd vcpkg
 
 ```sh
 cmake -B build -G Ninja \
-    -DCMAKE_INSTALL_PREFIX=<dir> \ # install directory
-    -DCMAKE_PREFIX_PATH=<dir> \ # directory `Qt5Config.cmake` locates
+    -DCMAKE_INSTALL_PREFIX=<dir> \
+    -DCMAKE_PREFIX_PATH=<dir> \
     -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake \
     -DCMAKE_BUILD_TYPE=Release
 
@@ -105,6 +117,26 @@ cmake --build build --target all
 
 cmake --build build --target install
 ```
+
+### CMake Build Options
+
+| Option | Default | Description |
+|---|---|---|
+| `BUILD_TESTS` | `ON` | Build `src/tests/` subdirectory (currently empty placeholder) |
+| `AUDIO_UTIL_BUILD_TESTS` | `ON` | Build TestAudioUtil |
+| `GAME_INFER_BUILD_TESTS` | `ON` | Build TestGame |
+| `SOME_INFER_BUILD_TESTS` | `ON` | Build TestSome |
+| `RMVPE_INFER_BUILD_TESTS` | `ON` | Build TestRmvpe |
+| `ONNXRUNTIME_ENABLE_DML` | `ON` (Windows) | Enable DirectML GPU acceleration |
+| `ONNXRUNTIME_ENABLE_CUDA` | `OFF` | Enable CUDA GPU acceleration |
+
+### Build Outputs
+
+| Type | Files |
+|---|---|
+| Applications | `MinLabel.exe`, `SlurCutter.exe`, `AudioSlicer.exe`, `LyricFA.exe`, `HubertFA.exe`, `GameInfer.exe` |
+| Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestSome.exe`, `TestAudioUtil.exe` |
+| Shared libraries | `game-infer.dll`, `rmvpe-infer.dll`, `some-infer.dll`, `audio-util.dll` |
 
 ## Libraries
 
@@ -118,8 +150,10 @@ cmake --build build --target install
 
 ### Dependencies
 
-+ [Qt 6.8.3](https://www.qt.io/)
++ [Qt 6](https://www.qt.io/) (6.8+)
     + GNU LGPL v2.1 or later
++ [ONNX Runtime](https://github.com/microsoft/onnxruntime)
+    + MIT License
 + [FFmpeg](https://github.com/FFmpeg/FFmpeg)
     + GNU LGPL v2.1 or later
 + [LAME](https://lame.sourceforge.io/)
@@ -138,10 +172,18 @@ cmake --build build --target install
     + GNU GPL v2.0
 + [yaml-cpp](https://github.com/jbeder/yaml-cpp)
     + MIT License
++ [wolf-midi](https://github.com/user/wolf-midi)
+    + MIT License
++ [nlohmann/json](https://github.com/nlohmann/json)
+    + MIT License
 + [FoxBreatheLabeler](https://github.com/autumn-DL/FoxBreatheLabeler)
     + GNU AGPL v3.0
 + [textgrid.hpp](https://github.com/eiichiroi/textgrid.hpp)
     + MIT License
++ [soxr](https://sourceforge.net/projects/soxr/)
+    + GNU LGPL v2.1
++ [mpg123](https://www.mpg123.de/)
+    + GNU LGPL v2.1
 
 ## License
 
