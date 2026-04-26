@@ -69,7 +69,7 @@ bool SDLPlaybackPrivate::setup(const QVariantMap &args) {
 
     // 缓冲区
     pcm_buffer_size = bufferSamples * channels;
-    pcm_buffer.reset(new float[pcm_buffer_size * sizeof(float)]);
+    pcm_buffer.reset(new float[pcm_buffer_size]);
 
     // 开始侦听音频设备
     producer = new std::thread(&SDLPlaybackPrivate::poll, this);
