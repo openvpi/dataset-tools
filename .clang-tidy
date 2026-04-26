@@ -1,0 +1,55 @@
+---
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  cert-*,
+  -cert-err58-cpp,
+  concurrency-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-no-malloc,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-pro-type-union-access,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-const-correctness,
+  -misc-non-private-member-variables-in-classes,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  performance-*,
+  -performance-avoid-endl,
+  -performance-unnecessary-value-param,
+  portability-*,
+  readability-*,
+  -readability-avoid-unconditional-preprocessor-if,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-identifier-naming,
+  -readability-magic-numbers,
+  -readability-named-parameter,
+  -readability-use-anyofallof,
+
+CheckOptions:
+  - key: readability-function-size.LineThreshold
+    value: 80
+  - key: readability-function-size.StatementThreshold
+    value: 40
+  - key: readability-function-size.ParameterThreshold
+    value: 8
+  - key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions
+    value: true
+  - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: true
+
+WarningsAsErrors: ''
+
+HeaderFilterRegex: '.*'

@@ -1,5 +1,6 @@
 # This file is used to ignore files which are generated
 # ----------------------------------------------------------------------------
+nul
 
 *~
 *.log
@@ -78,6 +79,7 @@ __pycache__
 
 build-src*
 build/
+build_check/
 cmake-build*
 *.user
 *.lnk
@@ -98,3 +100,9 @@ CMakeSettings.json
 setup-vcpkg.json
 setup-vcpkg-temp*
 /src/libs/onnxruntime/
+docs/api/
+build-stdout.txt
+build-stderr.txt
+build_test_log.txt
+build-vs/
+/.*

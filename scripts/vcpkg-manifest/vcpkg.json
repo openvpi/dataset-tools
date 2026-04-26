@@ -1,6 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "$note": "ffmpeg-fake is a custom overlay port (from ports/) that provides FFmpeg headers and link targets without building FFmpeg from source. The actual FFmpeg shared libraries are expected to be available at runtime.",
   "dependencies": [
+    "syscmdline",
     "sdl2",
     "ffmpeg-fake",
     "fftw3",
@@ -9,15 +11,10 @@
     "soxr",
     "wolf-midi",
     "libsndfile",
-    "qbreakpad",
-    "nlohmann-json"
-  ],
-  "vcpkg-configuration": {
-    "overlay-ports": [
-      "../vcpkg/ports"
-    ],
-    "overlay-triplets": [
-      "../vcpkg/triplets"
-    ]
-  }
+    "nlohmann-json",
+    {
+      "name": "qwindowkit",
+      "features": ["widgets"]
+    }
+  ]
 }

@@ -1,0 +1,47 @@
+* text=auto eol=lf
+
+# Source files
+*.cpp    text eol=lf
+*.h      text eol=lf
+*.hpp    text eol=lf
+*.c      text eol=lf
+*.cmake  text eol=lf
+*.txt    text eol=lf
+*.md     text eol=lf
+*.py     text eol=lf
+*.ts     text eol=lf
+*.json   text eol=lf
+*.qrc    text eol=lf
+*.qss    text eol=lf
+*.css    text eol=lf
+*.pro    text eol=lf
+*.pri    text eol=lf
+*.bat    text eol=crlf
+*.ps1    text eol=crlf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.in     text eol=lf
+*.sh     text eol=lf
+
+# Binary files
+*.onnx   binary
+*.lib    binary
+*.dll    binary
+*.exe    binary
+*.so     binary
+*.dylib  binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.svg    binary
+*.ico    binary
+*.icns   binary
+*.gif    binary
+*.zip    binary
+*.tar    binary
+*.gz     binary
+*.7z     binary
+*.ttf    binary
+*.otf    binary
+*.woff   binary
+*.woff2  binary

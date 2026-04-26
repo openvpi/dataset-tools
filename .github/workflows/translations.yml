@@ -1,0 +1,55 @@
+name: Translation Coverage
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.cpp'
+      - 'src/**/*.h'
+      - 'src/**/translations/*.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  check-translations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-l10n-tools
+
+      - name: Check for untranslated strings
+        run: |
+          echo "## Translation Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          total_untranslated=0
+
+          for ts_file in $(find src -name '*_zh_CN.ts' -type f); do
+            # Count <translation> elements
+            total=$(grep -c '<translation' "$ts_file" 2>/dev/null || echo 0)
+            # Count unfinished (type="unfinished") translations
+            unfinished=$(grep -c 'type="unfinished"' "$ts_file" 2>/dev/null || echo 0)
+            # Count empty translations
+            empty=$(grep -c '<translation></translation>' "$ts_file" 2>/dev/null || echo 0)
+            untranslated=$((unfinished + empty))
+            total_untranslated=$((total_untranslated + untranslated))
+
+            if [ "$total" -gt 0 ]; then
+              translated=$((total - untranslated))
+              pct=$((translated * 100 / total))
+              status="✅"
+              [ "$untranslated" -gt 0 ] && status="⚠️"
+              echo "| $status | \`$ts_file\` | $translated/$total ($pct%) |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total untranslated: $total_untranslated**" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$total_untranslated" -gt 0 ]; then
+            echo "::warning::Found $total_untranslated untranslated string(s) in .ts files"
+          fi

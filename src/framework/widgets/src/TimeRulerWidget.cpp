@@ -1,0 +1,201 @@
+#include <dsfw/widgets/TimeRulerWidget.h>
+
+#include <QPainter>
+#include <QPaintEvent>
+#include <QWheelEvent>
+#include <cmath>
+#include <algorithm>
+
+namespace dsfw::widgets {
+
+static const TimeRulerWidget::TimescaleLevel kLevels[] = {
+    {0.0005, 0.0002},   // 0.5ms / 0.2ms
+    {0.001,  0.0005},   // 1ms / 0.5ms
+    {0.002,  0.001},    // 2ms / 1ms
+    {0.005,  0.002},    // 5ms / 2ms
+    {0.01,   0.005},    // 10ms / 5ms
+    {0.02,   0.01},     // 20ms / 10ms
+    {0.05,   0.02},     // 50ms / 20ms
+    {0.1,    0.05},     // 100ms / 50ms
+    {0.2,    0.1},      // 200ms / 100ms
+    {0.5,    0.2},      // 500ms / 200ms
+    {1.0,    0.5},      // 1s / 500ms
+    {2.0,    1.0},      // 2s / 1s
+    {5.0,    2.0},      // 5s / 2s
+    {10.0,   5.0},      // 10s / 5s
+    {15.0,   5.0},      // 15s / 5s
+    {30.0,   10.0},     // 30s / 10s
+    {60.0,   30.0},     // 1min / 30s
+    {120.0,  60.0},     // 2min / 1min
+    {300.0,  120.0},    // 5min / 2min
+    {600.0,  300.0},    // 10min / 5min
+    {1800.0, 600.0},    // 30min / 10min
+    {3600.0, 900.0},    // 1h / 15min
+};
+
+static constexpr int kLevelCount = static_cast<int>(std::size(kLevels));
+
+TimeRulerWidget::TimeRulerWidget(ViewportController *viewport, QWidget *parent)
+    : QWidget(parent), m_viewport(viewport) {
+    setFixedHeight(24);
+
+    if (m_viewport) {
+        connect(m_viewport, &ViewportController::viewportChanged,
+                this, [this](const ViewportState &state) { setViewport(state); });
+        m_viewStart = m_viewport->state().startSec;
+        m_viewEnd = m_viewport->state().endSec;
+        m_resolution = m_viewport->state().resolution;
+        m_sampleRate = m_viewport->state().sampleRate;
+    }
+}
+
+void TimeRulerWidget::setViewport(const ViewportState &state) {
+    m_viewStart = state.startSec;
+    m_viewEnd = state.endSec;
+    m_resolution = state.resolution;
+    m_sampleRate = state.sampleRate;
+    update();
+}
+
+double TimeRulerWidget::timeToX(double time) const {
+    double viewDuration = m_viewEnd - m_viewStart;
+    if (viewDuration <= 0.0 || width() <= 0) return 0.0;
+    return (time - m_viewStart) / viewDuration * width();
+}
+
+TimeRulerWidget::TimescaleLevel TimeRulerWidget::findLevel(double pps) {
+    for (int i = 0; i < kLevelCount; ++i) {
+        if (kLevels[i].minorSec * pps >= kMinMinorStepPx)
+            return kLevels[i];
+    }
+    return kLevels[kLevelCount - 1];
+}
+
+QString TimeRulerWidget::formatTime(double timeSec, double intervalSec) {
+    if (intervalSec >= 3600.0) {
+        int totalSec = static_cast<int>(timeSec);
+        int hr = totalSec / 3600;
+        int min = (totalSec % 3600) / 60;
+        int sec = totalSec % 60;
+        return QStringLiteral("%1:%2:%3")
+            .arg(hr)
+            .arg(min, 2, 10, QChar('0'))
+            .arg(sec, 2, 10, QChar('0'));
+    }
+    if (intervalSec >= 60.0) {
+        int totalSec = static_cast<int>(timeSec);
+        int min = totalSec / 60;
+        int sec = totalSec % 60;
+        return QStringLiteral("%1:%2")
+            .arg(min)
+            .arg(sec, 2, 10, QChar('0'));
+    }
+    if (intervalSec >= 1.0) {
+        return QString::number(static_cast<int>(timeSec)) + QStringLiteral("s");
+    }
+    if (intervalSec >= 0.1) {
+        return QString::number(timeSec, 'f', 1) + QStringLiteral("s");
+    }
+    if (intervalSec >= 0.005) {
+        return QString::number(timeSec, 'f', 3) + QStringLiteral("s");
+    }
+    if (intervalSec >= 0.001) {
+        return QString::number(timeSec * 1000.0, 'f', 2) + QStringLiteral("ms");
+    }
+    return QString::number(timeSec * 1000.0, 'f', 1) + QStringLiteral("ms");
+}
+
+void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
+    QPainter painter(this);
+
+    bool darkMode = palette().window().color().lightness() < 128;
+    QColor bgColor = darkMode ? QColor(35, 35, 40) : QColor(245, 245, 248);
+    QColor minorTickColor = darkMode ? QColor(80, 80, 100) : QColor(180, 180, 195);
+    QColor majorTickColor = darkMode ? QColor(140, 140, 160) : QColor(100, 100, 120);
+    QColor labelColor = darkMode ? QColor(180, 180, 200) : QColor(60, 60, 80);
+    QColor borderColor = minorTickColor;
+
+    painter.fillRect(rect(), bgColor);
+
+    double viewDuration = m_viewEnd - m_viewStart;
+    if (viewDuration <= 0.0) return;
+
+    auto level = findLevel(m_sampleRate > 0 && m_resolution > 0
+                           ? static_cast<double>(m_sampleRate) /  m_resolution
+                           : 200.0);
+
+    QFont font = painter.font();
+    font.setPixelSize(10);
+    painter.setFont(font);
+
+    int h = height();
+    static constexpr int kMajorTickH = 12;
+    static constexpr int kMinorTickH = 6;
+
+    // Draw minor ticks (no fade — level is selected by findLevel to guarantee adequate spacing)
+    {
+        QPen minorPen(minorTickColor, 1);
+        painter.setPen(minorPen);
+
+        double firstTick = std::floor(m_viewStart / level.minorSec) * level.minorSec;
+        for (double t = firstTick; t <= m_viewEnd; t += level.minorSec) {
+            if (t < m_viewStart) continue;
+            int x = static_cast<int>(timeToX(t));
+            painter.drawLine(x, h - kMinorTickH, x, h);
+        }
+    }
+
+    // Draw major ticks + labels
+    {
+        QPen majorPen(majorTickColor, 1);
+        painter.setPen(majorPen);
+
+        // labelColor already defined above
+
+        double firstMajor = std::floor(m_viewStart / level.majorSec) * level.majorSec;
+        for (double t = firstMajor; t <= m_viewEnd; t += level.majorSec) {
+            if (t < m_viewStart) continue;
+            int x = static_cast<int>(timeToX(t));
+            painter.drawLine(x, h - kMajorTickH, x, h);
+
+            painter.setPen(labelColor);
+            QString label = formatTime(t, level.majorSec);
+            QFontMetrics fm(painter.font());
+            int textWidth = fm.horizontalAdvance(label);
+            int textHeight = fm.height();
+            
+            // 确保文字不会超出边界
+            int textLeft = x - textWidth / 2;
+            int textRight = textLeft + textWidth;
+            
+            // 如果文字超出左边界，调整到边界并留出2像素边距
+            if (textLeft < 2) {
+                textLeft = 2;
+            }
+            // 如果文字超出右边界，调整到边界并留出2像素边距
+            if (textRight > width() - 2) {
+                textLeft = width() - textWidth - 2;
+            }
+            
+            QRect textRect(textLeft, 0, textWidth, h - kMajorTickH);
+            painter.drawText(textRect, Qt::AlignLeft | Qt::AlignBottom, label);
+            painter.setPen(majorPen);
+        }
+    }
+
+    // Bottom border
+    painter.setPen(QPen(borderColor, 1));
+    painter.drawLine(0, h - 1, width(), h - 1);
+}
+
+void TimeRulerWidget::wheelEvent(QWheelEvent *event) {
+    if (event->modifiers() & Qt::ControlModifier) {
+        QWidget::wheelEvent(event);
+        return;
+    }
+    int d = (event->angleDelta().y() > 0) ? -1 : 1;
+    emit entryScrollRequested(d);
+    event->accept();
+}
+
+} // namespace dsfw::widgets

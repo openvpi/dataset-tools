@@ -2,16 +2,14 @@
 
 DiffSinger dataset processing tools for singing voice synthesis data preparation, including audio slicing, labeling, forced alignment, and audio-to-MIDI transcription.
 
-## Applications
+## Application
 
 | Application | Description |
 |---|---|
-| **MinLabel** | Audio labeling tool with G2P conversion (Mandarin/Cantonese/Japanese) |
-| **SlurCutter** | DiffSinger sentence/MIDI editor with piano roll F0 visualization |
-| **AudioSlicer** | RMS-based automatic audio slicing with Audacity CSV marker support |
-| **LyricFA** | Lyric forced alignment using FunASR Paraformer (Chinese) |
-| **HubertFA** | HuBERT phoneme forced alignment with Praat TextGrid output |
-| **GameInfer** | GAME audio-to-MIDI transcription (4-model ONNX pipeline) |
+| **LabelSuite** | All-in-one audio labeling toolset (AppShell multi-page). 11 pages (Slice, ASR, Label, Align, Phone, CSV, MIDI, DS, Pitch, Settings, Log). Shares the same dstext/PipelineContext data model as DsLabeler; imports/exports legacy formats (TextGrid, .lab, .ds) via FormatAdapters. Supports auto-completion (auto FA/F0/MIDI on page entry). No `.dsproj` project file required. |
+| **DsLabeler** | DiffSinger dataset labeler driven by `.dsproj` project files. Eight pages: Welcome (create/open project), Slicer (audio slicing + export), MinLabel (+ ASR/LyricFA), Phoneme (+ auto FA), Pitch (+ auto F0/MIDI extraction), Export (CSV/DS/WAV output with auto-completion of skipped steps), Settings (unified configuration), Log (application logs). |
+
+See [Unified App Design](docs/developer/architecture/framework/appshell.md) for the full design.
 
 ## Supported Platforms
 
@@ -49,8 +47,8 @@ Required for GameInfer. Place the model directory (containing `config.json`, `en
 | Component | Requirement |             Detailed             |
 |:---------:|:-----------:|:--------------------------------:|
 |    Qt     |  \>=6.8.0   | Core, Gui, Widgets, Svg, Network |
-| Compiler  |  \>=C++17   |      MSVC 2022, GCC, Clang       |
-|   CMake   |   \>=3.17   |      >=3.20 is recommended       |
+| Compiler  |  \>=C++20   |      MSVC 2022, GCC, Clang       |
+|   CMake   |  \>=3.21    |                                  |
 
 > Tested with Qt 6.8.3 and Qt 6.9.3. CI builds use Qt 6.9.3.
 
@@ -61,8 +59,8 @@ You need to install Qt libraries first.
 #### Windows
 
 ```sh
-cd /D src/libs
-cmake -Dep=dml -P ../../scripts/setup-onnxruntime.cmake
+cd /D src/infer
+cmake -Dep=dml -P ../../cmake/setup-onnxruntime.cmake
 
 cd ../../
 set QT_DIR=<dir> # directory `Qt6Config.cmake` locates
@@ -82,8 +80,8 @@ vcpkg install ^
 #### Unix
 
 ```sh
-cd src/libs
-cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
+cd src/infer
+cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
 
 cd ../../
 export QT_DIR=<dir> # directory `Qt6Config.cmake` locates
@@ -122,11 +120,12 @@ cmake --build build --target install
 
 | Option | Default | Description |
 |---|---|---|
-| `BUILD_TESTS` | `ON` | Build `src/tests/` subdirectory (currently empty placeholder) |
-| `AUDIO_UTIL_BUILD_TESTS` | `ON` | Build TestAudioUtil |
-| `GAME_INFER_BUILD_TESTS` | `ON` | Build TestGame |
-| `SOME_INFER_BUILD_TESTS` | `ON` | Build TestSome |
-| `RMVPE_INFER_BUILD_TESTS` | `ON` | Build TestRmvpe |
+| `BUILD_TESTS` | `ON` | Build unit tests |
+| `BUILD_INTEGRATION_TESTS` | `OFF` | Build integration/UI tests (require GUI) |
+| `AUDIO_UTIL_BUILD_TESTS` | `OFF` | Build TestAudioUtil |
+| `GAME_INFER_BUILD_TESTS` | `OFF` | Build TestGame (requires GAME model) |
+| `RMVPE_INFER_BUILD_TESTS` | `OFF` | Build TestRmvpe (requires RMVPE model) |
+| `SOME_INFER_BUILD_TESTS` | `OFF` | Build TestSome (requires SomeModel) |
 | `ONNXRUNTIME_ENABLE_DML` | `ON` (Windows) | Enable DirectML GPU acceleration |
 | `ONNXRUNTIME_ENABLE_CUDA` | `OFF` | Enable CUDA GPU acceleration |
 
@@ -134,9 +133,37 @@ cmake --build build --target install
 
 | Type | Files |
 |---|---|
-| Applications | `MinLabel.exe`, `SlurCutter.exe`, `AudioSlicer.exe`, `LyricFA.exe`, `HubertFA.exe`, `GameInfer.exe` |
-| Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestSome.exe`, `TestAudioUtil.exe` |
-| Shared libraries | `game-infer.dll`, `rmvpe-infer.dll`, `some-infer.dll`, `audio-util.dll` |
+| Applications | `LabelSuite.exe`, `DsLabeler.exe` |
+| Tools | `dstools-cli.exe`, `hfa-cli.exe`, `WidgetGallery.exe` |
+| Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestAudioUtil.exe` |
+| Shared libraries | `dsfw-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `rmvpe-infer.dll`, `hubert-infer.dll`, `moe-infer.dll` |
+
+## Framework (dsfw)
+
+The project includes a reusable C++20/Qt6 desktop application framework (`dsfw`) that can be consumed independently via `find_package(dsfw)`. The framework provides:
+
+- **dsfw-core** — Type-safe settings, JSON utilities, service locator, document/model/G2P/export interfaces, file I/O, async tasks, pipeline context and runner
+- **dsfw-ui-core** — AppShell unified window shell (single/multi-page modes), theme system, frameless window helper, icon navigation bar, page lifecycle interfaces
+- **dsfw-widgets** — Reusable GUI components (PlayWidget, ProgressDialog, PropertyEditor, etc.) as a shared library
+
+After building and installing the project, external projects can use:
+
+```cmake
+find_package(dsfw REQUIRED)
+target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
+```
+
+### Framework Documentation
+
+| Document | Description |
+|---|---|
+| [Unified App Design](docs/developer/architecture/framework/unified-app-design.md) | DsSuite unified application design (multi-page AppShell) |
+| [Getting Started](docs/developer/getting-started/index.md) | Quick start guide with hello world examples |
+| [Architecture](docs/developer/architecture/overview.md) | Detailed architecture design and layer descriptions |
+| [Pipeline Design](docs/developer/architecture/data-flow/pipeline.md) | Task processor architecture and pipeline design |
+| [Data Format](docs/developer/architecture/data-flow/ds-format.md) | Project and data format specifications |
+| [Dirty Mechanism](docs/developer/architecture/framework/dirty-mechanism.md) | Layer dependency and dirty data propagation |
+| [Build Guide](docs/developer/getting-started/building.md) | Build from source instructions |
 
 ## Libraries
 
@@ -172,7 +199,7 @@ cmake --build build --target install
     + GNU GPL v2.0
 + [yaml-cpp](https://github.com/jbeder/yaml-cpp)
     + MIT License
-+ [wolf-midi](https://github.com/user/wolf-midi)
++ [wolf-midi](https://github.com/wolfgitpr/wolf-midi)
     + MIT License
 + [nlohmann/json](https://github.com/nlohmann/json)
     + MIT License

@@ -1,0 +1,15 @@
+# Doxyfile - DiffSinger Dataset Tools Framework
+
+PROJECT_NAME           = "DiffSinger Dataset Tools Framework"
+OUTPUT_DIRECTORY       = docs/api
+INPUT                  = src/framework/core/include/ src/framework/ui-core/include/
+RECURSIVE              = YES
+EXTRACT_ALL            = YES
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+
+FILE_PATTERNS          = *.h *.hpp
+USE_MDFILE_AS_MAINPAGE =
+QUIET                  = YES
+WARNINGS               = YES

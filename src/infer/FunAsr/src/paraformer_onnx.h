@@ -1,0 +1,49 @@
+#ifndef PARAFORMER_MODELIMP_H
+#define PARAFORMER_MODELIMP_H
+#pragma once
+#include "FeatureExtract.h"
+
+#include <memory>
+#include <Model.h>
+#include <onnxruntime_cxx_api.h>
+
+#include "Vocab.h"
+
+namespace FunAsr {
+    class ModelImp final : public Model {
+    private:
+        std::unique_ptr<FeatureExtract> fe;
+
+        std::unique_ptr<Vocab> vocab;
+        bool m_loaded = false;
+        std::string m_errorMessage;
+
+        static void apply_lfr(std::unique_ptr<Tensor<float>> &din);
+        static void apply_cmvn(const Tensor<float> *din);
+
+        std::string greedy_search(float *in, const int &nLen) const;
+
+#ifdef _WIN_X86
+        Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+#else
+        Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+#endif
+
+        std::unique_ptr<Ort::Session> m_session;
+
+        std::vector<std::string> m_strInputNames, m_strOutputNames;
+        std::vector<const char *> m_szInputNames;
+        std::vector<const char *> m_szOutputNames;
+
+    public:
+        explicit ModelImp(const std::filesystem::path &, const int &nNumThread = 0,
+                         ExecutionProvider provider = ExecutionProvider::CPU, int deviceId = 0);
+        ~ModelImp() override;
+        void reset() override;
+        std::string forward(float *din, int len, int flag) override;
+        bool isLoaded() const { return m_loaded; }
+        std::string errorMessage() const { return m_errorMessage; }
+    };
+
+} // namespace paraformer
+#endif

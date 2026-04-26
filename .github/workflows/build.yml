@@ -1,0 +1,479 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "*"
+    branches:
+      - main
+      - master
+      - refactor
+  pull_request:
+    branches:
+      - main
+      - master
+      - refactor
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: Release
+  VCPKG_COMMIT: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            triplet: x64-linux
+            onnxruntime_ep: cpu
+            dml: OFF
+            artifact_name: linux-x64
+            archive_ext: tar.gz
+          - os: macos-14
+            triplet: arm64-osx
+            onnxruntime_ep: cpu
+            dml: OFF
+            artifact_name: macos-arm64
+            archive_ext: zip
+          - os: windows-latest
+            triplet: x64-windows
+            onnxruntime_ep: dml
+            dml: ON
+            artifact_name: msvc2022-x64
+            archive_ext: zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify source file encoding (UTF-8 without BOM)
+        shell: bash
+        run: |
+          echo "Checking for non-UTF-8 source files..."
+          FOUND=0
+          for f in $(find src tests -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" -o -name "*.cmake" -o -name "*.py" -o -name "*.md" -o -name "*.txt" -o -name "*.json" -o -name "*.ts" -o -name "*.qss" -o -name "*.pro" -o -name "*.pri" \) 2>/dev/null); do
+            HEADER=$(xxd -l 3 -p "$f" 2>/dev/null || true)
+            if [ "$HEADER" = "fffe" ] || [ "$HEADER" = "fffe23" ]; then
+              echo "::error::UTF-16 LE BOM found: $f"
+              FOUND=1
+            elif [ "$HEADER" = "feff" ] || [ "$HEADER" = "feff00" ]; then
+              echo "::error::UTF-16 BE BOM found: $f"
+              FOUND=1
+            elif [ "${HEADER:0:6}" = "efbbbf" ]; then
+              echo "::warning::UTF-8 BOM found: $f (should be UTF-8 without BOM per conventions.md §13)"
+            fi
+          done
+          if [ $FOUND -ne 0 ]; then
+            echo "::error::Fatal encoding issues detected. All source files must be UTF-8 without BOM."
+            exit 1
+          fi
+          echo "All source files have valid encoding."
+
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev \
+            libx11-dev libxft-dev libxext-dev libwayland-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev
+
+      - name: Setup ccache
+        if: runner.os != 'Windows'
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.triplet }}
+          max-size: 500M
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+          cache: true
+
+      - name: Initialize MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Setup sccache (Windows)
+        if: runner.os == 'Windows'
+        uses: mozilla-actions/sccache-action@v0.0.7
+
+      - name: Configure sccache (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $env:GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $env:GITHUB_ENV
+
+      - name: Configure Qt6 path (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "QT_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" >> $GITHUB_ENV
+
+      - name: Configure Qt6 path (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "QT_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
+
+      - name: Verify Qt Installation
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "QT_DIR: $QT6_DIR"
+          ls -l "$QT6_DIR/lib/cmake/Qt6"
+
+      - name: Cache vcpkg bootstrap
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{github.workspace}}/vcpkg
+            !${{github.workspace}}/vcpkg/installed
+          key: vcpkg-bootstrap-${{ runner.os }}-${{ env.VCPKG_COMMIT }}
+
+      - name: Setup vcpkg
+        shell: bash
+        run: |
+          if [ -d "vcpkg/.git" ]; then
+            cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          else
+            rm -rf vcpkg
+            git clone https://github.com/microsoft/vcpkg.git
+            cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          else
+            vcpkg/bootstrap-vcpkg.sh -disableMetrics
+          fi
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg/installed
+          key: vcpkg-installed-${{ matrix.triplet }}-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.triplet }}-
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Build Vcpkg packages (Unix)
+        if: runner.os != 'Windows'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            cd ${{github.workspace}}/vcpkg
+            ./vcpkg install \
+              --x-manifest-root=../scripts/vcpkg-manifest \
+              --x-install-root=./installed \
+              --overlay-triplets=../scripts/vcpkg/triplets \
+              --triplet=${{ matrix.triplet }}
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
+          QT_DIR: ${{env.QT_DIR}}
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR;VCPKG_BUILD_TYPE'
+          VCPKG_BUILD_TYPE: release
+
+      - name: Build Vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          shell: cmd
+          command: |
+            cd /D ${{github.workspace}}\vcpkg
+            set VCPKG_BUILD_TYPE=release
+            vcpkg.exe install --x-manifest-root=..\scripts\vcpkg-manifest --x-install-root=.\installed --overlay-triplets=..\scripts\vcpkg\triplets --triplet=${{ matrix.triplet }}
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
+          QT_DIR: ${{env.QT_DIR}}
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR;VCPKG_BUILD_TYPE'
+          VCPKG_BUILD_TYPE: release
+
+      - name: Install OnnxRuntime (Unix)
+        if: runner.os != 'Windows'
+        working-directory: ${{github.workspace}}/src/infer
+        run: |
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Install OnnxRuntime (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: ${{github.workspace}}/src/infer
+        run: |
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Configure CMake (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          COVERAGE_ARGS=()
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            COVERAGE_ARGS+=("-DCMAKE_CXX_FLAGS=--coverage -g -O0")
+            COVERAGE_ARGS+=("-DCMAKE_EXE_LINKER_FLAGS=--coverage")
+          fi
+          cmake -B "${{github.workspace}}/build" -G Ninja \
+            -DBUILD_TESTS:BOOL=ON \
+            -DGAME_INFER_BUILD_TESTS:BOOL=ON \
+            -DRMVPE_INFER_BUILD_TESTS:BOOL=ON \
+            -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" \
+            -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" \
+            -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
+            -DDSTOOLS_DEPLOY_MODE=ON \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            "${COVERAGE_ARGS[@]}"
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DGAME_INFER_BUILD_TESTS:BOOL=ON -DRMVPE_INFER_BUILD_TESTS:BOOL=ON -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} -DDSTOOLS_DEPLOY_MODE=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --target all
+
+      - name: Run tests
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure -C ${{env.BUILD_TYPE}} --timeout 120
+
+      - name: Generate coverage report (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ${{github.workspace}}/build
+        run: |
+          pip3 install gcovr
+          gcovr --xml -o coverage.xml --root ${{github.workspace}}/src --exclude-unreachable-branches --print-summary
+
+      - name: Upload coverage to Codecov (Linux)
+        if: runner.os == 'Linux'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ${{github.workspace}}/build/coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Verify build outputs
+        shell: bash
+        run: |
+          echo "=== Verifying build outputs ==="
+          FAILED=0
+          # GUI apps use MACOSX_BUNDLE on macOS → .app bundle layout
+          for app in LabelSuite DsLabeler; do
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              EXE="${{github.workspace}}/build/bin/${app}.exe"
+            elif [ "$RUNNER_OS" = "macOS" ]; then
+              EXE="${{github.workspace}}/build/bin/${app}.app/Contents/MacOS/${app}"
+            else
+              EXE="${{github.workspace}}/build/bin/${app}"
+            fi
+            if [ -f "$EXE" ]; then
+              echo "  [OK] $app"
+            else
+              echo "  [FAIL] $app (not found)"
+              FAILED=1
+            fi
+          done
+          # CLI tools and utilities — plain executables (no MACOSX_BUNDLE)
+          for app in dstools-cli WidgetGallery; do
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              EXE="${{github.workspace}}/build/bin/${app}.exe"
+            else
+              EXE="${{github.workspace}}/build/bin/${app}"
+            fi
+            if [ -f "$EXE" ]; then
+              echo "  [OK] $app"
+            else
+              echo "  [FAIL] $app (not found)"
+              FAILED=1
+            fi
+          done
+          for test_target in TestAudioUtil TestGame TestRmvpe; do
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              EXE="${{github.workspace}}/build/bin/${test_target}.exe"
+            else
+              EXE="${{github.workspace}}/build/bin/${test_target}"
+            fi
+            if [ -f "$EXE" ]; then
+              echo "  [OK] $test_target"
+            else
+              echo "  [FAIL] $test_target (not found)"
+              FAILED=1
+            fi
+          done
+          if [ $FAILED -ne 0 ]; then
+            echo "::error::Some expected build outputs are missing"
+            exit 1
+          fi
+
+      - name: Deploy
+        run: cmake --build ${{github.workspace}}/build --target install
+
+      - name: Verify deploy artifact (no .lib/.a files)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "=== Verifying deploy artifact has no SDK files ==="
+          if find "${{github.workspace}}/deploy" -name "*.lib" | grep -q .; then
+            echo "::error::Found .lib files in deploy artifact (DSTOOLS_DEPLOY_MODE should prevent this)"
+            find "${{github.workspace}}/deploy" -name "*.lib"
+            exit 1
+          fi
+          echo "  [OK] No .lib files in deploy artifact"
+
+      - name: Set Commit ID
+        shell: bash
+        run: |
+          BUILD_DATE=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+          SHORT_HASH=$(git log --format="%H" -n 1 | head -c 7)
+          VERSION="${BUILD_DATE}-${SHORT_HASH}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}
+          path: ${{github.workspace}}/deploy
+
+      - name: Compress release archive (Linux)
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux'
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          tar czf dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.tar.gz .
+
+      - name: Compress release archive (macOS)
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'macOS'
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          zip -r dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip .
+
+      - name: Compress release archive (Windows)
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Windows'
+        shell: bash
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          7z a dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip ./*
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{github.workspace}}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION }}.${{ matrix.archive_ext }}
+
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 clang-tidy autoconf autoconf-archive automake libtool libltdl-dev libx11-dev libxft-dev libxext-dev libwayland-dev libegl1-mesa-dev libibus-1.0-dev
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+          cache: true
+
+      - name: Cache vcpkg bootstrap
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{github.workspace}}/vcpkg
+            !${{github.workspace}}/vcpkg/installed
+          key: vcpkg-bootstrap-${{ runner.os }}-${{ env.VCPKG_COMMIT }}
+
+      - name: Setup vcpkg
+        run: |
+          if [ -d "vcpkg/.git" ]; then
+            cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          else
+            rm -rf vcpkg
+            git clone https://github.com/microsoft/vcpkg.git
+            cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          fi
+          vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg/installed
+          key: vcpkg-installed-x64-linux-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-installed-x64-linux-
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Build Vcpkg packages
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            cd ${{github.workspace}}/vcpkg
+            ./vcpkg install \
+              --x-manifest-root=../scripts/vcpkg-manifest \
+              --x-install-root=./installed \
+              --overlay-triplets=../scripts/vcpkg/triplets \
+              --triplet=x64-linux
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
+          QT_DIR: ${{env.QT_ROOT_DIR}}
+          Qt6_DIR: ${{env.QT_ROOT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR;VCPKG_BUILD_TYPE'
+          VCPKG_BUILD_TYPE: release
+
+      - name: Install OnnxRuntime
+        working-directory: ${{github.workspace}}/src/infer
+        run: cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Configure CMake
+        run: |
+          cmake -B ${{github.workspace}}/build -G Ninja \
+            -DBUILD_TESTS:BOOL=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_PREFIX_PATH=${{env.QT_ROOT_DIR}}/lib/cmake/Qt6/ \
+            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DONNXRUNTIME_ENABLE_DML=OFF
+
+      - name: Run clang-tidy
+        working-directory: ${{github.workspace}}/build
+        run: |
+          run-clang-tidy -p . -quiet 2>&1 | tee clang-tidy-results.txt
+          if grep -qE "error:" clang-tidy-results.txt; then
+            echo "::error::clang-tidy found errors (WarningsAsErrors checks failed)"
+            exit 1
+          fi
+          if grep -qE "warning:" clang-tidy-results.txt; then
+            echo "::warning::clang-tidy found warnings, see clang-tidy-results.txt"
+          fi

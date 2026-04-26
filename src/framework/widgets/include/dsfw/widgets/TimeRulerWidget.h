@@ -1,0 +1,50 @@
+#pragma once
+
+#include <QWidget>
+#include <dsfw/widgets/ViewportController.h>
+#include <dsfw/widgets/WidgetsGlobal.h>
+
+class QPainter;
+
+namespace dsfw::widgets {
+
+    class DSFW_WIDGETS_API TimeRulerWidget : public QWidget {
+        Q_OBJECT
+
+    public:
+        explicit TimeRulerWidget(ViewportController *viewport, QWidget *parent = nullptr);
+
+        void setViewport(const ViewportState &state);
+
+    signals:
+        void entryScrollRequested(int delta);
+
+    protected:
+        void paintEvent(QPaintEvent *event) override;
+        void wheelEvent(QWheelEvent *event) override;
+
+    public:
+        struct TimescaleLevel {
+            double majorSec; ///< Major tick interval (seconds).
+            double minorSec; ///< Minor tick interval (seconds).
+        };
+
+    private:
+        [[nodiscard]] double timeToX(double time) const;
+
+        /// Find appropriate timescale level for the given pixels-per-second.
+        [[nodiscard]] static TimescaleLevel findLevel(double pps);
+
+        /// Format time label based on the time value.
+        [[nodiscard]] static QString formatTime(double timeSec, double intervalSec);
+
+        ViewportController *m_viewport = nullptr;
+        double m_viewStart = 0.0;
+        double m_viewEnd = 10.0;
+        int m_resolution = 40;
+        int m_sampleRate = 44100;
+
+        static constexpr double kMinMinorStepPx = 60.0;
+    };
+
+} // namespace dsfw::widgets

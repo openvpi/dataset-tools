@@ -1,0 +1,3 @@
+#pragma once
+#define DIRECTML_SOURCE_VERSION "a106403f359140dc8648a0dadbe862e1ebfd0b50"
+#define DIRECTML_PREVIEW_BUILD  0

@@ -1,0 +1,926 @@
+#include "AudioVisualizerContainer.h"
+
+#include "ChartPanelBase.h"
+#include "DataAreaWidget.h"
+#include "PlayCursorOverlay.h"
+#include "TierLabelArea.h"
+#include "dstools/MiniMapScrollBar.h"
+
+#include <BoundaryDragController.h>
+#include <BoundaryOverlayWidget.h>
+#include <IBoundaryModel.h>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QPointer>
+#include <QResizeEvent>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QWheelEvent>
+#include <algorithm>
+#include <dsfw/widgets/PlayWidget.h>
+#include <dstools/Constants.h>
+#include <dstools/TimePos.h>
+
+namespace dstools {
+
+    using dsfw::widgets::PlayWidget;
+    using dsfw::widgets::ViewportController;
+    using dsfw::widgets::ViewportState;
+
+    AppSettings &AudioVisualizerContainer::chartLayoutSettings() {
+        static AppSettings s_settings("AudioVisualizer");
+        return s_settings;
+    }
+
+    AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppName, QWidget *parent) :
+        QWidget(parent), m_settings(settingsAppName) {
+        m_viewport = new ViewportController(this);
+        m_dragController = new BoundaryDragController(this);
+
+        auto *mainLayout = new QVBoxLayout(this);
+        mainLayout->setContentsMargins(0, 0, 0, 0);
+        mainLayout->setSpacing(0);
+
+        auto *pairWidget = new QWidget(this);
+        auto *pairLayout = new QHBoxLayout(pairWidget);
+        pairLayout->setContentsMargins(0, 0, 0, 0);
+        pairLayout->setSpacing(0);
+
+        m_leftPane = new QWidget(pairWidget);
+        m_leftPane->setFixedWidth(52);
+        pairLayout->addWidget(m_leftPane);
+
+        m_dataArea = new DataAreaWidget(pairWidget);
+        pairLayout->addWidget(m_dataArea, 1);
+
+        mainLayout->addWidget(pairWidget);
+
+        m_miniMap = new MiniMapScrollBar(m_viewport, m_dataArea);
+        m_dataArea->layout()->addWidget(m_miniMap);
+
+        m_timeRuler = new TimeRulerWidget(m_viewport, m_dataArea);
+        m_dataArea->layout()->addWidget(m_timeRuler);
+
+        m_tierLabelArea = new TierLabelArea(m_dataArea);
+        m_tierLabelArea->setViewportController(m_viewport);
+        m_tierLabelArea->installEventFilter(this);
+        m_dataArea->layout()->addWidget(m_tierLabelArea);
+
+        m_chartSplitter = new QSplitter(Qt::Vertical, m_dataArea);
+        m_chartSplitter->setHandleWidth(4);
+        m_chartSplitter->setStyleSheet(QStringLiteral("QSplitter::handle { background-color: transparent; }"));
+        m_chartSplitter->installEventFilter(this);
+        static_cast<QVBoxLayout *>(m_dataArea->layout())->addWidget(m_chartSplitter, 1);
+
+        m_boundaryOverlay = new BoundaryOverlayWidget(m_viewport, m_dataArea);
+        m_boundaryOverlay->trackWidget(m_chartSplitter);
+
+        m_playCursorOverlay = new PlayCursorOverlay(m_dataArea);
+
+        m_scaleLabel = new QLabel(m_dataArea);
+        m_scaleLabel->setStyleSheet(QStringLiteral("QLabel {"
+                                                   "  color: #aaa;"
+                                                   "  background-color: rgba(30, 30, 30, 180);"
+                                                   "  border: 1px solid #555;"
+                                                   "  border-radius: 3px;"
+                                                   "  padding: 2px 6px;"
+                                                   "  font-size: 11px;"
+                                                   "}"));
+        m_scaleLabel->setAlignment(Qt::AlignCenter);
+        m_scaleLabel->adjustSize();
+
+        connect(m_viewport, &ViewportController::viewportChanged, m_timeRuler, &TimeRulerWidget::setViewport);
+        connect(m_viewport, &ViewportController::viewportChanged, m_boundaryOverlay,
+                &BoundaryOverlayWidget::setViewport);
+        connect(m_viewport, &ViewportController::viewportChanged, m_miniMap, &MiniMapScrollBar::setViewport);
+        connect(m_viewport, &ViewportController::viewportChanged, this,
+                &AudioVisualizerContainer::updateScaleIndicator);
+
+        connect(m_viewport, &ViewportController::viewportChanged, this, [this](const ViewportState &state) {
+            m_coordConverter.update(state);
+            if (m_dragController)
+                m_dragController->setCoordConverter(&m_coordConverter,
+                                                    m_chartSplitter ? m_chartSplitter->width() : width());
+        });
+
+        m_boundaryOverlay->setCoordConverter(&m_coordConverter);
+        m_playCursorOverlay->setCoordConverter(&m_coordConverter);
+
+        connect(m_chartSplitter, &QSplitter::splitterMoved, this, &AudioVisualizerContainer::refreshYAxisLabels);
+
+        connect(m_viewport, &ViewportController::viewportChanged, this, [this](const ViewportState &) {
+            for (auto *w : m_yAxisLabels)
+                w->update();
+        });
+
+        connect(m_dragController, &BoundaryDragController::dragStarted, this, [this]() { installDragEventFilters(); });
+        connect(m_dragController, &BoundaryDragController::dragFinished, this, [this]() { removeDragEventFilters(); });
+
+        connect(m_viewport, &ViewportController::viewportChanged, this,
+                [this](const ViewportState &state) { Q_UNUSED(state) });
+    }
+
+    void AudioVisualizerContainer::updateScaleIndicator() {
+        if (!m_scaleLabel || !m_viewport)
+            return;
+
+        int resolution = m_viewport->resolution();
+        int sampleRate = m_viewport->sampleRate();
+
+        double visibleSec =
+            (sampleRate > 0) ? static_cast<double>(m_chartSplitter->width()) * resolution / sampleRate : 0.0;
+
+        QString text;
+        if (visibleSec >= 60.0)
+            text = QStringLiteral("%1min visible  (%2 spx)").arg(visibleSec / 60.0, 0, 'f', 1).arg(resolution);
+        else if (visibleSec >= 1.0)
+            text = QStringLiteral("%1s visible  (%2 spx)").arg(visibleSec, 0, 'f', 1).arg(resolution);
+        else if (visibleSec > 0.0)
+            text = QStringLiteral("%1ms visible  (%2 spx)")
+                       .arg(visibleSec * constants::kMsPerSecond, 0, 'f', 0)
+                       .arg(resolution);
+
+        m_scaleLabel->setText(text);
+        m_scaleLabel->adjustSize();
+
+        // Position at bottom-right of the chart splitter area
+        int x = m_chartSplitter->width() - m_scaleLabel->width() - 8;
+        int y = m_chartSplitter->y() + m_chartSplitter->height() - m_scaleLabel->height() - 8;
+        m_scaleLabel->move(x, y);
+        m_scaleLabel->raise();
+    }
+
+    AudioVisualizerContainer::~AudioVisualizerContainer() = default;
+
+    ViewportController *AudioVisualizerContainer::viewport() const {
+        return m_viewport;
+    }
+
+    IBoundaryModel *AudioVisualizerContainer::boundaryModel() const {
+        return m_boundaryModel;
+    }
+
+    BoundaryDragController *AudioVisualizerContainer::dragController() const {
+        return m_dragController;
+    }
+
+    TimeRulerWidget *AudioVisualizerContainer::timeRuler() const {
+        return m_timeRuler;
+    }
+
+    BoundaryOverlayWidget *AudioVisualizerContainer::boundaryOverlay() const {
+        return m_boundaryOverlay;
+    }
+
+    TierLabelArea *AudioVisualizerContainer::tierLabelArea() const {
+        return m_tierLabelArea;
+    }
+
+    QSplitter *AudioVisualizerContainer::chartSplitter() const {
+        return m_chartSplitter;
+    }
+
+    MiniMapScrollBar *AudioVisualizerContainer::miniMap() const {
+        return m_miniMap;
+    }
+
+    void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel *model) {
+        m_boundaryModel = model;
+        if (m_tierLabelArea) {
+            m_tierLabelArea->setBoundaryModel(model);
+        }
+        m_boundaryOverlay->setBoundaryModel(model);
+
+        for (auto &entry : m_charts) {
+            if (auto *panel = qobject_cast<chart::ChartPanelBase *>(entry.widget))
+                panel->setBoundaryModel(model);
+        }
+
+        if (m_tierLabelArea) {
+            int tierLabelH = m_tierLabelArea->height();
+            m_boundaryOverlay->setTierLabelGeometry(tierLabelH, tierLabelH);
+        }
+        updateOverlayTopOffset();
+    }
+
+    void AudioVisualizerContainer::setTierLabelArea(TierLabelArea *area) {
+        if (!area || area == m_tierLabelArea)
+            return;
+
+        auto *layout = m_dataArea ? qobject_cast<QVBoxLayout *>(m_dataArea->layout()) : nullptr;
+        if (!layout)
+            return;
+
+        int idx = layout->indexOf(m_tierLabelArea);
+        if (idx < 0)
+            return;
+
+        layout->removeWidget(m_tierLabelArea);
+        m_tierLabelArea->deleteLater();
+
+        m_tierLabelArea = area;
+        m_tierLabelArea->setViewportController(m_viewport);
+        m_tierLabelArea->installEventFilter(this);
+        if (m_boundaryModel)
+            m_tierLabelArea->setBoundaryModel(m_boundaryModel);
+        layout->insertWidget(idx, m_tierLabelArea);
+        m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+        updateOverlayTopOffset();
+    }
+
+    void AudioVisualizerContainer::setupPhonemeOverlay(int tierCount, int tierRowHeight) {
+        removeTierLabelArea();
+        if (auto *bo = boundaryOverlay()) {
+            bo->setTierLabelGeometry(tierCount * tierRowHeight, tierRowHeight);
+            bo->setExtraTopOffset(0);
+            bo->forceReposition();
+        }
+    }
+
+    void AudioVisualizerContainer::removeTierLabelArea() {
+        if (!m_tierLabelArea)
+            return;
+
+        auto *layout = m_dataArea ? qobject_cast<QVBoxLayout *>(m_dataArea->layout()) : nullptr;
+        if (layout) {
+            int idx = layout->indexOf(m_tierLabelArea);
+            if (idx >= 0)
+                layout->removeWidget(m_tierLabelArea);
+        }
+
+        m_tierLabelArea->removeEventFilter(this);
+        m_tierLabelArea->deleteLater();
+        m_tierLabelArea = nullptr;
+
+        if (m_boundaryOverlay) {
+            m_boundaryOverlay->setTierLabelGeometry(0, 0);
+        }
+        updateOverlayTopOffset();
+
+        QTimer::singleShot(0, this, [this]() {
+            updateOverlayTopOffset();
+            if (m_boundaryOverlay)
+                m_boundaryOverlay->forceReposition();
+        });
+    }
+
+    void AudioVisualizerContainer::setEditorWidget(QWidget *widget) {
+        if (!widget || widget == m_editorWidget)
+            return;
+
+        auto *layout = m_dataArea ? qobject_cast<QVBoxLayout *>(m_dataArea->layout()) : nullptr;
+        if (!layout)
+            return;
+
+        // If there's an existing editor widget, replace it
+        if (m_editorWidget) {
+            int oldIdx = layout->indexOf(m_editorWidget);
+            if (oldIdx >= 0) {
+                layout->removeWidget(m_editorWidget);
+                m_editorWidget->deleteLater();
+            }
+        }
+
+        m_editorWidget = widget;
+
+        // Insert editor widget before the chart splitter
+        int splitterIdx = layout->indexOf(m_chartSplitter);
+        if (splitterIdx >= 0) {
+            layout->insertWidget(splitterIdx, m_editorWidget);
+        } else {
+            layout->addWidget(m_editorWidget);
+        }
+
+        // Connect viewport to editor widget
+        connectViewportToWidget(m_editorWidget);
+
+        // Update the boundary overlay so it covers the tier label + editor area
+        // (the overlay tracks chartSplitter and extends upward by this offset)
+        updateOverlayTopOffset();
+
+        // Track editor widget height changes to keep overlay covering it
+        m_editorWidget->installEventFilter(this);
+
+        refreshYAxisLabels();
+    }
+
+    void AudioVisualizerContainer::updateOverlayTopOffset() {
+        if (!m_tierLabelArea && m_editorWidget) {
+            int totalHeight = m_editorWidget->height();
+            if (m_boundaryOverlay) {
+                m_boundaryOverlay->updateLabelAreaHeight(totalHeight);
+                m_boundaryOverlay->setExtraTopOffset(0);
+            }
+            return;
+        }
+        int extraHeight = m_editorWidget ? m_editorWidget->height() : 0;
+        if (m_boundaryOverlay)
+            m_boundaryOverlay->setExtraTopOffset(extraHeight);
+    }
+
+    void AudioVisualizerContainer::setTotalDuration(double seconds) {
+        m_viewport->setTotalDuration(seconds);
+    }
+
+    void AudioVisualizerContainer::setYAxisWidth(int w) {
+        m_yAxisWidth = w;
+        if (m_leftPane)
+            m_leftPane->setFixedWidth(w);
+    }
+
+    void AudioVisualizerContainer::recomputeYAxisWidth() {
+        setYAxisWidth(52);
+        refreshYAxisLabels();
+    }
+
+    void AudioVisualizerContainer::refreshYAxisLabels() {
+        for (auto *w : m_yAxisLabels)
+            w->deleteLater();
+        m_yAxisLabels.clear();
+
+        if (!m_leftPane || !m_chartSplitter)
+            return;
+
+        int splitterY = m_chartSplitter->pos().y();
+
+        for (int i = 0; i < m_chartSplitter->count(); ++i) {
+            QWidget *child = m_chartSplitter->widget(i);
+            if (!child->isVisible())
+                continue;
+            auto *panel = qobject_cast<chart::ChartPanelBase *>(child);
+            if (!panel)
+                continue;
+
+            QWidget *labelWidget = panel->createYAxisLabelWidget(m_leftPane);
+            if (!labelWidget)
+                continue;
+
+            int yOffset = splitterY + child->pos().y();
+            int childHeight = child->height();
+
+            labelWidget->setFixedWidth(m_yAxisWidth > 0 ? m_yAxisWidth : 52);
+            labelWidget->move(0, yOffset);
+            labelWidget->setFixedHeight(childHeight);
+            labelWidget->show();
+
+            if (auto *base = qobject_cast<chart::ChartPanelBase *>(child)) {
+                QWidget *label = labelWidget;
+                connect(base, &chart::ChartPanelBase::verticalContentScrolled, label, [label]() { label->update(); });
+            }
+
+            m_yAxisLabels.append(labelWidget);
+        }
+    }
+
+    void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, int sampleRate) {
+        m_miniMap->setAudioData(samples, sampleRate);
+    }
+
+    void AudioVisualizerContainer::wheelEvent(QWheelEvent *event) {
+        if (event->modifiers() & Qt::ControlModifier) {
+            const int delta = event->angleDelta().y();
+            if (delta > 0)
+                m_viewport->zoomIn(m_viewport->viewCenter());
+            else if (delta < 0)
+                m_viewport->zoomOut(m_viewport->viewCenter());
+            adjustViewRangeToResolution();
+            event->accept();
+            return;
+        }
+        QWidget::wheelEvent(event);
+    }
+
+    bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
+        // Cross-widget drag capture: once BoundaryDragController enters dragging state
+        // (from ChartPanelBase or IntervalTierView or this handler), all subsequent
+        // MouseMove/Release events on any installed widget are intercepted here to
+        // provide continuous drag across widget boundaries using global coordinates.
+        // Press detection uses active-tier-only 30ms proximity; per-widget handlers
+        // (ChartPanelBase::mousePressEvent) cover non-active-tier hits with 12px threshold.
+        if (event->type() == QEvent::MouseButtonPress && m_dragController && !m_dragController->isDragging()) {
+            auto *me = static_cast<QMouseEvent *>(event);
+            if (me->button() == Qt::LeftButton) {
+                int tier = m_boundaryModel ? m_boundaryModel->activeTierIndex() : -1;
+                if (tier >= 0) {
+                    double time = xToTimeGlobal(me->globalPosition().x());
+                    TimePos targetTime = secToUs(time);
+                    TimePos kSnapThreshold = secToUs(0.03);
+                    int count = m_boundaryModel->boundaryCount(tier);
+                    int bestIdx = -1;
+                    TimePos bestDist = kSnapThreshold;
+                    for (int b = 0; b < count; ++b) {
+                        TimePos dist = std::abs(m_boundaryModel->boundaryTime(tier, b) - targetTime);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestIdx = b;
+                        }
+                    }
+                    if (bestIdx >= 0) {
+                        m_dragController->startDrag(tier, bestIdx, m_boundaryModel);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (m_dragController && m_dragController->isDragging()) {
+            if (event->type() == QEvent::MouseMove) {
+                auto *me = static_cast<QMouseEvent *>(event);
+                double time = xToTimeGlobal(me->globalPosition().x());
+                m_dragController->updateDrag(secToUs(time));
+                invalidateBoundaryModel();
+                return true;
+            }
+            if (event->type() == QEvent::MouseButtonRelease) {
+                auto *me = static_cast<QMouseEvent *>(event);
+                if (me->button() == Qt::LeftButton) {
+                    double time = xToTimeGlobal(me->globalPosition().x());
+                    m_dragController->endDrag(secToUs(time), m_undoStack);
+                    invalidateBoundaryModel();
+                    return true;
+                }
+            }
+        }
+
+        if (watched == m_editorWidget && event->type() == QEvent::Resize) {
+            updateOverlayTopOffset();
+        }
+        if (event->type() == QEvent::Resize) {
+            if (watched == m_chartSplitter)
+                updateScaleIndicator();
+        }
+        if (watched == m_tierLabelArea && event->type() == QEvent::Resize) {
+            m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+            updateOverlayTopOffset();
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
+    void AudioVisualizerContainer::setDefaultResolution(int resolution) {
+        m_viewport->setResolution(resolution);
+    }
+
+    void AudioVisualizerContainer::setResolutionKey(const QString &key) {
+        m_resolutionKey = key;
+    }
+
+    void AudioVisualizerContainer::saveResolution() {
+        static const dstools::SettingsKey<int> kResolution("Viewport/resolution", 0);
+        if (!m_resolutionKey.isEmpty()) {
+            std::string keyPath = m_resolutionKey.toStdString();
+            dstools::SettingsKey<int> key(keyPath.c_str(), 0);
+            m_settings.set(key, m_viewport->resolution());
+        } else {
+            m_settings.set(kResolution, m_viewport->resolution());
+        }
+    }
+
+    bool AudioVisualizerContainer::restoreResolution() {
+        static const dstools::SettingsKey<int> kResolution("Viewport/resolution", 0);
+        int saved = 0;
+        if (!m_resolutionKey.isEmpty()) {
+            std::string keyPath = m_resolutionKey.toStdString();
+            dstools::SettingsKey<int> key(keyPath.c_str(), 0);
+            saved = m_settings.get(key);
+        } else {
+            saved = m_settings.get(kResolution);
+        }
+        if (saved > 0) {
+            m_viewport->setResolution(saved);
+            return true;
+        }
+        return false;
+    }
+
+    void AudioVisualizerContainer::fitToWindow() {
+        int64_t totalSamples = m_viewport->totalSamples();
+        if (totalSamples <= 0)
+            return;
+
+        int w = m_chartSplitter ? m_chartSplitter->width() : width();
+        if (w <= 0) {
+            m_needsFitOnResize = true;
+            return;
+        }
+        m_needsFitOnResize = false;
+
+        double totalDur = static_cast<double>(totalSamples) / m_viewport->sampleRate();
+        double fitResolution = totalDur * m_viewport->sampleRate() / w;
+
+        int bestRes = static_cast<int>(std::round(fitResolution / 10.0)) * 10;
+        bestRes = std::max(ViewportController::kMinResolution, bestRes);
+        m_viewport->setResolution(bestRes);
+        updateViewRangeFromResolution();
+    }
+
+    void AudioVisualizerContainer::applyDefaultScale() {
+        if (restoreResolution()) {
+            updateViewRangeFromResolution();
+            return;
+        }
+
+        static const dstools::SettingsKey<int> kDefaultResolution("AudioVisualizer/defaultResolution", 0);
+        auto &s_avSettings = chartLayoutSettings();
+        s_avSettings.reload();
+        int defaultRes = s_avSettings.get(kDefaultResolution);
+        if (defaultRes > 0 && m_viewport->totalSamples() > 0) {
+            m_viewport->setResolution(defaultRes);
+            updateViewRangeFromResolution();
+            return;
+        }
+        fitToWindow();
+    }
+
+    void AudioVisualizerContainer::updateViewRangeFromResolution() {
+        int w = m_chartSplitter ? m_chartSplitter->width() : width();
+        if (w <= 0 || m_viewport->sampleRate() <= 0)
+            return;
+
+        double totalDur = m_viewport->totalDuration();
+        double visibleDuration = static_cast<double>(w) * m_viewport->resolution() / m_viewport->sampleRate();
+
+        double startSec = m_viewport->startSec();
+        double endSec = startSec + visibleDuration;
+        if (totalDur > 0.0 && endSec > totalDur) {
+            endSec = totalDur;
+            startSec = endSec - visibleDuration;
+            if (startSec < 0.0)
+                startSec = 0.0;
+        }
+
+        m_viewport->setViewRange(startSec, endSec);
+    }
+
+    void AudioVisualizerContainer::adjustViewRangeToResolution() {
+        int w = m_chartSplitter ? m_chartSplitter->width() : width();
+        if (w <= 0 || m_viewport->sampleRate() <= 0)
+            return;
+
+        double visibleDuration = static_cast<double>(w) * m_viewport->resolution() / m_viewport->sampleRate();
+        double totalDur = m_viewport->totalDuration();
+        double centerSec = m_viewport->viewCenter();
+
+        double startSec = centerSec - visibleDuration / 2.0;
+        double endSec = startSec + visibleDuration;
+
+        if (totalDur > 0.0 && endSec > totalDur) {
+            endSec = totalDur;
+            startSec = endSec - visibleDuration;
+            if (startSec < 0.0)
+                startSec = 0.0;
+        }
+        if (startSec < 0.0)
+            startSec = 0.0;
+
+        m_viewport->setViewRange(startSec, endSec);
+    }
+
+    void AudioVisualizerContainer::resizeEvent(QResizeEvent *event) {
+        QWidget::resizeEvent(event);
+        if (m_needsFitOnResize && width() > 0) {
+            fitToWindow();
+        } else if (m_viewport->totalSamples() > 0) {
+            updateViewRangeFromResolution();
+        }
+        if (!m_pendingSplitterState.isEmpty() && m_chartSplitter && m_chartSplitter->height() > 0) {
+            m_chartSplitter->restoreState(m_pendingSplitterState);
+            m_pendingSplitterState.clear();
+            bool hasZeroHeight = false;
+            for (int i = 0; i < m_chartSplitter->count(); ++i) {
+                if (m_chartSplitter->widget(i)->isVisible() && m_chartSplitter->sizes().at(i) == 0) {
+                    hasZeroHeight = true;
+                    break;
+                }
+            }
+            if (hasZeroHeight)
+                applyDefaultHeightRatios();
+        }
+        updateScaleIndicator();
+        if (m_playCursorOverlay && m_dataArea && m_chartSplitter) {
+            QPoint chartPos = m_chartSplitter->pos();
+            m_playCursorOverlay->setGeometry(chartPos.x(), chartPos.y(), m_chartSplitter->width(),
+                                             m_chartSplitter->height());
+            m_playCursorOverlay->raise();
+        }
+        if (m_boundaryOverlay) {
+            m_boundaryOverlay->forceReposition();
+        }
+        refreshYAxisLabels();
+    }
+
+    void AudioVisualizerContainer::addChart(const QString &id, QWidget *widget, int defaultOrder, int stretchFactor,
+                                            double heightWeight) {
+        ChartEntry entry{id, widget, defaultOrder, stretchFactor, heightWeight};
+        m_charts[id] = entry;
+
+        if (!m_chartOrder.contains(id))
+            m_chartOrder.append(id);
+
+        connectViewportToWidget(widget);
+
+        // Auto-set drag controller on chart widgets that support it (reduces boilerplate
+        // in page assembly code; see refactoring-roadmap-v2.md §7.7).
+        if (m_dragController) {
+            if (auto *panel = qobject_cast<chart::ChartPanelBase *>(widget))
+                panel->setDragController(m_dragController);
+        }
+
+        if (m_boundaryModel) {
+            if (auto *panel = qobject_cast<chart::ChartPanelBase *>(widget))
+                panel->setBoundaryModel(m_boundaryModel);
+        }
+
+        widget->installEventFilter(this);
+
+        restoreChartOrder();
+
+        rebuildChartLayout();
+
+        recomputeYAxisWidth();
+        QTimer::singleShot(0, this, [this]() { updateGeometry(); });
+    }
+
+    void AudioVisualizerContainer::removeChart(const QString &id) {
+        m_charts.remove(id);
+        m_chartOrder.removeAll(id);
+        rebuildChartLayout();
+
+        recomputeYAxisWidth();
+        QTimer::singleShot(0, this, [this]() { updateGeometry(); });
+    }
+
+    QStringList AudioVisualizerContainer::chartOrder() const {
+        return m_chartOrder;
+    }
+
+    void AudioVisualizerContainer::setChartOrder(const QStringList &order) {
+        m_chartOrder = order;
+        saveChartOrder();
+        rebuildChartLayout();
+        emit chartOrderChanged(order);
+    }
+
+    void AudioVisualizerContainer::setChartVisible(const QString &id, bool visible) {
+        auto it = m_charts.find(id);
+        if (it == m_charts.end())
+            return;
+
+        if (visible)
+            m_hiddenCharts.remove(id);
+        else
+            m_hiddenCharts.insert(id);
+
+        it->widget->setVisible(visible);
+        rebuildChartLayout();
+        recomputeYAxisWidth();
+        emit chartVisibilityChanged(id, visible);
+    }
+
+    bool AudioVisualizerContainer::chartVisible(const QString &id) const {
+        return !m_hiddenCharts.contains(id);
+    }
+
+    void AudioVisualizerContainer::saveChartVisibility() {
+        static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+        QStringList visible;
+        for (const auto &id : m_chartOrder) {
+            if (!m_hiddenCharts.contains(id))
+                visible.append(id);
+        }
+        chartLayoutSettings().set(kChartVisible, visible.join(QLatin1Char(',')));
+    }
+
+    void AudioVisualizerContainer::restoreChartVisibility() {
+        static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+        chartLayoutSettings().reload();
+        QString saved = chartLayoutSettings().get(kChartVisible);
+        if (saved.isEmpty())
+            return;
+
+        QStringList visibleIds = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        QSet<QString> visibleSet(visibleIds.begin(), visibleIds.end());
+
+        for (const auto &id : m_chartOrder) {
+            bool shouldBeVisible = visibleSet.contains(id);
+            if (shouldBeVisible)
+                m_hiddenCharts.remove(id);
+            else
+                m_hiddenCharts.insert(id);
+
+            auto it = m_charts.find(id);
+            if (it != m_charts.end())
+                it->widget->setVisible(shouldBeVisible);
+        }
+        rebuildChartLayout();
+    }
+
+    void AudioVisualizerContainer::saveChartOrder() {
+        static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+        chartLayoutSettings().set(kChartOrder, m_chartOrder.join(QLatin1Char(',')));
+    }
+
+    bool AudioVisualizerContainer::restoreChartOrder() {
+        static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+        chartLayoutSettings().reload();
+        QString saved = chartLayoutSettings().get(kChartOrder);
+        if (saved.isEmpty())
+            return false;
+
+        QStringList savedOrder = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        QStringList reordered;
+        for (const auto &chartId : savedOrder) {
+            if (m_chartOrder.contains(chartId))
+                reordered.append(chartId);
+        }
+        for (const auto &chartId : m_chartOrder) {
+            if (!reordered.contains(chartId))
+                reordered.append(chartId);
+        }
+        m_chartOrder = reordered;
+        return true;
+    }
+
+    QByteArray AudioVisualizerContainer::saveSplitterState() const {
+        return m_chartSplitter->saveState();
+    }
+
+    void AudioVisualizerContainer::restoreSplitterState(const QByteArray &state) {
+        if (state.isEmpty())
+            return;
+        if (m_chartSplitter && m_chartSplitter->height() > 0) {
+            m_chartSplitter->restoreState(state);
+            bool hasZeroHeight = false;
+            for (int i = 0; i < m_chartSplitter->count(); ++i) {
+                if (m_chartSplitter->widget(i)->isVisible() && m_chartSplitter->sizes().at(i) == 0) {
+                    hasZeroHeight = true;
+                    break;
+                }
+            }
+            if (hasZeroHeight)
+                applyDefaultHeightRatios();
+        } else {
+            m_pendingSplitterState = state;
+        }
+    }
+
+    void AudioVisualizerContainer::setUndoStack(QUndoStack *stack) {
+        m_undoStack = stack;
+    }
+
+    void AudioVisualizerContainer::setPlayWidget(PlayWidget *playWidget) {
+        if (m_playWidget == playWidget)
+            return;
+
+        // Disconnect previous
+        if (m_playWidget) {
+            disconnect(m_playWidget, nullptr, this, nullptr);
+        }
+        m_playWidget = playWidget;
+
+        if (!m_playWidget)
+            return;
+
+        // Create playhead timer (auto-clear after 200ms of no updates)
+        if (!m_playheadTimer) {
+            m_playheadTimer = new QTimer(this);
+            m_playheadTimer->setSingleShot(true);
+            m_playheadTimer->setInterval(200);
+        }
+
+        // Forward playhead to all registered chart widgets via QMetaMethod invocation
+        connect(m_playWidget, &PlayWidget::playheadChanged, this, [this](double sec) {
+            notifyChartsPlayhead(sec);
+            if (m_boundaryOverlay)
+                m_boundaryOverlay->setPlayhead(sec);
+            if (m_playCursorOverlay)
+                m_playCursorOverlay->setPlayheadPosition(sec);
+            if (m_playheadTimer)
+                m_playheadTimer->start();
+        });
+
+        connect(m_playheadTimer, &QTimer::timeout, this, [this]() {
+            clearChartsPlayhead();
+            if (m_boundaryOverlay)
+                m_boundaryOverlay->setPlayhead(-1.0);
+            if (m_playCursorOverlay)
+                m_playCursorOverlay->setPlayheadPosition(-1.0);
+        });
+    }
+
+    void AudioVisualizerContainer::invalidateBoundaryModel() {
+        if (m_boundaryOverlay)
+            m_boundaryOverlay->update();
+
+        if (m_tierLabelArea)
+            m_tierLabelArea->onModelDataChanged();
+
+        forEachChartWidget([](QWidget *w) { w->update(); });
+
+        emit boundaryModelInvalidated();
+    }
+
+    void AudioVisualizerContainer::rebuildChartLayout() {
+        while (m_chartSplitter->count() > 0) {
+            auto *w = m_chartSplitter->widget(0);
+            w->setParent(nullptr);
+        }
+
+        int splitterIndex = 0;
+        for (int i = 0; i < static_cast<int>(m_chartOrder.size()); ++i) {
+            const auto &id = m_chartOrder[i];
+            auto it = m_charts.find(id);
+            if (it == m_charts.end())
+                continue;
+            if (m_hiddenCharts.contains(id)) {
+                it->widget->hide();
+                continue;
+            }
+            m_chartSplitter->addWidget(it->widget);
+            m_chartSplitter->setStretchFactor(splitterIndex, it->stretchFactor);
+            it->widget->show();
+            ++splitterIndex;
+        }
+
+        // Apply default height ratios — per-page state is restored externally
+        applyDefaultHeightRatios();
+    }
+
+    void AudioVisualizerContainer::applyDefaultHeightRatios() {
+        int totalHeight = m_chartSplitter->height();
+        if (totalHeight <= 0)
+            totalHeight = 600; // fallback before first show
+
+        double totalWeight = 0.0;
+        for (const auto &id : m_chartOrder) {
+            if (m_hiddenCharts.contains(id))
+                continue;
+            auto it = m_charts.find(id);
+            if (it != m_charts.end())
+                totalWeight += it->heightWeight;
+        }
+        if (totalWeight <= 0.0)
+            return;
+
+        QList<int> sizes;
+        for (const auto &id : m_chartOrder) {
+            if (m_hiddenCharts.contains(id))
+                continue;
+            auto it = m_charts.find(id);
+            if (it != m_charts.end())
+                sizes.append(static_cast<int>(totalHeight * it->heightWeight / totalWeight));
+        }
+        m_chartSplitter->setSizes(sizes);
+    }
+
+    void AudioVisualizerContainer::connectViewportToWidget(QWidget *widget) {
+        if (!widget || !m_viewport)
+            return;
+
+        QPointer<QWidget> safeWidget(widget);
+        connect(m_viewport, &ViewportController::viewportChanged, this, [safeWidget, this](const ViewportState &state) {
+            if (!safeWidget)
+                return;
+            if (auto *panel = qobject_cast<chart::ChartPanelBase *>(safeWidget.data())) {
+                panel->onViewportUpdate(m_coordConverter, safeWidget->width());
+            }
+        });
+    }
+
+    double AudioVisualizerContainer::xToTimeGlobal(qreal globalX) const {
+        if (!m_chartSplitter)
+            return 0.0;
+        qreal localX = globalX - m_chartSplitter->mapToGlobal(QPoint(0, 0)).x();
+        return m_coordConverter.xToTime(static_cast<int>(localX), m_chartSplitter->width());
+    }
+
+    void AudioVisualizerContainer::installDragEventFilters() {
+        if (m_editorWidget)
+            m_editorWidget->installEventFilter(this);
+    }
+
+    void AudioVisualizerContainer::removeDragEventFilters() {
+        if (m_editorWidget)
+            m_editorWidget->removeEventFilter(this);
+    }
+
+    void AudioVisualizerContainer::forEachChartWidget(const std::function<void(QWidget *)> &fn) {
+        for (const auto &id : m_chartOrder) {
+            auto it = m_charts.find(id);
+            if (it != m_charts.end() && it->widget)
+                fn(it->widget);
+        }
+    }
+
+    void AudioVisualizerContainer::notifyChartsPlayhead(double sec) {
+        forEachChartWidget([sec](QWidget *w) {
+            if (auto *panel = qobject_cast<chart::ChartPanelBase *>(w))
+                panel->setPlayhead(sec);
+        });
+    }
+
+    void AudioVisualizerContainer::clearChartsPlayhead() {
+        notifyChartsPlayhead(-1.0);
+    }
+
+} // namespace dstools

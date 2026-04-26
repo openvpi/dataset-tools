@@ -1,104 +1,60 @@
-if (NOT DEFINED BUILD_TESTS)
-    set(BUILD_TESTS on)
+option(BUILD_TESTS "Build unit test targets" ON)
+
+# Infer tests require ONNX models and audio files — off by default
+if (NOT BUILD_TESTS)
+    set(GAME_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(SOME_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(RMVPE_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(AUDIO_UTIL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+else ()
+    # Default infer tests to OFF even when BUILD_TESTS=ON
+    # Enable individually: -DGAME_INFER_BUILD_TESTS=ON etc.
+    if (NOT DEFINED CACHE{GAME_INFER_BUILD_TESTS})
+        set(GAME_INFER_BUILD_TESTS OFF CACHE BOOL "Build TestGame (requires GAME model)" FORCE)
+    endif ()
+    if (NOT DEFINED CACHE{SOME_INFER_BUILD_TESTS})
+        set(SOME_INFER_BUILD_TESTS OFF CACHE BOOL "Build TestSome (requires SOME model)" FORCE)
+    endif ()
+    if (NOT DEFINED CACHE{RMVPE_INFER_BUILD_TESTS})
+        set(RMVPE_INFER_BUILD_TESTS OFF CACHE BOOL "Build TestRmvpe (requires RMVPE model)" FORCE)
+    endif ()
+    if (NOT DEFINED CACHE{AUDIO_UTIL_BUILD_TESTS})
+        set(AUDIO_UTIL_BUILD_TESTS OFF CACHE BOOL "Build TestAudioUtil" FORCE)
+    endif ()
 endif ()
 
-find_package(QT NAMES Qt6 COMPONENTS Core Widgets Svg REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Svg REQUIRED)
+find_package(QT NAMES Qt6 COMPONENTS Core Gui Widgets Svg Network Concurrent REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets Svg Network Concurrent REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS LinguistTools QUIET)
+qt_standard_project_setup()
 
 add_custom_target(DeployedTargets)
 
-add_subdirectory(apps)
+# Shared types (header-only, must come before everything)
+set(CMAKE_FOLDER "Libraries/Framework")
+add_subdirectory(types)
+
+# Framework layers
+add_subdirectory(framework)
+
+# Shared layers (must come before apps)
+set(CMAKE_FOLDER "Libraries")
+add_subdirectory(domain)
+add_subdirectory(ui-core)
+
+set(CMAKE_FOLDER "Libraries/Infer")
+add_subdirectory(infer)
+
+set(CMAKE_FOLDER "Libraries/Libs")
 add_subdirectory(libs)
 
+# Applications
+set(CMAKE_FOLDER "Applications")
+add_subdirectory(apps)
+
 if (BUILD_TESTS)
+    set(CMAKE_FOLDER "Tests")
     add_subdirectory(tests)
 endif ()
 
-# "QT_QMAKE_EXECUTABLE" is usually defined by QtCreator.
-if (NOT DEFINED QT_QMAKE_EXECUTABLE)
-    get_target_property(QT_QMAKE_EXECUTABLE Qt::qmake IMPORTED_LOCATION)
-endif ()
-
-if (NOT EXISTS "${QT_QMAKE_EXECUTABLE}")
-    message(WARNING "deploy_qt_runtime: Can't locate the QMake executable.")
-    return()
-endif ()
-
-cmake_path(GET QT_QMAKE_EXECUTABLE PARENT_PATH __qt_bin_dir)
-find_program(QT_DEPLOY_EXECUTABLE NAMES windeployqt macdeployqt HINTS "${__qt_bin_dir}")
-
-if (NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
-    message(WARNING "deploy_qt_runtime: Can't locate the deployqt tool.")
-    return()
-endif ()
-
-if (NOT CMAKE_INSTALL_PREFIX)
-    return()
-endif ()
-
-if (WIN32)
-    string(REPLACE "\\" "/" _install_dir ${CMAKE_INSTALL_PREFIX})
-
-    install(CODE "
-        file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.dll\" \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.exe\")
-        foreach(_file \${_files})
-            file(COPY \${_file} DESTINATION \"${_install_dir}\")
-        endforeach()
-    ")
-
-    get_target_property(_targets DeployedTargets TARGETS)
-
-    foreach (_target ${_targets})
-        install(CODE "
-            set(ENV{PATH} \"${__qt_bin_dir};\$ENV{PATH}\")
-            execute_process(
-                COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
-                --libdir \"${_install_dir}\"
-                --plugindir \"${_install_dir}/plugins\"
-                --no-translations
-                --no-system-d3d-compiler
-                --no-compiler-runtime
-                --no-opengl-sw
-                --force
-                --verbose 0
-                \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>\"
-                WORKING_DIRECTORY \"${_install_dir}\"
-            )
-        ")
-    endforeach ()
-elseif (APPLE)
-    set(_install_dir ${CMAKE_INSTALL_PREFIX})
-
-    get_target_property(_targets DeployedTargets TARGETS)
-
-    foreach (_target ${_targets})
-        install(CODE "
-            file(COPY \"$<TARGET_BUNDLE_DIR:${_target}>\" DESTINATION \"${_install_dir}\")
-        ")
-    endforeach ()
-
-    if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        foreach (_target ${_targets})
-            install(CODE "
-                execute_process(
-                    COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
-                    \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>.app\"
-                    -verbose=0
-                    -codesign=-
-                    WORKING_DIRECTORY \"${_install_dir}\"
-                )
-            ")
-        endforeach ()
-    else ()
-        foreach (_target ${_targets})
-            install(CODE "
-                execute_process(
-                    COMMAND \"${QT_DEPLOY_EXECUTABLE}\"
-                    \"${_install_dir}/$<TARGET_FILE_NAME:${_target}>.app\"
-                    -verbose=0
-                    WORKING_DIRECTORY \"${_install_dir}\"
-                )
-            ")
-        endforeach ()
-    endif ()
-endif ()
+include(${CMAKE_SOURCE_DIR}/cmake/deploy.cmake)

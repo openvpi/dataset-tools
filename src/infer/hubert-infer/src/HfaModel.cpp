@@ -1,0 +1,120 @@
+#include <hubert-infer/HfaModel.h>
+
+#include <iostream>
+
+#include <dstools/OnnxEnv.h>
+
+namespace HFA {
+    HfaModel::HfaModel(const std::filesystem::path &model_Path, const ExecutionProvider provider, const int device_id)
+        : OnnxModelBase(provider, device_id) {
+#if defined(_M_IX86) || defined(__i386__)
+        m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+#endif
+        auto loadResult = loadSession(model_Path);
+        if (!loadResult) {
+            std::cout << "Failed to create session: " << loadResult.error() << std::endl;
+        }
+    }
+
+    HfaModel::~HfaModel() {
+        m_input_name = {};
+    }
+
+    bool HfaModel::forward(const std::vector<std::vector<float>> &input_data, HfaLogits &result,
+                           std::string &msg) const {
+        if (!m_session) {
+            msg = "Model session not initialized";
+            return false;
+        }
+
+        if (input_data.empty()) {
+            msg = "输入数据不能为空";
+            return false;
+        }
+
+        const size_t batch_size = input_data.size();
+        size_t max_len = 0;
+        for (const auto &vec : input_data) {
+            max_len = std::max(max_len, vec.size());
+        }
+
+        std::vector<float> flattened_input;
+        flattened_input.reserve(batch_size * max_len);
+        for (const auto &vec : input_data) {
+            flattened_input.insert(flattened_input.end(), vec.begin(), vec.end());
+            flattened_input.insert(flattened_input.end(), max_len - vec.size(), 0.0f);
+        }
+
+        const std::array<int64_t, 2> input_shape = {static_cast<int64_t>(batch_size), static_cast<int64_t>(max_len)};
+
+        const Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+            m_memoryInfo, flattened_input.data(), flattened_input.size(), input_shape.data(), input_shape.size());
+
+        try {
+            const std::vector<const char *> output_names = {m_predictor_output_name[0], m_predictor_output_name[1],
+                                                            m_predictor_output_name[2]};
+
+            auto predictor_outputs = m_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1,
+                                                          output_names.data(), output_names.size());
+
+            auto parse_3d_output = [](Ort::Value &tensor) {
+                const auto shape = tensor.GetTensorTypeAndShapeInfo().GetShape();
+
+                if (shape.size() != 3) {
+                    throw std::runtime_error("Expected 3D tensor (BCT) but got " + std::to_string(shape.size()) + "D");
+                }
+
+                const size_t batch = shape[0];
+                const size_t classes = shape[1];
+                const size_t time = shape[2];
+
+                const float *data = tensor.GetTensorMutableData<float>();
+
+                std::vector<std::vector<std::vector<float>>> output(batch);
+
+                for (size_t b = 0; b < batch; ++b) {
+                    output[b].resize(classes);
+
+                    for (size_t c = 0; c < classes; ++c) {
+                        output[b][c].resize(time);
+
+                        for (size_t t = 0; t < time; ++t) {
+                            const size_t index = b * (classes * time) + c * time + t;
+                            output[b][c][t] = data[index];
+                        }
+                    }
+                }
+
+                return output;
+            };
+
+            auto parse_2d_output = [](Ort::Value &tensor) {
+                const auto shape = tensor.GetTensorTypeAndShapeInfo().GetShape();
+                const float *data = tensor.GetTensorMutableData<float>();
+                const size_t batch = shape[0];
+                const size_t time = shape[1];
+
+                std::vector<std::vector<float>> output;
+                output.resize(batch);
+
+                for (size_t b = 0; b < batch; b++) {
+                    output[b].assign(data + b * time, data + (b + 1) * time);
+                }
+                return output;
+            };
+
+            result.ph_frame_logits = parse_3d_output(predictor_outputs[0]);
+            result.ph_edge_logits = parse_2d_output(predictor_outputs[1]);
+            result.cvnt_logits = parse_3d_output(predictor_outputs[2]);
+
+            return true;
+        } catch (const Ort::Exception &e) {
+            msg = "预测器推理错误: " + std::string(e.what());
+            return false;
+        } catch (const std::exception &e) {
+            msg = "预测器内部错误: " + std::string(e.what());
+            return false;
+        }
+    }
+
+} // namespace HFA
