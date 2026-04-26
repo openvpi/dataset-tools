@@ -162,7 +162,7 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     gBoxAudioOptions = new QGroupBox(gBoxSettings);
     gBoxAudioOptions->setObjectName("gBoxAudioOptions");
 
-    vlAudioOptions = new QVBoxLayout(gBoxSettings);
+    vlAudioOptions = new QVBoxLayout(gBoxAudioOptions);
     vlAudioOptions->setObjectName("vlAudioOptions");
 
     lblOutputWaveFormat = new QLabel(gBoxAudioOptions);
@@ -203,7 +203,7 @@ void Ui_MainWindow::setupUi(QMainWindow *MainWindow) {
     vlFilename = new QVBoxLayout(gBoxFilename);
     vlFilename->setObjectName("vlFilename");
 
-    hlSuffixDigits = new QHBoxLayout(gBoxFilename);
+    hlSuffixDigits = new QHBoxLayout();
     hlSuffixDigits->setObjectName("hlSuffixDigits");
 
     lblSuffixDigits = new QLabel(gBoxFilename);
@@ -371,16 +371,20 @@ void Ui_MainWindow::retranslateUi(QMainWindow *MainWindow)
     btnRemoveListItem->setText(QCoreApplication::translate("MainWindow", "Remove", nullptr));
     btnClearList->setText(QCoreApplication::translate("MainWindow", "Clear List", nullptr));
     gBoxParameters->setTitle(QCoreApplication::translate("MainWindow", "Parameters", nullptr));
+    const auto setDefault = [](QLineEdit *edit, const QString &value) {
+        edit->setText(value);
+        edit->setPlaceholderText(value);
+    };
     lblThreshold->setText(QCoreApplication::translate("MainWindow", "Threshold (dB)", nullptr));
-    lineEditThreshold->setText(QCoreApplication::translate("MainWindow", "-40", nullptr));
+    setDefault(lineEditThreshold, QStringLiteral("-40"));
     lblMinLen->setText(QCoreApplication::translate("MainWindow", "Minimum Length (ms)", nullptr));
-    lineEditMinLen->setText(QCoreApplication::translate("MainWindow", "5000", nullptr));
+    setDefault(lineEditMinLen, QStringLiteral("5000"));
     lblMinInterval->setText(QCoreApplication::translate("MainWindow", "Minimum Interval (ms)", nullptr));
-    lineEditMinInterval->setText(QCoreApplication::translate("MainWindow", "300", nullptr));
+    setDefault(lineEditMinInterval, QStringLiteral("300"));
     lblHopSize->setText(QCoreApplication::translate("MainWindow", "Hop Size (ms)", nullptr));
-    lineEditHopSize->setText(QCoreApplication::translate("MainWindow", "10", nullptr));
+    setDefault(lineEditHopSize, QStringLiteral("10"));
     lblMaxSilence->setText(QCoreApplication::translate("MainWindow", "Maximum Silence Length (ms)", nullptr));
-    lineEditMaxSilence->setText(QCoreApplication::translate("MainWindow", "1000", nullptr));
+    setDefault(lineEditMaxSilence, QStringLiteral("1000"));
     gBoxAudioOptions->setTitle(QCoreApplication::translate("MainWindow", "Audio", nullptr));
     lblOutputDir->setText(QCoreApplication::translate("MainWindow", "Output Directory (default to source directory)", nullptr));
     lineEditOutputDir->setText(QString());

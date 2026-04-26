@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QIODevice>
+#include <QLineEdit>
 #include <QList>
 #include <QMessageBox>
 #include <QRegularExpression>
@@ -65,8 +66,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->progressBar->setMaximum(100);
     ui->progressBar->setValue(0);
 
-    auto validator = new QRegularExpressionValidator(QRegularExpression("\\d+"));
-    ui->lineEditThreshold->setValidator(new QDoubleValidator());
+    auto validator = new QRegularExpressionValidator(QRegularExpression("\\d+"), this);
+    ui->lineEditThreshold->setValidator(new QDoubleValidator(this));
     ui->lineEditMinLen->setValidator(validator);
     ui->lineEditMinInterval->setValidator(validator);
     ui->lineEditHopSize->setValidator(validator);
@@ -207,6 +208,11 @@ void MainWindow::slot_start() {
         return;
     }
 
+    auto valueOrPlaceholder = [](const QLineEdit *edit) {
+        const auto trimmed = edit->text().trimmed();
+        return trimmed.isEmpty() ? edit->placeholderText().trimmed() : trimmed;
+    };
+
     auto slicingMode = ui->cmbSlicingMode->currentData().value<SlicingMode>();
     bool saveAudio, saveMarkers, loadMarkers;
     switch (slicingMode) {
@@ -271,11 +277,11 @@ void MainWindow::slot_start() {
         auto path = item->data(Qt::ItemDataRole::UserRole + 1).toString();
         auto runnable =
             new WorkThread(path, ui->lineEditOutputDir->text(),
-                           ui->lineEditThreshold->text().toDouble(),
-                           ui->lineEditMinLen->text().toLongLong(),
-                           ui->lineEditMinInterval->text().toLongLong(),
-                           ui->lineEditHopSize->text().toLongLong(),
-                           ui->lineEditMaxSilence->text().toLongLong(),
+                           valueOrPlaceholder(ui->lineEditThreshold).toDouble(),
+                           valueOrPlaceholder(ui->lineEditMinLen).toLongLong(),
+                           valueOrPlaceholder(ui->lineEditMinInterval).toLongLong(),
+                           valueOrPlaceholder(ui->lineEditHopSize).toLongLong(),
+                           valueOrPlaceholder(ui->lineEditMaxSilence).toLongLong(),
                            ui->cmbOutputWaveFormat->currentData().toInt(),
                            saveAudio,
                            saveMarkers,

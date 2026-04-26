@@ -1,10 +1,10 @@
 #ifndef AUDIO_SLICER_SLICER_H
 #define AUDIO_SLICER_SLICER_H
 
+#include <utility>
 #include <vector>
-#include <tuple>
 
-#include <QtGlobal>
+#include <QString>
 
 using MarkerList = std::vector<std::pair<qint64, qint64>>;
 

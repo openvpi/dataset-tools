@@ -1,4 +1,4 @@
-project(AudioSlicer VERSION 0.0.1.4)
+project(AudioSlicer VERSION 0.0.1.5)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
