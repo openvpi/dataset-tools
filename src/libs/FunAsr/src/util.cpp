@@ -8,11 +8,18 @@ namespace FunAsr {
 
         FILE *fp;
         fp = fopen(filename, "rb");
+        if (!fp) {
+            return nullptr;
+        }
         fseek(fp, 0, SEEK_END);
         uint32_t nFileLen = ftell(fp);
         fseek(fp, 0, SEEK_SET);
 
         float *params_addr = (float *) aligned_malloc(32, nFileLen);
+        if (!params_addr) {
+            fclose(fp);
+            return nullptr;
+        }
         int n = fread(params_addr, 1, nFileLen, fp);
         fclose(fp);
 
@@ -34,6 +41,9 @@ namespace FunAsr {
     void SaveDataFile(const char *filename, void *data, uint32_t len) {
         FILE *fp;
         fp = fopen(filename, "wb+");
+        if (!fp) {
+            return;
+        }
         fwrite(data, 1, len, fp);
         fclose(fp);
     }
