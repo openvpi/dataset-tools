@@ -65,7 +65,7 @@ namespace Minlabel {
         browseAction = new QAction("Open Folder", this);
         browseAction->setShortcut(QKeySequence("Ctrl+O"));
 
-        covertAction = new QAction("Covert lab to project file", this);
+        convertAction = new QAction("Convert lab to project file", this);
 
         exportAction = new QAction("Export", this);
         exportAction->setShortcut(QKeySequence("Ctrl+E"));
@@ -73,7 +73,7 @@ namespace Minlabel {
         fileMenu = new QMenu("File(&F)", this);
         fileMenu->addAction(browseAction);
         fileMenu->addAction(exportAction);
-        fileMenu->addAction(covertAction);
+        fileMenu->addAction(convertAction);
 
         nextAction = new QAction("Next file", this);
         nextAction->setShortcut(QKeySequence::MoveToNextPage);
@@ -239,7 +239,7 @@ namespace Minlabel {
         if (!writeJsonFile(jsonFilePath, writeData)) {
             QMessageBox::critical(this, QApplication::applicationName(),
                                   QString("Failed to write to file %1").arg(jsonFilePath));
-            exit(-1);
+            return;
         }
 
         const QString labFilePath = audioToOtherSuffix(filename, "lab");
@@ -252,7 +252,7 @@ namespace Minlabel {
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::critical(this, QApplication::applicationName(),
                                   QString("Failed to write to file %1").arg(labFilePath));
-            exit(-1);
+            return;
         }
 
         QTextStream labIn(&labFile);
@@ -364,10 +364,10 @@ namespace Minlabel {
             dirname = path;
             cfg->setValue("General/LastDir", dirname);
             _q_updateProgress();
-        } else if (action == covertAction) {
+        } else if (action == convertAction) {
             playerWidget->setPlaying(false);
-            const int choice = QMessageBox::question(this, "Covert lab to project file.",
-                                                     "Do you want to covert lab to project file in target folder?",
+            const int choice = QMessageBox::question(this, "Convert lab to project file.",
+                                                     "Do you want to convert lab to project file in target folder?",
                                                      QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (choice == QMessageBox::Yes) {
                 const QString path =
@@ -416,7 +416,8 @@ namespace Minlabel {
 
     void MainWindow::_q_updateProgress() const {
         const int count = jsonCount(dirname);
-        const int totalRowCount = static_cast<int>(fsModel->rootDirectory().count());
+        const int totalRowCount = static_cast<int>(fsModel->rootDirectory().entryList(
+            QStringList{"*.wav", "*.mp3", "*.m4a", "*.flac"}, QDir::Files).count());
         double progress = 0.0;
         if (totalRowCount > 0) {
             progress = static_cast<double>(count) / totalRowCount * 100.0;
@@ -461,7 +462,7 @@ namespace Minlabel {
         QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
 
         int count = 0;
-        foreach (const QFileInfo &fileInfo, fileInfoList) {
+        for (const QFileInfo &fileInfo : fileInfoList) {
             QString currentFilePath = fsModel->fileInfo(treeView->currentIndex()).absoluteFilePath();
             QString labFilePath = fileInfo.absoluteFilePath();
             QString suffix = fileInfo.suffix().toLower();
@@ -496,7 +497,7 @@ namespace Minlabel {
                         if (!writeJsonFile(jsonFilePath, writeData)) {
                             QMessageBox::critical(this, QApplication::applicationName(),
                                                   QString("Failed to write to file %1").arg(jsonFilePath));
-                            exit(-1);
+                            continue;
                         }
                     }
                     count++;

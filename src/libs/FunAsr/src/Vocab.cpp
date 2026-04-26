@@ -41,6 +41,7 @@ namespace FunAsr {
     Vocab::~Vocab() = default;
 
     int str2int(const std::string &str) {
+        if (str.size() < 3) return 0;  // BUG-016 fix: boundary check
         const char *ch_array = str.c_str();
         if (((ch_array[0] & 0xf0) != 0xe0) || ((ch_array[1] & 0xc0) != 0x80) || ((ch_array[2] & 0xc0) != 0x80))
             return 0;

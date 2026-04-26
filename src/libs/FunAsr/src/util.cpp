@@ -12,7 +12,9 @@ namespace FunAsr {
             return nullptr;
         }
         fseek(fp, 0, SEEK_END);
-        uint32_t nFileLen = ftell(fp);
+        long pos = ftell(fp);  // BUG-023 fix: check ftell return value
+        if (pos < 0) { fclose(fp); return nullptr; }
+        size_t nFileLen = static_cast<size_t>(pos);
         fseek(fp, 0, SEEK_SET);
 
         float *params_addr = (float *) aligned_malloc(32, nFileLen);

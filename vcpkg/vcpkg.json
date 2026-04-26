@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "dependencies": [
+    "sdl2",
+    "ffmpeg-fake",
+    "fftw3",
+    "cpp-pinyin",
+    "cpp-kana",
+    "soxr",
+    "wolf-midi",
+    "libsndfile",
+    "qbreakpad",
+    "nlohmann-json"
+  ],
+  "vcpkg-configuration": {
+    "overlay-ports": [
+      "ports"
+    ],
+    "overlay-triplets": [
+      "triplets"
+    ]
+  }
+}

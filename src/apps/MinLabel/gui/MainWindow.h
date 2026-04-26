@@ -20,7 +20,7 @@ namespace Minlabel {
     protected:
         QMenu *fileMenu;
         QAction *browseAction;
-        QAction *covertAction;
+        QAction *convertAction;
         QAction *exportAction;
 
         QMenu *editMenu;
@@ -59,6 +59,7 @@ namespace Minlabel {
         void openDirectory(const QString &dirName) const;
         void openFile(const QString &filename) const;
         void saveFile(const QString &filename);
+        // Returns false on failure but does not exit (BUG-001 fix)
         void labToJson(const QString &dirName);
         void exportAudio(const ExportInfo &exportInfo);
 

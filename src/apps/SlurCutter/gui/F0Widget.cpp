@@ -1060,6 +1060,7 @@ namespace SlurCutter {
                     else if (deltaPitch < 0)
                         setDraggedNoteGlide(GlideStyle::Down);
                     setCursor(Qt::ArrowCursor);
+                    break;  // BUG-003 fix: was missing break
                 }
 
                 case None:

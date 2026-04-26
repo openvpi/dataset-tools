@@ -1,6 +1,7 @@
 #include "FeatureExtract.h"
 
 #include <cmath>
+#include <cstring>
 
 #include "predefine_coe.h"
 #include <ComDefine.h>
@@ -107,7 +108,8 @@ namespace FunAsr {
             }
         } else {
             int val = 0x34000000;
-            const float min_resol = *((float *) &val);
+            float min_resol;  // BUG-025 fix: use memcpy instead of type punning
+            std::memcpy(&min_resol, &val, sizeof(float));
 
             for (int i = 0; i < 80; i++) {
                 const float tmp = din[i] < min_resol ? min_resol : din[i];
