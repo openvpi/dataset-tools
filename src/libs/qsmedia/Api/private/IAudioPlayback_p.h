@@ -3,7 +3,6 @@
 
 #include "../IAudioPlayback.h"
 
-#include <atomic>
 
 QSAPI_BEGIN_NAMESPACE
 
@@ -27,7 +26,7 @@ public:
     bool available;
 
     // Atomic int as playback state
-    std::atomic<int> state;
+    volatile int state;
 
     // Arguments
     int bufferSamples;
