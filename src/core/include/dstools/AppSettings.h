@@ -31,15 +31,10 @@
 ///   // 4. Write (automatically persists to disk):
 ///   settings.set(MyAppKeys::LastDir, QString("/some/path"));
 ///
-///   // 5. React to changes:
+///   // 5. React to changes (auto-disconnects when widget is destroyed):
 ///   settings.observe(MyAppKeys::Threshold, [](double val) {
 ///       qDebug() << "Threshold changed to" << val;
-///   });
-///
-///   // 6. Bind a QSpinBox bidirectionally:
-///   settings.bind(MyAppKeys::LastTab, spinBox,
-///                 &QSpinBox::setValue,                              // setter
-///                 &QSpinBox::valueChanged, QOverload<int>::of(&QSpinBox::valueChanged)); // signal
+///   }, myWidget);
 /// @endcode
 
 #include <QCoreApplication>
@@ -53,6 +48,7 @@
 
 #include <functional>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -61,15 +57,17 @@ namespace dstools {
 
 // ─── SettingsKey ──────────────────────────────────────────────────────────
 
-/// A typed, named settings key with a compile-time default value.
+/// A typed, named settings key with a default value.
 /// The `path` uses '/' as a logical separator (e.g. "General/lastDir").
 /// In the JSON file this maps to nested objects: { "General": { "lastDir": "..." } }
+///
+/// Keys are typically declared as `inline const` at namespace scope in a schema header.
 template <typename T>
 struct SettingsKey {
     const char *path;
     T defaultValue;
 
-    constexpr SettingsKey(const char *path, T defaultValue)
+    SettingsKey(const char *path, T defaultValue)
         : path(path), defaultValue(std::move(defaultValue)) {}
 };
 
@@ -133,11 +131,15 @@ namespace detail {
     }
 
     /// Navigate into nested JSON by "/"-separated path, returning pointer or nullptr.
+    /// Returns nullptr for empty paths.
     inline const nlohmann::json *resolve(const nlohmann::json &root, const char *path) {
+        if (!path || path[0] == '\0')
+            return nullptr;
         const nlohmann::json *node = &root;
         std::string segment;
         std::istringstream ss(path);
         while (std::getline(ss, segment, '/')) {
+            if (segment.empty()) continue;
             if (!node->is_object() || !node->contains(segment))
                 return nullptr;
             node = &(*node)[segment];
@@ -146,13 +148,20 @@ namespace detail {
     }
 
     /// Set a value at a "/"-separated path, creating intermediate objects as needed.
+    /// Does nothing for empty paths.
     inline void assign(nlohmann::json &root, const char *path, const nlohmann::json &value) {
+        if (!path || path[0] == '\0')
+            return;
         nlohmann::json *node = &root;
         std::string segment;
         std::istringstream ss(path);
         std::vector<std::string> segments;
-        while (std::getline(ss, segment, '/'))
-            segments.push_back(segment);
+        while (std::getline(ss, segment, '/')) {
+            if (!segment.empty())
+                segments.push_back(segment);
+        }
+        if (segments.empty())
+            return;
         for (size_t i = 0; i + 1 < segments.size(); ++i) {
             auto &s = segments[i];
             if (!node->contains(s) || !(*node)[s].is_object())
@@ -214,14 +223,23 @@ public:
 
     /// Register a callback invoked when a specific key changes.
     /// The callback receives the new value with the correct type.
-    /// Returns a connection ID that can be used to disconnect later.
+    /// Returns a connection ID that can be used with removeObserver().
+    ///
+    /// If @p context is non-null, the observer is automatically removed when
+    /// the context QObject is destroyed (prevents dangling callbacks).
     template <typename T>
-    int observe(const SettingsKey<T> &key, std::function<void(const T &)> callback) {
+    int observe(const SettingsKey<T> &key, std::function<void(const T &)> callback,
+                QObject *context = nullptr) {
         std::lock_guard lock(m_mutex);
         int id = m_nextObserverId++;
         m_observers[std::string(key.path)].push_back({id, [cb = std::move(callback)](const void *ptr) {
             cb(*static_cast<const T *>(ptr));
         }});
+        if (context) {
+            connect(context, &QObject::destroyed, this, [this, id]() {
+                removeObserver(id);
+            });
+        }
         return id;
     }
 
@@ -248,23 +266,37 @@ public:
     }
 
     /// Remove a key from storage. Next get() will return the key's default.
+    /// Emits keyChanged if the key was present.
     template <typename T>
     void remove(const SettingsKey<T> &key) {
-        std::lock_guard lock(m_mutex);
-        // Simple approach: re-parse path and erase leaf
-        std::string segment;
-        std::istringstream ss(key.path);
-        std::vector<std::string> segments;
-        while (std::getline(ss, segment, '/'))
-            segments.push_back(segment);
+        bool removed = false;
+        {
+            std::lock_guard lock(m_mutex);
+            std::string segment;
+            std::istringstream ss(key.path);
+            std::vector<std::string> segments;
+            while (std::getline(ss, segment, '/')) {
+                if (!segment.empty())
+                    segments.push_back(segment);
+            }
+            if (segments.empty())
+                return;
 
-        nlohmann::json *node = &m_data;
-        for (size_t i = 0; i + 1 < segments.size(); ++i) {
-            if (!node->contains(segments[i])) return;
-            node = &(*node)[segments[i]];
+            nlohmann::json *node = &m_data;
+            for (size_t i = 0; i + 1 < segments.size(); ++i) {
+                if (!node->contains(segments[i])) return;
+                node = &(*node)[segments[i]];
+            }
+            if (node->contains(segments.back())) {
+                node->erase(segments.back());
+                saveToDisk();
+                removed = true;
+            }
         }
-        node->erase(segments.back());
-        saveToDisk();
+        if (removed) {
+            emit keyChanged(QString::fromUtf8(key.path));
+            notifyObservers(key.path, key.defaultValue);
+        }
     }
 
     /// Force re-read from disk (e.g., if external tool edited the file).

@@ -9,8 +9,6 @@
 #include "DsSentence.h"
 #include "F0Widget.h"
 
-#include <QSettings>
-
 namespace SlurCutter {
     F0Widget::F0Widget(QWidget *parent)
         : QFrame(parent), draggingNoteInterval(0, 0), contextMenuNoteInterval(0, 0, {}) {
