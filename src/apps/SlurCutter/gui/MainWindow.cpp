@@ -15,35 +15,12 @@
 #include <QMimeData>
 #include <QPluginLoader>
 
-#include <QJsonArray>
-#include <QStyledItemDelegate>
+    #include <QJsonArray>
 
 #include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
 namespace SlurCutter {
-    CustomDelegate::CustomDelegate(const QSet<QString> &editedFiles, QObject *parent)
-        : QStyledItemDelegate(parent), m_editedFiles(editedFiles) {
-    }
-
-    void CustomDelegate::setEditedFiles(const QSet<QString> &editedFiles) {
-        m_editedFiles = editedFiles;
-    }
-
-    void CustomDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
-        const auto *model = dynamic_cast<const QFileSystemModel *>(index.model());
-        if (!model)
-            return;
-
-        QStyleOptionViewItem modifiedOption(option);
-        const QString fileName = QFileInfo(model->filePath(index)).fileName();
-
-        if (m_editedFiles.contains(fileName))
-            modifiedOption.palette.setColor(QPalette::Text, Qt::gray);
-
-        QStyledItemDelegate::paint(painter, modifiedOption, index);
-    }
-
     static QString audioFileToDsFile(const QString &filename) {
         const QFileInfo info(filename);
         const QString suffix = info.suffix().toLower();
@@ -135,7 +112,10 @@ namespace SlurCutter {
         treeView = new QTreeView();
         treeView->setModel(fsModel);
 
-        m_delegate = new CustomDelegate(editedFiles, treeView);
+        m_delegate = new dstools::widgets::FileStatusDelegate(treeView);
+        m_delegate->setStatusChecker([this](const QString &filePath) -> bool {
+            return editedFiles.contains(QFileInfo(filePath).fileName());
+        });
         treeView->setItemDelegate(m_delegate);
 
         {
@@ -230,7 +210,10 @@ namespace SlurCutter {
                 editFile.close();
             }
         }
-        m_delegate->setEditedFiles(editedFiles);
+        m_delegate->setStatusChecker([this](const QString &filePath) -> bool {
+            return editedFiles.contains(QFileInfo(filePath).fileName());
+        });
+        treeView->viewport()->update();
         fsModel->setRootPath(dirname);
         treeView->setRootIndex(fsModel->index(dirname));
     }
@@ -277,7 +260,10 @@ namespace SlurCutter {
                     editFile.close();
                 }
             }
-            m_delegate->setEditedFiles(editedFiles);
+            m_delegate->setStatusChecker([this](const QString &filePath) -> bool {
+                return editedFiles.contains(QFileInfo(filePath).fileName());
+            });
+            treeView->viewport()->update();
             return true;
         }
         QMessageBox::critical(this, "Save error",

@@ -3,13 +3,14 @@
 
 #include <QFileSystemModel>
 #include <QMainWindow>
-#include <QProgressBar>
 #include <QSplitter>
 #include <QTreeView>
 
 #include "Common.h"
 #include <dstools/AppSettings.h>
 #include <dstools/PlayWidget.h>
+#include <dstools/FileStatusDelegate.h>
+#include <dstools/FileProgressTracker.h>
 #include "TextWidget.h"
 
 namespace Minlabel {
@@ -45,13 +46,11 @@ namespace Minlabel {
         QTreeView *treeView;
         QFileSystemModel *fsModel;
 
-        QProgressBar *progressBar;
+        dstools::widgets::FileProgressTracker *m_fileProgress;
 
         QSplitter *mainSplitter;
 
         QVBoxLayout *rightLayout;
-        QLabel *progressLabel;
-        QHBoxLayout *progressLayout;
         QWidget *rightWidget;
 
         QString lastFile;

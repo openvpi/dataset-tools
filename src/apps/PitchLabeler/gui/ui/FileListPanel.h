@@ -6,6 +6,8 @@
 #include <QString>
 #include <QSet>
 
+#include <dstools/FileProgressTracker.h>
+
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
@@ -46,7 +48,7 @@ signals:
 
 private:
     QListWidget *m_listWidget = nullptr;
-    QLabel *m_progressLabel = nullptr;
+    dstools::widgets::FileProgressTracker *m_progressTracker = nullptr;
     QString m_directory;
     QString m_lastFile;
 
@@ -59,7 +61,7 @@ private:
     void onCurrentRowChanged(int row);
     void loadState();
     void updateItemStyle(QListWidgetItem *item, const QString &path);
-    void updateProgressLabel();
+
 };
 
 } // namespace ui

@@ -11,23 +11,10 @@
 #include "F0Widget.h"
 #include <dstools/AppSettings.h>
 #include <dstools/PlayWidget.h>
-
-#include <QStyledItemDelegate>
+#include <dstools/FileStatusDelegate.h>
 
 
 namespace SlurCutter {
-    class CustomDelegate final : public QStyledItemDelegate {
-    public:
-        explicit CustomDelegate(const QSet<QString> &editedFiles, QObject *parent = nullptr);
-
-        void setEditedFiles(const QSet<QString> &editedFiles);
-
-    private:
-        QSet<QString> m_editedFiles;
-
-        void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
-    };
-
     class MainWindow final : public QMainWindow {
         Q_OBJECT
     public:
@@ -57,7 +44,7 @@ namespace SlurCutter {
         dstools::widgets::PlayWidget *playerWidget;
         F0Widget *f0Widget;
 
-        CustomDelegate *m_delegate;
+        dstools::widgets::FileStatusDelegate *m_delegate;
         QTreeView *treeView;
         QFileSystemModel *fsModel;
         QListWidget *sentenceWidget;

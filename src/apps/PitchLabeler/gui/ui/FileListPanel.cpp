@@ -29,12 +29,12 @@ FileListPanel::FileListPanel(QWidget *parent)
     m_listWidget = new QListWidget();
     layout->addWidget(m_listWidget, 1);
 
-    // Progress label at the bottom
-    m_progressLabel = new QLabel();
-    m_progressLabel->setStyleSheet(
-        "background-color: #22222C; color: #9898A8; font-size: 10px; padding: 4px 8px; border-top: 1px solid #33333E;");
-    m_progressLabel->setAlignment(Qt::AlignCenter);
-    layout->addWidget(m_progressLabel);
+    // Progress tracker at the bottom
+    m_progressTracker = new dstools::widgets::FileProgressTracker(
+        dstools::widgets::FileProgressTracker::LabelOnly, this);
+    m_progressTracker->setFormat(QStringLiteral("\u6807\u6ce8\u8fdb\u5ea6: %1 / %2 (%3%)"));
+    m_progressTracker->setEmptyText(QStringLiteral("\u65e0\u6587\u4ef6"));
+    layout->addWidget(m_progressTracker);
 
     // Use currentRowChanged for both click and keyboard navigation
     connect(m_listWidget, &QListWidget::currentRowChanged, this, &FileListPanel::onCurrentRowChanged);
@@ -48,7 +48,7 @@ void FileListPanel::setDirectory(const QString &path) {
     m_directory = path;
 
     if (path.isEmpty()) {
-        updateProgressLabel();
+        m_progressTracker->setProgress(m_savedFiles.size(), m_listWidget->count());
         return;
     }
 
@@ -64,7 +64,7 @@ void FileListPanel::setDirectory(const QString &path) {
         updateItemStyle(item, fi.absoluteFilePath());
     }
 
-    updateProgressLabel();
+    m_progressTracker->setProgress(m_savedFiles.size(), m_listWidget->count());
 
     // Restore last selected file
     bool restored = false;
@@ -91,7 +91,7 @@ void FileListPanel::clear() {
     m_modifiedFiles.clear();
     m_savedFiles.clear();
     m_listWidget->clear();
-    updateProgressLabel();
+    m_progressTracker->setProgress(m_savedFiles.size(), m_listWidget->count());
 }
 
 void FileListPanel::populateList() {
@@ -175,7 +175,7 @@ void FileListPanel::setFileSaved(const QString &path) {
             break;
         }
     }
-    updateProgressLabel();
+    m_progressTracker->setProgress(m_savedFiles.size(), m_listWidget->count());
 }
 
 int FileListPanel::totalFiles() const {
@@ -212,20 +212,6 @@ void FileListPanel::updateItemStyle(QListWidgetItem *item, const QString &path) 
         QFont f = item->font();
         f.setBold(false);
         item->setFont(f);
-    }
-}
-
-void FileListPanel::updateProgressLabel() {
-    int total = m_listWidget->count();
-    int saved = m_savedFiles.size();
-    if (total == 0) {
-        m_progressLabel->setText(QStringLiteral("无文件"));
-    } else {
-        m_progressLabel->setText(
-            QStringLiteral("标注进度: %1 / %2 (%3%)")
-                .arg(saved)
-                .arg(total)
-                .arg(total > 0 ? saved * 100 / total : 0));
     }
 }
 

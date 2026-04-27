@@ -7,6 +7,8 @@ set(WIDGETS_SOURCES
     src/TaskWindow.cpp
     src/GpuSelector.cpp
     src/ShortcutEditorWidget.cpp
+    src/FileProgressTracker.cpp
+    src/FileStatusDelegate.cpp
 )
 
 set(WIDGETS_HEADERS
@@ -15,6 +17,8 @@ set(WIDGETS_HEADERS
     include/dstools/TaskWindow.h
     include/dstools/GpuSelector.h
     include/dstools/ShortcutEditorWidget.h
+    include/dstools/FileProgressTracker.h
+    include/dstools/FileStatusDelegate.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${WIDGETS_SOURCES} ${WIDGETS_HEADERS})

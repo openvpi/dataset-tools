@@ -17,51 +17,12 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QStatusBar>
-#include <QStyledItemDelegate>
 #include <QTreeWidget>
 
 #include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
 namespace Minlabel {
-    class CustomDelegate final : public QStyledItemDelegate {
-    public:
-        explicit CustomDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {
-        }
-
-        void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
-            const auto *model = dynamic_cast<const QFileSystemModel *>(index.model());
-            if (!model) {
-                return;
-            }
-
-            const QFileInfo fileInfo(model->filePath(index));
-            const QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
-
-            QStyleOptionViewItem modifiedOption(option);
-
-            // 如果 JSON 文件存在且可读
-            if (QFile::exists(jsonFilePath) && fileInfo.isFile()) {
-                QFile jsonFile(jsonFilePath);
-                if (jsonFile.open(QIODevice::ReadOnly)) {
-                    const QByteArray jsonData = jsonFile.readAll();
-                    jsonFile.close();
-
-                    const QJsonDocument jsonDoc(QJsonDocument::fromJson(jsonData));
-                    if (jsonDoc.isObject()) {
-                        const QJsonObject jsonObj = jsonDoc.object();
-                        // 判断 isCheck 是否存在且为 true
-                        if (jsonObj.value("isCheck").toBool(false)) {
-                            modifiedOption.palette.setColor(QPalette::Text, Qt::gray);
-                        }
-                    }
-                }
-            }
-
-            QStyledItemDelegate::paint(painter, modifiedOption, index);
-        }
-    };
-
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings("MinLabel") {
         playing = false;
 
@@ -133,14 +94,8 @@ namespace Minlabel {
 
         bar->addMenu(helpMenu);
 
-        progressLabel = new QLabel("progress:");
-        progressBar = new QProgressBar();
-        progressBar->setRange(0, 100);
-        progressBar->setValue(0);
-
-        progressLayout = new QHBoxLayout();
-        progressLayout->addWidget(progressLabel);
-        progressLayout->addWidget(progressBar);
+        m_fileProgress = new dstools::widgets::FileProgressTracker(
+            dstools::widgets::FileProgressTracker::ProgressBarStyle, this);
 
         // Init widgets
         playerWidget = new dstools::widgets::PlayWidget();
@@ -157,7 +112,24 @@ namespace Minlabel {
 
         treeView = new QTreeView();
         treeView->setModel(fsModel);
-        treeView->setItemDelegate(new CustomDelegate(treeView));
+
+        auto *delegate = new dstools::widgets::FileStatusDelegate(treeView);
+        delegate->setStatusChecker([](const QString &filePath) -> bool {
+            const QFileInfo fileInfo(filePath);
+            const QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
+            if (!QFile::exists(jsonFilePath) || !fileInfo.isFile())
+                return false;
+            QFile jsonFile(jsonFilePath);
+            if (!jsonFile.open(QIODevice::ReadOnly))
+                return false;
+            const QByteArray jsonData = jsonFile.readAll();
+            jsonFile.close();
+            const QJsonDocument jsonDoc(QJsonDocument::fromJson(jsonData));
+            if (!jsonDoc.isObject())
+                return false;
+            return jsonDoc.object().value("isCheck").toBool(false);
+        });
+        treeView->setItemDelegate(delegate);
 
         {
             QSet<QString> names{"Name", "Size"};
@@ -171,7 +143,7 @@ namespace Minlabel {
         rightLayout = new QVBoxLayout();
         rightLayout->addWidget(playerWidget);
         rightLayout->addWidget(textWidget);
-        rightLayout->addLayout(progressLayout);
+        rightLayout->addWidget(m_fileProgress);
 
         rightWidget = new QWidget();
         rightWidget->setLayout(rightLayout);
@@ -433,13 +405,9 @@ namespace Minlabel {
 
     void MainWindow::_q_updateProgress() const {
         const int count = jsonCount(dirname);
-        const int totalRowCount = static_cast<int>(fsModel->rootDirectory().entryList(
+        const int total = static_cast<int>(fsModel->rootDirectory().entryList(
             QStringList{"*.wav", "*.mp3", "*.m4a", "*.flac"}, QDir::Files).count());
-        double progress = 0.0;
-        if (totalRowCount > 0) {
-            progress = static_cast<double>(count) / totalRowCount * 100.0;
-        }
-        progressBar->setValue(static_cast<int>(progress));
+        m_fileProgress->setProgress(count, total);
     }
 
     void MainWindow::_q_treeCurrentChanged(const QModelIndex &current) {
