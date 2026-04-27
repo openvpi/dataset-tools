@@ -20,6 +20,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <dstools/Theme.h>
+
 #include <wolf-midi/MidiFile.h>
 
 #include "utils/DmlGpuUtils.h"
@@ -115,7 +117,6 @@ void MainWidget::setupModelGroup() {
 
     // Status label
     m_modelStatusLabel = new QLabel("Not loaded");
-    m_modelStatusLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
     layout->addWidget(m_modelStatusLabel, 2, 0, 1, 3);
 
     // Removed Load Model button
@@ -128,16 +129,33 @@ void MainWidget::setModelLoadingStatus(const QString &status) {
     QMetaObject::invokeMethod(
         this,
         [this, status] {
+            const auto &pal = dstools::Theme::palette();
+            QColor color;
+            bool bold = false;
+            bool italic = false;
+
             if (status.contains("Success") || status.contains("successfully")) {
-                m_modelStatusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
+                color = pal.success;
+                bold = true;
             } else if (status.contains("Failed") || status.contains("failed") || status.contains("Error")) {
-                m_modelStatusLabel->setStyleSheet("QLabel { color: red; font-weight: bold; }");
+                color = pal.error;
+                bold = true;
             } else if (status.contains("Loading") || status.contains("loading")) {
-                m_modelStatusLabel->setStyleSheet("QLabel { color: blue; font-weight: bold; }");
+                color = pal.accent;
+                bold = true;
             } else {
-                m_modelStatusLabel->setStyleSheet("QLabel { color: gray; font-style: italic; }");
+                color = pal.textSecondary;
+                italic = true;
             }
 
+            QFont f = m_modelStatusLabel->font();
+            f.setBold(bold);
+            f.setItalic(italic);
+            m_modelStatusLabel->setFont(f);
+
+            QPalette p = m_modelStatusLabel->palette();
+            p.setColor(QPalette::WindowText, color);
+            m_modelStatusLabel->setPalette(p);
             m_modelStatusLabel->setText(status);
         },
         Qt::QueuedConnection);
