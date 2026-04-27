@@ -144,7 +144,7 @@ namespace SlurCutter {
         DsSentence sentence = loadDsSentencesFromJsonObj(content);
 
         auto f0Seq = sentence.f0_seq.split(" ", Qt::SkipEmptyParts);
-        foreach (auto f0, f0Seq) {
+        for (const auto &f0 : f0Seq) {
             f0Values.append(FrequencyToMidiNote(f0.toDouble()));
         }
         f0Timestep = sentence.f0_timestep.toDouble();
@@ -220,8 +220,8 @@ namespace SlurCutter {
             if (notePitch.contains(QRegularExpression(R"((\+|\-))"))) {
                 auto splitPitch = notePitch.split(QRegularExpression(R"((\+|\-))"));
                 note.pitch = NoteNameToMidiNote(splitPitch[0]);
-                note.cents = splitPitch[1].toDouble();
-                note.cents *= notePitch[splitPitch[0].length()] == '+' ? 1 : -1;
+                note.cents = (splitPitch.size() > 1) ? splitPitch[1].toDouble() : 0.0;
+                note.cents *= (splitPitch[0].length() < notePitch.length() && notePitch[splitPitch[0].length()] == '+') ? 1 : -1;
             } else {
                 note.pitch = NoteNameToMidiNote(noteSeq[i]);
                 note.cents = NAN;
@@ -252,11 +252,21 @@ namespace SlurCutter {
 
         // Update ranges
         std::get<1>(timeRange) = noteBegin;
+        if (f0Values.isEmpty()) {
+            setErrorStatusText(tr("Empty F0 data in sentence"));
+            return;
+        }
         std::get<0>(pitchRange) = *std::min_element(f0Values.begin(), f0Values.end());
         std::get<1>(pitchRange) = *std::max_element(f0Values.begin(), f0Values.end());
         horizontalScrollBar->setMaximum(noteBegin * 1000);
-        verticalScrollBar->setMaximum(std::get<1>(pitchRange) * 100);
-        verticalScrollBar->setMinimum(std::get<0>(pitchRange) * 100);
+        if (clampPitchToF0Bounds) {
+            verticalScrollBar->setMaximum(std::get<1>(pitchRange) * 100);
+            verticalScrollBar->setMinimum(std::get<0>(pitchRange) * 100);
+        } else {
+            // Allow scrolling beyond F0 bounds (full MIDI range: 0-127)
+            verticalScrollBar->setMinimum(0);
+            verticalScrollBar->setMaximum(127 * 100);
+        }
 
         isEmpty = false;
 
@@ -521,7 +531,7 @@ namespace SlurCutter {
     }
 
     void F0Widget::modeChanged() {
-        // Fuck this what the hell is this bloody cast chain
+        // Update the selected drag mode from the sender action's data
         selectedDragMode = static_cast<decltype(Note)>(static_cast<QAction *>(sender())->data().toInt());
     }
 
@@ -826,11 +836,11 @@ namespace SlurCutter {
 
             // Note description (Note+-Cents, glide, ...) text
             painter.setPen(Qt::white);
-            foreach (auto &i, noteDescription) {
+            for (const auto &i : noteDescription) {
                 painter.drawText(i.first, i.second);
             }
             if (showPhonemeTexts) {
-                foreach (auto &i, phonemeTexts) {
+                for (const auto &i : phonemeTexts) {
                     painter.drawText(i.first, i.second);
                 }
             }

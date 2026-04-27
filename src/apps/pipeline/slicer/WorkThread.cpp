@@ -196,7 +196,7 @@ void WorkThread::run() {
                                              SF_FORMAT_WAV | sndfile_outputWaveFormat, channels, sr);
             sf.seek(beginFrame, SEEK_SET);
             std::vector<double> tmp(frameCount * channels);
-            auto bytesRead = sf.read(tmp.data(), tmp.size());
+            sf.read(tmp.data(), tmp.size());
             auto bytesWritten = wf.write(tmp.data(), tmp.size());
             if (bytesWritten != static_cast<sf_count_t>(tmp.size())) {
                 isAudioWriteError = true;
@@ -250,7 +250,7 @@ inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampl
         if (ok) *ok = false;
         return 0;
     }
-    QRegularExpression re(R"(^\s*(\d+):(\d+)\.(\d+)\s*$)");
+    static const QRegularExpression re(R"(^\s*(\d+):(\d+)\.(\d+)\s*$)");
     auto match = re.match(decimalFormat);
     if (!match.hasMatch()) {
         if (ok) *ok = false;
@@ -359,7 +359,7 @@ inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, Mark
         }
         // Identify Time Format
         auto timeFormat = split[3];
-        QRegularExpression regexSample(R"(^\s*(\d+)\s*Hz\s*$)");
+        static const QRegularExpression regexSample(R"(^\s*(\d+)\s*Hz\s*$)");
         auto regexSampleMatch = regexSample.match(timeFormat);
         if (regexSampleMatch.hasMatch()) {
             // MarkerTimeFormat::Samples

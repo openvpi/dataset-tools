@@ -1,119 +1,168 @@
 #include <dstools/AudioPlayback.h>
 #include <dstools/AudioDecoder.h>
-#include "SDLPlayback.h"
-#include "FFmpegDecoder.h"
+
+#include <SDL2/SDL.h>
 
 #include <QDebug>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 namespace dstools::audio {
 
 struct AudioPlayback::Impl {
-    SDLPlayback *playback = nullptr;
     AudioDecoder *decoder = nullptr;
+    SDL_AudioDeviceID deviceId = 0;
+    bool sdlInitialized = false;
     bool available = false;
+
+    int sampleRate = 44100;
+    int channels = 2;
+    int bufferSize = 1024;
+
+    std::atomic<State> currentState{Stopped};
+    QString currentDeviceName;
+
+    static void audioCallback(void *userdata, Uint8 *stream, int len);
 };
+
+void AudioPlayback::Impl::audioCallback(void *userdata, Uint8 *stream, int len) {
+    auto *impl = static_cast<Impl *>(userdata);
+    if (!impl->decoder || impl->currentState.load() != Playing) {
+        memset(stream, 0, len);
+        return;
+    }
+
+    int bytesRead = impl->decoder->read(reinterpret_cast<char *>(stream), 0, len);
+    if (bytesRead < len) {
+        memset(stream + bytesRead, 0, len - bytesRead);
+        // Reached end
+        impl->currentState.store(Stopped);
+    }
+}
 
 AudioPlayback::AudioPlayback(QObject *parent)
     : QObject(parent), d(std::make_unique<Impl>()) {
 }
 
 AudioPlayback::~AudioPlayback() {
-    if (d->playback) {
-        if (d->playback->isPlaying()) {
-            d->playback->stop();
-        }
-        if (d->available) {
-            d->playback->dispose();
-        }
-        delete d->playback;
-    }
+    dispose();
 }
 
 bool AudioPlayback::setup(int sampleRate, int channels, int bufferSize) {
-    d->playback = new SDLPlayback(this);
-
-    QsMedia::PlaybackArguments args(sampleRate, channels, bufferSize);
-    if (!d->playback->setup(args)) {
-        delete d->playback;
-        d->playback = nullptr;
-        d->available = false;
-        return false;
+    if (!d->sdlInitialized) {
+        if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+            qWarning() << "AudioPlayback: SDL_Init failed:" << SDL_GetError();
+            return false;
+        }
+        d->sdlInitialized = true;
     }
+
+    d->sampleRate = sampleRate;
+    d->channels = channels;
+    d->bufferSize = bufferSize;
     d->available = true;
-
-    // Forward signals
-    connect(d->playback, &QsApi::IAudioPlayback::stateChanged, this, [this]() {
-        emit stateChanged(state());
-    });
-    connect(d->playback, &QsApi::IAudioPlayback::deviceChanged, this, [this]() {
-        emit deviceChanged(currentDevice());
-    });
-    connect(d->playback, &QsApi::IAudioPlayback::deviceAdded, this, [this]() {
-        auto devs = devices();
-        emit deviceAdded(devs.isEmpty() ? QString() : devs.last());
-    });
-    connect(d->playback, &QsApi::IAudioPlayback::deviceRemoved, this, [this]() {
-        emit deviceRemoved(QString());
-    });
-
-    // Set first device if available
-    auto devList = devices();
-    if (!devList.isEmpty()) {
-        setDevice(devList.front());
-    }
-
     return true;
 }
 
 void AudioPlayback::dispose() {
-    if (d->playback && d->available) {
-        d->playback->dispose();
-        d->available = false;
+    stop();
+    if (d->deviceId) {
+        SDL_CloseAudioDevice(d->deviceId);
+        d->deviceId = 0;
     }
+    if (d->sdlInitialized) {
+        SDL_QuitSubSystem(SDL_INIT_AUDIO);
+        d->sdlInitialized = false;
+    }
+    d->available = false;
 }
 
 void AudioPlayback::setDecoder(AudioDecoder *decoder) {
     d->decoder = decoder;
-    if (d->playback && decoder) {
-        // The SDLPlayback expects an IAudioDecoder.
-        // We need to get the underlying FFmpegDecoder from AudioDecoder.
-        // For now, we use a workaround: the AudioDecoder's Impl holds a FFmpegDecoder.
-        // This is an internal detail; we access it via friend or direct cast.
-        // TODO: clean up this layering violation after full migration
-    }
 }
 
 void AudioPlayback::play() {
-    if (d->playback && d->available) {
-        d->playback->play();
+    if (!d->available || !d->decoder) return;
+
+    // Open audio device if not already open
+    if (!d->deviceId) {
+        SDL_AudioSpec desired{};
+        desired.freq = d->sampleRate;
+        desired.format = AUDIO_F32SYS;
+        desired.channels = static_cast<Uint8>(d->channels);
+        desired.samples = static_cast<Uint16>(d->bufferSize);
+        desired.callback = Impl::audioCallback;
+        desired.userdata = d.get();
+
+        SDL_AudioSpec obtained{};
+        const char *devName = d->currentDeviceName.isEmpty()
+                                  ? nullptr
+                                  : d->currentDeviceName.toUtf8().constData();
+        d->deviceId = SDL_OpenAudioDevice(devName, 0, &desired, &obtained, 0);
+        if (!d->deviceId) {
+            qWarning() << "AudioPlayback: Failed to open audio device:" << SDL_GetError();
+            return;
+        }
     }
+
+    auto oldState = d->currentState.load();
+    d->currentState.store(Playing);
+    SDL_PauseAudioDevice(d->deviceId, 0);
+
+    if (oldState != Playing)
+        emit stateChanged(Playing);
 }
 
 void AudioPlayback::stop() {
-    if (d->playback && d->available) {
-        d->playback->stop();
+    if (!d->available) return;
+
+    auto oldState = d->currentState.load();
+    d->currentState.store(Stopped);
+
+    if (d->deviceId) {
+        SDL_PauseAudioDevice(d->deviceId, 1);
     }
+
+    if (oldState != Stopped)
+        emit stateChanged(Stopped);
 }
 
 QStringList AudioPlayback::devices() const {
-    if (!d->playback) return {};
-    return d->playback->devices();
+    QStringList result;
+    if (!d->sdlInitialized) return result;
+
+    int count = SDL_GetNumAudioDevices(0);
+    for (int i = 0; i < count; ++i) {
+        const char *name = SDL_GetAudioDeviceName(i, 0);
+        if (name) result << QString::fromUtf8(name);
+    }
+    return result;
 }
 
 QString AudioPlayback::currentDevice() const {
-    if (!d->playback) return {};
-    return d->playback->currentDevice();
+    return d->currentDeviceName;
 }
 
 void AudioPlayback::setDevice(const QString &device) {
-    if (d->playback) {
-        d->playback->setDevice(device);
+    if (d->currentDeviceName == device) return;
+
+    bool wasPlaying = (d->currentState.load() == Playing);
+    if (wasPlaying) stop();
+
+    if (d->deviceId) {
+        SDL_CloseAudioDevice(d->deviceId);
+        d->deviceId = 0;
     }
+
+    d->currentDeviceName = device;
+    emit deviceChanged(device);
+
+    if (wasPlaying) play();
 }
 
 AudioPlayback::State AudioPlayback::state() const {
-    if (!d->playback) return Stopped;
-    return d->playback->isPlaying() ? Playing : Stopped;
+    return d->currentState.load();
 }
 
 } // namespace dstools::audio

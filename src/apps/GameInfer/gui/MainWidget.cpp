@@ -568,8 +568,8 @@ void MainWidget::onExportMidiTask() {
                 this,
                 [this] {
                     QMessageBox::critical(this, "Error",
-                                          QString("Audio file is not exists: %1")
-                                              .arg(m_wavPathLineEdit->text().toLocal8Bit().toStdString()));
+                                          QString("Audio file does not exist: %1")
+                                              .arg(m_wavPathLineEdit->text()));
                 },
                 Qt::QueuedConnection);
             QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
@@ -582,7 +582,7 @@ void MainWidget::onExportMidiTask() {
                 QMetaObject::invokeMethod(
                     this,
                     [this, msg_] {
-                        QMessageBox::information(this, "Fail", "Model load failed! - " + QString::fromLocal8Bit(msg_));
+                        QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg_));
                     },
                     Qt::QueuedConnection);
                 QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));

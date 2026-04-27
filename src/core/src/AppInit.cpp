@@ -10,9 +10,18 @@
 #include <Windows.h>
 #endif
 
+#ifdef HAS_QBREAKPAD
+#include <QBreakpadHandler.h>
+#endif
+
+#ifdef HAS_CPP_PINYIN
+#include <cpp-pinyin/G2pglobal.h>
+#include <filesystem>
+#endif
+
 namespace dstools {
 
-void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
+bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
     // 1. Root privilege check — from original MinLabel/SlurCutter main.cpp
 #ifdef Q_OS_WIN
     if (IsUserAnAdmin() && !app.arguments().contains("--allow-root")) {
@@ -22,13 +31,25 @@ void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
                           .arg(app.applicationName(), "Administrator");
         MessageBoxW(nullptr, msg.toStdWString().data(), title.toStdWString().data(),
                     MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONWARNING);
+        return false;
     }
-#else
+#elif defined(Q_OS_LINUX)
     if (geteuid() == 0 && !app.arguments().contains("--allow-root")) {
         QString msg = QString("You're trying to start %1 as root, which may cause "
                               "security problem and isn't recommended.")
                           .arg(app.applicationName());
         fputs(qPrintable(msg), stdout);
+        return false;
+    }
+#else
+    // macOS: show GUI warning
+    if (geteuid() == 0 && !app.arguments().contains("--allow-root")) {
+        QString title = app.applicationName();
+        QString msg = QString("You're trying to start %1 as root, which may cause "
+                              "security problem and isn't recommended.")
+                          .arg(app.applicationName());
+        QMessageBox::warning(nullptr, title, msg, QApplication::tr("Confirm"));
+        return false;
     }
 #endif
 
@@ -65,6 +86,11 @@ void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
         if (!handler) {
             handler = new QBreakpadHandler();
             handler->setDumpPath(app.applicationDirPath() + "/dumps");
+#ifdef Q_OS_WIN
+            QBreakpadHandler::UniqueExtraHandler = []() {
+                MessageBoxW(nullptr, L"Crash!!!", L"QBreakpad", MB_OK | MB_ICONERROR);
+            };
+#endif
         }
 #endif
     }
@@ -78,7 +104,7 @@ void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
 #else
             std::filesystem::path(app.applicationDirPath().toStdWString()) / "dict";
 #endif
-        Pinyin::setDictionaryPath(dictPath.make_preferred());
+        Pinyin::setDictionaryPath(dictPath.make_preferred().string());
 #endif
     }
 
@@ -88,6 +114,7 @@ void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
     if (!configDir.exists()) {
         configDir.mkpath(".");
     }
+    return true;
 }
 
 } // namespace dstools

@@ -59,7 +59,6 @@ private:
 
     // State
     int m_notifyTimerId = 0;
-    bool m_playing = false;
     QString m_filename;
 
     // Range playback
@@ -69,7 +68,6 @@ private:
 
     // Playhead tracking (SlurCutter steady_clock precision)
     uint64_t m_lastObtainedTimeMs = 0;
-    uint64_t m_pauseAtTime = 0;
     std::chrono::time_point<std::chrono::steady_clock> m_lastObtainedTimePoint;
     uint64_t estimatedTimeMs() const;
 
@@ -88,8 +86,6 @@ private:
     void onDeviceAction(QAction *action);
     void onPlaybackStateChanged();
     void onDeviceChanged();
-    void onDeviceAdded();
-    void onDeviceRemoved();
 };
 
 } // namespace dstools::widgets

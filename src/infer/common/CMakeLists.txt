@@ -13,11 +13,11 @@ add_library(${PROJECT_NAME} STATIC ${INFER_COMMON_SOURCES} ${INFER_COMMON_HEADER
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../libs/onnxruntime/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../onnxruntime/include
 )
 
 target_link_directories(${PROJECT_NAME} PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../libs/onnxruntime/lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/../onnxruntime/lib
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC

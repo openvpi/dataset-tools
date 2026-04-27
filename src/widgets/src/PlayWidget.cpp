@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenu>
@@ -55,6 +56,10 @@ PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
         connect(m_devBtn, &QPushButton::clicked, this, &PlayWidget::onDevClicked);
         connect(m_slider, &QSlider::sliderReleased, this, &PlayWidget::onSliderReleased);
         connect(m_deviceActionGroup, &QActionGroup::triggered, this, &PlayWidget::onDeviceAction);
+        connect(m_playback, &dstools::audio::AudioPlayback::stateChanged,
+                this, &PlayWidget::onPlaybackStateChanged);
+        connect(m_playback, &dstools::audio::AudioPlayback::deviceChanged,
+                this, &PlayWidget::onDeviceChanged);
         reloadDevices();
     } else {
         m_playBtn->setEnabled(false);
@@ -174,6 +179,19 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
                 killTimer(m_notifyTimerId);
                 m_notifyTimerId = 0;
             }
+            // EOF: reset position to range start or beginning
+            if (m_decoder && m_decoder->isOpen()) {
+                if (m_decoder->position() >= m_decoder->length()) {
+                    if (m_hasRange) {
+                        auto fmt = m_decoder->format();
+                        m_decoder->setPosition(
+                            static_cast<qint64>(m_rangeStart * fmt.averageBytesPerSecond()));
+                    } else {
+                        m_decoder->setPosition(0);
+                    }
+                }
+            }
+            reloadSliderStatus();
             reloadButtonStatus();
         }
     }
@@ -288,14 +306,6 @@ void PlayWidget::onPlaybackStateChanged() {
 
 void PlayWidget::onDeviceChanged() {
     reloadDeviceActionStatus();
-}
-
-void PlayWidget::onDeviceAdded() {
-    reloadDevices();
-}
-
-void PlayWidget::onDeviceRemoved() {
-    reloadDevices();
 }
 
 } // namespace dstools::widgets

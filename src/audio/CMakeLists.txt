@@ -20,12 +20,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
-# Internal: access FFmpegDecoder and SDLPlayback directly
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/ffmpegdecoder
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/sdlplayback
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/qsmedia
-)
+# FFmpeg
+find_package(FFmpeg CONFIG REQUIRED)
+
+# SDL2
+find_package(SDL2 CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-core
@@ -33,7 +32,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    QsMedia
-    FFmpegDecoder
-    SDLPlayback
+    SDL2::SDL2
 )
+
+# Link FFmpeg libraries
+ffmpeg_link_all(${PROJECT_NAME} PRIVATE)

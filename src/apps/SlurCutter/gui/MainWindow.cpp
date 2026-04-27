@@ -93,7 +93,7 @@ namespace SlurCutter {
         bar->addMenu(helpMenu);
 
         // Init widgets
-        playerWidget = new PlayWidget();
+        playerWidget = new dstools::widgets::PlayWidget();
         playerWidget->setObjectName("play-widget");
         playerWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
@@ -155,7 +155,7 @@ namespace SlurCutter {
         connect(sentenceWidget, &QListWidget::currentRowChanged, this, &MainWindow::_q_sentenceChanged);
         connect(f0Widget, &F0Widget::requestReloadSentence, this, &MainWindow::reloadDsSentenceRequested);
 
-        connect(playerWidget, &PlayWidget::playheadChanged, f0Widget, &F0Widget::setPlayHeadPos);
+        connect(playerWidget, &dstools::widgets::PlayWidget::playheadChanged, f0Widget, &F0Widget::setPlayHeadPos);
 
         reloadWindowTitle();
         resize(1280, 720);
@@ -244,7 +244,7 @@ namespace SlurCutter {
 
     bool MainWindow::saveFile(const QString &filename) {
         QJsonArray docArr;
-        foreach (auto &i, dsContent) {
+        for (const auto &i : dsContent) {
             docArr.append(i);
         }
         const QJsonDocument doc(docArr);
@@ -353,7 +353,7 @@ namespace SlurCutter {
             }
 
             double dur = 0.0;
-            foreach (QString durStr, noteDur) {
+            for (const QString &durStr : noteDur) {
                 dur += durStr.toDouble();
             }
 
@@ -519,7 +519,7 @@ namespace SlurCutter {
         const auto item = sentenceWidget->item(currentRow);
         const double offset = item->data(Qt::UserRole + 1).toDouble();
         const double dur = item->data(Qt::UserRole + 2).toDouble();
-        playerWidget->setRange(offset, offset + dur);
+        playerWidget->setPlayRange(offset, offset + dur);
         f0Widget->setPlayHeadPos(0.0);
     }
 }

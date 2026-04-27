@@ -1,6 +1,7 @@
-#include <dstools/Theme.h>
 #include <QFile>
 #include <QTextStream>
+#include <dstools/Theme.h>
+#include <qpalette.h>
 
 namespace dstools {
 

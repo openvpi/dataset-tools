@@ -219,6 +219,8 @@ void SlicerPage::onStart() {
             m_spnSuffixDigits->value(), i);
         connect(runnable, &WorkThread::oneFinished, this, &SlicerPage::onOneFinished);
         connect(runnable, &WorkThread::oneFailed, this, &SlicerPage::onOneFailed);
+        connect(runnable, &WorkThread::oneInfo, this, &SlicerPage::logMessage);
+        connect(runnable, &WorkThread::oneError, this, &SlicerPage::logMessage);
         m_threadPool->start(runnable);
     }
 }

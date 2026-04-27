@@ -8,7 +8,8 @@ int main(int argc, char *argv[]) {
     app.setApplicationName("SlurCutter");
     app.setOrganizationName("Team OpenVPI");
 
-    dstools::AppInit::init(app);
+    if (!dstools::AppInit::init(app))
+        return 0;
     dstools::Theme::apply(app, dstools::Theme::Dark);
 
     SlurCutter::MainWindow w;

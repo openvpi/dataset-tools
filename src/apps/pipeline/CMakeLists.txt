@@ -31,6 +31,15 @@ set(PIPELINE_SOURCES
     # HubertFA Tab
     hubertfa/HubertFAPage.h   hubertfa/HubertFAPage.cpp
     hubertfa/HfaTask.h         hubertfa/HfaTask.cpp
+
+    # HubertFA core (from HubertFA app's util/)
+    ../HubertFA/util/Hfa.cpp
+    ../HubertFA/util/HfaModel.cpp
+    ../HubertFA/util/AlignmentDecoder.cpp
+    ../HubertFA/util/AlignWord.cpp
+    ../HubertFA/util/DictionaryG2P.cpp
+    ../HubertFA/util/NonLexicalDecoder.cpp
+    ../HubertFA/util/DmlGpuUtils.cpp
 )
 
 add_executable(${PROJECT_NAME} WIN32 ${PIPELINE_SOURCES})
@@ -47,11 +56,17 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     # HubertFA original headers (until hubert-infer extraction)
     ${CMAKE_CURRENT_SOURCE_DIR}/../HubertFA
     ${CMAKE_CURRENT_SOURCE_DIR}/../HubertFA/util
+    # ONNX Runtime headers (for HFA)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/include
 )
 
 find_package(SndFile CONFIG REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+
+target_link_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/lib
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     dstools-widgets
@@ -60,6 +75,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     cpp-pinyin::cpp-pinyin
     SndFile::sndfile
     nlohmann_json::nlohmann_json
+    onnxruntime
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
 )
@@ -70,6 +86,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 if(WIN32)
     include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)
+endif()
+
+if(ONNXRUNTIME_ENABLE_DML)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ONNXRUNTIME_ENABLE_DML)
+    target_link_libraries(${PROJECT_NAME} PRIVATE dxgi)
 endif()
 
 set_property(TARGET DeployedTargets APPEND PROPERTY TARGETS ${PROJECT_NAME})

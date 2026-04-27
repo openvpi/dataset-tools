@@ -28,7 +28,7 @@ namespace Minlabel {
 
         QComboBox *languageCombo;
 
-        QCheckBox *covertNum;
+        QCheckBox *convertNum;
         QCheckBox *cleanRes;
 
         QCheckBox *manTone;

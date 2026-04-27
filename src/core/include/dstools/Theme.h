@@ -1,33 +1,30 @@
 #pragma once
 #include <QApplication>
 #include <QColor>
+#include <QPalette>
 
 namespace dstools {
 
 class Theme {
 public:
-    enum Mode { Light, Dark, System };
+    enum Mode { Light, Dark };
+
+    struct Palette {
+        QColor bgPrimary;
+        QColor bgSecondary;
+        QColor bgSurface;
+        QColor accent;
+        QColor textPrimary;
+        QColor textSecondary;
+        QColor border;
+        QColor success;
+        QColor error;
+        QColor warning;
+    };
 
     /// Apply theme to the entire application
     static void apply(QApplication &app, Mode mode);
-
-    /// Get current theme mode
     static Mode currentMode();
-
-    /// Get theme palette (for custom-painted components like F0Widget)
-    struct Palette {
-        QColor bgPrimary;       // Main background
-        QColor bgSecondary;     // Secondary background (panels/lists)
-        QColor bgSurface;       // Cards/overlays
-        QColor accent;          // Accent color
-        QColor textPrimary;     // Primary text
-        QColor textSecondary;   // Secondary text
-        QColor border;          // Border
-        QColor success;         // Success
-        QColor error;           // Error
-        QColor warning;         // Warning
-    };
-
     static const Palette &palette();
 
 private:

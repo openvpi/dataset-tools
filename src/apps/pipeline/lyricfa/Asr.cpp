@@ -43,8 +43,6 @@ namespace LyricFA {
             return false;
         }
 
-        int idx = 0;
-
         for (const auto &[fst, snd] : chunks) {
             const auto beginFrame = fst;
             const auto endFrame = snd;
@@ -73,7 +71,6 @@ namespace LyricFA {
                 m_asrHandle->reset();
                 msg += m_asrHandle->forward(buff, len, flag);
             }
-            idx++;
         }
 
 

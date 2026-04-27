@@ -131,7 +131,7 @@ namespace SlurCutter {
         std::tuple<double, double> pitchRange = {0.0, 0.0}, timeRange = {0.0, 0.0};
         double playheadPos = 0.0;
 
-        bool clampPitchToF0Bounds = true; // Also affects scroll bar range // TODO: INCOMPLETE
+        bool clampPitchToF0Bounds = true; // Also affects scroll bar range
         bool snapToKey = true;
         bool showPitchTextOverlay = false;
         bool showPhonemeTexts = true;

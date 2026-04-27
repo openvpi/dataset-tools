@@ -45,14 +45,12 @@ public:
     void setDevice(const QString &device);
 
     /// State
-    enum State { Stopped, Playing, Paused };
+    enum State { Stopped, Playing };
     State state() const;
 
 signals:
     void stateChanged(AudioPlayback::State newState);
     void deviceChanged(const QString &device);
-    void deviceAdded(const QString &device);
-    void deviceRemoved(const QString &device);
 
 private:
     struct Impl;

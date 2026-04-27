@@ -9,7 +9,8 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion("0.1.0");
     app.setOrganizationName("Team OpenVPI");
 
-    dstools::AppInit::init(app);
+    if (!dstools::AppInit::init(app))
+        return 0;
     dstools::Theme::apply(app, dstools::Theme::Dark);
 
     MainWindow window;

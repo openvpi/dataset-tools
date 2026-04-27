@@ -1,4 +1,4 @@
-#include "HfaThread.h"
+#include "HfaTask.h"
 
 #include <QMessageBox>
 

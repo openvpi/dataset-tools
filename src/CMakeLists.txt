@@ -9,7 +9,6 @@ add_custom_target(DeployedTargets)
 
 # Shared layers (must come before apps)
 add_subdirectory(core)
-add_subdirectory(libs)
 add_subdirectory(audio)
 add_subdirectory(widgets)
 add_subdirectory(infer)

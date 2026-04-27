@@ -11,8 +11,6 @@ set(CORE_SOURCES
 set(CORE_HEADERS
     include/dstools/AppInit.h
     include/dstools/Config.h
-    include/dstools/ErrorHandling.h
-    include/dstools/ThreadUtils.h
     include/dstools/Theme.h
 )
 

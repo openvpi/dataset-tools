@@ -1,12 +1,15 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QFileSystemModel>
 #include <QListWidget>
 #include <QMainWindow>
 #include <QSplitter>
+#include <QTreeView>
+#include <QVBoxLayout>
 
 #include "F0Widget.h"
-#include "PlayWidget.h"
+#include <dstools/PlayWidget.h>
 
 #include <QSettings>
 #include <QStyledItemDelegate>
@@ -51,7 +54,7 @@ namespace SlurCutter {
         QString dirname;
         QSet<QString> editedFiles;
 
-        PlayWidget *playerWidget;
+        dstools::widgets::PlayWidget *playerWidget;
         F0Widget *f0Widget;
 
         CustomDelegate *m_delegate;

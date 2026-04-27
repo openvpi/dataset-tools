@@ -9,6 +9,8 @@
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -114,7 +116,7 @@ namespace Minlabel {
         progressLayout->addWidget(progressBar);
 
         // Init widgets
-        playerWidget = new PlayWidget();
+        playerWidget = new dstools::widgets::PlayWidget();
         playerWidget->setObjectName("play-widget");
         playerWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
@@ -207,7 +209,7 @@ namespace Minlabel {
         playerWidget->openFile(filename);
     }
 
-    void MainWindow::saveFile(const QString &filename) {
+    bool MainWindow::saveFile(const QString &filename) {
         const QString txtContent = textWidget->wordsText->text();
         QString labContent = textWidget->contentText->toPlainText();
         QString withoutTone = "";
@@ -224,7 +226,7 @@ namespace Minlabel {
         const QString jsonFilePath = audioToOtherSuffix(filename, "json");
 
         if (labContent.isEmpty() && txtContent.isEmpty() && !QFile::exists(jsonFilePath)) {
-            return;
+            return true;
         }
 
         static QRegularExpression rm_s("\\s+");
@@ -239,25 +241,26 @@ namespace Minlabel {
         if (!writeJsonFile(jsonFilePath, writeData)) {
             QMessageBox::critical(this, QApplication::applicationName(),
                                   QString("Failed to write to file %1").arg(jsonFilePath));
-            return;
+            return false;
         }
 
         const QString labFilePath = audioToOtherSuffix(filename, "lab");
 
         if (labContent.isEmpty() && !QFile::exists(labFilePath)) {
-            return;
+            return true;
         }
 
         QFile labFile(labFilePath);
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::critical(this, QApplication::applicationName(),
                                   QString("Failed to write to file %1").arg(labFilePath));
-            return;
+            return false;
         }
 
         QTextStream labIn(&labFile);
         labIn << labContent;
         labFile.close();
+        return true;
     }
 
     void MainWindow::reloadWindowTitle() {
@@ -439,7 +442,8 @@ namespace Minlabel {
 
     auto MainWindow::exportAudio(const ExportInfo &exportInfo) -> void {
         const int count = jsonCount(dirname);
-        if (const int totalRowCount = static_cast<int>(fsModel->rootDirectory().count()); totalRowCount != count) {
+        if (const int totalRowCount = static_cast<int>(fsModel->rootDirectory().entryList(
+                QStringList{"*.wav", "*.mp3", "*.m4a", "*.flac"}, QDir::Files).count()); totalRowCount != count) {
             const QMessageBox::StandardButton reply =
                 QMessageBox::question(this, QApplication::applicationName(),
                                       QString("%1 file are not labeled, continue?").arg(totalRowCount - count),

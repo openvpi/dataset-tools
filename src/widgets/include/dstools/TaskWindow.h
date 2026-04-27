@@ -2,14 +2,13 @@
 #include <dstools/WidgetsGlobal.h>
 #include <QWidget>
 #include <QStringList>
-
-class QListWidget;
-class QPushButton;
-class QProgressBar;
-class QPlainTextEdit;
-class QVBoxLayout;
-class QHBoxLayout;
-class QThreadPool;
+#include <QListWidget>
+#include <QPushButton>
+#include <QProgressBar>
+#include <QPlainTextEdit>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QThreadPool>
 
 namespace dstools::widgets {
 

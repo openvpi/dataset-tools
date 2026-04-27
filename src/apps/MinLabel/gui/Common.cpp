@@ -64,7 +64,7 @@ namespace Minlabel {
         QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
 
         int count = 0;
-        foreach (const QFileInfo &fileInfo, fileInfoList) {
+        for (const QFileInfo &fileInfo : fileInfoList) {
             if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
                 QFile file(fileInfo.filePath());
                 if (file.open(QIODevice::ReadOnly)) {
@@ -202,7 +202,7 @@ namespace Minlabel {
         QFileInfoList fileInfoList = source.entryInfoList(QDir::Files);
 
         QList<CopyInfo> copyList;
-        foreach (const QFileInfo &fileInfo, fileInfoList) {
+        for (const QFileInfo &fileInfo : fileInfoList) {
             if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
                 const QString audioPath = labFileToAudioFile(fileInfo.absoluteFilePath());
 

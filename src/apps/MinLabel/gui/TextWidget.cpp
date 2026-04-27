@@ -59,8 +59,8 @@ namespace Minlabel {
         canTone->hide();
         optionsLayout->addWidget(canTone);
 
-        covertNum = new QCheckBox("Convert number");
-        optionsLayout->addWidget(covertNum);
+        convertNum = new QCheckBox("Convert number");
+        optionsLayout->addWidget(convertNum);
 
         cleanRes = new QCheckBox("Clean result");
         optionsLayout->addWidget(cleanRes);
@@ -149,9 +149,9 @@ namespace Minlabel {
 
     void TextWidget::_q_onLanguageComboIndexChanged() {
         static QMap<QString, QList<QCheckBox *>> optionMap = {
-            {"pinyin",    {manTone, covertNum, cleanRes} },
+            {"pinyin",    {manTone, convertNum, cleanRes} },
             {"romaji",    {removeSokuon, doubleConsonant}},
-            {"cantonese", {canTone, covertNum, cleanRes} }
+            {"cantonese", {canTone, convertNum, cleanRes} }
         };
 
         const QString selectedLanguage = languageCombo->currentText();

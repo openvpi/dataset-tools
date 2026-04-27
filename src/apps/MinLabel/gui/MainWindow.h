@@ -1,13 +1,15 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QFileSystemModel>
 #include <QMainWindow>
 #include <QProgressBar>
 #include <QSettings>
 #include <QSplitter>
+#include <QTreeView>
 
 #include "Common.h"
-#include "PlayWidget.h"
+#include <dstools/PlayWidget.h>
 #include "TextWidget.h"
 
 namespace Minlabel {
@@ -37,7 +39,7 @@ namespace Minlabel {
         bool playing;
         QString dirname;
 
-        PlayWidget *playerWidget;
+        dstools::widgets::PlayWidget *playerWidget;
         TextWidget *textWidget;
 
         QTreeView *treeView;
@@ -58,7 +60,7 @@ namespace Minlabel {
 
         void openDirectory(const QString &dirName) const;
         void openFile(const QString &filename) const;
-        void saveFile(const QString &filename);
+        bool saveFile(const QString &filename);
         // Returns false on failure but does not exit (BUG-001 fix)
         void labToJson(const QString &dirName);
         void exportAudio(const ExportInfo &exportInfo);

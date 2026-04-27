@@ -9,7 +9,7 @@ namespace LyricFA {
     }
 
     QString ChineseProcessor::clean_text(const QString &text) {
-        const QRegularExpression re("[^\\u4e00-\\u9fa5]");
+        static const QRegularExpression re("[^\\u4e00-\\u9fa5]");
         QString cleaned = text;
         cleaned.remove(re);
         cleaned = cleaned.simplified();

@@ -64,6 +64,11 @@ namespace HFA {
 
     bool HfaModel::forward(const std::vector<std::vector<float>> &input_data, HfaLogits &result,
                            std::string &msg) const {
+        if (!m_model_session) {
+            msg = "Model session not initialized";
+            return false;
+        }
+
         if (input_data.empty()) {
             msg = "输入数据不能为空";
             return false;
