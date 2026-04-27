@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,6 +35,9 @@ namespace Game
         GameModel();
         ~GameModel();
         int get_target_sample_rate() const;
+        float get_timestep() const;
+        bool has_dur2bd() const;
+        const std::map<std::string, int> &get_language_map() const;
 
         bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
                         std::string &msg);
@@ -59,7 +63,8 @@ namespace Game
         std::unique_ptr<Ort::Session> sessEncoder;
         std::unique_ptr<Ort::Session> sessSegmenter;
         std::unique_ptr<Ort::Session> sessEstimator;
-        std::unique_ptr<Ort::Session> sessDur2bd;
+        std::unique_ptr<Ort::Session> sessBd2dur;   // bd2dur.onnx: boundaries → durations
+        std::unique_ptr<Ort::Session> sessDur2bd;   // dur2bd.onnx: durations → boundaries (optional)
 
         Ort::Env env;
         Ort::SessionOptions sessionOptions;
@@ -77,11 +82,13 @@ namespace Game
         float m_timestep = 0.01f;
         int m_language = 0;
         int m_target_sample_rate;
+        bool m_has_languages = false;
+        std::map<std::string, int> m_language_map;
 
         std::tuple<Ort::Value, Ort::Value, Ort::Value> runEncoder(const std::vector<float> &waveform, float duration,
                                                                   int language) const;
 
-        std::vector<uint8_t> runDur2bd(const std::vector<float> &knownDurations,
+        std::vector<uint8_t> runDur2bd(const std::vector<float> &durations,
                                        const std::vector<uint8_t> &maskT) const;
 
         std::vector<uint8_t> runSegmenter(const Ort::Value &xSeg, const std::vector<uint8_t> &knownBoundaries,

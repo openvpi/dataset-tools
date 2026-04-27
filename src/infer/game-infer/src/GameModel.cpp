@@ -139,6 +139,12 @@ namespace Game
 
     int GameModel::get_target_sample_rate() const { return m_target_sample_rate; }
 
+    float GameModel::get_timestep() const { return m_timestep; }
+
+    bool GameModel::has_dur2bd() const { return sessDur2bd != nullptr; }
+
+    const std::map<std::string, int> &GameModel::get_language_map() const { return m_language_map; }
+
     bool GameModel::load_model(const std::filesystem::path &modelPath, const ExecutionProvider provider,
                                const int device_id, std::string &msg) {
         modelDir = modelPath;
@@ -172,9 +178,12 @@ namespace Game
         m_d3pm_ts = generate_d3pm_ts(0.0f, 8); // Default D3PM settings
 
         // Load language if available
-        if (config.contains("languages")) {
-            // Default to 0 (unknown/universal) if no language specified
+        if (config.contains("languages") && !config["languages"].is_null()) {
+            m_has_languages = true;
             m_language = 0;
+            for (auto &[key, value] : config["languages"].items()) {
+                m_language_map[key] = value.get<int>();
+            }
         }
 
         sessionOptions = Ort::SessionOptions();
@@ -233,11 +242,24 @@ namespace Game
         m_seg_radius_seconds = config.value("seg_radius_seconds", 0.02f);
         m_est_threshold = config.value("est_threshold", 0.2f);
 
-        return loadSession("encoder.onnx", sessEncoder) && loadSession("segmenter.onnx", sessSegmenter) &&
-            loadSession("estimator.onnx", sessEstimator) && loadSession("bd2dur.onnx", sessDur2bd);
+        const bool coreLoaded = loadSession("encoder.onnx", sessEncoder) &&
+            loadSession("segmenter.onnx", sessSegmenter) &&
+            loadSession("estimator.onnx", sessEstimator) &&
+            loadSession("bd2dur.onnx", sessBd2dur);
+
+        if (!coreLoaded)
+            return false;
+
+        // dur2bd.onnx is optional (needed for align mode with known durations)
+        const auto dur2bdPath = modelDir / "dur2bd.onnx";
+        if (std::filesystem::exists(dur2bdPath)) {
+            loadSession("dur2bd.onnx", sessDur2bd);
+        }
+
+        return true;
     }
 
-    bool GameModel::is_open() const { return sessDur2bd && sessEncoder && sessEstimator && sessSegmenter; }
+    bool GameModel::is_open() const { return sessBd2dur && sessEncoder && sessEstimator && sessSegmenter; }
 
     void GameModel::terminate() {}
 
@@ -363,29 +385,32 @@ namespace Game
         return std::make_tuple(std::move(outputTensors[0]), std::move(outputTensors[1]), std::move(outputTensors[2]));
     }
 
-    std::vector<uint8_t> GameModel::runDur2bd(const std::vector<float> &knownDurations,
+    std::vector<uint8_t> GameModel::runDur2bd(const std::vector<float> &durations,
                                               const std::vector<uint8_t> &maskT) const {
-        if (knownDurations.empty() || maskT.empty()) {
+        if (!sessDur2bd) {
+            throw std::runtime_error("dur2bd.onnx not loaded. Align mode requires dur2bd.onnx in model directory.");
+        }
+        if (durations.empty() || maskT.empty()) {
             return {};
         }
 
-        const std::array<int64_t, 2> knownDurationsShape = {1, static_cast<int64_t>(knownDurations.size())};
+        const std::array<int64_t, 2> durationsShape = {1, static_cast<int64_t>(durations.size())};
         const std::array<int64_t, 2> maskTShape = {1, static_cast<int64_t>(maskT.size())};
 
         const Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
-        std::vector<float> tempKnownDurations(knownDurations.begin(), knownDurations.end());
-        Ort::Value knownDurationsTensor =
-            Ort::Value::CreateTensor<float>(memoryInfo, tempKnownDurations.data(), knownDurations.size(),
-                                            knownDurationsShape.data(), knownDurationsShape.size());
+        std::vector<float> tempDurations(durations.begin(), durations.end());
+        Ort::Value durationsTensor =
+            Ort::Value::CreateTensor<float>(memoryInfo, tempDurations.data(), durations.size(),
+                                            durationsShape.data(), durationsShape.size());
 
         std::vector<uint8_t> tempMaskT(maskT.begin(), maskT.end());
         Ort::Value maskTTensor = Ort::Value::CreateTensor<bool>(memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()),
                                                                 tempMaskT.size(), maskTShape.data(), maskTShape.size());
 
-        const char *inputNames[] = {"known_durations", "maskT"};
+        const char *inputNames[] = {"durations", "maskT"};
         std::vector<Ort::Value> inputTensors;
-        inputTensors.push_back(std::move(knownDurationsTensor));
+        inputTensors.push_back(std::move(durationsTensor));
         inputTensors.push_back(std::move(maskTTensor));
 
         const char *outputNames[] = {"boundaries"};
@@ -561,8 +586,8 @@ namespace Game
 
         const char *outputNames[] = {"durations", "maskN"};
 
-        const auto outputTensors = sessDur2bd->Run(Ort::RunOptions{nullptr}, inputNames, inputTensors.data(),
-                                                   inputTensors.size(), outputNames, 2);
+        const auto outputTensors = sessBd2dur->Run(Ort::RunOptions{nullptr}, inputNames, inputTensors.data(),
+                                                    inputTensors.size(), outputNames, 2);
 
         const float *durData = outputTensors[0].GetTensorData<float>();
         const size_t durCount = outputTensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
