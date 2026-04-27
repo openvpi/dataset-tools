@@ -8,7 +8,7 @@
 #include <QTreeView>
 
 #include "Common.h"
-#include <dstools/Config.h>
+#include <dstools/AppSettings.h>
 #include <dstools/PlayWidget.h>
 #include "TextWidget.h"
 
@@ -56,7 +56,7 @@ namespace Minlabel {
 
         QString lastFile;
 
-        dstools::Config m_config;
+        dstools::AppSettings m_settings;
 
         void openDirectory(const QString &dirName) const;
         void openFile(const QString &filename) const;

@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "ExportDialog.h"
+#include "../MinLabelKeys.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -58,7 +59,7 @@ namespace Minlabel {
         }
     };
 
-    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_config("MinLabel") {
+    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings("MinLabel") {
         playing = false;
 
         setAcceptDrops(true);
@@ -299,7 +300,7 @@ namespace Minlabel {
                     openDirectory(filename);
 
                     dirname = filename;
-                    m_config.setString("General/LastDir", dirname);
+                    m_settings.set(MinLabelKeys::LastDir, dirname);
                     _q_updateProgress();
                 }
             }
@@ -310,28 +311,27 @@ namespace Minlabel {
     }
 
     void MainWindow::closeEvent(QCloseEvent *event) {
-        m_config.setShortcut("Open", browseAction->shortcut());
-        m_config.setShortcut("Export", exportAction->shortcut());
-        m_config.setString("Navigation/Prev", prevAction->shortcut().toString());
-        m_config.setString("Navigation/Next", nextAction->shortcut().toString());
-        m_config.setString("Playback/Play", playAction->shortcut().toString());
+        m_settings.setShortcut(MinLabelKeys::ShortcutOpen, browseAction->shortcut());
+        m_settings.setShortcut(MinLabelKeys::ShortcutExport, exportAction->shortcut());
+        m_settings.setShortcut(MinLabelKeys::NavigationPrev, prevAction->shortcut());
+        m_settings.setShortcut(MinLabelKeys::NavigationNext, nextAction->shortcut());
+        m_settings.setShortcut(MinLabelKeys::PlaybackPlay, playAction->shortcut());
 
         if (!dirname.isEmpty()) {
-            m_config.setString("General/LastDir", dirname);
+            m_settings.set(MinLabelKeys::LastDir, dirname);
         }
 
-        m_config.sync();
         event->accept();
     }
 
     void MainWindow::applyConfig() {
-        browseAction->setShortcut(m_config.shortcut("Open", QKeySequence("Ctrl+O")));
-        exportAction->setShortcut(m_config.shortcut("Export", QKeySequence("Ctrl+E")));
-        prevAction->setShortcut(QKeySequence(m_config.getString("Navigation/Prev", "PgUp")));
-        nextAction->setShortcut(QKeySequence(m_config.getString("Navigation/Next", "PgDown")));
-        playAction->setShortcut(QKeySequence(m_config.getString("Playback/Play", "F5")));
+        browseAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutOpen));
+        exportAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutExport));
+        prevAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationPrev));
+        nextAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationNext));
+        playAction->setShortcut(m_settings.shortcut(MinLabelKeys::PlaybackPlay));
 
-        if (const QString savedDir = m_config.getString("General/LastDir");
+        if (const QString savedDir = m_settings.get(MinLabelKeys::LastDir);
             !savedDir.isEmpty() && QDir(savedDir).exists()) {
             dirname = savedDir;
             openDirectory(dirname);
@@ -353,7 +353,7 @@ namespace Minlabel {
             openDirectory(path);
 
             dirname = path;
-            m_config.setString("General/LastDir", dirname);
+            m_settings.set(MinLabelKeys::LastDir, dirname);
             _q_updateProgress();
         } else if (action == convertAction) {
             playerWidget->setPlaying(false);
