@@ -48,6 +48,16 @@ namespace Game
                      std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
                      std::string &msg) const;
 
+        /**
+         * Forward pass with known durations for align mode.
+         * known_durations: word durations in seconds, used to inject known boundaries via dur2bd.
+         * Returns durations, presence, scores for the predicted notes.
+         */
+        bool forwardWithKnownDurations(const std::vector<float> &waveform_data,
+                                        const std::vector<float> &known_durations, std::vector<float> &durations,
+                                        std::vector<float> &presence, std::vector<float> &scores,
+                                        std::string &msg) const;
+
         static std::vector<float> generate_d3pm_ts(float t0, int n_steps);
 
         // Parameter setter methods

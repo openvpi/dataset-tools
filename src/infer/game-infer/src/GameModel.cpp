@@ -304,6 +304,47 @@ namespace Game
         }
     }
 
+    bool GameModel::forwardWithKnownDurations(const std::vector<float> &waveform_data,
+                                               const std::vector<float> &known_durations,
+                                               std::vector<float> &durations, std::vector<float> &presence,
+                                               std::vector<float> &scores, std::string &msg) const {
+        try {
+            if (!sessDur2bd) {
+                msg = "dur2bd.onnx not loaded. Align mode requires dur2bd.onnx in model directory.";
+                return false;
+            }
+
+            InferenceInput input;
+            input.waveform = waveform_data;
+            input.duration = static_cast<float>(waveform_data.size()) / static_cast<float>(sampleRate);
+            input.known_durations = known_durations;
+            input.language = m_language;
+
+            int T = static_cast<int>(std::ceil(input.duration / m_timestep));
+            if (T <= 0)
+                T = 1;
+            input.maskT = std::vector<bool>(T, true);
+            input.timestep = m_timestep;
+
+            int seg_radius_frames = static_cast<int>(std::round(m_seg_radius_seconds / m_timestep));
+            if (seg_radius_frames < 1)
+                seg_radius_frames = 1;
+
+            const InferenceOutput output =
+                inferSlice(input, m_seg_threshold, seg_radius_frames, m_est_threshold, m_d3pm_ts);
+
+            durations = output.durations;
+            presence = output.presence;
+            scores = output.scores;
+
+            return true;
+        }
+        catch (const std::exception &e) {
+            msg = "Error during align inference: " + std::string(e.what());
+            return false;
+        }
+    }
+
     std::vector<float> GameModel::generate_d3pm_ts(const float t0, const int n_steps) {
         std::vector<float> ts;
         if (n_steps <= 0)
@@ -768,8 +809,19 @@ namespace Game
         if (knownDurations.empty()) {
             knownDurations.push_back(input.duration);
         }
+
+        // Convert known durations to known boundaries via dur2bd if available and meaningful
         std::vector<uint8_t> knownBoundaries;
-        knownBoundaries.resize(T, 0);
+        if (input.known_durations.size() > 1 && sessDur2bd) {
+            // Align mode: use dur2bd to convert word durations to frame-level boundaries
+            knownBoundaries = runDur2bd(knownDurations, maskTBool);
+            if (knownBoundaries.size() != static_cast<size_t>(T)) {
+                knownBoundaries.resize(T, 0);
+            }
+        } else {
+            // Extract mode: no known boundaries
+            knownBoundaries.resize(T, 0);
+        }
 
         std::vector<uint8_t> boundaries = runSegmenterWithConfig(
             xSegCleanVal, knownBoundaries, knownBoundaries, input.language, maskTVal, segThreshold, segRadius, d3pmTs);
