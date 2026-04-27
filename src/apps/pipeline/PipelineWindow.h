@@ -1,7 +1,7 @@
 #pragma once
 #include <QMainWindow>
 #include <QTabWidget>
-#include <dstools/Config.h>
+#include <dstools/AppSettings.h>
 
 class SlicerPage;
 class LyricFAPage;
@@ -11,7 +11,7 @@ class PipelineWindow : public QMainWindow {
     Q_OBJECT
 public:
     explicit PipelineWindow(QWidget *parent = nullptr);
-    ~PipelineWindow() override;
+    ~PipelineWindow() override = default;
 
 private:
     void setupUI();
@@ -22,5 +22,5 @@ private:
     LyricFAPage *m_lyricFAPage;
     HubertFAPage *m_hubertFAPage;
 
-    dstools::Config m_config;
+    dstools::AppSettings m_settings;
 };

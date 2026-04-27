@@ -1,4 +1,5 @@
 #include "PipelineWindow.h"
+#include "PipelineKeys.h"
 #include "slicer/SlicerPage.h"
 #include "lyricfa/LyricFAPage.h"
 #include "hubertfa/HubertFAPage.h"
@@ -9,26 +10,22 @@
 #include <QStatusBar>
 
 PipelineWindow::PipelineWindow(QWidget *parent)
-    : QMainWindow(parent), m_config("DatasetPipeline") {
+    : QMainWindow(parent), m_settings("DatasetPipeline") {
     setWindowTitle("Dataset Pipeline");
     resize(1200, 800);
     setupUI();
     setupMenuBar();
 
     // Restore last tab
-    int lastTab = m_config.getInt("General/lastTab", 0);
+    int lastTab = m_settings.get(PipelineKeys::LastTab);
     if (lastTab >= 0 && lastTab < m_tabWidget->count())
         m_tabWidget->setCurrentIndex(lastTab);
 
     connect(m_tabWidget, &QTabWidget::currentChanged, this, [this](int index) {
-        m_config.setInt("General/lastTab", index);
+        m_settings.set(PipelineKeys::LastTab, index);
     });
 
     statusBar()->showMessage(tr("Ready"));
-}
-
-PipelineWindow::~PipelineWindow() {
-    m_config.sync();
 }
 
 void PipelineWindow::setupUI() {
