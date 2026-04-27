@@ -40,7 +40,17 @@ namespace HFA {
             return false;
         }
         std::ifstream vocab_stream(vocab_file);
-        json vocab = json::parse(vocab_stream);
+        if (!vocab_stream.is_open()) {
+            error = "cannot open " + vocab_file.string();
+            return false;
+        }
+        json vocab;
+        try {
+            vocab = json::parse(vocab_stream);
+        } catch (const std::exception &e) {
+            error = std::string("failed to parse vocab.json: ") + e.what();
+            return false;
+        }
         const auto dictionaries = vocab["dictionaries"];
         if (dictionaries.is_object()) {
             for (const auto &[key, dict_node] : dictionaries.items()) {
@@ -232,7 +242,13 @@ namespace HFA {
                 fs::path model_path(modelFolder.toStdString());
                 fs::path vocab_file = model_path / "vocab.json";
                 std::ifstream vocab_stream(vocab_file);
-                json vocab = json::parse(vocab_stream);
+                json vocab;
+                try {
+                    vocab = json::parse(vocab_stream);
+                } catch (const std::exception &) {
+                    // vocab already validated in check_configs; skip dynamic UI
+                    vocab = json::object();
+                }
 
                 if (vocab.contains("non_lexical_phonemes")) {
                     auto nonLexicalPh = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();

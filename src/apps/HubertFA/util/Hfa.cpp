@@ -19,45 +19,61 @@ using json = nlohmann::json;
 namespace HFA {
 
     HFA::HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id) {
-        const fs::path config_file = model_folder / "config.json";
-        std::ifstream config_stream(config_file);
-        json config = json::parse(config_stream);
+        try {
+            const fs::path config_file = model_folder / "config.json";
+            std::ifstream config_stream(config_file);
+            if (!config_stream.is_open()) {
+                std::cerr << "HFA: cannot open " << config_file.string() << std::endl;
+                return;
+            }
+            json config = json::parse(config_stream);
 
-        const auto mel_spec_config = config["mel_spec_config"].get<std::map<std::string, float>>();
-        hfa_input_sample_rate = static_cast<int>(mel_spec_config.at("sample_rate"));
+            const auto mel_spec_config = config["mel_spec_config"].get<std::map<std::string, float>>();
+            hfa_input_sample_rate = static_cast<int>(mel_spec_config.at("sample_rate"));
 
-        const fs::path model_path = model_folder / "model.onnx";
-        m_hfa = std::make_unique<HfaModel>(model_path, provider, device_id);
+            const fs::path model_path = model_folder / "model.onnx";
+            m_hfa = std::make_unique<HfaModel>(model_path, provider, device_id);
 
-        const fs::path vocab_file = model_folder / "vocab.json";
-        std::ifstream vocab_stream(vocab_file);
-        json vocab = json::parse(vocab_stream);
-        const auto dictionaries = vocab["dictionaries"];
+            const fs::path vocab_file = model_folder / "vocab.json";
+            std::ifstream vocab_stream(vocab_file);
+            if (!vocab_stream.is_open()) {
+                std::cerr << "HFA: cannot open " << vocab_file.string() << std::endl;
+                m_hfa.reset();
+                return;
+            }
+            json vocab = json::parse(vocab_stream);
+            const auto dictionaries = vocab["dictionaries"];
 
-        for (const auto &[language, dict_node] : dictionaries.items()) {
-            if (!dict_node.is_null()) {
-                auto dict_path_str = dict_node.get<std::string>();
-                fs::path dict_path = model_folder / dict_path_str;
+            for (const auto &[language, dict_node] : dictionaries.items()) {
+                if (!dict_node.is_null()) {
+                    auto dict_path_str = dict_node.get<std::string>();
+                    fs::path dict_path = model_folder / dict_path_str;
 
-                if (!fs::exists(dict_path)) {
-                    std::cerr << dict_path.string() << " does not exist" << std::endl;
-                } else {
-                    m_dictG2p[language] = new DictionaryG2P(dict_path.string(), language);
+                    if (!fs::exists(dict_path)) {
+                        std::cerr << dict_path.string() << " does not exist" << std::endl;
+                    } else {
+                        m_dictG2p[language] = new DictionaryG2P(dict_path.string(), language);
+                    }
                 }
             }
+
+            const auto silent_phonemes = vocab["silent_phonemes"].get<std::vector<std::string>>();
+            m_silent_phonemes = std::unordered_set(silent_phonemes.begin(), silent_phonemes.end());
+
+            const auto vocab_dict = vocab["vocab"].get<std::map<std::string, int>>();
+            auto non_lexical_phonemes = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
+            non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
+            m_alignmentDecoder = new AlignmentDecoder(vocab_dict, mel_spec_config);
+            m_nonLexicalDecoder = new NonLexicalDecoder(non_lexical_phonemes, mel_spec_config);
+        } catch (const std::exception &e) {
+            std::cerr << "HFA: failed to load model from " << model_folder.string()
+                      << ": " << e.what() << std::endl;
+            m_hfa.reset();
+            return;
         }
 
-        const auto silent_phonemes = vocab["silent_phonemes"].get<std::vector<std::string>>();
-        m_silent_phonemes = std::unordered_set(silent_phonemes.begin(), silent_phonemes.end());
-
-        const auto vocab_dict = vocab["vocab"].get<std::map<std::string, int>>();
-        auto non_lexical_phonemes = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
-        non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
-        m_alignmentDecoder = new AlignmentDecoder(vocab_dict, mel_spec_config);
-        m_nonLexicalDecoder = new NonLexicalDecoder(non_lexical_phonemes, mel_spec_config);
-
         if (!m_hfa) {
-            qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";
+            std::cerr << "HFA: cannot load model, check model.onnx and vocab.json" << std::endl;
         }
     }
 

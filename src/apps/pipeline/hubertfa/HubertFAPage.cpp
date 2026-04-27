@@ -169,7 +169,12 @@ void HubertFAPage::slot_loadModel() {
             fs::path mp(modelFolder.toStdString());
             fs::path vocabFile = mp / "vocab.json";
             std::ifstream vocabStream(vocabFile);
-            json vocab = json::parse(vocabStream);
+            json vocab;
+            try {
+                vocab = json::parse(vocabStream);
+            } catch (const std::exception &) {
+                vocab = json::object();
+            }
 
             if (vocab.contains("non_lexical_phonemes")) {
                 auto nps = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
