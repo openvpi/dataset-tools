@@ -54,8 +54,6 @@ namespace SlurCutter {
 
         setAcceptDrops(true);
 
-        initStyleSheet();
-
         // Init menus
         browseAction = new QAction("Open Folder", this);
         browseAction->setShortcut(QKeySequence("Ctrl+O"));
@@ -447,13 +445,6 @@ namespace SlurCutter {
         }
 
         event->accept();
-    }
-
-    void MainWindow::initStyleSheet() {
-        QFile file(":/res/app.qss");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            qApp->setStyleSheet(file.readAll());
-        }
     }
 
     void MainWindow::_q_fileMenuTriggered(const QAction *action) {

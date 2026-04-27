@@ -97,7 +97,6 @@ namespace SlurCutter {
         void closeEvent(QCloseEvent *event) override;
 
     private:
-        static void initStyleSheet();
         void applyConfig();
 
         void _q_fileMenuTriggered(const QAction *action);
