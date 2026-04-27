@@ -14,7 +14,6 @@
 #include <QPluginLoader>
 
 #include <QJsonArray>
-#include <QSettings>
 #include <QStyledItemDelegate>
 
 namespace SlurCutter {
@@ -48,7 +47,7 @@ namespace SlurCutter {
                (suffix != "wav" ? "_" + suffix : "") + ".ds";
     }
 
-    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_config("SlurCutter") {
         notifyTimerId = 0;
         playing = false;
 
@@ -158,15 +157,6 @@ namespace SlurCutter {
         reloadWindowTitle();
         resize(1280, 720);
 
-        QString configDirPath = QApplication::applicationDirPath() + "/config";
-        if (QDir configDir(configDirPath); !configDir.exists()) {
-            if (!configDir.mkpath(".")) {
-                QMessageBox::critical(this, QApplication::applicationName(),
-                                      "Failed to create config directory: " + configDir.absolutePath());
-                return;
-            }
-        }
-
         applyConfig();
     }
 
@@ -178,16 +168,14 @@ namespace SlurCutter {
     }
 
     void MainWindow::applyConfig() {
-        cfg = new QSettings(QApplication::applicationDirPath() + "/config/SlurCutter.ini", QSettings::IniFormat);
+        browseAction->setShortcut(m_config.shortcut("Open", QKeySequence("Ctrl+O")));
+        prevAction->setShortcut(QKeySequence(m_config.getString("Navigation/Prev", "PgUp")));
+        nextAction->setShortcut(QKeySequence(m_config.getString("Navigation/Next", "PgDown")));
+        playAction->setShortcut(QKeySequence(m_config.getString("Playback/Play", "F5")));
 
-        browseAction->setShortcut(QKeySequence(cfg->value("Shortcuts/Open", "Ctrl+O").toString()));
-        prevAction->setShortcut(QKeySequence(cfg->value("Navigation/Prev", "PgUp").toString()));
-        nextAction->setShortcut(QKeySequence(cfg->value("Navigation/Next", "PgDown").toString()));
-        playAction->setShortcut(QKeySequence(cfg->value("Playback/Play", "F5").toString()));
+        f0Widget->loadConfig(&m_config.settings());
 
-        f0Widget->loadConfig(cfg);
-
-        if (const QString savedDir = cfg->value("General/LastDir").toString();
+        if (const QString savedDir = m_config.getString("General/LastDir");
             !savedDir.isEmpty() && QDir(savedDir).exists()) {
             dirname = savedDir;
             openDirectory(dirname);
@@ -422,6 +410,7 @@ namespace SlurCutter {
                 if (QFile::exists(filename)) {
                     ok = true;
                     openDirectory(filename);
+                    m_config.setString("General/LastDir", dirname);
                 }
             }
             if (ok) {
@@ -432,18 +421,18 @@ namespace SlurCutter {
 
     void MainWindow::closeEvent(QCloseEvent *event) {
         // Pull and save config
-        QSettings settings(QApplication::applicationDirPath() + "/config/SlurCutter.ini", QSettings::IniFormat);
-        f0Widget->pullConfig(settings);
+        f0Widget->pullConfig(m_config.settings());
 
-        settings.setValue("Shortcuts/Open", browseAction->shortcut().toString());
-        settings.setValue("Navigation/Prev", prevAction->shortcut().toString());
-        settings.setValue("Navigation/Next", nextAction->shortcut().toString());
-        settings.setValue("Playback/Play", playAction->shortcut().toString());
+        m_config.setShortcut("Open", browseAction->shortcut());
+        m_config.setString("Navigation/Prev", prevAction->shortcut().toString());
+        m_config.setString("Navigation/Next", nextAction->shortcut().toString());
+        m_config.setString("Playback/Play", playAction->shortcut().toString());
 
         if (!dirname.isEmpty()) {
-            settings.setValue("General/LastDir", dirname);
+            m_config.setString("General/LastDir", dirname);
         }
 
+        m_config.sync();
         event->accept();
     }
 
@@ -459,6 +448,7 @@ namespace SlurCutter {
             openDirectory(path);
 
             dirname = path;
+            m_config.setString("General/LastDir", dirname);
         }
         reloadWindowTitle();
     }
