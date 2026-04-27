@@ -6,9 +6,10 @@
 #include <QFrame>
 #include <QMenu>
 #include <QScrollBar>
-#include <QSettings>
 #include <QtWidgets/qactiongroup.h>
 #include <tuple>
+
+namespace dstools { class AppSettings; }
 
 namespace SlurCutter {
     class F0Widget final : public QFrame {
@@ -19,8 +20,8 @@ namespace SlurCutter {
 
         void setDsSentenceContent(const QJsonObject &content);
         void setErrorStatusText(const QString &text);
-        void loadConfig(const QSettings *cfg);
-        void pullConfig(QSettings &cfg) const;
+        void loadConfig(dstools::AppSettings &settings);
+        void pullConfig(dstools::AppSettings &settings) const;
 
         void clear();
 

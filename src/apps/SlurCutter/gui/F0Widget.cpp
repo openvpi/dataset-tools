@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-
+#include "../SlurCutterKeys.h"
 #include "DsSentence.h"
 #include "F0Widget.h"
 
@@ -281,11 +281,11 @@ namespace SlurCutter {
         update();
     }
 
-    void F0Widget::loadConfig(const QSettings *cfg) {
-        snapToKey = cfg->value("F0Widget/snapToKey", snapToKey).toBool();
-        showPitchTextOverlay = cfg->value("F0Widget/showPitchTextOverlay", showPitchTextOverlay).toBool();
-        showPhonemeTexts = cfg->value("F0Widget/showPhonemeTexts", showPhonemeTexts).toBool();
-        showCrosshairAndPitch = cfg->value("F0Widget/showCrosshairAndPitch", showCrosshairAndPitch).toBool();
+    void F0Widget::loadConfig(dstools::AppSettings &settings) {
+        snapToKey = settings.get(SlurCutterKeys::SnapToKey);
+        showPitchTextOverlay = settings.get(SlurCutterKeys::ShowPitchTextOverlay);
+        showPhonemeTexts = settings.get(SlurCutterKeys::ShowPhonemeTexts);
+        showCrosshairAndPitch = settings.get(SlurCutterKeys::ShowCrosshairAndPitch);
 
         bgMenuShowPitchTextOverlay->setChecked(showPitchTextOverlay);
         bgMenuShowPhonemeTexts->setChecked(showPhonemeTexts);
@@ -295,11 +295,11 @@ namespace SlurCutter {
         update();
     }
 
-    void F0Widget::pullConfig(QSettings &cfg) const {
-        cfg.setValue("F0Widget/snapToKey", snapToKey);
-        cfg.setValue("F0Widget/showPitchTextOverlay", showPitchTextOverlay);
-        cfg.setValue("F0Widget/showPhonemeTexts", showPhonemeTexts);
-        cfg.setValue("F0Widget/showCrosshairAndPitch", showCrosshairAndPitch);
+    void F0Widget::pullConfig(dstools::AppSettings &settings) const {
+        settings.set(SlurCutterKeys::SnapToKey, snapToKey);
+        settings.set(SlurCutterKeys::ShowPitchTextOverlay, showPitchTextOverlay);
+        settings.set(SlurCutterKeys::ShowPhonemeTexts, showPhonemeTexts);
+        settings.set(SlurCutterKeys::ShowCrosshairAndPitch, showCrosshairAndPitch);
     }
 
     void F0Widget::clear() {

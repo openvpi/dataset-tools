@@ -1,5 +1,7 @@
 #include "MainWindow.h"
 
+#include "../SlurCutterKeys.h"
+
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
@@ -47,7 +49,7 @@ namespace SlurCutter {
                (suffix != "wav" ? "_" + suffix : "") + ".ds";
     }
 
-    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_config("SlurCutter") {
+    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings("SlurCutter") {
         notifyTimerId = 0;
         playing = false;
 
@@ -168,14 +170,14 @@ namespace SlurCutter {
     }
 
     void MainWindow::applyConfig() {
-        browseAction->setShortcut(m_config.shortcut("Open", QKeySequence("Ctrl+O")));
-        prevAction->setShortcut(QKeySequence(m_config.getString("Navigation/Prev", "PgUp")));
-        nextAction->setShortcut(QKeySequence(m_config.getString("Navigation/Next", "PgDown")));
-        playAction->setShortcut(QKeySequence(m_config.getString("Playback/Play", "F5")));
+        browseAction->setShortcut(m_settings.shortcut(SlurCutterKeys::ShortcutOpen));
+        prevAction->setShortcut(m_settings.shortcut(SlurCutterKeys::NavigationPrev));
+        nextAction->setShortcut(m_settings.shortcut(SlurCutterKeys::NavigationNext));
+        playAction->setShortcut(m_settings.shortcut(SlurCutterKeys::PlaybackPlay));
 
-        f0Widget->loadConfig(&m_config.settings());
+        f0Widget->loadConfig(m_settings);
 
-        if (const QString savedDir = m_config.getString("General/LastDir");
+        if (const QString savedDir = m_settings.get(SlurCutterKeys::LastDir);
             !savedDir.isEmpty() && QDir(savedDir).exists()) {
             dirname = savedDir;
             openDirectory(dirname);
@@ -410,7 +412,7 @@ namespace SlurCutter {
                 if (QFile::exists(filename)) {
                     ok = true;
                     openDirectory(filename);
-                    m_config.setString("General/LastDir", dirname);
+                    m_settings.set(SlurCutterKeys::LastDir, dirname);
                 }
             }
             if (ok) {
@@ -421,18 +423,17 @@ namespace SlurCutter {
 
     void MainWindow::closeEvent(QCloseEvent *event) {
         // Pull and save config
-        f0Widget->pullConfig(m_config.settings());
+        f0Widget->pullConfig(m_settings);
 
-        m_config.setShortcut("Open", browseAction->shortcut());
-        m_config.setString("Navigation/Prev", prevAction->shortcut().toString());
-        m_config.setString("Navigation/Next", nextAction->shortcut().toString());
-        m_config.setString("Playback/Play", playAction->shortcut().toString());
+        m_settings.setShortcut(SlurCutterKeys::ShortcutOpen, browseAction->shortcut());
+        m_settings.setShortcut(SlurCutterKeys::NavigationPrev, prevAction->shortcut());
+        m_settings.setShortcut(SlurCutterKeys::NavigationNext, nextAction->shortcut());
+        m_settings.setShortcut(SlurCutterKeys::PlaybackPlay, playAction->shortcut());
 
         if (!dirname.isEmpty()) {
-            m_config.setString("General/LastDir", dirname);
+            m_settings.set(SlurCutterKeys::LastDir, dirname);
         }
 
-        m_config.sync();
         event->accept();
     }
 
@@ -448,7 +449,7 @@ namespace SlurCutter {
             openDirectory(path);
 
             dirname = path;
-            m_config.setString("General/LastDir", dirname);
+            m_settings.set(SlurCutterKeys::LastDir, dirname);
         }
         reloadWindowTitle();
     }

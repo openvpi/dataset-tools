@@ -9,7 +9,7 @@
 #include <QVBoxLayout>
 
 #include "F0Widget.h"
-#include <dstools/Config.h>
+#include <dstools/AppSettings.h>
 #include <dstools/PlayWidget.h>
 
 #include <QStyledItemDelegate>
@@ -77,7 +77,7 @@ namespace SlurCutter {
         int currentRow = -1;
 
         // Cached application configuration
-        dstools::Config m_config;
+        dstools::AppSettings m_settings;
 
         void openDirectory(const QString &dirname);
         void openFile(const QString &filename);
