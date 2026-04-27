@@ -8,7 +8,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 
-#include <dstools/Config.h>
+#include <dstools/AppSettings.h>
 #include <game-infer/Game.h>
 
 class ConfigWidget;
@@ -19,7 +19,7 @@ class MainWindow : public QMainWindow {
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
+    ~MainWindow() override = default;
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -33,8 +33,7 @@ private:
     ConfigWidget *m_configWidget;
     MainWidget *m_mainWidget;
 
-    QSettings *m_settings;
-    dstools::Config m_config;
+    dstools::AppSettings m_settings;
 
     std::shared_ptr<Game::Game> m_game;
 

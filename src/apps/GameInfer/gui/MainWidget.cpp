@@ -14,12 +14,12 @@
 #include <QMessageBox>
 #include <QProgressBar>
 #include <QPushButton>
-#include <QSettings>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
 #include <fstream>
 #include <iostream>
 
+#include "../GameInferKeys.h"
 #include <dstools/Theme.h>
 
 #include <wolf-midi/MidiFile.h>
@@ -52,7 +52,7 @@ static void makeMidiFile(const std::filesystem::path &midi_path, std::vector<Gam
     midi.save(midi_path);
 }
 
-MainWidget::MainWidget(QSettings *settings, QWidget *parent)
+MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
     : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.01), m_framesPerSecond(1.0 / 0.01) {
     m_game = std::make_shared<Game::Game>();
 
@@ -67,8 +67,7 @@ MainWidget::MainWidget(QSettings *settings, QWidget *parent)
 
     setModelLoadingStatus("Not loaded");
 
-    max_audio_seg_length = m_settings->value("MainWidget/max_audio_seg_length", 60).toInt();
-    m_settings->setValue("MainWidget/max_audio_seg_length", max_audio_seg_length);
+    max_audio_seg_length = m_settings->get(GameInferKeys::MaxAudioSegLength);
 
     // Automatically load config when widget is initialized
     const auto modelPath = std::filesystem::path(m_modelPathEdit->text().toLocal8Bit().toStdString());
@@ -86,7 +85,7 @@ void MainWidget::setupModelGroup() {
     layout->addWidget(new QLabel("Model Path:"), 0, 0);
     m_modelPathEdit = new QLineEdit();
 
-    const QString savedModelPath = m_settings->value("MainWidget/modelPath", "").toString();
+    const QString savedModelPath = m_settings->get(GameInferKeys::ModelPath);
     if (savedModelPath.isEmpty()) {
         m_modelPathEdit->setText(QApplication::applicationDirPath() + "/model/GAME-1.0.3-small-onnx");
     } else {
@@ -190,10 +189,10 @@ void MainWidget::setupProcessingGroup() {
     m_segThresholdSpin->setSingleStep(0.01);
     m_segThresholdSpin->setValue(0.2);
     layout->addWidget(m_segThresholdSpin, 0, 1);
-    m_segThresholdSpin->setValue(m_settings->value("MainWidget/segThreshold", 0.2).toFloat());
+    m_segThresholdSpin->setValue(m_settings->get(GameInferKeys::SegThreshold));
 
     connect(m_segThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
-            [this](const double value) { m_settings->setValue("MainWidget/segThreshold", value); });
+            [this](const double value) { m_settings->set(GameInferKeys::SegThreshold, value); });
 
     // Segmentation radius in frames
     layout->addWidget(new QLabel("分割半径(帧, ms):"), 0, 2);
@@ -202,10 +201,10 @@ void MainWidget::setupProcessingGroup() {
     m_segRadiusFrameSpin->setSingleStep(1);
     m_segRadiusFrameSpin->setValue(2);
     layout->addWidget(m_segRadiusFrameSpin, 0, 3);
-    m_segRadiusFrameSpin->setValue(m_settings->value("MainWidget/segRadiusFrame", 2).toInt());
+    m_segRadiusFrameSpin->setValue(m_settings->get(GameInferKeys::SegRadiusFrame));
 
     connect(m_segRadiusFrameSpin, QOverload<int>::of(&QSpinBox::valueChanged), this,
-            [this](const int value) { m_settings->setValue("MainWidget/segRadiusFrame", value); });
+            [this](const int value) { m_settings->set(GameInferKeys::SegRadiusFrame, value); });
 
     m_segRadiusMsLabel = new QLabel("(ms)");
     layout->addWidget(m_segRadiusMsLabel, 0, 4);
@@ -223,10 +222,10 @@ void MainWidget::setupProcessingGroup() {
     m_estThresholdSpin->setSingleStep(0.01);
     m_estThresholdSpin->setValue(0.2);
     layout->addWidget(m_estThresholdSpin, 1, 1);
-    m_estThresholdSpin->setValue(m_settings->value("MainWidget/estThreshold", 0.2).toFloat());
+    m_estThresholdSpin->setValue(m_settings->get(GameInferKeys::EstThreshold));
 
     connect(m_estThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
-            [this](const double value) { m_settings->setValue("MainWidget/estThreshold", value); });
+            [this](const double value) { m_settings->set(GameInferKeys::EstThreshold, value); });
 
     // D3PM nsteps
     layout->addWidget(new QLabel("采样步数 (--seg-d3pm-nsteps):"), 1, 2);
@@ -239,11 +238,11 @@ void MainWidget::setupProcessingGroup() {
     m_segD3PMNStepsCombo->setCurrentIndex(3);
     layout->addWidget(m_segD3PMNStepsCombo, 1, 3);
 
-    m_segD3PMNStepsCombo->setCurrentIndex(m_settings->value("MainWidget/segD3PMNSteps", 3).toInt());
+    m_segD3PMNStepsCombo->setCurrentIndex(m_settings->get(GameInferKeys::SegD3PMNSteps));
 
     // Connect D3PM parameter to update immediately
     connect(m_segD3PMNStepsCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-            [this](const int value) { m_settings->setValue("MainWidget/segD3PMNSteps", value); });
+            [this](const int value) { m_settings->set(GameInferKeys::SegD3PMNSteps, value); });
 
     // Row 2: Language
     layout->addWidget(new QLabel("语言ID (--language):"), 2, 0);
@@ -274,7 +273,7 @@ void MainWidget::setupAudioGroup() {
     const auto wavPathLayout = new QGridLayout();
     const auto wavPathLabel = new QLabel("Input Audio File:");
     m_wavPathLineEdit = new QLineEdit();
-    m_wavPathLineEdit->setText(m_settings->value("MainWidget/wavPath", "").toString());
+    m_wavPathLineEdit->setText(m_settings->get(GameInferKeys::WavPath));
     m_wavPathButton = new QPushButton("Browse...");
     wavPathLayout->addWidget(wavPathLabel, 0, 0);
     wavPathLayout->addWidget(m_wavPathLineEdit, 0, 1);
@@ -289,7 +288,7 @@ void MainWidget::setupAudioGroup() {
     const auto outputMidiLayout = new QGridLayout();
     const auto outputMidiLabel = new QLabel("Output MIDI File:");
     m_outputMidiLineEdit = new QLineEdit();
-    m_outputMidiLineEdit->setText(m_settings->value("MainWidget/outMidiPath", "").toString());
+    m_outputMidiLineEdit->setText(m_settings->get(GameInferKeys::OutputMidiPath));
     m_outputMidiButton = new QPushButton("Browse...");
     outputMidiLayout->addWidget(outputMidiLabel, 0, 0);
     outputMidiLayout->addWidget(m_outputMidiLineEdit, 0, 1);
@@ -337,7 +336,7 @@ void MainWidget::browseModelPath() {
 
     if (!dir.isEmpty()) {
         m_modelPathEdit->setText(dir);
-        m_settings->setValue("MainWidget/modelPath", dir);
+        m_settings->set(GameInferKeys::ModelPath, dir);
 
         // Auto-load config when model path changes
         loadLanguagesFromConfig(std::filesystem::path(dir.toStdWString()));
@@ -413,7 +412,7 @@ bool MainWidget::loadModel(std::string &message) {
             this,
             [this, modelPath] {
                 setModelLoadingStatus("Model loaded successfully!");
-                m_settings->setValue("MainWidget/modelPath", QString::fromStdWString(modelPath.wstring()));
+                m_settings->set(GameInferKeys::ModelPath, QString::fromStdWString(modelPath.wstring()));
             },
             Qt::QueuedConnection);
     } else {
@@ -536,7 +535,7 @@ void MainWidget::onBrowseWavPath() {
         "Audio Files (*.wav *.flac *.mp3);;WAV Files (*.wav);;FLAC Files (*.flac);;MP3 Files (*.mp3)");
     if (!wavPath.isEmpty()) {
         m_wavPathLineEdit->setText(wavPath);
-        m_settings->setValue("MainWidget/wavPath", wavPath);
+        m_settings->set(GameInferKeys::WavPath, wavPath);
         generateMidiOutputPath(wavPath);
     }
 }
@@ -545,7 +544,7 @@ void MainWidget::onBrowseOutputMidi() {
     if (const QString file = QFileDialog::getSaveFileName(this, "Select Output MIDI File", "", "MIDI Files (*.mid)");
         !file.isEmpty()) {
         m_outputMidiLineEdit->setText(file);
-        m_settings->setValue("MainWidget/outMidiPath", file);
+        m_settings->set(GameInferKeys::OutputMidiPath, file);
     }
 }
 
@@ -565,7 +564,7 @@ void MainWidget::generateMidiOutputPath(const QString &wavPath) const {
     const QString dir = fileInfo.absolutePath();
     const QString midiPath = replaceFileExtension(wavPath, "mid");
     m_outputMidiLineEdit->setText(midiPath);
-    m_settings->setValue("MainWidget/outMidiPath", midiPath);
+    m_settings->set(GameInferKeys::OutputMidiPath, midiPath);
 }
 
 void MainWidget::onExportMidiTask() {

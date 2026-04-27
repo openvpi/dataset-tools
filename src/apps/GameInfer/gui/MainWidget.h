@@ -7,10 +7,10 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QProgressBar>
-#include <QSettings>
 #include <QSpinBox>
 #include <QWidget>
 
+#include <dstools/AppSettings.h>
 #include <game-infer/Game.h>
 #include <nlohmann/json.hpp>
 
@@ -21,7 +21,7 @@ class MainWidget : public QWidget {
     Q_OBJECT
 
 public:
-    explicit MainWidget(QSettings *settings, QWidget *parent = nullptr);
+    explicit MainWidget(dstools::AppSettings *settings, QWidget *parent = nullptr);
 
 private slots:
     void browseModelPath();
@@ -80,7 +80,7 @@ private:
     QPushButton *m_resetParamsBtn;
 
     // Settings
-    QSettings *m_settings;
+    dstools::AppSettings *m_settings;
 
     // Game instance
     std::shared_ptr<Game::Game> m_game = nullptr;
