@@ -334,7 +334,7 @@ namespace Game
         const auto tarSr = m_gameModel->get_target_sample_rate();
         std::string audioMsg;
         auto sfVio = AudioUtil::resample_to_vio(input.wavPath, audioMsg, 1, tarSr);
-        if (!audioMsg.empty() && sfVio.data.data.empty()) {
+        if (!audioMsg.empty() && sfVio.data.byteArray.empty()) {
             msg = "Failed to load audio '" + input.wavPath.string() + "': " + audioMsg;
             return false;
         }

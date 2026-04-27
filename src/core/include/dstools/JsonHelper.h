@@ -31,6 +31,8 @@
 #include <map>
 #include <vector>
 
+#include <QString>
+
 namespace dstools {
 
 class JsonHelper {
@@ -75,6 +77,36 @@ public:
             if (!root.is_object() || !root.contains(key))
                 return defaultValue;
             return root[key].get<T>();
+        } catch (...) {
+            return defaultValue;
+        }
+    }
+
+    // Specialization for QString
+    template <>
+    static QString get(const nlohmann::json &root, const char *path, const QString &defaultValue) {
+        try {
+            const auto *node = resolve(root, path);
+            if (!node) return defaultValue;
+            if (node->is_string()) {
+                return QString::fromStdString(node->get<std::string>());
+            }
+            return defaultValue;
+        } catch (...) {
+            return defaultValue;
+        }
+    }
+
+    template <>
+    static QString get(const nlohmann::json &root, const std::string &key, const QString &defaultValue) {
+        try {
+            if (!root.is_object() || !root.contains(key))
+                return defaultValue;
+            const auto &node = root[key];
+            if (node.is_string()) {
+                return QString::fromStdString(node.get<std::string>());
+            }
+            return defaultValue;
         } catch (...) {
             return defaultValue;
         }

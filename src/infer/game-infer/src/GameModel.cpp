@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 
 #include <nlohmann/json.hpp>
 
@@ -250,6 +251,17 @@ namespace Game
         if (!coreLoaded)
             return false;
 
+        // Cache segmenter input names for later use
+        m_segInputNames.clear();
+        {
+            const size_t numInputs = sessSegmenter->GetInputCount();
+            for (size_t i = 0; i < numInputs; ++i) {
+                Ort::AllocatorWithDefaultOptions alloc;
+                auto namePtr = sessSegmenter->GetInputNameAllocated(i, alloc);
+                m_segInputNames.emplace_back(namePtr.get());
+            }
+        }
+
         // dur2bd.onnx is optional (needed for align mode with known durations)
         const auto dur2bdPath = modelDir / "dur2bd.onnx";
         if (std::filesystem::exists(dur2bdPath)) {
@@ -316,7 +328,8 @@ namespace Game
 
             InferenceInput input;
             input.waveform = waveform_data;
-            input.duration = static_cast<float>(waveform_data.size()) / static_cast<float>(sampleRate);
+            // Match Python: waveform_duration = known_durations.sum(dim=1)
+            input.duration = std::accumulate(known_durations.begin(), known_durations.end(), 0.0f);
             input.known_durations = known_durations;
             input.language = m_language;
 
@@ -542,17 +555,7 @@ namespace Game
             std::vector<const char *> inputNames;
             std::vector<Ort::Value> inputTensors;
 
-            static std::vector<std::string> segInputNames;
-            if (segInputNames.empty()) {
-                size_t numInputs = sessSegmenter->GetInputCount();
-                for (size_t i = 0; i < numInputs; ++i) {
-                    Ort::AllocatorWithDefaultOptions alloc;
-                    auto namePtr = sessSegmenter->GetInputNameAllocated(i, alloc);
-                    segInputNames.emplace_back(namePtr.get());
-                }
-            }
-
-            for (const auto &name : segInputNames) {
+            for (const auto &name : m_segInputNames) {
                 if (name == "x_seg")
                     inputTensors.push_back(std::move(xSegTensor));
                 else if (name == "known_boundaries")

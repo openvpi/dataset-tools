@@ -216,7 +216,10 @@ void PlayWidget::reloadDevices() {
 
 void PlayWidget::reloadButtonStatus() {
     bool playing = isPlaying();
-    m_playBtn->setIcon(playing ? QIcon(":/res/pause.svg") : QIcon(":/res/play.svg"));
+    // Use standard Qt media icons - available in all styles
+    m_playBtn->setIcon(style()->standardIcon(
+        playing ? QStyle::SP_MediaPause : QStyle::SP_MediaPlay));
+    m_stopBtn->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 }
 
 void PlayWidget::reloadSliderStatus() {

@@ -84,6 +84,8 @@ namespace Game
         int sampleRate;
         int embeddingDim;
 
+        std::vector<std::string> m_segInputNames; // Segmenter input names (populated at load time)
+
         float m_seg_threshold = 0.2f;
         float m_seg_radius_seconds = 0.02f;
         float m_est_threshold = 0.2f;
