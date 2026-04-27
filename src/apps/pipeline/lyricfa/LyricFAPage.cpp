@@ -121,6 +121,10 @@ void LyricFAPage::runTask() {
         m_runBtn->setEnabled(true);
         return;
     }
+
+    m_isRunning = true;
+    m_runBtn->setEnabled(false);
+
     m_finishedTasks = 0;
     m_errorTasks = 0;
     m_errorDetails.clear();

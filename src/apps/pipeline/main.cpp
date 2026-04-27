@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <dstools/AppInit.h>
+#include <dstools/FramelessHelper.h>
 #include <dstools/Theme.h>
 #include "PipelineWindow.h"
 
@@ -14,6 +15,7 @@ int main(int argc, char *argv[]) {
     dstools::Theme::instance().init(app);
 
     PipelineWindow window;
+    dstools::FramelessHelper::apply(&window);
     window.show();
     return app.exec();
 }

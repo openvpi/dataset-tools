@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <dstools/AppInit.h>
+#include <dstools/FramelessHelper.h>
 #include <dstools/Theme.h>
 #include "gui/MainWindow.h"
 
@@ -14,6 +15,7 @@ int main(int argc, char *argv[]) {
     dstools::Theme::instance().init(app);
 
     Minlabel::MainWindow w;
+    dstools::FramelessHelper::apply(&w);
     w.show();
     return app.exec();
 }

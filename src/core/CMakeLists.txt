@@ -8,6 +8,7 @@ set(CORE_SOURCES
     src/AppSettings.cpp
     src/JsonHelper.cpp
     src/Theme.cpp
+    src/FramelessHelper.cpp
 )
 
 set(CORE_HEADERS
@@ -15,6 +16,7 @@ set(CORE_HEADERS
     include/dstools/AppSettings.h
     include/dstools/JsonHelper.h
     include/dstools/Theme.h
+    include/dstools/FramelessHelper.h
 )
 
 set(CORE_RESOURCES
@@ -35,6 +37,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 # JSON support for AppSettings
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
+
+# QWindowKit for frameless windows
+find_package(QWindowKit CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PUBLIC QWindowKit::Widgets)
 
 # Optional: qBreakpad support
 find_package(qBreakpad CONFIG QUIET)

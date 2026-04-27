@@ -95,6 +95,9 @@ void SlicerPage::runTask() {
         return;
     }
 
+    m_isRunning = true;
+    m_runBtn->setEnabled(false);
+
     auto slicingMode = static_cast<SlicingMode>(m_cmbSlicingMode->currentData().toInt());
     bool saveAudio = true, saveMarkers = false, loadMarkers = false;
     switch (slicingMode) {
