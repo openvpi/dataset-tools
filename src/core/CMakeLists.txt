@@ -1,6 +1,7 @@
 project(dstools-core)
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 
 set(CORE_SOURCES
     src/AppInit.cpp
@@ -14,7 +15,11 @@ set(CORE_HEADERS
     include/dstools/Theme.h
 )
 
-add_library(${PROJECT_NAME} STATIC ${CORE_SOURCES} ${CORE_HEADERS})
+set(CORE_RESOURCES
+    res/core.qrc
+)
+
+add_library(${PROJECT_NAME} STATIC ${CORE_SOURCES} ${CORE_HEADERS} ${CORE_RESOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

@@ -1,3 +1,4 @@
+#include <QDebug>
 #include <QFile>
 #include <QTextStream>
 #include <dstools/Theme.h>
@@ -47,12 +48,15 @@ void Theme::apply(QApplication &app, Mode mode) {
         s_palette = makeLightPalette();
     }
 
-    // Load QSS from resources if available
-    QString qssPath = (mode == Dark) ? ":/themes/dark.qss" : ":/themes/light.qss";
+    // Load QSS from embedded resources
+    QString qssPath = (mode == Dark) ? QStringLiteral(":/themes/dark.qss")
+                                     : QStringLiteral(":/themes/light.qss");
     QFile qssFile(qssPath);
     if (qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        app.setStyleSheet(qssFile.readAll());
+        app.setStyleSheet(QString::fromUtf8(qssFile.readAll()));
         qssFile.close();
+    } else {
+        qWarning() << "Theme: failed to load QSS from" << qssPath;
     }
 
     // Set application palette for non-QSS styled widgets
