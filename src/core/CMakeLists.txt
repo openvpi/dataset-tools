@@ -6,14 +6,12 @@ set(CMAKE_AUTORCC ON)
 set(CORE_SOURCES
     src/AppInit.cpp
     src/AppSettings.cpp
-    src/Config.cpp
     src/Theme.cpp
 )
 
 set(CORE_HEADERS
     include/dstools/AppInit.h
     include/dstools/AppSettings.h
-    include/dstools/Config.h
     include/dstools/Theme.h
 )
 
