@@ -10,6 +10,7 @@
 ///   w.show();
 /// @endcode
 
+#include <QDialog>
 #include <QMainWindow>
 
 namespace dstools {
@@ -19,6 +20,11 @@ struct FramelessHelper {
     /// containing min/max/close buttons. The title bar respects the current theme.
     /// @param window  The QMainWindow to decorate. Must not be null.
     static void apply(QMainWindow *window);
+
+    /// Make @p dialog frameless using QWindowKit, with a minimal title bar
+    /// containing only a close button. The title bar respects the current theme.
+    /// @param dialog  The QDialog to decorate. Must not be null.
+    static void applyToDialog(QDialog *dialog);
 };
 
 } // namespace dstools

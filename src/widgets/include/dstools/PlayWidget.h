@@ -30,6 +30,9 @@ public:
     bool isPlaying() const;
     void setPlaying(bool playing);
 
+    /// Seek to a specific position in seconds
+    void seek(double sec);
+
     /// Set play range (seconds). After setting, only audio in this range is played.
     void setPlayRange(double startSec, double endSec);
     void clearPlayRange();

@@ -3,10 +3,12 @@
 
 #include <QEvent>
 #include <QHBoxLayout>
+#include <QResizeEvent>
 #include <QLabel>
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QToolButton>
+#include <QDialog>
 
 #include <QWKWidgets/widgetwindowagent.h>
 
@@ -58,14 +60,10 @@ class TitleBar : public QWidget {
 public:
     explicit TitleBar(QMainWindow *window, QWidget *parent = nullptr)
         : QWidget(parent), m_window(window) {
+        // Functional row: [menuBar?] [stretch] [min] [max] [close]
         auto *layout = new QHBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
-
-        // Title label
-        m_titleLabel = new QLabel(this);
-        m_titleLabel->setContentsMargins(10, 0, 0, 0);
-        layout->addWidget(m_titleLabel);
 
         layout->addStretch();
 
@@ -77,6 +75,11 @@ public:
         layout->addWidget(m_minBtn);
         layout->addWidget(m_maxBtn);
         layout->addWidget(m_closeBtn);
+
+        // Centered title label as overlay (spans full width, behind controls)
+        m_titleLabel = new QLabel(this);
+        m_titleLabel->setAlignment(Qt::AlignCenter);
+        m_titleLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 
         connect(m_minBtn, &QToolButton::clicked, window, &QWidget::showMinimized);
         connect(m_maxBtn, &QToolButton::clicked, this, [this]() {
@@ -106,6 +109,13 @@ public:
     TitleBarButton *minimizeButton() const { return m_minBtn; }
     TitleBarButton *maximizeButton() const { return m_maxBtn; }
     TitleBarButton *closeButton() const { return m_closeBtn; }
+
+protected:
+    void resizeEvent(QResizeEvent *event) override {
+        QWidget::resizeEvent(event);
+        // Keep overlay title label sized to full width
+        m_titleLabel->setGeometry(0, 0, width(), height());
+    }
 
 private:
     void applyTheme() {
@@ -178,12 +188,12 @@ void FramelessHelper::apply(QMainWindow *window) {
     // Create title bar
     auto *titleBar = new TitleBar(window);
 
-    // If window has a menu bar, embed it in the title bar
+    // If window has a menu bar, embed it at the far-left of the title bar
     if (auto *menuBar = window->menuBar(); menuBar && !menuBar->actions().isEmpty()) {
         auto *layout = qobject_cast<QHBoxLayout *>(titleBar->layout());
         if (layout) {
-            // Insert after title label (index 1), before stretch
-            layout->insertWidget(1, menuBar);
+            // Insert at index 0 (leftmost position)
+            layout->insertWidget(0, menuBar);
             menuBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
             // Mark menu bar as hit-test visible so clicks go to it
             agent->setHitTestVisible(menuBar, true);
@@ -204,6 +214,88 @@ void FramelessHelper::apply(QMainWindow *window) {
 
     // Track maximize state for button icon
     window->installEventFilter(new WindowStateFilter(window, titleBar));
+}
+
+// ── DialogTitleBar: minimal title bar for QDialog (close only) ──────
+
+class DialogTitleBar : public QWidget {
+    Q_OBJECT
+public:
+    explicit DialogTitleBar(QDialog *dialog, QWidget *parent = nullptr)
+        : QWidget(parent), m_dialog(dialog) {
+        auto *layout = new QHBoxLayout(this);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+
+        m_titleLabel = new QLabel(this);
+        m_titleLabel->setContentsMargins(10, 0, 0, 0);
+        layout->addWidget(m_titleLabel);
+
+        layout->addStretch();
+
+        m_closeBtn = new TitleBarButton(TitleBarButton::Close, this);
+        layout->addWidget(m_closeBtn);
+
+        connect(m_closeBtn, &QToolButton::clicked, dialog, &QDialog::reject);
+
+        setFixedHeight(32);
+        setAutoFillBackground(true);
+        updateTitle();
+        applyTheme();
+
+        connect(&Theme::instance(), &Theme::themeChanged, this, &DialogTitleBar::applyTheme);
+    }
+
+    void updateTitle() {
+        m_titleLabel->setText(m_dialog->windowTitle());
+    }
+
+    TitleBarButton *closeButton() const { return m_closeBtn; }
+
+private:
+    void applyTheme() {
+        const auto &pal = Theme::instance().palette();
+
+        auto widgetPal = palette();
+        widgetPal.setColor(QPalette::Window, pal.bgPrimary);
+        setPalette(widgetPal);
+
+        m_titleLabel->setStyleSheet(QStringLiteral(
+            "QLabel { color: %1; background: transparent; font-size: 12px; }"
+        ).arg(pal.textPrimary.name()));
+
+        m_closeBtn->setStyleSheet(QStringLiteral(
+            "QToolButton { color: %1; background: transparent; border: none; font-size: 13px; }"
+            "QToolButton:hover { background: #E81123; color: white; }"
+        ).arg(pal.textPrimary.name()));
+    }
+
+    QDialog *m_dialog;
+    QLabel *m_titleLabel;
+    TitleBarButton *m_closeBtn;
+};
+
+void FramelessHelper::applyToDialog(QDialog *dialog) {
+    if (!dialog)
+        return;
+
+    dialog->setAttribute(Qt::WA_DontCreateNativeAncestors);
+
+    auto *agent = new QWK::WidgetWindowAgent(dialog);
+    agent->setup(dialog);
+
+    auto *titleBar = new DialogTitleBar(dialog);
+
+    agent->setTitleBar(titleBar);
+    agent->setSystemButton(QWK::WindowAgentBase::Close, titleBar->closeButton());
+
+    // Create a layout with title bar at top; caller adds content below
+    auto *layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(titleBar);
+
+    QObject::connect(dialog, &QWidget::windowTitleChanged, titleBar, &DialogTitleBar::updateTitle);
 }
 
 } // namespace dstools

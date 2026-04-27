@@ -1,5 +1,6 @@
 #include <dstools/ShortcutEditorWidget.h>
 #include <dstools/AppSettings.h>
+#include <dstools/FramelessHelper.h>
 
 #include <QBoxLayout>
 #include <QDialog>
@@ -119,7 +120,10 @@ void ShortcutEditorWidget::showDialog(dstools::AppSettings *settings,
     dlg.setWindowTitle(QObject::tr("Keyboard Shortcuts"));
     dlg.resize(520, 420);
 
-    auto *layout = new QVBoxLayout(&dlg);
+    dstools::FramelessHelper::applyToDialog(&dlg);
+
+    // applyToDialog creates a QVBoxLayout with title bar; add content below
+    auto *layout = qobject_cast<QVBoxLayout *>(dlg.layout());
     auto *widget = new ShortcutEditorWidget(settings, entries, &dlg);
     layout->addWidget(widget);
 

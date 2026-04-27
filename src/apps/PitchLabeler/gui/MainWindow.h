@@ -95,7 +95,19 @@ private:
     QToolButton *m_btnToolSelect = nullptr;
     QToolButton *m_btnToolModulation = nullptr;
     QToolButton *m_btnToolDrift = nullptr;
+    QToolButton *m_btnToolAudition = nullptr;
     QActionGroup *m_toolModeGroup = nullptr;
+
+    // Waveform / volume controls
+    QToolButton *m_btnWaveformToggle = nullptr;
+    QSlider *m_volumeSlider = nullptr;
+    QLabel *m_volumeLabel = nullptr;
+
+    // Playback progress widget above piano roll
+    QWidget *m_playbackProgressWidget = nullptr;
+    QSlider *m_playbackProgressSlider = nullptr;
+    QLabel *m_progressCurrentTime = nullptr;
+    QLabel *m_progressTotalTime = nullptr;
 
     // UI Components - Panels
     QWidget *m_emptyPage = nullptr;

@@ -31,8 +31,8 @@ QMainWindow, QDialog {
 
 /* ---- Menu bar ---- */
 QMenuBar {
-    background-color: #F7F8FA;
-    border-bottom: 1px solid #EBECF0;
+    background-color: transparent;
+    border: none;
 }
 
 QMenuBar::item {

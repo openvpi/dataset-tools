@@ -2,6 +2,8 @@
 
 #include <QApplication>
 
+#include <dstools/AppInit.h>
+#include <dstools/FramelessHelper.h>
 #include <dstools/Theme.h>
 
 int main(int argc, char *argv[]) {
@@ -11,10 +13,12 @@ int main(int argc, char *argv[]) {
     app.setOrganizationName("DiffSinger");
     app.setApplicationVersion("0.1.0");
 
-    // Initialize theme system
+    if (!dstools::AppInit::init(app))
+        return 0;
     dstools::Theme::instance().init(app);
 
     dstools::pitchlabeler::MainWindow window;
+    dstools::FramelessHelper::apply(&window);
     window.show();
 
     return app.exec();

@@ -138,6 +138,16 @@ void PlayWidget::setPlaying(bool playing) {
     reloadButtonStatus();
 }
 
+void PlayWidget::seek(double sec) {
+    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return;
+    auto fmt = m_decoder->format();
+    if (fmt.averageBytesPerSecond() <= 0) return;
+    qint64 pos = static_cast<qint64>(sec * fmt.averageBytesPerSecond());
+    m_decoder->setPosition(pos);
+    reloadFinePlayheadStatus(static_cast<uint64_t>(sec * 1000));
+    reloadSliderStatus();
+}
+
 void PlayWidget::setPlayRange(double startSec, double endSec) {
     m_rangeStart = startSec;
     m_rangeEnd = endSec;
@@ -166,12 +176,22 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
         if (!m_valid || !m_playback) return;
         if (isPlaying()) {
             reloadSliderStatus();
+            double posSec = static_cast<double>(estimatedTimeMs()) / 1000.0;
             if (m_hasRange) {
-                double posSec = static_cast<double>(estimatedTimeMs()) / 1000.0;
                 emit playheadChanged(posSec - m_rangeStart);
                 if (posSec >= m_rangeEnd) {
                     m_playback->stop();
                     reloadButtonStatus();
+                }
+            } else {
+                // Compute position from decoder for accurate non-range playback
+                if (m_decoder && m_decoder->isOpen()) {
+                    auto fmt = m_decoder->format();
+                    if (fmt.averageBytesPerSecond() > 0) {
+                        double decoderSec = static_cast<double>(m_decoder->position()) /
+                                            fmt.averageBytesPerSecond();
+                        emit playheadChanged(decoderSec);
+                    }
                 }
             }
         } else {

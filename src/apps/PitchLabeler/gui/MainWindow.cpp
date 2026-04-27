@@ -20,6 +20,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 
 #include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
@@ -215,36 +216,83 @@ namespace dstools {
             toolbar->setStyleSheet(
                 "QToolBar { background: #2A2A36; border-bottom: 1px solid #33333E; spacing: 4px; padding: 2px 6px; }");
 
-            // ---- Playback controls ----
-            m_actPlayPause = new QAction(QStringLiteral("播放"), this);
+            // ---- Styled tool mode buttons (LEFT side) ----
+            static const QString toolBtnStyle = QStringLiteral(
+                "QToolButton { padding: 4px 12px; border-radius: 3px; font-size: 12px; }"
+                "QToolButton:checked { background-color: #4A90D9; color: white; }"
+                "QToolButton:!checked { background: transparent; color: #9898A8; }");
+
+            m_btnToolSelect = new QToolButton();
+            m_btnToolSelect->setText(QStringLiteral("↑ 选择"));
+            m_btnToolSelect->setToolTip(QStringLiteral("选择工具 (V)"));
+            m_btnToolSelect->setCheckable(true);
+            m_btnToolSelect->setChecked(true);
+            m_btnToolSelect->setStyleSheet(toolBtnStyle);
+            toolbar->addWidget(m_btnToolSelect);
+
+            m_btnToolModulation = new QToolButton();
+            m_btnToolModulation->setText(QStringLiteral("≡ 颤音调制"));
+            m_btnToolModulation->setToolTip(QStringLiteral("颤音调制工具 (M)"));
+            m_btnToolModulation->setCheckable(true);
+            m_btnToolModulation->setStyleSheet(toolBtnStyle);
+            toolbar->addWidget(m_btnToolModulation);
+
+            m_btnToolDrift = new QToolButton();
+            m_btnToolDrift->setText(QStringLiteral("↕ 音高偏移"));
+            m_btnToolDrift->setToolTip(QStringLiteral("音高偏移工具 (D)"));
+            m_btnToolDrift->setCheckable(true);
+            m_btnToolDrift->setStyleSheet(toolBtnStyle);
+            toolbar->addWidget(m_btnToolDrift);
+
+            m_btnToolAudition = new QToolButton();
+            m_btnToolAudition->setText(QStringLiteral("✎ 试听"));
+            m_btnToolAudition->setToolTip(QStringLiteral("试听工具"));
+            m_btnToolAudition->setCheckable(true);
+            m_btnToolAudition->setStyleSheet(toolBtnStyle);
+            toolbar->addWidget(m_btnToolAudition);
+
+            // ---- Spacer to push playback controls to right ----
+            auto *toolbarSpacer = new QWidget();
+            toolbarSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+            toolbar->addWidget(toolbarSpacer);
+
+            // ---- Playback controls (RIGHT side) ----
+            m_actPlayPause = new QAction(QStringLiteral("▶"), this);
             m_actPlayPause->setStatusTip(QStringLiteral("播放/暂停 (Space)"));
             toolbar->addAction(m_actPlayPause);
 
-            m_actStop = new QAction(QStringLiteral("停止"), this);
+            m_actStop = new QAction(QStringLiteral("⏹"), this);
             m_actStop->setStatusTip(QStringLiteral("停止 (Escape)"));
             toolbar->addAction(m_actStop);
 
             toolbar->addSeparator();
 
-            // ---- Tool mode buttons ----
-            m_btnToolSelect = new QToolButton();
-            m_btnToolSelect->setText(QStringLiteral("选择"));
-            m_btnToolSelect->setToolTip(QStringLiteral("选择工具 (V)"));
-            m_btnToolSelect->setCheckable(true);
-            m_btnToolSelect->setChecked(true);
-            toolbar->addWidget(m_btnToolSelect);
+            // ---- Waveform display toggle ----
+            m_btnWaveformToggle = new QToolButton();
+            m_btnWaveformToggle->setText(QStringLiteral("🔊"));
+            m_btnWaveformToggle->setToolTip(QStringLiteral("切换波形显示"));
+            m_btnWaveformToggle->setCheckable(true);
+            m_btnWaveformToggle->setChecked(true);
+            toolbar->addWidget(m_btnWaveformToggle);
 
-            m_btnToolModulation = new QToolButton();
-            m_btnToolModulation->setText(QStringLiteral("颤音调制"));
-            m_btnToolModulation->setToolTip(QStringLiteral("颤音调制工具 (M)"));
-            m_btnToolModulation->setCheckable(true);
-            toolbar->addWidget(m_btnToolModulation);
+            // ---- Volume control ----
+            m_volumeSlider = new QSlider(Qt::Horizontal);
+            m_volumeSlider->setRange(0, 100);
+            m_volumeSlider->setValue(100);
+            m_volumeSlider->setFixedWidth(80);
+            m_volumeSlider->setStyleSheet(
+                "QSlider { margin: 0 4px; }"
+                "QSlider::groove:horizontal { background: #33333E; height: 4px; border-radius: 2px; }"
+                "QSlider::handle:horizontal { background: #4A90D9; width: 10px; margin: -3px 0; border-radius: 5px; }");
+            toolbar->addWidget(m_volumeSlider);
 
-            m_btnToolDrift = new QToolButton();
-            m_btnToolDrift->setText(QStringLiteral("音高偏移"));
-            m_btnToolDrift->setToolTip(QStringLiteral("音高偏移工具 (D)"));
-            m_btnToolDrift->setCheckable(true);
-            toolbar->addWidget(m_btnToolDrift);
+            m_volumeLabel = new QLabel(QStringLiteral("100%"));
+            m_volumeLabel->setStyleSheet("color: #9898A8; font-size: 11px; margin-left: 2px;");
+            toolbar->addWidget(m_volumeLabel);
+
+            connect(m_volumeSlider, &QSlider::valueChanged, this, [this](int value) {
+                m_volumeLabel->setText(QString::number(value) + QStringLiteral("%"));
+            });
 
             // Exclusive tool mode group
             m_toolModeGroup = new QActionGroup(this);
@@ -268,19 +316,37 @@ namespace dstools {
                 setToolMode(ui::ToolDrift);
             });
 
-            toolbar->addSeparator();
-
-            // A/B comparison toggle
-            toolbar->addAction(m_actABCompare);
-
-            toolbar->addSeparator();
-
-            // Zoom controls
-            toolbar->addAction(m_actZoomIn);
-            toolbar->addAction(m_actZoomOut);
-            toolbar->addAction(m_actZoomReset);
-
             contentLayout->addWidget(toolbar);
+
+            // Playback progress widget above piano roll
+            m_playbackProgressWidget = new QWidget();
+            auto *progressLayout = new QHBoxLayout(m_playbackProgressWidget);
+            progressLayout->setContentsMargins(8, 4, 8, 4);
+            progressLayout->setSpacing(8);
+
+            m_progressCurrentTime = new QLabel("00:00.000");
+            m_progressCurrentTime->setStyleSheet("color: #9898A8; font-size: 11px; font-family: Consolas;");
+            m_progressCurrentTime->setMinimumWidth(70);
+            progressLayout->addWidget(m_progressCurrentTime);
+
+            m_playbackProgressSlider = new QSlider(Qt::Horizontal);
+            m_playbackProgressSlider->setRange(0, 10000); // 0-10s in ms by default
+            m_playbackProgressSlider->setValue(0);
+            m_playbackProgressSlider->setFixedHeight(16);
+            m_playbackProgressSlider->setStyleSheet(
+                "QSlider { margin: 0 4px; }"
+                "QSlider::groove:horizontal { background: #33333E; height: 4px; border-radius: 2px; }"
+                "QSlider::handle:horizontal { background: #4A90D9; width: 10px; margin: -3px 0; border-radius: 5px; }"
+                "QSlider::sub-page:horizontal { background: #4A90D9; height: 4px; border-radius: 2px; }"
+            );
+            progressLayout->addWidget(m_playbackProgressSlider, 1);
+
+            m_progressTotalTime = new QLabel("00:00.000");
+            m_progressTotalTime->setStyleSheet("color: #9898A8; font-size: 11px; font-family: Consolas;");
+            m_progressTotalTime->setMinimumWidth(70);
+            progressLayout->addWidget(m_progressTotalTime);
+
+            contentLayout->addWidget(m_playbackProgressWidget);
 
             // Piano roll view (takes remaining space)
             m_pianoRoll = new ui::PianoRollView();
@@ -471,6 +537,15 @@ namespace dstools {
 
             // Playback (widget signals)
             connect(m_playWidget, &dstools::widgets::PlayWidget::playheadChanged, this, &MainWindow::updatePlayheadPosition);
+
+            // Seek when playback progress slider is moved
+            connect(m_playbackProgressSlider, &QSlider::sliderReleased, this, [this]() {
+                if (!m_currentFile || !m_playWidget) return;
+                double sec = m_playbackProgressSlider->value() / 1000.0;
+                m_playWidget->seek(sec);
+                // Also update display immediately
+                updatePlayheadPosition(sec);
+            });
         }
 
         void MainWindow::applyConfig() {
@@ -577,6 +652,17 @@ namespace dstools {
             // Store original F0 for A/B comparison
             m_originalF0 = ds->f0.values;
 
+            // Initialize progress bar
+            if (m_playbackProgressSlider && ds) {
+                double total = ds->getTotalDuration();
+                m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
+                m_playbackProgressSlider->setValue(0);
+                m_progressCurrentTime->setText("00:00.000");
+                int totalMin = static_cast<int>(total) / 60;
+                double totalSec = total - totalMin * 60;
+                m_progressTotalTime->setText(QString("%1:%2").arg(totalMin, 2, 10, QChar('0')).arg(totalSec, 6, 'f', 3, QChar('0')));
+            }
+
             updateWindowTitle();
             updateStatusBar();
 
@@ -665,6 +751,22 @@ namespace dstools {
             double seconds = sec - minutes * 60;
             m_statusPosition->setText(
                 QString("%1:%2").arg(minutes, 2, 10, QChar('0')).arg(seconds, 6, 'f', 3, QChar('0')));
+
+            // Update progress slider and labels
+            if (m_playbackProgressSlider && m_currentFile) {
+                double total = m_currentFile->getTotalDuration();
+                m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
+                m_playbackProgressSlider->setValue(static_cast<int>(sec * 1000));
+
+                // Update time labels
+                auto formatTime = [](double s) -> QString {
+                    int min = static_cast<int>(s) / 60;
+                    double sec = s - min * 60;
+                    return QString("%1:%2").arg(min, 2, 10, QChar('0')).arg(sec, 6, 'f', 3, QChar('0'));
+                };
+                m_progressCurrentTime->setText(formatTime(sec));
+                m_progressTotalTime->setText(formatTime(total));
+            }
         }
 
         void MainWindow::updatePlaybackState() {
@@ -753,7 +855,9 @@ namespace dstools {
         }
 
         void MainWindow::keyPressEvent(QKeyEvent *event) {
-            const QKeySequence pressed(event->modifiers() | event->key());
+            // Strip KeypadModifier so numpad keys match their non-numpad equivalents.
+            const auto mods = event->modifiers() & ~Qt::KeypadModifier;
+            const auto eventKey = event->key();
 
             // Map settings keys to actions
             struct ShortcutAction {
@@ -771,11 +875,17 @@ namespace dstools {
                 {PitchLabelerKeys::NavigationNext, [this]() { onNextFile(); }},
             };
 
+            // Compare raw key + modifiers instead of QKeySequence::operator==,
+            // which is unreliable for digit keys in Qt6.
             for (const auto &[key, action] : shortcuts) {
-                if (pressed == m_settings.shortcut(key)) {
-                    action();
-                    event->accept();
-                    return;
+                const QKeySequence ks = m_settings.shortcut(key);
+                if (!ks.isEmpty()) {
+                    const QKeyCombination combo = ks[0];
+                    if (eventKey == combo.key() && mods == combo.keyboardModifiers()) {
+                        action();
+                        event->accept();
+                        return;
+                    }
                 }
             }
 
