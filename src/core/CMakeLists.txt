@@ -5,12 +5,14 @@ set(CMAKE_AUTORCC ON)
 
 set(CORE_SOURCES
     src/AppInit.cpp
+    src/AppSettings.cpp
     src/Config.cpp
     src/Theme.cpp
 )
 
 set(CORE_HEADERS
     include/dstools/AppInit.h
+    include/dstools/AppSettings.h
     include/dstools/Config.h
     include/dstools/Theme.h
 )
@@ -29,6 +31,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
 )
+
+# JSON support for AppSettings
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
 
 # Optional: qBreakpad support
 find_package(qBreakpad CONFIG QUIET)
