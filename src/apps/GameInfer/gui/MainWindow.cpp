@@ -2,6 +2,7 @@
 #include "MainWidget.h"
 
 #include <QApplication>
+#include <QCloseEvent>
 #include <QDir>
 #include <QMessageBox>
 #include <QStatusBar>
@@ -9,19 +10,24 @@
 #include <iostream>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), m_settings(nullptr), m_statusLabel(nullptr), m_progressBar(nullptr) {
+    : QMainWindow(parent), m_settings(nullptr), m_config("GameInfer"),
+      m_statusLabel(nullptr), m_progressBar(nullptr) {
 
-    setWindowTitle("GameInfer - 音频转MIDI工具");
+    setWindowTitle("GameInfer - \u97f3\u9891\u8f6cMIDI\u5de5\u5177");
     resize(800, 450);
 
-    // Setup settings
-    const QString configDirPath = QApplication::applicationDirPath() + "/config";
-    if (const QDir configDir(configDirPath); !configDir.exists()) {
-        if (!configDir.mkpath(".")) {
-            QMessageBox::critical(this, QApplication::applicationName(),
-                                  "Failed to create config directory: " + configDir.absolutePath());
-            return;
-        }
+    m_settings = &m_config.settings();
+
+    setupCentralWidget();
+    setupStatusBar();
+}
+
+MainWindow::~MainWindow() = default;
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    m_config.sync();
+    event->accept();
+}
     }
 
     m_settings = new QSettings(configDirPath + "/GameInfer.ini", QSettings::IniFormat);

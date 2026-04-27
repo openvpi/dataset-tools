@@ -5,10 +5,10 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QProgressBar>
-#include <QSettings>
 #include <QTabWidget>
 #include <QVBoxLayout>
 
+#include <dstools/Config.h>
 #include <game-infer/Game.h>
 
 class ConfigWidget;
@@ -21,6 +21,9 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+protected:
+    void closeEvent(QCloseEvent *event) override;
+
 private:
     void setupCentralWidget();
     void setupStatusBar();
@@ -31,6 +34,7 @@ private:
     MainWidget *m_mainWidget;
 
     QSettings *m_settings;
+    dstools::Config m_config;
 
     std::shared_ptr<Game::Game> m_game;
 
