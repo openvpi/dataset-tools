@@ -65,7 +65,11 @@ namespace SlurCutter {
                     {QStringLiteral("Play/Stop"), QStringLiteral("Playback"), SlurCutterKeys::PlaybackPlay.path, SlurCutterKeys::PlaybackPlay.defaultValue},
                 };
                 dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
-                applyConfig();
+                // Re-apply shortcuts to QActions
+                browseAction->setShortcut(m_settings.shortcut(SlurCutterKeys::ShortcutOpen));
+                prevAction->setShortcut(m_settings.shortcut(SlurCutterKeys::NavigationPrev));
+                nextAction->setShortcut(m_settings.shortcut(SlurCutterKeys::NavigationNext));
+                playAction->setShortcut(m_settings.shortcut(SlurCutterKeys::PlaybackPlay));
             });
         }
 

@@ -66,6 +66,10 @@ ShortcutEditorWidget::ShortcutEditorWidget(dstools::AppSettings *settings,
                 QVariant v = item->data(0, EntryIndexRole);
                 if (!v.isValid())
                     return; // category node
+
+                // Commit any previously active editor first
+                commitPendingEdit();
+
                 int idx = v.toInt();
 
                 auto *editor = new QKeySequenceEdit(
@@ -73,19 +77,62 @@ ShortcutEditorWidget::ShortcutEditorWidget(dstools::AppSettings *settings,
                 m_tree->setItemWidget(item, ColShortcut, editor);
                 editor->setFocus();
 
+                m_activeEditor = editor;
+                m_activeItem = item;
+                m_activeEntryIndex = idx;
+
                 connect(editor, &QKeySequenceEdit::editingFinished, this,
-                        [this, editor, item, idx]() {
-                            QString seq = editor->keySequence().toString();
-                            m_tree->removeItemWidget(item, ColShortcut);
-                            if (!seq.isEmpty()) {
-                                applyShortcut(idx, seq);
-                            }
-                            item->setText(ColShortcut, currentSequence(idx));
+                        [this]() {
+                            commitPendingEdit();
                         });
             });
 }
 
-ShortcutEditorWidget::~ShortcutEditorWidget() = default;
+void ShortcutEditorWidget::commitPendingEdit() {
+    if (!m_activeEditor)
+        return;
+
+    QString seq = m_activeEditor->keySequence().toString();
+    int idx = m_activeEntryIndex;
+    QTreeWidgetItem *item = m_activeItem;
+
+    // Clear active state before modifying tree (removeItemWidget destroys the editor)
+    m_activeEditor = nullptr;
+    m_activeItem = nullptr;
+    m_activeEntryIndex = -1;
+
+    m_tree->removeItemWidget(item, ColShortcut);
+    if (!seq.isEmpty()) {
+        applyShortcut(idx, seq);
+    }
+    item->setText(ColShortcut, currentSequence(idx));
+}
+
+ShortcutEditorWidget::~ShortcutEditorWidget() {
+    commitPendingEdit();
+}
+
+void ShortcutEditorWidget::showDialog(dstools::AppSettings *settings,
+                                      const std::vector<ShortcutEntry> &entries,
+                                      QWidget *parent) {
+    QDialog dlg(parent);
+    dlg.setWindowTitle(QObject::tr("Keyboard Shortcuts"));
+    dlg.resize(520, 420);
+
+    auto *layout = new QVBoxLayout(&dlg);
+    auto *widget = new ShortcutEditorWidget(settings, entries, &dlg);
+    layout->addWidget(widget);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    layout->addWidget(buttons);
+
+    QObject::connect(buttons, &QDialogButtonBox::accepted, widget, &ShortcutEditorWidget::commitPendingEdit);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, widget, &ShortcutEditorWidget::commitPendingEdit);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    dlg.exec();
+}
 
 void ShortcutEditorWidget::buildTree() {
     m_tree->clear();
@@ -191,26 +238,6 @@ void ShortcutEditorWidget::resetAll() {
         if (m_entryItems[i])
             m_entryItems[i]->setText(ColShortcut, entry.defaultSequence);
     }
-}
-
-void ShortcutEditorWidget::showDialog(dstools::AppSettings *settings,
-                                      const std::vector<ShortcutEntry> &entries,
-                                      QWidget *parent) {
-    QDialog dlg(parent);
-    dlg.setWindowTitle(QObject::tr("Keyboard Shortcuts"));
-    dlg.resize(520, 420);
-
-    auto *layout = new QVBoxLayout(&dlg);
-    auto *widget = new ShortcutEditorWidget(settings, entries, &dlg);
-    layout->addWidget(widget);
-
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-    layout->addWidget(buttons);
-
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-    dlg.exec();
 }
 
 } // namespace dstools::widgets

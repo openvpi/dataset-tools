@@ -66,7 +66,12 @@ namespace Minlabel {
                     {QStringLiteral("Play/Stop"), QStringLiteral("Playback"), MinLabelKeys::PlaybackPlay.path, MinLabelKeys::PlaybackPlay.defaultValue},
                 };
                 dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
-                applyConfig();
+                // Re-apply shortcuts to QActions
+                browseAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutOpen));
+                exportAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutExport));
+                prevAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationPrev));
+                nextAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationNext));
+                playAction->setShortcut(m_settings.shortcut(MinLabelKeys::PlaybackPlay));
             });
         }
 

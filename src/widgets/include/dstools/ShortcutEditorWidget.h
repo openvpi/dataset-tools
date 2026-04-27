@@ -47,6 +47,9 @@ public:
                            const std::vector<ShortcutEntry> &entries,
                            QWidget *parent);
 
+    /// Commit any in-progress shortcut edit (flushes the active QKeySequenceEdit).
+    void commitPendingEdit();
+
 private:
     void buildTree();
     void resetEntry(int entryIndex);
@@ -59,6 +62,11 @@ private:
     std::vector<ShortcutEntry> m_entries;
     QTreeWidget *m_tree;
     QPushButton *m_resetAllBtn;
+
+    // Active inline editor state
+    QKeySequenceEdit *m_activeEditor = nullptr;
+    QTreeWidgetItem *m_activeItem = nullptr;
+    int m_activeEntryIndex = -1;
 
     /// Maps entry index -> the tree widget item displaying it.
     std::vector<QTreeWidgetItem *> m_entryItems;

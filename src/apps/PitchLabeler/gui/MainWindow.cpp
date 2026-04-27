@@ -147,7 +147,17 @@ namespace dstools {
                         {QStringLiteral("A/B Compare"), QStringLiteral("Tools"), PitchLabelerKeys::ShortcutABCompare.path, PitchLabelerKeys::ShortcutABCompare.defaultValue},
                     };
                     dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
-                    applyConfig();
+                    // Re-apply shortcuts to QActions (without full applyConfig side effects)
+                    m_actOpenDir->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutOpen));
+                    m_actSave->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSave));
+                    m_actSaveAll->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSaveAll));
+                    m_actUndo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutUndo));
+                    m_actRedo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutRedo));
+                    m_actZoomIn->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomIn));
+                    m_actZoomOut->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomOut));
+                    m_actZoomReset->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomReset));
+                    m_actABCompare->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutABCompare));
+                    m_actExit->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutExit));
                 });
             }
 
