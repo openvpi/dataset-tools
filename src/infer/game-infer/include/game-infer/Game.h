@@ -4,10 +4,13 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "GameGlobal.h"
+#include "NoteAlignment.h"
+#include "WordParser.h"
 
 namespace Game
 {
@@ -23,6 +26,22 @@ namespace Game
         float onset;    // Onset time in seconds
         float duration; // Duration in seconds
         bool voiced;    // true = voiced note, false = rest/unvoiced
+    };
+
+    /** Input for a single align operation */
+    struct AlignInput {
+        std::filesystem::path wavPath;
+        std::vector<std::string> phSeq;
+        std::vector<float> phDur;
+        std::vector<int> phNum;
+    };
+
+    /** Options controlling align mode behavior */
+    struct AlignOptions {
+        std::set<std::string> uvVocab = {"AP", "SP", "br", "sil"};
+        UvWordCond uvWordCond = UvWordCond::Lead;
+        UvNoteCond uvNoteCond = UvNoteCond::Predict;
+        bool useWordBoundary = true; // false = no word-note alignment (--no-wb)
     };
 
     enum class ExecutionProvider { CPU, CUDA, DML };
@@ -58,6 +77,28 @@ namespace Game
          */
         bool get_notes(const std::filesystem::path &filepath, std::vector<GameNote> &notes, std::string &msg,
                        const std::function<void(int)> &progressChanged, int max_audio_length = 600) const;
+
+        /**
+         * Align a single audio file with phoneme transcription.
+         * Returns aligned notes with slur flags, matching Python infer.py align mode.
+         * Requires dur2bd.onnx to be present in the model directory.
+         */
+        bool align(const AlignInput &input, const AlignOptions &options, std::vector<AlignedNote> &output,
+                   std::string &msg) const;
+
+        /**
+         * Process a DiffSinger transcription CSV file.
+         * Reads the CSV, runs align on each item, writes updated CSV with note_seq/note_dur/note_slur.
+         * @param csvPath Input CSV path
+         * @param savePath Output CSV path (if empty, determined by saveFilename relative to csvPath)
+         * @param saveFilename Output filename (used when savePath is empty)
+         * @param overwrite If true and savePath is empty and saveFilename is empty, overwrite input CSV
+         * @param options Align options
+         * @param progressChanged Progress callback (0-100)
+         */
+        bool alignCSV(const std::filesystem::path &csvPath, const std::filesystem::path &savePath,
+                      const std::string &saveFilename, bool overwrite, const AlignOptions &options, std::string &msg,
+                      const std::function<void(int)> &progressChanged = nullptr) const;
 
         // Methods to update model parameters
         void set_seg_threshold(float threshold) const;

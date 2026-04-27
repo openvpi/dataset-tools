@@ -7,7 +7,9 @@
 
 #include <audio-util/Slicer.h>
 #include <audio-util/Util.h>
+#include <game-infer/DiffSingerParser.h>
 #include <game-infer/GameModel.h>
+#include <game-infer/PitchUtils.h>
 
 namespace Game
 {
@@ -294,6 +296,185 @@ namespace Game
     }
 
     void Game::terminate() const { m_gameModel->terminate(); }
+
+    bool Game::align(const AlignInput &input, const AlignOptions &options, std::vector<AlignedNote> &output,
+                     std::string &msg) const {
+        if (!m_gameModel) {
+            msg = "Model not loaded";
+            return false;
+        }
+        if (!m_gameModel->has_dur2bd()) {
+            msg = "dur2bd.onnx not loaded. Align mode requires dur2bd.onnx in model directory.";
+            return false;
+        }
+
+        // Validate phonemes
+        auto [valid, errMsg] = validatePhones(input.phSeq, input.phDur, input.phNum);
+        if (!valid) {
+            msg = "Invalid phoneme data for '" + input.wavPath.filename().string() + "': " + errMsg;
+            return false;
+        }
+
+        // Parse words with UV merging for align mode
+        std::vector<WordInfo> words;
+        if (options.useWordBoundary) {
+            words = parseWords(input.phSeq, input.phDur, input.phNum, options.uvVocab, options.uvWordCond,
+                               true /* merge consecutive UV for known_durations */);
+        } else {
+            // No word boundary: single word spanning entire duration
+            float totalDur = 0.0f;
+            for (const auto d : input.phDur)
+                totalDur += d;
+            words.push_back(WordInfo{totalDur, true});
+        }
+
+        const auto knownDurations = wordDurations(words);
+
+        // Load audio
+        const auto tarSr = m_gameModel->get_target_sample_rate();
+        std::string audioMsg;
+        auto sfVio = AudioUtil::resample_to_vio(input.wavPath, audioMsg, 1, tarSr);
+        if (!audioMsg.empty() && sfVio.data.data.empty()) {
+            msg = "Failed to load audio '" + input.wavPath.string() + "': " + audioMsg;
+            return false;
+        }
+
+        SndfileHandle sf(sfVio.vio, &sfVio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sfVio.info.channels,
+                         sfVio.info.samplerate);
+        const auto totalSize = sf.frames();
+        std::vector<float> waveform(totalSize);
+        sf.seek(0, SEEK_SET);
+        sf.read(waveform.data(), static_cast<sf_count_t>(waveform.size()));
+
+        // Run inference with known durations
+        std::vector<float> durations, presence, scores;
+        if (!m_gameModel->forwardWithKnownDurations(waveform, knownDurations, durations, presence, scores, msg)) {
+            return false;
+        }
+
+        // Filter valid notes (duration > 0)
+        std::vector<float> validDur, validScores, validPresence;
+        for (size_t i = 0; i < durations.size(); ++i) {
+            if (durations[i] > 0.0f) {
+                validDur.push_back(durations[i]);
+                validScores.push_back(scores[i]);
+                validPresence.push_back(presence[i]);
+            }
+        }
+
+        if (options.useWordBoundary) {
+            // Build note_seq based on uv_note_cond
+            std::vector<std::string> noteSeq;
+            for (size_t i = 0; i < validScores.size(); ++i) {
+                if (options.uvNoteCond == UvNoteCond::Follow) {
+                    // Defer v/uv to alignment; use raw pitch for all
+                    noteSeq.push_back(midiToNoteName(validScores[i], true));
+                } else {
+                    // Predict: use presence to decide rest
+                    if (validPresence[i] > 0.5f) {
+                        noteSeq.push_back(midiToNoteName(validScores[i], true));
+                    } else {
+                        noteSeq.push_back("rest");
+                    }
+                }
+            }
+
+            // Re-parse words without merging for alignment (matching Python behavior)
+            std::vector<WordInfo> alignWords;
+            if (options.uvNoteCond == UvNoteCond::Follow) {
+                alignWords =
+                    parseWords(input.phSeq, input.phDur, input.phNum, options.uvVocab, options.uvWordCond, false);
+            } else {
+                alignWords =
+                    parseWords(input.phSeq, input.phDur, input.phNum, options.uvVocab, options.uvWordCond, false);
+            }
+
+            output = alignNotesToWords(alignWords, noteSeq, validDur, 0.01f,
+                                       options.uvNoteCond == UvNoteCond::Follow);
+        } else {
+            // No alignment: apply presence-based rest directly
+            for (size_t i = 0; i < validScores.size(); ++i) {
+                std::string name;
+                if (validPresence[i] > 0.5f) {
+                    name = midiToNoteName(validScores[i], true);
+                } else {
+                    name = "rest";
+                }
+                output.push_back(AlignedNote{name, validDur[i], 0});
+            }
+        }
+
+        return true;
+    }
+
+    bool Game::alignCSV(const std::filesystem::path &csvPath, const std::filesystem::path &savePath,
+                        const std::string &saveFilename, const bool overwrite, const AlignOptions &options,
+                        std::string &msg, const std::function<void(int)> &progressChanged) const {
+        // Parse CSV
+        std::vector<DiffSingerItem> items;
+        try {
+            items = parseDiffSingerCSV(csvPath);
+        }
+        catch (const std::exception &e) {
+            msg = "Failed to parse CSV: " + std::string(e.what());
+            return false;
+        }
+
+        // Determine output path
+        std::filesystem::path outputPath;
+        if (!savePath.empty()) {
+            outputPath = savePath;
+        } else if (!saveFilename.empty()) {
+            outputPath = csvPath.parent_path() / saveFilename;
+        } else if (overwrite) {
+            outputPath = csvPath;
+        } else {
+            msg = "No output path specified and overwrite is false";
+            return false;
+        }
+
+        // Check existing files if not overwriting
+        if (!overwrite && std::filesystem::exists(outputPath)) {
+            msg = "Output file already exists: " + outputPath.string();
+            return false;
+        }
+
+        // Run align on each item
+        std::vector<std::vector<AlignedNote>> allResults;
+        allResults.reserve(items.size());
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            const auto &item = items[i];
+
+            AlignInput alignInput;
+            alignInput.wavPath = item.wavPath;
+            alignInput.phSeq = item.phSeq;
+            alignInput.phDur = item.phDur;
+            alignInput.phNum = item.phNum;
+
+            std::vector<AlignedNote> result;
+            if (!align(alignInput, options, result, msg)) {
+                msg = "Failed on item '" + item.name + "': " + msg;
+                return false;
+            }
+            allResults.push_back(std::move(result));
+
+            if (progressChanged) {
+                progressChanged(static_cast<int>((i + 1) * 100 / items.size()));
+            }
+        }
+
+        // Write output CSV
+        try {
+            writeDiffSingerCSV(outputPath, items, allResults);
+        }
+        catch (const std::exception &e) {
+            msg = "Failed to write output CSV: " + std::string(e.what());
+            return false;
+        }
+
+        return true;
+    }
 
     // Implementation of parameter setting methods
     void Game::set_seg_threshold(const float threshold) const {
