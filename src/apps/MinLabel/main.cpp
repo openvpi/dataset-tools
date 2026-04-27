@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 
     if (!dstools::AppInit::init(app, /*initPinyin=*/true, /*initCrashHandler=*/true))
         return 0;
-    dstools::Theme::apply(app, dstools::Theme::Dark);
+    dstools::Theme::instance().init(app);
 
     Minlabel::MainWindow w;
     w.show();

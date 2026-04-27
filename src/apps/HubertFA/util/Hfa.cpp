@@ -10,39 +10,43 @@
 #include <vector>
 
 #include <audio-util/Util.h>
-#include <nlohmann/json.hpp>
+#include <dstools/JsonHelper.h>
 
 
 namespace fs = std::filesystem;
-using json = nlohmann::json;
+using dstools::JsonHelper;
 
 namespace HFA {
 
     HFA::HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id) {
         try {
+            std::string jsonErr;
+
             const fs::path config_file = model_folder / "config.json";
-            std::ifstream config_stream(config_file);
-            if (!config_stream.is_open()) {
-                std::cerr << "HFA: cannot open " << config_file.string() << std::endl;
+            auto config = JsonHelper::loadFile(config_file, jsonErr);
+            if (!jsonErr.empty()) {
+                std::cerr << "HFA: " << jsonErr << std::endl;
                 return;
             }
-            json config = json::parse(config_stream);
 
-            const auto mel_spec_config = config["mel_spec_config"].get<std::map<std::string, float>>();
+            std::map<std::string, float> mel_spec_config;
+            if (!JsonHelper::getRequiredMap<std::string, float>(config, "mel_spec_config", mel_spec_config, jsonErr)) {
+                std::cerr << "HFA: " << jsonErr << std::endl;
+                return;
+            }
             hfa_input_sample_rate = static_cast<int>(mel_spec_config.at("sample_rate"));
 
             const fs::path model_path = model_folder / "model.onnx";
             m_hfa = std::make_unique<HfaModel>(model_path, provider, device_id);
 
             const fs::path vocab_file = model_folder / "vocab.json";
-            std::ifstream vocab_stream(vocab_file);
-            if (!vocab_stream.is_open()) {
-                std::cerr << "HFA: cannot open " << vocab_file.string() << std::endl;
+            auto vocab = JsonHelper::loadFile(vocab_file, jsonErr);
+            if (!jsonErr.empty()) {
+                std::cerr << "HFA: " << jsonErr << std::endl;
                 m_hfa.reset();
                 return;
             }
-            json vocab = json::parse(vocab_stream);
-            const auto dictionaries = vocab["dictionaries"];
+            const auto dictionaries = JsonHelper::getObject(vocab, "dictionaries");
 
             for (const auto &[language, dict_node] : dictionaries.items()) {
                 if (!dict_node.is_null()) {
@@ -57,11 +61,26 @@ namespace HFA {
                 }
             }
 
-            const auto silent_phonemes = vocab["silent_phonemes"].get<std::vector<std::string>>();
+            std::vector<std::string> silent_phonemes;
+            if (!JsonHelper::getRequiredVec<std::string>(vocab, "silent_phonemes", silent_phonemes, jsonErr)) {
+                std::cerr << "HFA: " << jsonErr << std::endl;
+                m_hfa.reset();
+                return;
+            }
             m_silent_phonemes = std::unordered_set(silent_phonemes.begin(), silent_phonemes.end());
 
-            const auto vocab_dict = vocab["vocab"].get<std::map<std::string, int>>();
-            auto non_lexical_phonemes = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
+            std::map<std::string, int> vocab_dict;
+            if (!JsonHelper::getRequiredMap<std::string, int>(vocab, "vocab", vocab_dict, jsonErr)) {
+                std::cerr << "HFA: " << jsonErr << std::endl;
+                m_hfa.reset();
+                return;
+            }
+            std::vector<std::string> non_lexical_phonemes;
+            if (!JsonHelper::getRequiredVec<std::string>(vocab, "non_lexical_phonemes", non_lexical_phonemes, jsonErr)) {
+                std::cerr << "HFA: " << jsonErr << std::endl;
+                m_hfa.reset();
+                return;
+            }
             non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
             m_alignmentDecoder = new AlignmentDecoder(vocab_dict, mel_spec_config);
             m_nonLexicalDecoder = new NonLexicalDecoder(non_lexical_phonemes, mel_spec_config);

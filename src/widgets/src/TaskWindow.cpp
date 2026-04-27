@@ -25,9 +25,31 @@ TaskWindow::TaskWindow(QWidget *parent)
     setAcceptDrops(true);
 }
 
+TaskWindow::TaskWindow(LayoutMode mode, QWidget *parent)
+    : QWidget(parent), m_threadPool(new QThreadPool(this)), m_layoutMode(mode) {
+    m_threadPool->setMaxThreadCount(1);
+    setupUI();
+    setAcceptDrops(true);
+}
+
 TaskWindow::~TaskWindow() = default;
 
+void TaskWindow::setLayoutMode(LayoutMode mode) {
+    m_layoutMode = mode;
+}
+
+void TaskWindow::setProgressBarVisible(bool visible) {
+    m_progressBar->setVisible(visible);
+}
+
 void TaskWindow::setupUI() {
+    if (m_layoutMode == PipelineStyle)
+        setupPipelineStyleUI();
+    else
+        setupClassicUI();
+}
+
+void TaskWindow::setupClassicUI() {
     auto *mainLayout = new QHBoxLayout(this);
 
     // Left panel: task list + buttons
@@ -78,6 +100,68 @@ void TaskWindow::setupUI() {
     rightContainer->addWidget(m_runBtn);
 
     mainLayout->addLayout(rightContainer, 2);
+}
+
+void TaskWindow::setupPipelineStyleUI() {
+    auto *mainLayout = new QVBoxLayout(this);
+
+    // Top area: file list (left) + parameters (right) side-by-side
+    auto *topRow = new QHBoxLayout();
+
+    // Left panel: task list + buttons
+    auto *leftPanel = new QVBoxLayout();
+
+    m_taskListWidget = new QListWidget();
+    leftPanel->addWidget(m_taskListWidget);
+
+    auto *listBtns = new QHBoxLayout();
+    auto *addFileBtn = new QPushButton(tr("Add Files"));
+    auto *addFolderBtn = new QPushButton(tr("Add Folder"));
+    auto *removeBtn = new QPushButton(tr("Remove"));
+    auto *clearBtn = new QPushButton(tr("Clear"));
+    listBtns->addWidget(addFileBtn);
+    listBtns->addWidget(addFolderBtn);
+    listBtns->addWidget(removeBtn);
+    listBtns->addWidget(clearBtn);
+    leftPanel->addLayout(listBtns);
+
+    connect(addFileBtn, &QPushButton::clicked, this, &TaskWindow::addFiles);
+    connect(addFolderBtn, &QPushButton::clicked, this, &TaskWindow::addFolder);
+    connect(removeBtn, &QPushButton::clicked, this, &TaskWindow::removeSelected);
+    connect(clearBtn, &QPushButton::clicked, this, &TaskWindow::clearList);
+
+    topRow->addLayout(leftPanel, 1);
+
+    // Right panel: custom widgets + run button
+    auto *rightContainer = new QVBoxLayout();
+
+    m_topLayout = new QHBoxLayout();
+    rightContainer->addLayout(m_topLayout);
+
+    m_rightPanel = new QVBoxLayout();
+    rightContainer->addLayout(m_rightPanel);
+
+    m_runBtn = new QPushButton(tr("Run"));
+    connect(m_runBtn, &QPushButton::clicked, this, &TaskWindow::onRunClicked);
+    rightContainer->addWidget(m_runBtn);
+
+    topRow->addLayout(rightContainer, 2);
+    mainLayout->addLayout(topRow, 1);
+
+    // Bottom area: progress bar + log output (full width)
+    auto *bottomPanel = new QVBoxLayout();
+
+    m_progressBar = new QProgressBar();
+    m_progressBar->setMinimum(0);
+    m_progressBar->setMaximum(100);
+    m_progressBar->setValue(0);
+    bottomPanel->addWidget(m_progressBar);
+
+    m_logOutput = new QPlainTextEdit();
+    m_logOutput->setReadOnly(true);
+    bottomPanel->addWidget(m_logOutput);
+
+    mainLayout->addLayout(bottomPanel, 1);
 }
 
 void TaskWindow::setMaxThreadCount(int count) {

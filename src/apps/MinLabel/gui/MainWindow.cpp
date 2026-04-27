@@ -20,6 +20,8 @@
 #include <QStyledItemDelegate>
 #include <QTreeWidget>
 
+#include <dstools/Theme.h>
+
 namespace Minlabel {
     class CustomDelegate final : public QStyledItemDelegate {
     public:
@@ -105,6 +107,11 @@ namespace Minlabel {
         bar->addMenu(fileMenu);
         bar->addMenu(editMenu);
         bar->addMenu(playMenu);
+
+        auto *viewMenu = new QMenu("View(&V)", this);
+        dstools::Theme::instance().populateThemeMenu(viewMenu);
+        bar->addMenu(viewMenu);
+
         bar->addMenu(helpMenu);
 
         progressLabel = new QLabel("progress:");

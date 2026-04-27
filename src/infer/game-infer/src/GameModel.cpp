@@ -148,8 +148,18 @@ namespace Game
             return false;
         }
         nlohmann::json config;
-        configFile >> config;
+        try {
+            configFile >> config;
+        } catch (const nlohmann::json::parse_error &e) {
+            msg = "Failed to parse config.json: " + std::string(e.what());
+            return false;
+        }
         configFile.close();
+
+        if (!config.is_object()) {
+            msg = "config.json root is not a JSON object";
+            return false;
+        }
 
         // Load parameters from config.json
         timestep = config.value("timestep", 0.01f);

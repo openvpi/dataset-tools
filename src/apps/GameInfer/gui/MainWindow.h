@@ -26,6 +26,7 @@ protected:
 
 private:
     void setupCentralWidget();
+    void setupMenuBar();
     void setupStatusBar();
 
     QHBoxLayout *m_mainLayout;

@@ -9,6 +9,8 @@
 #include <QMessageBox>
 #include <QStatusBar>
 
+#include <dstools/Theme.h>
+
 PipelineWindow::PipelineWindow(QWidget *parent)
     : QMainWindow(parent), m_settings("DatasetPipeline") {
     setWindowTitle("Dataset Pipeline");
@@ -45,6 +47,9 @@ void PipelineWindow::setupUI() {
 void PipelineWindow::setupMenuBar() {
     auto *fileMenu = menuBar()->addMenu(tr("File(&F)"));
     fileMenu->addAction(tr("Quit"), qApp, &QApplication::quit, QKeySequence::Quit);
+
+    auto *viewMenu = menuBar()->addMenu(tr("View(&V)"));
+    dstools::Theme::instance().populateThemeMenu(viewMenu);
 
     auto *helpMenu = menuBar()->addMenu(tr("Help(&H)"));
     helpMenu->addAction(tr("About %1").arg(qApp->applicationName()), this, [this]() {

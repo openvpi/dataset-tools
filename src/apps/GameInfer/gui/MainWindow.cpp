@@ -3,7 +3,10 @@
 
 #include <QApplication>
 #include <QCloseEvent>
+#include <QMenuBar>
 #include <QStatusBar>
+
+#include <dstools/Theme.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_settings("GameInfer"),
@@ -12,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("GameInfer - \u97f3\u9891\u8f6cMIDI\u5de5\u5177");
     resize(800, 450);
 
+    setupMenuBar();
     setupCentralWidget();
     setupStatusBar();
 }
@@ -36,4 +40,9 @@ void MainWindow::setupStatusBar() {
     m_progressBar->setMaximumWidth(200);
 
     statusBar()->addWidget(m_progressBar);
+}
+
+void MainWindow::setupMenuBar() {
+    auto *viewMenu = menuBar()->addMenu(tr("View(&V)"));
+    dstools::Theme::instance().populateThemeMenu(viewMenu);
 }

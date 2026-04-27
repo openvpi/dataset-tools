@@ -14,10 +14,11 @@
 
 #include <cpp-pinyin/Pinyin.h>
 
-LyricFAPage::LyricFAPage(QWidget *parent) : TaskWindow(parent) {
+LyricFAPage::LyricFAPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
     m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
     m_match = new LyricFA::MatchLyric();
     setRunButtonText("Run ASR");
+    setProgressBarVisible(true);
     LyricFAPage::init();
 }
 

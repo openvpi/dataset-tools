@@ -115,6 +115,73 @@ public:
         }
     }
 
+    // ── Required value access (reports errors instead of silent defaults) ──
+
+    /// Get a required value by "/"-separated path. Sets error if missing or wrong type.
+    /// @return true on success, false on failure (value is left unchanged)
+    template <typename T>
+    static bool getRequired(const nlohmann::json &root, const char *path, T &out, std::string &error) {
+        try {
+            const auto *node = resolve(root, path);
+            if (!node) {
+                error = std::string("missing required field: ") + path;
+                return false;
+            }
+            out = node->get<T>();
+            return true;
+        } catch (const nlohmann::json::type_error &e) {
+            error = std::string("type mismatch at ") + path + ": " + e.what();
+            return false;
+        } catch (const std::exception &e) {
+            error = std::string("error reading ") + path + ": " + e.what();
+            return false;
+        }
+    }
+
+    /// Get a required std::vector by "/"-separated path. Sets error if missing or wrong type.
+    template <typename T>
+    static bool getRequiredVec(const nlohmann::json &root, const char *path, std::vector<T> &out,
+                               std::string &error) {
+        const auto *node = resolve(root, path);
+        if (!node) {
+            error = std::string("missing required field: ") + path;
+            return false;
+        }
+        if (!node->is_array()) {
+            error = std::string("expected array at ") + path;
+            return false;
+        }
+        try {
+            out = node->get<std::vector<T>>();
+            return true;
+        } catch (const std::exception &e) {
+            error = std::string("error reading array at ") + path + ": " + e.what();
+            return false;
+        }
+    }
+
+    /// Get a required std::map by "/"-separated path. Sets error if missing or wrong type.
+    template <typename K, typename V>
+    static bool getRequiredMap(const nlohmann::json &root, const char *path, std::map<K, V> &out,
+                               std::string &error) {
+        const auto *node = resolve(root, path);
+        if (!node) {
+            error = std::string("missing required field: ") + path;
+            return false;
+        }
+        if (!node->is_object()) {
+            error = std::string("expected object at ") + path;
+            return false;
+        }
+        try {
+            out = node->get<std::map<K, V>>();
+            return true;
+        } catch (const std::exception &e) {
+            error = std::string("error reading object at ") + path + ": " + e.what();
+            return false;
+        }
+    }
+
     // ── Path utilities ────────────────────────────────────────────────
 
     /// Navigate into nested JSON by "/"-separated path.

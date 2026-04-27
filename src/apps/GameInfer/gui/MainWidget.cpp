@@ -16,10 +16,10 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
-#include <fstream>
 #include <iostream>
 
 #include "../GameInferKeys.h"
+#include <dstools/JsonHelper.h>
 #include <dstools/Theme.h>
 
 #include <wolf-midi/MidiFile.h>
@@ -128,7 +128,7 @@ void MainWidget::setModelLoadingStatus(const QString &status) {
     QMetaObject::invokeMethod(
         this,
         [this, status] {
-            const auto &pal = dstools::Theme::palette();
+            const auto &pal = dstools::Theme::instance().palette();
             QColor color;
             bool bold = false;
             bool italic = false;
@@ -346,39 +346,20 @@ void MainWidget::browseModelPath() {
 
 void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
     const std::filesystem::path configPath = modelPath / "config.json";
-    std::ifstream configFile(configPath);
+    std::string jsonErr;
+    auto config = dstools::JsonHelper::loadFile(configPath, jsonErr);
 
-    if (configFile.is_open()) {
-        try {
-            nlohmann::json config;
-            configFile >> config;
-
-            if (config.contains("timestep")) {
-                if (config["timestep"].is_number_float()) {
-                    m_timeStepSeconds = config["timestep"].get<float>();
-                } else if (config["timestep"].is_string()) {
-                    const auto timestepStr = config["timestep"].get<std::string>();
-                    m_timeStepSeconds = std::stof(timestepStr);
-                }
-
-                if (m_timeStepSeconds > 0) {
-                    m_framesPerSecond = 1.0 / m_timeStepSeconds;
-                } else {
-                    m_timeStepSeconds = 0.01;
-                    m_framesPerSecond = 1.0 / 0.01;
-                }
-            } else {
-                m_timeStepSeconds = 0.01;
-                m_framesPerSecond = 1.0 / 0.01;
-            }
-        } catch (const std::exception &e) {
-            std::cerr << "Error parsing config.json for timestep: " << e.what() << std::endl;
+    if (jsonErr.empty()) {
+        // Use JsonHelper::get with defaults - handles missing keys and type mismatches
+        m_timeStepSeconds = dstools::JsonHelper::get(config, "timestep", 0.01f);
+        if (m_timeStepSeconds > 0) {
+            m_framesPerSecond = 1.0 / m_timeStepSeconds;
+        } else {
             m_timeStepSeconds = 0.01;
             m_framesPerSecond = 1.0 / 0.01;
         }
-
-        configFile.close();
     } else {
+        std::cerr << "Error loading config.json: " << jsonErr << std::endl;
         m_timeStepSeconds = 0.01;
         m_framesPerSecond = 1.0 / 0.01;
     }
@@ -435,27 +416,20 @@ void MainWidget::loadLanguagesFromConfig(const std::filesystem::path &modelPath)
 
     // Try to load languages from config.json
     const std::filesystem::path configPath = modelPath / "config.json";
-    std::ifstream configFile(configPath);
+    std::string jsonErr;
+    auto config = dstools::JsonHelper::loadFile(configPath, jsonErr);
 
-    if (configFile.is_open()) {
-        try {
-            nlohmann::json config;
-            configFile >> config;
-
-            if (config.contains("languages") && config["languages"].is_object()) {
-                for (auto &[key, value] : config["languages"].items()) {
-                    if (value.is_number_integer()) {
-                        int id = value.get<int>();
-                        m_languageIdToName[id] = key;
-                        m_languageNameToId[key] = id;
-                    }
+    if (jsonErr.empty()) {
+        auto languages = dstools::JsonHelper::getObject(config, "languages");
+        if (languages.is_object()) {
+            for (auto &[key, value] : languages.items()) {
+                if (value.is_number_integer()) {
+                    int id = value.get<int>();
+                    m_languageIdToName[id] = key;
+                    m_languageNameToId[key] = id;
                 }
             }
-        } catch (const std::exception &e) {
-            std::cerr << "Error parsing config.json: " << e.what() << std::endl;
         }
-
-        configFile.close();
     }
 
     // Update the language combo box

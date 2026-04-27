@@ -17,7 +17,10 @@ namespace dstools::widgets {
 class DSTOOLS_WIDGETS_API TaskWindow : public QWidget {
     Q_OBJECT
 public:
+    enum LayoutMode { Classic, PipelineStyle };
+
     explicit TaskWindow(QWidget *parent = nullptr);
+    explicit TaskWindow(LayoutMode mode, QWidget *parent = nullptr);
     ~TaskWindow() override;
 
     void setMaxThreadCount(int count);
@@ -41,6 +44,8 @@ protected:
     virtual void runTask() = 0;
     virtual void onTaskFinished() {}
 
+    void setLayoutMode(LayoutMode mode);
+    void setProgressBarVisible(bool visible);
     void addTopWidget(QWidget *widget);
 
     // UI components (accessible by subclasses)
@@ -63,7 +68,10 @@ protected:
 
 private:
     QThreadPool *m_threadPool;
+    LayoutMode m_layoutMode = Classic;
     void setupUI();
+    void setupClassicUI();
+    void setupPipelineStyleUI();
     void updateProgress();
     void onRunClicked();
 };

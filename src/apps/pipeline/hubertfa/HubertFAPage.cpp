@@ -1,7 +1,6 @@
 #include "HubertFAPage.h"
 
 #include <filesystem>
-#include <fstream>
 
 #include <QApplication>
 #include <QDir>
@@ -12,18 +11,18 @@
 #include <QRadioButton>
 #include <QTextCursor>
 
-#include <nlohmann/json.hpp>
+#include <dstools/JsonHelper.h>
 
 // Include original HFA headers directly since they haven't moved to hubert-infer yet
 #include "../../HubertFA/util/Hfa.h"
 #include "../../HubertFA/util/HfaThread.h"
 
 namespace fs = std::filesystem;
-using json = nlohmann::json;
 
-HubertFAPage::HubertFAPage(QWidget *parent) : TaskWindow(parent) {
+HubertFAPage::HubertFAPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
     m_errorFormat.setForeground(Qt::red);
     setRunButtonText("Run Alignment");
+    setProgressBarVisible(true);
     HubertFAPage::init();
     slot_loadModel();
 }
@@ -168,16 +167,12 @@ void HubertFAPage::slot_loadModel() {
 
             fs::path mp(modelFolder.toStdString());
             fs::path vocabFile = mp / "vocab.json";
-            std::ifstream vocabStream(vocabFile);
-            json vocab;
-            try {
-                vocab = json::parse(vocabStream);
-            } catch (const std::exception &) {
-                vocab = json::object();
-            }
+            std::string jsonErr;
+            auto vocab = dstools::JsonHelper::loadFile(vocabFile, jsonErr);
+            if (!jsonErr.empty()) vocab = nlohmann::json::object();
 
-            if (vocab.contains("non_lexical_phonemes")) {
-                auto nps = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
+            {
+                auto nps = dstools::JsonHelper::getVec<std::string>(vocab, "non_lexical_phonemes");
                 if (!nps.empty()) {
                     dynLayout->addWidget(new QLabel("Non-speech phonemes:", m_dynamicContainer));
                     m_nonSpeechPhLayout = new QHBoxLayout();
@@ -188,8 +183,8 @@ void HubertFAPage::slot_loadModel() {
                 }
             }
 
-            if (vocab.contains("dictionaries")) {
-                auto langs = vocab["dictionaries"].get<std::map<std::string, std::string>>();
+            {
+                auto langs = dstools::JsonHelper::getMap<std::string, std::string>(vocab, "dictionaries");
                 if (!langs.empty()) {
                     dynLayout->addWidget(new QLabel("Language:", m_dynamicContainer));
                     m_languageGroup = new QButtonGroup(this);

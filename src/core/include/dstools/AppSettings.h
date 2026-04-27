@@ -44,6 +44,7 @@
 #include <QString>
 #include <QVariant>
 
+#include <dstools/JsonHelper.h>
 #include <nlohmann/json.hpp>
 
 #include <functional>
@@ -130,23 +131,6 @@ namespace detail {
         return fallback;
     }
 
-    /// Navigate into nested JSON by "/"-separated path, returning pointer or nullptr.
-    /// Returns nullptr for empty paths.
-    inline const nlohmann::json *resolve(const nlohmann::json &root, const char *path) {
-        if (!path || path[0] == '\0')
-            return nullptr;
-        const nlohmann::json *node = &root;
-        std::string segment;
-        std::istringstream ss(path);
-        while (std::getline(ss, segment, '/')) {
-            if (segment.empty()) continue;
-            if (!node->is_object() || !node->contains(segment))
-                return nullptr;
-            node = &(*node)[segment];
-        }
-        return node;
-    }
-
     /// Set a value at a "/"-separated path, creating intermediate objects as needed.
     /// Does nothing for empty paths.
     inline void assign(nlohmann::json &root, const char *path, const nlohmann::json &value) {
@@ -195,7 +179,7 @@ public:
     template <typename T>
     T get(const SettingsKey<T> &key) const {
         std::lock_guard lock(m_mutex);
-        if (const auto *node = detail::resolve(m_data, key.path))
+        if (const auto *node = JsonHelper::resolve(m_data, key.path))
             return detail::fromJson<T>(*node, key.defaultValue);
         return key.defaultValue;
     }
@@ -262,7 +246,7 @@ public:
     template <typename T>
     bool contains(const SettingsKey<T> &key) const {
         std::lock_guard lock(m_mutex);
-        return detail::resolve(m_data, key.path) != nullptr;
+        return JsonHelper::resolve(m_data, key.path) != nullptr;
     }
 
     /// Remove a key from storage. Next get() will return the key's default.
@@ -320,7 +304,7 @@ private:
 
     template <typename T>
     T get_unlocked(const SettingsKey<T> &key) const {
-        if (const auto *node = detail::resolve(m_data, key.path))
+        if (const auto *node = JsonHelper::resolve(m_data, key.path))
             return detail::fromJson<T>(*node, key.defaultValue);
         return key.defaultValue;
     }

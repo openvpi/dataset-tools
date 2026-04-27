@@ -18,6 +18,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
+        dstools-core
         audio-util nlohmann_json::nlohmann_json
         onnxruntime
         AsyncTaskWindow::AsyncTaskWindow

@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -13,44 +14,17 @@
 #include "Enumerations.h"
 #include "WorkThread.h"
 
-SlicerPage::SlicerPage(QWidget *parent) : QWidget(parent) {
-    m_threadPool = new QThreadPool(this);
-    m_threadPool->setMaxThreadCount(1);
-    setupUI();
+SlicerPage::SlicerPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
+    setMaxThreadCount(1);
+    setRunButtonText("Start");
+    setProgressBarVisible(true);
+    SlicerPage::init();
 }
 
 SlicerPage::~SlicerPage() = default;
 
-void SlicerPage::setupUI() {
-    auto *mainLayout = new QHBoxLayout(this);
-
-    // Left: file list
-    auto *leftLayout = new QVBoxLayout();
-    m_fileList = new QListWidget();
-    leftLayout->addWidget(m_fileList);
-
-    auto *listBtns = new QHBoxLayout();
-    auto *addBtn = new QPushButton(tr("Add Files"));
-    auto *addFolderBtn = new QPushButton(tr("Add Folder"));
-    auto *removeBtn = new QPushButton(tr("Remove"));
-    auto *clearBtn = new QPushButton(tr("Clear"));
-    listBtns->addWidget(addBtn);
-    listBtns->addWidget(addFolderBtn);
-    listBtns->addWidget(removeBtn);
-    listBtns->addWidget(clearBtn);
-    leftLayout->addLayout(listBtns);
-
-    connect(addBtn, &QPushButton::clicked, this, &SlicerPage::onAddFiles);
-    connect(addFolderBtn, &QPushButton::clicked, this, &SlicerPage::onAddFolder);
-    connect(removeBtn, &QPushButton::clicked, this, &SlicerPage::onRemoveItem);
-    connect(clearBtn, &QPushButton::clicked, this, &SlicerPage::onClearList);
-
-    mainLayout->addLayout(leftLayout, 1);
-
-    // Right: parameters + output
-    auto *rightLayout = new QVBoxLayout();
-
-    auto *paramGroup = new QGroupBox(tr("Parameters"));
+void SlicerPage::init() {
+    auto *paramGroup = new QGroupBox(tr("Parameters"), this);
     auto *paramLayout = new QGridLayout(paramGroup);
 
     paramLayout->addWidget(new QLabel(tr("Threshold:")), 0, 0);
@@ -98,7 +72,7 @@ void SlicerPage::setupUI() {
     m_chkOverwriteMarkers = new QCheckBox(tr("Overwrite Markers"));
     paramLayout->addWidget(m_chkOverwriteMarkers, 8, 0, 1, 2);
 
-    rightLayout->addWidget(paramGroup);
+    m_rightPanel->addWidget(paramGroup);
 
     // Output dir
     auto *outLayout = new QHBoxLayout();
@@ -108,82 +82,18 @@ void SlicerPage::setupUI() {
     auto *browseBtn = new QPushButton(tr("Browse..."));
     connect(browseBtn, &QPushButton::clicked, this, &SlicerPage::onBrowseOutputDir);
     outLayout->addWidget(browseBtn);
-    rightLayout->addLayout(outLayout);
+    m_rightPanel->addLayout(outLayout);
 
-    // Progress + Log + Run
-    m_progressBar = new QProgressBar();
-    rightLayout->addWidget(m_progressBar);
-
-    m_logOutput = new QTextEdit();
-    m_logOutput->setReadOnly(true);
-    rightLayout->addWidget(m_logOutput);
-
-    m_btnRun = new QPushButton(tr("Start"));
-    connect(m_btnRun, &QPushButton::clicked, this, &SlicerPage::onStart);
-    rightLayout->addWidget(m_btnRun);
-
-    mainLayout->addLayout(rightLayout, 2);
-
-    setAcceptDrops(true);
+    m_rightPanel->addStretch();
 }
 
-void SlicerPage::setProcessing(bool processing) {
-    m_processing = processing;
-    m_btnRun->setEnabled(!processing);
-}
-
-void SlicerPage::logMessage(const QString &txt) {
-    m_logOutput->append(txt);
-}
-
-void SlicerPage::addSingleAudioFile(const QString &fullPath) {
-    QFileInfo info(fullPath);
-    if (!info.exists() || info.suffix().toLower() != "wav") return;
-    auto *item = new QListWidgetItem(info.fileName());
-    item->setData(Qt::UserRole + 1, fullPath);
-    m_fileList->addItem(item);
-}
-
-void SlicerPage::onBrowseOutputDir() {
-    QString path = QFileDialog::getExistingDirectory(this, tr("Browse Output Directory"), ".");
-    if (!path.isEmpty()) {
-        m_lineOutputDir->setText(QDir::toNativeSeparators(path));
+void SlicerPage::runTask() {
+    int itemCount = m_taskListWidget->count();
+    if (itemCount == 0) {
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
     }
-}
-
-void SlicerPage::onAddFiles() {
-    if (m_processing) return;
-    QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select Audio Files"), ".", "Wave Files (*.wav)");
-    for (const QString &path : paths) {
-        addSingleAudioFile(path);
-    }
-}
-
-void SlicerPage::onAddFolder() {
-    if (m_processing) return;
-    QString path = QFileDialog::getExistingDirectory(this, tr("Add Folder"), ".");
-    QDir dir(path);
-    if (!dir.exists()) return;
-    for (const QString &name : dir.entryList({"*.wav"}, QDir::Files)) {
-        addSingleAudioFile(path + QDir::separator() + name);
-    }
-}
-
-void SlicerPage::onRemoveItem() {
-    if (m_processing) return;
-    qDeleteAll(m_fileList->selectedItems());
-}
-
-void SlicerPage::onClearList() {
-    if (m_processing) return;
-    m_fileList->clear();
-}
-
-void SlicerPage::onStart() {
-    if (m_processing) return;
-
-    int itemCount = m_fileList->count();
-    if (itemCount == 0) return;
 
     auto slicingMode = static_cast<SlicingMode>(m_cmbSlicingMode->currentData().toInt());
     bool saveAudio = true, saveMarkers = false, loadMarkers = false;
@@ -203,9 +113,8 @@ void SlicerPage::onStart() {
     m_progressBar->setValue(0);
     m_logOutput->clear();
 
-    setProcessing(true);
     for (int i = 0; i < itemCount; i++) {
-        auto *item = m_fileList->item(i);
+        auto *item = m_taskListWidget->item(i);
         auto path = item->data(Qt::UserRole + 1).toString();
         auto *runnable = new WorkThread(
             path, m_lineOutputDir->text(),
@@ -221,8 +130,27 @@ void SlicerPage::onStart() {
         connect(runnable, &WorkThread::oneFailed, this, &SlicerPage::onOneFailed);
         connect(runnable, &WorkThread::oneInfo, this, &SlicerPage::logMessage);
         connect(runnable, &WorkThread::oneError, this, &SlicerPage::logMessage);
-        m_threadPool->start(runnable);
+        threadPool()->start(runnable);
     }
+}
+
+void SlicerPage::onBrowseOutputDir() {
+    QString path = QFileDialog::getExistingDirectory(this, tr("Browse Output Directory"), ".");
+    if (!path.isEmpty()) {
+        m_lineOutputDir->setText(QDir::toNativeSeparators(path));
+    }
+}
+
+void SlicerPage::logMessage(const QString &txt) {
+    m_logOutput->appendPlainText(txt);
+}
+
+void SlicerPage::addSingleAudioFile(const QString &fullPath) {
+    QFileInfo info(fullPath);
+    if (!info.exists() || info.suffix().toLower() != "wav") return;
+    auto *item = new QListWidgetItem(info.fileName());
+    item->setData(Qt::UserRole + 1, fullPath);
+    m_taskListWidget->addItem(item);
 }
 
 void SlicerPage::onOneFinished(const QString &filename, int listIndex) {
@@ -230,7 +158,8 @@ void SlicerPage::onOneFinished(const QString &filename, int listIndex) {
     m_progressBar->setValue(m_workFinished);
     logMessage(QString("%1 finished.").arg(filename));
     if (m_workFinished == m_workTotal) {
-        setProcessing(false);
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
         logMessage(QString("Complete! Total: %1, Success: %2, Failed: %3")
             .arg(m_workTotal).arg(m_workTotal - m_workError).arg(m_workError));
     }
@@ -243,7 +172,8 @@ void SlicerPage::onOneFailed(const QString &errmsg, int listIndex) {
     m_progressBar->setValue(m_workFinished);
     logMessage(QString("[FAILED] %1").arg(errmsg));
     if (m_workFinished == m_workTotal) {
-        setProcessing(false);
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
         logMessage(QString("Complete! Total: %1, Success: %2, Failed: %3")
             .arg(m_workTotal).arg(m_workTotal - m_workError).arg(m_workError));
     }

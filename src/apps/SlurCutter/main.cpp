@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 
     if (!dstools::AppInit::init(app))
         return 0;
-    dstools::Theme::apply(app, dstools::Theme::Dark);
+    dstools::Theme::instance().init(app);
 
     SlurCutter::MainWindow w;
     w.show();

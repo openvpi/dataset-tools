@@ -18,6 +18,8 @@
 #include <QJsonArray>
 #include <QStyledItemDelegate>
 
+#include <dstools/Theme.h>
+
 namespace SlurCutter {
     CustomDelegate::CustomDelegate(const QSet<QString> &editedFiles, QObject *parent)
         : QStyledItemDelegate(parent), m_editedFiles(editedFiles) {
@@ -89,6 +91,11 @@ namespace SlurCutter {
         bar->addMenu(fileMenu);
         bar->addMenu(editMenu);
         bar->addMenu(playMenu);
+
+        auto *viewMenu = new QMenu("View(&V)", this);
+        dstools::Theme::instance().populateThemeMenu(viewMenu);
+        bar->addMenu(viewMenu);
+
         bar->addMenu(helpMenu);
 
         // Init widgets

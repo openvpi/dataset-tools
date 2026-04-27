@@ -1,7 +1,6 @@
 #include "HubertFAWindow.h"
 
 #include <filesystem>
-#include <fstream>
 
 #include <QApplication>
 #include <QFileDialog>
@@ -13,12 +12,11 @@
 #include <QStandardPaths>
 #include <QTextCursor>
 
-#include <nlohmann/json.hpp>
+#include <dstools/JsonHelper.h>
 
 #include "../util/HfaThread.h"
 
 namespace fs = std::filesystem;
-using json = nlohmann::json;
 
 namespace HFA {
 
@@ -39,19 +37,13 @@ namespace HFA {
             error = model_file.string() + " does not exist";
             return false;
         }
-        std::ifstream vocab_stream(vocab_file);
-        if (!vocab_stream.is_open()) {
-            error = "cannot open " + vocab_file.string();
+        std::string jsonErr;
+        auto vocab = dstools::JsonHelper::loadFile(vocab_file, jsonErr);
+        if (!jsonErr.empty()) {
+            error = jsonErr;
             return false;
         }
-        json vocab;
-        try {
-            vocab = json::parse(vocab_stream);
-        } catch (const std::exception &e) {
-            error = std::string("failed to parse vocab.json: ") + e.what();
-            return false;
-        }
-        const auto dictionaries = vocab["dictionaries"];
+        const auto dictionaries = dstools::JsonHelper::getObject(vocab, "dictionaries");
         if (dictionaries.is_object()) {
             for (const auto &[key, dict_node] : dictionaries.items()) {
                 if (!dict_node.is_null()) {
@@ -241,17 +233,15 @@ namespace HFA {
 
                 fs::path model_path(modelFolder.toStdString());
                 fs::path vocab_file = model_path / "vocab.json";
-                std::ifstream vocab_stream(vocab_file);
-                json vocab;
-                try {
-                    vocab = json::parse(vocab_stream);
-                } catch (const std::exception &) {
+                std::string jsonErr;
+                auto vocab = dstools::JsonHelper::loadFile(vocab_file, jsonErr);
+                if (!jsonErr.empty()) {
                     // vocab already validated in check_configs; skip dynamic UI
-                    vocab = json::object();
+                    vocab = nlohmann::json::object();
                 }
 
                 if (vocab.contains("non_lexical_phonemes")) {
-                    auto nonLexicalPh = vocab["non_lexical_phonemes"].get<std::vector<std::string>>();
+                    auto nonLexicalPh = dstools::JsonHelper::getVec<std::string>(vocab, "non_lexical_phonemes");
                     if (!nonLexicalPh.empty()) {
                         auto *phLabel = new QLabel("Non-speech phonemes:", m_dynamicContainer);
                         dynamicLayout->addWidget(phLabel);
@@ -266,7 +256,7 @@ namespace HFA {
                 }
 
                 if (vocab.contains("dictionaries")) {
-                    auto languages = vocab["dictionaries"].get<std::map<std::string, std::string>>();
+                    auto languages = dstools::JsonHelper::getMap<std::string, std::string>(vocab, "dictionaries");
                     if (!languages.empty()) {
                         auto *langLabel = new QLabel("Language:", m_dynamicContainer);
                         dynamicLayout->addWidget(langLabel);

@@ -1,19 +1,15 @@
 #include <dstools/AppSettings.h>
+#include <dstools/JsonHelper.h>
 
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
-#include <QFile>
 #include <QSaveFile>
-
-#include <fstream>
-#include <sstream>
 
 namespace dstools {
 
 AppSettings::AppSettings(const QString &appName, QObject *parent)
     : QObject(parent) {
-    // Build path: <appDir>/config/<appName>.json
     const QString configDir = QCoreApplication::applicationDirPath() + QStringLiteral("/config");
     QDir dir(configDir);
     if (!dir.exists())
@@ -24,41 +20,35 @@ AppSettings::AppSettings(const QString &appName, QObject *parent)
 }
 
 void AppSettings::loadFromDisk() {
-    QFile file(m_filePath);
-    if (!file.exists()) {
+    namespace fs = std::filesystem;
+    const fs::path path = m_filePath.toStdWString();
+    if (!fs::exists(path)) {
         m_data = nlohmann::json::object();
         return;
     }
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "AppSettings: cannot open" << m_filePath << "for reading";
-        m_data = nlohmann::json::object();
-        return;
-    }
-    const QByteArray bytes = file.readAll();
-    file.close();
 
-    try {
-        m_data = nlohmann::json::parse(bytes.constData(), bytes.constData() + bytes.size());
-        if (!m_data.is_object()) {
-            qWarning() << "AppSettings: root is not a JSON object in" << m_filePath;
-            m_data = nlohmann::json::object();
-        }
-    } catch (const nlohmann::json::parse_error &e) {
-        qWarning() << "AppSettings: parse error in" << m_filePath << ":" << e.what();
+    std::string error;
+    m_data = JsonHelper::loadFile(path, error);
+    if (!error.empty()) {
+        qWarning() << "AppSettings:" << QString::fromStdString(error);
+        m_data = nlohmann::json::object();
+    }
+    // loadFile may return an array (valid JSON but not our format)
+    if (!m_data.is_object()) {
+        qWarning() << "AppSettings: root is not a JSON object in" << m_filePath;
         m_data = nlohmann::json::object();
     }
 }
 
 void AppSettings::saveToDisk() {
-    // Use QSaveFile for atomic writes (write to temp, then rename).
-    // This prevents data loss if the app crashes mid-write.
+    // Use QSaveFile for Qt-native atomic writes (preferred in Qt context)
     QSaveFile file(m_filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qWarning() << "AppSettings: cannot open" << m_filePath << "for writing";
         return;
     }
 
-    const std::string content = m_data.dump(4);  // pretty-print with 4-space indent
+    const std::string content = m_data.dump(4);
     file.write(content.c_str(), static_cast<qint64>(content.size()));
     file.write("\n", 1);
 
