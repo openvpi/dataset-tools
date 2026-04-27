@@ -67,77 +67,106 @@ void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
 }
 ```
 
-### 1.2 Config
+### 1.2 AppSettings（原 Config，已重新设计）
+
+> **设计偏离**：原始设计为 `dstools::Config`（QSettings/INI 封装），实际实现已演进为
+> `dstools::AppSettings`（类型安全、响应式、JSON 后端）。详见 `STATUS.md` 偏离说明。
 
 ```cpp
-// src/core/include/dstools/Config.h
+// src/core/include/dstools/AppSettings.h
 #pragma once
-#include <QSettings>
-#include <QKeySequence>
+#include <QObject>
 #include <QString>
+#include <QKeySequence>
+#include <nlohmann/json.hpp>
+#include <functional>
+#include <mutex>
 
 namespace dstools {
 
-/// 统一配置封装。基于 QSettings INI 格式。
-/// 配置文件位于 <app_dir>/config/<appName>.ini
-class Config {
+/// 类型化配置 key，带编译期默认值。
+/// path 使用 '/' 分隔映射到嵌套 JSON 对象。
+template <typename T>
+struct SettingsKey {
+    const char *path;
+    T defaultValue;
+    SettingsKey(const char *path, T defaultValue);
+};
+
+/// 持久化、响应式配置存储，基于单个 JSON 文件。
+/// 线程安全，即时原子写入 (QSaveFile)。
+class AppSettings : public QObject {
+    Q_OBJECT
 public:
-    /// @param appName 配置文件名（不含扩展名），如 "DatasetTools"
-    explicit Config(const QString &appName);
+    explicit AppSettings(const QString &appName, QObject *parent = nullptr);
 
-    // 基本读写
-    QString   getString(const QString &key, const QString &defaultValue = {}) const;
-    void      setString(const QString &key, const QString &value);
-    int       getInt(const QString &key, int defaultValue = 0) const;
-    void      setInt(const QString &key, int value);
-    double    getDouble(const QString &key, double defaultValue = 0.0) const;
-    void      setDouble(const QString &key, double value);
-    bool      getBool(const QString &key, bool defaultValue = false) const;
-    void      setBool(const QString &key, bool value);
+    // 类型安全读写
+    template <typename T> T get(const SettingsKey<T> &key) const;
+    template <typename T> void set(const SettingsKey<T> &key, const T &value);
 
-    // 快捷键
-    QKeySequence shortcut(const QString &action, const QKeySequence &defaultSeq) const;
-    void         setShortcut(const QString &action, const QKeySequence &seq);
+    // 响应式观察（可选 QObject* context 自动断连）
+    template <typename T>
+    int observe(const SettingsKey<T> &key, std::function<void(const T &)> cb,
+                QObject *context = nullptr);
+    void removeObserver(int id);
 
-    // 组操作
-    void beginGroup(const QString &group);
-    void endGroup();
+    // 快捷键便利方法
+    QKeySequence shortcut(const SettingsKey<QString> &key) const;
+    void setShortcut(const SettingsKey<QString> &key, const QKeySequence &seq);
 
-    // 同步到磁盘
-    void sync();
+    // 杂项
+    template <typename T> bool contains(const SettingsKey<T> &key) const;
+    template <typename T> void remove(const SettingsKey<T> &key);
+    void reload();
+    void flush();
+    QString filePath() const;
 
-    // 底层访问（向后兼容）
-    QSettings &settings();
-
-private:
-    QSettings m_settings;
+signals:
+    void keyChanged(const QString &keyPath);
 };
 
 } // namespace dstools
+```
+
+**Schema 定义示例**（每个 app 一个头文件）：
+
+```cpp
+// src/apps/MinLabel/MinLabelKeys.h
+#pragma once
+#include <dstools/AppSettings.h>
+
+namespace MinLabelKeys {
+    inline const dstools::SettingsKey<QString> LastDir("General/lastDir", "");
+    inline const dstools::SettingsKey<QString> ShortcutOpen("Shortcuts/open", "Ctrl+O");
+    inline const dstools::SettingsKey<QString> ShortcutExport("Shortcuts/export", "Ctrl+E");
+    inline const dstools::SettingsKey<QString> NavigationPrev("Shortcuts/prevFile", "PgUp");
+    inline const dstools::SettingsKey<QString> NavigationNext("Shortcuts/nextFile", "PgDown");
+    inline const dstools::SettingsKey<QString> PlaybackPlay("Shortcuts/play", "F5");
+}
 ```
 
 **与原代码的映射**：
 
 | 原代码 | 新代码 |
 |--------|--------|
-| `QSettings settings(appDir + "/config/MinLabel.ini", QSettings::IniFormat)` | `Config cfg("MinLabel");` |
-| `settings.value("Shortcuts/Open", "Ctrl+O").toString()` | `cfg.shortcut("Open", QKeySequence("Ctrl+O"))` |
-| `settings.setValue("General/LastDir", dir)` | `cfg.setString("General/LastDir", dir)` |
+| `QSettings settings(appDir + "/config/MinLabel.ini", ...)` | `AppSettings settings("MinLabel");` |
+| `settings.value("Shortcuts/Open", "Ctrl+O").toString()` | `settings.shortcut(MinLabelKeys::ShortcutOpen)` |
+| `settings.setValue("General/LastDir", dir)` | `settings.set(MinLabelKeys::LastDir, dir)` |
 
-每个 EXE 使用独立的 INI 文件（保持与原格式兼容，已有用户配置不丢失）：
+每个 EXE 使用独立的 JSON 文件：
 
 ```
 config/
-├── DatasetPipeline.ini    # Pipeline 全局 + 三步骤参数
-├── MinLabel.ini           # 与原格式兼容
-├── SlurCutter.ini         # 与原格式兼容
-└── GameInfer.ini          # 与原格式兼容
+├── DatasetPipeline.json
+├── MinLabel.json
+├── SlurCutter.json
+└── GameInfer.json
 ```
 
 ```cpp
-// 每个 EXE 使用自己的 Config 实例
-dstools::Config config("MinLabel");    // → <appDir>/config/MinLabel.ini
-dstools::Config config("SlurCutter");  // → <appDir>/config/SlurCutter.ini
+// 每个 EXE 使用自己的 AppSettings 实例
+dstools::AppSettings settings("MinLabel");    // → <appDir>/config/MinLabel.json
+dstools::AppSettings settings("SlurCutter");  // → <appDir>/config/SlurCutter.json
 ```
 
 ### 1.3 ErrorHandling
