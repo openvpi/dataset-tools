@@ -7,6 +7,11 @@ namespace dstools {
 Config::Config(const QString &appName)
     : m_settings(QApplication::applicationDirPath() + "/config/" + appName + ".ini",
                  QSettings::IniFormat) {
+    // Ensure the config directory exists
+    QDir configDir(QApplication::applicationDirPath() + "/config");
+    if (!configDir.exists()) {
+        configDir.mkpath(".");
+    }
 }
 
 QString Config::getString(const QString &key, const QString &defaultValue) const {
