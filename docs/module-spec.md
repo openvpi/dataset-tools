@@ -1,8 +1,6 @@
 # 02 — 模块接口规范
 
-**Version**: 3.0  
-**Date**: 2026-04-26  
-**前置**: 01-architecture.md  
+**前置**: architecture.md  
 **变更**: v3.0 删除 PipelineRunner（不再一键串联）；明确 SlicerPage 不继承 TaskWindow；补充 AudioSlicer 特有的信号签名差异。
 
 本文档定义重构后每个模块的公共接口、方法签名、信号槽、数据结构和使用示例。确保实施时每个模块可独立开发并正确集成。
@@ -70,7 +68,7 @@ void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
 ### 1.2 AppSettings（原 Config，已重新设计）
 
 > **设计偏离**：原始设计为 `dstools::Config`（QSettings/INI 封装），实际实现已演进为
-> `dstools::AppSettings`（类型安全、响应式、JSON 后端）。详见 `STATUS.md` 偏离说明。
+> `dstools::AppSettings`（类型安全、响应式、JSON 后端）。详见 `status.md` 偏离说明。
 
 ```cpp
 // src/core/include/dstools/AppSettings.h
@@ -285,6 +283,84 @@ private:
 } // namespace dstools
 ```
 
+### 1.6 JsonHelper
+
+> **设计偏离**：原始设计中未包含此模块。实际实现中发现需要安全的 JSON 文件 I/O 和值访问封装，
+> 故新增 `JsonHelper` 作为 dstools-core 的一部分。
+
+```cpp
+// src/core/include/dstools/JsonHelper.h
+#pragma once
+#include <nlohmann/json.hpp>
+#include <filesystem>
+#include <string>
+#include <map>
+#include <vector>
+
+namespace dstools {
+
+/// 安全的 JSON 文件 I/O 和值访问封装。
+/// 所有方法优雅处理错误——不抛未捕获异常，不崩溃。
+class JsonHelper {
+public:
+    // ── 文件 I/O ──
+
+    /// 加载并解析 JSON 文件。失败时返回空对象。
+    static nlohmann::json loadFile(const std::filesystem::path &path, std::string &error);
+
+    /// 原子写入 JSON 文件（写临时文件 + 重命名）。
+    static bool saveFile(const std::filesystem::path &path, const nlohmann::json &data,
+                         std::string &error, int indent = 4);
+
+    // ── 安全值访问 ──
+
+    /// 按 "/" 分隔路径获取值，类型不匹配时返回默认值。不抛异常。
+    template <typename T>
+    static T get(const nlohmann::json &root, const char *path, const T &defaultValue);
+
+    /// 获取嵌套对象/数组。不存在时返回空对象/空数组。
+    static nlohmann::json getObject(const nlohmann::json &root, const char *path);
+    static nlohmann::json getArray(const nlohmann::json &root, const char *path);
+
+    /// 路径存在性检查。
+    static bool contains(const nlohmann::json &root, const char *path);
+
+    // ── 必需值访问（报告错误而非静默默认值） ──
+
+    template <typename T>
+    static bool getRequired(const nlohmann::json &root, const char *path, T &out, std::string &error);
+
+    // ── 集合辅助 ──
+
+    template <typename K, typename V>
+    static std::map<K, V> getMap(const nlohmann::json &root, const char *path);
+    template <typename T>
+    static std::vector<T> getVec(const nlohmann::json &root, const char *path);
+
+    // ── 路径工具 ──
+
+    /// 按 "/" 分隔路径导航嵌套 JSON。路径不存在时返回 nullptr。
+    static const nlohmann::json *resolve(const nlohmann::json &root, const char *path);
+
+private:
+    JsonHelper() = default; // 纯静态类
+};
+
+} // namespace dstools
+```
+
+**使用场景**：
+
+| 使用者 | 用法 |
+|--------|------|
+| AppSettings | 配置文件的 JSON 加载/保存 |
+| hubert-infer (规划中) | 模型 config.json 解析 |
+| 各推理库 | 模型配置读取 |
+
+**与 ErrorHandling 的关系**：
+
+JsonHelper 通过 `std::string &error` 输出参数报告错误，是一种轻量级错误处理方式。待 AD-03（ErrorHandling 模块）完成后，可考虑将错误报告迁移到 `Result<T>` / `Status` 类型。
+
 ---
 
 ## 2. Audio Layer
@@ -459,6 +535,10 @@ private:
 ---
 
 ## 3. Widgets Layer
+
+> **DLL 导出宏**: `src/widgets/include/dstools/WidgetsGlobal.h` 定义了 `DSTOOLS_WIDGETS_API` 宏
+> （编译 dstools-widgets 时为 `Q_DECL_EXPORT`，使用时为 `Q_DECL_IMPORT`）。
+> 所有 widgets 层的公共类声明应使用此宏。
 
 ### 3.1 PlayWidget
 
@@ -895,7 +975,7 @@ private:
 **SlicerPage**（原 AudioSlicer 完整 UI，迁移为 QWidget）：
 
 > **重要**: SlicerPage **不继承 TaskWindow**，因为 AudioSlicer 的 UI 和信号
-> 与 AsyncTaskWindow 不兼容（参见 05-unified-app.md §2.3）。
+> 与 AsyncTaskWindow 不兼容（参见 architecture.md §2.3）。
 
 ```cpp
 // src/apps/pipeline/slicer/SlicerPage.h

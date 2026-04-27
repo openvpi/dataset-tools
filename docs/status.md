@@ -2,13 +2,13 @@
 
 **最后更新**: 2026-04-27
 
-本文档追踪 `docs/refactor/` 下各设计文档的实现状态。
+本文档追踪 `docs/` 下各设计文档的实现状态。
 
 ---
 
 ## 设计偏离说明
 
-### 配置系统（02-module-spec.md §1.2）
+### 配置系统（module-spec.md §1.2）
 
 原始设计为 `dstools::Config`，基于 QSettings INI 格式的薄封装。实际实现已**超越原始设计**，演进为 `dstools::AppSettings`：
 
@@ -37,7 +37,7 @@ config/
 
 ---
 
-## 01-architecture.md 进度
+## architecture.md 进度
 
 | 目标 | 状态 | 说明 |
 |------|------|------|
@@ -54,18 +54,18 @@ config/
 | 提取 hubert-infer | ❌ TODO | HubertFA 工具代码仍在 src/apps/HubertFA/util/ |
 | cmake/ 脚本迁移 | ✅ DONE | |
 | 统一主题 (dark/light QSS) | ✅ DONE | |
-| 删除旧 AudioSlicer/LyricFA | ✅ DONE | |
+| 删除旧 AudioSlicer/LyricFA/HubertFA | ⚠️ PARTIAL | AudioSlicer/LyricFA 已删除；HubertFA 目录仍存在但已不参与构建（不在 apps/CMakeLists.txt 中），待 AD-01 完成后删除 |
 
 ---
 
-## 02-module-spec.md 进度
+## module-spec.md 进度
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
 | AppInit | ✅ DONE | 返回 bool (与文档略有差异) |
 | Config → AppSettings | ✅ DONE | 超越原设计，见上方偏离说明 |
-| ErrorHandling (Result/Status) | ❌ TODO | |
-| ThreadUtils (invokeOnMain) | ❌ TODO | |
+| ErrorHandling (Result/Status) | ❌ TODO | 代码中不存在，core/ 仅含 AppInit, AppSettings, Theme, JsonHelper |
+| ThreadUtils (invokeOnMain) | ❌ TODO | 代码中不存在 |
 | Theme | ✅ DONE | 缺少 System 模式 |
 | WaveFormat | ✅ DONE | |
 | AudioDecoder | ✅ DONE | |
@@ -75,11 +75,12 @@ config/
 | GpuSelector | ✅ DONE | |
 | OnnxEnv | ✅ DONE | |
 | ExecutionProvider | ✅ DONE | |
+| JsonHelper | ✅ DONE | 文档中未列出但已实现（安全 JSON 封装） |
 | hubert-infer | ❌ TODO | |
 
 ---
 
-## 03-bug-fixes.md 进度
+## bugs.md 进度
 
 ### 已修复
 BUG-001, 004, 005, 006, 009, 010, 011, 012, 014, 015, 016, 017, 023,
@@ -96,13 +97,13 @@ FEAT-001 (UndoStack), FEAT-003, FEAT-006
 
 ---
 
-## 04-ui-theming.md 进度
+## ui-theming.md 进度
 
 | 目标 | 状态 |
 |------|------|
-| Dark/Light QSS 主题文件 | ✅ DONE |
+| Dark/Light QSS 主题文件 | ⚠️ PARTIAL | Theme 类已实现；`resources/themes/` 目录已创建但为空，QSS 当前由 core/res/ 内资源提供 |
 | Theme::palette() 语义色板 | ✅ DONE |
-| SVG 图标系统 | ❌ TODO |
+| SVG 图标系统 | ❌ TODO | `resources/icons/` 目录已创建但为空 |
 | F0Widget 主题适配 | ❌ TODO (依赖 F0Widget 拆分) |
 | DPI 适配 | ❌ TODO |
 | 各 app UI 改进建议 | ❌ TODO |
@@ -110,7 +111,7 @@ FEAT-001 (UndoStack), FEAT-003, FEAT-006
 
 ---
 
-## 05-unified-app.md 进度
+## architecture.md (unified-app) 进度
 
 | 目标 | 状态 |
 |------|------|
@@ -125,7 +126,9 @@ FEAT-001 (UndoStack), FEAT-003, FEAT-006
 
 ---
 
-## 06-migration-guide.md Phase 进度
+## Migration Phase 进度
+
+> 原 06-migration-guide.md 已删除，其剩余有用内容保留于此。
 
 | Phase | 状态 | 说明 |
 |-------|------|------|
@@ -140,21 +143,21 @@ FEAT-001 (UndoStack), FEAT-003, FEAT-006
 
 ---
 
-## app-*.md 各应用文档进度
+## apps/*.md 各应用文档进度
 
-### app-DatasetPipeline.md
+### apps/DatasetPipeline.md
 - ✅ Pipeline 骨架 + 三 Tab 页迁移
 - ✅ BUG-005, 006, 009 修复
 - ❌ CQ-006 FaTread → LyricMatchTask 类名重命名
 
-### app-GameInfer.md
+### apps/GameInfer.md
 - ✅ BUG-012 修复
 - ✅ main.cpp 统一模式
 - ❌ 替换 DmlGpuUtils → GpuSelector
 - ❌ 删除 utils/DmlGpuUtils.*, GpuInfo.h
 - ❌ ExecutionProvider 适配
 
-### app-MinLabel.md
+### apps/MinLabel.md
 - ✅ 删除旧 PlayWidget，使用共享版本
 - ✅ BUG-001 (saveFile → bool, 移除 exit)
 - ✅ CQ-006 (covertAction → convertAction)
@@ -162,7 +165,7 @@ FEAT-001 (UndoStack), FEAT-003, FEAT-006
 - ❌ BUG-008 (QDir::count)
 - ❌ CQ-006 (covertNum → convertNum in TextWidget)
 
-### app-SlurCutter.md
+### apps/SlurCutter.md
 - ✅ 删除旧 PlayWidget，使用共享版本
 - ✅ CQ-004 (foreach → range for)
 - ❌ CQ-002 F0Widget 拆分 (1097行 → 4+1 文件)
@@ -172,22 +175,35 @@ FEAT-001 (UndoStack), FEAT-003, FEAT-006
 
 ---
 
+## CI/CD 进度
+
+| 平台 | 状态 | 说明 |
+|------|------|------|
+| Windows | ✅ DONE | `.github/workflows/windows-rel-build.yml`：CMake + vcpkg + Qt 6.9.3 + ONNX Runtime DML，tag 触发，自动构建 + 创建 GitHub Release |
+| macOS | ❌ TODO | |
+| Linux | ❌ TODO | |
+
+---
+
 ## 关键剩余工作（按优先级）
 
 ### 高优先级
 1. **hubert-infer 提取** — 推理代码仍在 src/apps/HubertFA/util/
 2. **GameInfer GpuSelector 迁移** — 仍使用私有 DmlGpuUtils
 3. **F0Widget 拆分 (CQ-002)** — 1097 行单文件，阻塞主题适配和 bug 修复
+4. **清理旧 HubertFA 目录** — `src/apps/HubertFA/` 已脱离构建但仍占仓库空间，含旧版备份文件（`HfaThread.cpp~`）
 
 ### 中优先级
-4. ErrorHandling / ThreadUtils 模块
-5. 剩余 bug 修复 (BUG-013, 018-025)
-6. FaTread → LyricMatchTask 类名重命名
-7. SVG 图标系统
+5. ErrorHandling / ThreadUtils 模块
+6. 剩余 bug 修复 (BUG-013, 018-025)
+7. FaTread → LyricMatchTask 类名重命名
+8. SVG 图标系统
+9. **smoke-test.ps1 更新** — `scripts/smoke-test.ps1` 仍检查 AudioSlicer.exe/LyricFA.exe/HubertFA.exe（已不存在），应改为 DatasetPipeline.exe
+10. **resources/ 主题文件填充** — dark.qss / light.qss / SVG 图标文件尚未创建
 
 ### 低优先级
-8. i18n tr() 包装 (CQ-003)
-9. 各 app UI 改进建议 (04-ui-theming §7)
-10. DPI 适配
-11. FEAT-001 UndoStack
-12. Phase 7 测试与验收
+11. i18n tr() 包装 (CQ-003)
+12. 各 app UI 改进建议 (ui-theming.md §7)
+13. DPI 适配
+14. FEAT-001 UndoStack
+15. Phase 7 测试与验收

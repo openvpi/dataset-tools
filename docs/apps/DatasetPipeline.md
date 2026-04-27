@@ -2,7 +2,7 @@
 
 **Version**: 1.0  
 **Date**: 2026-04-26  
-**前置**: 01-architecture.md, 02-module-spec.md  
+**前置**: architecture.md, module-spec.md  
 **项目规范**: 见本文档 §A「项目规范」
 
 ---
@@ -41,7 +41,7 @@ DatasetPipeline.exe 是重构后的**新建应用**，整合原 AudioSlicer、Ly
 | `pipeline/slicer/Enumerations.h` | `AudioSlicer/slicer/enumerations.h` | 原样迁移 |
 | `pipeline/slicer/WinFont.h/.cpp` | `AudioSlicer/utils/winfont.h/.cpp` | 原样迁移（**原方案遗漏**，此文件提供 Windows 字体回退逻辑，迁移后由 AppInit 统一处理，可评估是否仍需保留） |
 
-> **勘误**: 原 01-architecture.md 目录结构中遗漏了 `winfont.h/.cpp`。重构后此逻辑由 `AppInit::init()` 统一处理，该文件**可删除**。若 AudioSlicer 有特殊字体需求超出 AppInit 范围，则保留并迁移。
+> **勘误**: 原 architecture.md 目录结构中遗漏了 `winfont.h/.cpp`。重构后此逻辑由 `AppInit::init()` 统一处理，该文件**可删除**。若 AudioSlicer 有特殊字体需求超出 AppInit 范围，则保留并迁移。
 
 ### 2.3 LyricFA Tab（从 LyricFA 迁移）
 
@@ -59,7 +59,7 @@ DatasetPipeline.exe 是重构后的**新建应用**，整合原 AudioSlicer、Ly
 | `pipeline/lyricfa/LyricData.h` | `LyricFA/util/LyricData.h` | 原样迁移（**原方案遗漏**） |
 | `pipeline/lyricfa/Utils.h/.cpp` | `LyricFA/util/Utils.h/.cpp` | 原样迁移（**原方案遗漏**） |
 
-> **勘误**: 原 01-architecture.md 目录结构中遗漏了 `LyricData.h` 和 `Utils.h/.cpp`。这两个文件是 LyricFA 的数据定义和工具函数，必须一并迁移。
+> **勘误**: 原 architecture.md 目录结构中遗漏了 `LyricData.h` 和 `Utils.h/.cpp`。这两个文件是 LyricFA 的数据定义和工具函数，必须一并迁移。
 
 ### 2.4 HubertFA Tab（从 HubertFA 迁移）
 
@@ -177,10 +177,10 @@ void SlicerPage::showEvent(QShowEvent *event) {
 原 `AsyncTaskWindow` 有自己的 `createMenus()`，创建 File (Add File/Add Folder) 和 Help (About/About Qt) 菜单。迁移为 TaskWindow (QWidget) 后：
 
 - **File/Help 菜单功能移至 PipelineWindow** 的菜单栏
-- TaskWindow 改为通过按钮提供 Add File/Add Folder 功能（已在 02-module-spec.md 中定义）
+- TaskWindow 改为通过按钮提供 Add File/Add Folder 功能（已在 module-spec.md 中定义）
 - PipelineWindow 菜单栏包含: File (退出) + Help (About/About Qt)
 
-> **勘误**: 02-module-spec.md 的 TaskWindow 接口中缺少对原 `m_rightPanel` 和 `m_topLayout` 的替代说明。实际上子类通过 `addTopWidget()` 方法向 TaskWindow 布局中插入自定义控件，替代了原来直接操作 `m_rightPanel` 的模式。
+> **勘误**: module-spec.md 的 TaskWindow 接口中缺少对原 `m_rightPanel` 和 `m_topLayout` 的替代说明。实际上子类通过 `addTopWidget()` 方法向 TaskWindow 布局中插入自定义控件，替代了原来直接操作 `m_rightPanel` 的模式。
 
 ### 4.4 LyricFAPage 特殊成员
 
@@ -302,7 +302,7 @@ endif()
 add_dependencies(DeployedTargets DatasetPipeline)
 ```
 
-> **勘误 vs 05-unified-app.md §4.1**: 原 CMake 示例遗漏了 `LyricData.h`、`Utils.h/.cpp`、头文件搜索路径配置、版本信息和 macOS bundle 设置。
+> **勘误 vs architecture.md §4.1**: 原 CMake 示例遗漏了 `LyricData.h`、`Utils.h/.cpp`、头文件搜索路径配置、版本信息和 macOS bundle 设置。
 
 ---
 

@@ -6,11 +6,9 @@ DiffSinger dataset processing tools for singing voice synthesis data preparation
 
 | Application | Description |
 |---|---|
+| **DatasetPipeline** | Unified dataset processing pipeline with 3 tabs: AudioSlicer (RMS-based slicing), LyricFA (FunASR lyric alignment), HubertFA (HuBERT phoneme alignment) |
 | **MinLabel** | Audio labeling tool with G2P conversion (Mandarin/Cantonese/Japanese) |
 | **SlurCutter** | DiffSinger sentence/MIDI editor with piano roll F0 visualization |
-| **AudioSlicer** | RMS-based automatic audio slicing with Audacity CSV marker support |
-| **LyricFA** | Lyric forced alignment using FunASR Paraformer (Chinese) |
-| **HubertFA** | HuBERT phoneme forced alignment with Praat TextGrid output |
 | **GameInfer** | GAME audio-to-MIDI transcription (4-model ONNX pipeline) |
 
 ## Supported Platforms
@@ -61,8 +59,8 @@ You need to install Qt libraries first.
 #### Windows
 
 ```sh
-cd /D src/libs
-cmake -Dep=dml -P ../../scripts/setup-onnxruntime.cmake
+cd /D src/infer
+cmake -Dep=dml -P ../../cmake/setup-onnxruntime.cmake
 
 cd ../../
 set QT_DIR=<dir> # directory `Qt6Config.cmake` locates
@@ -82,8 +80,8 @@ vcpkg install ^
 #### Unix
 
 ```sh
-cd src/libs
-cmake -Dep=cpu -P ../../scripts/setup-onnxruntime.cmake
+cd src/infer
+cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
 
 cd ../../
 export QT_DIR=<dir> # directory `Qt6Config.cmake` locates
@@ -134,9 +132,9 @@ cmake --build build --target install
 
 | Type | Files |
 |---|---|
-| Applications | `MinLabel.exe`, `SlurCutter.exe`, `AudioSlicer.exe`, `LyricFA.exe`, `HubertFA.exe`, `GameInfer.exe` |
+| Applications | `DatasetPipeline.exe`, `MinLabel.exe`, `SlurCutter.exe`, `GameInfer.exe` |
 | Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestSome.exe`, `TestAudioUtil.exe` |
-| Shared libraries | `game-infer.dll`, `rmvpe-infer.dll`, `some-infer.dll`, `audio-util.dll` |
+| Shared libraries | `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `some-infer.dll`, `rmvpe-infer.dll` |
 
 ## Libraries
 

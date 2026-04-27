@@ -2,7 +2,7 @@
 
 **Version**: 1.0  
 **Date**: 2026-04-26  
-**前置**: 01-architecture.md, 02-module-spec.md, app-DatasetPipeline.md §A「项目规范」
+**前置**: architecture.md, module-spec.md, apps/DatasetPipeline.md §A「项目规范」
 
 ---
 
@@ -69,7 +69,7 @@ target_link_libraries(MinLabel PRIVATE
 | `qBreakpad::qBreakpad` | `dstools-core` (通过 `dstools-widgets`) | AppInit 内部条件初始化 |
 | 无 | `dstools-widgets` | **新增**：统一样式/组件 |
 
-> **勘误**: 原 02-module-spec.md §5.2 MinLabel 接口中未提及 `qBreakpad` 的处理方式。实际上 `AppInit::init(app, initPinyin=true, initCrashHandler=true)` 第三个参数控制 qBreakpad 初始化，MinLabel 是唯一需要 `initCrashHandler=true` 的 EXE。`dstools-core` 需要条件链接 `qBreakpad`（仅当 `HAS_QBREAKPAD` 宏定义时）。
+> **勘误**: 原 module-spec.md §5.2 MinLabel 接口中未提及 `qBreakpad` 的处理方式。实际上 `AppInit::init(app, initPinyin=true, initCrashHandler=true)` 第三个参数控制 qBreakpad 初始化，MinLabel 是唯一需要 `initCrashHandler=true` 的 EXE。`dstools-core` 需要条件链接 `qBreakpad`（仅当 `HAS_QBREAKPAD` 宏定义时）。
 
 ### 3.2 运行时依赖
 

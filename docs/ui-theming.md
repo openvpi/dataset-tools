@@ -1,8 +1,6 @@
 # 04 — UI 美化与主题系统
 
-**Version**: 3.0  
-**Date**: 2026-04-26  
-**前置**: 01-architecture.md, 02-module-spec.md  
+**前置**: architecture.md, module-spec.md  
 **变更**: v3.0 与架构 v3.0 同步。Pipeline 改为 Tab 分页独立运行，删除全局 Run All 按钮。
 
 本文档定义统一主题系统的设计规范、色板、QSS 规则、自绘组件适配方案、图标体系，以及新应用接入时如何自动获得一致的视觉风格。
