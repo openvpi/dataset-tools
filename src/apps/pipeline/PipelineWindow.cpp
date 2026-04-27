@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QStatusBar>
 
+#include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
 PipelineWindow::PipelineWindow(QWidget *parent)
@@ -46,6 +47,14 @@ void PipelineWindow::setupUI() {
 
 void PipelineWindow::setupMenuBar() {
     auto *fileMenu = menuBar()->addMenu(tr("File(&F)"));
+
+    auto *shortcutAction = fileMenu->addAction(tr("Shortcut Settings..."));
+    connect(shortcutAction, &QAction::triggered, this, [this]() {
+        std::vector<dstools::widgets::ShortcutEntry> entries;
+        dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
+    });
+
+    fileMenu->addSeparator();
     fileMenu->addAction(tr("Quit"), qApp, &QApplication::quit, QKeySequence::Quit);
 
     auto *viewMenu = menuBar()->addMenu(tr("View(&V)"));

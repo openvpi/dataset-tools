@@ -6,6 +6,7 @@
 #include <QMenuBar>
 #include <QStatusBar>
 
+#include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -45,4 +46,11 @@ void MainWindow::setupStatusBar() {
 void MainWindow::setupMenuBar() {
     auto *viewMenu = menuBar()->addMenu(tr("View(&V)"));
     dstools::Theme::instance().populateThemeMenu(viewMenu);
+
+    viewMenu->addSeparator();
+    auto *shortcutAction = viewMenu->addAction(tr("Shortcut Settings..."));
+    connect(shortcutAction, &QAction::triggered, this, [this]() {
+        std::vector<dstools::widgets::ShortcutEntry> entries;
+        dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
+    });
 }

@@ -6,6 +6,7 @@ set(WIDGETS_SOURCES
     src/PlayWidget.cpp
     src/TaskWindow.cpp
     src/GpuSelector.cpp
+    src/ShortcutEditorWidget.cpp
 )
 
 set(WIDGETS_HEADERS
@@ -13,6 +14,7 @@ set(WIDGETS_HEADERS
     include/dstools/PlayWidget.h
     include/dstools/TaskWindow.h
     include/dstools/GpuSelector.h
+    include/dstools/ShortcutEditorWidget.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${WIDGETS_SOURCES} ${WIDGETS_HEADERS})

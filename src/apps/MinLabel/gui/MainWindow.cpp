@@ -20,6 +20,7 @@
 #include <QStyledItemDelegate>
 #include <QTreeWidget>
 
+#include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
 namespace Minlabel {
@@ -89,6 +90,24 @@ namespace Minlabel {
         editMenu = new QMenu("Edit(&E)", this);
         editMenu->addAction(nextAction);
         editMenu->addAction(prevAction);
+
+        editMenu->addSeparator();
+        {
+            auto *shortcutAction = new QAction("Shortcut Settings...", this);
+            editMenu->addAction(shortcutAction);
+            connect(shortcutAction, &QAction::triggered, this, [this]() {
+                using dstools::widgets::ShortcutEntry;
+                std::vector<ShortcutEntry> entries = {
+                    {QStringLiteral("Open Folder"), QStringLiteral("File"), MinLabelKeys::ShortcutOpen.path, MinLabelKeys::ShortcutOpen.defaultValue},
+                    {QStringLiteral("Export"), QStringLiteral("File"), MinLabelKeys::ShortcutExport.path, MinLabelKeys::ShortcutExport.defaultValue},
+                    {QStringLiteral("Previous File"), QStringLiteral("Navigation"), MinLabelKeys::NavigationPrev.path, MinLabelKeys::NavigationPrev.defaultValue},
+                    {QStringLiteral("Next File"), QStringLiteral("Navigation"), MinLabelKeys::NavigationNext.path, MinLabelKeys::NavigationNext.defaultValue},
+                    {QStringLiteral("Play/Stop"), QStringLiteral("Playback"), MinLabelKeys::PlaybackPlay.path, MinLabelKeys::PlaybackPlay.defaultValue},
+                };
+                dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
+                applyConfig();
+            });
+        }
 
         playAction = new QAction("Play/Stop", this);
         playAction->setShortcut(QKeySequence("F5"));

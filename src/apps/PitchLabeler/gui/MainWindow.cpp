@@ -21,6 +21,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
 #include <algorithm>
@@ -54,7 +55,6 @@ namespace dstools {
             m_fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
 
             m_actOpenDir = new QAction(QStringLiteral("打开工作目录(&O)..."), this);
-            m_actOpenDir->setShortcut(QKeySequence("Ctrl+O"));
             m_actOpenDir->setStatusTip(QStringLiteral("打开包含 .ds 文件的目录"));
             m_fileMenu->addAction(m_actOpenDir);
 
@@ -65,20 +65,17 @@ namespace dstools {
             m_fileMenu->addSeparator();
 
             m_actSave = new QAction(QStringLiteral("保存(&S)"), this);
-            m_actSave->setShortcut(QKeySequence("Ctrl+S"));
             m_actSave->setStatusTip(QStringLiteral("保存当前文件"));
             m_actSave->setEnabled(false);
             m_fileMenu->addAction(m_actSave);
 
             m_actSaveAll = new QAction(QStringLiteral("全部保存(&L)"), this);
-            m_actSaveAll->setShortcut(QKeySequence("Ctrl+Shift+S"));
             m_actSaveAll->setStatusTip(QStringLiteral("保存所有已修改的文件"));
             m_fileMenu->addAction(m_actSaveAll);
 
             m_fileMenu->addSeparator();
 
             m_actExit = new QAction(QStringLiteral("退出(&X)"), this);
-            m_actExit->setShortcut(QKeySequence("Alt+F4"));
             m_actExit->setStatusTip(QStringLiteral("退出应用程序"));
             m_fileMenu->addAction(m_actExit);
 
@@ -86,13 +83,11 @@ namespace dstools {
             m_editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
 
             m_actUndo = new QAction(QStringLiteral("撤销(&U)"), this);
-            m_actUndo->setShortcut(QKeySequence("Ctrl+Z"));
             m_actUndo->setStatusTip(QStringLiteral("撤销上一步操作"));
             m_actUndo->setEnabled(false);
             m_editMenu->addAction(m_actUndo);
 
             m_actRedo = new QAction(QStringLiteral("重做(&R)"), this);
-            m_actRedo->setShortcut(QKeySequence("Ctrl+Y"));
             m_actRedo->setStatusTip(QStringLiteral("重做上一步撤销的操作"));
             m_actRedo->setEnabled(false);
             m_editMenu->addAction(m_actRedo);
@@ -101,17 +96,14 @@ namespace dstools {
             m_viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
 
             m_actZoomIn = new QAction(QStringLiteral("放大(&I)"), this);
-            m_actZoomIn->setShortcut(QKeySequence("Ctrl+="));
             m_actZoomIn->setStatusTip(QStringLiteral("水平放大"));
             m_viewMenu->addAction(m_actZoomIn);
 
             m_actZoomOut = new QAction(QStringLiteral("缩小(&O)"), this);
-            m_actZoomOut->setShortcut(QKeySequence("Ctrl+-"));
             m_actZoomOut->setStatusTip(QStringLiteral("水平缩小"));
             m_viewMenu->addAction(m_actZoomOut);
 
             m_actZoomReset = new QAction(QStringLiteral("重置缩放(&R)"), this);
-            m_actZoomReset->setShortcut(QKeySequence("Ctrl+0"));
             m_actZoomReset->setStatusTip(QStringLiteral("重置缩放到默认级别"));
             m_viewMenu->addAction(m_actZoomReset);
 
@@ -124,10 +116,40 @@ namespace dstools {
             m_toolsMenu = bar->addMenu(QStringLiteral("工具(&T)"));
 
             m_actABCompare = new QAction(QStringLiteral("A/B 对比(&B)"), this);
-            m_actABCompare->setShortcut(QKeySequence("Ctrl+B"));
             m_actABCompare->setCheckable(true);
             m_actABCompare->setStatusTip(QStringLiteral("切换 A/B 修改前后对比"));
             m_toolsMenu->addAction(m_actABCompare);
+
+            m_toolsMenu->addSeparator();
+            {
+                using dstools::widgets::ShortcutEntry;
+                auto *shortcutAction = new QAction(QStringLiteral("快捷键设置(&K)..."), this);
+                m_toolsMenu->addAction(shortcutAction);
+                connect(shortcutAction, &QAction::triggered, this, [this]() {
+                    using dstools::widgets::ShortcutEntry;
+                    std::vector<ShortcutEntry> entries = {
+                        {QStringLiteral("Open Directory"), QStringLiteral("File"), PitchLabelerKeys::ShortcutOpen.path, PitchLabelerKeys::ShortcutOpen.defaultValue},
+                        {QStringLiteral("Save"), QStringLiteral("File"), PitchLabelerKeys::ShortcutSave.path, PitchLabelerKeys::ShortcutSave.defaultValue},
+                        {QStringLiteral("Save All"), QStringLiteral("File"), PitchLabelerKeys::ShortcutSaveAll.path, PitchLabelerKeys::ShortcutSaveAll.defaultValue},
+                        {QStringLiteral("Exit"), QStringLiteral("File"), PitchLabelerKeys::ShortcutExit.path, PitchLabelerKeys::ShortcutExit.defaultValue},
+                        {QStringLiteral("Undo"), QStringLiteral("Edit"), PitchLabelerKeys::ShortcutUndo.path, PitchLabelerKeys::ShortcutUndo.defaultValue},
+                        {QStringLiteral("Redo"), QStringLiteral("Edit"), PitchLabelerKeys::ShortcutRedo.path, PitchLabelerKeys::ShortcutRedo.defaultValue},
+                        {QStringLiteral("Zoom In"), QStringLiteral("View"), PitchLabelerKeys::ShortcutZoomIn.path, PitchLabelerKeys::ShortcutZoomIn.defaultValue},
+                        {QStringLiteral("Zoom Out"), QStringLiteral("View"), PitchLabelerKeys::ShortcutZoomOut.path, PitchLabelerKeys::ShortcutZoomOut.defaultValue},
+                        {QStringLiteral("Reset Zoom"), QStringLiteral("View"), PitchLabelerKeys::ShortcutZoomReset.path, PitchLabelerKeys::ShortcutZoomReset.defaultValue},
+                        {QStringLiteral("Previous File"), QStringLiteral("Navigation"), PitchLabelerKeys::NavigationPrev.path, PitchLabelerKeys::NavigationPrev.defaultValue},
+                        {QStringLiteral("Next File"), QStringLiteral("Navigation"), PitchLabelerKeys::NavigationNext.path, PitchLabelerKeys::NavigationNext.defaultValue},
+                        {QStringLiteral("Play/Pause"), QStringLiteral("Playback"), PitchLabelerKeys::PlaybackPlayPause.path, PitchLabelerKeys::PlaybackPlayPause.defaultValue},
+                        {QStringLiteral("Stop"), QStringLiteral("Playback"), PitchLabelerKeys::PlaybackStop.path, PitchLabelerKeys::PlaybackStop.defaultValue},
+                        {QStringLiteral("Select Tool"), QStringLiteral("Tools"), PitchLabelerKeys::ToolSelect.path, PitchLabelerKeys::ToolSelect.defaultValue},
+                        {QStringLiteral("Modulation Tool"), QStringLiteral("Tools"), PitchLabelerKeys::ToolModulation.path, PitchLabelerKeys::ToolModulation.defaultValue},
+                        {QStringLiteral("Drift Tool"), QStringLiteral("Tools"), PitchLabelerKeys::ToolDrift.path, PitchLabelerKeys::ToolDrift.defaultValue},
+                        {QStringLiteral("A/B Compare"), QStringLiteral("Tools"), PitchLabelerKeys::ShortcutABCompare.path, PitchLabelerKeys::ShortcutABCompare.defaultValue},
+                    };
+                    dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
+                    applyConfig();
+                });
+            }
 
             // ---- 帮助 ----
             m_helpMenu = bar->addMenu(QStringLiteral("帮助(&H)"));
@@ -444,8 +466,15 @@ namespace dstools {
         void MainWindow::applyConfig() {
             // Apply saved shortcuts
             m_actOpenDir->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutOpen));
-            m_actSave->setShortcut(QKeySequence("Ctrl+S"));
-            m_actSaveAll->setShortcut(QKeySequence("Ctrl+Shift+S"));
+            m_actSave->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSave));
+            m_actSaveAll->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSaveAll));
+            m_actUndo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutUndo));
+            m_actRedo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutRedo));
+            m_actZoomIn->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomIn));
+            m_actZoomOut->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomOut));
+            m_actZoomReset->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomReset));
+            m_actABCompare->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutABCompare));
+            m_actExit->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutExit));
 
             // Load piano roll display options
             m_pianoRoll->loadConfig(m_settings);
@@ -714,50 +743,29 @@ namespace dstools {
         }
 
         void MainWindow::keyPressEvent(QKeyEvent *event) {
-            // Tool mode shortcuts
-            if (event->modifiers() == Qt::NoModifier) {
-                switch (event->key()) {
-                    case Qt::Key_V:
-                        setToolMode(ui::ToolSelect);
-                        event->accept();
-                        return;
-                    case Qt::Key_M:
-                        setToolMode(ui::ToolModulation);
-                        event->accept();
-                        return;
-                    case Qt::Key_D:
-                        setToolMode(ui::ToolDrift);
-                        event->accept();
-                        return;
-                    case Qt::Key_Space:
-                        onPlayPause();
-                        event->accept();
-                        return;
-                    case Qt::Key_Escape:
-                        onStop();
-                        event->accept();
-                        return;
-                    case Qt::Key_PageUp:
-                        onPrevFile();
-                        event->accept();
-                        return;
-                    case Qt::Key_PageDown:
-                        onNextFile();
-                        event->accept();
-                        return;
-                    default:
-                        break;
-                }
-            }
+            const QKeySequence pressed(event->modifiers() | event->key());
 
-            if (event->modifiers() == Qt::ShiftModifier) {
-                switch (event->key()) {
-                    case Qt::Key_Space:
-                        onStop();
-                        event->accept();
-                        return;
-                    default:
-                        break;
+            // Map settings keys to actions
+            struct ShortcutAction {
+                const dstools::SettingsKey<QString> &key;
+                std::function<void()> action;
+            };
+
+            const ShortcutAction shortcuts[] = {
+                {PitchLabelerKeys::ToolSelect, [this]() { setToolMode(ui::ToolSelect); }},
+                {PitchLabelerKeys::ToolModulation, [this]() { setToolMode(ui::ToolModulation); }},
+                {PitchLabelerKeys::ToolDrift, [this]() { setToolMode(ui::ToolDrift); }},
+                {PitchLabelerKeys::PlaybackPlayPause, [this]() { onPlayPause(); }},
+                {PitchLabelerKeys::PlaybackStop, [this]() { onStop(); }},
+                {PitchLabelerKeys::NavigationPrev, [this]() { onPrevFile(); }},
+                {PitchLabelerKeys::NavigationNext, [this]() { onNextFile(); }},
+            };
+
+            for (const auto &[key, action] : shortcuts) {
+                if (pressed == m_settings.shortcut(key)) {
+                    action();
+                    event->accept();
+                    return;
                 }
             }
 

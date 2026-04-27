@@ -18,6 +18,7 @@
 #include <QJsonArray>
 #include <QStyledItemDelegate>
 
+#include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
 namespace SlurCutter {
@@ -73,6 +74,23 @@ namespace SlurCutter {
         editMenu = new QMenu("Edit(&E)", this);
         editMenu->addAction(nextAction);
         editMenu->addAction(prevAction);
+
+        editMenu->addSeparator();
+        {
+            auto *shortcutAction = new QAction("Shortcut Settings...", this);
+            editMenu->addAction(shortcutAction);
+            connect(shortcutAction, &QAction::triggered, this, [this]() {
+                using dstools::widgets::ShortcutEntry;
+                std::vector<ShortcutEntry> entries = {
+                    {QStringLiteral("Open Folder"), QStringLiteral("File"), SlurCutterKeys::ShortcutOpen.path, SlurCutterKeys::ShortcutOpen.defaultValue},
+                    {QStringLiteral("Previous File"), QStringLiteral("Navigation"), SlurCutterKeys::NavigationPrev.path, SlurCutterKeys::NavigationPrev.defaultValue},
+                    {QStringLiteral("Next File"), QStringLiteral("Navigation"), SlurCutterKeys::NavigationNext.path, SlurCutterKeys::NavigationNext.defaultValue},
+                    {QStringLiteral("Play/Stop"), QStringLiteral("Playback"), SlurCutterKeys::PlaybackPlay.path, SlurCutterKeys::PlaybackPlay.defaultValue},
+                };
+                dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
+                applyConfig();
+            });
+        }
 
         playAction = new QAction("Play/Stop", this);
         playAction->setShortcut(QKeySequence("F5"));
