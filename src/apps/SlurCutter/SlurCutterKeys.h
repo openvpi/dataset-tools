@@ -1,15 +1,16 @@
 #pragma once
 #include <dstools/AppSettings.h>
+#include <dstools/CommonKeys.h>
 
 /// SlurCutter settings key schema -- all persisted keys in one place.
 namespace SlurCutterKeys {
-    // General
-    inline const dstools::SettingsKey<QString> LastDir("General/lastDir", "");
+    // Re-exported from CommonKeys
+    using dstools::CommonKeys::LastDir;
+    using dstools::CommonKeys::ShortcutOpen;
+    using dstools::CommonKeys::NavigationPrev;
+    using dstools::CommonKeys::NavigationNext;
 
     // Shortcuts
-    inline const dstools::SettingsKey<QString> ShortcutOpen("Shortcuts/open", "Ctrl+O");
-    inline const dstools::SettingsKey<QString> NavigationPrev("Shortcuts/prevFile", "PgUp");
-    inline const dstools::SettingsKey<QString> NavigationNext("Shortcuts/nextFile", "PgDown");
     inline const dstools::SettingsKey<QString> PlaybackPlay("Shortcuts/play", "F5");
 
     // F0Widget display options
