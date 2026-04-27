@@ -23,6 +23,17 @@ namespace Game
 
     bool Game::is_open() const { return m_gameModel && m_gameModel->is_open(); }
 
+    int Game::get_target_sample_rate() const { return m_gameModel ? m_gameModel->get_target_sample_rate() : 0; }
+
+    float Game::get_timestep() const { return m_gameModel ? m_gameModel->get_timestep() : 0.0f; }
+
+    bool Game::has_dur2bd() const { return m_gameModel && m_gameModel->has_dur2bd(); }
+
+    const std::map<std::string, int> &Game::get_language_map() const {
+        static const std::map<std::string, int> empty;
+        return m_gameModel ? m_gameModel->get_language_map() : empty;
+    }
+
     std::vector<double> cumulativeSum(const std::vector<float> &durations) {
         if (durations.empty()) return {};
         std::vector<double> cumsum(durations.size());
@@ -168,6 +179,117 @@ namespace Game
                 progressChanged(progress);
             }
         }
+        return true;
+    }
+
+    bool Game::get_notes(const std::filesystem::path &filepath, std::vector<GameNote> &notes, std::string &msg,
+                         const std::function<void(int)> &progressChanged, const int max_audio_length) const {
+        if (!m_gameModel) {
+            msg = "Model not loaded";
+            return false;
+        }
+
+        const auto tar_sr = m_gameModel->get_target_sample_rate();
+        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, tar_sr);
+
+        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
+                         sf_vio.info.samplerate);
+        const auto totalSize = sf.frames();
+
+        std::vector<float> audio(totalSize);
+        sf.seek(0, SEEK_SET);
+        sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
+
+        const AudioUtil::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
+        const auto chunks = slicer.slice(audio);
+
+        if (chunks.empty()) {
+            msg = "slicer: no audio chunks for output!";
+            return false;
+        }
+
+        int processedFrames = 0;
+        const auto slicerFrames = calculateSumOfDifferences(chunks);
+
+        for (const auto &[fst, snd] : chunks) {
+            const auto beginFrame = fst;
+            const auto endFrame = snd;
+            const auto frameCount = endFrame - beginFrame;
+
+            const double sliceDuration = static_cast<double>(frameCount) / tar_sr;
+
+            if (sliceDuration > max_audio_length) {
+                msg = "Slice duration exceeds " + std::to_string(max_audio_length) +
+                    " seconds: " + std::to_string(sliceDuration) +
+                    "s.\nPlease check whether the accompaniment has been removed from the current audio.";
+                return false;
+            }
+
+            if (frameCount <= 0 || beginFrame > totalSize || endFrame > totalSize) {
+                continue;
+            }
+
+            sf.seek(beginFrame, SEEK_SET);
+            std::vector<float> tmp(frameCount);
+            sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+
+            std::vector<bool> boundaries;
+            std::vector<float> durations;
+            std::vector<float> presence;
+            std::vector<float> scores;
+
+            const bool success = m_gameModel->forward(tmp, boundaries, durations, presence, scores, msg);
+            if (!success)
+                return false;
+
+            // Build notes with second-based timing, matching Python callback logic
+            const double chunkOffset = static_cast<double>(fst) / tar_sr;
+            double noteOnset = 0.0;
+            for (size_t i = 0; i < durations.size(); ++i) {
+                const float dur = durations[i];
+                if (dur <= 0.0f)
+                    continue;
+                const bool voiced = presence[i] > 0.5f;
+                if (voiced) {
+                    notes.push_back(GameNote{
+                        scores[i],
+                        static_cast<float>(chunkOffset + noteOnset),
+                        dur,
+                        true,
+                    });
+                }
+                noteOnset += dur;
+            }
+
+            processedFrames += static_cast<int>(frameCount);
+            const int progress =
+                static_cast<int>(static_cast<float>(processedFrames) / static_cast<float>(slicerFrames) * 100);
+
+            if (progressChanged) {
+                progressChanged(progress);
+            }
+        }
+
+        // Sort and fix overlaps (matching Python SaveCombinedFileCallback.save_file logic)
+        std::sort(notes.begin(), notes.end(), [](const GameNote &a, const GameNote &b) {
+            if (a.onset != b.onset)
+                return a.onset < b.onset;
+            return (a.onset + a.duration) < (b.onset + b.duration);
+        });
+        float lastTime = 0.0f;
+        size_t writeIdx = 0;
+        for (size_t i = 0; i < notes.size(); ++i) {
+            auto &note = notes[i];
+            note.onset = std::max(note.onset, lastTime);
+            const float offset = note.onset + note.duration;
+            if (offset <= note.onset)
+                continue; // skip zero-duration
+            notes[writeIdx] = note;
+            lastTime = offset;
+            writeIdx++;
+        }
+        notes.resize(writeIdx);
+
         return true;
     }
 
