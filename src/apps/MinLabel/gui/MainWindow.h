@@ -4,11 +4,11 @@
 #include <QFileSystemModel>
 #include <QMainWindow>
 #include <QProgressBar>
-#include <QSettings>
 #include <QSplitter>
 #include <QTreeView>
 
 #include "Common.h"
+#include <dstools/Config.h>
 #include <dstools/PlayWidget.h>
 #include "TextWidget.h"
 
@@ -56,7 +56,7 @@ namespace Minlabel {
 
         QString lastFile;
 
-        QSettings *cfg{};
+        dstools::Config m_config;
 
         void openDirectory(const QString &dirName) const;
         void openFile(const QString &filename) const;

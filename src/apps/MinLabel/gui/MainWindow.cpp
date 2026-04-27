@@ -58,7 +58,7 @@ namespace Minlabel {
         }
     };
 
-    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+    MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_config("MinLabel") {
         playing = false;
 
         setAcceptDrops(true);
@@ -171,15 +171,6 @@ namespace Minlabel {
 
         reloadWindowTitle();
         resize(1280, 720);
-
-        QString configDirPath = QApplication::applicationDirPath() + "/config";
-        if (QDir configDir(configDirPath); !configDir.exists()) {
-            if (!configDir.mkpath(".")) {
-                QMessageBox::critical(this, QApplication::applicationName(),
-                                      "Failed to create config directory: " + configDir.absolutePath());
-                return;
-            }
-        }
 
         applyConfig();
     }
@@ -308,7 +299,7 @@ namespace Minlabel {
                     openDirectory(filename);
 
                     dirname = filename;
-                    cfg->setValue("General/LastDir", dirname);
+                    m_config.setString("General/LastDir", dirname);
                     _q_updateProgress();
                 }
             }
@@ -319,31 +310,28 @@ namespace Minlabel {
     }
 
     void MainWindow::closeEvent(QCloseEvent *event) {
-        QSettings settings(QApplication::applicationDirPath() + "/config/MinLabel.ini", QSettings::IniFormat);
-
-        settings.setValue("Shortcuts/Open", browseAction->shortcut().toString());
-        settings.setValue("Shortcuts/Export", exportAction->shortcut().toString());
-        settings.setValue("Navigation/Prev", prevAction->shortcut().toString());
-        settings.setValue("Navigation/Next", nextAction->shortcut().toString());
-        settings.setValue("Playback/Play", playAction->shortcut().toString());
+        m_config.setShortcut("Open", browseAction->shortcut());
+        m_config.setShortcut("Export", exportAction->shortcut());
+        m_config.setString("Navigation/Prev", prevAction->shortcut().toString());
+        m_config.setString("Navigation/Next", nextAction->shortcut().toString());
+        m_config.setString("Playback/Play", playAction->shortcut().toString());
 
         if (!dirname.isEmpty()) {
-            settings.setValue("General/LastDir", dirname);
+            m_config.setString("General/LastDir", dirname);
         }
 
+        m_config.sync();
         event->accept();
     }
 
     void MainWindow::applyConfig() {
-        cfg = new QSettings(QApplication::applicationDirPath() + "/config/MinLabel.ini", QSettings::IniFormat);
+        browseAction->setShortcut(m_config.shortcut("Open", QKeySequence("Ctrl+O")));
+        exportAction->setShortcut(m_config.shortcut("Export", QKeySequence("Ctrl+E")));
+        prevAction->setShortcut(QKeySequence(m_config.getString("Navigation/Prev", "PgUp")));
+        nextAction->setShortcut(QKeySequence(m_config.getString("Navigation/Next", "PgDown")));
+        playAction->setShortcut(QKeySequence(m_config.getString("Playback/Play", "F5")));
 
-        browseAction->setShortcut(QKeySequence(cfg->value("Shortcuts/Open", "Ctrl+O").toString()));
-        exportAction->setShortcut(QKeySequence(cfg->value("Shortcuts/Export", "Ctrl+E").toString()));
-        prevAction->setShortcut(QKeySequence(cfg->value("Navigation/Prev", "PgUp").toString()));
-        nextAction->setShortcut(QKeySequence(cfg->value("Navigation/Next", "PgDown").toString()));
-        playAction->setShortcut(QKeySequence(cfg->value("Playback/Play", "F5").toString()));
-
-        if (const QString savedDir = cfg->value("General/LastDir").toString();
+        if (const QString savedDir = m_config.getString("General/LastDir");
             !savedDir.isEmpty() && QDir(savedDir).exists()) {
             dirname = savedDir;
             openDirectory(dirname);
@@ -365,7 +353,7 @@ namespace Minlabel {
             openDirectory(path);
 
             dirname = path;
-            cfg->setValue("General/LastDir", dirname);
+            m_config.setString("General/LastDir", dirname);
             _q_updateProgress();
         } else if (action == convertAction) {
             playerWidget->setPlaying(false);
