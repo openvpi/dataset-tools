@@ -3,9 +3,8 @@
 #include <QString>
 #include <vector>
 #include <memory>
-#include <filesystem>
 
-#include <nlohmann/json.hpp>
+#include <dstools/DsDocument.h>
 
 namespace dstools {
 namespace pitchlabeler {
@@ -43,7 +42,8 @@ struct F0Curve {
     void setRange(double startTime, const std::vector<double> &newValues);
 };
 
-/// In-memory representation of a DS file
+/// In-memory representation of a DS file.
+/// Uses DsDocument for file I/O (path encoding, atomic writes, round-trip safety).
 class DSFile {
 public:
     DSFile();
@@ -51,7 +51,6 @@ public:
     // Load/save
     static std::pair<std::shared_ptr<DSFile>, QString> load(const QString &path);
     std::pair<bool, QString> save(const QString &path = QString());
-    std::pair<bool, QString> saveAs(const QString &path);
 
     // Data access
     double offset = 0.0;
@@ -60,29 +59,29 @@ public:
     std::vector<Note> notes;
     F0Curve f0;
 
-    // Raw preserved fields (never modified)
+    // Raw preserved fields (never modified by PitchLabeler)
     QString rawPhSeq;
     QString rawPhDur;
     QString rawPhNum;
 
-    // Extra fields preserved round-trip
-    nlohmann::json m_rawJson;  // original JSON object, updated in-place on save
-
     // State
     bool modified = false;
-    std::filesystem::path filePath;
 
     // Helpers
     void recomputeNoteStarts();
     void markModified();
-    nlohmann::json toJson() const;
-    static std::shared_ptr<DSFile> fromJson(const nlohmann::json &data);
 
     int getNoteCount() const;
     double getTotalDuration() const;
 
+    /// File path of the loaded document.
+    QString filePath() const;
+
 private:
     void loadFromJson(const nlohmann::json &data);
+    void writeBackToJson(nlohmann::json &obj) const;
+
+    DsDocument m_doc;  // underlying document for I/O and round-trip preservation
 };
 
 } // namespace pitchlabeler

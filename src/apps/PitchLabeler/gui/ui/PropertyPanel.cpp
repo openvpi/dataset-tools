@@ -352,8 +352,8 @@ void PropertyPanel::updateGlobalFields() {
     if (!m_dsFile) return;
 
     // File name
-    if (!m_dsFile->filePath.empty()) {
-        m_lblFileName->setText(QString::fromStdString(m_dsFile->filePath.filename().string()));
+    if (!m_dsFile->filePath().isEmpty()) {
+        m_lblFileName->setText(QFileInfo(m_dsFile->filePath()).fileName());
     } else {
         m_lblFileName->setText(QString::fromUtf8("—"));
     }

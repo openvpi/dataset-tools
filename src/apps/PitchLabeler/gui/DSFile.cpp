@@ -1,11 +1,7 @@
 #include "DSFile.h"
 
 #include <dstools/JsonHelper.h>
-#include <QFile>
-#include <QTextStream>
-#include <QDebug>
 #include <QStringList>
-#include <QFileInfo>
 
 #include <cmath>
 
@@ -59,17 +55,8 @@ void F0Curve::setRange(double startTime, const std::vector<double> &newValues) {
 DSFile::DSFile() = default;
 
 void DSFile::loadFromJson(const nlohmann::json &data) {
-    using namespace dstools;
-
-    // offset may be stored as number or string in DS files.
-    if (data.contains("offset")) {
-        const auto &node = data["offset"];
-        if (node.is_number()) {
-            offset = node.get<double>();
-        } else if (node.is_string()) {
-            offset = QString::fromStdString(node.get<std::string>()).toDouble();
-        }
-    }
+    // offset and f0_timestep may be number or string — use DsDocument helper
+    offset = DsDocument::numberOrString(data, "offset", 0.0);
     text = JsonHelper::get(data, "text", QString(""));
 
     // Parse phones
@@ -127,8 +114,7 @@ void DSFile::loadFromJson(const nlohmann::json &data) {
         f0.values.reserve(f0List.size());
         for (const QString &v : f0List) {
             double freq = v.toDouble();
-            // Convert frequency (Hz) to MIDI note number during loading,
-            // consistent with SlurCutter: midi = 69 + 12 * log2(f / 440)
+            // Convert frequency (Hz) to MIDI note number during loading
             if (freq > 0.0) {
                 f0.values.push_back(69.0 + 12.0 * std::log2(freq / 440.0));
             } else {
@@ -136,28 +122,15 @@ void DSFile::loadFromJson(const nlohmann::json &data) {
             }
         }
     }
-    // f0_timestep may be stored as number or string in DS files.
-    // SlurCutter reads it as string then converts; we handle both.
-    if (data.contains("f0_timestep")) {
-        const auto &node = data["f0_timestep"];
-        if (node.is_number()) {
-            f0.timestep = node.get<double>();
-        } else if (node.is_string()) {
-            f0.timestep = QString::fromStdString(node.get<std::string>()).toDouble();
-        }
-    }
-
-    // Preserve original JSON for round-trip save
-    m_rawJson = data;
+    f0.timestep = DsDocument::numberOrString(data, "f0_timestep", 0.0);
 
     modified = false;
 }
 
-nlohmann::json DSFile::toJson() const {
-    // Start from the original JSON object to preserve all fields and types
-    nlohmann::json obj = m_rawJson.is_object() ? m_rawJson : nlohmann::json::object();
-
-    // Only update fields that PitchLabeler modifies (note_seq/dur/slur/glide and f0)
+void DSFile::writeBackToJson(nlohmann::json &obj) const {
+    // Only update fields that PitchLabeler modifies (note fields and f0_seq).
+    // All other fields (offset, text, ph_*, f0_timestep, unknown fields)
+    // are preserved from the original JSON with their original types.
     QStringList noteSeq, noteDur, noteSlur, noteGlide;
     for (const Note &note : notes) {
         noteSeq.append(note.name);
@@ -181,54 +154,31 @@ nlohmann::json DSFile::toJson() const {
         }
     }
     obj["f0_seq"] = f0List.join(' ').toStdString();
-
-    return obj;
-}
-
-std::shared_ptr<DSFile> DSFile::fromJson(const nlohmann::json &data) {
-    auto ds = std::make_shared<DSFile>();
-    ds->loadFromJson(data);
-    return ds;
 }
 
 std::pair<std::shared_ptr<DSFile>, QString> DSFile::load(const QString &path) {
-    using namespace dstools;
-
-    std::string error;
-    auto json = JsonHelper::loadFile(path.toStdString(), error);
-    if (!error.empty()) {
-        return {nullptr, QString::fromStdString(error)};
+    QString error;
+    auto doc = DsDocument::load(path, error);
+    if (doc.isEmpty()) {
+        return {nullptr, error};
     }
 
-    if (!json.is_array() || json.empty()) {
-        return {nullptr, "DS file must be a JSON array with at least one object"};
-    }
-
-    auto ds = fromJson(json[0]);
-    ds->filePath = path.toStdString();
+    auto ds = std::make_shared<DSFile>();
+    ds->m_doc = std::move(doc);
+    ds->loadFromJson(ds->m_doc.sentence(0));
     return {ds, QString()};
 }
 
 std::pair<bool, QString> DSFile::save(const QString &path) {
-    QString targetPath = path.isEmpty() ? QString::fromStdString(filePath.string()) : path;
-    if (targetPath.isEmpty()) {
-        return {false, "No file path specified"};
-    }
-    return saveAs(targetPath);
-}
+    // Write modified fields back into the original JSON sentence
+    writeBackToJson(m_doc.sentence(0));
 
-std::pair<bool, QString> DSFile::saveAs(const QString &path) {
-    using namespace dstools;
-
-    nlohmann::json data = nlohmann::json::array({toJson()});
-
-    std::string error;
-    if (!JsonHelper::saveFile(path.toStdString(), data, error)) {
-        return {false, QString::fromStdString(error)};
+    QString error;
+    if (!m_doc.save(path, error)) {
+        return {false, error};
     }
 
     modified = false;
-    filePath = path.toStdString();
     return {true, QString()};
 }
 
@@ -255,6 +205,10 @@ int DSFile::getNoteCount() const {
 double DSFile::getTotalDuration() const {
     if (notes.empty()) return 0.0;
     return notes.back().end();
+}
+
+QString DSFile::filePath() const {
+    return m_doc.filePath();
 }
 
 } // namespace pitchlabeler
