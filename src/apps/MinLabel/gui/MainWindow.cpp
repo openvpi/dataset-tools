@@ -19,7 +19,7 @@
 #include <QStatusBar>
 #include <QTreeWidget>
 
-#include <dstools/ShortcutEditorWidget.h>
+#include <dstools/ShortcutManager.h>
 #include <dstools/Theme.h>
 
 namespace Minlabel {
@@ -30,12 +30,10 @@ namespace Minlabel {
 
         // Init menus
         browseAction = new QAction("Open Folder", this);
-        browseAction->setShortcut(QKeySequence("Ctrl+O"));
 
         convertAction = new QAction("Convert lab to project file", this);
 
         exportAction = new QAction("Export", this);
-        exportAction->setShortcut(QKeySequence("Ctrl+E"));
 
         fileMenu = new QMenu("File(&F)", this);
         fileMenu->addAction(browseAction);
@@ -43,10 +41,8 @@ namespace Minlabel {
         fileMenu->addAction(convertAction);
 
         nextAction = new QAction("Next file", this);
-        nextAction->setShortcut(QKeySequence::MoveToNextPage);
 
         prevAction = new QAction("Previous file", this);
-        prevAction->setShortcut(QKeySequence::MoveToPreviousPage);
 
         editMenu = new QMenu("Edit(&E)", this);
         editMenu->addAction(nextAction);
@@ -57,26 +53,11 @@ namespace Minlabel {
             auto *shortcutAction = new QAction("Shortcut Settings...", this);
             editMenu->addAction(shortcutAction);
             connect(shortcutAction, &QAction::triggered, this, [this]() {
-                using dstools::widgets::ShortcutEntry;
-                std::vector<ShortcutEntry> entries = {
-                    {QStringLiteral("Open Folder"), QStringLiteral("File"), MinLabelKeys::ShortcutOpen.path, MinLabelKeys::ShortcutOpen.defaultValue},
-                    {QStringLiteral("Export"), QStringLiteral("File"), MinLabelKeys::ShortcutExport.path, MinLabelKeys::ShortcutExport.defaultValue},
-                    {QStringLiteral("Previous File"), QStringLiteral("Navigation"), MinLabelKeys::NavigationPrev.path, MinLabelKeys::NavigationPrev.defaultValue},
-                    {QStringLiteral("Next File"), QStringLiteral("Navigation"), MinLabelKeys::NavigationNext.path, MinLabelKeys::NavigationNext.defaultValue},
-                    {QStringLiteral("Play/Stop"), QStringLiteral("Playback"), MinLabelKeys::PlaybackPlay.path, MinLabelKeys::PlaybackPlay.defaultValue},
-                };
-                dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
-                // Re-apply shortcuts to QActions
-                browseAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutOpen));
-                exportAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutExport));
-                prevAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationPrev));
-                nextAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationNext));
-                playAction->setShortcut(m_settings.shortcut(MinLabelKeys::PlaybackPlay));
+                m_shortcutManager->showEditor(this);
             });
         }
 
         playAction = new QAction("Play/Stop", this);
-        playAction->setShortcut(QKeySequence("F5"));
 
         playMenu = new QMenu("Playback(&P)", this);
         playMenu->addAction(playAction);
@@ -98,6 +79,14 @@ namespace Minlabel {
         bar->addMenu(viewMenu);
 
         bar->addMenu(helpMenu);
+
+        m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
+        m_shortcutManager->bind(browseAction, MinLabelKeys::ShortcutOpen, QStringLiteral("Open Folder"), QStringLiteral("File"));
+        m_shortcutManager->bind(exportAction, MinLabelKeys::ShortcutExport, QStringLiteral("Export"), QStringLiteral("File"));
+        m_shortcutManager->bind(prevAction, MinLabelKeys::NavigationPrev, QStringLiteral("Previous File"), QStringLiteral("Navigation"));
+        m_shortcutManager->bind(nextAction, MinLabelKeys::NavigationNext, QStringLiteral("Next File"), QStringLiteral("Navigation"));
+        m_shortcutManager->bind(playAction, MinLabelKeys::PlaybackPlay, QStringLiteral("Play/Stop"), QStringLiteral("Playback"));
+        m_shortcutManager->applyAll();
 
         m_fileProgress = new dstools::widgets::FileProgressTracker(
             dstools::widgets::FileProgressTracker::ProgressBarStyle, this);
@@ -314,11 +303,7 @@ namespace Minlabel {
     }
 
     void MainWindow::closeEvent(QCloseEvent *event) {
-        m_settings.setShortcut(MinLabelKeys::ShortcutOpen, browseAction->shortcut());
-        m_settings.setShortcut(MinLabelKeys::ShortcutExport, exportAction->shortcut());
-        m_settings.setShortcut(MinLabelKeys::NavigationPrev, prevAction->shortcut());
-        m_settings.setShortcut(MinLabelKeys::NavigationNext, nextAction->shortcut());
-        m_settings.setShortcut(MinLabelKeys::PlaybackPlay, playAction->shortcut());
+        m_shortcutManager->saveAll();
 
         if (!dirname.isEmpty()) {
             m_settings.set(MinLabelKeys::LastDir, dirname);
@@ -328,11 +313,7 @@ namespace Minlabel {
     }
 
     void MainWindow::applyConfig() {
-        browseAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutOpen));
-        exportAction->setShortcut(m_settings.shortcut(MinLabelKeys::ShortcutExport));
-        prevAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationPrev));
-        nextAction->setShortcut(m_settings.shortcut(MinLabelKeys::NavigationNext));
-        playAction->setShortcut(m_settings.shortcut(MinLabelKeys::PlaybackPlay));
+        m_shortcutManager->applyAll();
 
         if (const QString savedDir = m_settings.get(MinLabelKeys::LastDir);
             !savedDir.isEmpty() && QDir(savedDir).exists()) {

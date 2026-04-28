@@ -26,6 +26,7 @@
 #include <dstools/AudioDecoder.h>
 #include <dstools/WaveFormat.h>
 #include <dstools/AudioFileResolver.h>
+#include <dstools/ShortcutManager.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -43,6 +44,22 @@ MainWindow::MainWindow(QWidget *parent)
     buildCentralLayout();
     buildStatusBar();
     connectSignals();
+
+    m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
+    m_shortcutManager->bind(m_actOpenDir, PhonemeLabelerKeys::ShortcutOpen, tr("Open Directory"), tr("File"));
+    m_shortcutManager->bind(m_actSave, PhonemeLabelerKeys::ShortcutSave, tr("Save"), tr("File"));
+    m_shortcutManager->bind(m_actSaveAs, PhonemeLabelerKeys::ShortcutSaveAs, tr("Save As"), tr("File"));
+    m_shortcutManager->bind(m_actExit, PhonemeLabelerKeys::ShortcutExit, tr("Exit"), tr("File"));
+    m_shortcutManager->bind(m_actUndo, PhonemeLabelerKeys::ShortcutUndo, tr("Undo"), tr("Edit"));
+    m_shortcutManager->bind(m_actRedo, PhonemeLabelerKeys::ShortcutRedo, tr("Redo"), tr("Edit"));
+    m_shortcutManager->bind(m_actZoomIn, PhonemeLabelerKeys::ShortcutZoomIn, tr("Zoom In"), tr("View"));
+    m_shortcutManager->bind(m_actZoomOut, PhonemeLabelerKeys::ShortcutZoomOut, tr("Zoom Out"), tr("View"));
+    m_shortcutManager->bind(m_actZoomReset, PhonemeLabelerKeys::ShortcutZoomReset, tr("Reset Zoom"), tr("View"));
+    m_shortcutManager->bind(m_actToggleBinding, PhonemeLabelerKeys::ShortcutToggleBinding, tr("Toggle Binding"), tr("View"));
+    m_shortcutManager->bind(m_actPlayPause, PhonemeLabelerKeys::PlaybackPlayPause, tr("Play/Pause"), tr("Playback"));
+    m_shortcutManager->bind(m_actStop, PhonemeLabelerKeys::PlaybackStop, tr("Stop"), tr("Playback"));
+    m_shortcutManager->applyAll();
+
     applyConfig();
 
     // Restore window state via native QSettings
@@ -77,7 +94,6 @@ void MainWindow::buildMenuBar() {
     m_fileMenu = menuBar()->addMenu(tr("&File"));
 
     m_actOpenDir = m_fileMenu->addAction(tr("Open &Directory..."), this, &MainWindow::openDirectory);
-    m_actOpenDir->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutOpen));
 
     m_actOpenFile = m_fileMenu->addAction(tr("Open &File..."), [this]() {
         QString path = QFileDialog::getOpenFileName(this, tr("Open TextGrid File"),
@@ -90,14 +106,11 @@ void MainWindow::buildMenuBar() {
     m_fileMenu->addSeparator();
 
     m_actSave = m_fileMenu->addAction(tr("&Save"), this, &MainWindow::saveFile);
-    m_actSave->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutSave));
 
     m_actSaveAs = m_fileMenu->addAction(tr("Save &As..."), this, &MainWindow::saveFileAs);
-    m_actSaveAs->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutSaveAs));
 
     m_fileMenu->addSeparator();
     m_actExit = m_fileMenu->addAction(tr("E&xit"), this, &QMainWindow::close);
-    m_actExit->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutExit));
 
     // Edit menu
     m_editMenu = menuBar()->addMenu(tr("&Edit"));
@@ -105,24 +118,19 @@ void MainWindow::buildMenuBar() {
     m_actUndo = m_editMenu->addAction(tr("&Undo"), [this]() {
         if (m_undoStack->canUndo()) m_undoStack->undo();
     });
-    m_actUndo->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutUndo));
 
     m_actRedo = m_editMenu->addAction(tr("&Redo"), [this]() {
         if (m_undoStack->canRedo()) m_undoStack->redo();
     });
-    m_actRedo->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutRedo));
 
     // View menu
     m_viewMenu = menuBar()->addMenu(tr("&View"));
 
     m_actZoomIn = m_viewMenu->addAction(tr("Zoom &In"), this, &MainWindow::onZoomIn);
-    m_actZoomIn->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutZoomIn));
 
     m_actZoomOut = m_viewMenu->addAction(tr("Zoom &Out"), this, &MainWindow::onZoomOut);
-    m_actZoomOut->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutZoomOut));
 
     m_actZoomReset = m_viewMenu->addAction(tr("&Reset Zoom"), this, &MainWindow::onZoomReset);
-    m_actZoomReset->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutZoomReset));
 
     m_viewMenu->addSeparator();
 
@@ -133,7 +141,6 @@ void MainWindow::buildMenuBar() {
         updateBindingStatus();
     });
     m_actToggleBinding->setCheckable(true);
-    m_actToggleBinding->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::ShortcutToggleBinding));
 
     m_viewMenu->addSeparator();
 
@@ -169,6 +176,12 @@ void MainWindow::buildMenuBar() {
 
     // Help menu
     m_helpMenu = menuBar()->addMenu(tr("&Help"));
+
+    m_viewMenu->addSeparator();
+    m_viewMenu->addAction(tr("&Keyboard Shortcuts..."), [this]() {
+        m_shortcutManager->showEditor(this);
+    });
+
     m_actAbout = m_helpMenu->addAction(tr("&About"), [this]() {
         QMessageBox::about(this, tr("About PhonemeLabeler"),
             tr("<h3>PhonemeLabeler 0.1.0</h3>"
@@ -183,10 +196,8 @@ void MainWindow::buildToolbar() {
     toolbar->setMovable(false);
 
     m_actPlayPause = toolbar->addAction(tr("Play"), this, &MainWindow::onPlayPause);
-    m_actPlayPause->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::PlaybackPlayPause));
 
     m_actStop = toolbar->addAction(tr("Stop"), this, &MainWindow::onStop);
-    m_actStop->setShortcut(m_settings.shortcut(PhonemeLabelerKeys::PlaybackStop));
 
     toolbar->addSeparator();
 

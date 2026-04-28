@@ -24,7 +24,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
-#include <dstools/ShortcutEditorWidget.h>
+#include <dstools/ShortcutManager.h>
 #include <dstools/Theme.h>
 #include <dstools/AudioFileResolver.h>
 
@@ -62,6 +62,19 @@ namespace dstools {
             buildCentralLayout();
             buildStatusBar();
             connectSignals();
+
+            m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
+            m_shortcutManager->bind(m_actOpenDir, PitchLabelerKeys::ShortcutOpen, QStringLiteral("Open Directory"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_actSave, PitchLabelerKeys::ShortcutSave, QStringLiteral("Save"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_actSaveAll, PitchLabelerKeys::ShortcutSaveAll, QStringLiteral("Save All"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_actExit, PitchLabelerKeys::ShortcutExit, QStringLiteral("Exit"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_actUndo, PitchLabelerKeys::ShortcutUndo, QStringLiteral("Undo"), QStringLiteral("Edit"));
+            m_shortcutManager->bind(m_actRedo, PitchLabelerKeys::ShortcutRedo, QStringLiteral("Redo"), QStringLiteral("Edit"));
+            m_shortcutManager->bind(m_actZoomIn, PitchLabelerKeys::ShortcutZoomIn, QStringLiteral("Zoom In"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_actZoomOut, PitchLabelerKeys::ShortcutZoomOut, QStringLiteral("Zoom Out"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_actZoomReset, PitchLabelerKeys::ShortcutZoomReset, QStringLiteral("Reset Zoom"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_actABCompare, PitchLabelerKeys::ShortcutABCompare, QStringLiteral("A/B Compare"), QStringLiteral("Tools"));
+
             applyConfig();
 
             updateWindowTitle();
@@ -143,42 +156,10 @@ namespace dstools {
 
             m_toolsMenu->addSeparator();
             {
-                using dstools::widgets::ShortcutEntry;
                 auto *shortcutAction = new QAction(QStringLiteral("快捷键设置(&K)..."), this);
                 m_toolsMenu->addAction(shortcutAction);
                 connect(shortcutAction, &QAction::triggered, this, [this]() {
-                    using dstools::widgets::ShortcutEntry;
-                    std::vector<ShortcutEntry> entries = {
-                        {QStringLiteral("Open Directory"), QStringLiteral("File"), PitchLabelerKeys::ShortcutOpen.path, PitchLabelerKeys::ShortcutOpen.defaultValue},
-                        {QStringLiteral("Save"), QStringLiteral("File"), PitchLabelerKeys::ShortcutSave.path, PitchLabelerKeys::ShortcutSave.defaultValue},
-                        {QStringLiteral("Save All"), QStringLiteral("File"), PitchLabelerKeys::ShortcutSaveAll.path, PitchLabelerKeys::ShortcutSaveAll.defaultValue},
-                        {QStringLiteral("Exit"), QStringLiteral("File"), PitchLabelerKeys::ShortcutExit.path, PitchLabelerKeys::ShortcutExit.defaultValue},
-                        {QStringLiteral("Undo"), QStringLiteral("Edit"), PitchLabelerKeys::ShortcutUndo.path, PitchLabelerKeys::ShortcutUndo.defaultValue},
-                        {QStringLiteral("Redo"), QStringLiteral("Edit"), PitchLabelerKeys::ShortcutRedo.path, PitchLabelerKeys::ShortcutRedo.defaultValue},
-                        {QStringLiteral("Zoom In"), QStringLiteral("View"), PitchLabelerKeys::ShortcutZoomIn.path, PitchLabelerKeys::ShortcutZoomIn.defaultValue},
-                        {QStringLiteral("Zoom Out"), QStringLiteral("View"), PitchLabelerKeys::ShortcutZoomOut.path, PitchLabelerKeys::ShortcutZoomOut.defaultValue},
-                        {QStringLiteral("Reset Zoom"), QStringLiteral("View"), PitchLabelerKeys::ShortcutZoomReset.path, PitchLabelerKeys::ShortcutZoomReset.defaultValue},
-                        {QStringLiteral("Previous File"), QStringLiteral("Navigation"), PitchLabelerKeys::NavigationPrev.path, PitchLabelerKeys::NavigationPrev.defaultValue},
-                        {QStringLiteral("Next File"), QStringLiteral("Navigation"), PitchLabelerKeys::NavigationNext.path, PitchLabelerKeys::NavigationNext.defaultValue},
-                        {QStringLiteral("Play/Pause"), QStringLiteral("Playback"), PitchLabelerKeys::PlaybackPlayPause.path, PitchLabelerKeys::PlaybackPlayPause.defaultValue},
-                        {QStringLiteral("Stop"), QStringLiteral("Playback"), PitchLabelerKeys::PlaybackStop.path, PitchLabelerKeys::PlaybackStop.defaultValue},
-                        {QStringLiteral("Select Tool"), QStringLiteral("Tools"), PitchLabelerKeys::ToolSelect.path, PitchLabelerKeys::ToolSelect.defaultValue},
-                        {QStringLiteral("Modulation Tool"), QStringLiteral("Tools"), PitchLabelerKeys::ToolModulation.path, PitchLabelerKeys::ToolModulation.defaultValue},
-                        {QStringLiteral("Drift Tool"), QStringLiteral("Tools"), PitchLabelerKeys::ToolDrift.path, PitchLabelerKeys::ToolDrift.defaultValue},
-                        {QStringLiteral("A/B Compare"), QStringLiteral("Tools"), PitchLabelerKeys::ShortcutABCompare.path, PitchLabelerKeys::ShortcutABCompare.defaultValue},
-                    };
-                    dstools::widgets::ShortcutEditorWidget::showDialog(&m_settings, entries, this);
-                    // Re-apply shortcuts to QActions (without full applyConfig side effects)
-                    m_actOpenDir->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutOpen));
-                    m_actSave->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSave));
-                    m_actSaveAll->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSaveAll));
-                    m_actUndo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutUndo));
-                    m_actRedo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutRedo));
-                    m_actZoomIn->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomIn));
-                    m_actZoomOut->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomOut));
-                    m_actZoomReset->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomReset));
-                    m_actABCompare->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutABCompare));
-                    m_actExit->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutExit));
+                    m_shortcutManager->showEditor(this);
                     rebuildWindowShortcuts();
                 });
             }
@@ -580,16 +561,7 @@ namespace dstools {
 
         void MainWindow::applyConfig() {
             // Apply saved shortcuts
-            m_actOpenDir->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutOpen));
-            m_actSave->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSave));
-            m_actSaveAll->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutSaveAll));
-            m_actUndo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutUndo));
-            m_actRedo->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutRedo));
-            m_actZoomIn->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomIn));
-            m_actZoomOut->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomOut));
-            m_actZoomReset->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomReset));
-            m_actABCompare->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutABCompare));
-            m_actExit->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutExit));
+            m_shortcutManager->applyAll();
 
             // Window-level shortcuts for tool modes, playback, navigation
             rebuildWindowShortcuts();

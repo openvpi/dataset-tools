@@ -7,6 +7,7 @@ set(WIDGETS_SOURCES
     src/TaskWindow.cpp
     src/GpuSelector.cpp
     src/ShortcutEditorWidget.cpp
+    src/ShortcutManager.cpp
     src/FileProgressTracker.cpp
     src/FileStatusDelegate.cpp
 )
@@ -17,6 +18,7 @@ set(WIDGETS_HEADERS
     include/dstools/TaskWindow.h
     include/dstools/GpuSelector.h
     include/dstools/ShortcutEditorWidget.h
+    include/dstools/ShortcutManager.h
     include/dstools/FileProgressTracker.h
     include/dstools/FileStatusDelegate.h
 )

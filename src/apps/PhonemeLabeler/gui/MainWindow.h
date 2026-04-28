@@ -14,6 +14,7 @@
 
 #include <dstools/AppSettings.h>
 #include <dstools/PlayWidget.h>
+#include <dstools/ShortcutManager.h>
 
 #include "../PhonemeLabelerKeys.h"
 #include "ui/TextGridDocument.h"
@@ -61,6 +62,7 @@ private:
 
     // Services
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
+    dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
 
     // UI Components
     QSplitter *m_mainSplitter = nullptr;

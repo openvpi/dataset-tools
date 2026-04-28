@@ -9,6 +9,7 @@
 #include "Common.h"
 #include <dstools/AppSettings.h>
 #include <dstools/PlayWidget.h>
+#include <dstools/ShortcutManager.h>
 #include <dstools/FileStatusDelegate.h>
 #include <dstools/FileProgressTracker.h>
 #include "TextWidget.h"
@@ -56,6 +57,7 @@ namespace Minlabel {
         QString lastFile;
 
         dstools::AppSettings m_settings;
+        dstools::widgets::ShortcutManager *m_shortcutManager;
 
         void openDirectory(const QString &dirName) const;
         void openFile(const QString &filename) const;

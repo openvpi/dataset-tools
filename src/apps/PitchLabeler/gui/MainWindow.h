@@ -19,6 +19,7 @@
 #include <dstools/AppSettings.h>
 #include <dstools/Theme.h>
 #include <dstools/PlayWidget.h>
+#include <dstools/ShortcutManager.h>
 
 #include "ui/PianoRollView.h"
 
@@ -57,6 +58,7 @@ private:
 
     // Services
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
+    dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
 
     // UI Components - Menu
     QMenu *m_fileMenu = nullptr;
