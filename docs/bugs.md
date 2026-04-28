@@ -183,11 +183,12 @@
 
 ### BUG-013: f0Values 空向量 UB [App]
 
-- **位置**: `src/apps/SlurCutter/gui/F0Widget.cpp`
+- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp`~~（原 SlurCutter 已删除）
 - **描述**: 对 `f0Values` 调用 `std::min_element` / `std::max_element` 时未检查是否为空，空向量上调用这些算法属于未定义行为。
 - **影响**: 加载空 f0 数据的 .ds 文件时崩溃。
 - **建议修复**: 在调用前检查 `isEmpty()`，为空时提示错误并 return。
 - **工时**: XS（15分钟）
+- **状态**: 原 SlurCutter 已删除。PitchLabeler 的 `PianoRollView.cpp` 需验证是否存在同类问题。
 
 ### BUG-023: FunAsr ftell 返回值截断 [App]
 
@@ -199,11 +200,12 @@
 
 ### BUG-024: splitPitch 越界访问 [App]
 
-- **位置**: `src/apps/SlurCutter/gui/F0Widget.cpp`
+- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp`~~（原 SlurCutter 已删除）
 - **描述**: `notePitch.split(...)` 结果直接取 `[1]` 元素，当音符名不含偏移量（如 "C4" 无 "+5"）时 `splitPitch` 只有一个元素，`[1]` 越界。
 - **影响**: 加载纯音符名时崩溃。
 - **建议修复**: 检查 `splitPitch.size() > 1` 后再访问。
 - **工时**: XS（5分钟）
+- **状态**: 原 SlurCutter 已删除。PitchLabeler 使用 `PianoRollView.cpp` 中的 `parseNoteName()` 实现音名解析，需验证是否存在同类越界问题。
 
 ### BUG-025: FunAsr 类型双关 UB [App]
 
@@ -288,11 +290,12 @@
 
 ### CQ-002: F0Widget 上帝类（1097行）
 
-- **位置**: `src/apps/SlurCutter/gui/F0Widget.cpp`
+- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp`~~
 - **描述**: F0Widget 同时承担音乐工具函数、音符数据模型、钢琴卷帘渲染、交互逻辑四种职责，严重违反单一职责原则。
 - **影响**: 难以维护和测试，任何修改都可能产生意外副作用。
 - **建议修复**: 拆分为 MusicUtilities、NoteDataModel、PianoRollRenderer、F0Widget 四个类。
 - **工时**: L（2~3天）
+- **状态**: 已解决 -- PitchLabeler 采用全新架构（PianoRollView、DSFile、PropertyPanel、FileListPanel 分离），不存在此问题
 
 ### CQ-005: 循环内创建 QRegularExpression
 
@@ -312,11 +315,12 @@
 
 ### CQ-006b: covertNum 拼写错误
 
-- **位置**: `src/apps/SlurCutter/` 中 TextWidget 相关代码
+- **位置**: ~~`src/apps/SlurCutter/` 中 TextWidget 相关代码~~
 - **描述**: `covertNum` 应为 `convertNum`。
 - **影响**: 可读性。
 - **建议修复**: 全局替换。
 - **工时**: XS（15分钟）
+- **状态**: 已解决 -- SlurCutter 已删除
 
 ---
 
@@ -405,11 +409,12 @@
 
 ### CQ-007: F0Widget 不当注释
 
-- **位置**: `src/apps/SlurCutter/gui/F0Widget.cpp:524`
+- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp:524`~~
 - **描述**: 存在不合适的注释内容。
 - **影响**: 代码规范。
 - **建议修复**: 替换为正常功能描述注释。
 - **工时**: XS（5分钟）
+- **状态**: 已解决 -- SlurCutter 已删除
 
 ### CQ-008: 裸 new/delete 遍布全项目
 
@@ -594,19 +599,18 @@ void MainWindow::labToJson(const QString &dir) {
 
 ### BUG-013: f0Values 空向量 ⏳
 
-**新位置**: `src/apps/SlurCutter/F0Widget/NoteDataModel.cpp`
+**原位置**: ~~`src/apps/SlurCutter/F0Widget/NoteDataModel.cpp`~~（SlurCutter 已删除）
+**当前状态**: PitchLabeler 的 `PianoRollView.cpp` 需验证是否存在同类问题。
 
 ```cpp
-void NoteDataModel::loadFromDsSentence(const QJsonObject &obj) {
-    // ... 解析 f0_seq ...
-    if (m_f0Values.isEmpty()) {
-        // 设置安全默认值，避免 UB
-        emit errorOccurred(tr("Empty F0 data in sentence"));
-        return;
-    }
-    m_f0Min = *std::min_element(m_f0Values.begin(), m_f0Values.end());
-    m_f0Max = *std::max_element(m_f0Values.begin(), m_f0Values.end());
+// 若 PitchLabeler 中存在类似的 min_element/max_element 调用，
+// 应在调用前检查容器是否为空：
+if (m_f0Values.isEmpty()) {
+    emit errorOccurred(tr("Empty F0 data in sentence"));
+    return;
 }
+m_f0Min = *std::min_element(m_f0Values.begin(), m_f0Values.end());
+m_f0Max = *std::max_element(m_f0Values.begin(), m_f0Values.end());
 ```
 
 ---
@@ -755,9 +759,11 @@ size_t nFileLen = static_cast<size_t>(pos);
 
 ### BUG-024: splitPitch 越界 ⏳
 
-**新位置**: `src/apps/SlurCutter/F0Widget/NoteDataModel.cpp`
+**原位置**: ~~`src/apps/SlurCutter/F0Widget/NoteDataModel.cpp`~~（SlurCutter 已删除）
+**当前状态**: PitchLabeler 使用 `PianoRollView.cpp` 中的 `parseNoteName()` 实现音名解析，需验证是否存在同类越界问题。
 
 ```cpp
+// PitchLabeler 的 parseNoteName() 应确保：
 auto splitPitch = notePitch.split(QRegularExpression(R"((\+|\-))"));
 note.pitch = MusicUtils::noteNameToMidiNote(splitPitch[0]);
 note.cents = (splitPitch.size() > 1) ? splitPitch[1].toDouble() : 0.0;
@@ -812,12 +818,12 @@ std::memcpy(&min_resol, &val, sizeof(float));
 |--------|------|------|
 | BUG-008 | ⏳ | `dir.count()` → `dir.entryList(audioFilters, QDir::Files).count()` |
 | BUG-012 | ⏳ | "is not exists" → "does not exist"，改 `QMessageBox::critical` |
-| CQ-002 | ⏳ | F0Widget 拆分，详见 module-spec.md §5.3 |
+| CQ-002 | ✅ | 已解决 -- PitchLabeler 全新架构 |
 | CQ-003 | ⏳ | i18n：所有用户可见字符串用 `tr()` 包裹 |
 | CQ-004 | ⏳ | `foreach` → 范围 for（8 处） |
 | CQ-005 | ⏳ | 循环内正则 → `static const QRegularExpression` |
-| CQ-006 | ⏳ | `covertAction` → `convertAction`，`FaTread` → `LyricMatchTask` |
-| CQ-007 | ⏳ | 删除不雅注释，替换为功能描述 |
+| CQ-006 | ⏳ | `covertAction` → `convertAction`，`FaTread` → `LyricMatchTask`（CQ-006b 已解决 -- SlurCutter 已删除） |
+| CQ-007 | ✅ | 已解决 -- SlurCutter 已删除 |
 | CQ-009 | ⏳ | 统一错误处理，设计 Result/Status 类型 |
 | CQ-010 | ⏳ | FunAsr 魔数提取为命名常量 |
 
@@ -829,22 +835,23 @@ std::memcpy(&min_resol, &val, sizeof(float));
 |--------|------|-----------|
 | Critical | 5 | ~2天 |
 | High | 14 | ~12天 |
-| Medium | 18 | ~9天 |
+| Medium | 15 | ~7天 |
 | Low | 16 | ~10天 |
-| **合计** | **53** | **~33天** |
+| **合计** | **50** | **~31天** |
+| **已解决** | **3** | CQ-002, CQ-006b, CQ-007（SlurCutter 删除） |
 
 ### 模块分布
 
 | 模块 | Bug 数量 | 占比 |
 |------|---------|------|
-| FunAsr | 16 | 31% |
-| audio (SDL/FFmpeg) | 9 | 17% |
-| SlurCutter | 5 | 10% |
+| FunAsr | 16 | 32% |
+| audio (SDL/FFmpeg) | 9 | 18% |
+| SlurCutter (已删除，待验证) | 2 | 4% |
 | 全项目 | 5 | 10% |
 | HubertFA | 3 | 6% |
 | audio-util | 5 | 10% |
 | MinLabel | 2 | 4% |
-| 其他 | 7 | 13% |
+| 其他 | 8 | 16% |
 
 ### 去重说明
 

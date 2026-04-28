@@ -11,6 +11,7 @@ add_custom_target(DeployedTargets)
 add_subdirectory(core)
 add_subdirectory(audio)
 add_subdirectory(widgets)
+add_subdirectory(libs)
 add_subdirectory(infer)
 
 add_subdirectory(apps)

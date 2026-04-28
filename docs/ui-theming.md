@@ -11,7 +11,7 @@
 
 1. **暗色优先** — 音频/音乐工具用户普遍偏好暗色界面
 2. **一套 QSS 覆盖全部控件** — 新增页面无需额外写样式
-3. **自绘组件兼容** — F0Widget 等 QPainter 自绘组件通过 `Theme::palette()` 获取色板
+3. **自绘组件兼容** — PianoRollView 等 QPainter 自绘组件通过 `Theme::palette()` 获取色板
 4. **亮/暗切换** — 用户可选，设置持久化
 5. **DPI 适配** — 布局使用相对尺寸，图标使用 SVG
 
@@ -319,7 +319,7 @@ QSlider::add-page:horizontal {
     border-radius: 2px;
 }
 
-/* Vertical slider (for F0Widget scrollbars if needed) */
+/* Vertical slider (for PianoRollView scrollbars if needed) */
 QSlider::groove:vertical {
     width: 4px;
     background: #3a3a52;
@@ -595,9 +595,9 @@ QLabel[cssClass="success"] {
 
 ## 4. 自绘组件适配
 
-### 4.1 F0Widget / PianoRollRenderer 色板
+### 4.1 PianoRollView (PitchLabeler) 色板
 
-F0Widget 使用 QPainter 自绘，不受 QSS 影响。通过 `Theme::palette()` 获取色板：
+PianoRollView 使用 QPainter 自绘，不受 QSS 影响。通过 `Theme::palette()` 获取色板：
 
 ```cpp
 // PianoRollRenderer.cpp
@@ -642,7 +642,7 @@ void PianoRollRenderer::render(QPainter &painter, const QRect &rect) {
 }
 ```
 
-### 4.2 与原 F0Widget 渲染的对应关系
+### 4.2 与 PitchLabeler PianoRollView 渲染的对应关系
 
 | 原渲染元素 | 原颜色 | 新颜色 (Dark) | 变化 |
 |-----------|--------|---------------|------|
@@ -675,17 +675,17 @@ void PianoRollRenderer::render(QPainter &painter, const QRect &rect) {
 | `pause.svg` | 暂停 | PlayWidget |
 | `stop-circle.svg` | 停止 | PlayWidget |
 | `volume-2.svg` | 音频设备 | PlayWidget |
-| `folder-open.svg` | 打开目录 | MinLabel, SlurCutter |
+| `folder-open.svg` | 打开目录 | MinLabel, PitchLabeler |
 | `save.svg` | 保存 | 通用 |
 | `download.svg` | 导出 | MinLabel |
 | `check-circle.svg` | 已完成/已标注 | MinLabel 文件树, TaskWindow |
 | `circle.svg` | 未完成/未标注 | MinLabel 文件树 |
 | `x-circle.svg` | 失败 | TaskWindow |
 | `loader.svg` | 处理中 | TaskWindow |
-| `scissors.svg` | 分割音符 | SlurCutter |
-| `merge.svg` | 合并音符 | SlurCutter |
-| `undo.svg` | 撤销 | SlurCutter |
-| `redo.svg` | 重做 | SlurCutter |
+| `scissors.svg` | 分割音符 | PitchLabeler |
+| `merge.svg` | 合并音符 | PitchLabeler |
+| `undo.svg` | 撤销 | PitchLabeler |
+| `redo.svg` | 重做 | PitchLabeler |
 | `plus.svg` | 添加文件 | AudioSlicer, TaskWindow |
 | `minus.svg` | 移除 | AudioSlicer, TaskWindow |
 | `trash-2.svg` | 清空列表 | AudioSlicer, TaskWindow |
@@ -750,7 +750,7 @@ Tab 样式：
 - 未选中: 灰色文字，透明背景
 - 悬停: 浅色背景
 
-### 6.2 MinLabel / SlurCutter / GameInfer — 独立 QMainWindow
+### 6.2 MinLabel / PitchLabeler / PhonemeLabeler / GameInfer — 独立 QMainWindow
 
 保持各自原有的窗口布局，变化仅限于：
 - 深色主题自动应用（通过 `dstools-widgets.dll` 中的 QSS）
@@ -771,14 +771,14 @@ Tab 样式：
 | 状态栏进度 | `statusBar: "MinLabel — 128/256 (50%) labeled"` |
 | G2P 按钮样式 | `cssClass="primary"` 属性 |
 
-### 7.2 SlurCutter
+### 7.2 PitchLabeler
 
-| 改进 | 实现 |
-|------|------|
-| 句子列表颜色标记 | 已编辑: `accent` 色文字; 未编辑: `textSecondary` |
-| 缩放指示器 | F0Widget 右下角显示 `"120%"` 缩放百分比 |
-| 工具栏按钮 | 在 F0Widget 上方添加: `[Split] [Merge] [Undo] [Redo]` 图标按钮 |
-| 快捷键提示 | 按钮 tooltip 显示快捷键 |
+| 改进 | 实现 | 状态 |
+|------|------|------|
+| 句子列表颜色标记 | FileListPanel 已实现 3-state 标记（未保存/已修改/已保存） | 已实现 |
+| 缩放指示器 | PianoRollView 已有缩放显示 | 已实现 |
+| 工具栏按钮 | PitchLabeler 已有 Select/Modulation/Drift/Audition 按钮 | 已实现 |
+| 快捷键提示 | 按钮 tooltip 显示快捷键 | 已实现 |
 
 ### 7.3 Pipeline Step 1 (AudioSlicer)
 

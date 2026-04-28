@@ -8,7 +8,8 @@ DiffSinger dataset processing tools for singing voice synthesis data preparation
 |---|---|
 | **DatasetPipeline** | Unified dataset processing pipeline with 3 tabs: AudioSlicer (RMS-based slicing), LyricFA (FunASR lyric alignment), HubertFA (HuBERT phoneme alignment) |
 | **MinLabel** | Audio labeling tool with G2P conversion (Mandarin/Cantonese/Japanese) |
-| **SlurCutter** | DiffSinger sentence/MIDI editor with piano roll F0 visualization |
+| **PhonemeLabeler** | TextGrid phoneme boundary editor with waveform/spectrogram/power visualization, cross-tier boundary binding, undo/redo |
+| **PitchLabeler** | DiffSinger .ds file F0 curve editor with piano roll visualization, multi-tool editing (Select/Modulation/Drift), A/B comparison, undo/redo |
 | **GameInfer** | GAME audio-to-MIDI transcription (4-model ONNX pipeline) |
 
 ## Supported Platforms
@@ -120,7 +121,7 @@ cmake --build build --target install
 
 | Option | Default | Description |
 |---|---|---|
-| `BUILD_TESTS` | `ON` | Build `src/tests/` subdirectory (currently empty placeholder) |
+| `BUILD_TESTS` | `ON` | Build `src/tests/` subdirectory |
 | `AUDIO_UTIL_BUILD_TESTS` | `ON` | Build TestAudioUtil |
 | `GAME_INFER_BUILD_TESTS` | `ON` | Build TestGame |
 | `SOME_INFER_BUILD_TESTS` | `ON` | Build TestSome |
@@ -132,7 +133,7 @@ cmake --build build --target install
 
 | Type | Files |
 |---|---|
-| Applications | `DatasetPipeline.exe`, `MinLabel.exe`, `SlurCutter.exe`, `GameInfer.exe` |
+| Applications | `DatasetPipeline.exe`, `MinLabel.exe`, `PhonemeLabeler.exe`, `PitchLabeler.exe`, `GameInfer.exe` |
 | Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestSome.exe`, `TestAudioUtil.exe` |
 | Shared libraries | `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `some-infer.dll`, `rmvpe-infer.dll` |
 
@@ -170,7 +171,7 @@ cmake --build build --target install
     + GNU GPL v2.0
 + [yaml-cpp](https://github.com/jbeder/yaml-cpp)
     + MIT License
-+ [wolf-midi](https://github.com/user/wolf-midi)
++ [wolf-midi](https://github.com/wolfgitpr/wolf-midi)
     + MIT License
 + [nlohmann/json](https://github.com/nlohmann/json)
     + MIT License

@@ -8,12 +8,11 @@
 
 ## 高优先级
 
-### FEAT-001: SlurCutter 撤销/重做
+### FEAT-001: SlurCutter 撤销/重做 — 已完成/已过时
 
-- **目标**: 为 SlurCutter 的全部 7 种编辑操作提供完整的撤销重做支持
-- **设计方案**: 基于 Qt 的 QUndoStack + QUndoCommand 框架，为每种编辑操作（插入、删除、移动、合并、拆分等）实现对应的 Command 子类
-- **预估工时**: 6h
-- **依赖**: 无
+- **状态**: 已过时 — PitchLabeler 已实现完整的 QUndoStack 撤销重做
+- **原目标**: 为 SlurCutter 的全部 7 种编辑操作提供完整的撤销重做支持
+- **说明**: SlurCutter 已从代码库中删除，由 PitchLabeler 完全替代。PitchLabeler 基于 Qt 的 QUndoStack + QUndoCommand 框架实现了完整的撤销重做功能
 
 ### FEAT-006: 单元测试覆盖
 
@@ -31,7 +30,7 @@
 ### FEAT-002: 批量重采样工具
 
 - **目标**: 提供批量音频重采样功能，支持常见采样率转换
-- **设计方案**: 复用现有 AsyncTaskWindow 异步任务框架 + audio-util 库的重采样能力，新增一个独立的工具窗口
+- **设计方案**: 复用现有 TaskWindow 异步任务框架 + audio-util 库的重采样能力，新增一个独立的工具窗口
 - **预估工时**: 4h
 - **依赖**: dstools-audio, audio-util
 
@@ -58,7 +57,7 @@
 
 ### FEAT-007: 统一配置系统 ⚠️ 部分完成
 
-- **目标**: 统一 4 个 EXE 的配置管理方式，消除 key 命名不一致的问题
+- **目标**: 统一 5 个 EXE 的配置管理方式，消除 key 命名不一致的问题
 - **现状**: 已完成 AppSettings + JSON 后端的基础框架。目前 3 个应用仍使用旧的 INI 配置，尚未迁移
 - **设计方案**: 将剩余应用逐步迁移到 AppSettings，统一 key 的命名规范
 - **预估工时**: 4h（迁移 + 验证）
@@ -90,9 +89,9 @@
 
 | 方向 | 说明 | 备注 |
 |------|------|------|
-| SVG 图标系统 | 为全部 4 个应用统一引入 SVG 图标 | 可与主题系统同步推进 |
+| SVG 图标系统 | 为全部 5 个应用统一引入 SVG 图标 | 可与主题系统同步推进 |
 | 主题系统自动模式 | 自动检测 OS 主题（浅色/深色）并切换 | 依赖 dstools-widgets |
-| F0Widget 主题适配 | F0Widget 需跟随应用主题变化 | 被 CQ-002（F0Widget 拆分）阻塞，需先完成拆分 |
+| PianoRollView 主题适配 | PitchLabeler 的 PianoRollView 需跟随应用主题变化 | PianoRollView 已通过 Theme::palette() 获取色板，可能仍需完善 |
 | DPI 适配 | 高分屏下的布局和渲染适配 | 涉及全部应用的 UI 层 |
 
 ### 质量保障
@@ -103,7 +102,7 @@
 
 ### 建议推进顺序
 
-1. **FEAT-001**（SlurCutter 撤销重做）+ **FEAT-003**（参数校验）+ **FEAT-004**（线程安全）：三者相互独立，可并行推进
+1. **FEAT-003**（参数校验）+ **FEAT-004**（线程安全）：两者相互独立，可并行推进
 2. **FEAT-006 P0**（核心测试）：为后续重构提供安全网
 3. **FEAT-002**（批量重采样）：独立功能，随时可做
 4. **FEAT-005**（CI/CD）：Windows 已完成，等 FEAT-006 有一定覆盖后搭建 macOS/Linux
