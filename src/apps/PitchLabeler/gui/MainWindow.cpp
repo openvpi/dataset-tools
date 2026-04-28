@@ -26,6 +26,7 @@
 
 #include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
+#include <dstools/AudioFileResolver.h>
 
 #include <algorithm>
 #include <functional>
@@ -670,15 +671,9 @@ namespace dstools {
             m_actSave->setEnabled(true);
 
             // Find and load audio file
-            QFileInfo fi(path);
-            QString audioPath = fi.absolutePath() + "/" + fi.completeBaseName();
-            QStringList audioExts = {"wav", "mp3", "m4a", "flac"};
-            for (const QString &ext : audioExts) {
-                QString testPath = audioPath + "." + ext;
-                if (QFile::exists(testPath)) {
-                    m_playWidget->openFile(testPath);
-                    break;
-                }
+            QString audioPath = dstools::AudioFileResolver::findAudioFile(path);
+            if (!audioPath.isEmpty()) {
+                m_playWidget->openFile(audioPath);
             }
 
             // Limit piano roll length to audio file duration

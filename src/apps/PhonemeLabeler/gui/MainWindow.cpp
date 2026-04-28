@@ -25,6 +25,7 @@
 
 #include <dstools/AudioDecoder.h>
 #include <dstools/WaveFormat.h>
+#include <dstools/AudioFileResolver.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -497,16 +498,14 @@ void MainWindow::onFileSelected(const QString &path) {
     m_settings.set(PhonemeLabelerKeys::LastDir, QFileInfo(path).absolutePath());
 
     // Load audio if available (same name, different extension)
-    QStringList audioExts = {"wav", "mp3", "m4a", "flac", "ogg"};
-    for (const QString &ext : audioExts) {
-        QString tryPath = QFileInfo(path).absolutePath() + "/" + QFileInfo(path).completeBaseName() + "." + ext;
-        if (QFile::exists(tryPath)) {
-            m_waveformWidget->loadAudio(tryPath);
-            m_playWidget->openFile(tryPath);
+    QString audioFilePath = dstools::AudioFileResolver::findAudioFile(path);
+    if (!audioFilePath.isEmpty()) {
+            m_waveformWidget->loadAudio(audioFilePath);
+            m_playWidget->openFile(audioFilePath);
 
             // Load audio data for power and spectrogram widgets
             dstools::audio::AudioDecoder decoder;
-            if (decoder.open(tryPath)) {
+            if (decoder.open(audioFilePath)) {
                 auto fmt = decoder.format();
                 int sampleRate = fmt.sampleRate();
                 int channels = fmt.channels();
@@ -539,8 +538,6 @@ void MainWindow::onFileSelected(const QString &path) {
                 m_powerWidget->setAudioData(monoSamples, sampleRate);
                 m_spectrogramWidget->setAudioData(monoSamples, sampleRate);
             }
-            break;
-        }
     }
 
     m_waveformWidget->setDocument(m_document);

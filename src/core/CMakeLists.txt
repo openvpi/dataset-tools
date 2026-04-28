@@ -11,6 +11,7 @@ set(CORE_SOURCES
     src/Theme.cpp
     src/FramelessHelper.cpp
     src/PitchUtils.cpp
+    src/AudioFileResolver.cpp
 )
 
 set(CORE_HEADERS
@@ -21,6 +22,7 @@ set(CORE_HEADERS
     include/dstools/Theme.h
     include/dstools/FramelessHelper.h
     include/dstools/PitchUtils.h
+    include/dstools/AudioFileResolver.h
 )
 
 set(CORE_RESOURCES

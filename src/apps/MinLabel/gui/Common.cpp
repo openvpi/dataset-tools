@@ -5,42 +5,15 @@
 #include <QJsonObject>
 #include <QMessageBox>
 
+#include <dstools/AudioFileResolver.h>
+
 namespace Minlabel {
     QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix) {
-        const QFileInfo info(filename);
-        const QString suffix = info.suffix().toLower();
-        const QString name = info.fileName();
-        return info.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) +
-               (suffix != "wav" ? "_" + suffix : "") + "." + tarSuffix;
+        return dstools::AudioFileResolver::audioToDataFile(filename, tarSuffix);
     }
 
     QString labFileToAudioFile(const QString &filename) {
-        const QFileInfo info(filename);
-
-        const QString dirPath = info.absolutePath();
-        const QString suffix = info.suffix().toLower();
-        const QString fileName = info.fileName();
-        const QString baseName = fileName.mid(0, fileName.size() - suffix.size() - 1);
-
-        const QDir directory(dirPath);
-        QStringList fileTypes;
-        fileTypes << "*.wav"
-                  << "*.mp3"
-                  << "*.m4a"
-                  << "*.flac";
-
-        QStringList audioFiles = directory.entryList(fileTypes, QDir::Files);
-        for (const QString &audioFile : audioFiles) {
-            QFileInfo audioInfo(audioFile);
-            QString audioSuffix = audioInfo.suffix().toLower();
-            QString audioName = audioInfo.fileName();
-            QString audioBaseName = audioName.mid(0, audioName.size() - audioSuffix.size() - 1);
-            if (audioBaseName == baseName) {
-                QString audioFilePath = directory.absoluteFilePath(audioFile);
-                return audioFilePath;
-            }
-        }
-        return "";
+        return dstools::AudioFileResolver::findAudioFile(filename);
     }
 
     bool expFile(const CopyInfo &copyInfo, const QString &item, const QString &suffix, const QString &data) {
