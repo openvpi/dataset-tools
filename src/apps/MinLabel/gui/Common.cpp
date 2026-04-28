@@ -6,8 +6,19 @@
 #include <QMessageBox>
 
 #include <dstools/AudioFileResolver.h>
+#include <dstools/JsonHelper.h>
 
 namespace Minlabel {
+    // QJsonObject ↔ nlohmann::json boundary conversion
+    static QJsonObject nlohmannToQt(const nlohmann::json &j) {
+        return QJsonDocument::fromJson(
+            QByteArray::fromStdString(j.dump())).object();
+    }
+    static nlohmann::json qtToNlohmann(const QJsonObject &obj) {
+        return nlohmann::json::parse(
+            QJsonDocument(obj).toJson(QJsonDocument::Compact).toStdString());
+    }
+
     QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix) {
         return dstools::AudioFileResolver::audioToDataFile(filename, tarSuffix);
     }
@@ -194,43 +205,19 @@ namespace Minlabel {
     }
 
     bool readJsonFile(const QString &fileName, QJsonObject &jsonObject) {
-        QFile file(fileName);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        std::string error;
+        auto j = dstools::JsonHelper::loadFile(fileName.toStdString(), error);
+        if (!error.empty())
             return false;
-        }
-
-        const QByteArray jsonData = file.readAll();
-        file.close();
-
-        QJsonParseError parseError{};
-        const QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData, &parseError);
-
-        if (parseError.error != QJsonParseError::NoError) {
-            return false;
-        }
-
-        if (!jsonDoc.isObject()) {
-            return false;
-        }
-
-        jsonObject = jsonDoc.object();
+        jsonObject = nlohmannToQt(j);
         return true;
     }
 
     bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject) {
-        QFile file(fileName);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        std::string error;
+        auto j = qtToNlohmann(jsonObject);
+        if (!dstools::JsonHelper::saveFile(fileName.toStdString(), j, error))
             return false;
-        }
-
-        const QJsonDocument jsonDoc(jsonObject);
-        const QByteArray jsonData = jsonDoc.toJson();
-
-        if (file.write(jsonData) == -1) {
-            return false;
-        }
-
-        file.close();
         return true;
     }
 }
