@@ -1,5 +1,5 @@
 #include "PropertyPanel.h"
-#include "PianoRollView.h"  // for parseNoteName
+#include <dstools/PitchUtils.h>
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -13,6 +13,9 @@
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
+
+using dstools::NotePitch;
+using dstools::parseNoteName;
 
 // ============================================================================
 // Helpers

@@ -10,6 +10,7 @@ set(CORE_SOURCES
     src/JsonHelper.cpp
     src/Theme.cpp
     src/FramelessHelper.cpp
+    src/PitchUtils.cpp
 )
 
 set(CORE_HEADERS
@@ -19,6 +20,7 @@ set(CORE_HEADERS
     include/dstools/JsonHelper.h
     include/dstools/Theme.h
     include/dstools/FramelessHelper.h
+    include/dstools/PitchUtils.h
 )
 
 set(CORE_RESOURCES

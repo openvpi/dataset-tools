@@ -8,6 +8,8 @@
 #include <QVector>
 #include <QSet>
 
+#include <dstools/PitchUtils.h>
+
 #include <memory>
 #include <set>
 #include <map>
@@ -21,42 +23,20 @@ class DSFile;
 
 namespace ui {
 
+using dstools::NotePitch;
+using dstools::parseNoteName;
+using dstools::freqToMidi;
+using dstools::midiToFreq;
+using dstools::midiToNoteName;
+using dstools::midiToNoteString;
+using dstools::shiftNoteCents;
+
 /// Tool modes for pitch editing (matches Python reference ToolMode)
 enum ToolMode {
     ToolSelect = 0,
     ToolModulation = 1,
     ToolDrift = 2,
 };
-
-/// Parsed representation of a DS note string (e.g. "C#4+12")
-struct NotePitch {
-    QString name;       // e.g. "C#"
-    int octave = 0;     // e.g. 4
-    int cents = 0;      // e.g. 12, always in [-50, +50]
-    double midiNumber = 0.0; // full precision MIDI number
-    bool valid = false;
-};
-
-/// Parse a DS note string like "C#4+12", "Bb3", "rest" into NotePitch.
-/// Returns invalid NotePitch for "rest" or unparseable strings.
-NotePitch parseNoteName(const QString &noteStr);
-
-/// Convert frequency in Hz to MIDI note number (float).
-/// Returns 0 for freq <= 0.
-double freqToMidi(double freq);
-
-/// Convert MIDI note number to frequency in Hz.
-double midiToFreq(double midi);
-
-/// Convert MIDI note number to display name (e.g. "C4", "C#4")
-QString midiToNoteName(int midiNote);
-
-/// Shift a note name string by delta_cents, with auto carry-over at ±50.
-/// Example: shiftNoteCents("C4+48", 5) -> "C#4+3"
-QString shiftNoteCents(const QString &noteStr, int deltaCents);
-
-/// Convert a fractional MIDI number to a DS note string (auto carry-over).
-QString midiToNoteString(double midiFloat);
 
 /// Piano roll view for editing notes and F0
 class PianoRollView : public QFrame {
