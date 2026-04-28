@@ -6,6 +6,7 @@ set(CMAKE_AUTORCC ON)
 set(CORE_SOURCES
     src/AppInit.cpp
     src/AppSettings.cpp
+    src/DsDocument.cpp
     src/JsonHelper.cpp
     src/Theme.cpp
     src/FramelessHelper.cpp
@@ -14,6 +15,7 @@ set(CORE_SOURCES
 set(CORE_HEADERS
     include/dstools/AppInit.h
     include/dstools/AppSettings.h
+    include/dstools/DsDocument.h
     include/dstools/JsonHelper.h
     include/dstools/Theme.h
     include/dstools/FramelessHelper.h
