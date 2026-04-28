@@ -11,6 +11,7 @@
 #include <QWidget>
 
 #include <dstools/AppSettings.h>
+#include <dstools/GpuSelector.h>
 #include <game-infer/Game.h>
 #include <nlohmann/json.hpp>
 
@@ -37,7 +38,6 @@ private:
     void setupModelGroup();
     void setupAudioGroup();
     void setupActionButtons();
-    void updateDeviceList() const;
     void setupProcessingGroup();
     bool updateParameterValues() const;
     void loadLanguagesFromConfig(const std::filesystem::path &modelPath);
@@ -50,7 +50,7 @@ private:
     QPushButton *m_browseModelBtn;
     QPushButton *m_loadModelBtn;
     QComboBox *m_providerCombo;
-    QComboBox *m_deviceCombo;
+    dstools::widgets::GpuSelector *m_deviceCombo;
     QLabel *m_modelStatusLabel;
 
     // Segmentation group widgets

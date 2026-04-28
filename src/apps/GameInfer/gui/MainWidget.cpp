@@ -24,8 +24,6 @@
 
 #include <wolf-midi/MidiFile.h>
 
-#include "utils/DmlGpuUtils.h"
-
 static void makeMidiFile(const std::filesystem::path &midi_path, std::vector<Game::GameMidi> midis, const float tempo) {
     Midi::MidiFile midi;
     midi.setFileFormat(1);
@@ -104,15 +102,17 @@ void MainWidget::setupModelGroup() {
     m_providerCombo->addItem("DirectML", static_cast<int>(Game::ExecutionProvider::DML));
     layout->addWidget(m_providerCombo, 1, 1);
 
-    // Device selection
+    // Device selection (GPU)
     layout->addWidget(new QLabel("Execution Device:"), 1, 2);
-    m_deviceCombo = new QComboBox();
+    m_deviceCombo = new dstools::widgets::GpuSelector(this);
     m_deviceCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    m_deviceCombo->addItem("Default (CPU)", -1);
     layout->addWidget(m_deviceCombo, 1, 3);
 
-    // Refresh devices when provider changes
-    connect(m_providerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { updateDeviceList(); });
+    // Show/hide GPU selector based on provider
+    connect(m_providerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
+        const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
+        m_deviceCombo->setEnabled(provider == Game::ExecutionProvider::DML);
+    });
 
     // Status label
     m_modelStatusLabel = new QLabel("Not loaded");
@@ -160,23 +160,6 @@ void MainWidget::setModelLoadingStatus(const QString &status) {
         Qt::QueuedConnection);
 }
 
-void MainWidget::updateDeviceList() const {
-    m_deviceCombo->clear();
-
-    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-
-    if (provider == Game::ExecutionProvider::DML) {
-#ifdef _WIN32
-        QList<GpuInfo> gpuList = DmlGpuUtils::getGpuList();
-        for (const auto &gpu : gpuList) {
-            const double memoryGB = static_cast<double>(gpu.memory) / (1024 * 1024 * 1024);
-            QString deviceName = QString("%1 (%2 GB)").arg(gpu.description).arg(memoryGB, 0, 'f', 2);
-            m_deviceCombo->addItem(deviceName, gpu.index);
-        }
-#endif
-    }
-    m_deviceCombo->addItem("Default", -1);
-}
 
 void MainWidget::setupProcessingGroup() {
     auto *group = new QGroupBox("Processing Parameters");
@@ -381,7 +364,7 @@ bool MainWidget::loadModel(std::string &message) {
 
     // Get execution provider from combo box
     const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-    const int deviceId = m_deviceCombo->currentData().toInt();
+    const int deviceId = m_deviceCombo->selectedDeviceId();
     std::string msg;
 
     QMetaObject::invokeMethod(
