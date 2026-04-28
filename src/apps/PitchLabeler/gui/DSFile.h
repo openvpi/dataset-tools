@@ -5,9 +5,12 @@
 #include <memory>
 
 #include <dstools/DsDocument.h>
+#include <dstools/F0Curve.h>
 
 namespace dstools {
 namespace pitchlabeler {
+
+using dstools::F0Curve;
 
 /// Represents a single phoneme with its time interval
 struct Phone {
@@ -29,17 +32,6 @@ struct Note {
     double end() const { return start + duration; }
     bool isRest() const { return name.trimmed().toLower() == "rest"; }
     bool isSlur() const { return slur == 1; }
-};
-
-/// Represents F0 (fundamental frequency) curve data
-struct F0Curve {
-    std::vector<double> values;
-    double timestep = 0.0;  // seconds between samples
-
-    double totalDuration() const;
-    double getValueAtTime(double time) const;
-    std::vector<double> getRange(double startTime, double endTime) const;
-    void setRange(double startTime, const std::vector<double> &newValues);
 };
 
 /// In-memory representation of a DS file.
