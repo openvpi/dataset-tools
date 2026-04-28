@@ -1,33 +1,16 @@
 #pragma once
 
-#include <QWidget>
-#include <QStringList>
-#include <QListWidget>
+#include <dstools/BaseFileListPanel.h>
 
 namespace dstools {
 namespace phonemelabeler {
 
-class FileListPanel : public QWidget {
+class FileListPanel : public dstools::widgets::BaseFileListPanel {
     Q_OBJECT
-
 public:
     explicit FileListPanel(QWidget *parent = nullptr);
-    ~FileListPanel() override = default;
 
-    void setDirectory(const QString &dir);
-    void setCurrentFile(const QString &path);
-
-    [[nodiscard]] QStringList textGridFiles() const { return m_files; }
-
-signals:
-    void fileSelected(const QString &path);
-
-private:
-    void refreshFileList();
-
-    QString m_directory;
-    QStringList m_files;
-    QListWidget *m_listWidget = nullptr;
+    [[nodiscard]] QStringList textGridFiles() const;
 };
 
 } // namespace phonemelabeler

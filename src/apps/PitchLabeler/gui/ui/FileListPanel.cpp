@@ -8,7 +8,6 @@
 #include <QJsonObject>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include <QVBoxLayout>
 
 #include <dstools/FileProgressTracker.h>
 
@@ -16,59 +15,48 @@ namespace dstools {
     namespace pitchlabeler {
         namespace ui {
 
-            // Style constants
-            static const QString StyleUnsaved = "color: #9898A8;";                     // dim gray — not yet touched
-            static const QString StyleModified = "color: #FFB366; font-weight: bold;"; // orange — modified
-            static const QString StyleSaved = "color: #4ADE80;";                       // green — saved
-
-            FileListPanel::FileListPanel(QWidget *parent) : QWidget(parent) {
-                auto *layout = new QVBoxLayout(this);
-                layout->setContentsMargins(0, 0, 0, 0);
-                layout->setSpacing(0);
-
-                m_listWidget = new QListWidget();
-                layout->addWidget(m_listWidget, 1);
-
-                m_progressTracker = new dstools::widgets::FileProgressTracker(
-                    dstools::widgets::FileProgressTracker::LabelOnly, this);
-                m_progressTracker->setFormat(QStringLiteral("已标注 %1 / %2 (%3%)"));
-                m_progressTracker->setEmptyText(QStringLiteral("未加载文件"));
-                layout->addWidget(m_progressTracker);
-
-                // Use currentRowChanged for both click and keyboard navigation
-                connect(m_listWidget, &QListWidget::currentRowChanged, this, &FileListPanel::onCurrentRowChanged);
+            FileListPanel::FileListPanel(QWidget *parent) : BaseFileListPanel(parent) {
+                setFileFilters({"*.ds"});
+                setShowProgress(true);
+                progressTracker()->setFormat(QStringLiteral("已标注 %1 / %2 (%3%)"));
+                progressTracker()->setEmptyText(QStringLiteral("未加载文件"));
             }
 
             FileListPanel::~FileListPanel() = default;
 
             void FileListPanel::setDirectory(const QString &path) {
-                m_listWidget->clear();
                 m_modifiedFiles.clear();
-                m_directory = path;
 
                 if (path.isEmpty()) {
+                    BaseFileListPanel::setDirectory(path);
                     return;
                 }
 
-                loadState();
+                // Load persisted state before populating (needs path for state file)
+                // Temporarily store path so loadState can use it via a local variable
+                m_savedFiles.clear();
+                // We need directory set to load state, but base::setDirectory also refreshes.
+                // So: set directory in base (which refreshes + calls styleItem with empty saved set),
+                // then load state, re-style, and restore selection.
+                BaseFileListPanel::setDirectory(path); // sets m_directory, refreshes list
 
-                QDir dir(path);
-                QStringList filters{"*.ds"};
-                QFileInfoList files = dir.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Name);
+                // Now load persisted state
+                loadState(); // uses directory() which is now set
 
-                for (const QFileInfo &fi : files) {
-                    auto *item = new QListWidgetItem(fi.fileName(), m_listWidget);
-                    item->setData(Qt::UserRole, fi.absoluteFilePath());
-                    updateItemStyle(item, fi.absoluteFilePath());
+                // Re-style items with loaded state
+                for (int i = 0; i < listWidget()->count(); ++i) {
+                    auto *item = listWidget()->item(i);
+                    if (item)
+                        styleItem(item, item->data(Qt::UserRole).toString());
                 }
 
                 // Restore last selected file
                 bool restored = false;
                 if (!m_lastFile.isEmpty()) {
-                    for (int i = 0; i < m_listWidget->count(); ++i) {
-                        auto *item = m_listWidget->item(i);
+                    for (int i = 0; i < listWidget()->count(); ++i) {
+                        auto *item = listWidget()->item(i);
                         if (item && QFileInfo(item->data(Qt::UserRole).toString()).fileName() == m_lastFile) {
-                            m_listWidget->setCurrentItem(item);
+                            listWidget()->setCurrentItem(item);
                             restored = true;
                             break;
                         }
@@ -76,75 +64,19 @@ namespace dstools {
                 }
 
                 // Select first if nothing selected — triggers currentRowChanged → fileSelected
-                if (!restored && m_listWidget->count() > 0) {
-                    m_listWidget->setCurrentRow(0);
+                if (!restored && listWidget()->count() > 0) {
+                    listWidget()->setCurrentRow(0);
                 }
 
                 updateProgress();
             }
 
             void FileListPanel::clear() {
-                m_directory.clear();
                 m_lastFile.clear();
                 m_modifiedFiles.clear();
                 m_savedFiles.clear();
-                m_listWidget->clear();
+                BaseFileListPanel::setDirectory(QString());
                 updateProgress();
-            }
-
-            void FileListPanel::populateList() {
-                // Re-style all items
-                for (int i = 0; i < m_listWidget->count(); ++i) {
-                    auto *item = m_listWidget->item(i);
-                    if (item) {
-                        updateItemStyle(item, item->data(Qt::UserRole).toString());
-                    }
-                }
-            }
-
-            void FileListPanel::onItemClicked(QListWidgetItem *item) {
-                if (!item)
-                    return;
-                QString path = item->data(Qt::UserRole).toString();
-                if (!path.isEmpty()) {
-                    m_lastFile = QFileInfo(path).fileName();
-                    emit fileSelected(path);
-                }
-            }
-
-            void FileListPanel::onCurrentRowChanged(int row) {
-                if (row < 0)
-                    return;
-                auto *item = m_listWidget->item(row);
-                if (!item)
-                    return;
-                QString path = item->data(Qt::UserRole).toString();
-                if (!path.isEmpty()) {
-                    m_lastFile = QFileInfo(path).fileName();
-                    emit fileSelected(path);
-                }
-            }
-
-            void FileListPanel::selectNextFile() {
-                int row = m_listWidget->currentRow();
-                if (row < m_listWidget->count() - 1) {
-                    m_listWidget->setCurrentRow(row + 1);
-                }
-            }
-
-            void FileListPanel::selectPrevFile() {
-                int row = m_listWidget->currentRow();
-                if (row > 0) {
-                    m_listWidget->setCurrentRow(row - 1);
-                }
-            }
-
-            QString FileListPanel::currentFilePath() const {
-                auto *item = m_listWidget->currentItem();
-                if (item) {
-                    return item->data(Qt::UserRole).toString();
-                }
-                return QString();
             }
 
             void FileListPanel::setFileModified(const QString &path, bool modified) {
@@ -155,10 +87,10 @@ namespace dstools {
                 }
 
                 // Find and restyle the item
-                for (int i = 0; i < m_listWidget->count(); ++i) {
-                    auto *item = m_listWidget->item(i);
+                for (int i = 0; i < listWidget()->count(); ++i) {
+                    auto *item = listWidget()->item(i);
                     if (item && item->data(Qt::UserRole).toString() == path) {
-                        updateItemStyle(item, path);
+                        styleItem(item, path);
                         break;
                     }
                 }
@@ -169,10 +101,10 @@ namespace dstools {
                 m_savedFiles.insert(path);
 
                 // Find and restyle the item
-                for (int i = 0; i < m_listWidget->count(); ++i) {
-                    auto *item = m_listWidget->item(i);
+                for (int i = 0; i < listWidget()->count(); ++i) {
+                    auto *item = listWidget()->item(i);
                     if (item && item->data(Qt::UserRole).toString() == path) {
-                        updateItemStyle(item, path);
+                        styleItem(item, path);
                         break;
                     }
                 }
@@ -181,27 +113,27 @@ namespace dstools {
             }
 
             int FileListPanel::totalFiles() const {
-                return m_listWidget->count();
+                return fileCount();
             }
 
             int FileListPanel::savedFiles() const {
-                return m_savedFiles.size();
+                return static_cast<int>(m_savedFiles.size());
             }
 
-            void FileListPanel::updateItemStyle(QListWidgetItem *item, const QString &path) {
+            void FileListPanel::styleItem(QListWidgetItem *item, const QString &filePath) {
                 if (!item)
                     return;
 
-                QString fileName = QFileInfo(path).fileName();
+                QString fileName = QFileInfo(filePath).fileName();
 
-                if (m_modifiedFiles.contains(path)) {
+                if (m_modifiedFiles.contains(filePath)) {
                     // Modified — orange, show asterisk
                     item->setText(QStringLiteral("● ") + fileName);
                     item->setForeground(QColor("#FFB366"));
                     QFont f = item->font();
                     f.setBold(true);
                     item->setFont(f);
-                } else if (m_savedFiles.contains(path)) {
+                } else if (m_savedFiles.contains(filePath)) {
                     // Saved — green checkmark
                     item->setText(QStringLiteral("✓ ") + fileName);
                     item->setForeground(QColor("#4ADE80"));
@@ -219,10 +151,15 @@ namespace dstools {
             }
 
             void FileListPanel::saveState() {
-                if (m_directory.isEmpty())
+                if (directory().isEmpty())
                     return;
 
-                QString stateFile = m_directory + "/.pitchlabeler_state.json";
+                // Update m_lastFile from current selection
+                auto *current = listWidget()->currentItem();
+                if (current)
+                    m_lastFile = QFileInfo(current->data(Qt::UserRole).toString()).fileName();
+
+                QString stateFile = directory() + "/.pitchlabeler_state.json";
 
                 QFile file(stateFile);
                 if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -242,17 +179,17 @@ namespace dstools {
             }
 
             void FileListPanel::updateProgress() {
-                if (m_progressTracker) {
-                    m_progressTracker->setProgress(
-                        static_cast<int>(m_savedFiles.size()), m_listWidget->count());
+                if (progressTracker()) {
+                    progressTracker()->setProgress(
+                        static_cast<int>(m_savedFiles.size()), fileCount());
                 }
             }
 
             void FileListPanel::loadState() {
-                if (m_directory.isEmpty())
+                if (directory().isEmpty())
                     return;
 
-                QString stateFile = m_directory + "/.pitchlabeler_state.json";
+                QString stateFile = directory() + "/.pitchlabeler_state.json";
 
                 QFile file(stateFile);
                 if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -265,7 +202,7 @@ namespace dstools {
                     QJsonArray savedArr = json["saved_files"].toArray();
                     for (const QJsonValue &val : savedArr) {
                         // Reconstruct full path
-                        QString fullPath = m_directory + "/" + val.toString();
+                        QString fullPath = directory() + "/" + val.toString();
                         if (QFile::exists(fullPath)) {
                             m_savedFiles.insert(fullPath);
                         }

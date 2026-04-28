@@ -1,38 +1,22 @@
 #pragma once
 
-#include <QWidget>
-#include <QListWidget>
-#include <QLabel>
-#include <QString>
+#include <dstools/BaseFileListPanel.h>
 #include <QSet>
-
-namespace dstools::widgets {
-class FileProgressTracker;
-}
 
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
 
-/// File list panel showing .ds files in working directory.
-/// Tracks three states per file:
-///   - Unsaved (not yet opened/touched) — default color
-///   - Modified (opened and changed, not saved) — orange indicator
-///   - Saved (explicitly saved after modification) — green indicator
-class FileListPanel : public QWidget {
+/// File list panel for .ds files with 3-color status tracking and state persistence.
+class FileListPanel : public dstools::widgets::BaseFileListPanel {
     Q_OBJECT
 
 public:
     explicit FileListPanel(QWidget *parent = nullptr);
     ~FileListPanel() override;
 
-    void setDirectory(const QString &path);
+    void setDirectory(const QString &path) override;
     void clear();
-
-    // Selection helpers
-    void selectNextFile();
-    void selectPrevFile();
-    QString currentFilePath() const;
 
     // Modification state
     void setFileModified(const QString &path, bool modified);
@@ -45,26 +29,16 @@ public:
     // Persistence
     void saveState();
 
-signals:
-    void fileSelected(const QString &path);
+protected:
+    void styleItem(QListWidgetItem *item, const QString &filePath) override;
 
 private:
-    QListWidget *m_listWidget = nullptr;
-    dstools::widgets::FileProgressTracker *m_progressTracker = nullptr;
-    QString m_directory;
     QString m_lastFile;
+    QSet<QString> m_modifiedFiles;
+    QSet<QString> m_savedFiles;
 
-    // Track file states
-    QSet<QString> m_modifiedFiles;  // currently modified (unsaved)
-    QSet<QString> m_savedFiles;     // saved at least once
-
-    void populateList();
-    void onItemClicked(QListWidgetItem *item);
-    void onCurrentRowChanged(int row);
     void loadState();
-    void updateItemStyle(QListWidgetItem *item, const QString &path);
     void updateProgress();
-
 };
 
 } // namespace ui
