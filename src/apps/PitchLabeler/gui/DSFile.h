@@ -66,7 +66,7 @@ public:
     QString rawPhNum;
 
     // Extra fields preserved round-trip
-    nlohmann::json extraFields;
+    nlohmann::json m_rawJson;  // original JSON object, updated in-place on save
 
     // State
     bool modified = false;

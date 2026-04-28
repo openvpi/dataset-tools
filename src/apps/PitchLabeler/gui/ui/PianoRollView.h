@@ -69,6 +69,9 @@ public:
     void setDSFile(std::shared_ptr<DSFile> ds);
     void clear();
 
+    /// Set audio file duration (seconds) to limit piano roll max length
+    void setAudioDuration(double sec);
+
     // Zoom controls
     void zoomIn();
     void zoomOut();
@@ -96,6 +99,7 @@ signals:
     void noteSelected(int noteIndex);
     void selectionChanged(const std::set<int> &selected);
     void positionClicked(double time, double midi);
+    void rulerClicked(double timeSec);
     void fileEdited();
     void toolModeChanged(int mode);
     void noteGlideChanged(int noteIndex, const QString &glide);
@@ -118,6 +122,7 @@ protected:
 private:
     // Data
     std::shared_ptr<DSFile> m_dsFile;
+    double m_audioDuration = 0.0;  // audio file duration in seconds (0 = no limit)
 
     // Display parameters
     double m_hScale = 100.0;        // pixels per second (horizontal zoom)
@@ -177,6 +182,9 @@ private:
     bool m_rubberBandActive = false;
     QPoint m_rubberBandStart;
     QRect m_rubberBandRect;
+
+    // Ruler scrub
+    bool m_rulerDragging = false;
 
     static constexpr double ModulationDragSensitivity = 80.0;
 

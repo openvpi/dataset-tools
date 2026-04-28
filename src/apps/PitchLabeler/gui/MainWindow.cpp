@@ -16,6 +16,8 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QProxyStyle>
+#include <QShortcut>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QToolButton>
@@ -27,6 +29,23 @@
 
 #include <algorithm>
 #include <functional>
+
+namespace {
+    /// Style override: left-click anywhere on the slider groove jumps directly
+    /// to that position (instead of paging). This lets the user click+drag
+    /// seamlessly because QSlider enters its normal drag tracking after the jump.
+    class JumpClickStyle : public QProxyStyle {
+    public:
+        using QProxyStyle::QProxyStyle;
+        int styleHint(StyleHint hint, const QStyleOption *option = nullptr,
+                      const QWidget *widget = nullptr,
+                      QStyleHintReturn *returnData = nullptr) const override {
+            if (hint == SH_Slider_AbsoluteSetButtons)
+                return Qt::LeftButton;
+            return QProxyStyle::styleHint(hint, option, widget, returnData);
+        }
+    };
+}
 
 namespace dstools {
     namespace pitchlabeler {
@@ -159,6 +178,7 @@ namespace dstools {
                     m_actZoomReset->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomReset));
                     m_actABCompare->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutABCompare));
                     m_actExit->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutExit));
+                    rebuildWindowShortcuts();
                 });
             }
 
@@ -330,9 +350,11 @@ namespace dstools {
             progressLayout->addWidget(m_progressCurrentTime);
 
             m_playbackProgressSlider = new QSlider(Qt::Horizontal);
+            m_playbackProgressSlider->setStyle(new JumpClickStyle(m_playbackProgressSlider->style()));
             m_playbackProgressSlider->setRange(0, 10000); // 0-10s in ms by default
             m_playbackProgressSlider->setValue(0);
             m_playbackProgressSlider->setFixedHeight(16);
+            m_playbackProgressSlider->setTracking(true);
             m_playbackProgressSlider->setStyleSheet(
                 "QSlider { margin: 0 4px; }"
                 "QSlider::groove:horizontal { background: #33333E; height: 4px; border-radius: 2px; }"
@@ -431,6 +453,12 @@ namespace dstools {
             // Piano roll signals
             connect(m_pianoRoll, &ui::PianoRollView::noteSelected, this, &MainWindow::onNoteSelected);
             connect(m_pianoRoll, &ui::PianoRollView::positionClicked, this, &MainWindow::onPositionClicked);
+            connect(m_pianoRoll, &ui::PianoRollView::rulerClicked, this, [this](double timeSec) {
+                if (m_playWidget) {
+                    m_playWidget->seek(timeSec);
+                    updatePlayheadPosition(timeSec);
+                }
+            });
             connect(m_pianoRoll, &ui::PianoRollView::fileEdited, this, [this]() {
                 if (m_currentFile) {
                     m_currentFile->markModified();
@@ -538,13 +566,14 @@ namespace dstools {
             // Playback (widget signals)
             connect(m_playWidget, &dstools::widgets::PlayWidget::playheadChanged, this, &MainWindow::updatePlayheadPosition);
 
-            // Seek when playback progress slider is moved
-            connect(m_playbackProgressSlider, &QSlider::sliderReleased, this, [this]() {
+            // Seek when user interacts with the playback progress slider
+            connect(m_playbackProgressSlider, &QSlider::valueChanged, this, [this](int value) {
+                if (!m_playbackProgressSlider->isSliderDown()) return;
                 if (!m_currentFile || !m_playWidget) return;
-                double sec = m_playbackProgressSlider->value() / 1000.0;
+                double sec = value / 1000.0;
                 m_playWidget->seek(sec);
-                // Also update display immediately
-                updatePlayheadPosition(sec);
+                m_pianoRoll->setPlayheadTime(sec);
+                updateTimeLabels(sec);
             });
         }
 
@@ -560,6 +589,9 @@ namespace dstools {
             m_actZoomReset->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutZoomReset));
             m_actABCompare->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutABCompare));
             m_actExit->setShortcut(m_settings.shortcut(PitchLabelerKeys::ShortcutExit));
+
+            // Window-level shortcuts for tool modes, playback, navigation
+            rebuildWindowShortcuts();
 
             // Load piano roll display options
             m_pianoRoll->loadConfig(m_settings);
@@ -647,6 +679,13 @@ namespace dstools {
                     m_playWidget->openFile(testPath);
                     break;
                 }
+            }
+
+            // Limit piano roll length to audio file duration
+            if (m_pianoRoll) {
+                double audioDur = m_playWidget->duration();
+                if (audioDur > 0)
+                    m_pianoRoll->setAudioDuration(audioDur);
             }
 
             // Store original F0 for A/B comparison
@@ -744,28 +783,34 @@ namespace dstools {
             m_playWidget->setPlaying(false);
         }
 
-        void MainWindow::updatePlayheadPosition(double sec) {
-            m_pianoRoll->setPlayheadTime(sec);
+        void MainWindow::updateTimeLabels(double sec) {
+            auto formatTime = [](double s) -> QString {
+                int min = static_cast<int>(s) / 60;
+                double sec = s - min * 60;
+                return QString("%1:%2").arg(min, 2, 10, QChar('0')).arg(sec, 6, 'f', 3, QChar('0'));
+            };
 
             int minutes = static_cast<int>(sec) / 60;
             double seconds = sec - minutes * 60;
             m_statusPosition->setText(
                 QString("%1:%2").arg(minutes, 2, 10, QChar('0')).arg(seconds, 6, 'f', 3, QChar('0')));
 
-            // Update progress slider and labels
-            if (m_playbackProgressSlider && m_currentFile) {
+            m_progressCurrentTime->setText(formatTime(sec));
+            if (m_currentFile) {
+                m_progressTotalTime->setText(formatTime(m_currentFile->getTotalDuration()));
+            }
+        }
+
+        void MainWindow::updatePlayheadPosition(double sec) {
+            m_pianoRoll->setPlayheadTime(sec);
+            updateTimeLabels(sec);
+
+            // Don't fight the user — skip slider update while they're dragging
+            if (m_playbackProgressSlider && m_currentFile &&
+                !m_playbackProgressSlider->isSliderDown()) {
                 double total = m_currentFile->getTotalDuration();
                 m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
                 m_playbackProgressSlider->setValue(static_cast<int>(sec * 1000));
-
-                // Update time labels
-                auto formatTime = [](double s) -> QString {
-                    int min = static_cast<int>(s) / 60;
-                    double sec = s - min * 60;
-                    return QString("%1:%2").arg(min, 2, 10, QChar('0')).arg(sec, 6, 'f', 3, QChar('0'));
-                };
-                m_progressCurrentTime->setText(formatTime(sec));
-                m_progressTotalTime->setText(formatTime(total));
             }
         }
 
@@ -854,18 +899,17 @@ namespace dstools {
             event->accept();
         }
 
-        void MainWindow::keyPressEvent(QKeyEvent *event) {
-            // Strip KeypadModifier so numpad keys match their non-numpad equivalents.
-            const auto mods = event->modifiers() & ~Qt::KeypadModifier;
-            const auto eventKey = event->key();
+        void MainWindow::rebuildWindowShortcuts() {
+            // Delete previous shortcuts
+            qDeleteAll(m_windowShortcuts);
+            m_windowShortcuts.clear();
 
-            // Map settings keys to actions
-            struct ShortcutAction {
+            struct Entry {
                 const dstools::SettingsKey<QString> &key;
                 std::function<void()> action;
             };
 
-            const ShortcutAction shortcuts[] = {
+            const Entry entries[] = {
                 {PitchLabelerKeys::ToolSelect, [this]() { setToolMode(ui::ToolSelect); }},
                 {PitchLabelerKeys::ToolModulation, [this]() { setToolMode(ui::ToolModulation); }},
                 {PitchLabelerKeys::ToolDrift, [this]() { setToolMode(ui::ToolDrift); }},
@@ -875,21 +919,14 @@ namespace dstools {
                 {PitchLabelerKeys::NavigationNext, [this]() { onNextFile(); }},
             };
 
-            // Compare raw key + modifiers instead of QKeySequence::operator==,
-            // which is unreliable for digit keys in Qt6.
-            for (const auto &[key, action] : shortcuts) {
+            for (const auto &[key, action] : entries) {
                 const QKeySequence ks = m_settings.shortcut(key);
                 if (!ks.isEmpty()) {
-                    const QKeyCombination combo = ks[0];
-                    if (eventKey == combo.key() && mods == combo.keyboardModifiers()) {
-                        action();
-                        event->accept();
-                        return;
-                    }
+                    auto *sc = new QShortcut(ks, this, nullptr, nullptr, Qt::WindowShortcut);
+                    connect(sc, &QShortcut::activated, this, action);
+                    m_windowShortcuts.append(sc);
                 }
             }
-
-            QMainWindow::keyPressEvent(event);
         }
 
     } // namespace pitchlabeler

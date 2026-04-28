@@ -12,6 +12,7 @@
 #include <QSplitter>
 #include <QStackedWidget>
 #include <QListWidget>
+#include <QShortcut>
 #include <QSlider>
 #include <QSize>
 
@@ -44,7 +45,6 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
 
 private:
     // Settings
@@ -130,6 +130,7 @@ private:
     // State
     bool m_abComparisonActive = false;
     std::vector<double> m_originalF0;
+    QList<QShortcut *> m_windowShortcuts;
 
     // Helpers
     void buildMenuBar();
@@ -168,6 +169,7 @@ private:
     void onStop();
     void updatePlayheadPosition(double sec);
     void updatePlaybackState();
+    void updateTimeLabels(double sec);
 
     // Tool mode
     void setToolMode(ui::ToolMode mode);
@@ -179,6 +181,7 @@ private:
     // Updates
     void updateStatusBar();
     void reloadCurrentFile();
+    void rebuildWindowShortcuts();
 
 signals:
     void fileLoaded(const QString &path);

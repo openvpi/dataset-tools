@@ -148,6 +148,13 @@ void PlayWidget::seek(double sec) {
     reloadSliderStatus();
 }
 
+double PlayWidget::duration() const {
+    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return 0.0;
+    auto fmt = m_decoder->format();
+    if (fmt.averageBytesPerSecond() <= 0) return 0.0;
+    return static_cast<double>(m_decoder->length()) / fmt.averageBytesPerSecond();
+}
+
 void PlayWidget::setPlayRange(double startSec, double endSec) {
     m_rangeStart = startSec;
     m_rangeEnd = endSec;

@@ -397,12 +397,25 @@ void PianoRollView::setDSFile(std::shared_ptr<pitchlabeler::DSFile> ds) {
 
 void PianoRollView::clear() {
     m_dsFile.reset();
+    m_audioDuration = 0.0;
     m_selectedNotes.clear();
     m_draggingNote = false;
     m_modulationDragging = false;
     m_driftDragging = false;
     m_rubberBandActive = false;
     m_preAdjustF0.clear();
+    update();
+}
+
+void PianoRollView::setAudioDuration(double sec) {
+    m_audioDuration = sec;
+    if (m_audioDuration > 0) {
+        double drawW = width() - ScrollBarSize;
+        double minScale = (drawW - PianoWidth) / m_audioDuration;
+        if (m_hScale < minScale)
+            m_hScale = minScale;
+    }
+    updateScrollBars();
     update();
 }
 
@@ -413,13 +426,23 @@ void PianoRollView::zoomIn() {
 }
 
 void PianoRollView::zoomOut() {
-    m_hScale = qMax(m_hScale / 1.2, 20.0);
+    double minScale = 20.0;
+    if (m_audioDuration > 0) {
+        double drawW = width() - ScrollBarSize;
+        minScale = qMax(minScale, (drawW - PianoWidth) / m_audioDuration);
+    }
+    m_hScale = qMax(m_hScale / 1.2, minScale);
     updateScrollBars();
     update();
 }
 
 void PianoRollView::resetZoom() {
     m_hScale = 100.0;
+    if (m_audioDuration > 0) {
+        double drawW = width() - ScrollBarSize;
+        double minScale = (drawW - PianoWidth) / m_audioDuration;
+        m_hScale = qMax(m_hScale, minScale);
+    }
     m_vScale = 20.0;
     updateScrollBars();
     update();
@@ -514,9 +537,11 @@ void PianoRollView::updateScrollBars() {
     int drawW = width() - ScrollBarSize;
     int drawH = height() - ScrollBarSize;
 
-    // Total scene size
-    double totalDuration = m_dsFile ? m_dsFile->getTotalDuration() : 10.0;
-    double sceneW = timeToX(totalDuration) + 200;
+    // Total scene size — limited to audio file duration when available
+    double totalDuration = m_audioDuration > 0 ? m_audioDuration
+                         : m_dsFile            ? m_dsFile->getTotalDuration()
+                                               : 10.0;
+    double sceneW = timeToX(totalDuration);
     double sceneH = midiToY(MinMidi) + 50;
 
     m_hScrollBar->setRange(0, qMax(0, static_cast<int>(sceneW - drawW)));
@@ -639,7 +664,9 @@ void PianoRollView::drawGrid(QPainter &p, int w, int h) {
     }
 
     // Vertical bar lines (every second)
-    double totalDuration = m_dsFile ? m_dsFile->getTotalDuration() : 10.0;
+    double totalDuration = m_audioDuration > 0 ? m_audioDuration
+                         : m_dsFile            ? m_dsFile->getTotalDuration()
+                                               : 10.0;
     QPen penBar(Colors::BarLine, 1);
     p.setPen(penBar);
     for (int t = 0; t <= static_cast<int>(totalDuration) + 2; ++t) {
@@ -1087,6 +1114,12 @@ void PianoRollView::drawCrosshair(QPainter &p, int w, int h) {
 
 void PianoRollView::resizeEvent(QResizeEvent *event) {
     QFrame::resizeEvent(event);
+    if (m_audioDuration > 0) {
+        double drawW = width() - ScrollBarSize;
+        double minScale = (drawW - PianoWidth) / m_audioDuration;
+        if (m_hScale < minScale)
+            m_hScale = minScale;
+    }
     updateScrollBars();
 }
 
@@ -1132,8 +1165,18 @@ void PianoRollView::mousePressEvent(QMouseEvent *event) {
         int x = event->pos().x();
         int y = event->pos().y();
 
-        // Click on ruler: ignore (playhead positioning handled elsewhere)
-        if (y < RulerHeight) return;
+        // Click on ruler: seek playhead to clicked time
+        if (y < RulerHeight) {
+            double sceneX = widgetXToScene(x);
+            double time = xToTime(sceneX);
+            if (time >= 0) {
+                m_playheadPos = time;
+                m_rulerDragging = true;
+                emit rulerClicked(time);
+                update();
+            }
+            return;
+        }
         // Click on piano sidebar: ignore
         if (x < PianoWidth) return;
 
@@ -1218,6 +1261,16 @@ void PianoRollView::mousePressEvent(QMouseEvent *event) {
 void PianoRollView::mouseMoveEvent(QMouseEvent *event) {
     m_mousePos = event->pos();
 
+    // Ruler scrub: drag on ruler to scrub playhead
+    if (m_rulerDragging) {
+        double sceneX = widgetXToScene(event->pos().x());
+        double time = std::max(0.0, xToTime(sceneX));
+        m_playheadPos = time;
+        emit rulerClicked(time);
+        update();
+        return;
+    }
+
     double sceneY = widgetYToScene(event->pos().y());
 
     // Modulation drag
@@ -1283,6 +1336,12 @@ void PianoRollView::mouseReleaseEvent(QMouseEvent *event) {
     }
 
     if (event->button() == Qt::LeftButton) {
+        // Finish ruler scrub
+        if (m_rulerDragging) {
+            m_rulerDragging = false;
+            return;
+        }
+
         // Finish note pitch drag
         if (m_draggingNote) {
             m_draggingNote = false;

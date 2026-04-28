@@ -147,30 +147,17 @@ void DSFile::loadFromJson(const nlohmann::json &data) {
         }
     }
 
-    // Capture extra fields
-    extraFields.clear();
-    QStringList knownFields = {"offset", "text", "ph_seq", "ph_dur", "ph_num",
-                               "note_seq", "note_dur", "note_slur", "note_glide",
-                               "f0_seq", "f0_timestep"};
-    for (auto &item : data.items()) {
-        if (!knownFields.contains(QString::fromStdString(item.key()))) {
-            extraFields[item.key()] = item.value();
-        }
-    }
+    // Preserve original JSON for round-trip save
+    m_rawJson = data;
 
     modified = false;
 }
 
 nlohmann::json DSFile::toJson() const {
-    nlohmann::json obj;
+    // Start from the original JSON object to preserve all fields and types
+    nlohmann::json obj = m_rawJson.is_object() ? m_rawJson : nlohmann::json::object();
 
-    obj["offset"] = offset;
-    obj["text"] = text.toStdString();
-    obj["ph_seq"] = rawPhSeq.toStdString();
-    obj["ph_dur"] = rawPhDur.toStdString();
-    obj["ph_num"] = rawPhNum.toStdString();
-
-    // Note fields (what we modify)
+    // Only update fields that PitchLabeler modifies (note_seq/dur/slur/glide and f0)
     QStringList noteSeq, noteDur, noteSlur, noteGlide;
     for (const Note &note : notes) {
         noteSeq.append(note.name);
@@ -194,10 +181,6 @@ nlohmann::json DSFile::toJson() const {
         }
     }
     obj["f0_seq"] = f0List.join(' ').toStdString();
-    obj["f0_timestep"] = f0.timestep;
-
-    // Extra fields
-    obj.insert(extraFields.begin(), extraFields.end());
 
     return obj;
 }
