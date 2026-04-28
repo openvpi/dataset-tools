@@ -1,6 +1,6 @@
 #include "EntryListPanel.h"
 #include "TextGridDocument.h"
-#include "ViewportController.h"
+#include <dstools/ViewportController.h>
 
 #include <QVBoxLayout>
 #include <QLabel>

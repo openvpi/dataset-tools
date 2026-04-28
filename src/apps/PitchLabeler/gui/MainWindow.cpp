@@ -57,6 +57,9 @@ namespace dstools {
             setMinimumSize(1024, 680);
             resize(1440, 900);
 
+            m_viewport = new dstools::widgets::ViewportController(this);
+            m_viewport->setPixelsPerSecond(100.0);
+
             buildMenuBar();
             buildToolbar();
             buildCentralLayout();
@@ -354,6 +357,7 @@ namespace dstools {
 
             // Piano roll view (takes remaining space)
             m_pianoRoll = new ui::PianoRollView();
+            m_pianoRoll->setViewportController(m_viewport);
             contentLayout->addWidget(m_pianoRoll, 1);
 
             // Property panel (collapsible at bottom)

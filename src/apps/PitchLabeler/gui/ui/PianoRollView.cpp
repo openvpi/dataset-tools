@@ -81,8 +81,16 @@ PianoRollView::PianoRollView(QWidget *parent)
     m_vScrollBar = new QScrollBar(Qt::Vertical, this);
 
     connect(m_hScrollBar, &QScrollBar::valueChanged, this, [this](int val) {
-        m_scrollX = val;
-        update();
+        if (m_viewport) {
+            // Convert pixel scroll to time and update viewport
+            double startSec = static_cast<double>(val) / m_hScale;
+            double drawW = width() - ScrollBarSize - PianoWidth;
+            double endSec = startSec + drawW / m_hScale;
+            m_viewport->setViewRange(startSec, endSec);
+        } else {
+            m_scrollX = val;
+            update();
+        }
     });
     connect(m_vScrollBar, &QScrollBar::valueChanged, this, [this](int val) {
         m_scrollY = val;
@@ -311,20 +319,32 @@ void PianoRollView::clear() {
 
 void PianoRollView::setAudioDuration(double sec) {
     m_audioDuration = sec;
+    if (m_viewport) {
+        m_viewport->setTotalDuration(sec);
+    }
     if (m_audioDuration > 0) {
         double drawW = width() - ScrollBarSize;
         double minScale = (drawW - PianoWidth) / m_audioDuration;
-        if (m_hScale < minScale)
-            m_hScale = minScale;
+        if (m_hScale < minScale) {
+            if (m_viewport) {
+                m_viewport->setPixelsPerSecond(minScale);
+            } else {
+                m_hScale = minScale;
+            }
+        }
     }
     updateScrollBars();
     update();
 }
 
 void PianoRollView::zoomIn() {
-    m_hScale = qMin(m_hScale * 1.2, 1000.0);
-    updateScrollBars();
-    update();
+    if (m_viewport) {
+        m_viewport->zoomAt(m_viewport->viewCenter(), 1.2);
+    } else {
+        m_hScale = qMin(m_hScale * 1.2, 1000.0);
+        updateScrollBars();
+        update();
+    }
 }
 
 void PianoRollView::zoomOut() {
@@ -333,17 +353,27 @@ void PianoRollView::zoomOut() {
         double drawW = width() - ScrollBarSize;
         minScale = qMax(minScale, (drawW - PianoWidth) / m_audioDuration);
     }
-    m_hScale = qMax(m_hScale / 1.2, minScale);
-    updateScrollBars();
-    update();
+    if (m_viewport) {
+        double newScale = qMax(m_hScale / 1.2, minScale);
+        m_viewport->zoomAt(m_viewport->viewCenter(), newScale / m_hScale);
+    } else {
+        m_hScale = qMax(m_hScale / 1.2, minScale);
+        updateScrollBars();
+        update();
+    }
 }
 
 void PianoRollView::resetZoom() {
-    m_hScale = 100.0;
+    double newScale = 100.0;
     if (m_audioDuration > 0) {
         double drawW = width() - ScrollBarSize;
         double minScale = (drawW - PianoWidth) / m_audioDuration;
-        m_hScale = qMax(m_hScale, minScale);
+        newScale = qMax(newScale, minScale);
+    }
+    if (m_viewport) {
+        m_viewport->setPixelsPerSecond(newScale);
+    } else {
+        m_hScale = newScale;
     }
     m_vScale = 20.0;
     updateScrollBars();
@@ -1019,8 +1049,13 @@ void PianoRollView::resizeEvent(QResizeEvent *event) {
     if (m_audioDuration > 0) {
         double drawW = width() - ScrollBarSize;
         double minScale = (drawW - PianoWidth) / m_audioDuration;
-        if (m_hScale < minScale)
-            m_hScale = minScale;
+        if (m_hScale < minScale) {
+            if (m_viewport) {
+                m_viewport->setPixelsPerSecond(minScale);
+            } else {
+                m_hScale = minScale;
+            }
+        }
     }
     updateScrollBars();
 }
@@ -1028,14 +1063,27 @@ void PianoRollView::resizeEvent(QResizeEvent *event) {
 void PianoRollView::wheelEvent(QWheelEvent *event) {
     if (event->modifiers() & Qt::ControlModifier) {
         // Zoom horizontally
-        if (event->angleDelta().y() > 0) {
-            zoomIn();
+        if (m_viewport) {
+            double factor = event->angleDelta().y() > 0 ? 1.2 : 1.0 / 1.2;
+            // Zoom centered on mouse position
+            double sceneX = widgetXToScene(static_cast<int>(event->position().x()));
+            double centerSec = xToTime(sceneX);
+            m_viewport->zoomAt(centerSec, factor);
         } else {
-            zoomOut();
+            if (event->angleDelta().y() > 0) {
+                zoomIn();
+            } else {
+                zoomOut();
+            }
         }
     } else if (event->modifiers() & Qt::ShiftModifier) {
         // Horizontal scroll
-        m_hScrollBar->setValue(m_hScrollBar->value() - event->angleDelta().y());
+        if (m_viewport) {
+            double deltaSec = -event->angleDelta().y() / m_hScale;
+            m_viewport->scrollBy(deltaSec);
+        } else {
+            m_hScrollBar->setValue(m_hScrollBar->value() - event->angleDelta().y());
+        }
     } else {
         // Vertical scroll
         m_vScrollBar->setValue(m_vScrollBar->value() - event->angleDelta().y());
@@ -1206,7 +1254,12 @@ void PianoRollView::mouseMoveEvent(QMouseEvent *event) {
     // Panning (middle button only)
     if (m_isDragging && m_dragButton == Qt::MiddleButton) {
         QPoint delta = event->pos() - m_dragStart;
-        m_hScrollBar->setValue(m_hScrollBar->value() - delta.x());
+        if (m_viewport) {
+            double deltaSec = -delta.x() / m_hScale;
+            m_viewport->scrollBy(deltaSec);
+        } else {
+            m_hScrollBar->setValue(m_hScrollBar->value() - delta.x());
+        }
         m_vScrollBar->setValue(m_vScrollBar->value() - delta.y());
         m_dragStart = event->pos();
         return;
@@ -1651,6 +1704,31 @@ void PianoRollView::pullConfig(dstools::AppSettings &settings) const {
     settings.set(PitchLabelerKeys::ShowPitchTextOverlay, m_showPitchTextOverlay);
     settings.set(PitchLabelerKeys::ShowPhonemeTexts, m_showPhonemeTexts);
     settings.set(PitchLabelerKeys::ShowCrosshairAndPitch, m_showCrosshairAndPitch);
+}
+
+// ============================================================================
+// ViewportController integration
+// ============================================================================
+
+void PianoRollView::setViewportController(dstools::widgets::ViewportController *vc) {
+    m_viewport = vc;
+    if (vc) {
+        connect(vc, &dstools::widgets::ViewportController::viewportChanged,
+                this, &PianoRollView::onViewportChanged);
+        // Initialize viewport from current state
+        vc->setPixelsPerSecond(m_hScale);
+    }
+}
+
+void PianoRollView::onViewportChanged(const dstools::widgets::ViewportState &state) {
+    m_hScale = state.pixelsPerSecond;
+    m_scrollX = state.startSec * state.pixelsPerSecond;
+    updateScrollBars();
+    // Sync scrollbar position without triggering feedback
+    m_hScrollBar->blockSignals(true);
+    m_hScrollBar->setValue(static_cast<int>(m_scrollX));
+    m_hScrollBar->blockSignals(false);
+    update();
 }
 
 } // namespace ui

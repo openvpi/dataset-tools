@@ -10,6 +10,7 @@ set(WIDGETS_SOURCES
     src/ShortcutManager.cpp
     src/FileProgressTracker.cpp
     src/FileStatusDelegate.cpp
+    src/ViewportController.cpp
 )
 
 set(WIDGETS_HEADERS
@@ -21,6 +22,7 @@ set(WIDGETS_HEADERS
     include/dstools/ShortcutManager.h
     include/dstools/FileProgressTracker.h
     include/dstools/FileStatusDelegate.h
+    include/dstools/ViewportController.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${WIDGETS_SOURCES} ${WIDGETS_HEADERS})

@@ -1,12 +1,15 @@
 #pragma once
 
 #include <QWidget>
-#include "ViewportController.h"
+#include <dstools/ViewportController.h>
 
 class QPainter;
 
 namespace dstools {
 namespace phonemelabeler {
+
+using dstools::widgets::ViewportController;
+using dstools::widgets::ViewportState;
 
 /// Horizontal time ruler displaying second ticks, aligned with the viewport.
 class TimeRulerWidget : public QWidget {

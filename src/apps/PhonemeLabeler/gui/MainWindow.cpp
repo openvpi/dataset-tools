@@ -8,7 +8,7 @@
 #include "ui/EntryListPanel.h"
 #include "ui/TimeRulerWidget.h"
 #include "ui/TextGridDocument.h"
-#include "ui/ViewportController.h"
+#include <dstools/ViewportController.h>
 #include "ui/BoundaryBindingManager.h"
 #include "ui/BoundaryOverlayWidget.h"
 

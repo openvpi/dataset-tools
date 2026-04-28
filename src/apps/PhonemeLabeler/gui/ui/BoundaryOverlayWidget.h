@@ -2,10 +2,13 @@
 
 #include <QWidget>
 
-#include "ViewportController.h"
+#include <dstools/ViewportController.h>
 
 namespace dstools {
 namespace phonemelabeler {
+
+using dstools::widgets::ViewportController;
+using dstools::widgets::ViewportState;
 
 class TextGridDocument;
 

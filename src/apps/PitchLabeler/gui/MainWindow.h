@@ -20,6 +20,7 @@
 #include <dstools/Theme.h>
 #include <dstools/PlayWidget.h>
 #include <dstools/ShortcutManager.h>
+#include <dstools/ViewportController.h>
 
 #include "ui/PianoRollView.h"
 
@@ -57,6 +58,7 @@ private:
     std::shared_ptr<DSFile> m_currentFile;
 
     // Services
+    dstools::widgets::ViewportController *m_viewport = nullptr;
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
     dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
 

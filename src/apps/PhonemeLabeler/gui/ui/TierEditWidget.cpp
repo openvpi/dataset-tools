@@ -1,7 +1,7 @@
 #include "TierEditWidget.h"
 #include "IntervalTierView.h"
 #include "TextGridDocument.h"
-#include "ViewportController.h"
+#include <dstools/ViewportController.h>
 #include "BoundaryBindingManager.h"
 
 #include <QVBoxLayout>

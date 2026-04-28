@@ -18,7 +18,7 @@
 
 #include "../PhonemeLabelerKeys.h"
 #include "ui/TextGridDocument.h"
-#include "ui/ViewportController.h"
+#include <dstools/ViewportController.h>
 #include "ui/BoundaryBindingManager.h"
 #include "ui/WaveformWidget.h"
 #include "ui/TierEditWidget.h"
@@ -33,6 +33,9 @@
 
 namespace dstools {
 namespace phonemelabeler {
+
+using dstools::widgets::ViewportController;
+using dstools::widgets::ViewportState;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT

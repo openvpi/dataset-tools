@@ -3,11 +3,15 @@
 #include <QWidget>
 #include <QListWidget>
 
+#include <dstools/ViewportController.h>
+
 namespace dstools {
 namespace phonemelabeler {
 
+using dstools::widgets::ViewportController;
+using dstools::widgets::ViewportState;
+
 class TextGridDocument;
-class ViewportController;
 
 /// Panel showing phoneme entries from the active tier.
 /// Scroll wheel switches entries; selected entry centers in the viewport.

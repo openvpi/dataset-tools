@@ -4,7 +4,7 @@
 #include <vector>
 #include <QPoint>
 
-#include "ViewportController.h"
+#include <dstools/ViewportController.h>
 #include "BoundaryBindingManager.h"
 
 class QPainter;
@@ -12,6 +12,9 @@ class QUndoStack;
 
 namespace dstools {
 namespace phonemelabeler {
+
+using dstools::widgets::ViewportController;
+using dstools::widgets::ViewportState;
 
 class TextGridDocument;
 

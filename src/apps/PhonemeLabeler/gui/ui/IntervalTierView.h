@@ -4,7 +4,7 @@
 #include <QPoint>
 #include <QVector>
 
-#include "ViewportController.h"
+#include <dstools/ViewportController.h>
 #include "TextGridDocument.h"
 #include "BoundaryBindingManager.h"
 
@@ -13,6 +13,9 @@ class QUndoStack;
 
 namespace dstools {
 namespace phonemelabeler {
+
+using dstools::widgets::ViewportController;
+using dstools::widgets::ViewportState;
 
 class IntervalTierView : public QWidget {
     Q_OBJECT

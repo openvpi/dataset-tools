@@ -9,6 +9,7 @@
 #include <QSet>
 
 #include <dstools/PitchUtils.h>
+#include <dstools/ViewportController.h>
 
 #include <memory>
 #include <set>
@@ -51,6 +52,9 @@ public:
 
     /// Set audio file duration (seconds) to limit piano roll max length
     void setAudioDuration(double sec);
+
+    /// Set shared viewport controller for horizontal zoom/scroll synchronization
+    void setViewportController(dstools::widgets::ViewportController *vc);
 
     // Zoom controls
     void zoomIn();
@@ -100,6 +104,10 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
+    // Viewport controller (shared horizontal zoom/scroll)
+    dstools::widgets::ViewportController *m_viewport = nullptr;
+    void onViewportChanged(const dstools::widgets::ViewportState &state);
+
     // Data
     std::shared_ptr<DSFile> m_dsFile;
     double m_audioDuration = 0.0;  // audio file duration in seconds (0 = no limit)
