@@ -687,7 +687,9 @@ namespace dstools {
         }
 
         void PitchLabelerPage::updatePlaybackState() {
-            // Update play button icon if needed
+            const bool playing = m_playWidget->isPlaying();
+            m_actPlayPause->setText(playing ? QStringLiteral("⏸") : QStringLiteral("▶"));
+            m_actPlayPause->setToolTip(playing ? tr("Pause") : tr("Play"));
         }
 
         void PitchLabelerPage::setToolMode(ui::ToolMode mode) {
