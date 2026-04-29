@@ -14,10 +14,10 @@ namespace HFA {
         }
 
         if (dictionary_.find(language) == dictionary_.end()) {
-            dictionary_[language] = new std::unordered_map<std::string, std::vector<std::string>>();
+            dictionary_[language] = std::unordered_map<std::string, std::vector<std::string>>();
         }
 
-        const auto &dict = dictionary_[language];
+        auto &dict = dictionary_[language];
 
         std::string line;
         while (std::getline(file, line)) {
@@ -60,7 +60,7 @@ namespace HFA {
 
         std::unordered_map<std::string, std::vector<std::string>> *dictionary;
         if (dictionary_.find(language) != dictionary_.end()) {
-            dictionary = dictionary_.find(language)->second;
+            dictionary = &dictionary_.at(language);
         } else {
             std::cerr << "Error: Language '" << language << "' not found in dictionary." << std::endl;
             return std::make_tuple(phSeq, wordSeq, phIdxToWordIdx);

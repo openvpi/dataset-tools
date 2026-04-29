@@ -18,7 +18,7 @@ namespace HFA {
             convert(const std::string &inputText, const std::string &language);
 
     private:
-        std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>*> dictionary_;
+        std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>> dictionary_;
         std::string language_;
     };
 
