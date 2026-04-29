@@ -1,4 +1,3 @@
-#include <string>
 #include <utility>
 #include <vector>
 #include <limits>
@@ -11,12 +10,7 @@
 #include <QRegularExpression>
 #include <QTime>
 
-#include <sndfile.hh>
-
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) || (defined(UNICODE) || defined(_UNICODE))
-#    define USE_WIDE_CHAR
-#endif
-
+#include "audio_io.h"
 #include "mathutils.h"
 #include "slicer.h"
 #include "workthread.h"
@@ -35,7 +29,15 @@ enum class MarkerError {
     NothingToOutputError
 };
 
-inline int determineSndFileFormat(int formatEnum);
+static OutputSampleFormat mapFormatEnum(int formatEnum) {
+    switch (formatEnum) {
+        case WF_INT24_PCM: return OutputSampleFormat::PCM24;
+        case WF_INT32_PCM: return OutputSampleFormat::PCM32;
+        case WF_FLOAT32:   return OutputSampleFormat::Float32;
+        default:           return OutputSampleFormat::PCM16;
+    }
+}
+
 inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outFileName, int sampleRate,
                                    bool overwrite = false,
                                    MarkerTimeFormat timeFormat = MarkerTimeFormat::Samples,
@@ -64,25 +66,17 @@ void WorkThread::run() {
     auto outPath = m_outPath.isEmpty() ? fileDirName : m_outPath;
     auto markerFilePath = QDir(fileDirName).absoluteFilePath(fileBaseName + ".csv");
 
-#ifdef USE_WIDE_CHAR
-    auto inFileNameStr = m_filename.toStdWString();
-#else
-    auto inFileNameStr = m_filename.toStdString();
-#endif
-    SndfileHandle sf(inFileNameStr.c_str());
+    auto reader = createAudioReader(m_filename);
 
-    auto sfErrCode = sf.error();
-    auto sfErrMsg = sf.strError();
-
-    if (sfErrCode) {
-        emit oneError(QString("libsndfile error %1: %2").arg(sfErrCode).arg(sfErrMsg));
+    if (reader->errorCode()) {
+        emit oneError(QString("audio error %1: %2").arg(reader->errorCode()).arg(reader->errorMessage()));
         emit oneFailed(m_filename, m_listIndex);
         return;
     }
 
-    auto sr = sf.samplerate();
-    auto channels = sf.channels();
-    auto frames = sf.frames();
+    auto sr = reader->sampleRate();
+    auto channels = reader->channels();
+    auto frames = reader->frames();
 
     auto totalSize = frames * channels;
 
@@ -115,7 +109,7 @@ void WorkThread::run() {
     }
     if (!hasExistingMarkers) {
         emit oneInfo(QString("%1: calculating markers").arg(m_filename));
-        Slicer slicer(&sf, m_threshold, m_minLength, m_minInterval, m_hopSize, m_maxSilKept);
+        Slicer slicer(reader.get(), m_threshold, m_minLength, m_minInterval, m_hopSize, m_maxSilKept);
 
         if (slicer.getErrorCode() != SlicerErrorCode::SLICER_OK) {
             emit oneError("slicer: " + slicer.getErrorMsg());
@@ -185,20 +179,12 @@ void WorkThread::run() {
             auto outFileName = QString("%1_%2.wav").arg(fileBaseName).arg(idx, m_minimumDigits, 10, QLatin1Char('0'));
             auto outFilePath = QDir(outPath).absoluteFilePath(outFileName);
 
-#ifdef USE_WIDE_CHAR
-            auto outFilePathStr = outFilePath.toStdWString();
-#else
-            auto outFilePathStr = outFilePath.toStdString();
-#endif
-
-            int sndfile_outputWaveFormat = determineSndFileFormat(m_outputWaveFormat);
-            SndfileHandle wf = SndfileHandle(outFilePathStr.c_str(), SFM_WRITE,
-                                             SF_FORMAT_WAV | sndfile_outputWaveFormat, channels, sr);
-            sf.seek(beginFrame, SEEK_SET);
+            auto writer = createWavWriter(outFilePath, sr, channels, mapFormatEnum(m_outputWaveFormat));
+            reader->seek(beginFrame);
             std::vector<double> tmp(frameCount * channels);
-            auto bytesRead = sf.read(tmp.data(), tmp.size());
-            auto bytesWritten = wf.write(tmp.data(), tmp.size());
-            if (bytesWritten != static_cast<sf_count_t>(tmp.size())) {
+            auto samplesRead = reader->read(tmp.data(), tmp.size());
+            auto samplesWritten = writer->write(tmp.data(), tmp.size());
+            if (samplesWritten != static_cast<qint64>(tmp.size())) {
                 isAudioWriteError = true;
                 idx++;
                 break;
@@ -218,20 +204,6 @@ void WorkThread::run() {
     }
 
     emit oneFinished(m_filename, m_listIndex);
-}
-
-inline int determineSndFileFormat(int formatEnum) {
-    switch (formatEnum) {
-        case WF_INT16_PCM:
-            return SF_FORMAT_PCM_16;
-        case WF_INT24_PCM:
-            return SF_FORMAT_PCM_24;
-        case WF_INT32_PCM:
-            return SF_FORMAT_PCM_32;
-        case WF_FLOAT32:
-            return SF_FORMAT_FLOAT;
-    }
-    return 0;
 }
 
 inline QString samplesToDecimalFormat(qint64 samples, int sampleRate) {

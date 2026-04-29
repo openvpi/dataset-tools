@@ -6,9 +6,9 @@
 
 #include <QString>
 
-using MarkerList = std::vector<std::pair<qint64, qint64>>;
+#include "audio_io.h"
 
-class SndfileHandle;
+using MarkerList = std::vector<std::pair<qint64, qint64>>;
 
 enum SlicerErrorCode {
     SLICER_OK = 0,
@@ -26,10 +26,10 @@ private:
     qint64 m_maxSilKept;
     SlicerErrorCode m_errCode;
     QString m_errMsg;
-    SndfileHandle *m_decoder;
+    IAudioReader *m_decoder;
 
 public:
-    explicit Slicer(SndfileHandle *decoder, double threshold = -40.0, qint64 minLength = 5000, qint64 minInterval = 300, qint64 hopSize = 20, qint64 maxSilKept = 5000);
+    explicit Slicer(IAudioReader *decoder, double threshold = -40.0, qint64 minLength = 5000, qint64 minInterval = 300, qint64 hopSize = 20, qint64 maxSilKept = 5000);
     MarkerList slice();
     SlicerErrorCode getErrorCode();
     QString getErrorMsg();

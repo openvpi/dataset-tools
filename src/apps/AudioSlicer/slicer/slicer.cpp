@@ -6,8 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include <sndfile.hh>
-
 #include "mathutils.h"
 #include "slicer.h"
 
@@ -63,7 +61,7 @@ qint64 MovingRMS::size() {
     return m_numElements;
 }
 
-Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 minLength, qint64 minInterval, qint64 hopSize, qint64 maxSilKept)
+Slicer::Slicer(IAudioReader *decoder, double threshold, qint64 minLength, qint64 minInterval, qint64 hopSize, qint64 maxSilKept)
 {
     m_errCode = SlicerErrorCode::SLICER_OK;
     if ((!((minLength >= minInterval) && (minInterval >= hopSize))) || (maxSilKept < hopSize))
@@ -83,8 +81,8 @@ Slicer::Slicer(SndfileHandle *decoder, double threshold, qint64 minLength, qint6
         return;
     }
 
-    m_decoder->seek(0, SEEK_SET);
-    int sr = m_decoder->samplerate();
+    m_decoder->seek(0);
+    int sr = m_decoder->sampleRate();
     if (sr <= 0) {
         m_errCode = SlicerErrorCode::SLICER_AUDIO_ERROR;
         m_errMsg = "Invalid audio file!";
