@@ -184,7 +184,7 @@ void TaskWindow::addFiles() {
     if (m_isRunning) return;
     QStringList files = QFileDialog::getOpenFileNames(
         this, tr("Add Files"), QString(),
-        tr("Audio Files (*.wav *.mp3 *.m4a *.flac);;All Files (*.*)"));
+        tr("Audio Files (*.wav *.mp3 *.m4a *.flac *.ogg);;All Files (*.*)"));
     for (const QString &file : files) {
         auto *item = new QListWidgetItem(QFileInfo(file).fileName());
         item->setData(Qt::UserRole + 1, file);
@@ -197,7 +197,7 @@ void TaskWindow::addFolder() {
     QString dir = QFileDialog::getExistingDirectory(this, tr("Add Folder"));
     if (dir.isEmpty()) return;
     QDir d(dir);
-    QStringList files = d.entryList({"*.wav", "*.mp3", "*.m4a", "*.flac"}, QDir::Files);
+    QStringList files = d.entryList({"*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"}, QDir::Files);
     for (const QString &file : files) {
         auto *item = new QListWidgetItem(file);
         item->setData(Qt::UserRole + 1, d.absoluteFilePath(file));
@@ -278,7 +278,7 @@ void TaskWindow::dropEvent(QDropEvent *event) {
             m_taskListWidget->addItem(item);
         } else if (info.isDir()) {
             QDir d(path);
-            for (const QString &file : d.entryList({"*.wav", "*.mp3", "*.m4a", "*.flac"}, QDir::Files)) {
+            for (const QString &file : d.entryList({"*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"}, QDir::Files)) {
                 auto *item = new QListWidgetItem(file);
                 item->setData(Qt::UserRole + 1, d.absoluteFilePath(file));
                 m_taskListWidget->addItem(item);
