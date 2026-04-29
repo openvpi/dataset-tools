@@ -6,6 +6,7 @@ set(CMAKE_AUTORCC ON)
 set(CORE_SOURCES
     src/AppInit.cpp
     src/AppSettings.cpp
+    src/CsvToDsConverter.cpp
     src/DsDocument.cpp
     src/JsonHelper.cpp
     src/Theme.cpp
@@ -13,6 +14,7 @@ set(CORE_SOURCES
     src/PitchUtils.cpp
     src/AudioFileResolver.cpp
     src/F0Curve.cpp
+    src/PhNumCalculator.cpp
     src/TextGridToCsv.cpp
     src/TranscriptionCsv.cpp
 )
@@ -20,10 +22,12 @@ set(CORE_SOURCES
 set(CORE_HEADERS
     include/dstools/AppInit.h
     include/dstools/AppSettings.h
+    include/dstools/CsvToDsConverter.h
     include/dstools/DsDocument.h
     include/dstools/JsonHelper.h
     include/dstools/Theme.h
     include/dstools/FramelessHelper.h
+    include/dstools/PhNumCalculator.h
     include/dstools/PitchUtils.h
     include/dstools/AudioFileResolver.h
     include/dstools/F0Curve.h
