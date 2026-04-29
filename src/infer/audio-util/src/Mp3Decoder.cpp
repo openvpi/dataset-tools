@@ -5,12 +5,20 @@
 #include <fstream>
 #include <iostream>
 #include <mpg123.h>
+#include <mutex>
 #include <vector>
 
 namespace AudioUtil
 {
     void write_mp3_to_vio(const std::filesystem::path &filepath, SF_VIO &sf_vio) {
-        if (mpg123_init() != MPG123_OK) {
+        static std::once_flag mpg123InitFlag;
+        bool initOk = true;
+        std::call_once(mpg123InitFlag, [&] {
+            if (mpg123_init() != MPG123_OK) {
+                initOk = false;
+            }
+        });
+        if (!initOk) {
             std::cerr << "Failed to initialize mpg123" << std::endl;
             return;
         }
@@ -18,7 +26,6 @@ namespace AudioUtil
         mpg123_handle *mh = mpg123_new(nullptr, nullptr);
         if (mh == nullptr) {
             std::cerr << "Failed to create mpg123 handle" << std::endl;
-            mpg123_exit();
             return;
         }
 
@@ -26,7 +33,6 @@ namespace AudioUtil
         if (!file.is_open()) {
             std::cerr << "Failed to open MP3 file: " << filepath << std::endl;
             mpg123_delete(mh);
-            mpg123_exit();
             return;
         }
 
@@ -36,7 +42,6 @@ namespace AudioUtil
         if (mpg123_open_feed(mh) != MPG123_OK) {
             std::cerr << "Failed to open feed" << std::endl;
             mpg123_delete(mh);
-            mpg123_exit();
             return;
         }
 
@@ -60,15 +65,13 @@ namespace AudioUtil
         if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK) {
             std::cerr << "Failed to get format from mpg123: " << mpg123_strerror(mh) << std::endl;
             mpg123_delete(mh);
-            mpg123_exit();
             return;
         }
 
         const off_t total_frames = mpg123_length(mh);
-        if (total_frames < 0) {
-            std::cerr << "Failed to get frame count: " << mpg123_strerror(mh) << std::endl;
-        } else {
-            std::cout << "Total Frames: " << total_frames << std::endl;
+        if (total_frames > 0) {
+            const size_t estimated_size = total_frames * channels * sizeof(float);
+            sf_vio.data.byteArray.reserve(estimated_size);
         }
 
         if (encoding & MPG123_ENC_FLOAT_32) {
@@ -82,11 +85,6 @@ namespace AudioUtil
         sf_vio.info.frames = 0;
         sf_vio.info.sections = 1;
         sf_vio.info.seekable = 1;
-
-        std::cout << "Rate: " << rate << ", Channels: " << channels << ", Encoding: " << encoding << std::endl;
-
-        const size_t estimated_size = total_frames * channels * sizeof(float);
-        sf_vio.data.byteArray.reserve(estimated_size);
 
         SndfileHandle outBuf(sf_vio.vio, &sf_vio.data, SFM_WRITE, sf_vio.info.format, channels, rate);
 
@@ -106,7 +104,7 @@ namespace AudioUtil
 
                 // Assuming `done` contains bytes read, convert to number of samples
                 const auto num_samples = static_cast<sf_count_t>(done / sizeof(float));
-                const sf_count_t written = outBuf.writef(pcm_buffer.data(), num_samples);
+                const sf_count_t written = outBuf.writef(pcm_buffer.data(), num_samples / channels);
 
                 if (written > 0)
                     sf_vio.info.frames += written;
@@ -135,7 +133,5 @@ namespace AudioUtil
         }
 
         mpg123_delete(mh);
-        mpg123_exit();
-        std::cout << "Mp3 decode success." << std::endl;
     }
 } // namespace AudioUtil
