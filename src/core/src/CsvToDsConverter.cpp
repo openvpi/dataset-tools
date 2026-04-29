@@ -6,6 +6,9 @@
 #include <QFile>
 #include <QFileInfo>
 
+#include <sndfile.h>
+
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <locale>
@@ -56,6 +59,104 @@ namespace {
         return QString::fromStdString(oss.str());
     }
 
+    /// Built-in F0 extraction using autocorrelation pitch detection.
+    /// Used as fallback when no external F0 callback is provided.
+    bool extractF0Builtin(const QString &wavPath, int sampleRate, int hopSize,
+                          std::vector<float> &f0, QString &error) {
+        // Open WAV file with libsndfile
+        SF_INFO sfInfo{};
+        SNDFILE *file = sf_open(wavPath.toUtf8().constData(), SFM_READ, &sfInfo);
+        if (!file) {
+            error = QStringLiteral("Failed to open WAV file: ") + wavPath;
+            return false;
+        }
+
+        // Read all samples (mix to mono if needed)
+        const sf_count_t totalFrames = sfInfo.frames;
+        const int channels = sfInfo.channels;
+        std::vector<float> raw(static_cast<size_t>(totalFrames * channels));
+        sf_readf_float(file, raw.data(), totalFrames);
+        sf_close(file);
+
+        // Mix to mono
+        std::vector<float> mono(static_cast<size_t>(totalFrames));
+        if (channels == 1) {
+            mono = std::move(raw);
+        } else {
+            for (sf_count_t i = 0; i < totalFrames; ++i) {
+                float sum = 0.0f;
+                for (int ch = 0; ch < channels; ++ch)
+                    sum += raw[static_cast<size_t>(i * channels + ch)];
+                mono[static_cast<size_t>(i)] = sum / static_cast<float>(channels);
+            }
+        }
+
+        // Autocorrelation-based pitch detection per hop frame
+        const float minF0 = 50.0f;   // Hz
+        const float maxF0 = 1100.0f;  // Hz
+        const int minLag = sampleRate / static_cast<int>(maxF0);
+        const int maxLag = sampleRate / static_cast<int>(minF0);
+        const int windowSize = maxLag * 2;
+        const int numFrames = static_cast<int>((totalFrames - windowSize) / hopSize) + 1;
+
+        f0.resize(std::max(numFrames, 0), 0.0f);
+
+        for (int frame = 0; frame < numFrames; ++frame) {
+            const int offset = frame * hopSize;
+            if (offset + windowSize > static_cast<int>(totalFrames))
+                break;
+
+            const float *win = mono.data() + offset;
+
+            // Compute energy of the window
+            float energy = 0.0f;
+            for (int i = 0; i < windowSize; ++i)
+                energy += win[i] * win[i];
+
+            // Silence threshold — unvoiced
+            if (energy < 1e-6f * windowSize) {
+                f0[static_cast<size_t>(frame)] = 0.0f;
+                continue;
+            }
+
+            // Normalized autocorrelation (YIN-like difference function)
+            float bestCorr = -1.0f;
+            int bestLag = 0;
+
+            for (int lag = minLag; lag <= maxLag; ++lag) {
+                float corr = 0.0f;
+                float norm1 = 0.0f;
+                float norm2 = 0.0f;
+                const int len = windowSize - lag;
+                for (int i = 0; i < len; ++i) {
+                    corr += win[i] * win[i + lag];
+                    norm1 += win[i] * win[i];
+                    norm2 += win[i + lag] * win[i + lag];
+                }
+                const float denom = std::sqrt(norm1 * norm2);
+                if (denom > 1e-10f)
+                    corr /= denom;
+                else
+                    corr = 0.0f;
+
+                if (corr > bestCorr) {
+                    bestCorr = corr;
+                    bestLag = lag;
+                }
+            }
+
+            // Voicing threshold
+            if (bestCorr > 0.5f && bestLag > 0) {
+                f0[static_cast<size_t>(frame)] =
+                    static_cast<float>(sampleRate) / static_cast<float>(bestLag);
+            } else {
+                f0[static_cast<size_t>(frame)] = 0.0f;
+            }
+        }
+
+        return true;
+    }
+
 } // anonymous namespace
 
 
@@ -99,8 +200,11 @@ bool CsvToDsConverter::convertFromMemory(const std::vector<TranscriptionRow> &ro
         if (f0Callback) {
             if (!f0Callback(wavPath, f0, error))
                 return false;
+        } else {
+            // Built-in fallback: autocorrelation pitch detection via libsndfile
+            if (!extractF0Builtin(wavPath, opts.sampleRate, opts.hopSize, f0, error))
+                return false;
         }
-        // TODO: F0 extraction stub — if f0Callback is null, f0 stays empty
 
         // Build sentence JSON
         nlohmann::json sentence;

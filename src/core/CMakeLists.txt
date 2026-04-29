@@ -97,3 +97,7 @@ endif()
 
 # textgrid (header-only) for TextGridToCsv
 target_link_libraries(${PROJECT_NAME} PRIVATE textgrid)
+
+# SndFile for built-in F0 extraction fallback
+find_package(SndFile CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE SndFile::sndfile)
