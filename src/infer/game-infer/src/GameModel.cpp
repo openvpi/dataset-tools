@@ -393,18 +393,16 @@ namespace Game
         const std::vector<int64_t> durationShape = {1};
         const std::vector<int64_t> languageShape = {1};
 
-        const Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-
         Ort::Value waveformTensor =
-            Ort::Value::CreateTensor<float>(memoryInfo, const_cast<float *>(waveform.data()), waveform.size(),
+            Ort::Value::CreateTensor<float>(m_memoryInfo, const_cast<float *>(waveform.data()), waveform.size(),
                                             waveformShape.data(), waveformShape.size());
 
         std::vector<float> durationVec = {duration};
-        Ort::Value durationTensor = Ort::Value::CreateTensor<float>(memoryInfo, durationVec.data(), 1,
+        Ort::Value durationTensor = Ort::Value::CreateTensor<float>(m_memoryInfo, durationVec.data(), 1,
                                                                     durationShape.data(), durationShape.size());
 
         std::vector<int64_t> languageVec = {static_cast<int64_t>(language)};
-        Ort::Value languageTensor = Ort::Value::CreateTensor<int64_t>(memoryInfo, languageVec.data(), 1,
+        Ort::Value languageTensor = Ort::Value::CreateTensor<int64_t>(m_memoryInfo, languageVec.data(), 1,
                                                                       languageShape.data(), languageShape.size());
 
         std::vector<const char *> inputNames;
@@ -451,16 +449,14 @@ namespace Game
         const std::array<int64_t, 2> durationsShape = {1, static_cast<int64_t>(durations.size())};
         const std::array<int64_t, 2> maskTShape = {1, static_cast<int64_t>(maskT.size())};
 
-        const Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-
         std::vector<float> tempDurations(durations.begin(), durations.end());
         Ort::Value durationsTensor =
-            Ort::Value::CreateTensor<float>(memoryInfo, tempDurations.data(), durations.size(),
-                                            durationsShape.data(), durationsShape.size());
+            Ort::Value::CreateTensor<float>(m_memoryInfo, tempDurations.data(), durations.size(),
+                                             durationsShape.data(), durationsShape.size());
 
         std::vector<uint8_t> tempMaskT(maskT.begin(), maskT.end());
-        Ort::Value maskTTensor = Ort::Value::CreateTensor<bool>(memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()),
-                                                                tempMaskT.size(), maskTShape.data(), maskTShape.size());
+        Ort::Value maskTTensor = Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()),
+                                                                 tempMaskT.size(), maskTShape.data(), maskTShape.size());
 
         const char *inputNames[] = {"durations", "maskT"};
         std::vector<Ort::Value> inputTensors;
@@ -506,8 +502,6 @@ namespace Game
         std::vector<float> xSegData(xSegInfo.GetElementCount());
         std::memcpy(xSegData.data(), xSeg.GetTensorData<float>(), xSegData.size() * sizeof(float));
 
-        Ort::MemoryInfo memInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-
         std::array<int64_t, 2> boundariesShape = {1, T};
         std::array<int64_t, 3> xSegShapeArr = {xSegShape[0], xSegShape[1], xSegShape[2]};
 
@@ -520,37 +514,37 @@ namespace Game
             knownBd.resize(T, 0);
 
         for (float t : d3pmTs) {
-            Ort::Value xSegTensor = Ort::Value::CreateTensor<float>(memInfo, xSegData.data(), xSegData.size(),
-                                                                    xSegShapeArr.data(), xSegShapeArr.size());
+            Ort::Value xSegTensor = Ort::Value::CreateTensor<float>(m_memoryInfo, xSegData.data(), xSegData.size(),
+                                                                     xSegShapeArr.data(), xSegShapeArr.size());
 
             std::vector<uint8_t> maskTBoolVec(maskTBool.begin(), maskTBool.end());
             Ort::Value maskTTensor =
-                Ort::Value::CreateTensor<bool>(memInfo, reinterpret_cast<bool *>(maskTBoolVec.data()),
+                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(maskTBoolVec.data()),
                                                maskTBoolVec.size(), boundariesShape.data(), boundariesShape.size());
 
             std::vector<uint8_t> knownBdVec(knownBd.begin(), knownBd.end());
             Ort::Value knownBdTensor =
-                Ort::Value::CreateTensor<bool>(memInfo, reinterpret_cast<bool *>(knownBdVec.data()), knownBdVec.size(),
+                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(knownBdVec.data()), knownBdVec.size(),
                                                boundariesShape.data(), boundariesShape.size());
 
             std::vector<uint8_t> currentBdVec(currentBoundaries.begin(), currentBoundaries.end());
             Ort::Value prevBdTensor =
-                Ort::Value::CreateTensor<bool>(memInfo, reinterpret_cast<bool *>(currentBdVec.data()),
+                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(currentBdVec.data()),
                                                currentBdVec.size(), boundariesShape.data(), boundariesShape.size());
 
             std::array<int64_t, 1> langShape = {1};
             int64_t langVal = language;
             Ort::Value langTensor =
-                Ort::Value::CreateTensor<int64_t>(memInfo, &langVal, 1, langShape.data(), langShape.size());
+                Ort::Value::CreateTensor<int64_t>(m_memoryInfo, &langVal, 1, langShape.data(), langShape.size());
 
-            Ort::Value threshTensor = Ort::Value::CreateTensor<float>(memInfo, &threshold, 1, nullptr, 0);
+            Ort::Value threshTensor = Ort::Value::CreateTensor<float>(m_memoryInfo, &threshold, 1, nullptr, 0);
 
             int64_t radius_64 = radius;
-            Ort::Value radiusTensor = Ort::Value::CreateTensor<int64_t>(memInfo, &radius_64, 1, nullptr, 0);
+            Ort::Value radiusTensor = Ort::Value::CreateTensor<int64_t>(m_memoryInfo, &radius_64, 1, nullptr, 0);
 
             std::array<int64_t, 1> tShape = {1};
             float tVal = t;
-            Ort::Value tTensor = Ort::Value::CreateTensor<float>(memInfo, &tVal, 1, tShape.data(), tShape.size());
+            Ort::Value tTensor = Ort::Value::CreateTensor<float>(m_memoryInfo, &tVal, 1, tShape.data(), tShape.size());
 
             std::vector<const char *> inputNames;
             std::vector<Ort::Value> inputTensors;
@@ -612,15 +606,13 @@ namespace Game
         const std::array<int64_t, 2> boundariesShape = {1, static_cast<int64_t>(boundaries.size())};
         const std::array<int64_t, 2> maskTShape = {1, static_cast<int64_t>(maskT.size())};
 
-        const Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-
         std::vector<uint8_t> tempBoundaries(boundaries.begin(), boundaries.end());
         Ort::Value boundariesTensor =
-            Ort::Value::CreateTensor<bool>(memoryInfo, reinterpret_cast<bool *>(tempBoundaries.data()),
-                                           boundaries.size(), boundariesShape.data(), boundariesShape.size());
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempBoundaries.data()),
+                                            boundaries.size(), boundariesShape.data(), boundariesShape.size());
 
         std::vector<uint8_t> tempMaskT(maskT.begin(), maskT.end());
-        Ort::Value maskTTensor = Ort::Value::CreateTensor<bool>(memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()),
+        Ort::Value maskTTensor = Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()),
                                                                 tempMaskT.size(), maskTShape.data(), maskTShape.size());
 
         const char *inputNames[] = {"boundaries", "maskT"};
@@ -690,10 +682,8 @@ namespace Game
         auto xEstData = xEst.GetTensorData<float>();
         std::vector<float> xEstCopy(xEstData, xEstData + xEstTypeInfo.GetElementCount());
 
-        Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-
-        Ort::Value xEstTensor = Ort::Value::CreateTensor<float>(memoryInfo, xEstCopy.data(), xEstCopy.size(),
-                                                                xEstShape.data(), xEstShape.size());
+        Ort::Value xEstTensor = Ort::Value::CreateTensor<float>(m_memoryInfo, xEstCopy.data(), xEstCopy.size(),
+                                                                 xEstShape.data(), xEstShape.size());
 
         std::vector<uint8_t> maskTVec;
         maskTVec.reserve(T);
@@ -703,8 +693,8 @@ namespace Game
 
         std::array<int64_t, 2> maskTShapeForTensor = {1, T};
         Ort::Value maskTTensor =
-            Ort::Value::CreateTensor<bool>(memoryInfo, reinterpret_cast<bool *>(maskTVec.data()), maskTVec.size(),
-                                           maskTShapeForTensor.data(), maskTShapeForTensor.size());
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(maskTVec.data()), maskTVec.size(),
+                                            maskTShapeForTensor.data(), maskTShapeForTensor.size());
 
         std::vector<uint8_t> boundariesVec;
         boundariesVec.reserve(boundariesAdjusted.size());
@@ -713,8 +703,8 @@ namespace Game
         }
         std::array<int64_t, 2> bdShape = {1, static_cast<int64_t>(boundariesAdjusted.size())};
         Ort::Value boundariesTensor =
-            Ort::Value::CreateTensor<bool>(memoryInfo, reinterpret_cast<bool *>(boundariesVec.data()),
-                                           boundariesVec.size(), bdShape.data(), bdShape.size());
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(boundariesVec.data()),
+                                            boundariesVec.size(), bdShape.data(), bdShape.size());
 
         std::vector<uint8_t> tempMaskN;
         tempMaskN.reserve(maskN.size());
@@ -723,13 +713,13 @@ namespace Game
         }
 
         std::array<int64_t, 2> maskNShape = {1, static_cast<int64_t>(tempMaskN.size())};
-        Ort::Value maskNTensor = Ort::Value::CreateTensor<bool>(memoryInfo, reinterpret_cast<bool *>(tempMaskN.data()),
-                                                                tempMaskN.size(), maskNShape.data(), maskNShape.size());
+        Ort::Value maskNTensor = Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskN.data()),
+                                                                 tempMaskN.size(), maskNShape.data(), maskNShape.size());
 
         std::vector<float> threshVec = {threshold};
         std::array<int64_t, 1> scalarShape = {1};
         Ort::Value thresholdTensor =
-            Ort::Value::CreateTensor<float>(memoryInfo, threshVec.data(), 1, scalarShape.data(), scalarShape.size());
+            Ort::Value::CreateTensor<float>(m_memoryInfo, threshVec.data(), 1, scalarShape.data(), scalarShape.size());
 
         const char *inputNames[] = {"x_est", "boundaries", "maskT", "maskN", "threshold"};
         std::vector<Ort::Value> inputTensors;
@@ -776,14 +766,13 @@ namespace Game
         auto xSegData = xSegVal.GetTensorData<float>();
         size_t xSegCount = xSegVal.GetTensorTypeAndShapeInfo().GetElementCount();
         std::vector<float> xSegClean(xSegData, xSegData + xSegCount);
-        Ort::MemoryInfo memInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-        Ort::Value xSegCleanVal = Ort::Value::CreateTensor<float>(memInfo, xSegClean.data(), xSegClean.size(),
-                                                                  xSegShape.data(), xSegShape.size());
+        Ort::Value xSegCleanVal = Ort::Value::CreateTensor<float>(m_memoryInfo, xSegClean.data(), xSegClean.size(),
+                                                                   xSegShape.data(), xSegShape.size());
 
         auto xEstData = xEstVal.GetTensorData<float>();
         size_t xEstCount = xEstVal.GetTensorTypeAndShapeInfo().GetElementCount();
         std::vector<float> xEstClean(xEstData, xEstData + xEstCount);
-        Ort::Value xEstCleanVal = Ort::Value::CreateTensor<float>(memInfo, xEstClean.data(), xEstClean.size(),
+        Ort::Value xEstCleanVal = Ort::Value::CreateTensor<float>(m_memoryInfo, xEstClean.data(), xEstClean.size(),
                                                                   xEstShape.data(), xEstShape.size());
 
         int64_t T = maskTShape[1];

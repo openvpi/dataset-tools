@@ -78,6 +78,7 @@ namespace Game
 
         Ort::Env env;
         Ort::SessionOptions sessionOptions;
+        Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
         std::filesystem::path modelDir;
         float timestep;
