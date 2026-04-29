@@ -16,14 +16,14 @@ ModelManager::~ModelManager() {
 void ModelManager::registerProvider(ModelType type, std::unique_ptr<IModelProvider> provider) {
     Entry entry;
     entry.provider = std::move(provider);
-    m_entries.insert(type, std::move(entry));
+    m_entries.emplace(type, std::move(entry));
 }
 
 IModelProvider *ModelManager::provider(ModelType type) const {
     auto it = m_entries.find(type);
     if (it == m_entries.end())
         return nullptr;
-    return it->provider.get();
+    return it->second.provider.get();
 }
 
 bool ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex,
@@ -34,9 +34,7 @@ bool ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gp
         return false;
     }
 
-    auto &entry = it.value();
-
-    // Already loaded with same path and GPU index
+    auto &entry = it->second;
     if (entry.provider->status() == ModelStatus::Ready && entry.lastPath == modelPath &&
         entry.lastGpuIndex == gpuIndex) {
         entry.lastUsedTimestamp = QDateTime::currentMSecsSinceEpoch();
@@ -71,7 +69,7 @@ void ModelManager::unload(ModelType type) {
     if (it == m_entries.end())
         return;
 
-    auto &entry = it.value();
+    auto &entry = it->second;
     if (entry.provider->status() == ModelStatus::Ready) {
         entry.provider->unload();
         emit modelStatusChanged(type, ModelStatus::Unloaded);
@@ -81,9 +79,9 @@ void ModelManager::unload(ModelType type) {
 
 void ModelManager::unloadAll() {
     for (auto it = m_entries.begin(); it != m_entries.end(); ++it) {
-        if (it->provider->status() == ModelStatus::Ready) {
-            it->provider->unload();
-            emit modelStatusChanged(it.key(), ModelStatus::Unloaded);
+        if (it->second.provider->status() == ModelStatus::Ready) {
+            it->second.provider->unload();
+            emit modelStatusChanged(it->first, ModelStatus::Unloaded);
         }
     }
     emit memoryUsageChanged(0);
@@ -100,8 +98,8 @@ int64_t ModelManager::memoryLimit() const {
 int64_t ModelManager::currentMemoryUsage() const {
     int64_t total = 0;
     for (auto it = m_entries.begin(); it != m_entries.end(); ++it) {
-        if (it->provider->status() == ModelStatus::Ready)
-            total += it->provider->estimatedMemoryBytes();
+        if (it->second.provider->status() == ModelStatus::Ready)
+            total += it->second.provider->estimatedMemoryBytes();
     }
     return total;
 }
@@ -110,14 +108,14 @@ ModelStatus ModelManager::status(ModelType type) const {
     auto it = m_entries.find(type);
     if (it == m_entries.end())
         return ModelStatus::Unloaded;
-    return it->provider->status();
+    return it->second.provider->status();
 }
 
 QList<ModelType> ModelManager::loadedModels() const {
     QList<ModelType> result;
     for (auto it = m_entries.begin(); it != m_entries.end(); ++it) {
-        if (it->provider->status() == ModelStatus::Ready)
-            result.append(it.key());
+        if (it->second.provider->status() == ModelStatus::Ready)
+            result.append(it->first);
     }
     return result;
 }
@@ -133,10 +131,10 @@ void ModelManager::evictIfNeeded(int64_t requiredBytes) {
         bool found = false;
 
         for (auto it = m_entries.begin(); it != m_entries.end(); ++it) {
-            if (it->provider->status() == ModelStatus::Ready &&
-                it->lastUsedTimestamp < oldestTimestamp) {
-                oldestTimestamp = it->lastUsedTimestamp;
-                oldest = it.key();
+            if (it->second.provider->status() == ModelStatus::Ready &&
+                it->second.lastUsedTimestamp < oldestTimestamp) {
+                oldestTimestamp = it->second.lastUsedTimestamp;
+                oldest = it->first;
                 found = true;
             }
         }

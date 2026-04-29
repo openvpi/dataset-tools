@@ -3,9 +3,9 @@
 #include <dstools/IModelProvider.h>
 
 #include <QObject>
-#include <QMap>
 #include <QString>
 
+#include <map>
 #include <memory>
 
 namespace dstools {
@@ -46,7 +46,7 @@ private:
         qint64 lastUsedTimestamp = 0;
     };
 
-    QMap<ModelType, Entry> m_entries;
+    std::map<ModelType, Entry> m_entries;
     int64_t m_memoryLimit = 0;
 
     void evictIfNeeded(int64_t requiredBytes);
