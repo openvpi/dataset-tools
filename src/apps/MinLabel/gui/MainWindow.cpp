@@ -125,7 +125,8 @@ namespace Minlabel {
             if (filenames.size() == 1) {
                 if (const QString &filename = filenames.front(); QFile::exists(filename)) {
                     ok = true;
-                    m_page->setWorkingDirectory(filename);
+                    const QFileInfo fi(filename);
+                    m_page->setWorkingDirectory(fi.isDir() ? filename : fi.absolutePath());
                 }
             }
             if (ok) {
@@ -135,6 +136,21 @@ namespace Minlabel {
     }
 
     void MainWindow::closeEvent(QCloseEvent *event) {
+        if (m_page->hasUnsavedChanges()) {
+            const auto result = QMessageBox::question(
+                this, tr("Unsaved Changes"),
+                tr("You have unsaved changes. Do you want to save before closing?"),
+                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+                QMessageBox::Save);
+            if (result == QMessageBox::Cancel) {
+                event->ignore();
+                return;
+            }
+            if (result == QMessageBox::Save) {
+                m_page->save();
+            }
+        }
+
         m_page->shortcutManager()->saveAll();
 
         const QString dir = m_page->workingDirectory();
