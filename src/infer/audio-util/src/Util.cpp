@@ -115,7 +115,7 @@ namespace AudioUtil
 
         if (!resampler || error) {
             msg = "Failed to create SoX resampler: " + std::string(soxr_strerror(error ? error : soxr_error(0)));
-            std::cout << msg << std::endl;
+            std::cerr << msg << std::endl;
             return {};
         }
 
@@ -206,7 +206,7 @@ namespace AudioUtil
                                      &output_frames_done);
 
                 if (error) {
-                    std::cout << "Error during resampling: " << soxr_strerror(error) << std::endl;
+                    std::cerr << "Error during resampling: " << soxr_strerror(error) << std::endl;
                     processing_error = true;
                     break;
                 }
@@ -270,7 +270,7 @@ namespace AudioUtil
                     const sf_count_t written = dstHandle.writef(processed_buffer.data(), output_frames);
 
                     if (written != static_cast<sf_count_t>(output_frames)) {
-                        std::cout << "Error writing to output VIO" << std::endl;
+                        std::cerr << "Error writing to output VIO" << std::endl;
                         processing_error = true;
                         break;
                     }
@@ -292,7 +292,7 @@ namespace AudioUtil
                                      &output_frames_done);
 
                 if (error) {
-                    std::cout << "Error during resampling flush: " << soxr_strerror(error) << std::endl;
+                    std::cerr << "Error during resampling flush: " << soxr_strerror(error) << std::endl;
                     processing_error = true;
                     break;
                 }
@@ -347,7 +347,7 @@ namespace AudioUtil
                     const sf_count_t written = dstHandle.writef(processed_buffer.data(), output_frames);
 
                     if (written != static_cast<sf_count_t>(output_frames)) {
-                        std::cout << "Error writing to output VIO during flush" << std::endl;
+                        std::cerr << "Error writing to output VIO during flush" << std::endl;
                         processing_error = true;
                         break;
                     }
@@ -375,11 +375,11 @@ namespace AudioUtil
         const double output_duration = static_cast<double>(total_output_frames) / tar_samplerate;
 
         if (std::abs(input_duration - output_duration) > 0.01) {
-            std::cout << "Resample Warning." << std::endl;
-            std::cout << "Input duration: " << input_duration << "s (" << total_input_frames << " frames)" << std::endl;
-            std::cout << "Output duration: " << output_duration << "s (" << total_output_frames << " frames)"
+            std::cerr << "Resample Warning." << std::endl;
+            std::cerr << "Input duration: " << input_duration << "s (" << total_input_frames << " frames)" << std::endl;
+            std::cerr << "Output duration: " << output_duration << "s (" << total_output_frames << " frames)"
                       << std::endl;
-            std::cout << "Duration difference: " << (output_duration - input_duration) << "s" << std::endl;
+            std::cerr << "Duration difference: " << (output_duration - input_duration) << "s" << std::endl;
         }
 
         return sf_vio_out;
@@ -446,7 +446,6 @@ namespace AudioUtil
             }
         }
 
-        std::cout << "Successfully wrote VIO to WAV file: " << filepath << std::endl;
         return true;
     }
 } // namespace AudioUtil
