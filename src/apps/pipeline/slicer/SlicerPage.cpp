@@ -95,6 +95,75 @@ void SlicerPage::runTask() {
         return;
     }
 
+    bool ok = true;
+    double threshold = m_lineThreshold->text().toDouble(&ok);
+    if (!ok || threshold >= 0) {
+        QMessageBox::warning(this, tr("Invalid Parameter"),
+                             tr("Threshold must be a negative number (e.g. -40)."));
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
+    }
+
+    qint64 minLength = m_lineMinLength->text().toLongLong(&ok);
+    if (!ok || minLength <= 0) {
+        QMessageBox::warning(this, tr("Invalid Parameter"),
+                             tr("Min Length must be a positive integer."));
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
+    }
+
+    qint64 minInterval = m_lineMinInterval->text().toLongLong(&ok);
+    if (!ok || minInterval <= 0) {
+        QMessageBox::warning(this, tr("Invalid Parameter"),
+                             tr("Min Interval must be a positive integer."));
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
+    }
+
+    qint64 hopSize = m_lineHopSize->text().toLongLong(&ok);
+    if (!ok || hopSize <= 0) {
+        QMessageBox::warning(this, tr("Invalid Parameter"),
+                             tr("Hop Size must be a positive integer."));
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
+    }
+
+    qint64 maxSilKept = m_lineMaxSilence->text().toLongLong(&ok);
+    if (!ok || maxSilKept < 0) {
+        QMessageBox::warning(this, tr("Invalid Parameter"),
+                             tr("Max Silence must be a non-negative integer."));
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
+    }
+
+    if (!(minLength >= minInterval && minInterval >= hopSize)) {
+        QMessageBox::warning(this, tr("Invalid Parameter"),
+                             tr("Parameter constraint violated:\nMin Length >= Min Interval >= Hop Size\n\n"
+                                "Current values: Min Length=%1, Min Interval=%2, Hop Size=%3")
+                                 .arg(minLength)
+                                 .arg(minInterval)
+                                 .arg(hopSize));
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
+    }
+
+    if (maxSilKept < hopSize) {
+        QMessageBox::warning(this, tr("Invalid Parameter"),
+                             tr("Parameter constraint violated:\nMax Silence >= Hop Size\n\n"
+                                "Current values: Max Silence=%1, Hop Size=%2")
+                                 .arg(maxSilKept)
+                                 .arg(hopSize));
+        m_isRunning = false;
+        m_runBtn->setEnabled(true);
+        return;
+    }
+
     m_isRunning = true;
     m_runBtn->setEnabled(false);
 
