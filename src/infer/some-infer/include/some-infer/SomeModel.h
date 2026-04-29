@@ -2,6 +2,7 @@
 #define SOMEMODEL_H
 
 #include <filesystem>
+#include <mutex>
 #include <onnxruntime_cxx_api.h>
 #include <some-infer/Provider.h>
 #include <string>
@@ -22,7 +23,8 @@ namespace Some
         void terminate();
 
     private:
-        Ort::RunOptions run_options;
+        std::mutex m_runMutex;
+        Ort::RunOptions *m_activeRunOptions = nullptr;
         Ort::SessionOptions m_session_options;
         Ort::Session m_session;
         Ort::AllocatorWithDefaultOptions m_allocator;

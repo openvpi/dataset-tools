@@ -31,7 +31,10 @@ namespace Rmvpe
         return m_session != nullptr;
     }
 
-    void RmvpeModel::terminate() { run_options.SetTerminate(); }
+    void RmvpeModel::terminate() {
+        std::lock_guard lock(m_runMutex);
+        if (m_activeRunOptions) m_activeRunOptions->SetTerminate();
+    }
 
     // Forward pass through the model: takes waveform and threshold as inputs, returns f0 and uv as outputs
     bool RmvpeModel::forward(const std::vector<float> &waveform_data, float threshold, std::vector<float> &f0,
@@ -61,11 +64,19 @@ namespace Rmvpe
 
             const Ort::Value input_tensors[] = {(std::move(waveform_tensor)), (std::move(threshold_tensor))};
 
-            run_options.UnsetTerminate();
+            Ort::RunOptions runOptions;
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = &runOptions;
+            }
             auto output_tensors =
-                m_session.Run(run_options, input_names, input_tensors, 2, // 输入：waveform 和 threshold
-                               output_names, 2 // 输出：f0 和 uv
+                m_session.Run(runOptions, input_names, input_tensors, 2,
+                               output_names, 2
                 );
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = nullptr;
+            }
 
             const float *f0_array = output_tensors.front().GetTensorMutableData<float>();
             f0.assign(f0_array, f0_array + output_tensors.front().GetTensorTypeAndShapeInfo().GetElementCount());

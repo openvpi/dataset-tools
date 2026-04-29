@@ -26,7 +26,10 @@ namespace Some
     // Destructor: Release ONNX session
     SomeModel::~SomeModel() = default;
 
-    void SomeModel::terminate() { run_options.SetTerminate(); }
+    void SomeModel::terminate() {
+        std::lock_guard lock(m_runMutex);
+        if (m_activeRunOptions) m_activeRunOptions->SetTerminate();
+    }
 
     bool SomeModel::is_open() const { 
         return m_session != nullptr;
@@ -57,8 +60,16 @@ namespace Some
 
             const Ort::Value input_tensors[] = {std::move(waveform_tensor)};
 
-            run_options.UnsetTerminate();
-            auto output_tensors = m_session.Run(run_options, input_names, input_tensors, 1, output_names, 3);
+            Ort::RunOptions runOptions;
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = &runOptions;
+            }
+            auto output_tensors = m_session.Run(runOptions, input_names, input_tensors, 1, output_names, 3);
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = nullptr;
+            }
 
             const float *midi_array = output_tensors.at(0).GetTensorMutableData<float>();
             note_midi.assign(midi_array,

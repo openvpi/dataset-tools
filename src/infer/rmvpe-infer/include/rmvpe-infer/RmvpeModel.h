@@ -2,6 +2,7 @@
 #define RMVPEMODEL_H
 
 #include <filesystem>
+#include <mutex>
 #include <onnxruntime_cxx_api.h>
 #include <rmvpe-infer/Provider.h>
 #include <rmvpe-infer/RmvpeGlobal.h>
@@ -23,7 +24,8 @@ namespace Rmvpe
         void terminate();
 
     private:
-        Ort::RunOptions run_options;
+        std::mutex m_runMutex;
+        Ort::RunOptions *m_activeRunOptions = nullptr;
         Ort::SessionOptions m_session_options;
         Ort::Session m_session;
         Ort::AllocatorWithDefaultOptions m_allocator;
