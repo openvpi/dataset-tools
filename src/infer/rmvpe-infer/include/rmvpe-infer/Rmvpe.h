@@ -30,6 +30,7 @@ namespace Rmvpe
 
         void terminate() const;
 
+    private:
         std::unique_ptr<RmvpeModel> m_rmvpe;
     };
 } // namespace Rmvpe
