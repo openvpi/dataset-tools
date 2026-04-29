@@ -23,6 +23,7 @@ namespace LyricFA {
     Asr::~Asr() = default;
 
     bool Asr::recognize(const std::filesystem::path &filepath, std::string &msg) const {
+        std::lock_guard<std::mutex> lock(m_mutex);
         if (!m_asrHandle) {
             return false;
         }

@@ -2,6 +2,7 @@
 #define ASR_H
 
 #include <memory>
+#include <mutex>
 
 #include <QString>
 #include <filesystem>
@@ -23,7 +24,7 @@ namespace LyricFA {
 
     private:
         std::unique_ptr<FunAsr::Model> m_asrHandle;
+        mutable std::mutex m_mutex;
     };
 } // LyricFA
-
 #endif // ASR_H
