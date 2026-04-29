@@ -391,8 +391,9 @@ namespace Game
         const std::vector<int64_t> durationShape = {1};
         const std::vector<int64_t> languageShape = {1};
 
+        std::vector<float> waveformMutable(waveform.begin(), waveform.end());
         Ort::Value waveformTensor =
-            Ort::Value::CreateTensor<float>(m_memoryInfo, const_cast<float *>(waveform.data()), waveform.size(),
+            Ort::Value::CreateTensor<float>(m_memoryInfo, waveformMutable.data(), waveformMutable.size(),
                                             waveformShape.data(), waveformShape.size());
 
         std::vector<float> durationVec = {duration};

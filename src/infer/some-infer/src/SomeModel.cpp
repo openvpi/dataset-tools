@@ -83,8 +83,9 @@ namespace Some
             const size_t n_samples = waveform_data.size();
 
             const std::array<int64_t, 2> input_waveform_shape = {1, static_cast<int64_t>(n_samples)};
+            std::vector<float> waveform_mutable(waveform_data.begin(), waveform_data.end());
             Ort::Value waveform_tensor = Ort::Value::CreateTensor<float>(
-                m_memory_info, const_cast<float *>(waveform_data.data()), waveform_data.size(),
+                m_memory_info, waveform_mutable.data(), waveform_mutable.size(),
                 input_waveform_shape.data(), input_waveform_shape.size());
 
             std::vector<float> midi_data;
