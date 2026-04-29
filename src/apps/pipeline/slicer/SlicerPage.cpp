@@ -212,7 +212,8 @@ void SlicerPage::addSingleAudioFile(const QString &fullPath) {
     QFileInfo info(fullPath);
     if (!info.exists() || !info.isFile()) return;
     static const QSet<QString> supportedFormats = {
-        "wav", "mp3", "flac", "ogg", "aiff", "au", "snd", "voc", "w64"
+        "wav", "mp3", "flac", "ogg", "aiff", "au", "snd", "voc", "w64",
+        "m4a", "aac", "wma", "opus"
     };
     if (!supportedFormats.contains(info.suffix().toLower())) return;
     auto *item = new QListWidgetItem(info.fileName());

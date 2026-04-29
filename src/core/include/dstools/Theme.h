@@ -18,6 +18,9 @@
 ///   });
 /// @endcode
 
+#include "AppSettings.h"
+
+
 #include <QApplication>
 #include <QColor>
 #include <QObject>

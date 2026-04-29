@@ -29,7 +29,7 @@ namespace FunAsr {
         int size() const;
         void reset();
         void insert(float *din, int len, int flag);
-        bool fetch(Tensor<float> *&dout);
+        bool fetch(std::unique_ptr<Tensor<float>> &dout);
     };
 }
 #endif

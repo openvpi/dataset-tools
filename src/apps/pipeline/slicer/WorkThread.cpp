@@ -1,17 +1,20 @@
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
-#include <limits>
 
 #include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QStringView>
 #include <QRegularExpression>
+#include <QStringView>
+#include <QTemporaryFile>
 #include <QTime>
 
 #include <sndfile.hh>
+
+#include <dstools/AudioDecoder.h>
 
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) || (defined(UNICODE) || defined(_UNICODE))
 #    define USE_WIDE_CHAR
@@ -21,38 +24,27 @@
 #include "Slicer.h"
 #include "WorkThread.h"
 
-enum class MarkerTimeFormat {
-    Decimal,
-    Samples
-};
+enum class MarkerTimeFormat { Decimal, Samples };
 
-enum class MarkerError {
-    Success,
-    Skipped,
-    IOError,
-    FileNotExistError,
-    FormatError,
-    NothingToOutputError
-};
+enum class MarkerError { Success, Skipped, IOError, FileNotExistError, FormatError, NothingToOutputError };
 
 inline int determineSndFileFormat(int formatEnum);
-inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outFileName, int sampleRate,
-                                   bool overwrite = false,
-                                   MarkerTimeFormat timeFormat = MarkerTimeFormat::Samples,
+inline MarkerError writeCSVMarkers(const MarkerList &chunks, const QString &outFileName, int sampleRate,
+                                   bool overwrite = false, MarkerTimeFormat timeFormat = MarkerTimeFormat::Samples,
                                    qint64 totalSize = std::numeric_limits<qint64>::max());
 inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, MarkerError *ok = nullptr);
 inline QString samplesToDecimalFormat(qint64 samples, int sampleRate);
 inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampleRate, bool *ok = nullptr);
 inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRate, bool *ok = nullptr);
 
-WorkThread::WorkThread(const QString &filename, const QString &outPath, double threshold, qint64 minLength, qint64 minInterval,
-                       qint64 hopSize, qint64 maxSilKept, int outputWaveFormat,
-                       bool saveAudio, bool saveMarkers, bool loadMarkers, bool overwriteMarkers,
-                       int minimumDigits, int listIndex)
+WorkThread::WorkThread(const QString &filename, const QString &outPath, double threshold, qint64 minLength,
+                       qint64 minInterval, qint64 hopSize, qint64 maxSilKept, int outputWaveFormat, bool saveAudio,
+                       bool saveMarkers, bool loadMarkers, bool overwriteMarkers, int minimumDigits, int listIndex)
     : m_filename(filename), m_outPath(outPath), m_threshold(threshold), m_minLength(minLength),
       m_minInterval(minInterval), m_hopSize(hopSize), m_maxSilKept(maxSilKept), m_outputWaveFormat(outputWaveFormat),
-      m_saveAudio(saveAudio), m_saveMarkers(saveMarkers), m_loadMarkers(loadMarkers), m_overwriteMarkers(overwriteMarkers),
-      m_minimumDigits(minimumDigits), m_listIndex(listIndex) {}
+      m_saveAudio(saveAudio), m_saveMarkers(saveMarkers), m_loadMarkers(loadMarkers),
+      m_overwriteMarkers(overwriteMarkers), m_minimumDigits(minimumDigits), m_listIndex(listIndex) {
+}
 
 void WorkThread::run() {
     emit oneInfo(QString("%1 started processing.").arg(m_filename));
@@ -74,10 +66,60 @@ void WorkThread::run() {
     auto sfErrCode = sf.error();
     auto sfErrMsg = sf.strError();
 
+    QString tempWavPath;
     if (sfErrCode) {
-        emit oneError(QString("libsndfile error %1: %2").arg(sfErrCode).arg(sfErrMsg));
-        emit oneFailed(m_filename, m_listIndex);
-        return;
+        dstools::audio::AudioDecoder decoder;
+        if (!decoder.open(m_filename)) {
+            emit oneError(QString("Cannot open audio file: %1 (libsndfile: %2)").arg(m_filename).arg(sfErrMsg));
+            emit oneFailed(m_filename, m_listIndex);
+            return;
+        }
+
+        QTemporaryFile tempFile(QString("%1/dstslicer_XXXXXX.wav").arg(fileDirName));
+        if (!tempFile.open()) {
+            emit oneError(QString("Cannot create temporary file for %1").arg(m_filename));
+            emit oneFailed(m_filename, m_listIndex);
+            return;
+        }
+        tempWavPath = tempFile.fileName();
+        tempFile.close();
+
+        const auto fmt = decoder.format();
+        const int sr = fmt.sampleRate();
+        const int channels = fmt.channels();
+        const qint64 totalFrames = decoder.length();
+
+        SndfileHandle wf(tempWavPath.toStdWString().c_str(), SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_FLOAT, channels, sr);
+        if (wf.error()) {
+            emit oneError(QString("Cannot create temporary WAV for %1").arg(m_filename));
+            emit oneFailed(m_filename, m_listIndex);
+            return;
+        }
+
+        std::vector<float> buf(4096 * channels);
+        qint64 framesRead = 0;
+        while (framesRead < totalFrames) {
+            const int toRead = std::min(static_cast<qint64>(4096), totalFrames - framesRead);
+            const int n = decoder.read(buf.data(), static_cast<int>(framesRead), toRead * channels);
+            if (n <= 0)
+                break;
+            wf.writef(buf.data(), n / channels);
+            framesRead += n / channels;
+        }
+        decoder.close();
+        wf.writeSync();
+
+#ifdef USE_WIDE_CHAR
+        sf = SndfileHandle(tempWavPath.toStdWString().c_str());
+#else
+        sf = SndfileHandle(tempWavPath.toStdString().c_str());
+#endif
+        sfErrCode = sf.error();
+        if (sfErrCode) {
+            emit oneError(QString("Cannot re-open decoded file: %1").arg(m_filename));
+            emit oneFailed(m_filename, m_listIndex);
+            return;
+        }
     }
 
     auto sr = sf.samplerate();
@@ -131,7 +173,8 @@ void WorkThread::run() {
     bool isMarkerWriteError = false;
 
     if (m_saveMarkers) {
-        MarkerError saveOk = writeCSVMarkers(chunks, markerFilePath, sr, m_overwriteMarkers, MarkerTimeFormat::Samples, totalSize);
+        MarkerError saveOk =
+            writeCSVMarkers(chunks, markerFilePath, sr, m_overwriteMarkers, MarkerTimeFormat::Samples, totalSize);
         switch (saveOk) {
             case MarkerError::Success:
                 emit oneInfo(QString("%1: saved markers to %2").arg(m_filename, markerFilePath));
@@ -214,9 +257,14 @@ void WorkThread::run() {
     }
 
     if (isAudioWriteError || isMarkerWriteError) {
+        if (!tempWavPath.isEmpty())
+            QFile::remove(tempWavPath);
         emit oneFailed(m_filename, m_listIndex);
         return;
     }
+
+    if (!tempWavPath.isEmpty())
+        QFile::remove(tempWavPath);
 
     emit oneFinished(m_filename, m_listIndex);
 }
@@ -249,13 +297,15 @@ inline QString samplesToDecimalFormat(qint64 samples, int sampleRate) {
 
 inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampleRate, bool *ok) {
     if (sampleRate <= 0) {
-        if (ok) *ok = false;
+        if (ok)
+            *ok = false;
         return 0;
     }
     static const QRegularExpression re(R"(^\s*(\d+):(\d+)\.(\d+)\s*$)");
     auto match = re.match(decimalFormat);
     if (!match.hasMatch()) {
-        if (ok) *ok = false;
+        if (ok)
+            *ok = false;
         return 0;
     }
     bool hasParseError = false;
@@ -267,11 +317,13 @@ inline qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampl
     qint64 zzz = match.capturedView(3).toLongLong(&parseOk);
     hasParseError |= !parseOk;
     if (hasParseError) {
-        if (ok) *ok = false;
+        if (ok)
+            *ok = false;
         return 0;
     }
     qint64 samples = (mm * 60 + ss) * sampleRate + divIntRound(zzz * sampleRate, static_cast<qint64>(1000));
-    if (ok) *ok = true;
+    if (ok)
+        *ok = true;
     return samples;
 }
 
@@ -279,9 +331,8 @@ inline qint64 decimalFormatToSamples(const QString &decimalFormat, int sampleRat
     return decimalFormatToSamples(QStringView{decimalFormat}, sampleRate, ok);
 }
 
-inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outFileName, int sampleRate,
-                            bool overwrite,
-                            MarkerTimeFormat timeFormat, qint64 totalSize) {
+inline MarkerError writeCSVMarkers(const MarkerList &chunks, const QString &outFileName, int sampleRate, bool overwrite,
+                                   MarkerTimeFormat timeFormat, qint64 totalSize) {
     QString markerType = "Cue";
     if (chunks.empty()) {
         return MarkerError::NothingToOutputError;
@@ -300,8 +351,8 @@ inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outF
         auto beginFrame = chunk.first;
         auto endFrame = chunk.second;
         auto frameCount = endFrame - beginFrame;
-        if ((frameCount <= 0) || (beginFrame > totalSize) || (endFrame > totalSize) ||
-            (beginFrame < 0) || (endFrame < 0)) {
+        if ((frameCount <= 0) || (beginFrame > totalSize) || (endFrame > totalSize) || (beginFrame < 0) ||
+            (endFrame < 0)) {
             continue;
         }
         switch (timeFormat) {
@@ -325,23 +376,24 @@ inline MarkerError writeCSVMarkers(const MarkerList& chunks, const QString &outF
     }
     auto fileError = writeFile.error();
     writeFile.close();
-    return (fileError == QFile::FileError::NoError) ? \
-            MarkerError::Success : MarkerError::IOError;
+    return (fileError == QFile::FileError::NoError) ? MarkerError::Success : MarkerError::IOError;
 }
 
 inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, MarkerError *ok) {
     QFile readFile(inFileName);
     if (!readFile.exists()) {
-        if (ok) *ok = MarkerError::FileNotExistError;
+        if (ok)
+            *ok = MarkerError::FileNotExistError;
         return {};
     }
 
     if (!readFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        if (ok) *ok = MarkerError::IOError;
+        if (ok)
+            *ok = MarkerError::IOError;
         return {};
     }
 
-    MarkerList ml {};
+    MarkerList ml{};
 
     QTextStream ts(&readFile);
     QString line;
@@ -356,7 +408,8 @@ inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, Mark
         // [0]Name [1]Start [2]Duration [3]Time Format [4]Type [5]Description
         // We only need "Start", "Duration", and "Time Format". Read them by position.
         if (split.size() < 4) {
-            if (ok) *ok = MarkerError::FormatError;
+            if (ok)
+                *ok = MarkerError::FormatError;
             return {};
         }
         // Identify Time Format
@@ -379,7 +432,8 @@ inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, Mark
             hasParseError |= !parseOk;
 
             if (hasParseError) {
-                if (ok) *ok = MarkerError::FormatError;
+                if (ok)
+                    *ok = MarkerError::FormatError;
                 return {};
             }
 
@@ -399,15 +453,18 @@ inline MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, Mark
             hasParseError |= !parseOk;
 
             if (hasParseError) {
-                if (ok) *ok = MarkerError::FormatError;
+                if (ok)
+                    *ok = MarkerError::FormatError;
                 return {};
             }
             ml.emplace_back(beginFrame, beginFrame + frameCount);
         } else {
-            if (ok) *ok = MarkerError::FormatError;
+            if (ok)
+                *ok = MarkerError::FormatError;
             return {};
         }
     }
-    if (ok) *ok = MarkerError::Success;
+    if (ok)
+        *ok = MarkerError::Success;
     return ml;
 }

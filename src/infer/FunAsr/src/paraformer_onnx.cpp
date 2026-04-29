@@ -101,9 +101,8 @@ namespace FunAsr {
 
     std::string ModelImp::forward(float *din, int len, int flag) {
         fe->insert(din, len, flag);
-        Tensor<float> *raw_in = nullptr;
-        fe->fetch(raw_in);
-        std::unique_ptr<Tensor<float>> in(raw_in);
+        std::unique_ptr<Tensor<float>> in;
+        fe->fetch(in);
         apply_lfr(in);
         apply_cmvn(in.get());
         Ort::RunOptions run_option;

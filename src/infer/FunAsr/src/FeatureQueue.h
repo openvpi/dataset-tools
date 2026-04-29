@@ -19,7 +19,7 @@ namespace FunAsr {
         void reinit(const int &size);
         void reset();
         void push(const float *din, const int &flag);
-        Tensor<float> *pop();
+        std::unique_ptr<Tensor<float>> pop();
         int size() const;
     };
 }

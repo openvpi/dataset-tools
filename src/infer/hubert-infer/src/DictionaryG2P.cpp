@@ -40,7 +40,7 @@ namespace HFA {
                 phonemes.push_back(phone);
             }
 
-            (*dict)[word] = phonemes;
+            dict[word] = phonemes;
         }
     }
 

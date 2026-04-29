@@ -112,4 +112,21 @@ elseif (APPLE)
             ")
         endforeach ()
     endif ()
+elseif (UNIX)
+    set(_install_dir ${CMAKE_INSTALL_PREFIX})
+
+    install(CODE "
+        file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.so*\" \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.exe\")
+        foreach(_file \${_files})
+            file(COPY \${_file} DESTINATION \"${_install_dir}\")
+        endforeach()
+    ")
+
+    get_target_property(_targets DeployedTargets TARGETS)
+
+    foreach (_target ${_targets})
+        install(CODE "
+            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}\")
+        ")
+    endforeach ()
 endif ()

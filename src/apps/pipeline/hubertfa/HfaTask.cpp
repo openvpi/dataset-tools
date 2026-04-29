@@ -2,7 +2,7 @@
 
 #include <QMessageBox>
 
-#include "textgrid.hpp"
+#include <textgrid.hpp>
 
 #include <QFileInfo>
 #include <sstream>

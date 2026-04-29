@@ -14,6 +14,7 @@
 #include "Asr.h"
 #include "MatchLyric.h"
 
+#include <QDir>
 #include <cpp-pinyin/Pinyin.h>
 
 using dstools::widgets::PathSelector;

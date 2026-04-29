@@ -87,7 +87,8 @@ namespace FunAsr {
 
                 // process word start and middle part
                 if (sub_word) {
-                    combine += word.erase(word.length() - 2);
+                    if (word.length() >= 2)
+                        combine += word.erase(word.length() - 2);
                     is_combining = true;
                     continue;
                 }
@@ -113,7 +114,7 @@ namespace FunAsr {
 
                     // pre word is chinese
                     if (!is_pre_english) {
-                        if (word[0] >= 'a' && word[0] <= 'z')
+                        if (!word.empty() && word[0] >= 'a' && word[0] <= 'z')
                             word[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(word[0])));
                         words.push_back(word);
                         pre_english_len = word.size();
@@ -125,7 +126,7 @@ namespace FunAsr {
 
                         // single letter turn to upper case
                         if (word.size() == 1) {
-                            if (word[0] >= 'a' && word[0] <= 'z')
+                            if (!word.empty() && word[0] >= 'a' && word[0] <= 'z')
                                 word[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(word[0])));
                         }
 

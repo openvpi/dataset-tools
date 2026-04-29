@@ -55,6 +55,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     audio-util
     hubert-infer
     FunAsr
+    textgrid
     cpp-pinyin::cpp-pinyin
     SndFile::sndfile
     nlohmann_json::nlohmann_json

@@ -56,7 +56,7 @@ namespace Game
         bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
                         std::string &msg) const;
         bool is_open() const;
-        void terminate() const;
+        static void terminate();
 
         int get_target_sample_rate() const;
         float get_timestep() const;

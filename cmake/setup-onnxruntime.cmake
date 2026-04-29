@@ -91,6 +91,12 @@ set(_arch ${_detected_arch})
 set(_version "1.17.3")
 set(_version_dml "1.15.0")
 
+set(_hash_win_x64        "14e0b7ed6cc504f8c4c1d8e57451ada6d8469394d08e10afa6db616f082fe035")
+set(_hash_linux_x64      "")
+set(_hash_osx_arm64      "")
+set(_hash_win_x64_gpu    "")
+set(_hash_linux_x64_gpu  "")
+
 macro(download_onnxruntime_from_github)
     set(_base_url "https://github.com/microsoft/onnxruntime/releases/download/v${_version}")
     set(_name      "onnxruntime-${_os}-${_arch}-${_full_version}")
@@ -100,12 +106,16 @@ macro(download_onnxruntime_from_github)
 
     message(STATUS "Downloading ONNX Runtime from ${_url}")
 
-    file(DOWNLOAD ${_url} ${_file_path}
-
-            # EXPECTED_HASH SHA256=14e0b7ed6cc504f8c4c1d8e57451ada6d8469394d08e10afa6db616f082fe035
-            # TIMEOUT 60
-            SHOW_PROGRESS
-    )
+    if(_expected_hash)
+        file(DOWNLOAD ${_url} ${_file_path}
+                EXPECTED_HASH SHA256=${_expected_hash}
+                SHOW_PROGRESS
+        )
+    else()
+        file(DOWNLOAD ${_url} ${_file_path}
+                SHOW_PROGRESS
+        )
+    endif()
 
     set(_extract_dir ${CMAKE_BINARY_DIR}/onnxruntime)
 
@@ -185,10 +195,12 @@ endmacro()
 if(DEFINED ep AND "${ep}" STREQUAL gpu)
     set(_full_version      gpu-${_version})
     set(_full_version_zip  gpu-${_version})
+    set(_expected_hash     "${_hash_win_x64_gpu}")
     download_onnxruntime_from_github()
 elseif(DEFINED ep AND "${ep}" STREQUAL gpu-cuda12)
     set(_full_version      gpu-cuda12-${_version})
     set(_full_version_zip  gpu-${_version})
+    set(_expected_hash     "${_hash_linux_x64_gpu}")
     download_onnxruntime_from_github()
 elseif(DEFINED ep AND "${ep}" STREQUAL dml)
     download_onnxruntime_from_nuget()
@@ -196,5 +208,14 @@ elseif(DEFINED ep AND "${ep}" STREQUAL dml)
 else()
     set(_full_version      ${_version})
     set(_full_version_zip  ${_version})
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND _arch STREQUAL "x64")
+        set(_expected_hash "${_hash_win_x64}")
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux" AND _arch STREQUAL "x64")
+        set(_expected_hash "${_hash_linux_x64}")
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND _arch STREQUAL "arm64")
+        set(_expected_hash "${_hash_osx_arm64}")
+    else()
+        set(_expected_hash "")
+    endif()
     download_onnxruntime_from_github()
 endif()

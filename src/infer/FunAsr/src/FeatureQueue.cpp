@@ -19,6 +19,7 @@ namespace FunAsr {
     }
 
     void FeatureQueue::push(const float *din, const int &flag) {
+        if (buff_idx >= window_size) return;
         const int offset = buff_idx * 80;
         memcpy(buff->buff + offset, din, 80 * sizeof(float));
         buff_idx++;
@@ -37,10 +38,10 @@ namespace FunAsr {
         }
     }
 
-    Tensor<float> *FeatureQueue::pop() {
+    std::unique_ptr<Tensor<float>> FeatureQueue::pop() {
         auto tmp = std::move(feature_queue.front());
         feature_queue.pop();
-        return tmp.release();
+        return tmp;
     }
 
     int FeatureQueue::size() const {

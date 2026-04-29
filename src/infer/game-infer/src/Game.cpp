@@ -7,9 +7,9 @@
 
 #include <audio-util/Slicer.h>
 #include <audio-util/Util.h>
+#include <dstools/PitchUtils.h>
 #include <game-infer/DiffSingerParser.h>
 #include <game-infer/GameModel.h>
-#include <dstools/PitchUtils.h>
 
 namespace Game
 {
@@ -37,7 +37,8 @@ namespace Game
     }
 
     std::vector<double> cumulativeSum(const std::vector<float> &durations) {
-        if (durations.empty()) return {};
+        if (durations.empty())
+            return {};
         std::vector<double> cumsum(durations.size());
         cumsum[0] = static_cast<double>(durations[0]);
         for (size_t i = 1; i < durations.size(); ++i) {
@@ -273,11 +274,13 @@ namespace Game
         }
 
         // Sort and fix overlaps (matching Python SaveCombinedFileCallback.save_file logic)
-        std::sort(notes.begin(), notes.end(), [](const GameNote &a, const GameNote &b) {
-            if (a.onset != b.onset)
-                return a.onset < b.onset;
-            return (a.onset + a.duration) < (b.onset + b.duration);
-        });
+        std::sort(notes.begin(), notes.end(),
+                  [](const GameNote &a, const GameNote &b)
+                  {
+                      if (a.onset != b.onset)
+                          return a.onset < b.onset;
+                      return (a.onset + a.duration) < (b.onset + b.duration);
+                  });
         float lastTime = 0.0f;
         size_t writeIdx = 0;
         for (size_t i = 0; i < notes.size(); ++i) {
@@ -295,7 +298,7 @@ namespace Game
         return true;
     }
 
-    void Game::terminate() const { m_gameModel->terminate(); }
+    void Game::terminate() {}
 
     bool Game::align(const AlignInput &input, const AlignOptions &options, std::vector<AlignedNote> &output,
                      std::string &msg) const {
@@ -389,8 +392,7 @@ namespace Game
                     parseWords(input.phSeq, input.phDur, input.phNum, options.uvVocab, options.uvWordCond, false);
             }
 
-            output = alignNotesToWords(alignWords, noteSeq, validDur, 0.01f,
-                                       options.uvNoteCond == UvNoteCond::Follow);
+            output = alignNotesToWords(alignWords, noteSeq, validDur, 0.01f, options.uvNoteCond == UvNoteCond::Follow);
         } else {
             // No alignment: apply presence-based rest directly
             for (size_t i = 0; i < validScores.size(); ++i) {

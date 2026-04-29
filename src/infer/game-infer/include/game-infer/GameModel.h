@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -42,8 +43,6 @@ namespace Game
         bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
                         std::string &msg);
         bool is_open() const;
-        static void terminate();
-        bool is_terminated() const;
 
         bool forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                      std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
@@ -55,9 +54,9 @@ namespace Game
          * Returns durations, presence, scores for the predicted notes.
          */
         bool forwardWithKnownDurations(const std::vector<float> &waveform_data,
-                                        const std::vector<float> &known_durations, std::vector<float> &durations,
-                                        std::vector<float> &presence, std::vector<float> &scores,
-                                        std::string &msg) const;
+                                       const std::vector<float> &known_durations, std::vector<float> &durations,
+                                       std::vector<float> &presence, std::vector<float> &scores,
+                                       std::string &msg) const;
 
         static std::vector<float> generate_d3pm_ts(float t0, int n_steps);
 
@@ -74,12 +73,13 @@ namespace Game
         std::unique_ptr<Ort::Session> sessEncoder;
         std::unique_ptr<Ort::Session> sessSegmenter;
         std::unique_ptr<Ort::Session> sessEstimator;
-        std::unique_ptr<Ort::Session> sessBd2dur;   // bd2dur.onnx: boundaries → durations
-        std::unique_ptr<Ort::Session> sessDur2bd;   // dur2bd.onnx: durations → boundaries (optional)
+        std::unique_ptr<Ort::Session> sessBd2dur; // bd2dur.onnx: boundaries → durations
+        std::unique_ptr<Ort::Session> sessDur2bd; // dur2bd.onnx: durations → boundaries (optional)
 
         Ort::Env env;
         Ort::SessionOptions sessionOptions;
         Ort::RunOptions m_runOptions;
+        std::atomic<bool> m_terminated{false};
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
         std::filesystem::path modelDir;
@@ -103,8 +103,7 @@ namespace Game
         std::tuple<Ort::Value, Ort::Value, Ort::Value> runEncoder(const std::vector<float> &waveform, float duration,
                                                                   int language) const;
 
-        std::vector<uint8_t> runDur2bd(const std::vector<float> &durations,
-                                       const std::vector<uint8_t> &maskT) const;
+        std::vector<uint8_t> runDur2bd(const std::vector<float> &durations, const std::vector<uint8_t> &maskT) const;
 
         std::vector<uint8_t> runSegmenter(const Ort::Value &xSeg, const std::vector<uint8_t> &knownBoundaries,
                                           const std::vector<uint8_t> &prevBoundaries, int language,

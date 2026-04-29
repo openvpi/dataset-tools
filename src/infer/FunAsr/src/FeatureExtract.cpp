@@ -79,7 +79,7 @@ namespace FunAsr {
         speech.update(i);
     }
 
-    bool FeatureExtract::fetch(Tensor<float> *&dout) {
+    bool FeatureExtract::fetch(std::unique_ptr<Tensor<float>> &dout) {
         if (fqueue.size() < 1) {
             return false;
         }
