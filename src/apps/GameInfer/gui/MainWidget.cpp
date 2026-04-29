@@ -24,6 +24,19 @@
 
 #include <wolf-midi/MidiFile.h>
 
+static std::vector<float> generateD3pmTimesteps(int nSteps) {
+    std::vector<float> ts;
+    if (nSteps <= 0)
+        return ts;
+    constexpr float t0 = 0.0f;
+    const float step = (1.0f - t0) / nSteps;
+    ts.reserve(nSteps);
+    for (int i = 0; i < nSteps; ++i) {
+        ts.push_back(t0 + i * step);
+    }
+    return ts;
+}
+
 static void makeMidiFile(const std::filesystem::path &midi_path, std::vector<Game::GameMidi> midis, const float tempo) {
     Midi::MidiFile midi;
     midi.setFileFormat(1);
@@ -464,16 +477,7 @@ bool MainWidget::updateParameterValues() const {
 
     // Update D3PM nsteps (generate time steps automatically with t0=0)
     const int nSteps = m_segD3PMNStepsCombo->currentData().toInt();
-    std::vector<float> generatedTs;
-
-    if (nSteps > 0) {
-        constexpr float t0 = 0.0f;
-        const float step = (1.0f - t0) / nSteps;
-        for (int i = 0; i < nSteps; ++i) {
-            generatedTs.push_back(t0 + i * step);
-        }
-    }
-    m_game->set_d3pm_ts(generatedTs);
+    m_game->set_d3pm_ts(generateD3pmTimesteps(nSteps));
 
     // Update language - get the selected ID from the combo box
     const int languageId = m_languageCombo->currentData().toInt();
@@ -594,14 +598,7 @@ void MainWidget::onExportMidiTask() {
         m_game->set_language(languageId);
 
         if (d3pmNSteps > 0) {
-            constexpr float t0 = 0.0f;
-            const float step = (1.0f - t0) / d3pmNSteps;
-            std::vector<float> generatedTs;
-            generatedTs.reserve(d3pmNSteps);
-            for (int i = 0; i < d3pmNSteps; ++i) {
-                generatedTs.push_back(t0 + i * step);
-            }
-            m_game->set_d3pm_ts(generatedTs);
+            m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
         }
 
         const bool success = m_game->get_midi(
@@ -755,14 +752,7 @@ void MainWidget::onAlignCsvTask() {
         m_game->set_language(languageId);
 
         if (d3pmNSteps > 0) {
-            constexpr float t0 = 0.0f;
-            const float step = (1.0f - t0) / d3pmNSteps;
-            std::vector<float> generatedTs;
-            generatedTs.reserve(d3pmNSteps);
-            for (int i = 0; i < d3pmNSteps; ++i) {
-                generatedTs.push_back(t0 + i * step);
-            }
-            m_game->set_d3pm_ts(generatedTs);
+            m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
         }
 
         Game::AlignOptions options;
