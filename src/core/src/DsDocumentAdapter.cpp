@@ -83,7 +83,19 @@ int DsDocumentAdapter::entryCount() const {
 }
 
 double DsDocumentAdapter::durationSec() const {
-    return 0.0; // TODO: sum offsets + durations across sentences
+    double maxEnd = 0.0;
+    for (const auto &s : m_inner->sentences()) {
+        double offset = DsDocument::numberOrString(s, "offset", 0.0);
+        double dur = 0.0;
+        if (s.contains("ph_dur") && s["ph_dur"].is_string()) {
+            const auto parts = QString::fromStdString(s["ph_dur"].get<std::string>())
+                                   .split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            for (const auto &tok : parts)
+                dur += tok.toDouble();
+        }
+        maxEnd = std::max(maxEnd, offset + dur);
+    }
+    return maxEnd;
 }
 
 DsDocument *DsDocumentAdapter::inner() const {
