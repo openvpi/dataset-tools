@@ -6,6 +6,53 @@
 #include "FlacDecoder.h"
 #include "Mp3Decoder.h"
 
+static std::vector<float> convertChannels(
+    const std::vector<float> &output_buffer,
+    size_t output_frames,
+    size_t original_src_channels,
+    size_t tar_channel)
+{
+    std::vector<float> processed_buffer(output_frames * tar_channel);
+
+    if (tar_channel == 1 && original_src_channels > 1) {
+        for (size_t i = 0; i < output_frames; ++i) {
+            float mix = 0.0f;
+            for (size_t ch = 0; ch < original_src_channels; ++ch) {
+                size_t input_idx = i * original_src_channels + ch;
+                if (input_idx < output_buffer.size()) {
+                    mix += output_buffer[input_idx];
+                }
+            }
+            processed_buffer[i] = mix / static_cast<float>(original_src_channels);
+        }
+    } else if (original_src_channels == 1 && tar_channel > 1) {
+        for (size_t i = 0; i < output_frames; ++i) {
+            float sample = (i < output_buffer.size()) ? output_buffer[i] : 0.0f;
+            for (size_t ch = 0; ch < tar_channel; ++ch) {
+                processed_buffer[i * tar_channel + ch] = sample;
+            }
+        }
+    } else {
+        const size_t min_channels = std::min<size_t>(original_src_channels, tar_channel);
+        for (size_t i = 0; i < output_frames; ++i) {
+            for (size_t ch = 0; ch < min_channels; ++ch) {
+                size_t input_idx = i * original_src_channels + ch;
+                size_t output_idx = i * tar_channel + ch;
+                if (input_idx < output_buffer.size() && output_idx < processed_buffer.size()) {
+                    processed_buffer[output_idx] = output_buffer[input_idx];
+                }
+            }
+            for (size_t ch = min_channels; ch < tar_channel; ++ch) {
+                size_t output_idx = i * tar_channel + ch;
+                if (output_idx < processed_buffer.size()) {
+                    processed_buffer[output_idx] = 0.0f;
+                }
+            }
+        }
+    }
+    return processed_buffer;
+}
+
 namespace AudioUtil
 {
     SF_VIO resample_to_vio(const std::filesystem::path &filepath, std::string &msg, const int tar_channel,
@@ -220,51 +267,7 @@ namespace AudioUtil
                     const size_t output_frames = output_frames_done; // 帧数
 
                     // 通道转换
-                    std::vector<float> processed_buffer(output_frames * tar_channel);
-
-                    if (tar_channel == 1 && original_src_channels > 1) {
-                        // 混音到单声道
-                        for (size_t i = 0; i < output_frames; ++i) {
-                            float mix = 0.0f;
-                            for (size_t ch = 0; ch < original_src_channels; ++ch) {
-                                size_t input_idx = i * original_src_channels + ch;
-                                if (input_idx < output_buffer.size()) {
-                                    mix += output_buffer[input_idx];
-                                }
-                            }
-                            processed_buffer[i] = mix / static_cast<float>(original_src_channels);
-                        }
-                    } else if (original_src_channels == 1 && tar_channel > 1) {
-                        // 单声道复制到多声道
-                        for (size_t i = 0; i < output_frames; ++i) {
-                            float sample = 0.0f;
-                            size_t input_idx = i;
-                            if (input_idx < output_buffer.size()) {
-                                sample = output_buffer[input_idx];
-                            }
-                            for (size_t ch = 0; ch < tar_channel; ++ch) {
-                                processed_buffer[i * tar_channel + ch] = sample;
-                            }
-                        }
-                    } else {
-                        // 通道数相同或不同时的处理
-                        const size_t min_channels = std::min<size_t>(original_src_channels, tar_channel);
-                        for (size_t i = 0; i < output_frames; ++i) {
-                            for (size_t ch = 0; ch < min_channels; ++ch) {
-                                size_t input_idx = i * original_src_channels + ch;
-                                size_t output_idx = i * tar_channel + ch;
-                                if (input_idx < output_buffer.size() && output_idx < processed_buffer.size()) {
-                                    processed_buffer[output_idx] = output_buffer[input_idx];
-                                }
-                            }
-                            for (size_t ch = min_channels; ch < tar_channel; ++ch) {
-                                size_t output_idx = i * tar_channel + ch;
-                                if (output_idx < processed_buffer.size()) {
-                                    processed_buffer[output_idx] = 0.0f;
-                                }
-                            }
-                        }
-                    }
+                    auto processed_buffer = convertChannels(output_buffer, output_frames, original_src_channels, tar_channel);
 
                     // 写入目标VIO
                     const sf_count_t written = dstHandle.writef(processed_buffer.data(), output_frames);
@@ -301,48 +304,7 @@ namespace AudioUtil
                     const size_t output_frames = output_frames_done;
 
                     // 通道转换（同主循环）
-                    std::vector<float> processed_buffer(output_frames * tar_channel);
-
-                    if (tar_channel == 1 && original_src_channels > 1) {
-                        for (size_t i = 0; i < output_frames; ++i) {
-                            float mix = 0.0f;
-                            for (size_t ch = 0; ch < original_src_channels; ++ch) {
-                                size_t input_idx = i * original_src_channels + ch;
-                                if (input_idx < output_buffer.size()) {
-                                    mix += output_buffer[input_idx];
-                                }
-                            }
-                            processed_buffer[i] = mix / static_cast<float>(original_src_channels);
-                        }
-                    } else if (original_src_channels == 1 && tar_channel > 1) {
-                        for (size_t i = 0; i < output_frames; ++i) {
-                            float sample = 0.0f;
-                            size_t input_idx = i;
-                            if (input_idx < output_buffer.size()) {
-                                sample = output_buffer[input_idx];
-                            }
-                            for (size_t ch = 0; ch < tar_channel; ++ch) {
-                                processed_buffer[i * tar_channel + ch] = sample;
-                            }
-                        }
-                    } else {
-                        const size_t min_channels = std::min<size_t>(original_src_channels, tar_channel);
-                        for (size_t i = 0; i < output_frames; ++i) {
-                            for (size_t ch = 0; ch < min_channels; ++ch) {
-                                size_t input_idx = i * original_src_channels + ch;
-                                size_t output_idx = i * tar_channel + ch;
-                                if (input_idx < output_buffer.size() && output_idx < processed_buffer.size()) {
-                                    processed_buffer[output_idx] = output_buffer[input_idx];
-                                }
-                            }
-                            for (size_t ch = min_channels; ch < tar_channel; ++ch) {
-                                size_t output_idx = i * tar_channel + ch;
-                                if (output_idx < processed_buffer.size()) {
-                                    processed_buffer[output_idx] = 0.0f;
-                                }
-                            }
-                        }
-                    }
+                    auto processed_buffer = convertChannels(output_buffer, output_frames, original_src_channels, tar_channel);
 
                     const sf_count_t written = dstHandle.writef(processed_buffer.data(), output_frames);
 
