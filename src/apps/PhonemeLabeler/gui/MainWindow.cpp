@@ -97,11 +97,12 @@ void MainWindow::buildMenuBar() {
 
     // Add edit actions (Save, SaveAs) from page
     auto editActs = m_page->editActions();
-    // editActions returns: Undo, Redo, nullptr(sep), Save, SaveAs
+    // editActions() returns: [Undo, Redo, nullptr(separator), Save, SaveAs]
+    enum EditActionIndex { ActUndo = 0, ActRedo = 1, /* Sep = 2, */ ActSave = 3, ActSaveAs = 4 };
     // Add Save and SaveAs to File menu
-    if (editActs.size() >= 5) {
-        if (editActs[3]) m_fileMenu->addAction(editActs[3]); // Save
-        if (editActs[4]) m_fileMenu->addAction(editActs[4]); // SaveAs
+    if (editActs.size() > ActSaveAs) {
+        if (editActs[ActSave]) m_fileMenu->addAction(editActs[ActSave]);
+        if (editActs[ActSaveAs]) m_fileMenu->addAction(editActs[ActSaveAs]);
     }
 
     m_fileMenu->addSeparator();
@@ -115,9 +116,9 @@ void MainWindow::buildMenuBar() {
 
     // Edit menu
     m_editMenu = menuBar()->addMenu(tr("&Edit"));
-    if (editActs.size() >= 2) {
-        if (editActs[0]) m_editMenu->addAction(editActs[0]); // Undo
-        if (editActs[1]) m_editMenu->addAction(editActs[1]); // Redo
+    if (editActs.size() > ActRedo) {
+        if (editActs[ActUndo]) m_editMenu->addAction(editActs[ActUndo]);
+        if (editActs[ActRedo]) m_editMenu->addAction(editActs[ActRedo]);
     }
 
     // View menu
