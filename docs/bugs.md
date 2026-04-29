@@ -1,9 +1,8 @@
 # 未修复 Bug 清单
 
-**Version**: 1.1 | **Date**: 2026-04-27 | **基准**: 重构后代码
+**Version**: 1.2 | **Date**: 2026-04-29 | **基准**: 重构后代码
 
-> 本文档列出所有**未修复**的 Bug，并附带待修复项的实施细节。
-> 来源标注：`[App]` = docs/ISSUES.md v3.0，`[Lib]` = docs/fix/ISSUES.md
+> 本文档列出所有**未修复**的 Bug。
 
 ---
 
@@ -171,7 +170,7 @@
 
 ---
 
-## Medium (18)
+## Medium (16)
 
 ### BUG-008: QDir::count() 包含 . 和 .. [App]
 
@@ -183,12 +182,12 @@
 
 ### BUG-013: f0Values 空向量 UB [App]
 
-- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp`~~（原 SlurCutter 已删除）
+- **位置**: PitchLabeler `PianoRollView.cpp`（需验证是否存在同类问题）
 - **描述**: 对 `f0Values` 调用 `std::min_element` / `std::max_element` 时未检查是否为空，空向量上调用这些算法属于未定义行为。
 - **影响**: 加载空 f0 数据的 .ds 文件时崩溃。
 - **建议修复**: 在调用前检查 `isEmpty()`，为空时提示错误并 return。
 - **工时**: XS（15分钟）
-- **状态**: 原 SlurCutter 已删除。PitchLabeler 的 `PianoRollView.cpp` 需验证是否存在同类问题。
+- **状态**: 需在 PitchLabeler 中验证是否存在同类问题。
 
 ### BUG-023: FunAsr ftell 返回值截断 [App]
 
@@ -200,12 +199,12 @@
 
 ### BUG-024: splitPitch 越界访问 [App]
 
-- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp`~~（原 SlurCutter 已删除）
+- **位置**: PitchLabeler `PianoRollView.cpp` 中的 `parseNoteName()`（需验证是否存在同类越界问题）
 - **描述**: `notePitch.split(...)` 结果直接取 `[1]` 元素，当音符名不含偏移量（如 "C4" 无 "+5"）时 `splitPitch` 只有一个元素，`[1]` 越界。
 - **影响**: 加载纯音符名时崩溃。
 - **建议修复**: 检查 `splitPitch.size() > 1` 后再访问。
 - **工时**: XS（5分钟）
-- **状态**: 原 SlurCutter 已删除。PitchLabeler 使用 `PianoRollView.cpp` 中的 `parseNoteName()` 实现音名解析，需验证是否存在同类越界问题。
+- **状态**: 需在 PitchLabeler 中验证是否存在同类越界问题。
 
 ### BUG-025: FunAsr 类型双关 UB [App]
 
@@ -288,15 +287,6 @@
 - **建议修复**: 改用 `fprintf(stderr, ...)` 或 `qWarning()`。
 - **工时**: XS（5分钟）
 
-### CQ-002: F0Widget 上帝类（1097行）
-
-- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp`~~
-- **描述**: F0Widget 同时承担音乐工具函数、音符数据模型、钢琴卷帘渲染、交互逻辑四种职责，严重违反单一职责原则。
-- **影响**: 难以维护和测试，任何修改都可能产生意外副作用。
-- **建议修复**: 拆分为 MusicUtilities、NoteDataModel、PianoRollRenderer、F0Widget 四个类。
-- **工时**: L（2~3天）
-- **状态**: 已解决 -- PitchLabeler 采用全新架构（PianoRollView、DSFile、PropertyPanel、FileListPanel 分离），不存在此问题
-
 ### CQ-005: 循环内创建 QRegularExpression
 
 - **位置**: `src/apps/MinLabel/gui/MainWindow.cpp`
@@ -312,15 +302,6 @@
 - **影响**: 代码可读性差。
 - **建议修复**: 全局重命名，包括文件名。
 - **工时**: S（半天）
-
-### CQ-006b: covertNum 拼写错误
-
-- **位置**: ~~`src/apps/SlurCutter/` 中 TextWidget 相关代码~~
-- **描述**: `covertNum` 应为 `convertNum`。
-- **影响**: 可读性。
-- **建议修复**: 全局替换。
-- **工时**: XS（15分钟）
-- **状态**: 已解决 -- SlurCutter 已删除
 
 ---
 
@@ -407,15 +388,6 @@
 - **工时**: XL（3~5天）
 - **关联**: L-02, M-03
 
-### CQ-007: F0Widget 不当注释
-
-- **位置**: ~~`src/apps/SlurCutter/gui/F0Widget.cpp:524`~~
-- **描述**: 存在不合适的注释内容。
-- **影响**: 代码规范。
-- **建议修复**: 替换为正常功能描述注释。
-- **工时**: XS（5分钟）
-- **状态**: 已解决 -- SlurCutter 已删除
-
 ### CQ-008: 裸 new/delete 遍布全项目
 
 - **位置**: 全项目（FunAsr 最严重）
@@ -449,7 +421,6 @@
 - **影响**: 短字符串输入时越界访问。
 - **建议修复**: 添加 `if (str.size() < 3) return 0;` 前置检查。
 - **工时**: XS（5分钟）
-- **备注**: 待重构时修复。虽在修复文档中有描述，但实际代码中尚未应用修复。
 
 ### BUG-012: GameInfer 错误提示不当 [App]
 
@@ -461,384 +432,15 @@
 
 ---
 
-## 修复实施细节
-
-> 以下为仍未修复的 Bug 的具体修复代码和策略，来源于原修复实施文档。
-
-### BUG-001: exit(-1) → 优雅降级 ⚠️
-
-**新位置**: `src/widgets/src/PlayWidget.cpp`, `src/apps/MinLabel/MainWindow.cpp`
-
-**PlayWidget 修复**（5 处 exit 中的 2 处）：
-
-```cpp
-// src/widgets/src/PlayWidget.cpp
-
-PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
-    // ... UI 布局 ...
-    initAudio();
-    if (m_valid) {
-        connect(m_playback, &AudioPlayback::stateChanged,
-                this, &PlayWidget::onPlaybackStateChanged);
-        connect(m_playback, &AudioPlayback::deviceChanged,
-                this, &PlayWidget::onDeviceChanged);
-        connect(m_playback, &AudioPlayback::deviceAdded,
-                this, &PlayWidget::onDeviceAdded);
-        connect(m_playback, &AudioPlayback::deviceRemoved,
-                this, &PlayWidget::onDeviceRemoved);
-        reloadDevices();
-    } else {
-        m_playBtn->setEnabled(false);
-        m_stopBtn->setEnabled(false);
-        m_devBtn->setEnabled(false);
-        m_slider->setEnabled(false);
-    }
-}
-
-void PlayWidget::initAudio() {
-    m_decoder = new dstools::audio::AudioDecoder();
-    m_playback = new dstools::audio::AudioPlayback(this);
-
-    if (!m_playback->setup(44100, 2, 1024)) {
-        QMessageBox::warning(this, qApp->applicationName(),
-            tr("Failed to initialize audio playback. "
-               "Audio features will be disabled."));
-        delete m_playback; m_playback = nullptr;
-        delete m_decoder;  m_decoder = nullptr;
-        m_valid = false;
-        return;
-    }
-    m_playback->setDecoder(m_decoder);
-    m_valid = true;
-}
-
-PlayWidget::~PlayWidget() {
-    if (m_playback) {
-        m_playback->stop();
-        m_playback->dispose();
-    }
-    delete m_playback;
-    delete m_decoder;
-}
-
-// 所有公共方法添加守卫
-void PlayWidget::openFile(const QString &path) {
-    if (!m_valid) return;
-    // ... 原逻辑 ...
-}
-
-void PlayWidget::setPlaying(bool playing) {
-    if (!m_valid) return;
-    // ... 原逻辑 ...
-}
-```
-
-**MinLabel MainWindow 修复**（5 处 exit 中的 3 处：saveFile 2 处 + labToJson 1 处）：
-
-```cpp
-// src/apps/MinLabel/MainWindow.cpp
-
-// void saveFile → bool saveFile（2 处 exit → return false）
-bool MainWindow::saveFile(const QString &filename) {
-    // ... 构造 writeData ...
-
-    if (!writeJsonFile(jsonFilePath, writeData)) {
-        QMessageBox::critical(this, qApp->applicationName(),
-            tr("Failed to write to file %1").arg(jsonFilePath));
-        return false;   // 原: exit(-1)
-    }
-
-    QFile labFile(labFilePath);
-    if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, qApp->applicationName(),
-            tr("Failed to write to file %1").arg(labFilePath));
-        return false;   // 原: exit(-1)
-    }
-    // ... 写入 lab 内容 ...
-    return true;
-}
-
-// 调用者处理返回值
-void MainWindow::onTreeCurrentChanged(...) {
-    if (!m_currentFile.isEmpty()) {
-        saveFile(m_currentFile);  // 失败不阻止导航
-    }
-    openFile(newFile);
-}
-
-// labToJson 中的 exit(-1) 同样修复为错误提示
-void MainWindow::labToJson(const QString &dir) {
-    // ... 批量转换 ...
-    if (!writeJsonFile(jsonFilePath, writeData)) {
-        QMessageBox::critical(this, qApp->applicationName(),
-            tr("Failed to write to file %1").arg(jsonFilePath));
-        continue;   // 原: exit(-1)，改为跳过当前文件继续处理
-    }
-}
-```
-
-**验证**: 启动时拔掉音频设备 → 应显示警告并禁用播放按钮，不崩溃。
-
-**⚠️ 风险**: saveFile 返回 false 后静默切换文件可能导致数据丢失；建议失败时弹窗询问用户。
-
----
-
-### BUG-007: HFA 内存泄漏 ⏳
-
-**新位置**: `src/infer/hubert-infer/src/Hfa.cpp`
-
-所有裸指针 → `std::unique_ptr`。详见 module-spec.md §4.3。
-
----
-
-### BUG-010: 未初始化指针 ⏳
-
-随 PlayWidget 合并自动修复（新代码统一使用 `= nullptr` 初始化）。
-
----
-
-### BUG-013: f0Values 空向量 ⏳
-
-**原位置**: ~~`src/apps/SlurCutter/F0Widget/NoteDataModel.cpp`~~（SlurCutter 已删除）
-**当前状态**: PitchLabeler 的 `PianoRollView.cpp` 需验证是否存在同类问题。
-
-```cpp
-// 若 PitchLabeler 中存在类似的 min_element/max_element 调用，
-// 应在调用前检查容器是否为空：
-if (m_f0Values.isEmpty()) {
-    emit errorOccurred(tr("Empty F0 data in sentence"));
-    return;
-}
-m_f0Min = *std::min_element(m_f0Values.begin(), m_f0Values.end());
-m_f0Max = *std::max_element(m_f0Values.begin(), m_f0Values.end());
-```
-
----
-
-### BUG-014: PlayWidget 已知崩溃 ⏳
-
-随 BUG-001 修复方案一并解决（`m_valid` 守卫阻止在未初始化时操作）。
-
----
-
-### BUG-016: Vocab str2int 边界 ⏳
-
-**新位置**: `src/infer/funasr/src/Vocab.cpp`
-
-```cpp
-int str2int(const std::string &str) {  // 自由函数，非 Vocab 成员
-    if (str.size() < 3) return 0;  // ← 新增（与现有错误路径返回值一致）
-    const char *ch_array = str.c_str();
-    // ... 原逻辑 ...
-}
-```
-
----
-
-### BUG-017: WaveStream 虚析构 ⏳
-
-**新位置**: `src/audio/src/WaveFormat.cpp`（WaveFormat 替代了原 WaveStream）
-
-重构后 `WaveStream` 基类被移除（AudioDecoder 不再继承），此问题自然消除。如果保留 WaveFormat 继承体系，确保析构函数为 virtual。
-
----
-
-### BUG-018: volatile + 忙等待 ⚠️
-
-**原位置**: `src/libs/qsmedia/Api/private/IAudioPlayback_p.h:29`（`volatile int state;`）
-**新位置**: `src/audio/src/AudioPlayback.cpp`
-
-```cpp
-// AudioPlayback::Impl
-struct AudioPlayback::Impl {
-    std::atomic<int> state{AudioPlayback::Stopped};
-    std::mutex stateMutex;
-    std::condition_variable stateCV;
-    // ...
-
-    void waitForStateChange(int fromState) {
-        std::unique_lock<std::mutex> lock(stateMutex);
-        stateCV.wait(lock, [&] { return state.load() != fromState; });
-    }
-
-    void setState(int newState) {
-        state.store(newState);
-        stateCV.notify_all();
-    }
-};
-
-// SDL poll 线程中:
-// 原: while (state == Stopped) {}   ← 100% CPU
-// 新:
-d->waitForStateChange(Stopped);
-```
-
-**⚠️ 风险**: volatile → atomic + CV 改动涉及 SDL 回调线程模型，需全面审查状态读写路径。
-
----
-
-### BUG-019: mutex RAII ⚠️
-
-```cpp
-// 原:
-// mutex.lock();
-// ... 代码 ...
-// mutex.unlock();
-
-// 修复:
-{
-    std::lock_guard<std::mutex> guard(d->pcmMutex);
-    // ... 代码 ...
-}  // 自动解锁
-```
-
-**⚠️ 风险**: SDL 回调中 mutex RAII 化需确认回调内无提前 return 分支遗漏。
-
----
-
-### BUG-020: 空设备列表 ⚠️
-
-```cpp
-// 原: q->setDevice(devices.front());
-// 修复:
-if (!devices.isEmpty()) {
-    q->setDevice(devices.front());
-}
-```
-
-**⚠️ 风险**: 空设备检查后需整条音频管线都能处理"无设备"状态，否则崩溃转移到下游。
-
----
-
-### BUG-021: HfaModel 空 session ⏳
-
-**新位置**: `src/infer/hubert-infer/src/HfaModel.cpp`
-
-```cpp
-bool HfaModel::forward(...) const {
-    if (!m_model_session) {
-        msg = "Model session not initialized";
-        return false;
-    }
-    // ... 原逻辑 ...
-}
-```
-
----
-
-### BUG-022: FunAsr 资源泄漏 ⏳
-
-**新位置**: `src/infer/funasr/src/paraformer_onnx.cpp`
-
-```cpp
-class ModelImp {
-    std::unique_ptr<FeatureExtract> fe;
-    std::unique_ptr<Ort::Session> m_session;
-    std::unique_ptr<Vocab> vocab;
-    // 构造函数中 make_unique，异常安全
-};
-```
-
----
-
-### BUG-023: ftell 截断 ⏳
-
-**新位置**: `src/infer/funasr/src/util.cpp`
-
-```cpp
-// 当前代码 (未修复):
-uint32_t nFileLen = ftell(fp);
-
-// 应修复为:
-long pos = ftell(fp);
-if (pos < 0) { fclose(fp); return nullptr; }
-size_t nFileLen = static_cast<size_t>(pos);
-```
-
----
-
-### BUG-024: splitPitch 越界 ⏳
-
-**原位置**: ~~`src/apps/SlurCutter/F0Widget/NoteDataModel.cpp`~~（SlurCutter 已删除）
-**当前状态**: PitchLabeler 使用 `PianoRollView.cpp` 中的 `parseNoteName()` 实现音名解析，需验证是否存在同类越界问题。
-
-```cpp
-// PitchLabeler 的 parseNoteName() 应确保：
-auto splitPitch = notePitch.split(QRegularExpression(R"((\+|\-))"));
-note.pitch = MusicUtils::noteNameToMidiNote(splitPitch[0]);
-note.cents = (splitPitch.size() > 1) ? splitPitch[1].toDouble() : 0.0;
-```
-
----
-
-### BUG-025: 类型双关 ⏳
-
-**新位置**: `src/infer/funasr/src/FeatureExtract.cpp`
-
-```cpp
-// 原: const float min_resol = *((float *) &val);
-// 新:
-float min_resol;
-std::memcpy(&min_resol, &val, sizeof(float));
-```
-
----
-
-### CQ-011: pcm_buffer 分配 ⚠️
-
-```cpp
-// 原: pcm_buffer.reset(new float[pcm_buffer_size * sizeof(float)]);
-// 新: pcm_buffer.reset(new float[pcm_buffer_size]);
-```
-
-**⚠️ 风险**: pcm_buffer_size 语义需确认是"浮点数个数"而非"字节数"，否则修复方向相反。
-
----
-
-### CQ-008: 裸指针 → 智能指针
-
-全局替换规则：
-
-| 位置 | 原 | 新 |
-|------|-----|-----|
-| PlayWidget decoder/playback | `new` + 手动 delete | 构造函数内 new + 析构 null 检查 delete（因 Qt 生命周期） |
-| HFA m_dictG2p | `new DictionaryG2P` | `std::make_unique<DictionaryG2P>` |
-| HFA m_alignmentDecoder | `new AlignmentDecoder` | `std::make_unique<AlignmentDecoder>` |
-| HFA m_nonLexicalDecoder | `new NonLexicalDecoder` | `std::make_unique<NonLexicalDecoder>` |
-| FunAsr fe/session/vocab | `new Xxx` | `std::make_unique<Xxx>` |
-| HfaModel m_model_session | `new Ort::Session` | `std::unique_ptr<Ort::Session>` |
-
-注意：`PlayWidget` 中的 `m_playback` 用裸指针 + 手动管理（因为 SDL dispose 和 Qt 析构顺序需要精确控制），但确保析构函数 null 安全。
-
----
-
-### 其他待修复项（无代码片段）
-
-| Bug ID | 状态 | 说明 |
-|--------|------|------|
-| BUG-008 | ⏳ | `dir.count()` → `dir.entryList(audioFilters, QDir::Files).count()` |
-| BUG-012 | ⏳ | "is not exists" → "does not exist"，改 `QMessageBox::critical` |
-| CQ-002 | ✅ | 已解决 -- PitchLabeler 全新架构 |
-| CQ-003 | ⏳ | i18n：所有用户可见字符串用 `tr()` 包裹 |
-| CQ-004 | ⏳ | `foreach` → 范围 for（8 处） |
-| CQ-005 | ⏳ | 循环内正则 → `static const QRegularExpression` |
-| CQ-006 | ⏳ | `covertAction` → `convertAction`，`FaTread` → `LyricMatchTask`（CQ-006b 已解决 -- SlurCutter 已删除） |
-| CQ-007 | ✅ | 已解决 -- SlurCutter 已删除 |
-| CQ-009 | ⏳ | 统一错误处理，设计 Result/Status 类型 |
-| CQ-010 | ⏳ | FunAsr 魔数提取为命名常量 |
-
----
-
 ## 统计
 
 | 严重度 | 数量 | 预估总工时 |
 |--------|------|-----------|
 | Critical | 5 | ~2天 |
 | High | 14 | ~12天 |
-| Medium | 15 | ~7天 |
-| Low | 16 | ~10天 |
+| Medium | 16 | ~7天 |
+| Low | 15 | ~10天 |
 | **合计** | **50** | **~31天** |
-| **已解决** | **3** | CQ-002, CQ-006b, CQ-007（SlurCutter 删除） |
 
 ### 模块分布
 
@@ -846,7 +448,7 @@ std::memcpy(&min_resol, &val, sizeof(float));
 |------|---------|------|
 | FunAsr | 16 | 32% |
 | audio (SDL/FFmpeg) | 9 | 18% |
-| SlurCutter (已删除，待验证) | 2 | 4% |
+| PitchLabeler (待验证) | 2 | 4% |
 | 全项目 | 5 | 10% |
 | HubertFA | 3 | 6% |
 | audio-util | 5 | 10% |
@@ -872,20 +474,3 @@ std::memcpy(&min_resol, &val, sizeof(float));
 | M | 1~2天 |
 | L | 2~3天 |
 | XL | 3~5天 |
-
----
-
-## 修复验证矩阵
-
-| Bug ID | 自动测试 | 手动测试 |
-|--------|----------|----------|
-| BUG-001 | 构造 PlayWidget 后检查 m_valid | 拔掉音频设备启动 |
-| BUG-003 | — | 在 F0Widget 中执行 Glide 操作后检查状态 |
-| BUG-005 | `TestChineseProcessor` | 输入混合中英文 |
-| BUG-006 | `TestSlicer::csvRoundTrip` | 导出/导入 CSV |
-| BUG-013 | `TestNoteDataModel::emptyF0` | 加载空 f0_seq 的 .ds |
-| BUG-015 | `TestFunAsr::missingModel` | 指定不存在的路径 |
-| BUG-016 | `TestFunAsr::shortString` | 输入长度<3的字符串 |
-| BUG-017 | 编译器检查虚析构 | — |
-| BUG-018 | `TestAudioPlayback::stateTransitions` | CPU 使用率监控 |
-| BUG-024 | `TestNoteDataModel::pureNoteName` | 加载 "C4" (无偏移) |

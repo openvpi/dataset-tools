@@ -11,6 +11,7 @@ DiffSinger dataset processing tools for singing voice synthesis data preparation
 | **PhonemeLabeler** | TextGrid phoneme boundary editor with waveform/spectrogram/power visualization, cross-tier boundary binding, undo/redo |
 | **PitchLabeler** | DiffSinger .ds file F0 curve editor with piano roll visualization, multi-tool editing (Select/Modulation/Drift), A/B comparison, undo/redo |
 | **GameInfer** | GAME audio-to-MIDI transcription (4-model ONNX pipeline) |
+| **DiffSingerLabeler** | Unified 9-step dataset labeling wizard integrating Slice, ASR, Label (MinLabel), Align (HubertFA), Phone (PhonemeLabeler), CSV/MIDI/DS build, and Pitch (PitchLabeler) into a single guided workflow |
 
 ## Supported Platforms
 

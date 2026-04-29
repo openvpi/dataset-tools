@@ -1,18 +1,12 @@
 # 新功能提案
 
-**Version**: 1.0 | **Date**: 2026-04-27
+**Version**: 1.1 | **Date**: 2026-04-29
 
 本文档收录所有待实现的功能提案与增强建议，按优先级分类。每条提案包含目标、设计思路、工时预估及依赖关系。
 
 ---
 
 ## 高优先级
-
-### FEAT-001: SlurCutter 撤销/重做 — 已完成/已过时
-
-- **状态**: 已过时 — PitchLabeler 已实现完整的 QUndoStack 撤销重做
-- **原目标**: 为 SlurCutter 的全部 7 种编辑操作提供完整的撤销重做支持
-- **说明**: SlurCutter 已从代码库中删除，由 PitchLabeler 完全替代。PitchLabeler 基于 Qt 的 QUndoStack + QUndoCommand 框架实现了完整的撤销重做功能
 
 ### FEAT-006: 单元测试覆盖
 
@@ -58,18 +52,16 @@
 ### FEAT-007: 统一配置系统 ⚠️ 部分完成
 
 - **目标**: 统一 5 个 EXE 的配置管理方式，消除 key 命名不一致的问题
-- **现状**: 已完成 AppSettings + JSON 后端的基础框架。目前 3 个应用仍使用旧的 INI 配置，尚未迁移
-- **设计方案**: 将剩余应用逐步迁移到 AppSettings，统一 key 的命名规范
+- **剩余工作**: 3 个应用仍使用旧的 INI 配置，需迁移到 AppSettings 并统一 key 命名规范
 - **预估工时**: 4h（迁移 + 验证）
 - **依赖**: 无
 
 ### FEAT-005: 跨平台 CI/CD ⚠️ 部分完成
 
 - **目标**: 在 GitHub Actions 上建立全平台持续集成流水线
-- **现状**: Windows Release 构建已完成（`.github/workflows/windows-rel-build.yml`），支持 CMake + vcpkg + Qt 6.9.3 + ONNX Runtime DML，tag 触发自动构建并创建 GitHub Release
-- **剩余工作**: macOS 和 Linux 的 CI 流水线
+- **剩余工作**: macOS 和 Linux 的 CI 流水线（Windows Release 构建已完成）
 - **设计方案**: 以 Windows workflow 为参考模板，处理各平台的依赖安装、编译、打包
-- **预估工时**: 6h（仅 macOS + Linux，Windows 已完成）
+- **预估工时**: 6h（仅 macOS + Linux）
 - **依赖**: FEAT-006（有测试覆盖后 CI 才有实质意义）
 
 ### FEAT-008: 结构化日志
@@ -105,6 +97,6 @@
 1. **FEAT-003**（参数校验）+ **FEAT-004**（线程安全）：两者相互独立，可并行推进
 2. **FEAT-006 P0**（核心测试）：为后续重构提供安全网
 3. **FEAT-002**（批量重采样）：独立功能，随时可做
-4. **FEAT-005**（CI/CD）：Windows 已完成，等 FEAT-006 有一定覆盖后搭建 macOS/Linux
+4. **FEAT-005**（CI/CD 剩余平台）：等 FEAT-006 有一定覆盖后搭建 macOS/Linux
 5. **FEAT-007**（配置迁移）+ **FEAT-008**（结构化日志）：低风险，可穿插进行
 6. UI/视觉体系的各项工作，等核心功能和测试稳定后再集中推进
