@@ -10,6 +10,10 @@ namespace FunAsr {
     }
 
     FeatureQueue::~FeatureQueue() {
+        while (!feature_queue.empty()) {
+            delete feature_queue.front();
+            feature_queue.pop();
+        }
         delete buff;
     }
 
