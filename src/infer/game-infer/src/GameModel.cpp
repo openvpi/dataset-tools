@@ -157,7 +157,8 @@ namespace Game
         nlohmann::json config;
         try {
             configFile >> config;
-        } catch (const nlohmann::json::parse_error &e) {
+        }
+        catch (const nlohmann::json::parse_error &e) {
             msg = "Failed to parse config.json: " + std::string(e.what());
             return false;
         }
@@ -227,7 +228,7 @@ namespace Game
         {
             const std::filesystem::path model_path = modelDir / name;
             if (!std::filesystem::exists(model_path)) {
-                msg = model_path.string() + "not exist!";
+                msg = model_path.string() + " not exist!";
                 return false;
             }
 #ifdef _WIN32
@@ -244,8 +245,7 @@ namespace Game
         m_est_threshold = config.value("est_threshold", 0.2f);
 
         const bool coreLoaded = loadSession("encoder.onnx", sessEncoder) &&
-            loadSession("segmenter.onnx", sessSegmenter) &&
-            loadSession("estimator.onnx", sessEstimator) &&
+            loadSession("segmenter.onnx", sessSegmenter) && loadSession("estimator.onnx", sessEstimator) &&
             loadSession("bd2dur.onnx", sessBd2dur);
 
         if (!coreLoaded)
@@ -272,14 +272,6 @@ namespace Game
     }
 
     bool GameModel::is_open() const { return sessBd2dur && sessEncoder && sessEstimator && sessSegmenter; }
-
-    void GameModel::terminate() {
-        m_runOptions.SetTerminate();
-    }
-
-    bool GameModel::is_terminated() const {
-        return m_runOptions.GetTerminate();
-    }
 
     bool GameModel::forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                             std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
@@ -323,9 +315,9 @@ namespace Game
     }
 
     bool GameModel::forwardWithKnownDurations(const std::vector<float> &waveform_data,
-                                               const std::vector<float> &known_durations,
-                                               std::vector<float> &durations, std::vector<float> &presence,
-                                               std::vector<float> &scores, std::string &msg) const {
+                                              const std::vector<float> &known_durations, std::vector<float> &durations,
+                                              std::vector<float> &presence, std::vector<float> &scores,
+                                              std::string &msg) const {
         try {
             if (!sessDur2bd) {
                 msg = "dur2bd.onnx not loaded. Align mode requires dur2bd.onnx in model directory.";
@@ -437,8 +429,8 @@ namespace Game
 
         const char *outputNames[] = {"x_seg", "x_est", "maskT"};
 
-        auto outputTensors = sessEncoder->Run(m_runOptions, inputNames.data(), inputTensors.data(),
-                                              inputTensors.size(), outputNames, 3);
+        auto outputTensors =
+            sessEncoder->Run(m_runOptions, inputNames.data(), inputTensors.data(), inputTensors.size(), outputNames, 3);
 
         return std::make_tuple(std::move(outputTensors[0]), std::move(outputTensors[1]), std::move(outputTensors[2]));
     }
@@ -456,13 +448,13 @@ namespace Game
         const std::array<int64_t, 2> maskTShape = {1, static_cast<int64_t>(maskT.size())};
 
         std::vector<float> tempDurations(durations.begin(), durations.end());
-        Ort::Value durationsTensor =
-            Ort::Value::CreateTensor<float>(m_memoryInfo, tempDurations.data(), durations.size(),
-                                             durationsShape.data(), durationsShape.size());
+        Ort::Value durationsTensor = Ort::Value::CreateTensor<float>(
+            m_memoryInfo, tempDurations.data(), durations.size(), durationsShape.data(), durationsShape.size());
 
         std::vector<uint8_t> tempMaskT(maskT.begin(), maskT.end());
-        Ort::Value maskTTensor = Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()),
-                                                                 tempMaskT.size(), maskTShape.data(), maskTShape.size());
+        Ort::Value maskTTensor =
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()), tempMaskT.size(),
+                                           maskTShape.data(), maskTShape.size());
 
         const char *inputNames[] = {"durations", "maskT"};
         std::vector<Ort::Value> inputTensors;
@@ -471,8 +463,8 @@ namespace Game
 
         const char *outputNames[] = {"boundaries"};
 
-        const auto outputTensors = sessDur2bd->Run(m_runOptions, inputNames, inputTensors.data(),
-                                                   inputTensors.size(), outputNames, 1);
+        const auto outputTensors =
+            sessDur2bd->Run(m_runOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 1);
 
         const bool *boundaryData = outputTensors[0].GetTensorData<bool>();
         const size_t boundaryCount = outputTensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
@@ -521,7 +513,7 @@ namespace Game
 
         for (float t : d3pmTs) {
             Ort::Value xSegTensor = Ort::Value::CreateTensor<float>(m_memoryInfo, xSegData.data(), xSegData.size(),
-                                                                     xSegShapeArr.data(), xSegShapeArr.size());
+                                                                    xSegShapeArr.data(), xSegShapeArr.size());
 
             std::vector<uint8_t> maskTBoolVec(maskTBool.begin(), maskTBool.end());
             Ort::Value maskTTensor =
@@ -530,8 +522,8 @@ namespace Game
 
             std::vector<uint8_t> knownBdVec(knownBd.begin(), knownBd.end());
             Ort::Value knownBdTensor =
-                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(knownBdVec.data()), knownBdVec.size(),
-                                               boundariesShape.data(), boundariesShape.size());
+                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(knownBdVec.data()),
+                                               knownBdVec.size(), boundariesShape.data(), boundariesShape.size());
 
             std::vector<uint8_t> currentBdVec(currentBoundaries.begin(), currentBoundaries.end());
             Ort::Value prevBdTensor =
@@ -578,8 +570,8 @@ namespace Game
             }
 
             const char *outputNames[] = {"boundaries"};
-            auto outputs = sessSegmenter->Run(m_runOptions, inputNames.data(), inputTensors.data(),
-                                              inputTensors.size(), outputNames, 1);
+            auto outputs = sessSegmenter->Run(m_runOptions, inputNames.data(), inputTensors.data(), inputTensors.size(),
+                                              outputNames, 1);
 
             const bool *outData = outputs[0].GetTensorData<bool>();
             size_t outCount = outputs[0].GetTensorTypeAndShapeInfo().GetElementCount();
@@ -615,11 +607,12 @@ namespace Game
         std::vector<uint8_t> tempBoundaries(boundaries.begin(), boundaries.end());
         Ort::Value boundariesTensor =
             Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempBoundaries.data()),
-                                            boundaries.size(), boundariesShape.data(), boundariesShape.size());
+                                           boundaries.size(), boundariesShape.data(), boundariesShape.size());
 
         std::vector<uint8_t> tempMaskT(maskT.begin(), maskT.end());
-        Ort::Value maskTTensor = Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()),
-                                                                tempMaskT.size(), maskTShape.data(), maskTShape.size());
+        Ort::Value maskTTensor =
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()), tempMaskT.size(),
+                                           maskTShape.data(), maskTShape.size());
 
         const char *inputNames[] = {"boundaries", "maskT"};
         std::vector<Ort::Value> inputTensors;
@@ -628,8 +621,8 @@ namespace Game
 
         const char *outputNames[] = {"durations", "maskN"};
 
-        const auto outputTensors = sessBd2dur->Run(m_runOptions, inputNames, inputTensors.data(),
-                                                    inputTensors.size(), outputNames, 2);
+        const auto outputTensors =
+            sessBd2dur->Run(m_runOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 2);
 
         const float *durData = outputTensors[0].GetTensorData<float>();
         const size_t durCount = outputTensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
@@ -689,7 +682,7 @@ namespace Game
         std::vector<float> xEstCopy(xEstData, xEstData + xEstTypeInfo.GetElementCount());
 
         Ort::Value xEstTensor = Ort::Value::CreateTensor<float>(m_memoryInfo, xEstCopy.data(), xEstCopy.size(),
-                                                                 xEstShape.data(), xEstShape.size());
+                                                                xEstShape.data(), xEstShape.size());
 
         std::vector<uint8_t> maskTVec;
         maskTVec.reserve(T);
@@ -700,7 +693,7 @@ namespace Game
         std::array<int64_t, 2> maskTShapeForTensor = {1, T};
         Ort::Value maskTTensor =
             Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(maskTVec.data()), maskTVec.size(),
-                                            maskTShapeForTensor.data(), maskTShapeForTensor.size());
+                                           maskTShapeForTensor.data(), maskTShapeForTensor.size());
 
         std::vector<uint8_t> boundariesVec;
         boundariesVec.reserve(boundariesAdjusted.size());
@@ -710,7 +703,7 @@ namespace Game
         std::array<int64_t, 2> bdShape = {1, static_cast<int64_t>(boundariesAdjusted.size())};
         Ort::Value boundariesTensor =
             Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(boundariesVec.data()),
-                                            boundariesVec.size(), bdShape.data(), bdShape.size());
+                                           boundariesVec.size(), bdShape.data(), bdShape.size());
 
         std::vector<uint8_t> tempMaskN;
         tempMaskN.reserve(maskN.size());
@@ -719,8 +712,9 @@ namespace Game
         }
 
         std::array<int64_t, 2> maskNShape = {1, static_cast<int64_t>(tempMaskN.size())};
-        Ort::Value maskNTensor = Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskN.data()),
-                                                                 tempMaskN.size(), maskNShape.data(), maskNShape.size());
+        Ort::Value maskNTensor =
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskN.data()), tempMaskN.size(),
+                                           maskNShape.data(), maskNShape.size());
 
         std::vector<float> threshVec = {threshold};
         std::array<int64_t, 1> scalarShape = {1};
@@ -737,8 +731,8 @@ namespace Game
 
         const char *outputNames[] = {"presence", "scores"};
 
-        auto outputTensors = sessEstimator->Run(m_runOptions, inputNames, inputTensors.data(),
-                                                inputTensors.size(), outputNames, 2);
+        auto outputTensors =
+            sessEstimator->Run(m_runOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 2);
 
         const bool *presenceDataBool = outputTensors[0].GetTensorData<bool>();
         size_t presenceCount = outputTensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
@@ -773,7 +767,7 @@ namespace Game
         size_t xSegCount = xSegVal.GetTensorTypeAndShapeInfo().GetElementCount();
         std::vector<float> xSegClean(xSegData, xSegData + xSegCount);
         Ort::Value xSegCleanVal = Ort::Value::CreateTensor<float>(m_memoryInfo, xSegClean.data(), xSegClean.size(),
-                                                                   xSegShape.data(), xSegShape.size());
+                                                                  xSegShape.data(), xSegShape.size());
 
         auto xEstData = xEstVal.GetTensorData<float>();
         size_t xEstCount = xEstVal.GetTensorTypeAndShapeInfo().GetElementCount();
