@@ -18,6 +18,7 @@ set(CORE_SOURCES
     src/TextGridToCsv.cpp
     src/TranscriptionCsv.cpp
     src/TranscriptionPipeline.cpp
+    src/LocalFileIOProvider.cpp
 )
 
 set(CORE_HEADERS
@@ -35,6 +36,8 @@ set(CORE_HEADERS
     include/dstools/TextGridToCsv.h
     include/dstools/TranscriptionCsv.h
     include/dstools/TranscriptionPipeline.h
+    include/dstools/IFileIOProvider.h
+    include/dstools/LocalFileIOProvider.h
 )
 
 set(CORE_RESOURCES
