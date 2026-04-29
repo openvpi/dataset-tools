@@ -76,6 +76,11 @@ MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
     }
 }
 
+MainWidget::~MainWidget() {
+    m_runningTask.cancel();
+    m_runningTask.waitForFinished();
+}
+
 void MainWidget::setupModelGroup() {
     auto *group = new QGroupBox("Model Configuration");
     auto *layout = new QGridLayout(group);
@@ -537,9 +542,15 @@ void MainWidget::onExportMidiTask() {
     const QString wavPath = m_wavPathLineEdit->text();
     const QString outputMidiPath = m_outputMidiLineEdit->text();
     const float tempo = static_cast<float>(m_tempoSpin->value());
-    const int maxAudioSegLength = max_audio_seg_length;
+    const int maxAudioSegLength = this->max_audio_seg_length;
+    const int segRadiusFrame = m_segRadiusFrameSpin->value();
+    const double segThreshold = m_segThresholdSpin->value();
+    const double estThreshold = m_estThresholdSpin->value();
+    const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
+    const int languageId = m_languageCombo->currentData().toInt();
 
-    QFuture<void> future = QtConcurrent::run([this, wavPath, outputMidiPath, tempo, maxAudioSegLength] {
+    m_runningTask = QtConcurrent::run([this, wavPath, outputMidiPath, tempo, maxAudioSegLength,
+                                       segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId] {
         std::vector<Game::GameMidi> midis;
         std::string msg;
 
@@ -570,7 +581,22 @@ void MainWidget::onExportMidiTask() {
             }
         }
 
-        updateParameterValues();
+        m_game->set_seg_threshold(segThreshold);
+        m_game->set_seg_radius_frames(segRadiusFrame);
+        m_game->set_est_threshold(estThreshold);
+        m_game->set_language(languageId);
+
+        if (d3pmNSteps > 0) {
+            constexpr float t0 = 0.0f;
+            const float step = (1.0f - t0) / d3pmNSteps;
+            std::vector<float> generatedTs;
+            generatedTs.reserve(d3pmNSteps);
+            for (int i = 0; i < d3pmNSteps; ++i) {
+                generatedTs.push_back(t0 + i * step);
+            }
+            m_game->set_d3pm_ts(generatedTs);
+        }
+
         const bool success = m_game->get_midi(
             wavPath.toLocal8Bit().toStdString(), midis, tempo, msg,
             [this](const int progress) {
@@ -688,8 +714,14 @@ void MainWidget::onAlignCsvTask() {
     const std::filesystem::path csvPath = csvInputPath.toLocal8Bit().toStdString();
     const std::filesystem::path savePath = outputInfo.absolutePath().toLocal8Bit().toStdString();
     const std::string saveFilename = outputInfo.fileName().toLocal8Bit().toStdString();
+    const int segRadiusFrame = m_segRadiusFrameSpin->value();
+    const double segThreshold = m_segThresholdSpin->value();
+    const double estThreshold = m_estThresholdSpin->value();
+    const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
+    const int languageId = m_languageCombo->currentData().toInt();
 
-    QFuture<void> future = QtConcurrent::run([this, csvPath, savePath, saveFilename] {
+    m_runningTask = QtConcurrent::run([this, csvPath, savePath, saveFilename,
+                                       segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId] {
         std::string msg;
 
         if (!m_game->is_open()) {
@@ -706,7 +738,21 @@ void MainWidget::onAlignCsvTask() {
             }
         }
 
-        updateParameterValues();
+        m_game->set_seg_threshold(segThreshold);
+        m_game->set_seg_radius_frames(segRadiusFrame);
+        m_game->set_est_threshold(estThreshold);
+        m_game->set_language(languageId);
+
+        if (d3pmNSteps > 0) {
+            constexpr float t0 = 0.0f;
+            const float step = (1.0f - t0) / d3pmNSteps;
+            std::vector<float> generatedTs;
+            generatedTs.reserve(d3pmNSteps);
+            for (int i = 0; i < d3pmNSteps; ++i) {
+                generatedTs.push_back(t0 + i * step);
+            }
+            m_game->set_d3pm_ts(generatedTs);
+        }
 
         Game::AlignOptions options;
 

@@ -15,6 +15,7 @@
 #include <game-infer/Game.h>
 #include <nlohmann/json.hpp>
 
+#include <QFuture>
 #include <map>
 #include <string>
 
@@ -23,6 +24,7 @@ class MainWidget : public QWidget {
 
 public:
     explicit MainWidget(dstools::AppSettings *settings, QWidget *parent = nullptr);
+    ~MainWidget() override;
 
 private slots:
     void browseModelPath();
@@ -109,6 +111,8 @@ private:
     // Time step information
     float m_timeStepSeconds;
     double m_framesPerSecond;
+
+    QFuture<void> m_runningTask;
 };
 
 #endif // MAINWIDGET_H
