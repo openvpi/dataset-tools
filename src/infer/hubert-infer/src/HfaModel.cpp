@@ -48,9 +48,9 @@ namespace HFA {
         // Create ONNX Runtime Session
         try {
 #ifdef _WIN32
-            m_model_session = new Ort::Session(m_env, model_Path.wstring().c_str(), m_session_options);
+            m_model_session = std::make_unique<Ort::Session>(m_env, model_Path.wstring().c_str(), m_session_options);
 #else
-            m_model_session = new Ort::Session(m_env, model_Path.c_str(), m_session_options);
+            m_model_session = std::make_unique<Ort::Session>(m_env, model_Path.c_str(), m_session_options);
 #endif
         } catch (const Ort::Exception &e) {
             std::cout << "Failed to create session: " << e.what() << std::endl;
@@ -58,7 +58,7 @@ namespace HFA {
     }
 
     HfaModel::~HfaModel() {
-        delete m_model_session;
+        m_model_session.reset();
         m_input_name = {};
     }
 
