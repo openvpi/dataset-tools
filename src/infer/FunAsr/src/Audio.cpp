@@ -87,6 +87,9 @@ namespace FunAsr {
             memcpy(speech_buff, buf + WAV_HEADER_SIZE, speech_len * sizeof(int16_t));
 
             speech_data = static_cast<float *>(malloc(sizeof(float) * speech_align_len));
+            if (!speech_data) {
+                return false;
+            }
             memset(speech_data, 0, sizeof(float) * speech_align_len);
             float scale = 1;
 
