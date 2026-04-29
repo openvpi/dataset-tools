@@ -1,9 +1,10 @@
-#ifndef FBLMODEL_H
-#define FBLMODEL_H
+#ifndef HFAMODEL_H
+#define HFAMODEL_H
 
 #include <hubert-infer/HubertInferGlobal.h>
 
 #include <filesystem>
+#include <memory>
 #include <onnxruntime_cxx_api.h>
 #include <string>
 #include <vector>
@@ -26,7 +27,7 @@ namespace HFA {
     private:
         Ort::Env m_env;
         Ort::SessionOptions m_session_options;
-        Ort::Session *m_model_session;
+        std::unique_ptr<Ort::Session> m_model_session;
         Ort::AllocatorWithDefaultOptions m_allocator;
 
         const char *m_input_name = "waveform";
@@ -41,4 +42,4 @@ namespace HFA {
 
 } // Hfa
 
-#endif // FBLMODEL_H
+#endif // HFAMODEL_H

@@ -1,8 +1,8 @@
-#ifndef SOMEPROVIDER_H
-#define SOMEPROVIDER_H
+#ifndef HFAPROVIDER_H
+#define HFAPROVIDER_H
 
 namespace HFA {
     enum class ExecutionProvider { CPU, DML, CUDA };
 }
 
-#endif // SOMEPROVIDER_H
+#endif // HFAPROVIDER_H
