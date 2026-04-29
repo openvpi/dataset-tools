@@ -1,0 +1,109 @@
+name: macOS Build
+
+on:
+  push:
+    tags:
+      - "*"
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+
+      - name: Configure Qt6 path
+        run: |
+          echo "QT_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" >> $GITHUB_ENV
+
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Build Vcpkg packages
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          ./vcpkg install \
+            --x-manifest-root=../scripts/vcpkg-manifest \
+            --x-install-root=./installed \
+            --triplet=arm64-osx
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
+          QT_DIR: ${{env.QT_DIR}}
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+
+      - name: Install OnnxRuntime
+        working-directory: ${{github.workspace}}/src/infer
+        run: |
+          cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Configure CMake
+        run: |
+          cmake -B ${{github.workspace}}/build -G Ninja \
+            -DBUILD_TESTS:BOOL=ON \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deploy \
+            -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
+            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DONNXRUNTIME_ENABLE_DML=OFF
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --target all
+
+      - name: Run tests
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure -C ${{env.BUILD_TYPE}}
+
+      - name: Deploy
+        run: cmake --build ${{github.workspace}}/build --target install
+
+      - name: Set Commit ID
+        run: |
+          BUILD_DATE=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+          SHORT_HASH=$(git log --format="%H" -n 1 | head -c 7)
+          VERSION="${BUILD_DATE}-${SHORT_HASH}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset-tools-macos-arm64-${{env.VERSION}}
+          path: ${{github.workspace}}/deploy
+
+      - name: Compress release archive
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          zip -r dataset-tools-macos-arm64-${{env.VERSION}}.zip .
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{github.workspace}}/deploy/dataset-tools-macos-arm64-${{env.VERSION}}.zip
