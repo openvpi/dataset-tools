@@ -62,11 +62,11 @@ bool PhNumCalculator::loadDictionary(const QString &dictPath, QString &error) {
     return true;
 }
 
-void PhNumCalculator::setVowels(const std::unordered_set<QString> &vowels) {
+void PhNumCalculator::setVowels(const QSet<QString> &vowels) {
     m_vowels = vowels;
 }
 
-void PhNumCalculator::setConsonants(const std::unordered_set<QString> &consonants) {
+void PhNumCalculator::setConsonants(const QSet<QString> &consonants) {
     m_consonants = consonants;
 }
 

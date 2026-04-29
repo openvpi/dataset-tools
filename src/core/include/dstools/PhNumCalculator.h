@@ -4,9 +4,9 @@
 /// @brief Phoneme count calculator for DiffSinger ph_num attribute.
 /// Equivalent to Python add_ph_num.py.
 
+#include <QSet>
 #include <QString>
 #include <vector>
-#include <unordered_set>
 
 namespace dstools {
 
@@ -25,8 +25,8 @@ public:
     bool loadDictionary(const QString &dictPath, QString &error);
 
     /// Manually set vowel/consonant sets.
-    void setVowels(const std::unordered_set<QString> &vowels);
-    void setConsonants(const std::unordered_set<QString> &consonants);
+    void setVowels(const QSet<QString> &vowels);
+    void setConsonants(const QSet<QString> &consonants);
 
     /// Whether dictionary is loaded.
     bool isLoaded() const;
@@ -39,8 +39,8 @@ public:
     bool calculateBatch(std::vector<TranscriptionRow> &rows, QString &error) const;
 
 private:
-    std::unordered_set<QString> m_vowels;
-    std::unordered_set<QString> m_consonants;
+    QSet<QString> m_vowels;
+    QSet<QString> m_consonants;
     bool m_loaded = false;
 };
 
