@@ -112,6 +112,8 @@ macro(download_onnxruntime_from_github)
                 SHOW_PROGRESS
         )
     else()
+        message(WARNING "Downloading ONNX Runtime WITHOUT hash verification. "
+                        "Consider adding EXPECTED_HASH for supply-chain security.")
         file(DOWNLOAD ${_url} ${_file_path}
                 SHOW_PROGRESS
         )
@@ -144,6 +146,8 @@ macro(download_onnxruntime_from_nuget)
     set(_file_path_ort "${CMAKE_BINARY_DIR}/${_name_zip_ort}")
     message(STATUS "Downloading ONNX Runtime from ${_url_ort}")
 
+    message(WARNING "Downloading ONNX Runtime (NuGet) WITHOUT hash verification. "
+                    "Consider adding EXPECTED_HASH for supply-chain security.")
     file(DOWNLOAD ${_url_ort} ${_file_path_ort}
             SHOW_PROGRESS
     )
