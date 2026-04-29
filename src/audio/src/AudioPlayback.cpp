@@ -5,8 +5,6 @@
 
 #include <QDebug>
 #include <atomic>
-#include <condition_variable>
-#include <mutex>
 
 namespace dstools::audio {
 

@@ -12,7 +12,6 @@ class AudioDecoder;
 ///
 /// Bug fixes vs original:
 ///   - std::atomic<int> replaces volatile int state (BUG-018)
-///   - std::condition_variable replaces busy-wait (BUG-018)
 ///   - std::lock_guard replaces manual lock/unlock (BUG-019)
 ///   - Empty device list guard (BUG-020)
 ///   - pcm_buffer allocation fix (CQ-011)
