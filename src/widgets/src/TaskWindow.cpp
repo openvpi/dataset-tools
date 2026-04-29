@@ -18,6 +18,15 @@
 
 namespace dstools::widgets {
 
+static const QStringList kAudioExtensions = {
+    QStringLiteral("*.wav"), QStringLiteral("*.mp3"), QStringLiteral("*.m4a"),
+    QStringLiteral("*.flac"), QStringLiteral("*.ogg"),
+};
+
+static QString audioFileFilter() {
+    return QObject::tr("Audio Files (%1);;All Files (*.*)").arg(kAudioExtensions.join(QLatin1Char(' ')));
+}
+
 TaskWindow::TaskWindow(QWidget *parent)
     : QWidget(parent), m_threadPool(new QThreadPool(this)) {
     m_threadPool->setMaxThreadCount(1);
@@ -183,8 +192,7 @@ QThreadPool *TaskWindow::threadPool() const {
 void TaskWindow::addFiles() {
     if (m_isRunning) return;
     QStringList files = QFileDialog::getOpenFileNames(
-        this, tr("Add Files"), QString(),
-        tr("Audio Files (*.wav *.mp3 *.m4a *.flac *.ogg);;All Files (*.*)"));
+        this, tr("Add Files"), QString(), audioFileFilter());
     for (const QString &file : files) {
         auto *item = new QListWidgetItem(QFileInfo(file).fileName());
         item->setData(Qt::UserRole + 1, file);
@@ -197,7 +205,7 @@ void TaskWindow::addFolder() {
     QString dir = QFileDialog::getExistingDirectory(this, tr("Add Folder"));
     if (dir.isEmpty()) return;
     QDir d(dir);
-    QStringList files = d.entryList({"*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"}, QDir::Files);
+    QStringList files = d.entryList(kAudioExtensions, QDir::Files);
     for (const QString &file : files) {
         auto *item = new QListWidgetItem(file);
         item->setData(Qt::UserRole + 1, d.absoluteFilePath(file));
@@ -283,7 +291,7 @@ void TaskWindow::dropEvent(QDropEvent *event) {
             m_taskListWidget->addItem(item);
         } else if (info.isDir()) {
             QDir d(path);
-            for (const QString &file : d.entryList({"*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"}, QDir::Files)) {
+            for (const QString &file : d.entryList(kAudioExtensions, QDir::Files)) {
                 auto *item = new QListWidgetItem(file);
                 item->setData(Qt::UserRole + 1, d.absoluteFilePath(file));
                 m_taskListWidget->addItem(item);
