@@ -5,6 +5,7 @@
 
 #include <QDebug>
 #include <atomic>
+#include <mutex>
 
 namespace dstools::audio {
 
@@ -19,6 +20,7 @@ struct AudioPlayback::Impl {
     int bufferSize = 1024;
 
     std::atomic<State> currentState{Stopped};
+    std::mutex decoderMutex;
     QString currentDeviceName;
 
     static void audioCallback(void *userdata, Uint8 *stream, int len);
@@ -26,6 +28,7 @@ struct AudioPlayback::Impl {
 
 void AudioPlayback::Impl::audioCallback(void *userdata, Uint8 *stream, int len) {
     auto *impl = static_cast<Impl *>(userdata);
+    std::lock_guard lock(impl->decoderMutex);
     if (!impl->decoder || impl->currentState.load() != Playing) {
         memset(stream, 0, len);
         return;
@@ -77,6 +80,7 @@ void AudioPlayback::dispose() {
 }
 
 void AudioPlayback::setDecoder(AudioDecoder *decoder) {
+    std::lock_guard lock(d->decoderMutex);
     d->decoder = decoder;
 }
 
@@ -94,9 +98,10 @@ void AudioPlayback::play() {
         desired.userdata = d.get();
 
         SDL_AudioSpec obtained{};
+        const QByteArray devNameUtf8 = d->currentDeviceName.toUtf8();
         const char *devName = d->currentDeviceName.isEmpty()
                                   ? nullptr
-                                  : d->currentDeviceName.toUtf8().constData();
+                                  : devNameUtf8.constData();
         d->deviceId = SDL_OpenAudioDevice(devName, 0, &desired, &obtained, 0);
         if (!d->deviceId) {
             qWarning() << "AudioPlayback: Failed to open audio device:" << SDL_GetError();
