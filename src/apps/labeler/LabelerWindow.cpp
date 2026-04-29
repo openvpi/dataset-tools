@@ -198,92 +198,69 @@ QWidget *LabelerWindow::ensurePage(int step) {
         QWidget *page = nullptr;
 
         switch (step) {
-        case 0: { // Slice — placeholder until SlicerPage integration
+        case 0: { // Step 1: Slice — placeholder until SlicerPage integration
             auto *lbl = new QLabel(tr("Audio Slicer \u2014 Will integrate SlicerPage"));
             lbl->setAlignment(Qt::AlignCenter);
-            auto f = lbl->font();
-            f.setPointSize(16);
-            lbl->setFont(f);
+            auto f = lbl->font(); f.setPointSize(16); lbl->setFont(f);
             page = lbl;
             break;
         }
-        case 1: { // ASR — placeholder until LyricFAPage integration
+        case 1: { // Step 2: ASR — placeholder until LyricFAPage integration
             auto *lbl = new QLabel(tr("Lyric ASR \u2014 Will integrate LyricFAPage"));
             lbl->setAlignment(Qt::AlignCenter);
-            auto f = lbl->font();
-            f.setPointSize(16);
-            lbl->setFont(f);
+            auto f = lbl->font(); f.setPointSize(16); lbl->setFont(f);
             page = lbl;
             break;
         }
-        case 3: { // Align — placeholder until HubertFAPage integration
+        case 2: { // Step 3: Label (MinLabel)
+            auto *p = new Minlabel::MinLabelPage(this);
+            if (!m_workingDir.isEmpty())
+                p->setWorkingDirectory(m_workingDir);
+            page = p;
+            break;
+        }
+        case 3: { // Step 4: Align — placeholder until HubertFAPage integration
             auto *lbl = new QLabel(tr("Phoneme Alignment \u2014 Will integrate HubertFAPage"));
             lbl->setAlignment(Qt::AlignCenter);
-            auto f = lbl->font();
-            f.setPointSize(16);
-            lbl->setFont(f);
+            auto f = lbl->font(); f.setPointSize(16); lbl->setFont(f);
             page = lbl;
             break;
         }
-        case 5: // CSV
-            page = new BuildCsvPage;
-            break;
-        case 6: // MIDI
-            page = new GameAlignPage;
-            break;
-        case 7: // DS
-            page = new BuildDsPage;
-            break;
-        default: {
-            auto *placeholder = new QLabel(
-                tr("Step %1 \u2014 %2\n\nNot yet implemented").arg(step + 1).arg(stepLabels[step]));
-            placeholder->setAlignment(Qt::AlignCenter);
-            auto f = placeholder->font();
-            f.setPointSize(16);
-            placeholder->setFont(f);
-            page = placeholder;
+        case 4: { // Step 5: Phone (PhonemeLabeler)
+            auto *p = new dstools::phonemelabeler::PhonemeLabelerPage(this);
+            if (!m_workingDir.isEmpty())
+                p->setWorkingDirectory(m_workingDir);
+            page = p;
             break;
         }
+        case 5: // Step 6: CSV
+            page = new BuildCsvPage;
+            break;
+        case 6: // Step 7: MIDI
+            page = new GameAlignPage;
+            break;
+        case 7: // Step 8: DS
+            page = new BuildDsPage;
+            break;
+        case 8: { // Step 9: Pitch (PitchLabeler)
+            auto *p = new dstools::pitchlabeler::PitchLabelerPage(this);
+            if (!m_workingDir.isEmpty())
+                p->setWorkingDirectory(m_workingDir);
+            page = p;
+            break;
+        }
+        default:
+            break;
         }
 
         if (page) {
             m_stack->addWidget(page);
             m_pages[step] = page;
-            // Set working directory if applicable
             if (!m_workingDir.isEmpty()) {
                 if (auto *actions = qobject_cast<IPageActions *>(page))
                     actions->setWorkingDirectory(m_workingDir);
             }
         }
-    }
-            case 4: { // Step 5: Phone (PhonemeLabeler)
-                auto *p = new dstools::phonemelabeler::PhonemeLabelerPage(this);
-                if (!m_workingDir.isEmpty())
-                    p->setWorkingDirectory(m_workingDir);
-                page = p;
-                break;
-            }
-            case 8: { // Step 9: Pitch (PitchLabeler)
-                auto *p = new dstools::pitchlabeler::PitchLabelerPage(this);
-                if (!m_workingDir.isEmpty())
-                    p->setWorkingDirectory(m_workingDir);
-                page = p;
-                break;
-            }
-            default: {
-                auto *placeholder = new QLabel(
-                    tr("Step %1 \u2014 %2\n\nNot yet implemented").arg(step + 1).arg(stepLabels[step]));
-                placeholder->setAlignment(Qt::AlignCenter);
-                auto f = placeholder->font();
-                f.setPointSize(16);
-                placeholder->setFont(f);
-                page = placeholder;
-                break;
-            }
-        }
-
-        m_stack->addWidget(page);
-        m_pages[step] = page;
     }
 
     return m_pages[step];
