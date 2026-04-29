@@ -9,7 +9,7 @@
 #include <audio-util/Util.h>
 #include <game-infer/DiffSingerParser.h>
 #include <game-infer/GameModel.h>
-#include <game-infer/PitchUtils.h>
+#include <dstools/PitchUtils.h>
 
 namespace Game
 {
@@ -368,11 +368,11 @@ namespace Game
             for (size_t i = 0; i < validScores.size(); ++i) {
                 if (options.uvNoteCond == UvNoteCond::Follow) {
                     // Defer v/uv to alignment; use raw pitch for all
-                    noteSeq.push_back(midiToNoteName(validScores[i], true));
+                    noteSeq.push_back(dstools::midiToNoteString(static_cast<double>(validScores[i])).toStdString());
                 } else {
                     // Predict: use presence to decide rest
                     if (validPresence[i] > 0.5f) {
-                        noteSeq.push_back(midiToNoteName(validScores[i], true));
+                        noteSeq.push_back(dstools::midiToNoteString(static_cast<double>(validScores[i])).toStdString());
                     } else {
                         noteSeq.push_back("rest");
                     }
@@ -396,7 +396,7 @@ namespace Game
             for (size_t i = 0; i < validScores.size(); ++i) {
                 std::string name;
                 if (validPresence[i] > 0.5f) {
-                    name = midiToNoteName(validScores[i], true);
+                    name = dstools::midiToNoteString(static_cast<double>(validScores[i])).toStdString();
                 } else {
                     name = "rest";
                 }
