@@ -15,4 +15,4 @@ inline T divIntRound(T n, T d) {
                                ((n + (d / 2)) / d);
 }
 
-#endif // LYRICFA_MATHUTILS_H
+#endif // MATHUTILS_H
