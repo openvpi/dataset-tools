@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QSet>
 #include <QVBoxLayout>
 
 #include "Enumerations.h"
@@ -219,7 +220,11 @@ void SlicerPage::logMessage(const QString &txt) {
 
 void SlicerPage::addSingleAudioFile(const QString &fullPath) {
     QFileInfo info(fullPath);
-    if (!info.exists() || info.suffix().toLower() != "wav") return;
+    if (!info.exists() || !info.isFile()) return;
+    static const QSet<QString> supportedFormats = {
+        "wav", "mp3", "flac", "ogg", "aiff", "au", "snd", "voc", "w64"
+    };
+    if (!supportedFormats.contains(info.suffix().toLower())) return;
     auto *item = new QListWidgetItem(info.fileName());
     item->setData(Qt::UserRole + 1, fullPath);
     m_taskListWidget->addItem(item);
