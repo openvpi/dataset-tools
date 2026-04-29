@@ -43,6 +43,7 @@ namespace AudioUtil
         auto *data = static_cast<const char *>(ptr);
         qvio->byteArray.reserve(qvio->byteArray.size() + count);
         qvio->byteArray.insert(qvio->byteArray.end(), data, data + count);
+        qvio->seek += count;
         return count;
     }
 
