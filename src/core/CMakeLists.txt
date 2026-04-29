@@ -24,6 +24,8 @@ set(CORE_SOURCES
     src/DsItemManager.cpp
     src/DsProject.cpp
     src/PinyinG2PProvider.cpp
+    src/ModelDownloader.cpp
+    src/QualityMetrics.cpp
 )
 
 set(CORE_HEADERS
@@ -50,7 +52,9 @@ set(CORE_HEADERS
     include/dstools/IG2PProvider.h
     include/dstools/PinyinG2PProvider.h
     include/dstools/IModelDownloader.h
+    include/dstools/ModelDownloader.h
     include/dstools/IQualityMetrics.h
+    include/dstools/QualityMetrics.h
     include/dstools/IStepPlugin.h
     include/dstools/IModelProvider.h
     include/dstools/ModelManager.h
@@ -71,6 +75,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME} PUBLIC
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Network
 )
 
 # JSON support for AppSettings
