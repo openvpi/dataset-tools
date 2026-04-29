@@ -6,6 +6,9 @@
 #include "predefine_coe.h"
 #include "util.h"
 
+#include <iostream>
+#include <memory>
+
 
 namespace FunAsr {
     ModelImp::ModelImp(const std::filesystem::path &path, const int &nNumThread) {
@@ -48,10 +51,10 @@ namespace FunAsr {
         fe->reset();
     }
 
-    void ModelImp::apply_lfr(Tensor<float> *&din) {
+    void ModelImp::apply_lfr(std::unique_ptr<Tensor<float>> &din) {
         const int mm = din->size[2];
         const int ll = ceil(mm / 6.0);
-        auto *tmp = new Tensor<float>(ll, 560);
+        auto tmp = std::make_unique<Tensor<float>>(ll, 560);
         int out_offset = 0;
         for (int i = 0; i < ll; i++) {
             for (int j = 0; j < 7; j++) {
@@ -66,8 +69,7 @@ namespace FunAsr {
                 out_offset += 80;
             }
         }
-        delete din;
-        din = tmp;
+        din = std::move(tmp);
     }
 
     void ModelImp::apply_cmvn(const Tensor<float> *din) {
@@ -98,11 +100,12 @@ namespace FunAsr {
     }
 
     std::string ModelImp::forward(float *din, int len, int flag) {
-        Tensor<float> *in;
         fe->insert(din, len, flag);
-        fe->fetch(in);
+        Tensor<float> *raw_in = nullptr;
+        fe->fetch(raw_in);
+        std::unique_ptr<Tensor<float>> in(raw_in);
         apply_lfr(in);
-        apply_cmvn(in);
+        apply_cmvn(in.get());
         Ort::RunOptions run_option;
 
         const std::array<int64_t, 3> input_shape_{in->size[0], in->size[2], in->size[3]};
@@ -127,11 +130,13 @@ namespace FunAsr {
             auto *floatData = outputTensor[0].GetTensorMutableData<float>();
             const auto encoder_out_lens = outputTensor[1].GetTensorMutableData<int64_t>();
             result = greedy_search(floatData, static_cast<int>(*encoder_out_lens));
-        } catch (...) {
+        } catch (const Ort::Exception &e) {
+            std::cerr << "ONNX Runtime error in forward(): " << e.what() << std::endl;
+            result = "";
+        } catch (const std::exception &e) {
+            std::cerr << "Error in forward(): " << e.what() << std::endl;
             result = "";
         }
-
-        delete in;
 
         return result;
     }

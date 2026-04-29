@@ -16,7 +16,7 @@ namespace FunAsr {
 
         std::unique_ptr<Vocab> vocab;
 
-        static void apply_lfr(Tensor<float> *&din);
+        static void apply_lfr(std::unique_ptr<Tensor<float>> &din);
         static void apply_cmvn(const Tensor<float> *din);
 
         std::string greedy_search(float *in, const int &nLen) const;
