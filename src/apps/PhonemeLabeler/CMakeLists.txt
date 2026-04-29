@@ -27,7 +27,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE .)
 if (WIN32)
     include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)
 
-    if (NOT ${CMAKE_BUILD_TYPE} MATCHES "Debug")
+    if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Deb")
         set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
     endif ()
 endif ()
