@@ -111,7 +111,7 @@ AudioDecoder::~AudioDecoder() {
 bool AudioDecoder::open(const QString &path) {
     close();
 
-    std::string pathStr = path.toStdString();
+    std::string pathStr = path.toUtf8().toStdString();
 
     if (avformat_open_input(&d->fmtCtx, pathStr.c_str(), nullptr, nullptr) < 0) {
         qWarning() << "AudioDecoder: Failed to open" << path;
