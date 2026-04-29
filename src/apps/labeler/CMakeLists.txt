@@ -14,6 +14,8 @@ add_executable(${PROJECT_NAME}
     IPageActions.h
     IPageLifecycle.h
     IPageProgress.h
+    StepPlugins.cpp
+    StepPlugins.h
     pages/BuildCsvPage.cpp
     pages/BuildCsvPage.h
     pages/GameAlignPage.cpp
