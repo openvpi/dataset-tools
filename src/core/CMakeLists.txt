@@ -13,6 +13,8 @@ set(CORE_SOURCES
     src/PitchUtils.cpp
     src/AudioFileResolver.cpp
     src/F0Curve.cpp
+    src/TextGridToCsv.cpp
+    src/TranscriptionCsv.cpp
 )
 
 set(CORE_HEADERS
@@ -25,6 +27,7 @@ set(CORE_HEADERS
     include/dstools/PitchUtils.h
     include/dstools/AudioFileResolver.h
     include/dstools/F0Curve.h
+    include/dstools/TranscriptionCsv.h
 )
 
 set(CORE_RESOURCES
