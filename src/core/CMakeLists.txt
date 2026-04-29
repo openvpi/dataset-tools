@@ -17,6 +17,7 @@ set(CORE_SOURCES
     src/PhNumCalculator.cpp
     src/TextGridToCsv.cpp
     src/TranscriptionCsv.cpp
+    src/TranscriptionPipeline.cpp
 )
 
 set(CORE_HEADERS
@@ -33,6 +34,7 @@ set(CORE_HEADERS
     include/dstools/F0Curve.h
     include/dstools/TextGridToCsv.h
     include/dstools/TranscriptionCsv.h
+    include/dstools/TranscriptionPipeline.h
 )
 
 set(CORE_RESOURCES
