@@ -12,6 +12,9 @@ set(WIDGETS_SOURCES
     src/FileStatusDelegate.cpp
     src/BaseFileListPanel.cpp
     src/ViewportController.cpp
+    src/PathSelector.cpp
+    src/RunProgressRow.cpp
+    src/ModelLoadPanel.cpp
 )
 
 set(WIDGETS_HEADERS
@@ -25,6 +28,9 @@ set(WIDGETS_HEADERS
     include/dstools/FileStatusDelegate.h
     include/dstools/BaseFileListPanel.h
     include/dstools/ViewportController.h
+    include/dstools/PathSelector.h
+    include/dstools/RunProgressRow.h
+    include/dstools/ModelLoadPanel.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${WIDGETS_SOURCES} ${WIDGETS_HEADERS})
