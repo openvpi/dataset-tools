@@ -413,18 +413,20 @@ namespace Minlabel {
                     } else {
                         QString withoutTone = "";
                         if (!labContent.isEmpty() && labContent.contains(" ")) {
-                            QStringList inputList = labContent.split(" ");
-                            for (QString &item : inputList) {
-                                item.remove(QRegularExpression("[^a-z]"));
-                            }
+                        QStringList inputList = labContent.split(" ");
+                        static const QRegularExpression nonLowerAlpha("[^a-z]");
+                        for (QString &item : inputList) {
+                            item.remove(nonLowerAlpha);
+                        }
                             withoutTone = inputList.join(" ");
                         }
 
                         QFile jsonFile(jsonFilePath);
                         QJsonObject writeData;
-                        writeData["lab"] = labContent.replace(QRegularExpression("\\s+"), " ");
-                        writeData["raw_text"] = txtContent;
-                        writeData["lab_without_tone"] = withoutTone.replace(QRegularExpression("\\s+"), " ");
+                        static const QRegularExpression multiSpace("\\s+");
+                    writeData["lab"] = labContent.replace(multiSpace, " ");
+                    writeData["raw_text"] = txtContent;
+                    writeData["lab_without_tone"] = withoutTone.replace(multiSpace, " ");
 
                         if (!writeJsonFile(jsonFilePath, writeData)) {
                             QMessageBox::critical(this, QApplication::applicationName(),

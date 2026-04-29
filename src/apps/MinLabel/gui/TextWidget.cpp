@@ -90,7 +90,8 @@ namespace Minlabel {
 
     QString TextWidget::sentence() const {
         QString words = wordsText->text();
-        words.replace(QRegularExpression(R"([\r\n]+)"), " ");
+        static const QRegularExpression newlines(R"([\r\n]+)");
+        words.replace(newlines, " ");
         words = words.simplified();
         return words;
     }
