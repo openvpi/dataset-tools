@@ -1,4 +1,5 @@
 #include "LabelerWindow.h"
+#include "CleanupDialog.h"
 #include "IPageActions.h"
 #include "MinLabelPage.h"
 #include "PhonemeLabelerPage.h"
@@ -10,6 +11,7 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDir>
+#include <QDirIterator>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
