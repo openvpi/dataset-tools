@@ -372,7 +372,7 @@ namespace Minlabel {
                 QStringList{"*.wav", "*.mp3", "*.m4a", "*.flac"}, QDir::Files).count()); totalRowCount != count) {
             const QMessageBox::StandardButton reply =
                 QMessageBox::question(this, QApplication::applicationName(),
-                                      QString("%1 file are not labeled, continue?").arg(totalRowCount - count),
+                                      QString("%1 files are not labeled, continue?").arg(totalRowCount - count),
                                       QMessageBox::Yes | QMessageBox::No);
             if (reply == QMessageBox::No) {
                 return;
