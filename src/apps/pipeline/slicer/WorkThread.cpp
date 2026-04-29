@@ -231,8 +231,9 @@ inline int determineSndFileFormat(int formatEnum) {
             return SF_FORMAT_PCM_32;
         case WF_FLOAT32:
             return SF_FORMAT_FLOAT;
+        default:
+            return 0;
     }
-    return 0;
 }
 
 inline QString samplesToDecimalFormat(qint64 samples, int sampleRate) {
