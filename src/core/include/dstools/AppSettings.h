@@ -42,6 +42,7 @@
 #include <QKeySequence>
 #include <QObject>
 #include <QString>
+#include <QTimer>
 #include <QVariant>
 
 #include <dstools/JsonHelper.h>
@@ -171,7 +172,7 @@ public:
     /// @param appName  Used to derive the file path: <appDir>/config/<appName>.json
     /// @param parent   QObject parent (optional)
     explicit AppSettings(const QString &appName, QObject *parent = nullptr);
-    ~AppSettings() override = default;
+    ~AppSettings() override;
 
     // ── Typed access ──
 
@@ -193,7 +194,9 @@ public:
             T current = get_unlocked(key);
             if (current != value) {
                 detail::assign(m_data, key.path, detail::toJson(value));
-                saveToDisk();
+                m_dirty = true;
+                QMetaObject::invokeMethod(m_saveTimer, qOverload<>(&QTimer::start),
+                                          Qt::QueuedConnection);
                 changed = true;
             }
         }
@@ -331,6 +334,9 @@ private:
 
     std::unordered_map<std::string, std::vector<ObserverEntry>> m_observers;
     int m_nextObserverId = 0;
+
+    QTimer *m_saveTimer = nullptr;
+    bool m_dirty = false;
 };
 
 } // namespace dstools

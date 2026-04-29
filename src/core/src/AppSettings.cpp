@@ -17,6 +17,17 @@ AppSettings::AppSettings(const QString &appName, QObject *parent)
 
     m_filePath = configDir + QStringLiteral("/") + appName + QStringLiteral(".json");
     loadFromDisk();
+
+    m_saveTimer = new QTimer(this);
+    m_saveTimer->setSingleShot(true);
+    m_saveTimer->setInterval(500);
+    connect(m_saveTimer, &QTimer::timeout, this, [this]() {
+        std::lock_guard lock(m_mutex);
+        if (m_dirty) {
+            saveToDisk();
+            m_dirty = false;
+        }
+    });
 }
 
 void AppSettings::loadFromDisk() {
@@ -64,9 +75,15 @@ void AppSettings::reload() {
     loadFromDisk();
 }
 
+AppSettings::~AppSettings() {
+    flush();
+}
+
 void AppSettings::flush() {
     std::lock_guard lock(m_mutex);
+    m_saveTimer->stop();
     saveToDisk();
+    m_dirty = false;
 }
 
 void AppSettings::removeObserver(int id) {
