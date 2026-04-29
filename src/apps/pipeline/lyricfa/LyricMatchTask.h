@@ -1,5 +1,5 @@
-#ifndef FATREAD_H
-#define FATREAD_H
+#ifndef LYRICMATCHTASK_H
+#define LYRICMATCHTASK_H
 
 #include <QRunnable>
 #include <QThread>
@@ -8,10 +8,10 @@
 
 namespace LyricFA {
 
-    class FaTread final : public QObject, public QRunnable {
+    class LyricMatchTask final : public QObject, public QRunnable {
         Q_OBJECT
     public:
-        FaTread(MatchLyric *match, QString filename, QString labPath, QString jsonPath);
+        LyricMatchTask(MatchLyric *match, QString filename, QString labPath, QString jsonPath);
         void run() override;
 
     private:
@@ -27,4 +27,4 @@ namespace LyricFA {
 
 } // LyricFA
 
-#endif // FATREAD_H
+#endif // LYRICMATCHTASK_H

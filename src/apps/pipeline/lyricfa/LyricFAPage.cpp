@@ -204,9 +204,9 @@ void LyricFAPage::slot_matchLyric() {
     for (const QString &labPath : labPaths) {
         QString labName = QFileInfo(labPath).completeBaseName();
         const QString jsonPath = jsonFolder + QDir::separator() + labName + ".json";
-        auto *task = new LyricFA::FaTread(m_match, labName, labPath, jsonPath);
-        connect(task, &LyricFA::FaTread::oneFailed, this, &TaskWindow::slot_oneFailed);
-        connect(task, &LyricFA::FaTread::oneFinished, this, &TaskWindow::slot_oneFinished);
+         auto *task = new LyricFA::LyricMatchTask(m_match, labName, labPath, jsonPath);
+         connect(task, &LyricFA::LyricMatchTask::oneFailed, this, &TaskWindow::slot_oneFailed);
+         connect(task, &LyricFA::LyricMatchTask::oneFinished, this, &TaskWindow::slot_oneFinished);
         threadPool()->start(task);
     }
 }
