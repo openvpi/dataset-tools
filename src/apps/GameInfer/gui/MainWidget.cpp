@@ -360,27 +360,30 @@ void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
 }
 
 bool MainWidget::loadModel(std::string &message) {
-    if (m_modelPathEdit->text().isEmpty()) {
+    const QString modelPathText = m_modelPathEdit->text();
+    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
+    const int deviceId = m_deviceCombo->selectedDeviceId();
+
+    return loadModel(modelPathText, provider, deviceId, message);
+}
+
+bool MainWidget::loadModel(const QString &modelPathText, Game::ExecutionProvider provider, int deviceId, std::string &message) {
+    if (modelPathText.isEmpty()) {
         setModelLoadingStatus("Please select model path");
         message = "Please select model path";
         return false;
     }
 
-    std::filesystem::path modelPath = m_modelPathEdit->text().toLocal8Bit().toStdString();
-
-    // Get execution provider from combo box
-    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-    const int deviceId = m_deviceCombo->selectedDeviceId();
+    std::filesystem::path modelPath = modelPathText.toLocal8Bit().toStdString();
     std::string msg;
 
     QMetaObject::invokeMethod(
         this, [this] { setModelLoadingStatus("Model is loading, please wait 3-10 seconds!"); }, Qt::QueuedConnection);
     if (m_game->load_model(modelPath, provider, deviceId, msg)) {
-        updateParameterValues();
-        // Successfully loaded, update UI
         QMetaObject::invokeMethod(
             this,
             [this, modelPath] {
+                updateParameterValues();
                 setModelLoadingStatus("Model loaded successfully!");
                 m_settings->set(GameInferKeys::ModelPath, QString::fromStdWString(modelPath.wstring()));
             },
@@ -548,19 +551,23 @@ void MainWidget::onExportMidiTask() {
     const double estThreshold = m_estThresholdSpin->value();
     const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
     const int languageId = m_languageCombo->currentData().toInt();
+    const QString modelPathText = m_modelPathEdit->text();
+    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
+    const int deviceId = m_deviceCombo->selectedDeviceId();
 
     m_runningTask = QtConcurrent::run([this, wavPath, outputMidiPath, tempo, maxAudioSegLength,
-                                       segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId] {
+                                       segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId,
+                                       modelPathText, provider, deviceId] {
         std::vector<Game::GameMidi> midis;
         std::string msg;
 
         if (!exists(std::filesystem::path(wavPath.toLocal8Bit().toStdString()))) {
             QMetaObject::invokeMethod(
                 this,
-                [this] {
+                [this, wavPath] {
                     QMessageBox::critical(this, "Error",
                                           QString("Audio file does not exist: %1")
-                                              .arg(m_wavPathLineEdit->text()));
+                                              .arg(wavPath));
                 },
                 Qt::QueuedConnection);
             QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
@@ -569,7 +576,7 @@ void MainWidget::onExportMidiTask() {
 
         if (!m_game->is_open()) {
             std::string msg_;
-            if (!loadModel(msg_)) {
+            if (!loadModel(modelPathText, provider, deviceId, msg_)) {
                 QMetaObject::invokeMethod(
                     this,
                     [this, msg_] {
@@ -719,14 +726,18 @@ void MainWidget::onAlignCsvTask() {
     const double estThreshold = m_estThresholdSpin->value();
     const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
     const int languageId = m_languageCombo->currentData().toInt();
+    const QString modelPathText = m_modelPathEdit->text();
+    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
+    const int deviceId = m_deviceCombo->selectedDeviceId();
 
     m_runningTask = QtConcurrent::run([this, csvPath, savePath, saveFilename,
-                                       segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId] {
+                                       segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId,
+                                       modelPathText, provider, deviceId] {
         std::string msg;
 
         if (!m_game->is_open()) {
             std::string msg_;
-            if (!loadModel(msg_)) {
+            if (!loadModel(modelPathText, provider, deviceId, msg_)) {
                 QMetaObject::invokeMethod(
                     this,
                     [this, msg_] {

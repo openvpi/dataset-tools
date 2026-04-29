@@ -29,6 +29,7 @@ public:
 private slots:
     void browseModelPath();
     bool loadModel(std::string &message);
+    bool loadModel(const QString &modelPathText, Game::ExecutionProvider provider, int deviceId, std::string &message);
     void resetToDefaults() const;
     void onBrowseWavPath();
     void onBrowseOutputMidi();
