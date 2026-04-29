@@ -44,7 +44,7 @@ namespace Game
         bool useWordBoundary = true; // false = no word-note alignment (--no-wb)
     };
 
-    enum class ExecutionProvider { CPU, CUDA, DML };
+    enum class ExecutionProvider { CPU, DML, CUDA };
 
     class GameModel; // Forward declaration
 
