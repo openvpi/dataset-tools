@@ -52,7 +52,7 @@ namespace HFA {
                     if (!fs::exists(dict_path)) {
                         std::cerr << dict_path.string() << " does not exist" << std::endl;
                     } else {
-                        m_dictG2p[language] = new DictionaryG2P(dict_path.string(), language);
+                        m_dictG2p[language] = std::make_unique<DictionaryG2P>(dict_path.string(), language);
                     }
                 }
             }
@@ -78,8 +78,8 @@ namespace HFA {
                 return;
             }
             non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
-            m_alignmentDecoder = new AlignmentDecoder(vocab_dict, mel_spec_config);
-            m_nonLexicalDecoder = new NonLexicalDecoder(non_lexical_phonemes, mel_spec_config);
+            m_alignmentDecoder = std::make_unique<AlignmentDecoder>(vocab_dict, mel_spec_config);
+            m_nonLexicalDecoder = std::make_unique<NonLexicalDecoder>(non_lexical_phonemes, mel_spec_config);
         } catch (const std::exception &e) {
             std::cerr << "HFA: failed to load model from " << model_folder.string()
                       << ": " << e.what() << std::endl;

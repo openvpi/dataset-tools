@@ -48,9 +48,9 @@ namespace HFA {
 
     private:
         std::unique_ptr<HfaModel> m_hfa;
-        std::map<std::string, DictionaryG2P *> m_dictG2p;
-        AlignmentDecoder *m_alignmentDecoder;
-        NonLexicalDecoder *m_nonLexicalDecoder;
+        std::map<std::string, std::unique_ptr<DictionaryG2P>> m_dictG2p;
+        std::unique_ptr<AlignmentDecoder> m_alignmentDecoder;
+        std::unique_ptr<NonLexicalDecoder> m_nonLexicalDecoder;
         std::unordered_set<std::string> m_silent_phonemes;
 
         int hfa_input_sample_rate = 44100;
