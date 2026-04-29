@@ -12,8 +12,14 @@ void ViewportController::setViewRange(double startSec, double endSec) {
 }
 
 void ViewportController::setPixelsPerSecond(double pps) {
+    double oldPPS = m_state.pixelsPerSecond;
     m_state.pixelsPerSecond = std::clamp(pps, m_minPixelsPerSecond, m_maxPixelsPerSecond);
-    emit viewportChanged(m_state);
+    double center = (m_state.startSec + m_state.endSec) / 2.0;
+    double halfDuration = (m_state.endSec - m_state.startSec) / 2.0;
+    double newHalfDuration = halfDuration * oldPPS / m_state.pixelsPerSecond;
+    m_state.startSec = center - newHalfDuration;
+    m_state.endSec = center + newHalfDuration;
+    clampAndEmit();
 }
 
 void ViewportController::zoomAt(double centerSec, double factor) {
