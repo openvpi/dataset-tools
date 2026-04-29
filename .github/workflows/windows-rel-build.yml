@@ -67,7 +67,7 @@ jobs:
 
       - name: Install OnnxRuntime
         shell: cmd
-        working-directory: ${{github.workspace}}/src/libs
+        working-directory: ${{github.workspace}}/src/infer
         run: |
           cmake -Dep=dml -P ../../scripts/setup-onnxruntime.cmake
 
