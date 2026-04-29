@@ -59,6 +59,7 @@ MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
     setupModelGroup();
     setupProcessingGroup();
     setupAudioGroup();
+    setupAlignGroup();
     setupActionButtons();
 
     mainLayout->addStretch();
@@ -589,5 +590,141 @@ void MainWidget::onExportMidiTask() {
         }
 
         QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+    });
+}
+
+void MainWidget::setupAlignGroup() {
+    auto *group = new QGroupBox("Align CSV");
+    auto *layout = new QGridLayout(group);
+
+    // Row 0: Input CSV
+    layout->addWidget(new QLabel("Input CSV:"), 0, 0);
+    m_alignCsvInputEdit = new QLineEdit();
+    m_alignCsvInputEdit->setText(m_settings->get(GameInferKeys::AlignCsvInputPath));
+    layout->addWidget(m_alignCsvInputEdit, 0, 1);
+    m_alignCsvInputBtn = new QPushButton("Browse...");
+    layout->addWidget(m_alignCsvInputBtn, 0, 2);
+
+    // Row 1: WAV Directory
+    layout->addWidget(new QLabel("WAV Directory:"), 1, 0);
+    m_alignWavDirEdit = new QLineEdit();
+    m_alignWavDirEdit->setText(m_settings->get(GameInferKeys::AlignWavDir));
+    layout->addWidget(m_alignWavDirEdit, 1, 1);
+    m_alignWavDirBtn = new QPushButton("Browse...");
+    layout->addWidget(m_alignWavDirBtn, 1, 2);
+
+    // Row 2: Output CSV
+    layout->addWidget(new QLabel("Output CSV:"), 2, 0);
+    m_alignOutputEdit = new QLineEdit();
+    m_alignOutputEdit->setText(m_settings->get(GameInferKeys::AlignOutputPath));
+    layout->addWidget(m_alignOutputEdit, 2, 1);
+    m_alignOutputBtn = new QPushButton("Browse...");
+    layout->addWidget(m_alignOutputBtn, 2, 2);
+
+    // Row 3: Progress + Run
+    auto *progressLayout = new QHBoxLayout();
+    m_alignProgressBar = new QProgressBar();
+    m_alignProgressBar->setMinimum(0);
+    m_alignProgressBar->setMaximum(100);
+    m_alignProgressBar->setValue(0);
+    progressLayout->addWidget(m_alignProgressBar);
+    m_alignRunBtn = new QPushButton("Align");
+    progressLayout->addWidget(m_alignRunBtn);
+    layout->addLayout(progressLayout, 3, 0, 1, 3);
+
+    // Connections
+    connect(m_alignCsvInputBtn, &QPushButton::clicked, this, &MainWidget::onBrowseAlignCsvInput);
+    connect(m_alignWavDirBtn, &QPushButton::clicked, this, &MainWidget::onBrowseAlignWavDir);
+    connect(m_alignOutputBtn, &QPushButton::clicked, this, &MainWidget::onBrowseAlignOutput);
+    connect(m_alignRunBtn, &QPushButton::clicked, this, &MainWidget::onAlignCsvTask);
+
+    auto *mainLayout = qobject_cast<QVBoxLayout *>(this->layout());
+    mainLayout->addWidget(group);
+}
+
+void MainWidget::onBrowseAlignCsvInput() {
+    const QString file =
+        QFileDialog::getOpenFileName(this, "Select Input CSV File", m_alignCsvInputEdit->text(), "CSV Files (*.csv)");
+    if (!file.isEmpty()) {
+        m_alignCsvInputEdit->setText(file);
+        m_settings->set(GameInferKeys::AlignCsvInputPath, file);
+    }
+}
+
+void MainWidget::onBrowseAlignWavDir() {
+    const QString dir = QFileDialog::getExistingDirectory(this, "Select WAV Directory", m_alignWavDirEdit->text(),
+                                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    if (!dir.isEmpty()) {
+        m_alignWavDirEdit->setText(dir);
+        m_settings->set(GameInferKeys::AlignWavDir, dir);
+    }
+}
+
+void MainWidget::onBrowseAlignOutput() {
+    const QString file =
+        QFileDialog::getSaveFileName(this, "Select Output CSV File", m_alignOutputEdit->text(), "CSV Files (*.csv)");
+    if (!file.isEmpty()) {
+        m_alignOutputEdit->setText(file);
+        m_settings->set(GameInferKeys::AlignOutputPath, file);
+    }
+}
+
+void MainWidget::onAlignCsvTask() {
+    if (m_alignCsvInputEdit->text().isEmpty() || m_alignWavDirEdit->text().isEmpty() ||
+        m_alignOutputEdit->text().isEmpty()) {
+        QMessageBox::warning(this, "Warning", "Please fill all align CSV paths");
+        return;
+    }
+
+    m_alignRunBtn->setEnabled(false);
+    m_alignProgressBar->setValue(0);
+
+    QFuture<void> future = QtConcurrent::run([this] {
+        std::string msg;
+
+        if (!m_game->is_open()) {
+            std::string msg_;
+            if (!loadModel(msg_)) {
+                QMetaObject::invokeMethod(
+                    this,
+                    [this, msg_] {
+                        QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg_));
+                    },
+                    Qt::QueuedConnection);
+                QMetaObject::invokeMethod(m_alignRunBtn, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+                return;
+            }
+        }
+
+        updateParameterValues();
+
+        const std::filesystem::path csvPath = m_alignCsvInputEdit->text().toLocal8Bit().toStdString();
+        const QFileInfo outputInfo(m_alignOutputEdit->text());
+        const std::filesystem::path savePath = outputInfo.absolutePath().toLocal8Bit().toStdString();
+        const std::string saveFilename = outputInfo.fileName().toLocal8Bit().toStdString();
+
+        Game::AlignOptions options;
+
+        const bool success = m_game->alignCSV(csvPath, savePath, saveFilename, true, options, msg,
+                                              [this](const int progress) {
+                                                  QMetaObject::invokeMethod(m_alignProgressBar, "setValue",
+                                                                           Qt::QueuedConnection, Q_ARG(int, progress));
+                                              });
+
+        if (success) {
+            QMetaObject::invokeMethod(
+                this, [this] { QMessageBox::information(this, "Success", "Align CSV completed!"); },
+                Qt::QueuedConnection);
+        } else {
+            std::cerr << "Align error: " << msg << std::endl;
+            QMetaObject::invokeMethod(
+                this,
+                [this, msg] {
+                    QMessageBox::critical(this, "Error", QString("Align failed: %1").arg(msg.c_str()));
+                },
+                Qt::QueuedConnection);
+        }
+
+        QMetaObject::invokeMethod(m_alignRunBtn, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
     });
 }

@@ -16,4 +16,9 @@ namespace GameInferKeys {
     // Audio paths
     inline const dstools::SettingsKey<QString> WavPath("Audio/inputPath", "");
     inline const dstools::SettingsKey<QString> OutputMidiPath("Audio/outputMidiPath", "");
+
+    // Align CSV paths
+    inline const dstools::SettingsKey<QString> AlignCsvInputPath("Align/csvInputPath", "");
+    inline const dstools::SettingsKey<QString> AlignWavDir("Align/wavDir", "");
+    inline const dstools::SettingsKey<QString> AlignOutputPath("Align/outputPath", "");
 }

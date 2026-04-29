@@ -33,10 +33,15 @@ private slots:
     void onWavPathChanged(const QString &wavPath) const;
     void generateMidiOutputPath(const QString &wavPath) const;
     void onExportMidiTask();
+    void onBrowseAlignCsvInput();
+    void onBrowseAlignWavDir();
+    void onBrowseAlignOutput();
+    void onAlignCsvTask();
 
 private:
     void setupModelGroup();
     void setupAudioGroup();
+    void setupAlignGroup();
     void setupActionButtons();
     void setupProcessingGroup();
     bool updateParameterValues() const;
@@ -75,6 +80,16 @@ private:
     QPushButton *m_outputMidiButton;
     QProgressBar *m_progressBar;
     QPushButton *m_runButton;
+
+    // Align group widgets
+    QLineEdit *m_alignCsvInputEdit;
+    QLineEdit *m_alignWavDirEdit;
+    QLineEdit *m_alignOutputEdit;
+    QPushButton *m_alignCsvInputBtn;
+    QPushButton *m_alignWavDirBtn;
+    QPushButton *m_alignOutputBtn;
+    QProgressBar *m_alignProgressBar;
+    QPushButton *m_alignRunBtn;
 
     // Action buttons
     QPushButton *m_resetParamsBtn;
