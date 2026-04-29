@@ -1,6 +1,7 @@
 #include "LabelerWindow.h"
 #include "CleanupDialog.h"
 #include "IPageActions.h"
+#include "IPageLifecycle.h"
 #include "MinLabelPage.h"
 #include "PhonemeLabelerPage.h"
 #include "PitchLabelerPage.h"
@@ -186,10 +187,25 @@ void LabelerWindow::onStepChanged(int step) {
     if (step < 0 || step >= 9)
         return;
 
+    // Deactivate current page via IPageLifecycle
+    auto *currentPage = m_stack->currentWidget();
+    if (currentPage) {
+        if (auto *lifecycle = qobject_cast<IPageLifecycle *>(currentPage)) {
+            if (!lifecycle->onDeactivating())
+                return; // veto
+            lifecycle->onDeactivated();
+        }
+    }
+
     auto *page = ensurePage(step);
     m_stack->setCurrentWidget(page);
     m_statusStep->setText(tr("Step: %1").arg(stepLabels[step]));
     updateDynamicMenus();
+
+    // Activate new page via IPageLifecycle
+    if (auto *lifecycle = qobject_cast<IPageLifecycle *>(page)) {
+        lifecycle->onActivated();
+    }
 }
 
 QWidget *LabelerWindow::ensurePage(int step) {
