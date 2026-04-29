@@ -325,7 +325,8 @@ namespace dstools {
             progressLayout->addWidget(m_progressCurrentTime);
 
             m_playbackProgressSlider = new QSlider(Qt::Horizontal);
-            m_playbackProgressSlider->setStyle(new JumpClickStyle(m_playbackProgressSlider->style()));
+            m_jumpClickStyle = std::make_unique<JumpClickStyle>(m_playbackProgressSlider->style());
+            m_playbackProgressSlider->setStyle(m_jumpClickStyle.get());
             m_playbackProgressSlider->setRange(0, 10000); // 0-10s in ms by default
             m_playbackProgressSlider->setValue(0);
             m_playbackProgressSlider->setFixedHeight(16);

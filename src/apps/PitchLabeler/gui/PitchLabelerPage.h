@@ -8,6 +8,7 @@
 #include <QSplitter>
 #include <QStackedWidget>
 #include <QToolButton>
+#include <QProxyStyle>
 #include <QShortcut>
 #include <QUndoStack>
 
@@ -146,6 +147,7 @@ private:
     std::vector<double> m_originalF0;
     QList<QShortcut *> m_windowShortcuts;
     QUndoStack *m_undoStack = nullptr;
+    std::unique_ptr<QProxyStyle> m_jumpClickStyle;
 
     // Helpers
     void buildLayout();
