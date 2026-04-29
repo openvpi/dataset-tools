@@ -273,7 +273,13 @@ namespace Game
 
     bool GameModel::is_open() const { return sessBd2dur && sessEncoder && sessEstimator && sessSegmenter; }
 
-    void GameModel::terminate() {}
+    void GameModel::terminate() {
+        m_runOptions.SetTerminate();
+    }
+
+    bool GameModel::is_terminated() const {
+        return m_runOptions.GetTerminate();
+    }
 
     bool GameModel::forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                             std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
@@ -431,7 +437,7 @@ namespace Game
 
         const char *outputNames[] = {"x_seg", "x_est", "maskT"};
 
-        auto outputTensors = sessEncoder->Run(Ort::RunOptions{nullptr}, inputNames.data(), inputTensors.data(),
+        auto outputTensors = sessEncoder->Run(m_runOptions, inputNames.data(), inputTensors.data(),
                                               inputTensors.size(), outputNames, 3);
 
         return std::make_tuple(std::move(outputTensors[0]), std::move(outputTensors[1]), std::move(outputTensors[2]));
@@ -465,7 +471,7 @@ namespace Game
 
         const char *outputNames[] = {"boundaries"};
 
-        const auto outputTensors = sessDur2bd->Run(Ort::RunOptions{nullptr}, inputNames, inputTensors.data(),
+        const auto outputTensors = sessDur2bd->Run(m_runOptions, inputNames, inputTensors.data(),
                                                    inputTensors.size(), outputNames, 1);
 
         const bool *boundaryData = outputTensors[0].GetTensorData<bool>();
@@ -572,7 +578,7 @@ namespace Game
             }
 
             const char *outputNames[] = {"boundaries"};
-            auto outputs = sessSegmenter->Run(Ort::RunOptions{nullptr}, inputNames.data(), inputTensors.data(),
+            auto outputs = sessSegmenter->Run(m_runOptions, inputNames.data(), inputTensors.data(),
                                               inputTensors.size(), outputNames, 1);
 
             const bool *outData = outputs[0].GetTensorData<bool>();
@@ -622,7 +628,7 @@ namespace Game
 
         const char *outputNames[] = {"durations", "maskN"};
 
-        const auto outputTensors = sessBd2dur->Run(Ort::RunOptions{nullptr}, inputNames, inputTensors.data(),
+        const auto outputTensors = sessBd2dur->Run(m_runOptions, inputNames, inputTensors.data(),
                                                     inputTensors.size(), outputNames, 2);
 
         const float *durData = outputTensors[0].GetTensorData<float>();
@@ -731,7 +737,7 @@ namespace Game
 
         const char *outputNames[] = {"presence", "scores"};
 
-        auto outputTensors = sessEstimator->Run(Ort::RunOptions{nullptr}, inputNames, inputTensors.data(),
+        auto outputTensors = sessEstimator->Run(m_runOptions, inputNames, inputTensors.data(),
                                                 inputTensors.size(), outputNames, 2);
 
         const bool *presenceDataBool = outputTensors[0].GetTensorData<bool>();

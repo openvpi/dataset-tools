@@ -43,6 +43,7 @@ namespace Game
                         std::string &msg);
         bool is_open() const;
         static void terminate();
+        bool is_terminated() const;
 
         bool forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                      std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
@@ -78,6 +79,7 @@ namespace Game
 
         Ort::Env env;
         Ort::SessionOptions sessionOptions;
+        Ort::RunOptions m_runOptions;
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
         std::filesystem::path modelDir;
