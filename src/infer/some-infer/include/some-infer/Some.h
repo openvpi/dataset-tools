@@ -16,10 +16,6 @@ namespace Some
         int note, start, duration;
     };
 
-    struct SOME_INFER_EXPORT Dur {
-        int note, start, duration;
-    };
-
     class SOME_INFER_EXPORT Some {
     public:
         explicit Some(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id);
