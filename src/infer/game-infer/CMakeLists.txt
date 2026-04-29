@@ -84,7 +84,8 @@ if (ONNXRUNTIME_ENABLE_DML)
 endif ()
 
 find_package(wolf-midi CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME} PUBLIC SndFile::sndfile nlohmann_json::nlohmann_json audio-util wolf-midi::wolf-midi dstools-core)
+target_link_libraries(${PROJECT_NAME} PUBLIC SndFile::sndfile nlohmann_json::nlohmann_json audio-util wolf-midi::wolf-midi)
+target_link_libraries(${PROJECT_NAME} PRIVATE dstools-core)
 target_link_libraries(${PROJECT_NAME} PUBLIC onnxruntime)
 
 target_sources(${PROJECT_NAME} PRIVATE ${_src})
