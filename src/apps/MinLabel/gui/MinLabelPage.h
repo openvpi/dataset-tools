@@ -69,6 +69,7 @@ namespace Minlabel {
         QString dirname;
         QString lastFile;
         bool playing = false;
+        bool m_isDirty = false;
 
         // Services
         dstools::AppSettings m_settings;

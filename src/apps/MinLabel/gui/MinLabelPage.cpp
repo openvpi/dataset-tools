@@ -137,6 +137,13 @@ namespace Minlabel {
         connect(treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this,
                 &MinLabelPage::_q_updateProgress);
 
+        connect(textWidget->contentText, &QPlainTextEdit::textChanged, this, [this]() {
+            m_isDirty = true;
+        });
+        connect(textWidget->wordsText, &QLineEdit::textChanged, this, [this]() {
+            m_isDirty = true;
+        });
+
         applyConfig();
     }
 
@@ -185,7 +192,7 @@ namespace Minlabel {
     }
 
     bool MinLabelPage::hasUnsavedChanges() const {
-        return QFile::exists(lastFile);
+        return m_isDirty;
     }
 
     bool MinLabelPage::save() {
@@ -272,6 +279,7 @@ namespace Minlabel {
         QTextStream labIn(&labFile);
         labIn << labContent;
         labFile.close();
+        m_isDirty = false;
         return true;
     }
 
