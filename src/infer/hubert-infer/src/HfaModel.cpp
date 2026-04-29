@@ -29,7 +29,7 @@ namespace HFA {
             }
 #endif
 
-#if ONNXRUNTIME_ENABLE_CUDA
+#ifdef ONNXRUNTIME_ENABLE_CUDA
             case ExecutionProvider::CUDA: {
                 std::string errorMessage;
                 if (!initCUDA(m_session_options, device_id, &errorMessage)) {

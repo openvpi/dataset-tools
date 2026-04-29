@@ -34,7 +34,7 @@ namespace Some
         }
 #endif
 
-#if ONNXRUNTIME_ENABLE_CUDA
+#ifdef ONNXRUNTIME_ENABLE_CUDA
         case ExecutionProvider::CUDA:
         {
             std::string errorMessage;
