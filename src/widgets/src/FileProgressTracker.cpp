@@ -10,29 +10,7 @@ FileProgressTracker::FileProgressTracker(DisplayStyle style, QWidget *parent)
     : QWidget(parent), m_style(style),
       m_format(QStringLiteral("%1 / %2 (%3%)")),
       m_emptyText(QStringLiteral("No files")) {
-    if (m_style == LabelOnly) {
-        auto *layout = new QVBoxLayout(this);
-        layout->setContentsMargins(0, 0, 0, 0);
-        layout->setSpacing(0);
-
-        m_label = new QLabel(this);
-        m_label->setStyleSheet(
-            "background-color: #22222C; color: #9898A8; font-size: 10px; padding: 4px 8px; border-top: 1px solid #33333E;");
-        m_label->setAlignment(Qt::AlignCenter);
-        layout->addWidget(m_label);
-    } else {
-        auto *layout = new QHBoxLayout(this);
-        layout->setContentsMargins(0, 0, 0, 0);
-
-        m_label = new QLabel(QStringLiteral("progress:"), this);
-        layout->addWidget(m_label);
-
-        m_progressBar = new QProgressBar(this);
-        m_progressBar->setRange(0, 100);
-        m_progressBar->setValue(0);
-        layout->addWidget(m_progressBar);
-    }
-
+    buildLayout();
     updateDisplay();
 }
 
@@ -56,30 +34,33 @@ void FileProgressTracker::setDisplayStyle(DisplayStyle style) {
     delete m_progressBar;
     m_progressBar = nullptr;
 
+    buildLayout();
+    updateDisplay();
+}
+
+void FileProgressTracker::buildLayout() {
     if (m_style == LabelOnly) {
-        auto *newLayout = new QVBoxLayout(this);
-        newLayout->setContentsMargins(0, 0, 0, 0);
-        newLayout->setSpacing(0);
+        auto *l = new QVBoxLayout(this);
+        l->setContentsMargins(0, 0, 0, 0);
+        l->setSpacing(0);
 
         m_label = new QLabel(this);
         m_label->setStyleSheet(
             "background-color: #22222C; color: #9898A8; font-size: 10px; padding: 4px 8px; border-top: 1px solid #33333E;");
         m_label->setAlignment(Qt::AlignCenter);
-        newLayout->addWidget(m_label);
+        l->addWidget(m_label);
     } else {
-        auto *newLayout = new QHBoxLayout(this);
-        newLayout->setContentsMargins(0, 0, 0, 0);
+        auto *l = new QHBoxLayout(this);
+        l->setContentsMargins(0, 0, 0, 0);
 
         m_label = new QLabel(QStringLiteral("progress:"), this);
-        newLayout->addWidget(m_label);
+        l->addWidget(m_label);
 
         m_progressBar = new QProgressBar(this);
         m_progressBar->setRange(0, 100);
         m_progressBar->setValue(0);
-        newLayout->addWidget(m_progressBar);
+        l->addWidget(m_progressBar);
     }
-
-    updateDisplay();
 }
 
 void FileProgressTracker::setFormat(const QString &format) {

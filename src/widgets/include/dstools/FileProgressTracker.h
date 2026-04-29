@@ -32,6 +32,7 @@ public:
     void setEmptyText(const QString &text);
 
 private:
+    void buildLayout();
     void updateDisplay();
 
     DisplayStyle m_style;
