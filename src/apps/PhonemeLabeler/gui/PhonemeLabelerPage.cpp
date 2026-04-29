@@ -571,7 +571,14 @@ void PhonemeLabelerPage::onStop() {
 }
 
 void PhonemeLabelerPage::updatePlaybackState() {
-    // Update play/pause icon based on state
+    const bool playing = m_playWidget->isPlaying();
+    if (playing) {
+        m_actPlayPause->setIcon(QIcon(":/icons/pause.svg"));
+        m_actPlayPause->setText(tr("Pause"));
+    } else {
+        m_actPlayPause->setIcon(QIcon(":/icons/play.svg"));
+        m_actPlayPause->setText(tr("Play"));
+    }
 }
 
 void PhonemeLabelerPage::updateScrollBar() {
