@@ -255,6 +255,11 @@ void TaskWindow::onRunClicked() {
     if (m_isRunning) return;
     m_isRunning = true;
     m_runBtn->setEnabled(false);
+    m_finishedTasks = 0;
+    m_errorTasks = 0;
+    m_totalTasks = 0;
+    m_errorDetails.clear();
+    m_progressBar->setValue(0);
     runTask();
 }
 
