@@ -44,6 +44,8 @@ private:
     QLabel *m_statusNotes = nullptr;
     QLabel *m_statusTool = nullptr;
 
+    bool m_fileLoaded = false;
+
     void buildMenuBar();
     void buildStatusBar();
     void updateWindowTitle();

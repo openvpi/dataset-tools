@@ -42,10 +42,13 @@ namespace dstools {
 
             // Connect page signals to status bar / title updates
             connect(m_page, &PitchLabelerPage::fileStatusChanged, this, [this](const QString &name) {
-                if (name.isEmpty())
+                if (name.isEmpty()) {
                     m_statusFile->setText(QStringLiteral("未加载文件"));
-                else
+                    m_fileLoaded = false;
+                } else {
                     m_statusFile->setText(name);
+                    m_fileLoaded = true;
+                }
             });
             connect(m_page, &PitchLabelerPage::positionChanged, this, [this](double sec) {
                 int minutes = static_cast<int>(sec) / 60;
@@ -181,11 +184,8 @@ namespace dstools {
         void MainWindow::updateWindowTitle() {
             QString title = QStringLiteral("DiffSinger 音高标注器");
             if (!m_page->workingDirectory().isEmpty()) {
-                // Show current file if loaded
-                // We check the page's hasUnsavedChanges for the modified indicator
-                // The fileStatusChanged signal provides the filename
-                QString statusText = m_statusFile->text();
-                if (statusText != QStringLiteral("未加载文件") && !statusText.isEmpty()) {
+                if (m_fileLoaded) {
+                    QString statusText = m_statusFile->text();
                     title = statusText + (m_page->hasUnsavedChanges() ? " *" : "") + " - " + title;
                 }
             }
