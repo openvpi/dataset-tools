@@ -21,6 +21,7 @@ set(CORE_SOURCES
     src/LocalFileIOProvider.cpp
     src/DsDocumentAdapter.cpp
     src/TextGridDocumentAdapter.cpp
+    src/ModelManager.cpp
 )
 
 set(CORE_HEADERS
@@ -48,6 +49,8 @@ set(CORE_HEADERS
     include/dstools/IModelDownloader.h
     include/dstools/IQualityMetrics.h
     include/dstools/IStepPlugin.h
+    include/dstools/IModelProvider.h
+    include/dstools/ModelManager.h
 )
 
 set(CORE_RESOURCES
