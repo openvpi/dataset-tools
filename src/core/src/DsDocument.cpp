@@ -1,6 +1,8 @@
 #include <dstools/DsDocument.h>
 #include <dstools/JsonHelper.h>
 
+#include <QDebug>
+
 namespace dstools {
 
 // ── Path encoding ─────────────────────────────────────────────────────
@@ -37,9 +39,13 @@ DsDocument DsDocument::load(const QString &path, QString &error) {
     }
 
     doc.m_sentences.reserve(json.size());
-    for (auto &item : json) {
+    for (size_t i = 0; i < json.size(); ++i) {
+        auto &item = json[i];
         if (item.is_object()) {
             doc.m_sentences.push_back(std::move(item));
+        } else {
+            qWarning() << "DsDocument::load: array element" << i << "is not an object (type:"
+                        << QString::fromStdString(item.type_name()) << "), skipping";
         }
     }
 
