@@ -19,6 +19,8 @@ set(CORE_SOURCES
     src/TranscriptionCsv.cpp
     src/TranscriptionPipeline.cpp
     src/LocalFileIOProvider.cpp
+    src/DsDocumentAdapter.cpp
+    src/TextGridDocumentAdapter.cpp
 )
 
 set(CORE_HEADERS
@@ -38,6 +40,9 @@ set(CORE_HEADERS
     include/dstools/TranscriptionPipeline.h
     include/dstools/IFileIOProvider.h
     include/dstools/LocalFileIOProvider.h
+    include/dstools/IDocument.h
+    include/dstools/DsDocumentAdapter.h
+    include/dstools/TextGridDocumentAdapter.h
 )
 
 set(CORE_RESOURCES
