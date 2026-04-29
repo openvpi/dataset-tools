@@ -25,7 +25,7 @@ namespace AudioUtil
         } else if (format & SF_FORMAT_PCM_32) {
             bit_depth = 32;
         } else {
-            std::cerr << "不支持的 FLAC 文件位深" << std::endl;
+            std::cerr << "Unsupported FLAC bit depth" << std::endl;
             return;
         }
 
@@ -59,7 +59,6 @@ namespace AudioUtil
             }
         }
 
-        std::cout << "Successfully wrote FLAC data to VIO." << std::endl;
     }
 
 } // namespace AudioUtil
