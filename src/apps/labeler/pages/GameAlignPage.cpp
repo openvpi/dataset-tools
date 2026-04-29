@@ -97,4 +97,24 @@ QString GameAlignPage::workingDirectory() const {
     return m_workingDir;
 }
 
+int GameAlignPage::progressTotal() const {
+    return m_progressTotal;
+}
+
+int GameAlignPage::progressCurrent() const {
+    return m_progressCurrent;
+}
+
+bool GameAlignPage::isRunning() const {
+    return m_running;
+}
+
+QString GameAlignPage::progressMessage() const {
+    return m_progressMessage;
+}
+
+void GameAlignPage::cancelOperation() {
+    m_running = false;
+}
+
 } // namespace dstools::labeler

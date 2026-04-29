@@ -169,4 +169,24 @@ QString BuildCsvPage::workingDirectory() const {
     return m_workingDir;
 }
 
+int BuildCsvPage::progressTotal() const {
+    return m_progressTotal;
+}
+
+int BuildCsvPage::progressCurrent() const {
+    return m_progressCurrent;
+}
+
+bool BuildCsvPage::isRunning() const {
+    return m_running;
+}
+
+QString BuildCsvPage::progressMessage() const {
+    return m_progressMessage;
+}
+
+void BuildCsvPage::cancelOperation() {
+    m_running = false;
+}
+
 } // namespace dstools::labeler
