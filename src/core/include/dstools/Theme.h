@@ -57,7 +57,8 @@ public:
     /// Initialize theme system. Call once from main(), before showing any window.
     /// Reads saved preference from AppSettings key "theme" (per-app).
     /// @param defaultMode  fallback if no saved preference exists
-    void init(QApplication &app, Mode defaultMode = Dark);
+    /// @param settings     optional AppSettings for persisting theme preference
+    void init(QApplication &app, Mode defaultMode = Dark, AppSettings *settings = nullptr);
 
     /// Switch theme at runtime (persists the choice).
     void setMode(Mode mode);
@@ -87,6 +88,7 @@ private:
     void onSystemSchemeChanged();
 
     QApplication *m_app = nullptr;
+    AppSettings *m_settings = nullptr;
     Mode m_mode = Dark;
     bool m_isDark = true;
     Palette m_palette;

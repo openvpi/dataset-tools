@@ -1,5 +1,8 @@
 #include <dstools/Theme.h>
 
+#include <dstools/AppSettings.h>
+#include <dstools/CommonKeys.h>
+
 #include <QActionGroup>
 #include <QDebug>
 #include <QFile>
@@ -59,12 +62,15 @@ Theme::Theme(QObject *parent) : QObject(parent) {}
 
 // ── Public API ───────────────────────────────────────────────────────
 
-void Theme::init(QApplication &app, Mode defaultMode) {
+void Theme::init(QApplication &app, Mode defaultMode, AppSettings *settings) {
     m_app = &app;
-    m_mode = defaultMode;
+    m_settings = settings;
 
-    // TODO: load saved preference from AppSettings when available
-    // For now, use the default mode passed in.
+    if (m_settings) {
+        m_mode = static_cast<Mode>(m_settings->get(CommonKeys::ThemeMode));
+    } else {
+        m_mode = defaultMode;
+    }
 
     // Listen for system theme changes
     if (auto *hints = QGuiApplication::styleHints()) {
@@ -80,7 +86,9 @@ void Theme::setMode(Mode mode) {
         return;
     m_mode = mode;
 
-    // TODO: persist to AppSettings
+    if (m_settings) {
+        m_settings->set(CommonKeys::ThemeMode, static_cast<int>(mode));
+    }
 
     applyTheme(resolveIsDark());
 

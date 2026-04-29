@@ -6,6 +6,7 @@
 namespace dstools::CommonKeys {
     // General
     inline const SettingsKey<QString> LastDir("General/lastDir", "");
+    inline const SettingsKey<int> ThemeMode("General/themeMode", 0);
 
     // Shortcuts shared by multiple apps
     inline const SettingsKey<QString> ShortcutOpen("Shortcuts/open", "Ctrl+O");
