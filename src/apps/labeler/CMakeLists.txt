@@ -45,6 +45,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler
     ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler/gui
     ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler/gui/ui
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/hubertfa
 )
 
 # MinLabel Page sources
@@ -112,19 +116,65 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler/gui/ui/PianoRollView.h
     ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler/gui/ui/PropertyPanel.cpp
     ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler/gui/ui/PropertyPanel.h
+    ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler/gui/ui/commands/PitchCommands.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/PitchLabeler/gui/ui/commands/PitchCommands.h
+)
+
+# Pipeline Page sources (Slicer, LyricFA, HubertFA)
+target_sources(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/SlicerPage.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/SlicerPage.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/Slicer.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/Slicer.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/WorkThread.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/WorkThread.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/MathUtils.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/slicer/Enumerations.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/LyricFAPage.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/LyricFAPage.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/AsrTask.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/AsrTask.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/LyricMatchTask.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/LyricMatchTask.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/Asr.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/Asr.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/MatchLyric.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/MatchLyric.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/LyricMatcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/LyricMatcher.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/SequenceAligner.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/SequenceAligner.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/ChineseProcessor.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/ChineseProcessor.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/SmartHighlighter.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/SmartHighlighter.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/LyricData.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/Utils.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/lyricfa/Utils.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/hubertfa/HubertFAPage.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/hubertfa/HubertFAPage.h
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/hubertfa/HfaTask.cpp
+    ${CMAKE_SOURCE_DIR}/src/apps/pipeline/hubertfa/HfaTask.h
 )
 
 # Additional libraries for embedded Pages
 find_package(cpp-pinyin CONFIG REQUIRED)
 find_package(cpp-kana CONFIG REQUIRED)
 find_package(FFTW3 CONFIG REQUIRED)
+find_package(SndFile CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     dstools-audio
+    audio-util
+    hubert-infer
+    FunAsr
     cpp-pinyin::cpp-pinyin
     cpp-kana::cpp-kana
     textgrid
     FFTW3::fftw3
+    SndFile::sndfile
+    nlohmann_json::nlohmann_json
 )
 
 if(WIN32)

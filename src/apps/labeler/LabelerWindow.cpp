@@ -9,6 +9,10 @@
 #include "pages/BuildDsPage.h"
 #include "pages/GameAlignPage.h"
 
+#include <pipeline/slicer/SlicerPage.h>
+#include <pipeline/lyricfa/LyricFAPage.h>
+#include <pipeline/hubertfa/HubertFAPage.h>
+
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDir>
@@ -216,18 +220,12 @@ QWidget *LabelerWindow::ensurePage(int step) {
         QWidget *page = nullptr;
 
         switch (step) {
-        case 0: { // Step 1: Slice — placeholder until SlicerPage integration
-            auto *lbl = new QLabel(tr("Audio Slicer \u2014 Will integrate SlicerPage"));
-            lbl->setAlignment(Qt::AlignCenter);
-            auto f = lbl->font(); f.setPointSize(16); lbl->setFont(f);
-            page = lbl;
+        case 0: { // Step 1: Slice
+            page = new SlicerPage(this);
             break;
         }
-        case 1: { // Step 2: ASR — placeholder until LyricFAPage integration
-            auto *lbl = new QLabel(tr("Lyric ASR \u2014 Will integrate LyricFAPage"));
-            lbl->setAlignment(Qt::AlignCenter);
-            auto f = lbl->font(); f.setPointSize(16); lbl->setFont(f);
-            page = lbl;
+        case 1: { // Step 2: ASR
+            page = new LyricFAPage(this);
             break;
         }
         case 2: { // Step 3: Label (MinLabel)
@@ -237,11 +235,8 @@ QWidget *LabelerWindow::ensurePage(int step) {
             page = p;
             break;
         }
-        case 3: { // Step 4: Align — placeholder until HubertFAPage integration
-            auto *lbl = new QLabel(tr("Phoneme Alignment \u2014 Will integrate HubertFAPage"));
-            lbl->setAlignment(Qt::AlignCenter);
-            auto f = lbl->font(); f.setPointSize(16); lbl->setFont(f);
-            page = lbl;
+        case 3: { // Step 4: Align
+            page = new HubertFAPage(this);
             break;
         }
         case 4: { // Step 5: Phone (PhonemeLabeler)
