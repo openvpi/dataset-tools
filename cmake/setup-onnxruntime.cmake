@@ -149,7 +149,7 @@ macro(download_onnxruntime_from_nuget)
     file(REMOVE ${_file_path_ort})
 
     file(COPY ${_extract_dir_ort}/build/native/include DESTINATION ${_extract_dir})
-    file(MAKE_DIRECTORY "${extract_dir}/lib")
+    file(MAKE_DIRECTORY "${_extract_dir}/lib")
     copy_contents("${_extract_dir_ort}/runtimes/win-x64/native" "${_extract_dir}/lib")
 
     file(REMOVE_RECURSE ${_extract_dir_ort})
@@ -176,7 +176,7 @@ macro(download_dml_from_nuget)
     file(REMOVE ${_file_path_dml})
 
     file(COPY ${_extract_dir_dml}/include DESTINATION ${_extract_dir})
-    file(MAKE_DIRECTORY "${extract_dir}/lib")
+    file(MAKE_DIRECTORY "${_extract_dir}/lib")
     copy_contents("${_extract_dir_dml}/bin/x64-win" "${_extract_dir}/lib")
 
     file(REMOVE_RECURSE ${_extract_dir_dml})
