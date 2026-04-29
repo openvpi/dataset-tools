@@ -50,10 +50,18 @@ endif ()
 if (WIN32)
     string(REPLACE "\\" "/" _install_dir ${CMAKE_INSTALL_PREFIX})
 
+    get_target_property(_deploy_targets DeployedTargets TARGETS)
+    # Copy only deployed executables (not test executables)
+    foreach(_target ${_deploy_targets})
+        install(CODE "
+            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}\")
+        ")
+    endforeach()
+    # Copy all DLLs (shared libraries needed at runtime)
     install(CODE "
-        file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.dll\" \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.exe\")
-        foreach(_file \${_files})
-            file(COPY \${_file} DESTINATION \"${_install_dir}\")
+        file(GLOB _dlls \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.dll\")
+        foreach(_dll \${_dlls})
+            file(COPY \${_dll} DESTINATION \"${_install_dir}\")
         endforeach()
     ")
 
