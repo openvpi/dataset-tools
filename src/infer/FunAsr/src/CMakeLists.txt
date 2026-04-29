@@ -1,34 +1,38 @@
-file(GLOB_RECURSE _src *.h *.cpp)
+set(FUNASR_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Audio.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FeatureExtract.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FeatureQueue.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Model.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/paraformer_onnx.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SpeechWrap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/util.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Vocab.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/alignedmem.cpp
+)
 
-add_library(${PROJECT_NAME} ${_src})
-target_include_directories(${PROJECT_NAME} PUBLIC *.h)
+add_library(${PROJECT_NAME} ${FUNASR_SOURCES})
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../onnxruntime/include
+)
+
+target_link_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../onnxruntime/lib
+)
 
 find_package(fftw3 CONFIG REQUIRED)
-target_include_directories(${PROJECT_NAME} PUBLIC ${FFTW3_INCLUDE_DIRS})
-target_link_directories(${PROJECT_NAME} PUBLIC ${FFTW3_LIBRARY_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC fftw3 fftw3f)
-
-include_directories(../include)
-target_include_directories(${PROJECT_NAME} PUBLIC ../../onnxruntime/include)
-target_link_directories(${PROJECT_NAME} PUBLIC ../../onnxruntime/lib)
 
 if (WIN32)
     target_compile_definitions(${PROJECT_NAME} PUBLIC -D_RPASR_API_EXPORT)
-else ()
+else()
+    find_package(OpenBLAS CONFIG QUIET)
+    if (OpenBLAS_FOUND)
+        target_link_libraries(${PROJECT_NAME} PUBLIC OpenBLAS::OpenBLAS)
+    endif()
     set(EXTRA_LIBS pthread)
-    target_include_directories(${PROJECT_NAME} PUBLIC "/usr/local/opt/fftw/include")
-    target_link_directories(${PROJECT_NAME} PUBLIC "/usr/local/opt/fftw/lib")
+endif()
 
-    target_include_directories(${PROJECT_NAME} PUBLIC "/usr/local/opt/openblas/include")
-    target_link_directories(${PROJECT_NAME} PUBLIC "/usr/local/opt/openblas/lib")
-
-    target_include_directories(${PROJECT_NAME} PUBLIC "/usr/include")
-    target_link_directories(${PROJECT_NAME} PUBLIC "/usr/lib64")
-    include_directories(${ONNXRUNTIME_DIR}/include)
-endif ()
-
-target_include_directories(${PROJECT_NAME} PUBLIC ../include)
 target_link_libraries(${PROJECT_NAME} PUBLIC onnxruntime ${EXTRA_LIBS})
-
-
-
