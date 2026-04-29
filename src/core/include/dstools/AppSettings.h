@@ -323,7 +323,7 @@ private:
     }
 
     void loadFromDisk();
-    void saveToDisk();
+    bool saveToDisk();
 
     QString m_filePath;
     nlohmann::json m_data;

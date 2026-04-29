@@ -40,12 +40,12 @@ void AppSettings::loadFromDisk() {
     }
 }
 
-void AppSettings::saveToDisk() {
+bool AppSettings::saveToDisk() {
     // Use QSaveFile for Qt-native atomic writes (preferred in Qt context)
     QSaveFile file(m_filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qWarning() << "AppSettings: cannot open" << m_filePath << "for writing";
-        return;
+        return false;
     }
 
     const std::string content = m_data.dump(4);
@@ -54,7 +54,9 @@ void AppSettings::saveToDisk() {
 
     if (!file.commit()) {
         qWarning() << "AppSettings: failed to commit (atomic write)" << m_filePath;
+        return false;
     }
+    return true;
 }
 
 void AppSettings::reload() {
