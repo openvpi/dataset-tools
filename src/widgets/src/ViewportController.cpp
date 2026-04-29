@@ -23,9 +23,13 @@ void ViewportController::setPixelsPerSecond(double pps) {
 }
 
 void ViewportController::zoomAt(double centerSec, double factor) {
+    if (factor == 0.0)
+        return;
     double newPPS = m_state.pixelsPerSecond * factor;
     newPPS = std::clamp(newPPS, m_minPixelsPerSecond, m_maxPixelsPerSecond);
     double duration = m_state.endSec - m_state.startSec;
+    if (duration == 0.0)
+        return;
     double newDuration = duration / factor;
     double ratio = (centerSec - m_state.startSec) / duration;
     double newStart = centerSec - ratio * newDuration;
