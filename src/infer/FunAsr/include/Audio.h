@@ -2,7 +2,9 @@
 #define AUDIO_H
 
 #include <cstdint>
+#include <memory>
 #include <queue>
+#include <vector>
 
 namespace FunAsr {
     class AudioFrame {
@@ -27,14 +29,14 @@ namespace FunAsr {
         int fetch(float *&dout, int &len, int &flag);
 
     private:
-        float *speech_data;
-        int16_t *speech_buff;
+        std::vector<float> speech_data;
+        std::vector<int16_t> speech_buff;
         int speech_len;
         int speech_align_len;
         int offset;
         float align_size;
         int data_type;
-        std::queue<AudioFrame *> frame_queue;
+        std::queue<std::unique_ptr<AudioFrame>> frame_queue;
     };
 }
 #endif

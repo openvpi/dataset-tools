@@ -1,5 +1,6 @@
 #include "Vocab.h"
 
+#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -72,6 +73,8 @@ namespace FunAsr {
         std::string combine;
 
         for (auto it = in.begin(); it != in.end(); it++) {
+            if (*it < 0 || *it >= static_cast<int>(vocab.size()))
+                continue;
             std::string word = vocab[*it];
 
             // step1 space character skips
@@ -110,7 +113,8 @@ namespace FunAsr {
 
                     // pre word is chinese
                     if (!is_pre_english) {
-                        word[0] = word[0] - 32;
+                        if (word[0] >= 'a' && word[0] <= 'z')
+                            word[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(word[0])));
                         words.push_back(word);
                         pre_english_len = word.size();
 
@@ -121,7 +125,8 @@ namespace FunAsr {
 
                         // single letter turn to upper case
                         if (word.size() == 1) {
-                            word[0] = word[0] - 32;
+                            if (word[0] >= 'a' && word[0] <= 'z')
+                                word[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(word[0])));
                         }
 
                         if (pre_english_len > 1) {

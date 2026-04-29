@@ -3,23 +3,13 @@
 #include <ComDefine.h>
 
 namespace FunAsr {
-    FeatureQueue::FeatureQueue() {
-        buff = new Tensor<float>(67, 80);
-        window_size = 67;
-        buff_idx = 0;
-    }
+    FeatureQueue::FeatureQueue()
+        : buff(std::make_unique<Tensor<float>>(67, 80)), window_size(67), buff_idx(0) {}
 
-    FeatureQueue::~FeatureQueue() {
-        while (!feature_queue.empty()) {
-            delete feature_queue.front();
-            feature_queue.pop();
-        }
-        delete buff;
-    }
+    FeatureQueue::~FeatureQueue() = default;
 
     void FeatureQueue::reinit(const int &size) {
-        delete buff;
-        buff = new Tensor<float>(size, 80);
+        buff = std::make_unique<Tensor<float>>(size, 80);
         buff_idx = 0;
         window_size = size;
     }
@@ -34,23 +24,23 @@ namespace FunAsr {
         buff_idx++;
 
         if (flag == S_END) {
-            auto *tmp = new Tensor<float>(buff_idx, 80);
+            auto tmp = std::make_unique<Tensor<float>>(buff_idx, 80);
             memcpy(tmp->buff, buff->buff, buff_idx * 80 * sizeof(float));
-            feature_queue.push(tmp);
+            feature_queue.push(std::move(tmp));
             buff_idx = 0;
         } else if (buff_idx == window_size) {
-            feature_queue.push(buff);
-            auto *tmp = new Tensor<float>(window_size, 80);
-            memcpy(tmp->buff, buff->buff + (window_size - 3) * 80, 3 * 80 * sizeof(float));
+            feature_queue.push(std::move(buff));
+            auto tmp = std::make_unique<Tensor<float>>(window_size, 80);
+            memcpy(tmp->buff, feature_queue.back()->buff + (window_size - 3) * 80, 3 * 80 * sizeof(float));
             buff_idx = 3;
-            buff = tmp;
+            buff = std::move(tmp);
         }
     }
 
     Tensor<float> *FeatureQueue::pop() {
-        Tensor<float> *tmp = feature_queue.front();
+        auto tmp = std::move(feature_queue.front());
         feature_queue.pop();
-        return tmp;
+        return tmp.release();
     }
 
     int FeatureQueue::size() const {

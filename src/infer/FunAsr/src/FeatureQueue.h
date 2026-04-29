@@ -2,13 +2,14 @@
 #define FEATUREQUEUE_H
 
 #include "Tensor.h"
+#include <memory>
 #include <queue>
 
 namespace FunAsr {
     class FeatureQueue {
     private:
-        std::queue<Tensor<float> *> feature_queue;
-        Tensor<float> *buff;
+        std::queue<std::unique_ptr<Tensor<float>>> feature_queue;
+        std::unique_ptr<Tensor<float>> buff;
         int buff_idx;
         int window_size;
 
