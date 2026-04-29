@@ -89,10 +89,12 @@ bool DsDocument::isEmpty() const {
 }
 
 nlohmann::json &DsDocument::sentence(int index) {
+    Q_ASSERT(index >= 0 && index < static_cast<int>(m_sentences.size()));
     return m_sentences[index];
 }
 
 const nlohmann::json &DsDocument::sentence(int index) const {
+    Q_ASSERT(index >= 0 && index < static_cast<int>(m_sentences.size()));
     return m_sentences[index];
 }
 
