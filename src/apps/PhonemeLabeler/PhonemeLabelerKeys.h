@@ -30,4 +30,8 @@ namespace PhonemeLabelerKeys {
     inline const dstools::SettingsKey<bool> PowerEnabled("View/powerEnabled", true);
     inline const dstools::SettingsKey<bool> SpectrogramEnabled("View/spectrogramEnabled", true);
     inline const dstools::SettingsKey<QString> SpectrogramColorStyle("View/spectrogramColorStyle", "Orange-Yellow");
+
+    // Window state (stored as base64-encoded QByteArray)
+    inline const dstools::SettingsKey<QString> WindowGeometry("Window/geometry", "");
+    inline const dstools::SettingsKey<QString> WindowState("Window/state", "");
 }

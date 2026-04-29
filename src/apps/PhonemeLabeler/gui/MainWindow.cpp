@@ -6,7 +6,6 @@
 #include <QFileInfo>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QSettings>
 #include <QStatusBar>
 #include <QToolBar>
 
@@ -48,24 +47,22 @@ MainWindow::MainWindow(QWidget *parent)
         updateWindowTitle();
     });
 
-    // Restore window state via native QSettings
-    QSettings settings("PhonemeLabeler", "PhonemeLabeler");
-    auto geom = settings.value("geometry").toByteArray();
-    if (!geom.isEmpty()) {
-        restoreGeometry(geom);
-    }
-    auto state = settings.value("windowState").toByteArray();
-    if (!state.isEmpty()) {
-        restoreState(state);
-    }
+    // Restore window state
+    auto geomB64 = m_page->settings().get(PhonemeLabelerKeys::WindowGeometry);
+    if (!geomB64.isEmpty())
+        restoreGeometry(QByteArray::fromBase64(geomB64.toUtf8()));
+    auto stateB64 = m_page->settings().get(PhonemeLabelerKeys::WindowState);
+    if (!stateB64.isEmpty())
+        restoreState(QByteArray::fromBase64(stateB64.toUtf8()));
 
     updateWindowTitle();
 }
 
 MainWindow::~MainWindow() {
-    QSettings settings("PhonemeLabeler", "PhonemeLabeler");
-    settings.setValue("geometry", saveGeometry());
-    settings.setValue("windowState", saveState());
+    m_page->settings().set(PhonemeLabelerKeys::WindowGeometry,
+                           QString::fromLatin1(saveGeometry().toBase64()));
+    m_page->settings().set(PhonemeLabelerKeys::WindowState,
+                           QString::fromLatin1(saveState().toBase64()));
 }
 
 void MainWindow::openFile(const QString &path) {
@@ -179,9 +176,10 @@ void MainWindow::updateWindowTitle() {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     if (m_page->maybeSave()) {
-        QSettings settings("PhonemeLabeler", "PhonemeLabeler");
-        settings.setValue("geometry", saveGeometry());
-        settings.setValue("windowState", saveState());
+        m_page->settings().set(PhonemeLabelerKeys::WindowGeometry,
+                               QString::fromLatin1(saveGeometry().toBase64()));
+        m_page->settings().set(PhonemeLabelerKeys::WindowState,
+                               QString::fromLatin1(saveState().toBase64()));
         event->accept();
     } else {
         event->ignore();
