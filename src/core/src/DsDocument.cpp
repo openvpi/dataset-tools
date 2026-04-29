@@ -84,6 +84,21 @@ bool DsDocument::save(QString &error) const {
     return save(QString(), error);
 }
 
+Result<DsDocument> DsDocument::loadFile(const QString &path) {
+    QString error;
+    auto doc = load(path, error);
+    if (!error.isEmpty())
+        return Result<DsDocument>::fail(error);
+    return doc;
+}
+
+Result<void> DsDocument::saveFile(const QString &path) const {
+    QString error;
+    if (!save(path.isEmpty() ? QString() : path, error))
+        return Result<void>::fail(error);
+    return {};
+}
+
 // ── Sentence access ───────────────────────────────────────────────────
 
 int DsDocument::sentenceCount() const {

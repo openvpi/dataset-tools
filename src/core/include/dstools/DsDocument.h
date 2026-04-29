@@ -33,6 +33,7 @@
 #include <nlohmann/json.hpp>
 
 #include <QString>
+#include <dstools/Result.h>
 
 #include <vector>
 
@@ -48,14 +49,23 @@ public:
     /// Load a DS file. Returns an empty document on failure.
     /// @param path   File path (QString, Unicode-safe)
     /// @param error  Set to error description on failure, empty on success
+    [[deprecated("Use loadFile() returning Result<DsDocument> instead")]]
     static DsDocument load(const QString &path, QString &error);
+
+    /// Load a DS file (Result-based API).
+    static Result<DsDocument> loadFile(const QString &path);
 
     /// Save the document to a DS file.
     /// @param path   File path (QString, Unicode-safe). Empty = use original path.
     /// @param error  Set to error description on failure
     /// @return true on success
+    [[deprecated("Use saveFile() returning Result<void> instead")]]
     bool save(const QString &path, QString &error) const;
+    [[deprecated("Use saveFile() returning Result<void> instead")]]
     bool save(QString &error) const;
+
+    /// Save the document (Result-based API).
+    Result<void> saveFile(const QString &path = {}) const;
 
     // ── Sentence access ───────────────────────────────────────────────
 
