@@ -43,6 +43,11 @@ set(CORE_HEADERS
     include/dstools/IDocument.h
     include/dstools/DsDocumentAdapter.h
     include/dstools/TextGridDocumentAdapter.h
+    include/dstools/IExportFormat.h
+    include/dstools/IG2PProvider.h
+    include/dstools/IModelDownloader.h
+    include/dstools/IQualityMetrics.h
+    include/dstools/IStepPlugin.h
 )
 
 set(CORE_RESOURCES
