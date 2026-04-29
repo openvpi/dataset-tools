@@ -9,7 +9,6 @@ namespace FunAsr {
         float *in;
         int in_size;
         int total_size;
-        int next_cache_size;
 
     public:
         SpeechWrap();

@@ -27,7 +27,12 @@ namespace FunAsr {
     void SpeechWrap::update(int offset) {
         int in_offset = offset - cache_size;
         cache_size = (total_size - offset);
-        memcpy(cache, in + in_offset, cache_size * sizeof(float));
+        if (cache_size > 400) {
+            cache_size = 400;
+        }
+        if (cache_size > 0) {
+            memcpy(cache, in + in_offset, cache_size * sizeof(float));
+        }
     }
 
     float &SpeechWrap::operator[](int i) {
