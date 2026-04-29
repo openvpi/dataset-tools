@@ -27,7 +27,6 @@ find_package(FFmpeg CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    dstools-core
     Qt${QT_VERSION_MAJOR}::Core
 )
 
