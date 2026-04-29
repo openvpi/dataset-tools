@@ -54,16 +54,6 @@
 
 ---
 
-## TD-006: AppSettings 每次 set() 都写磁盘 [低]
-
-**位置:** src/core/src/AppSettings.cpp
-
-**描述:** 每次调用 `set()` 立即序列化到 JSON 文件。高频操作（如窗口拖动保存位置）会产生频繁 IO。
-
-**修复:** 添加 debounce 或批量写入机制。
-
----
-
 ## TD-007: AudioDecoder 全量解码到内存 [低]
 
 **位置:** src/audio/src/AudioDecoder.cpp

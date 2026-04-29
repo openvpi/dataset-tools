@@ -22,12 +22,12 @@
 ## GAP-002: 跨平台声明与实际支持不匹配 [严重]
 
 - README声称: "Microsoft Windows (10~11), Apple macOS (11+), Linux (Ubuntu)"
-- 实际CI: 仅Windows构建和测试
+- 实际CI: 仅Windows构建和测试 (已添加PR触发和测试步骤，但仍仅Windows)
 - 实际代码问题:
-  - Linux无install/deploy逻辑 (src/CMakeLists.txt 无else分支)
-  - MinLabel字典文件仅Windows复制
+  - ~~Linux无install/deploy逻辑 (src/CMakeLists.txt 无else分支)~~ ✅ 已修复 (Linux install逻辑已添加, *.exe glob已移除)
+  - ~~MinLabel字典文件仅Windows复制~~ ✅ 已修复
   - FunAsr CMakeLists.txt硬编码macOS Homebrew路径
-  - setup-onnxruntime.cmake不支持Linux ARM64
+  - ~~setup-onnxruntime.cmake不支持Linux ARM64~~ ✅ 已修复
 - 影响: macOS/Linux用户构建可能失败或运行时功能缺失
 
 ## GAP-003: PitchLabeler声称Undo/Redo但未实现 [中等]
@@ -65,9 +65,9 @@
 
 ## GAP-008: 测试覆盖为零 [中等]
 
-- CI中BUILD_TESTS=OFF, src/tests/CMakeLists.txt为空文件
+- ~~CI中BUILD_TESTS=OFF~~ ✅ 已修复 (现为BUILD_TESTS=ON)
 - 虽然infer子库有各自tests (TestGame, TestSome等), 但:
-  - CI从不执行
+  - ~~CI从不执行~~ ✅ 已修复 (CI现有ctest步骤)
   - 无单元测试框架集成
   - 无UI测试
   - 无集成测试

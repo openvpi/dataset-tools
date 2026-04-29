@@ -20,15 +20,6 @@
 - **风险**: 高 — FunAsr在非Windows可能构建失败
 - **评估**: CI绿色; 三平台构建产物可运行
 
-### TASK-006: 添加Linux install逻辑
-- **目标**: cmake --install在Linux正确复制文件
-- **实现步骤**:
-  1. src/CMakeLists.txt L115后添加else()分支
-  2. 复制所有shared lib和exe到install prefix
-  3. 可选: 集成linuxdeploy生成AppImage
-- **风险**: 低
-- **评估**: Linux上cmake --install后, 目标目录有所有必要文件
-
 ### TASK-007: 统一推理库EP初始化
 - **目标**: 消除5处重复的DML/CUDA init代码
 - **实现步骤**:
@@ -97,10 +88,7 @@
 
 ## P3 任务
 
-### TASK-016: AppSettings添加写入debounce
 ### TASK-017: AudioDecoder实现流式解码
-### TASK-018: 移除audio对core的多余依赖
-### TASK-020: 添加download hash校验到setup-onnxruntime.cmake
 
 ---
 
@@ -117,7 +105,6 @@ TASK-015 ──→ 依赖F0提取实现 (core CsvToDsConverter TODO)
 | 任务 | 预计人天 | 复杂度 |
 |------|----------|--------|
 | TASK-005 | 3 | 高 |
-| TASK-006 | 0.5 | 低 |
 | TASK-007 | 3 | 高 |
 | TASK-009 | 5 | 高 |
 | TASK-010 | 3 | 中 |
