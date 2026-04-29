@@ -5,6 +5,8 @@ set(CMAKE_AUTORCC ON)
 
 add_executable(${PROJECT_NAME}
     main.cpp
+    CleanupDialog.cpp
+    CleanupDialog.h
     LabelerWindow.cpp
     LabelerWindow.h
     StepNavigator.cpp
