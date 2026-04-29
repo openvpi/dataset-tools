@@ -4,6 +4,9 @@
 #include <QPushButton>
 #include <QSharedPointer>
 
+#include "IPageActions.h"
+#include "IPageLifecycle.h"
+
 namespace dstools::widgets {
 class PathSelector;
 class ModelLoadPanel;
@@ -19,11 +22,21 @@ namespace Pinyin {
 class Pinyin;
 }
 
-class LyricFAPage : public dstools::widgets::TaskWindow {
+class LyricFAPage : public dstools::widgets::TaskWindow,
+                    public dstools::labeler::IPageActions,
+                    public dstools::labeler::IPageLifecycle {
     Q_OBJECT
+    Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
 public:
     explicit LyricFAPage(QWidget *parent = nullptr);
     ~LyricFAPage() override;
+
+    // IPageActions
+    void setWorkingDirectory(const QString &dir) override;
+    QString workingDirectory() const override;
+
+    // IPageLifecycle
+    void onWorkingDirectoryChanged(const QString &newDir) override;
 
 protected:
     void init() override;
@@ -49,4 +62,5 @@ private:
 
     enum Mode { Mode_Asr, Mode_MatchLyric };
     Mode m_currentMode = Mode_Asr;
+    QString m_workingDir;
 };

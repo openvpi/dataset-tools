@@ -212,3 +212,17 @@ void LyricFAPage::slot_loadModel() {
         m_runBtn->setEnabled(false);
     }
 }
+
+void LyricFAPage::setWorkingDirectory(const QString &dir) {
+    m_workingDir = dir;
+    if (m_labPath)
+        m_labPath->setPath(dir);
+}
+
+QString LyricFAPage::workingDirectory() const {
+    return m_workingDir;
+}
+
+void LyricFAPage::onWorkingDirectoryChanged(const QString &newDir) {
+    setWorkingDirectory(newDir);
+}

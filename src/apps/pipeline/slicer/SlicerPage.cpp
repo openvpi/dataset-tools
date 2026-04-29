@@ -246,3 +246,17 @@ void SlicerPage::onOneFailed(const QString &errmsg, int listIndex) {
             .arg(m_workTotal).arg(m_workTotal - m_workError).arg(m_workError));
     }
 }
+
+void SlicerPage::setWorkingDirectory(const QString &dir) {
+    m_workingDir = dir;
+    if (m_outputDir)
+        m_outputDir->setPath(dir);
+}
+
+QString SlicerPage::workingDirectory() const {
+    return m_workingDir;
+}
+
+void SlicerPage::onWorkingDirectoryChanged(const QString &newDir) {
+    setWorkingDirectory(newDir);
+}

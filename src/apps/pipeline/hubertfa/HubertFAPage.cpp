@@ -218,3 +218,17 @@ void HubertFAPage::slot_hfaFinished(const QString &filename, const QString &msg)
         emit allTasksFinished();
     }
 }
+
+void HubertFAPage::setWorkingDirectory(const QString &dir) {
+    m_workingDir = dir;
+    if (m_outTgPath)
+        m_outTgPath->setPath(dir);
+}
+
+QString HubertFAPage::workingDirectory() const {
+    return m_workingDir;
+}
+
+void HubertFAPage::onWorkingDirectoryChanged(const QString &newDir) {
+    setWorkingDirectory(newDir);
+}

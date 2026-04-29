@@ -5,15 +5,28 @@
 #include <QSpinBox>
 #include <QCheckBox>
 
+#include "IPageActions.h"
+#include "IPageLifecycle.h"
+
 namespace dstools::widgets {
 class PathSelector;
 }
 
-class SlicerPage : public dstools::widgets::TaskWindow {
+class SlicerPage : public dstools::widgets::TaskWindow,
+                   public dstools::labeler::IPageActions,
+                   public dstools::labeler::IPageLifecycle {
     Q_OBJECT
+    Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
 public:
     explicit SlicerPage(QWidget *parent = nullptr);
     ~SlicerPage() override;
+
+    // IPageActions
+    void setWorkingDirectory(const QString &dir) override;
+    QString workingDirectory() const override;
+
+    // IPageLifecycle
+    void onWorkingDirectoryChanged(const QString &newDir) override;
 
 protected:
     void init() override;
@@ -42,4 +55,5 @@ private:
     int m_workFinished = 0;
     int m_workError = 0;
     QStringList m_failIndex;
+    QString m_workingDir;
 };
