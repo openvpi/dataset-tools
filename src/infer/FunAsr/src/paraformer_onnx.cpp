@@ -12,28 +12,28 @@ namespace FunAsr {
         const auto model_path = path / "model.onnx";
         const auto vocab_path = path / "vocab.txt";
 
-        fe = new FeatureExtract(3);
+        fe = std::make_unique<FeatureExtract>(3);
 
         sessionOptions.SetInterOpNumThreads(nNumThread);
         sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
 #ifdef _WIN32
-        m_session = new Ort::Session(env, model_path.wstring().c_str(), sessionOptions);
-        vocab = new Vocab(vocab_path.wstring().c_str());
+        m_session = std::make_unique<Ort::Session>(env, model_path.wstring().c_str(), sessionOptions);
+        vocab = std::make_unique<Vocab>(vocab_path.wstring().c_str());
 #else
-        m_session = new Ort::Session(env, model_path.c_str(), sessionOptions);
-        vocab = new Vocab(vocab_path.c_str());
+        m_session = std::make_unique<Ort::Session>(env, model_path.c_str(), sessionOptions);
+        vocab = std::make_unique<Vocab>(vocab_path.c_str());
 #endif
 
         std::string strName;
-        getInputName(m_session, strName);
+        getInputName(m_session.get(), strName);
         m_strInputNames.emplace_back(strName.c_str());
-        getInputName(m_session, strName, 1);
+        getInputName(m_session.get(), strName, 1);
         m_strInputNames.push_back(strName);
 
-        getOutputName(m_session, strName);
+        getOutputName(m_session.get(), strName);
         m_strOutputNames.push_back(strName);
-        getOutputName(m_session, strName, 1);
+        getOutputName(m_session.get(), strName, 1);
         m_strOutputNames.push_back(strName);
 
         for (auto &item : m_strInputNames)
@@ -42,14 +42,7 @@ namespace FunAsr {
             m_szOutputNames.push_back(item.c_str());
     }
 
-    ModelImp::~ModelImp() {
-        delete fe;
-        if (m_session) {
-            delete m_session;
-            m_session = nullptr;
-        }
-        delete vocab;
-    }
+    ModelImp::~ModelImp() = default;
 
     void ModelImp::reset() {
         fe->reset();
@@ -81,8 +74,8 @@ namespace FunAsr {
         const int m = din->size[2];
         const int n = din->size[3];
 
-        const auto *var = (const float *) paraformer_cmvn_var_hex;
-        const auto *mean = (const float *) paraformer_cmvn_mean_hex;
+        const auto *var = reinterpret_cast<const float *>(paraformer_cmvn_var_hex);
+        const auto *mean = reinterpret_cast<const float *>(paraformer_cmvn_mean_hex);
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
                 const int idx = i * n + j;

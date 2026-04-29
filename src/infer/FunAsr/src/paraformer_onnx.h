@@ -3,6 +3,7 @@
 #pragma once
 #include "FeatureExtract.h"
 
+#include <memory>
 #include <Model.h>
 #include <onnxruntime_cxx_api.h>
 
@@ -11,9 +12,9 @@
 namespace FunAsr {
     class ModelImp final : public Model {
     private:
-        FeatureExtract *fe;
+        std::unique_ptr<FeatureExtract> fe;
 
-        Vocab *vocab;
+        std::unique_ptr<Vocab> vocab;
 
         static void apply_lfr(Tensor<float> *&din);
         static void apply_cmvn(const Tensor<float> *din);
@@ -26,7 +27,7 @@ namespace FunAsr {
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 #endif
 
-        Ort::Session *m_session = nullptr;
+        std::unique_ptr<Ort::Session> m_session;
         Ort::Env env = Ort::Env(ORT_LOGGING_LEVEL_ERROR, "paraformer");
         Ort::SessionOptions sessionOptions = Ort::SessionOptions();
 
