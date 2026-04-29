@@ -1,8 +1,11 @@
 #include "GameAlignPage.h"
 
+#include <QDir>
 #include <QFormLayout>
 #include <QMessageBox>
 #include <QVBoxLayout>
+
+#include <game-infer/Game.h>
 
 namespace dstools::labeler {
 
@@ -39,10 +42,44 @@ void GameAlignPage::buildUi() {
     m_runAction = new QAction(tr("Run MIDI Alignment"), this);
     m_runAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
     auto runSlot = [this]() {
-        QMessageBox::information(this, tr("Not Implemented"),
-                                 tr("GAME audio-to-MIDI alignment is not yet implemented.\n\n"
-                                    "This step will use the GAME model to generate MIDI "
-                                    "transcriptions from audio files."));
+        if (m_workingDir.isEmpty()) {
+            QMessageBox::warning(this, tr("Error"), tr("No working directory set."));
+            return;
+        }
+        if (m_modelPath->path().isEmpty()) {
+            QMessageBox::warning(this, tr("Error"), tr("No GAME model directory selected."));
+            return;
+        }
+
+        const QString csvPath = m_workingDir + QStringLiteral("/dstemp/build_csv/transcriptions.csv");
+        const QString outCsvPath = m_workingDir + QStringLiteral("/dstemp/midi/transcriptions.csv");
+        QDir().mkpath(m_workingDir + QStringLiteral("/dstemp/midi"));
+
+        m_log->clear();
+        m_log->append(tr("Loading GAME model..."));
+
+        Game::Game game;
+        auto [ep, deviceId] = m_gpuSelector->selected();
+        std::string msg;
+        auto provider = static_cast<Game::ExecutionProvider>(static_cast<int>(ep));
+        if (!game.load_model(m_modelPath->path().toStdString(), provider, deviceId, msg)) {
+            m_log->append(tr("<b>Error:</b> Failed to load model: %1").arg(QString::fromStdString(msg)));
+            return;
+        }
+
+        m_log->append(tr("Running GAME alignment on CSV..."));
+        m_runProgress->setProgress(0);
+
+        Game::AlignOptions alignOpts;
+        if (!game.alignCSV(
+                csvPath.toStdString(), outCsvPath.toStdString(), "", false, alignOpts, msg,
+                [this](int progress) { m_runProgress->setProgress(progress); })) {
+            m_log->append(tr("<b>Error:</b> %1").arg(QString::fromStdString(msg)));
+            QMessageBox::warning(this, tr("MIDI Alignment Failed"), QString::fromStdString(msg));
+        } else {
+            m_runProgress->setProgress(100);
+            m_log->append(tr("<b>Done.</b> Output: %1").arg(outCsvPath));
+        }
     };
     connect(m_runProgress, &dstools::widgets::RunProgressRow::runClicked, this, runSlot);
     connect(m_runAction, &QAction::triggered, this, runSlot);
