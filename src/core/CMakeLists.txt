@@ -27,6 +27,7 @@ set(CORE_HEADERS
     include/dstools/PitchUtils.h
     include/dstools/AudioFileResolver.h
     include/dstools/F0Curve.h
+    include/dstools/TextGridToCsv.h
     include/dstools/TranscriptionCsv.h
 )
 
@@ -66,3 +67,6 @@ if(cpp-pinyin_FOUND)
     target_link_libraries(${PROJECT_NAME} PRIVATE cpp-pinyin::cpp-pinyin)
     target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_CPP_PINYIN)
 endif()
+
+# textgrid (header-only) for TextGridToCsv
+target_link_libraries(${PROJECT_NAME} PRIVATE textgrid)
