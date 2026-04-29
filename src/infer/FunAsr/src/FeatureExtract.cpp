@@ -35,9 +35,9 @@ namespace FunAsr {
     }
 
     void FeatureExtract::insert(float *din, int len, int flag) {
-        const auto *window = (const float *) &window_hex;
+        const auto *window = reinterpret_cast<const float *>(&window_hex);
         if (mode == 3)
-            window = (const float *) &window_hamm_hex;
+            window = reinterpret_cast<const float *>(&window_hamm_hex);
 
         constexpr int window_size = 400;
         constexpr int window_shift = 160;
@@ -93,11 +93,11 @@ namespace FunAsr {
 
         if (mode < 2) {
             if (mode == 0) {
-                std = (const float *) global_cmvn_std_hex;
-                mean = (const float *) global_cmvn_mean_hex;
+                std = reinterpret_cast<const float *>(global_cmvn_std_hex);
+                mean = reinterpret_cast<const float *>(global_cmvn_mean_hex);
             } else {
-                std = (const float *) global_cmvn_std_online_hex;
-                mean = (const float *) global_cmvn_mean_online_hex;
+                std = reinterpret_cast<const float *>(global_cmvn_std_online_hex);
+                mean = reinterpret_cast<const float *>(global_cmvn_mean_online_hex);
             }
 
             int i;
@@ -120,7 +120,7 @@ namespace FunAsr {
 
     void FeatureExtract::melspect(const float *din, float *dout) {
         float fftmag[256];
-        const auto *melcoe = (const float *) melcoe_hex;
+        const auto *melcoe = reinterpret_cast<const float *>(melcoe_hex);
         for (int i = 0; i < 256; i++) {
             const float real = din[2 * i];
             const float imag = din[2 * i + 1];
