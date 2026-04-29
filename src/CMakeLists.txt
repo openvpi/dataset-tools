@@ -124,7 +124,7 @@ elseif (UNIX)
     set(_install_dir ${CMAKE_INSTALL_PREFIX})
 
     install(CODE "
-        file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.so*\" \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.exe\")
+        file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.so*\")
         foreach(_file \${_files})
             file(COPY \${_file} DESTINATION \"${_install_dir}\")
         endforeach()
