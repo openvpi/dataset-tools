@@ -11,11 +11,13 @@
 #include <QCloseEvent>
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
 
+#include <dstools/DsProject.h>
 #include <dstools/Theme.h>
 
 namespace dstools::labeler {
@@ -50,11 +52,25 @@ LabelerWindow::LabelerWindow(QWidget *parent) : QMainWindow(parent) {
     m_navigator->setCurrentRow(0);
 }
 
+LabelerWindow::~LabelerWindow() {
+    delete m_project;
+}
+
 void LabelerWindow::setupMenuBar() {
     auto *mb = menuBar();
 
     // File menu
     auto *fileMenu = mb->addMenu(tr("File(&F)"));
+    fileMenu->addAction(tr("Open Project..."), this, [this]() {
+        auto path = QFileDialog::getOpenFileName(this, tr("Open Project"), QString(),
+                                                  tr("DiffSinger Project (*.dsproj)"));
+        if (!path.isEmpty())
+            loadProject(path);
+    });
+    fileMenu->addAction(tr("Save Project"), this, &LabelerWindow::saveProject,
+                        QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
+    fileMenu->addAction(tr("Save Project As..."), this, &LabelerWindow::saveProjectAs);
+    fileMenu->addSeparator();
     fileMenu->addAction(tr("Set Working Directory..."), this, [this]() {
         auto dir = QFileDialog::getExistingDirectory(this, tr("Select Working Directory"),
                                                      m_workingDir);
@@ -105,6 +121,62 @@ void LabelerWindow::setWorkingDirectory(const QString &dir) {
             continue;
         if (auto *actions = qobject_cast<IPageActions *>(m_pages[i]))
             actions->setWorkingDirectory(dir);
+    }
+}
+
+void LabelerWindow::loadProject(const QString &path) {
+    QString error;
+    auto *proj = new dstools::DsProject(dstools::DsProject::load(path, error));
+    if (!error.isEmpty()) {
+        QMessageBox::warning(this, tr("Open Project"),
+                             tr("Failed to load project:\n%1").arg(error));
+        delete proj;
+        return;
+    }
+
+    delete m_project;
+    m_project = proj;
+
+    // Apply working directory from project
+    if (!m_project->workingDirectory().isEmpty())
+        setWorkingDirectory(m_project->workingDirectory());
+
+    setWindowTitle(tr("DiffSinger Labeler — %1").arg(QFileInfo(path).fileName()));
+}
+
+void LabelerWindow::saveProject() {
+    if (!m_project) {
+        saveProjectAs();
+        return;
+    }
+
+    // Sync current state into project
+    m_project->setWorkingDirectory(m_workingDir);
+
+    QString error;
+    if (!m_project->save(error)) {
+        QMessageBox::warning(this, tr("Save Project"),
+                             tr("Failed to save project:\n%1").arg(error));
+    }
+}
+
+void LabelerWindow::saveProjectAs() {
+    auto path = QFileDialog::getSaveFileName(this, tr("Save Project As"), QString(),
+                                              tr("DiffSinger Project (*.dsproj)"));
+    if (path.isEmpty())
+        return;
+
+    if (!m_project)
+        m_project = new dstools::DsProject;
+
+    m_project->setWorkingDirectory(m_workingDir);
+
+    QString error;
+    if (!m_project->save(path, error)) {
+        QMessageBox::warning(this, tr("Save Project"),
+                             tr("Failed to save project:\n%1").arg(error));
+    } else {
+        setWindowTitle(tr("DiffSinger Labeler — %1").arg(QFileInfo(path).fileName()));
     }
 }
 
@@ -248,8 +320,52 @@ void LabelerWindow::updateDynamicMenus() {
         for (auto *a : actions->toolActions())
             m_toolsMenu->addAction(a);
     }
-    if (m_toolsMenu->isEmpty())
-        m_toolsMenu->addAction(tr("(No tools)"))->setEnabled(false);
+    if (!m_toolsMenu->isEmpty())
+        m_toolsMenu->addSeparator();
+    m_toolsMenu->addAction(tr("Clean Working Directory..."), this, [this]() {
+        if (m_workingDir.isEmpty()) {
+            QMessageBox::warning(this, tr("No Working Directory"),
+                                 tr("Please set a working directory first."));
+            return;
+        }
+
+        static const char *stepDirs[] = {
+            "slicer",     "asr",       "asr_review",      "alignment", "alignment_review",
+            "build_csv",  "midi",      "build_ds",        "pitch_review",
+        };
+
+        CleanupDialog dlg(m_workingDir, this);
+        if (dlg.exec() != QDialog::Accepted)
+            return;
+
+        auto steps = dlg.selectedSteps();
+        if (steps.isEmpty())
+            return;
+
+        int totalFiles = 0;
+        qint64 totalSize = 0;
+        QDir base(m_workingDir + QStringLiteral("/dstemp"));
+
+        for (int idx : steps) {
+            QDir stepDir(base.filePath(stepDirs[idx]));
+            if (!stepDir.exists())
+                continue;
+            QDirIterator it(stepDir.absolutePath(), QDir::Files,
+                            QDirIterator::Subdirectories);
+            while (it.hasNext()) {
+                it.next();
+                totalSize += it.fileInfo().size();
+                if (QFile::remove(it.filePath()))
+                    ++totalFiles;
+            }
+        }
+
+        QMessageBox::information(
+            this, tr("Cleanup Complete"),
+            tr("Deleted %1 files (%2 MB)")
+                .arg(totalFiles)
+                .arg(totalSize / (1024 * 1024)));
+    });
 }
 
 void LabelerWindow::closeEvent(QCloseEvent *event) {

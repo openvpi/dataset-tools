@@ -8,6 +8,10 @@
 
 class QMenu;
 
+namespace dstools {
+class DsProject;
+}
+
 namespace dstools::labeler {
 
 class LabelerWindow : public QMainWindow {
@@ -15,9 +19,14 @@ class LabelerWindow : public QMainWindow {
 
 public:
     explicit LabelerWindow(QWidget *parent = nullptr);
+    ~LabelerWindow() override;
 
     void setWorkingDirectory(const QString &dir);
     QString workingDirectory() const { return m_workingDir; }
+
+    void loadProject(const QString &path);
+    void saveProject();
+    void saveProjectAs();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -44,6 +53,8 @@ private:
 
     QString m_workingDir;
     QWidget *m_pages[9] = {};
+
+    dstools::DsProject *m_project = nullptr;
 };
 
 } // namespace dstools::labeler

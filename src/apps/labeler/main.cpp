@@ -18,5 +18,13 @@ int main(int argc, char *argv[]) {
     window.resize(1400, 900);
     window.show();
 
+    // Handle command-line .dsproj argument
+    if (argc > 1) {
+        QString arg = QString::fromLocal8Bit(argv[1]);
+        if (arg.endsWith(QLatin1String(".dsproj"), Qt::CaseInsensitive)) {
+            window.loadProject(arg);
+        }
+    }
+
     return app.exec();
 }
