@@ -22,6 +22,7 @@ set(CORE_SOURCES
     src/DsDocumentAdapter.cpp
     src/TextGridDocumentAdapter.cpp
     src/ModelManager.cpp
+    src/DsItemManager.cpp
 )
 
 set(CORE_HEADERS
@@ -51,6 +52,7 @@ set(CORE_HEADERS
     include/dstools/IStepPlugin.h
     include/dstools/IModelProvider.h
     include/dstools/ModelManager.h
+    include/dstools/DsItemManager.h
 )
 
 set(CORE_RESOURCES
