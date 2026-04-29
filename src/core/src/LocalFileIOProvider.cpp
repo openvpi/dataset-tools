@@ -11,49 +11,41 @@ namespace dstools {
 
 // ── Binary I/O ───────────────────────────────────────────────────────
 
-QByteArray LocalFileIOProvider::readFile(const QString &path, std::string &error) {
-    error.clear();
+Result<QByteArray> LocalFileIOProvider::readFile(const QString &path) {
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) {
-        error = f.errorString().toStdString();
-        return {};
+        return Result<QByteArray>::Error(f.errorString().toStdString());
     }
-    return f.readAll();
+    return Result<QByteArray>::Ok(f.readAll());
 }
 
-bool LocalFileIOProvider::writeFile(const QString &path, const QByteArray &data,
-                                    std::string &error) {
-    error.clear();
+Result<void> LocalFileIOProvider::writeFile(const QString &path, const QByteArray &data) {
     // Ensure parent directory exists.
     const QFileInfo fi(path);
     if (!QDir().mkpath(fi.absolutePath())) {
-        error = "Failed to create directory: " + fi.absolutePath().toStdString();
-        return false;
+        return Result<void>::Error("Failed to create directory: " + fi.absolutePath().toStdString());
     }
     QFile f(path);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        error = f.errorString().toStdString();
-        return false;
+        return Result<void>::Error(f.errorString().toStdString());
     }
     if (f.write(data) != data.size()) {
-        error = f.errorString().toStdString();
-        return false;
+        return Result<void>::Error(f.errorString().toStdString());
     }
-    return true;
+    return Result<void>::Ok();
 }
 
 // ── Text I/O ─────────────────────────────────────────────────────────
 
-QString LocalFileIOProvider::readText(const QString &path, std::string &error) {
-    const QByteArray bytes = readFile(path, error);
-    if (!error.empty())
-        return {};
-    return QString::fromUtf8(bytes);
+Result<QString> LocalFileIOProvider::readText(const QString &path) {
+    auto result = readFile(path);
+    if (!result)
+        return Result<QString>::Error(result.error());
+    return Result<QString>::Ok(QString::fromUtf8(result.value()));
 }
 
-bool LocalFileIOProvider::writeText(const QString &path, const QString &text,
-                                    std::string &error) {
-    return writeFile(path, text.toUtf8(), error);
+Result<void> LocalFileIOProvider::writeText(const QString &path, const QString &text) {
+    return writeFile(path, text.toUtf8());
 }
 
 // ── Queries ──────────────────────────────────────────────────────────
@@ -73,14 +65,12 @@ FileInfo LocalFileIOProvider::fileInfo(const QString &path) {
     return info;
 }
 
-QStringList LocalFileIOProvider::listFiles(const QString &directory,
-                                           const QStringList &nameFilters, bool recursive,
-                                           std::string &error) {
-    error.clear();
+Result<QStringList> LocalFileIOProvider::listFiles(const QString &directory,
+                                                   const QStringList &nameFilters,
+                                                   bool recursive) {
     const QDir dir(directory);
     if (!dir.exists()) {
-        error = "Directory does not exist: " + directory.toStdString();
-        return {};
+        return Result<QStringList>::Error("Directory does not exist: " + directory.toStdString());
     }
 
     const auto flags =
@@ -90,40 +80,33 @@ QStringList LocalFileIOProvider::listFiles(const QString &directory,
     QStringList result;
     while (it.hasNext())
         result.append(it.next());
-    return result;
+    return Result<QStringList>::Ok(result);
 }
 
 // ── Mutations ────────────────────────────────────────────────────────
 
-bool LocalFileIOProvider::mkdirs(const QString &path, std::string &error) {
-    error.clear();
+Result<void> LocalFileIOProvider::mkdirs(const QString &path) {
     if (!QDir().mkpath(path)) {
-        error = "Failed to create directory: " + path.toStdString();
-        return false;
+        return Result<void>::Error("Failed to create directory: " + path.toStdString());
     }
-    return true;
+    return Result<void>::Ok();
 }
 
-bool LocalFileIOProvider::removeFile(const QString &path, std::string &error) {
-    error.clear();
+Result<void> LocalFileIOProvider::removeFile(const QString &path) {
     if (!QFile::remove(path)) {
-        error = "Failed to remove file: " + path.toStdString();
-        return false;
+        return Result<void>::Error("Failed to remove file: " + path.toStdString());
     }
-    return true;
+    return Result<void>::Ok();
 }
 
-bool LocalFileIOProvider::copyFile(const QString &src, const QString &dst,
-                                   std::string &error) {
-    error.clear();
+Result<void> LocalFileIOProvider::copyFile(const QString &src, const QString &dst) {
     // QFile::copy fails if dst exists, so remove it first.
     if (QFileInfo::exists(dst))
         QFile::remove(dst);
     if (!QFile::copy(src, dst)) {
-        error = "Failed to copy " + src.toStdString() + " to " + dst.toStdString();
-        return false;
+        return Result<void>::Error("Failed to copy " + src.toStdString() + " to " + dst.toStdString());
     }
-    return true;
+    return Result<void>::Ok();
 }
 
 // ── Global provider ──────────────────────────────────────────────────
@@ -137,6 +120,10 @@ IFileIOProvider *fileIOProvider() {
 
 void setFileIOProvider(IFileIOProvider *provider) {
     s_provider.reset(provider);
+}
+
+void resetFileIOProvider() {
+    s_provider = std::make_unique<LocalFileIOProvider>();
 }
 
 } // namespace dstools

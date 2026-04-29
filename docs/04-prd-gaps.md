@@ -50,13 +50,6 @@
 - 预期功能: 数据集SNR评分、对齐置信度、音素覆盖率统计
 - 影响: 用户无法评估数据集质量
 
-## GAP-006: 插件系统未实现 [低]
-
-- 接口设计: IStepPlugin定义了完整的插件生命周期
-- 实际: StubStepPlugin, TranscriptionPipeline硬编码步骤
-- 预期功能: 第三方可扩展处理步骤
-- 影响: 无法扩展管线功能
-
 ## GAP-007: Pipeline Slicer格式支持不完整 [中等]
 
 - 预期: 项目依赖FFmpeg, 应支持多种音频格式
@@ -72,9 +65,3 @@
   - 无UI测试
   - 无集成测试
 - 影响: 代码变更无法回归验证
-
-## GAP-009: FunAsr无GPU加速 [低]
-
-- 其他推理库: 全部支持DirectML + CUDA
-- FunAsr: 仅CPU
-- 影响: ASR步骤是唯一无法GPU加速的推理步骤

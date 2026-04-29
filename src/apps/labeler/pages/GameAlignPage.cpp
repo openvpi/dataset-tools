@@ -59,9 +59,9 @@ void GameAlignPage::buildUi() {
         m_log->append(tr("Loading GAME model..."));
 
         Game::Game game;
-        auto [ep, deviceId] = m_gpuSelector->selected();
+        const int deviceId = m_gpuSelector->selectedDeviceId();
         std::string msg;
-        auto provider = static_cast<Game::ExecutionProvider>(static_cast<int>(ep));
+        auto provider = deviceId >= 0 ? Game::ExecutionProvider::DML : Game::ExecutionProvider::CPU;
         if (!game.load_model(m_modelPath->path().toStdString(), provider, deviceId, msg)) {
             m_log->append(tr("<b>Error:</b> Failed to load model: %1").arg(QString::fromStdString(msg)));
             return;

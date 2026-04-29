@@ -54,7 +54,9 @@ bool ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gp
 
     emit modelStatusChanged(type, ModelStatus::Loading);
 
-    if (!entry.provider->load(modelPath, gpuIndex, error)) {
+    auto loadResult = entry.provider->load(modelPath, gpuIndex);
+    if (!loadResult) {
+        error = loadResult.error();
         emit modelStatusChanged(type, ModelStatus::Error);
         return false;
     }

@@ -6,15 +6,17 @@
 #include <functional>
 #include <string>
 
+#include <dstools/Result.h>
+
 namespace dstools {
 
 enum class ModelType {
-    Asr,        // FunASR speech recognition
-    HuBERT,     // HuBERT phoneme alignment
-    GAME,       // GAME audio-to-MIDI
-    RMVPE,      // RMVPE F0 estimation
-    SOME,       // SOME model
-    Custom      // User-defined
+    Asr,
+    HuBERT,
+    GAME,
+    RMVPE,
+    SOME,
+    Custom
 };
 
 enum class ModelStatus {
@@ -32,11 +34,11 @@ public:
     virtual ~IModelProvider() = default;
     virtual ModelType type() const = 0;
     virtual QString displayName() const = 0;
-    virtual bool load(const QString &modelPath, int gpuIndex, std::string &error) = 0;
+    virtual Result<void> load(const QString &modelPath, int gpuIndex) = 0;
     virtual void unload() = 0;
     virtual ModelStatus status() const = 0;
     virtual int64_t estimatedMemoryBytes() const = 0;
     bool isReady() const { return status() == ModelStatus::Ready; }
 };
 
-} // namespace dstools
+}

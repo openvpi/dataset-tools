@@ -1,35 +1,29 @@
 #pragma once
 
-/// @file LocalFileIOProvider.h
-/// @brief Local filesystem implementation of IFileIOProvider.
-
 #include <dstools/IFileIOProvider.h>
 
 namespace dstools {
 
-/// IFileIOProvider implementation backed by the local filesystem.
 class LocalFileIOProvider final : public IFileIOProvider {
 public:
-    QByteArray readFile(const QString &path, std::string &error) override;
-    bool writeFile(const QString &path, const QByteArray &data, std::string &error) override;
+    Result<QByteArray> readFile(const QString &path) override;
+    Result<void> writeFile(const QString &path, const QByteArray &data) override;
 
-    QString readText(const QString &path, std::string &error) override;
-    bool writeText(const QString &path, const QString &text, std::string &error) override;
+    Result<QString> readText(const QString &path) override;
+    Result<void> writeText(const QString &path, const QString &text) override;
 
     bool exists(const QString &path) override;
     FileInfo fileInfo(const QString &path) override;
-    QStringList listFiles(const QString &directory, const QStringList &nameFilters,
-                          bool recursive, std::string &error) override;
+    Result<QStringList> listFiles(const QString &directory, const QStringList &nameFilters,
+                                  bool recursive) override;
 
-    bool mkdirs(const QString &path, std::string &error) override;
-    bool removeFile(const QString &path, std::string &error) override;
-    bool copyFile(const QString &src, const QString &dst, std::string &error) override;
+    Result<void> mkdirs(const QString &path) override;
+    Result<void> removeFile(const QString &path) override;
+    Result<void> copyFile(const QString &src, const QString &dst) override;
 };
 
-/// Return the current global IFileIOProvider (defaults to LocalFileIOProvider).
 IFileIOProvider *fileIOProvider();
-
-/// Replace the global IFileIOProvider. Takes ownership of @p provider.
 void setFileIOProvider(IFileIOProvider *provider);
+void resetFileIOProvider();
 
-} // namespace dstools
+}

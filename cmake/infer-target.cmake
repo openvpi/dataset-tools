@@ -84,7 +84,7 @@ macro(dstools_add_infer_library _target)
     add_library(${_target}::${_target} ALIAS ${_target})
 
     # ORT path (kept for legacy references in some libs)
-    set(ONNX_RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../onnxruntime)
+    set(ONNX_RUNTIME_PATH ${PROJECT_DIR}/src/infer/onnxruntime)
 
     # Windows RC
     if(WIN32 AND _INF_RC_DESCRIPTION)
@@ -102,9 +102,11 @@ macro(dstools_add_infer_library _target)
     )
 
     # Tests
-    if(_INF_TESTS_OPTION AND ${_INF_TESTS_OPTION})
-        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
-            add_subdirectory(tests)
+    if(_INF_TESTS_OPTION)
+        if(${_INF_TESTS_OPTION})
+            if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
+                add_subdirectory(tests)
+            endif()
         endif()
     endif()
 

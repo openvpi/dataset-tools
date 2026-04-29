@@ -28,6 +28,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dstools-widgets
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -38,6 +39,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE .)
 
 # Include directories for embedded Page sources
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/apps
     ${CMAKE_SOURCE_DIR}/src/apps/MinLabel
     ${CMAKE_SOURCE_DIR}/src/apps/MinLabel/gui
     ${CMAKE_SOURCE_DIR}/src/apps/PhonemeLabeler
@@ -160,6 +162,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 # Additional libraries for embedded Pages
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Concurrent REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
 find_package(cpp-kana CONFIG REQUIRED)
 find_package(FFTW3 CONFIG REQUIRED)
@@ -170,6 +173,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dstools-audio
     audio-util
     hubert-infer
+    game-infer
+    rmvpe-infer
     FunAsr
     cpp-pinyin::cpp-pinyin
     cpp-kana::cpp-kana

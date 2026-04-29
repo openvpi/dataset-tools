@@ -7,24 +7,11 @@
 - **后果**: 每个DLL创建独立Ort::Env实例; EP初始化代码重复5次; 修改需同步5处
 - **建议**: 强制所有推理库链接并使用infer-common, 删除各自的initDirectML/initCUDA
 
-## ARCH-002: FunAsr架构质量远低于其他模块 [高]
-
-- **问题**: FunAsr使用C风格代码(malloc/free, raw new, 全局状态), 与项目其余部分(现代C++17, RAII, PIMPL)格格不入
-- **根因**: 可能从FunASR上游直接复制, 未适配项目规范
-- **后果**: 内存泄漏、线程不安全(FFTW plan)、不可维护
-- **建议**: 要么重写为现代C++, 要么隔离为独立进程/subprocess调用
-
 ## ARCH-003: Widgets层直接依赖具体Audio实现 [中]
 
 - **问题**: PlayWidget直接new AudioDecoder和AudioPlayback, 无抽象层
 - **后果**: 无法mock测试, 更换音频后端需修改widget代码
 - **建议**: 引入IAudioPlayer接口, PlayWidget通过DI获取
-
-## ARCH-004: TranscriptionPipeline未使用IStepPlugin [中]
-
-- **问题**: IStepPlugin接口已设计, 但TranscriptionPipeline硬编码TextGridToCsv→PhNumCalculator→CsvToDsConverter步骤
-- **后果**: 插件系统是死代码; 添加新步骤需修改Pipeline源码
-- **建议**: Pipeline消费IStepPlugin列表, 各步骤实现该接口
 
 ## ARCH-005: Theme单例和AppSettings全局函数妨碍测试 [中]
 

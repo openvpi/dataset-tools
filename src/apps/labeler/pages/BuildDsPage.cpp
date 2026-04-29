@@ -6,7 +6,6 @@
 #include <QVBoxLayout>
 
 #include <dstools/CsvToDsConverter.h>
-#include <rmvpe-infer/RmvpeModel.h>
 
 namespace dstools::labeler {
 
@@ -61,31 +60,12 @@ void BuildDsPage::buildUi() {
             QMessageBox::warning(this, tr("Error"), tr("No working directory set."));
             return;
         }
-        if (m_rmvpePath->path().isEmpty()) {
-            QMessageBox::warning(this, tr("Error"), tr("No RMVPE model file selected."));
-            return;
-        }
 
         const QString csvPath = m_workingDir + QStringLiteral("/dstemp/midi/transcriptions.csv");
         const QString outputDir = m_workingDir + QStringLiteral("/dstemp/build_ds");
         QDir().mkpath(outputDir);
 
         m_log->clear();
-        m_log->append(tr("Loading RMVPE model..."));
-
-        // Determine execution provider
-        Rmvpe::ExecutionProvider ep = Rmvpe::ExecutionProvider::CPU;
-        if (m_gpuSelector->currentIndex() == 1)
-            ep = Rmvpe::ExecutionProvider::DML;
-
-        auto rmvpe = std::make_shared<Rmvpe::RmvpeModel>(
-            m_rmvpePath->path().toStdString(), ep, 0);
-
-        if (!rmvpe->is_open()) {
-            m_log->append(tr("<b>Error:</b> Failed to load RMVPE model."));
-            return;
-        }
-
         m_log->append(tr("Converting CSV to DS files with F0 extraction..."));
         m_runProgress->setProgress(0);
 
@@ -96,23 +76,16 @@ void BuildDsPage::buildUi() {
         opts.sampleRate = m_sampleRate->value();
         opts.hopSize = m_hopSize->value();
 
-        auto f0Callback = [&rmvpe](const QString &wavPath, std::vector<float> &f0, QString &error) -> bool {
-            // TODO: Load WAV, resample to 16kHz, run RMVPE forward
-            // This is a placeholder — full implementation requires audio loading
-            Q_UNUSED(wavPath)
-            Q_UNUSED(f0)
-            error = "F0 extraction not yet fully implemented (requires audio decode integration)";
-            return false;
-        };
-
         auto progressCb = [this](int current, int total, const QString &name) {
             if (total > 0)
                 m_runProgress->setProgress(current * 100 / total);
             m_log->append(tr("[%1/%2] %3").arg(current).arg(total).arg(name));
         };
 
+        // Pass nullptr as f0Callback to use the built-in autocorrelation fallback.
+        // TODO: Implement proper RMVPE-based F0 extraction when audio decode integration is ready.
         QString error;
-        if (!dstools::CsvToDsConverter::convert(opts, f0Callback, progressCb, error)) {
+        if (!dstools::CsvToDsConverter::convert(opts, nullptr, progressCb, error)) {
             m_log->append(tr("<b>Error:</b> %1").arg(error));
             QMessageBox::warning(this, tr("Build DS Failed"), error);
         } else {

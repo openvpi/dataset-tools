@@ -44,6 +44,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/slicer
     ${CMAKE_CURRENT_SOURCE_DIR}/lyricfa
     ${CMAKE_CURRENT_SOURCE_DIR}/hubertfa
+    ${CMAKE_CURRENT_SOURCE_DIR}/../labeler
 )
 
 find_package(SndFile CONFIG REQUIRED)

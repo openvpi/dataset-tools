@@ -45,6 +45,7 @@ bool ModelDownloader::startDownload(const QString &modelId, const QUrl &url, con
     }
 
     connect(reply, &QNetworkReply::finished, this, [this, modelId, file, reply]() {
+        const QString filePath = file->fileName();
         file->close();
         file->deleteLater();
 
@@ -52,8 +53,10 @@ bool ModelDownloader::startDownload(const QString &modelId, const QUrl &url, con
 
         if (reply->error() == QNetworkReply::OperationCanceledError) {
             m_statuses[modelId] = DownloadStatus::Cancelled;
+            QFile::remove(filePath);
         } else if (reply->error() != QNetworkReply::NoError) {
             m_statuses[modelId] = DownloadStatus::Failed;
+            QFile::remove(filePath);
         } else {
             m_statuses[modelId] = DownloadStatus::Completed;
         }

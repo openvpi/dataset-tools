@@ -1,82 +1,79 @@
 #pragma once
-
-#include <QString>
+#include <string>
 #include <utility>
-#include <variant>
 
 namespace dstools {
 
-/// Lightweight result type for operations that can fail.
-/// Similar to std::expected<T, QString> (C++23), but usable with C++17.
-///
-/// Usage:
-///   Result<int> parseNumber(const QString &s);
-///   auto result = parseNumber("42");
-///   if (result) { use(*result); }
-///   else { report(result.error()); }
-///
-/// For void results, use Result<void>.
 template <typename T>
 class Result {
 public:
-    /// Construct a success result.
-    Result(T value) : m_data(std::move(value)) {} // NOLINT(google-explicit-constructor)
+    Result(T value) : m_value(std::move(value)), m_ok(true) {}
 
-    /// Construct a failure result.
-    static Result fail(const QString &error) {
+    static Result Ok(T value) { return Result(std::move(value)); }
+
+    static Result Error(std::string error) {
         Result r;
-        r.m_data = error;
+        r.m_ok = false;
+        r.m_error = std::move(error);
         return r;
     }
 
-    /// Check if the result is successful.
-    explicit operator bool() const { return std::holds_alternative<T>(m_data); }
-    bool hasValue() const { return std::holds_alternative<T>(m_data); }
+    static Result Error(const char *error) {
+        return Error(std::string(error));
+    }
 
-    /// Get the value (undefined if failed).
-    const T &value() const & { return std::get<T>(m_data); }
-    T &value() & { return std::get<T>(m_data); }
-    T &&value() && { return std::get<T>(std::move(m_data)); }
+    bool ok() const { return m_ok; }
+    explicit operator bool() const { return m_ok; }
 
-    const T &operator*() const & { return value(); }
-    T &operator*() & { return value(); }
-    T &&operator*() && { return std::move(*this).value(); }
+    const T &value() const & { return m_value; }
+    T &value() & { return m_value; }
+    T &&value() && { return std::move(m_value); }
 
-    const T *operator->() const { return &value(); }
-    T *operator->() { return &value(); }
+    const T &operator*() const & { return m_value; }
+    T &operator*() & { return m_value; }
 
-    /// Get the error message (empty if successful).
-    QString error() const {
-        if (auto *e = std::get_if<QString>(&m_data))
-            return *e;
-        return {};
+    const T *operator->() const { return &m_value; }
+    T *operator->() { return &m_value; }
+
+    const std::string &error() const { return m_error; }
+
+    T value_or(T default_value) const {
+        return m_ok ? m_value : std::move(default_value);
     }
 
 private:
     Result() = default;
-    std::variant<T, QString> m_data;
+
+    T m_value{};
+    std::string m_error;
+    bool m_ok = false;
 };
 
-/// Specialization for void results (success/fail with no value).
 template <>
 class Result<void> {
 public:
-    /// Construct a success result.
-    Result() : m_error() {}
-
-    /// Construct a failure result.
-    static Result fail(const QString &error) {
+    static Result Ok() { return Result(true); }
+    static Result Error(std::string error) {
         Result r;
-        r.m_error = error;
+        r.m_ok = false;
+        r.m_error = std::move(error);
         return r;
     }
+    static Result Error(const char *error) {
+        return Error(std::string(error));
+    }
 
-    explicit operator bool() const { return m_error.isEmpty(); }
-    bool hasValue() const { return m_error.isEmpty(); }
-    QString error() const { return m_error; }
+    bool ok() const { return m_ok; }
+    explicit operator bool() const { return m_ok; }
+
+    const std::string &error() const { return m_error; }
 
 private:
-    QString m_error;
+    Result(bool ok) : m_ok(ok) {}
+    Result() = default;
+
+    std::string m_error;
+    bool m_ok = false;
 };
 
-} // namespace dstools
+}
