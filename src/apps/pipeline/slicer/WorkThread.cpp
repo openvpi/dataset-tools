@@ -164,6 +164,7 @@ void WorkThread::run() {
             QString errmsg = QString("filesystem: could not create directory %1.").arg(outPath);
             emit oneError(errmsg);
             emit oneFailed(m_filename, m_listIndex);
+            return;
         }
 
         int idx = 0;
