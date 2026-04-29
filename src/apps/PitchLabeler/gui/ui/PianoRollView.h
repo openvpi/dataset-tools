@@ -7,6 +7,7 @@
 #include <QActionGroup>
 #include <QVector>
 #include <QSet>
+#include <QUndoStack>
 
 #include <dstools/PitchUtils.h>
 #include <dstools/ViewportController.h>
@@ -48,6 +49,7 @@ public:
     ~PianoRollView() override;
 
     void setDSFile(std::shared_ptr<DSFile> ds);
+    void setUndoStack(QUndoStack *stack) { m_undoStack = stack; }
     void clear();
 
     /// Set audio file duration (seconds) to limit piano roll max length
@@ -110,6 +112,7 @@ private:
 
     // Data
     std::shared_ptr<DSFile> m_dsFile;
+    QUndoStack *m_undoStack = nullptr;
     double m_audioDuration = 0.0;  // audio file duration in seconds (0 = no limit)
 
     // Display parameters

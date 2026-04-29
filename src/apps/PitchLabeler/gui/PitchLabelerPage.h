@@ -9,6 +9,7 @@
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QShortcut>
+#include <QUndoStack>
 
 #include <dstools/AppSettings.h>
 #include <dstools/PlayWidget.h>
@@ -144,6 +145,7 @@ private:
     bool m_abComparisonActive = false;
     std::vector<double> m_originalF0;
     QList<QShortcut *> m_windowShortcuts;
+    QUndoStack *m_undoStack = nullptr;
 
     // Helpers
     void buildLayout();

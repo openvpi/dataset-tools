@@ -1,5 +1,6 @@
 #include "PianoRollView.h"
 #include "gui/DSFile.h"
+#include "commands/PitchCommands.h"
 
 #include "../../PitchLabelerKeys.h"
 
@@ -1270,6 +1271,13 @@ void PianoRollView::mouseReleaseEvent(QMouseEvent *event) {
 
         // Finish modulation/drift drag
         if (m_modulationDragging || m_driftDragging) {
+            // Push undo command with old (pre-drag) and new (current) F0 values
+            if (m_undoStack && m_dsFile && !m_preAdjustF0.empty()) {
+                m_undoStack->push(new ModulationDriftCommand(
+                    m_dsFile, m_preAdjustF0, m_dsFile->f0.values));
+            } else if (m_dsFile) {
+                m_dsFile->markModified();
+            }
             m_modulationDragging = false;
             m_driftDragging = false;
             m_preAdjustF0.clear();
@@ -1454,13 +1462,17 @@ void PianoRollView::clearSelection() {
 
 void PianoRollView::doPitchMove(const std::vector<int> &indices, int deltaCents) {
     if (!m_dsFile || deltaCents == 0) return;
-    for (int idx : indices) {
-        if (idx < 0 || idx >= static_cast<int>(m_dsFile->notes.size())) continue;
-        auto &note = m_dsFile->notes[idx];
-        if (note.isRest()) continue;
-        note.name = shiftNoteCents(note.name, deltaCents);
+    if (m_undoStack) {
+        m_undoStack->push(new PitchMoveCommand(m_dsFile, indices, deltaCents));
+    } else {
+        for (int idx : indices) {
+            if (idx < 0 || idx >= static_cast<int>(m_dsFile->notes.size())) continue;
+            auto &note = m_dsFile->notes[idx];
+            if (note.isRest()) continue;
+            note.name = shiftNoteCents(note.name, deltaCents);
+        }
+        m_dsFile->markModified();
     }
-    m_dsFile->markModified();
     emit fileEdited();
     update();
 }
@@ -1571,7 +1583,6 @@ void PianoRollView::applyModulationDriftPreview() {
         }
     }
 
-    m_dsFile->markModified();
     update();
 }
 

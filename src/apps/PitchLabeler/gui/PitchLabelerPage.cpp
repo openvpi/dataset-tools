@@ -46,7 +46,8 @@ namespace dstools {
     namespace pitchlabeler {
 
         PitchLabelerPage::PitchLabelerPage(QWidget *parent)
-            : QWidget(parent), m_playWidget(new dstools::widgets::PlayWidget()) {
+            : QWidget(parent), m_playWidget(new dstools::widgets::PlayWidget()),
+              m_undoStack(new QUndoStack(this)) {
 
             m_viewport = new dstools::widgets::ViewportController(this);
             m_viewport->setPixelsPerSecond(100.0);
@@ -347,6 +348,7 @@ namespace dstools {
             // Piano roll view (takes remaining space)
             m_pianoRoll = new ui::PianoRollView();
             m_pianoRoll->setViewportController(m_viewport);
+            m_pianoRoll->setUndoStack(m_undoStack);
             contentLayout->addWidget(m_pianoRoll, 1);
 
             // Property panel (collapsible at bottom)
@@ -374,6 +376,10 @@ namespace dstools {
             connect(m_actSaveAll, &QAction::triggered, this, &PitchLabelerPage::saveAllFiles);
             connect(m_actUndo, &QAction::triggered, this, &PitchLabelerPage::onUndo);
             connect(m_actRedo, &QAction::triggered, this, &PitchLabelerPage::onRedo);
+
+            // Undo stack state tracking
+            connect(m_undoStack, &QUndoStack::canUndoChanged, m_actUndo, &QAction::setEnabled);
+            connect(m_undoStack, &QUndoStack::canRedoChanged, m_actRedo, &QAction::setEnabled);
 
             // View actions
             connect(m_actZoomIn, &QAction::triggered, this, &PitchLabelerPage::onZoomIn);
@@ -534,6 +540,9 @@ namespace dstools {
             m_currentFile = ds;
             m_currentFilePath = path;
 
+            // Clear undo history for new file
+            m_undoStack->clear();
+
             // Switch from empty state to file content
             m_mainStack->setCurrentIndex(1);
 
@@ -603,15 +612,22 @@ namespace dstools {
         }
 
         void PitchLabelerPage::onUndo() {
-            // TODO: undo not yet implemented
+            m_undoStack->undo();
+            m_pianoRoll->update();
+            updateUndoRedoState();
+            emit modificationChanged(m_currentFile && m_currentFile->modified);
         }
 
         void PitchLabelerPage::onRedo() {
-            // TODO: redo not yet implemented
+            m_undoStack->redo();
+            m_pianoRoll->update();
+            updateUndoRedoState();
+            emit modificationChanged(m_currentFile && m_currentFile->modified);
         }
 
         void PitchLabelerPage::updateUndoRedoState() {
-            // TODO: Check undo manager state
+            m_actUndo->setEnabled(m_undoStack->canUndo());
+            m_actRedo->setEnabled(m_undoStack->canRedo());
         }
 
         void PitchLabelerPage::onZoomIn() {
