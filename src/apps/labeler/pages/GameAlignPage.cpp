@@ -32,9 +32,7 @@ void GameAlignPage::buildUi() {
     modelRow->addWidget(btnBrowseModel);
     form->addRow(tr("Model:"), modelRow);
 
-    m_gpuSelector = new QComboBox;
-    m_gpuSelector->addItem(tr("CPU"));
-    m_gpuSelector->addItem(tr("GPU 0"));
+    m_gpuSelector = new dstools::widgets::GpuSelector;
     form->addRow(tr("Device:"), m_gpuSelector);
 
     vLayout->addLayout(form);

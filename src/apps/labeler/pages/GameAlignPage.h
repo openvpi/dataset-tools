@@ -2,12 +2,12 @@
 
 #include "IPageActions.h"
 
-#include <QComboBox>
 #include <QLineEdit>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QTextEdit>
 #include <QWidget>
+#include <dstools/GpuSelector.h>
 
 namespace dstools::labeler {
 
@@ -26,7 +26,7 @@ private:
     void buildUi();
 
     QLineEdit *m_modelPath = nullptr;
-    QComboBox *m_gpuSelector = nullptr;
+    dstools::widgets::GpuSelector *m_gpuSelector = nullptr;
     QPushButton *m_btnRun = nullptr;
     QProgressBar *m_progress = nullptr;
     QTextEdit *m_log = nullptr;
