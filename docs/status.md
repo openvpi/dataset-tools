@@ -57,13 +57,13 @@ config/
 | Pipeline 三 Tab 页独立 | ✅ DONE | Slicer/LyricFA/HubertFA |
 | 移除 qsmedia 插件系统 | ✅ DONE | |
 | 合并两个 PlayWidget | ✅ DONE | MinLabel + PitchLabeler + PhonemeLabeler 共享 PlayWidget |
-| 合并 DmlGpuUtils → GpuSelector | ✅ DONE | GameInfer 已迁移到共享 GpuSelector；HubertFA 副本待 hubert-infer 提取后删除 |
+| 合并 DmlGpuUtils → GpuSelector | ✅ DONE | GameInfer 已迁移到共享 GpuSelector；HubertFA 副本已随 HubertFA 目录删除 |
 | 推理库迁移到 src/infer/ | ✅ DONE | |
-| 提取 hubert-infer | ❌ TODO | HubertFA 工具代码仍在 src/apps/HubertFA/util/ |
+| 提取 hubert-infer | ✅ DONE | src/infer/hubert-infer/ 已创建；旧 src/apps/HubertFA/ 已删除 |
 | cmake/ 脚本迁移 | ✅ DONE | |
 | 统一主题 (dark/light QSS) | ✅ DONE | |
 | 删除旧独立 EXE | ✅ DONE | AudioSlicer/LyricFA 已删除；SlurCutter 已删除 |
-| 删除旧 AudioSlicer/LyricFA/HubertFA | ⚠️ PARTIAL | AudioSlicer/LyricFA 已删除；HubertFA 目录仍存在但已不参与构建（不在 apps/CMakeLists.txt 中），待 AD-01 完成后删除 |
+| 删除旧 AudioSlicer/LyricFA/HubertFA | ✅ DONE | AudioSlicer/LyricFA/HubertFA 均已删除 |
 
 ---
 
@@ -85,7 +85,7 @@ config/
 | OnnxEnv | ✅ DONE | |
 | ExecutionProvider | ✅ DONE | |
 | JsonHelper | ✅ DONE | 文档中未列出但已实现（安全 JSON 封装） |
-| hubert-infer | ❌ TODO | |
+| hubert-infer | ✅ DONE | src/infer/hubert-infer/ 已创建 |
 | PitchLabeler 模块 | ⚠️ 文档缺失 | 已实现，但 module-spec.md 中尚无对应章节，需补充 |
 | PhonemeLabeler 模块 | ⚠️ 文档缺失 | 已实现，但 module-spec.md 中尚无对应章节，需补充 |
 
@@ -98,7 +98,7 @@ BUG-001, 004, 005, 006, 009, 010, 011, 012, 014, 015, 016, 017, 023,
 CQ-001, CQ-004, CQ-006(covertAction)
 
 ### 部分修复
-BUG-007 (unique_ptr但hubert-infer未提取), BUG-008 (需验证)
+BUG-007 (unique_ptr, hubert-infer已提取), BUG-008 (需验证)
 
 ### 未修复
 BUG-018, 019, 020, 021, 022, 025,
@@ -158,9 +158,9 @@ FEAT-003, FEAT-006
 |-------|------|------|
 | Phase 0: 准备 | ✅ DONE | |
 | Phase 1: Core + Audio + Widgets | ✅ DONE | |
-| Phase 2: Inference 层重组 | ⚠️ PARTIAL | hubert-infer 未提取 |
+| Phase 2: Inference 层重组 | ✅ DONE | hubert-infer 已提取 |
 | Phase 3: DatasetPipeline | ✅ DONE | |
-| Phase 4: 独立 EXE 迁移 | ⚠️ PARTIAL | 5 个 app 均可构建；Phase 1 重构进度: 8/12 完成, 1/12 部分完成, 3/12 未完成 |
+| Phase 4: 独立 EXE 迁移 | ✅ DONE | 5 个 app 均可构建；Phase 1 重构 12/12 完成 |
 | Phase 5: Bug 清零 | ⚠️ PARTIAL | 约 16/43 已修复，部分 SlurCutter Bug 因删除而过时 |
 | Phase 6: UI 美化 | ⚠️ PARTIAL | QSS 主题完成，SVG/细节未做 |
 | Phase 7: 测试与验收 | ❌ TODO | |
@@ -224,15 +224,11 @@ FEAT-003, FEAT-006
 
 ## 关键剩余工作（按优先级）
 
-### Phase 1 剩余任务（~3 天）
-1. **TASK-1.9 hubert-infer 提取** (~1.5d) — 推理代码仍在 src/apps/HubertFA/util/，需创建 src/infer/hubert-infer/ 库
-2. **TASK-1.7 ViewportController 补完** (~0.5d) — PitchLabeler PianoRollView 的 zoom/scroll 操作绕过 ViewportController 直接修改本地状态
-3. **TASK-1.11 game-infer align 验证** (~0.5d) — 产出 spike-game-align-result.md 验证报告
-4. **TASK-1.12 labelvoice schema 决策** (~0.5d) — 产出 decision-labelvoice-schema.md 决策文档
+### Phase 1 已完成 ✅
+Phase 1 全部 12/12 任务已完成，详见 `docs/refactor-plan/phase-1/01-task-list-updated.md`。
 
 ### 高优先级
 5. **确认 SlurCutter 旧 Bug 在 PitchLabeler 中是否仍存在** — BUG-013, BUG-024, CQ-007 需逐一验证
-6. **清理旧 HubertFA 目录** — 待 TASK-1.9 完成后删除 `src/apps/HubertFA/`
 
 ### 中优先级
 5. **module-spec.md 补充 PitchLabeler / PhonemeLabeler 章节** — 两个新应用已实现但设计文档未覆盖
