@@ -1,6 +1,8 @@
 #include <dstools/ModelManager.h>
 
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QThread>
 
 #include <algorithm>
 
@@ -14,6 +16,7 @@ ModelManager::~ModelManager() {
 }
 
 void ModelManager::registerProvider(ModelType type, std::unique_ptr<IModelProvider> provider) {
+    Q_ASSERT(QThread::currentThread() == QCoreApplication::instance()->thread());
     Entry entry;
     entry.provider = std::move(provider);
     m_entries.emplace(type, std::move(entry));
@@ -28,6 +31,7 @@ IModelProvider *ModelManager::provider(ModelType type) const {
 
 bool ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex,
                                 std::string &error) {
+    Q_ASSERT(QThread::currentThread() == QCoreApplication::instance()->thread());
     auto it = m_entries.find(type);
     if (it == m_entries.end()) {
         error = "No provider registered for this model type";
@@ -65,6 +69,7 @@ bool ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gp
 }
 
 void ModelManager::unload(ModelType type) {
+    Q_ASSERT(QThread::currentThread() == QCoreApplication::instance()->thread());
     auto it = m_entries.find(type);
     if (it == m_entries.end())
         return;
