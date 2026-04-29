@@ -18,33 +18,48 @@ namespace FunAsr {
         const auto model_path = path / "model.onnx";
         const auto vocab_path = path / "vocab.txt";
 
-        fe = std::make_unique<FeatureExtract>(3);
+        try {
+            fe = std::make_unique<FeatureExtract>(3);
 
-        sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, deviceId, nNumThread);
+            sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, deviceId, nNumThread);
 
 #ifdef _WIN32
-        m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
-        vocab = std::make_unique<Vocab>(vocab_path.wstring().c_str());
+            m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
+            vocab = std::make_unique<Vocab>(vocab_path.wstring().c_str());
 #else
-        m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
-        vocab = std::make_unique<Vocab>(vocab_path.c_str());
+            m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
+            vocab = std::make_unique<Vocab>(vocab_path.c_str());
 #endif
 
-        std::string strName;
-        getInputName(m_session.get(), strName);
-        m_strInputNames.emplace_back(strName.c_str());
-        getInputName(m_session.get(), strName, 1);
-        m_strInputNames.push_back(strName);
+            if (!vocab) {
+                m_errorMessage = "Failed to load vocab.txt";
+                return;
+            }
 
-        getOutputName(m_session.get(), strName);
-        m_strOutputNames.push_back(strName);
-        getOutputName(m_session.get(), strName, 1);
-        m_strOutputNames.push_back(strName);
+            std::string strName;
+            getInputName(m_session.get(), strName);
+            m_strInputNames.emplace_back(strName.c_str());
+            getInputName(m_session.get(), strName, 1);
+            m_strInputNames.push_back(strName);
 
-        for (auto &item : m_strInputNames)
-            m_szInputNames.push_back(item.c_str());
-        for (auto &item : m_strOutputNames)
-            m_szOutputNames.push_back(item.c_str());
+            getOutputName(m_session.get(), strName);
+            m_strOutputNames.push_back(strName);
+            getOutputName(m_session.get(), strName, 1);
+            m_strOutputNames.push_back(strName);
+
+            for (auto &item : m_strInputNames)
+                m_szInputNames.push_back(item.c_str());
+            for (auto &item : m_strOutputNames)
+                m_szOutputNames.push_back(item.c_str());
+
+            m_loaded = true;
+        } catch (const Ort::Exception &e) {
+            m_errorMessage = std::string("ONNX Runtime error: ") + e.what();
+            std::cerr << m_errorMessage << std::endl;
+        } catch (const std::exception &e) {
+            m_errorMessage = std::string("Model load error: ") + e.what();
+            std::cerr << m_errorMessage << std::endl;
+        }
     }
 
     ModelImp::~ModelImp() = default;
@@ -89,6 +104,7 @@ namespace FunAsr {
     }
 
     std::string ModelImp::greedy_search(float *in, const int &nLen) const {
+        if (!vocab) return "";
         std::vector<int> hyps;
         const int Tmax = nLen;
         for (int i = 0; i < Tmax; i++) {
@@ -102,6 +118,7 @@ namespace FunAsr {
     }
 
     std::string ModelImp::forward(float *din, int len, int flag) {
+        if (!m_loaded) return "";
         fe->insert(din, len, flag);
         std::unique_ptr<Tensor<float>> in;
         fe->fetch(in);

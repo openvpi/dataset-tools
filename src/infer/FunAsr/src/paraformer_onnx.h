@@ -15,6 +15,8 @@ namespace FunAsr {
         std::unique_ptr<FeatureExtract> fe;
 
         std::unique_ptr<Vocab> vocab;
+        bool m_loaded = false;
+        std::string m_errorMessage;
 
         static void apply_lfr(std::unique_ptr<Tensor<float>> &din);
         static void apply_cmvn(const Tensor<float> *din);
@@ -40,6 +42,8 @@ namespace FunAsr {
         ~ModelImp() override;
         void reset() override;
         std::string forward(float *din, int len, int flag) override;
+        bool isLoaded() const { return m_loaded; }
+        std::string errorMessage() const { return m_errorMessage; }
     };
 
 } // namespace paraformer
