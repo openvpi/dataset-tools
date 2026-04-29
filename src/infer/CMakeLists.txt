@@ -5,6 +5,7 @@ add_subdirectory(FunAsr)
 add_subdirectory(some-infer)
 add_subdirectory(rmvpe-infer)
 add_subdirectory(game-infer)
+add_subdirectory(hubert-infer)
 
 # Copy ONNX Runtime (and DirectML) DLLs to output directory for development builds
 set(_ORT_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/onnxruntime/lib)

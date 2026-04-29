@@ -874,4 +874,4 @@ m_tabWidget->addTab(new NewToolPage(...), tr("Step 4: NewTool"));
 - 图标使用 SVG（矢量缩放）
 - 布局使用 `QHBoxLayout/QVBoxLayout/QSplitter`（自动适配）
 - 避免固定像素尺寸的 `setFixedSize()`，使用 `setMinimumSize()` + `setSizePolicy()`
-- F0Widget 中坐标计算基于 `widget()->width()/height()`，不硬编码像素值（原实现已满足）
+- PianoRollView 中坐标计算基于 `widget()->width()/height()`，不硬编码像素值（原实现已满足）

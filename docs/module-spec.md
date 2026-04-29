@@ -1,7 +1,7 @@
 # 02 — 模块接口规范
 
 **前置**: architecture.md  
-**变更**: v3.0 删除 PipelineRunner（不再一键串联）；明确 SlicerPage 不继承 TaskWindow；补充 AudioSlicer 特有的信号签名差异。
+**变更**: v4.0 删除 SlurCutter；新增 PitchLabeler、PhonemeLabeler；补充 DsDocument、FramelessHelper、CommonKeys、ShortcutEditorWidget、FileProgressTracker、FileStatusDelegate。
 
 本文档定义重构后每个模块的公共接口、方法签名、信号槽、数据结构和使用示例。确保实施时每个模块可独立开发并正确集成。
 
@@ -37,7 +37,7 @@ struct AppInit {
 ```cpp
 // AppInit.cpp
 void AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
-    // 1. Root 权限检查 — 原 MinLabel/SlurCutter main.cpp 中的逻辑
+    // 1. Root 权限检查 — 原 MinLabel main.cpp 中的逻辑
 #ifdef Q_OS_WIN
     // IsUserAnAdmin() 检查
 #else
@@ -157,14 +157,16 @@ namespace MinLabelKeys {
 config/
 ├── DatasetPipeline.json
 ├── MinLabel.json
-├── SlurCutter.json
+├── PhonemeLabeler.json
+├── PitchLabeler.json
 └── GameInfer.json
 ```
 
 ```cpp
 // 每个 EXE 使用自己的 AppSettings 实例
-dstools::AppSettings settings("MinLabel");    // → <appDir>/config/MinLabel.json
-dstools::AppSettings settings("SlurCutter");  // → <appDir>/config/SlurCutter.json
+dstools::AppSettings settings("MinLabel");        // → <appDir>/config/MinLabel.json
+dstools::AppSettings settings("PitchLabeler");    // → <appDir>/config/PitchLabeler.json
+dstools::AppSettings settings("PhonemeLabeler");  // → <appDir>/config/PhonemeLabeler.json
 ```
 
 ### 1.3 ErrorHandling
@@ -259,7 +261,7 @@ public:
     /// 获取当前主题模式
     static Mode currentMode();
 
-    /// 获取主题色板（供自绘组件使用，如 F0Widget）
+    /// 获取主题色板（供自绘组件使用，如 PianoRollView）
     struct Palette {
         QColor bgPrimary;       // 主背景
         QColor bgSecondary;     // 次背景（面板/列表）
@@ -360,6 +362,91 @@ private:
 **与 ErrorHandling 的关系**：
 
 JsonHelper 通过 `std::string &error` 输出参数报告错误，是一种轻量级错误处理方式。待 AD-03（ErrorHandling 模块）完成后，可考虑将错误报告迁移到 `Result<T>` / `Status` 类型。
+
+### 1.7 DsDocument
+
+```cpp
+// src/core/include/dstools/DsDocument.h
+#pragma once
+#include <nlohmann/json.hpp>
+#include <QString>
+
+namespace dstools {
+
+/// DiffSinger .ds 文件的 round-trip 安全 I/O。
+/// 内部使用 nlohmann::json，加载时保留所有原始字段（包括未识别字段），
+/// 编辑后保存时不丢失任何原始数据。
+///
+/// PitchLabeler 通过此类加载/保存 .ds 文件。
+class DsDocument {
+public:
+    DsDocument();
+
+    /// 从文件加载 .ds JSON
+    bool load(const QString &path, QString *errorMsg = nullptr);
+
+    /// 保存到文件（round-trip safe，保留所有 raw fields）
+    bool save(const QString &path, QString *errorMsg = nullptr) const;
+
+    /// 访问底层 JSON 数据
+    nlohmann::json &data();
+    const nlohmann::json &data() const;
+
+    /// 是否已加载
+    bool isLoaded() const;
+
+    /// 当前文件路径
+    QString filePath() const;
+
+private:
+    nlohmann::json m_data;
+    QString m_filePath;
+    bool m_loaded = false;
+};
+
+} // namespace dstools
+```
+
+### 1.8 FramelessHelper
+
+```cpp
+// src/core/include/dstools/FramelessHelper.h
+#pragma once
+
+class QWidget;
+
+namespace dstools {
+
+/// 无边框窗口装饰辅助。
+/// 为窗口提供自定义标题栏、拖拽移动、缩放等功能，同时保留系统原生阴影。
+/// PitchLabeler 和 PhonemeLabeler 在 main.cpp 中调用 apply() 来启用无边框模式。
+class FramelessHelper {
+public:
+    /// 对指定窗口应用无边框装饰
+    static void apply(QWidget *window);
+};
+
+} // namespace dstools
+```
+
+### 1.9 CommonKeys
+
+```cpp
+// src/core/include/dstools/CommonKeys.h
+#pragma once
+#include <dstools/AppSettings.h>
+
+namespace dstools {
+
+/// 跨应用共享的配置 key。
+/// 多个 app 使用同一语义的 key 时，统一在此定义，避免各 app 重复声明。
+namespace CommonKeys {
+    inline const SettingsKey<QString> Theme("General/theme", "system");
+    inline const SettingsKey<QString> Language("General/language", "");
+}
+
+} // namespace dstools
+```
 
 ---
 
@@ -561,19 +648,20 @@ class AudioPlayback;
 
 namespace dstools::widgets {
 
-/// 统一音频播放控件。合并原 MinLabel::PlayWidget 和 SlurCutter::PlayWidget。
+/// 统一音频播放控件。
 ///
 /// 保留的原始功能：
 ///   - 播放/暂停/停止按钮
 ///   - 进度滑块（点击定位 + 拖拽）
 ///   - 音频设备选择菜单
 ///   - 时间显示（当前/总时长）
-///   - 可选范围播放（SlurCutter 使用）
-///   - 可选播放头位置信号（SlurCutter 使用）
+///   - 可选范围播放（PitchLabeler/PhonemeLabeler 使用）
+///   - 可选播放头位置信号
 ///
-/// 合并策略：
-///   MinLabel: 使用基本模式（openFile + play/stop）
-///   SlurCutter: 使用范围模式（setPlayRange + playheadChanged）
+/// 使用者：
+///   MinLabel: 基本模式（openFile + play/stop）
+///   PitchLabeler: 范围模式（setPlayRange + playheadChanged）
+///   PhonemeLabeler: 范围模式（setPlayRange + playheadChanged）
 class PlayWidget : public QWidget {
     Q_OBJECT
 public:
@@ -593,7 +681,6 @@ public:
     void setPlaying(bool playing);
 
     /// 设置播放范围（秒）。设置后只播放此范围内的音频。
-    /// 原 SlurCutter::PlayWidget::setRange() 语义。
     void setPlayRange(double startSec, double endSec);
 
     /// 清除播放范围（恢复全文件播放）
@@ -601,12 +688,11 @@ public:
 
 signals:
     /// 播放头位置变化（秒）。
-    /// 原 SlurCutter::PlayWidget::playheadChanged 信号。
     /// 仅在设置了播放范围后有效（通过 timerEvent 发出，约 60fps）。
     void playheadChanged(double positionSec);
 
 private:
-    // UI 组件（与原 PlayWidget 布局一致）
+    // UI 组件
     QPushButton *m_playBtn;
     QPushButton *m_stopBtn;
     QPushButton *m_devBtn;
@@ -624,11 +710,11 @@ private:
     double m_rangeEnd = -1.0;
     bool m_hasRange = false;
 
-    // 播放头追踪（SlurCutter steady_clock 精度）
+    // 播放头追踪（steady_clock 精度）
     std::chrono::steady_clock::time_point m_playStartTime;
     double m_playStartPos = 0.0;
 
-    // 内部方法（原 PlayWidget 的 private slots）
+    // 内部方法
     void initAudio();
     void uninitAudio();
     void reloadDevices();
@@ -815,6 +901,115 @@ private:
 } // namespace dstools::widgets
 ```
 
+### 3.4 ShortcutEditorWidget
+
+```cpp
+// src/widgets/include/dstools/ShortcutEditorWidget.h
+#pragma once
+#include <QWidget>
+#include <QKeySequence>
+#include <QString>
+#include <QVector>
+
+namespace dstools::widgets {
+
+/// 快捷键条目描述。
+struct ShortcutEntry {
+    QString id;             // 配置文件中的 key path
+    QString displayName;    // 显示名称
+    QString category;       // 分组类别
+    QKeySequence defaultKey;// 默认快捷键
+};
+
+/// 快捷键编辑对话框。
+/// 展示当前所有快捷键绑定，支持用户自定义修改，检测冲突。
+/// 修改结果通过 AppSettings 持久化。
+class ShortcutEditorWidget : public QWidget {
+    Q_OBJECT
+public:
+    explicit ShortcutEditorWidget(QWidget *parent = nullptr);
+
+    /// 设置可编辑的快捷键列表
+    void setEntries(const QVector<ShortcutEntry> &entries);
+
+    /// 获取当前编辑结果
+    QVector<ShortcutEntry> entries() const;
+
+signals:
+    /// 快捷键被修改时发出
+    void shortcutChanged(const QString &id, const QKeySequence &newKey);
+};
+
+} // namespace dstools::widgets
+```
+
+### 3.5 FileProgressTracker
+
+```cpp
+// src/widgets/include/dstools/FileProgressTracker.h
+#pragma once
+#include <QObject>
+#include <QString>
+
+namespace dstools::widgets {
+
+/// 文件完成状态跟踪器。
+/// 跟踪目录中各文件的处理状态（未处理/进行中/已完成），
+/// PitchLabeler 和 MinLabel 使用此类在文件列表中显示进度。
+class FileProgressTracker : public QObject {
+    Q_OBJECT
+public:
+    enum State { Pending, InProgress, Completed };
+
+    explicit FileProgressTracker(QObject *parent = nullptr);
+
+    /// 设置文件状态
+    void setState(const QString &filePath, State state);
+
+    /// 查询文件状态
+    State state(const QString &filePath) const;
+
+    /// 已完成文件数
+    int completedCount() const;
+
+    /// 总文件数
+    int totalCount() const;
+
+signals:
+    void stateChanged(const QString &filePath, State newState);
+    void progressChanged(int completed, int total);
+};
+
+} // namespace dstools::widgets
+```
+
+### 3.6 FileStatusDelegate
+
+```cpp
+// src/widgets/include/dstools/FileStatusDelegate.h
+#pragma once
+#include <QStyledItemDelegate>
+
+namespace dstools::widgets {
+
+/// 文件状态图标代理。
+/// 在 QTreeView / QListView 中以图标形式显示文件的处理状态。
+/// MinLabel 的文件列表使用此代理。
+class FileStatusDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit FileStatusDelegate(QObject *parent = nullptr);
+
+    void paint(QPainter *painter, const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override;
+
+    QSize sizeHint(const QStyleOptionViewItem &option,
+                   const QModelIndex &index) const override;
+};
+
+} // namespace dstools::widgets
+```
+
 ---
 
 ## 4. Inference Layer
@@ -883,7 +1078,7 @@ enum class ExecutionProvider {
 
 **兼容性**：各推理库内部原本使用自己的枚举。重构时需修改：
 - `game-infer`: `Game::ExecutionProvider` → `dstools::infer::ExecutionProvider`，或在 `Game` 命名空间内 `using dstools::infer::ExecutionProvider;`
-  - **⚠ 注意枚举值序不同**：`game-infer` 原始顺序为 `{CPU, CUDA, DML}`（CUDA=1, DML=2），而统一枚举为 `{CPU, DML, CUDA}`（DML=1, CUDA=2）。迁移时必须全面替换符号引用，禁止使用整数值做隐式转换，否则会导致 CUDA/DML 静默互换。
+  - **注意枚举值序不同**：`game-infer` 原始顺序为 `{CPU, CUDA, DML}`（CUDA=1, DML=2），而统一枚举为 `{CPU, DML, CUDA}`（DML=1, CUDA=2）。迁移时必须全面替换符号引用，禁止使用整数值做隐式转换，否则会导致 CUDA/DML 静默互换。
 - `some-infer`, `rmvpe-infer`, `hubert-infer`: 枚举值序与统一枚举一致，直接替换即可
 
 ### 4.3 hubert-infer（新提取）
@@ -1027,7 +1222,133 @@ private:
 - 动态 UI（模型加载后生成语言 radio + 非语音音素 checkbox）
 - 各自的 Run/Stop/进度条/日志
 
-### 5.2 MinLabel（独立 EXE，保持 QMainWindow）
+### 5.2 PhonemeLabeler（独立 EXE）
+
+> **TextGrid 音素边界编辑器**
+>
+> 入口: `src/apps/PhonemeLabeler/main.cpp`
+> 命名空间: `dstools::phonemelabeler`
+>
+> 启动流程: `QApplication → AppInit::init() → Theme::instance().init() → MainWindow → FramelessHelper::apply() → show → exec`
+
+**功能**：
+
+- TextGrid 文件加载/编辑/保存 (via textgrid.hpp)
+- 波形显示 (WaveformWidget)
+- 频谱显示 (SpectrogramWidget, 6 种色板, SpectrogramColorPalette)
+- 能量显示 (PowerWidget)
+- 多层编辑 (IntervalTierView per tier, TierEditWidget)
+- 跨层边界绑定 (BoundaryBindingManager, AlignedBoundary struct)
+- 边界叠加可视化 (BoundaryOverlayWidget)
+- 时间轴控制 (ViewportController, ViewportState struct)
+- 时间标尺 (TimeRulerWidget)
+- 条目列表 (EntryListPanel)
+- 文件列表 (FileListPanel)
+- 完整撤销重做 (QUndoStack + 5 种 Command 类)
+- 键盘快捷键 (AppSettings + PhonemeLabelerKeys)
+
+**核心类**：
+
+```cpp
+namespace dstools::phonemelabeler {
+
+class MainWindow;               // QMainWindow, 主窗口
+class TextGridDocument;         // TextGrid 文档模型
+
+// 可视化
+class WaveformWidget;           // 波形绘制
+class SpectrogramWidget;        // 频谱绘制（6 种色板）
+class PowerWidget;              // 能量曲线
+class TimeRulerWidget;          // 时间标尺
+
+// 编辑
+class IntervalTierView;         // 单层 interval 编辑视图
+class TierEditWidget;           // tier 编辑容器
+class BoundaryOverlayWidget;    // 跨层边界叠加
+
+// 控制
+class ViewportController;       // 视口时间/缩放控制
+struct ViewportState {
+    double startTime;
+    double endTime;
+    double pixelsPerSecond;
+};
+
+class BoundaryBindingManager;   // 跨层边界绑定
+struct AlignedBoundary {
+    int tierIndex;
+    int boundaryIndex;
+    double time;
+};
+
+// 面板
+class EntryListPanel;           // 当前 tier 条目列表
+class FileListPanel;            // 文件浏览列表
+
+// 色板
+class SpectrogramColorPalette;  // 频谱色板（6 种预设）
+
+} // namespace dstools::phonemelabeler
+```
+
+**链接依赖**: dstools-widgets, dstools-audio, textgrid, FFTW3, Qt
+
+### 5.3 PitchLabeler（独立 EXE）
+
+> **DS 文件 F0 曲线编辑器**
+>
+> 入口: `src/apps/PitchLabeler/main.cpp`
+> 命名空间: `dstools::pitchlabeler`
+>
+> 启动流程: `QApplication → AppInit::init() → Theme::instance().init() → MainWindow → FramelessHelper::apply() → show → exec`
+
+**功能**：
+
+- .ds 文件加载/编辑/保存 (via DsDocument, round-trip safe)
+- 钢琴卷帘 F0 可视化 (PianoRollView)
+- 三种编辑工具: Select (音高拖拽), Modulation (F0 振幅缩放), Drift (F0 平滑/偏移)
+- A/B 对比（原始 vs 编辑后 F0）
+- 音符属性面板 (PropertyPanel: 频率偏差、vibrato 分析)
+- 文件进度跟踪 (FileListPanel + FileProgressTracker, 3-state)
+- 完整撤销重做 (QUndoStack)
+- 批量保存
+
+**核心类**：
+
+```cpp
+namespace dstools::pitchlabeler {
+
+class MainWindow;           // QMainWindow, 主窗口
+
+// 数据
+class DSFile;               // .ds 文件数据模型
+struct Phone { /* 音素信息 */ };
+struct Note  { /* 音符信息 */ };
+struct F0Curve { /* F0 曲线数据 */ };
+
+// 可视化 + 编辑
+class PianoRollView;        // 钢琴卷帘 F0 编辑视图
+struct NotePitch {
+    double startSec;
+    double endSec;
+    double pitchHz;
+};
+enum class ToolMode {
+    Select,                 // 音高拖拽
+    Modulation,             // F0 振幅缩放
+    Drift                   // F0 平滑/偏移
+};
+
+// 面板
+class FileListPanel;        // 文件列表 + FileProgressTracker
+class PropertyPanel;        // 音符属性（频率偏差、vibrato 分析）
+
+} // namespace dstools::pitchlabeler
+```
+
+**链接依赖**: dstools-widgets, Qt
+
+### 5.4 MinLabel（独立 EXE，保持 QMainWindow）
 
 ```cpp
 // src/apps/MinLabel/MainWindow.h
@@ -1071,52 +1392,7 @@ private:
 } // namespace Minlabel
 ```
 
-### 5.3 SlurCutter（独立 EXE，保持 QMainWindow）
-
-```cpp
-// src/apps/SlurCutter/MainWindow.h
-// 保持原结构，变化仅限于：
-// - 使用共享 PlayWidget（启用范围播放模式）
-// - F0Widget 拆分为 4 文件（CQ-002）
-// - main.cpp 调用 AppInit + Theme
-
-namespace SlurCutter {
-
-class MainWindow : public QMainWindow {
-    Q_OBJECT
-public:
-    explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
-
-    void openDirectory(const QString &dir);
-    void openFile(const QString &filename);
-    bool saveFile(const QString &filename);
-
-private:
-    QTreeView *m_treeView;
-    QListWidget *m_sentenceWidget;
-    F0Widget *m_f0Widget;
-    dstools::widgets::PlayWidget *m_playWidget;
-
-    QVector<QJsonObject> m_dsContent;
-    int m_currentSentence = -1;
-
-    // 保留的所有 signal-slot 连接
-    // m_playWidget::playheadChanged → m_f0Widget::setPlayHeadPos
-    // m_f0Widget::requestReloadSentence → reloadDsSentenceRequested
-    // m_sentenceWidget::currentRowChanged → onSentenceChanged
-
-    void pullEditedMidi();
-    void switchFile(bool next);
-    void switchSentence(bool next);
-    void onSentenceChanged(int row);
-    void reloadDsSentenceRequested();
-};
-
-} // namespace SlurCutter
-```
-
-### 5.4 GameInfer（独立 EXE，保持 QMainWindow）
+### 5.5 GameInfer（独立 EXE，保持 QMainWindow）
 
 ```cpp
 // src/apps/GameInfer/MainWindow.h
@@ -1131,6 +1407,33 @@ class MainWindow : public QMainWindow {
 };
 ```
 
+### 5.6 统一样式方案
+
+5 个 EXE（DatasetPipeline, MinLabel, PhonemeLabeler, PitchLabeler, GameInfer）共享 dstools-widgets.dll。
+
+**共享组件使用矩阵**：
+
+| 组件 | DatasetPipeline | MinLabel | PhonemeLabeler | PitchLabeler | GameInfer |
+|------|:-:|:-:|:-:|:-:|:-:|
+| PlayWidget | - | Y | Y | Y | - |
+| GpuSelector | Y (HubertFA Tab) | - | - | - | Y |
+| TaskWindow | Y (LyricFA/HubertFA) | - | - | - | - |
+| FileProgressTracker | - | Y | - | Y | - |
+| FileStatusDelegate | - | Y | - | - | - |
+| ShortcutEditorWidget | - | - | Y | Y | - |
+
+**统一初始化模式**（所有 EXE 的 main.cpp）：
+
+```cpp
+QApplication app(argc, argv);
+dstools::AppInit::init(app, /* initPinyin */ false);
+dstools::Theme::instance().init();
+MainWindow w;
+dstools::FramelessHelper::apply(&w);
+w.show();
+return app.exec();
+```
+
 ---
 
 ## 6. 数据结构保留清单
@@ -1140,12 +1443,11 @@ class MainWindow : public QMainWindow {
 | 数据 | 格式 | 读/写位置 | 保留 |
 |------|------|-----------|------|
 | MinLabel 标注 | `{"lab":"...", "raw_text":"...", "isCheck":true}` | Common.cpp readJsonFile/writeJsonFile | 完全保留 |
-| DiffSinger 句子 | `.ds` JSON (ph_seq, note_seq, f0_seq...) | SlurCutter MainWindow | 完全保留 |
-| F0 数据 | f0_seq 字符串 + f0_timestep | F0Widget | 完全保留 |
+| PitchLabeler F0 | `.ds` JSON (ph_seq, note_seq, f0_seq...) | DsDocument (round-trip, 保留所有 raw fields) | 完全保留 |
+| PhonemeLabeler 音素 | Praat `.TextGrid` (phones + words tier) | textgrid.hpp | 完全保留 |
 | AudioSlicer CSV | `start:end.decimal` 每行 | WorkThread | 完全保留（修复 BUG-006） |
 | ASR 输出 | `.lab` 纯文本 | AsrTask | 完全保留 |
 | 歌词匹配输出 | `.json` (raw_text + lab) | LyricMatcher | 完全保留 |
-| TextGrid | Praat TextGrid (phones + words tier) | HfaTask via textgrid.hpp | 完全保留 |
+| HubertFA TextGrid | Praat TextGrid (phones + words tier) | HfaTask via textgrid.hpp | 完全保留 |
 | MIDI | Format 1, PPQ 480, 2 tracks | game-infer via wolf-midi | 完全保留 |
 | INI 配置 | `QSettings::IniFormat` | 各应用 | 每个 EXE 独立 INI 文件 |
-| SlurEditedFiles.txt | 每行一个文件名 | SlurCutter MainWindow | 完全保留 |

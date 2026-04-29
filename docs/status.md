@@ -1,6 +1,6 @@
 # 重构进度追踪
 
-**最后更新**: 2026-04-28
+**最后更新**: 2026-04-29
 
 本文档追踪 `docs/` 下各设计文档的实现状态。
 
@@ -57,7 +57,7 @@ config/
 | Pipeline 三 Tab 页独立 | ✅ DONE | Slicer/LyricFA/HubertFA |
 | 移除 qsmedia 插件系统 | ✅ DONE | |
 | 合并两个 PlayWidget | ✅ DONE | MinLabel + PitchLabeler + PhonemeLabeler 共享 PlayWidget |
-| 合并 DmlGpuUtils → GpuSelector | ⚠️ PARTIAL | GpuSelector 已创建；GameInfer/HubertFA 尚未切换 |
+| 合并 DmlGpuUtils → GpuSelector | ✅ DONE | GameInfer 已迁移到共享 GpuSelector；HubertFA 副本待 hubert-infer 提取后删除 |
 | 推理库迁移到 src/infer/ | ✅ DONE | |
 | 提取 hubert-infer | ❌ TODO | HubertFA 工具代码仍在 src/apps/HubertFA/util/ |
 | cmake/ 脚本迁移 | ✅ DONE | |
@@ -160,7 +160,7 @@ FEAT-003, FEAT-006
 | Phase 1: Core + Audio + Widgets | ✅ DONE | |
 | Phase 2: Inference 层重组 | ⚠️ PARTIAL | hubert-infer 未提取 |
 | Phase 3: DatasetPipeline | ✅ DONE | |
-| Phase 4: 独立 EXE 迁移 | ⚠️ PARTIAL | 5 个 app 均可构建；GameInfer 未切到 GpuSelector |
+| Phase 4: 独立 EXE 迁移 | ⚠️ PARTIAL | 5 个 app 均可构建；Phase 1 重构进度: 8/12 完成, 1/12 部分完成, 3/12 未完成 |
 | Phase 5: Bug 清零 | ⚠️ PARTIAL | 约 16/43 已修复，部分 SlurCutter Bug 因删除而过时 |
 | Phase 6: UI 美化 | ⚠️ PARTIAL | QSS 主题完成，SVG/细节未做 |
 | Phase 7: 测试与验收 | ❌ TODO | |
@@ -224,11 +224,15 @@ FEAT-003, FEAT-006
 
 ## 关键剩余工作（按优先级）
 
+### Phase 1 剩余任务（~3 天）
+1. **TASK-1.9 hubert-infer 提取** (~1.5d) — 推理代码仍在 src/apps/HubertFA/util/，需创建 src/infer/hubert-infer/ 库
+2. **TASK-1.7 ViewportController 补完** (~0.5d) — PitchLabeler PianoRollView 的 zoom/scroll 操作绕过 ViewportController 直接修改本地状态
+3. **TASK-1.11 game-infer align 验证** (~0.5d) — 产出 spike-game-align-result.md 验证报告
+4. **TASK-1.12 labelvoice schema 决策** (~0.5d) — 产出 decision-labelvoice-schema.md 决策文档
+
 ### 高优先级
-1. **hubert-infer 提取** — 推理代码仍在 src/apps/HubertFA/util/
-2. **GameInfer GpuSelector 迁移** — 仍使用私有 DmlGpuUtils
-3. **确认 SlurCutter 旧 Bug 在 PitchLabeler 中是否仍存在** — BUG-013, BUG-024, CQ-007 需逐一验证
-4. **清理旧 HubertFA 目录** — `src/apps/HubertFA/` 已脱离构建但仍占仓库空间，含旧版备份文件（`HfaThread.cpp~`）
+5. **确认 SlurCutter 旧 Bug 在 PitchLabeler 中是否仍存在** — BUG-013, BUG-024, CQ-007 需逐一验证
+6. **清理旧 HubertFA 目录** — 待 TASK-1.9 完成后删除 `src/apps/HubertFA/`
 
 ### 中优先级
 5. **module-spec.md 补充 PitchLabeler / PhonemeLabeler 章节** — 两个新应用已实现但设计文档未覆盖

@@ -6,7 +6,7 @@
 
 #include <QSharedPointer>
 
-#include "HFA.h"
+#include <hubert-infer/Hfa.h>
 
 namespace HFA {
     class HfaThread final : public QObject, public QRunnable {

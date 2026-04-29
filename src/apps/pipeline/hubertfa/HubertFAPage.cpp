@@ -13,9 +13,8 @@
 
 #include <dstools/JsonHelper.h>
 
-// Include original HFA headers directly since they haven't moved to hubert-infer yet
-#include "../../HubertFA/util/Hfa.h"
-#include "../../HubertFA/util/HfaThread.h"
+#include <hubert-infer/Hfa.h>
+#include "HfaTask.h"
 
 namespace fs = std::filesystem;
 

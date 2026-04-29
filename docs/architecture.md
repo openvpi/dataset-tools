@@ -954,9 +954,9 @@ MinLabel、PhonemeLabeler、PitchLabeler、GameInfer 保持 `QMainWindow` 作为
 | 方面 | 原代码 | 重构后 |
 |------|--------|--------|
 | 字体设置 | 各自 10-15 行 Win32 代码 | `AppInit::init()` 一行 |
-| root 检查 | MinLabel/SlurCutter 各 5 行 | `AppInit::init()` 内部 |
+| root 检查 | MinLabel 等各 5 行 | `AppInit::init()` 内部 |
 | 深色模式 | 无 | `Theme::apply(Dark)` 一行 |
-| 样式表 | MinLabel/SlurCutter 各自 app.qss (57行×2) | 全局 dark.qss 由 Theme 加载 |
+| 样式表 | 各应用各自 app.qss | 全局 dark.qss 由 Theme 加载 |
 | PlayWidget | 各自一份 (~350行×2) | 链接 `dstools-widgets.dll` |
 | 窗口类型 | QMainWindow | **不变**，仍是 QMainWindow |
 | 菜单栏 | 各自创建 | **不变** |
