@@ -23,6 +23,7 @@ set(CORE_SOURCES
     src/ModelManager.cpp
     src/DsItemManager.cpp
     src/DsProject.cpp
+    src/PinyinG2PProvider.cpp
 )
 
 set(CORE_HEADERS
@@ -47,6 +48,7 @@ set(CORE_HEADERS
     include/dstools/DsDocumentAdapter.h
     include/dstools/IExportFormat.h
     include/dstools/IG2PProvider.h
+    include/dstools/PinyinG2PProvider.h
     include/dstools/IModelDownloader.h
     include/dstools/IQualityMetrics.h
     include/dstools/IStepPlugin.h
