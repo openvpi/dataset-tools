@@ -6,11 +6,12 @@
 
 namespace dstools {
 
-static const QStringList NoteNames = {
+static constexpr const char *NoteNames[] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 };
 
-// Semitones from C for each base note letter
+static constexpr int NoteNamesCount = 12;
+
 static int baseSemitones(QChar c) {
     switch (c.toUpper().toLatin1()) {
         case 'C': return 0;
@@ -40,18 +41,16 @@ NotePitch parseNoteName(const QString &noteStr) {
         return result;
     }
 
-    // Regex: ([A-G][#b]*) (-?\d+) ([+-]\d+)?
     static QRegularExpression re(R"(^([A-G][#b]*)(-?\d+)([+-]\d+)?$)");
     auto match = re.match(s);
     if (!match.hasMatch()) {
         return result;
     }
 
-    QString namePart = match.captured(1);  // e.g. "C#", "Bb", "C##"
+    QString namePart = match.captured(1);
     int octave = match.captured(2).toInt();
     int cents = match.captured(3).isEmpty() ? 0 : match.captured(3).toInt();
 
-    // Resolve accidentals to standard sharp name
     QChar base = namePart[0];
     int semitones = baseSemitones(base);
     if (semitones < 0) return result;
@@ -66,7 +65,7 @@ NotePitch parseNoteName(const QString &noteStr) {
     while (semitones < 0)   { semitones += 12; octaveOffset--; }
     octave += octaveOffset;
 
-    result.name = NoteNames[semitones];
+    result.name = QString::fromUtf8(NoteNames[semitones]);
     result.octave = octave;
     result.cents = cents;
     result.midiNumber = (octave + 1) * 12 + semitones + cents / 100.0;
@@ -75,11 +74,10 @@ NotePitch parseNoteName(const QString &noteStr) {
 }
 
 QString midiToNoteName(int midiNote) {
-    static const char *names[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     if (midiNote > 108 || midiNote < 21)
         return QString();
     midiNote -= 12;
-    return QString("%1%2").arg(names[midiNote % 12]).arg(midiNote / 12);
+    return QString("%1%2").arg(NoteNames[midiNote % NoteNamesCount]).arg(midiNote / 12);
 }
 
 QString midiToNoteString(double midiFloat) {
@@ -88,12 +86,11 @@ QString midiToNoteString(double midiFloat) {
     if (cents > 50) { midiInt++; cents -= 100; }
     else if (cents < -50) { midiInt--; cents += 100; }
     if (midiInt < 0) { midiInt = 0; cents = 0; }
-    static const char *names[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    int noteIdx = midiInt % 12;
+    int noteIdx = midiInt % NoteNamesCount;
     int octave = midiInt / 12 - 1;
     if (cents == 0)
-        return QString("%1%2").arg(names[noteIdx]).arg(octave);
-    return QString("%1%2%3%4").arg(names[noteIdx]).arg(octave).arg(cents > 0 ? "+" : "").arg(cents);
+        return QString("%1%2").arg(NoteNames[noteIdx]).arg(octave);
+    return QString("%1%2%3%4").arg(NoteNames[noteIdx]).arg(octave).arg(cents > 0 ? "+" : "").arg(cents);
 }
 
 QString shiftNoteCents(const QString &noteStr, int deltaCents) {
