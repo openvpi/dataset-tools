@@ -534,11 +534,16 @@ void MainWidget::onExportMidiTask() {
     m_runButton->setEnabled(false);
     m_progressBar->setValue(0);
 
-    QFuture<void> future = QtConcurrent::run([this] {
+    const QString wavPath = m_wavPathLineEdit->text();
+    const QString outputMidiPath = m_outputMidiLineEdit->text();
+    const float tempo = static_cast<float>(m_tempoSpin->value());
+    const int maxAudioSegLength = max_audio_seg_length;
+
+    QFuture<void> future = QtConcurrent::run([this, wavPath, outputMidiPath, tempo, maxAudioSegLength] {
         std::vector<Game::GameMidi> midis;
         std::string msg;
 
-        if (!exists(std::filesystem::path(m_wavPathLineEdit->text().toLocal8Bit().toStdString()))) {
+        if (!exists(std::filesystem::path(wavPath.toLocal8Bit().toStdString()))) {
             QMetaObject::invokeMethod(
                 this,
                 [this] {
@@ -567,15 +572,14 @@ void MainWidget::onExportMidiTask() {
 
         updateParameterValues();
         const bool success = m_game->get_midi(
-            m_wavPathLineEdit->text().toLocal8Bit().toStdString(), midis, static_cast<float>(m_tempoSpin->value()), msg,
+            wavPath.toLocal8Bit().toStdString(), midis, tempo, msg,
             [this](const int progress) {
                 QMetaObject::invokeMethod(m_progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, progress));
             },
-            max_audio_seg_length);
+            maxAudioSegLength);
 
         if (success) {
-            makeMidiFile(m_outputMidiLineEdit->text().toLocal8Bit().toStdString(), midis,
-                         static_cast<float>(m_tempoSpin->value()));
+            makeMidiFile(outputMidiPath.toLocal8Bit().toStdString(), midis, tempo);
             QMetaObject::invokeMethod(
                 this, [this] { QMessageBox::information(this, "Success", "MIDI file generated!"); },
                 Qt::QueuedConnection);
@@ -679,7 +683,13 @@ void MainWidget::onAlignCsvTask() {
     m_alignRunBtn->setEnabled(false);
     m_alignProgressBar->setValue(0);
 
-    QFuture<void> future = QtConcurrent::run([this] {
+    const QString csvInputPath = m_alignCsvInputEdit->text();
+    const QFileInfo outputInfo(m_alignOutputEdit->text());
+    const std::filesystem::path csvPath = csvInputPath.toLocal8Bit().toStdString();
+    const std::filesystem::path savePath = outputInfo.absolutePath().toLocal8Bit().toStdString();
+    const std::string saveFilename = outputInfo.fileName().toLocal8Bit().toStdString();
+
+    QFuture<void> future = QtConcurrent::run([this, csvPath, savePath, saveFilename] {
         std::string msg;
 
         if (!m_game->is_open()) {
@@ -697,11 +707,6 @@ void MainWidget::onAlignCsvTask() {
         }
 
         updateParameterValues();
-
-        const std::filesystem::path csvPath = m_alignCsvInputEdit->text().toLocal8Bit().toStdString();
-        const QFileInfo outputInfo(m_alignOutputEdit->text());
-        const std::filesystem::path savePath = outputInfo.absolutePath().toLocal8Bit().toStdString();
-        const std::string saveFilename = outputInfo.fileName().toLocal8Bit().toStdString();
 
         Game::AlignOptions options;
 
