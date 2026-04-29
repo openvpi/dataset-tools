@@ -9,13 +9,18 @@
 namespace dstools::widgets {
 
 ModelLoadPanel::ModelLoadPanel(const QString &label, const QString &filter, QWidget *parent)
+    : ModelLoadPanel(PathSelector::OpenFile, label, filter, parent) {
+}
+
+ModelLoadPanel::ModelLoadPanel(PathSelector::Mode mode, const QString &label,
+                               const QString &filter, QWidget *parent)
     : QWidget(parent) {
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(4);
 
     // Top row: path selector
-    m_pathSelector = new PathSelector(PathSelector::OpenFile, label, filter, this);
+    m_pathSelector = new PathSelector(mode, label, filter, this);
     mainLayout->addWidget(m_pathSelector);
 
     // Bottom row: Load button + status

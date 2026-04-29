@@ -1,8 +1,6 @@
 #include "GameAlignPage.h"
 
-#include <QFileDialog>
 #include <QFormLayout>
-#include <QHBoxLayout>
 #include <QMessageBox>
 #include <QVBoxLayout>
 
@@ -18,34 +16,19 @@ void GameAlignPage::buildUi() {
     // Parameter panel
     auto *form = new QFormLayout;
 
-    auto *modelRow = new QHBoxLayout;
-    m_modelPath = new QLineEdit;
-    m_modelPath->setPlaceholderText(tr("Path to GAME model directory"));
-    auto *btnBrowseModel = new QPushButton(tr("Browse..."));
-    connect(btnBrowseModel, &QPushButton::clicked, this, [this]() {
-        auto path = QFileDialog::getExistingDirectory(this, tr("Select GAME Model Directory"),
-                                                       m_workingDir);
-        if (!path.isEmpty())
-            m_modelPath->setText(path);
-    });
-    modelRow->addWidget(m_modelPath);
-    modelRow->addWidget(btnBrowseModel);
-    form->addRow(tr("Model:"), modelRow);
+    m_modelPath = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::Directory, "",
+                                                     "");
+    m_modelPath->setPlaceholder(tr("Path to GAME model directory"));
+    form->addRow(tr("Model:"), m_modelPath);
 
     m_gpuSelector = new dstools::widgets::GpuSelector;
     form->addRow(tr("Device:"), m_gpuSelector);
 
     vLayout->addLayout(form);
 
-    // Run button + progress
-    auto *runRow = new QHBoxLayout;
-    m_btnRun = new QPushButton(tr("Run"));
-    m_progress = new QProgressBar;
-    m_progress->setRange(0, 100);
-    m_progress->setValue(0);
-    runRow->addWidget(m_btnRun);
-    runRow->addWidget(m_progress, 1);
-    vLayout->addLayout(runRow);
+    // Run progress row
+    m_runProgress = new dstools::widgets::RunProgressRow(tr("Run"));
+    vLayout->addWidget(m_runProgress);
 
     // Log area
     m_log = new QTextEdit;
@@ -61,7 +44,7 @@ void GameAlignPage::buildUi() {
                                     "This step will use the GAME model to generate MIDI "
                                     "transcriptions from audio files."));
     };
-    connect(m_btnRun, &QPushButton::clicked, this, runSlot);
+    connect(m_runProgress, &dstools::widgets::RunProgressRow::runClicked, this, runSlot);
     connect(m_runAction, &QAction::triggered, this, runSlot);
 }
 

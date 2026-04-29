@@ -2,16 +2,15 @@
 #define MAINWIDGET_H
 
 #include <QComboBox>
-#include <QFileDialog>
 #include <QLabel>
-#include <QLineEdit>
 #include <QMessageBox>
-#include <QProgressBar>
 #include <QSpinBox>
 #include <QWidget>
 
 #include <dstools/AppSettings.h>
 #include <dstools/GpuSelector.h>
+#include <dstools/PathSelector.h>
+#include <dstools/RunProgressRow.h>
 #include <game-infer/Game.h>
 #include <nlohmann/json.hpp>
 
@@ -27,18 +26,11 @@ public:
     ~MainWidget() override;
 
 private slots:
-    void browseModelPath();
-    bool loadModel(std::string &message);
     bool loadModel(const QString &modelPathText, Game::ExecutionProvider provider, int deviceId, std::string &message);
     void resetToDefaults() const;
-    void onBrowseWavPath();
-    void onBrowseOutputMidi();
     void onWavPathChanged(const QString &wavPath) const;
     void generateMidiOutputPath(const QString &wavPath) const;
     void onExportMidiTask();
-    void onBrowseAlignCsvInput();
-    void onBrowseAlignWavDir();
-    void onBrowseAlignOutput();
     void onAlignCsvTask();
 
 private:
@@ -54,9 +46,7 @@ private:
     void setModelLoadingStatus(const QString &status);
 
     // Model group widgets
-    QLineEdit *m_modelPathEdit;
-    QPushButton *m_browseModelBtn;
-    QPushButton *m_loadModelBtn;
+    dstools::widgets::PathSelector *m_modelPath;
     QComboBox *m_providerCombo;
     dstools::widgets::GpuSelector *m_deviceCombo;
     QLabel *m_modelStatusLabel;
@@ -77,22 +67,15 @@ private:
     QDoubleSpinBox *m_tempoSpin;
 
     // Audio processing widgets
-    QLineEdit *m_wavPathLineEdit;
-    QLineEdit *m_outputMidiLineEdit;
-    QPushButton *m_wavPathButton;
-    QPushButton *m_outputMidiButton;
-    QProgressBar *m_progressBar;
-    QPushButton *m_runButton;
+    dstools::widgets::PathSelector *m_wavPath;
+    dstools::widgets::PathSelector *m_outputMidi;
+    dstools::widgets::RunProgressRow *m_audioRun;
 
     // Align group widgets
-    QLineEdit *m_alignCsvInputEdit;
-    QLineEdit *m_alignWavDirEdit;
-    QLineEdit *m_alignOutputEdit;
-    QPushButton *m_alignCsvInputBtn;
-    QPushButton *m_alignWavDirBtn;
-    QPushButton *m_alignOutputBtn;
-    QProgressBar *m_alignProgressBar;
-    QPushButton *m_alignRunBtn;
+    dstools::widgets::PathSelector *m_alignCsvInput;
+    dstools::widgets::PathSelector *m_alignWavDir;
+    dstools::widgets::PathSelector *m_alignOutput;
+    dstools::widgets::RunProgressRow *m_alignRun;
 
     // Action buttons
     QPushButton *m_resetParamsBtn;

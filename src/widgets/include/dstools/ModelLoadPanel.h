@@ -1,5 +1,6 @@
 #pragma once
 #include <dstools/WidgetsGlobal.h>
+#include <dstools/PathSelector.h>
 #include <QWidget>
 
 class QLabel;
@@ -7,14 +8,14 @@ class QPushButton;
 
 namespace dstools::widgets {
 
-class PathSelector;
-
 /// Composite widget: PathSelector (OpenFile) + "Load" button + status label for model loading.
 class DSTOOLS_WIDGETS_API ModelLoadPanel : public QWidget {
     Q_OBJECT
 public:
     explicit ModelLoadPanel(const QString &label, const QString &filter,
                             QWidget *parent = nullptr);
+    explicit ModelLoadPanel(PathSelector::Mode mode, const QString &label,
+                            const QString &filter = {}, QWidget *parent = nullptr);
 
     QString path() const;
     PathSelector *pathSelector() const;

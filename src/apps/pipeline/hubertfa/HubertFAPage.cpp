@@ -4,19 +4,23 @@
 
 #include <QApplication>
 #include <QDir>
-#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QRadioButton>
 #include <QTextCursor>
 
+#include <dstools/PathSelector.h>
+#include <dstools/ModelLoadPanel.h>
 #include <dstools/JsonHelper.h>
 
 #include <hubert-infer/Hfa.h>
 #include "HfaTask.h"
 
 namespace fs = std::filesystem;
+
+using dstools::widgets::PathSelector;
+using dstools::widgets::ModelLoadPanel;
 
 HubertFAPage::HubertFAPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
     m_errorFormat.setForeground(Qt::red);
@@ -31,18 +35,9 @@ HubertFAPage::~HubertFAPage() {
 }
 
 void HubertFAPage::init() {
-    auto *outLabel = new QLabel("Output TextGrid directory:", this);
-    m_outTgEdit = new QLineEdit(this);
-    auto *outBtn = new QPushButton("Browse...", this);
-    auto *outLayout = new QHBoxLayout();
-    outLayout->addWidget(outLabel);
-    outLayout->addWidget(m_outTgEdit);
-    outLayout->addWidget(outBtn);
-    connect(outBtn, &QPushButton::clicked, this, &HubertFAPage::slot_outTgPath);
-    m_rightPanel->addLayout(outLayout);
+    m_outTgPath = new PathSelector(PathSelector::Directory, "Output TextGrid directory:", {}, this);
+    m_rightPanel->addWidget(m_outTgPath);
 
-    auto *modelLabel = new QLabel("HFA model folder:", this);
-    m_modelEdit = new QLineEdit(this);
     const QString defaultModelPath = QDir::cleanPath(
 #ifdef Q_OS_MAC
         QApplication::applicationDirPath() + "/../Resources/hfa_model"
@@ -50,19 +45,11 @@ void HubertFAPage::init() {
         QApplication::applicationDirPath() + QDir::separator() + "model" + QDir::separator() + "HfaModel"
 #endif
     );
-    m_modelEdit->setText(defaultModelPath);
-    auto *modelBrowseBtn = new QPushButton("Browse...", this);
-    m_modelLoadBtn = new QPushButton("Load Model", this);
-    m_modelStatusLabel = new QLabel("Model not loaded", this);
-    auto *modelLayout = new QHBoxLayout();
-    modelLayout->addWidget(modelLabel);
-    modelLayout->addWidget(m_modelEdit);
-    modelLayout->addWidget(modelBrowseBtn);
-    modelLayout->addWidget(m_modelLoadBtn);
-    modelLayout->addWidget(m_modelStatusLabel);
-    connect(modelBrowseBtn, &QPushButton::clicked, this, &HubertFAPage::slot_browseModel);
-    connect(m_modelLoadBtn, &QPushButton::clicked, this, &HubertFAPage::slot_loadModel);
-    m_topLayout->addLayout(modelLayout);
+
+    m_modelPanel = new ModelLoadPanel(PathSelector::Directory, "HFA model folder:", {}, this);
+    m_modelPanel->pathSelector()->setPath(defaultModelPath);
+    connect(m_modelPanel, &ModelLoadPanel::loadRequested, this, &HubertFAPage::slot_loadModel);
+    m_topLayout->addWidget(m_modelPanel);
 
     m_rightPanel->addStretch();
 }
@@ -74,7 +61,7 @@ void HubertFAPage::runTask() {
         m_runBtn->setEnabled(true);
         return;
     }
-    const QString outDir = m_outTgEdit->text().trimmed();
+    const QString outDir = m_outTgPath->path().trimmed();
     if (outDir.isEmpty()) {
         QMessageBox::warning(this, "Warning", "Output directory cannot be empty.");
         m_isRunning = false;
@@ -138,20 +125,10 @@ void HubertFAPage::onTaskFinished() {
     m_totalTasks = m_finishedTasks = m_errorTasks = 0;
 }
 
-void HubertFAPage::slot_outTgPath() {
-    QString path = QFileDialog::getExistingDirectory(this, "Select Output TextGrid Directory", m_outTgEdit->text());
-    if (!path.isEmpty()) m_outTgEdit->setText(path);
-}
-
-void HubertFAPage::slot_browseModel() {
-    QString path = QFileDialog::getExistingDirectory(this, "Select HFA Model Folder", m_modelEdit->text());
-    if (!path.isEmpty()) m_modelEdit->setText(path);
-}
-
 void HubertFAPage::slot_loadModel() {
-    QString modelFolder = m_modelEdit->text().trimmed();
+    QString modelFolder = m_modelPanel->path().trimmed();
     if (modelFolder.isEmpty()) {
-        m_modelStatusLabel->setText("Model folder path is empty.");
+        m_modelPanel->setStatus("Model folder path is empty.", false);
         m_runBtn->setEnabled(false);
         return;
     }
@@ -159,9 +136,8 @@ void HubertFAPage::slot_loadModel() {
     if (m_hfa) { delete m_hfa; m_hfa = nullptr; }
     m_hfa = new HFA::HFA(modelFolder.toStdString(), HFA::ExecutionProvider::CPU, -1);
     if (m_hfa->initialized()) {
-        m_modelStatusLabel->setText("Model loaded successfully.");
+        m_modelPanel->setStatus("Model loaded successfully.", true);
         m_runBtn->setEnabled(true);
-        m_modelLoadBtn->setEnabled(false);
 
         // Build dynamic UI from vocab.json
         if (!m_dynamicContainer) {
@@ -209,9 +185,8 @@ void HubertFAPage::slot_loadModel() {
             m_rightPanel->insertWidget(stretchIdx, m_dynamicContainer);
         }
     } else {
-        m_modelStatusLabel->setText("Model loading failed.");
+        m_modelPanel->setStatus("Model loading failed.", false);
         m_runBtn->setEnabled(false);
-        m_modelLoadBtn->setEnabled(true);
     }
 }
 

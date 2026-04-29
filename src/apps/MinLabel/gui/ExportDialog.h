@@ -5,6 +5,7 @@
 #include <QCheckBox>
 #include <QDialog>
 #include <QLineEdit>
+#include <dstools/PathSelector.h>
 
 #include "Common.h"
 
@@ -17,8 +18,7 @@ namespace Minlabel {
 
         ExportInfo exportInfo;
 
-        QLineEdit *outputDirEdit;
-        QPushButton *outputDirButton;
+        dstools::widgets::PathSelector *m_outputDir;
 
         QLineEdit *folderNameEdit;
         QCheckBox *convertFilename{};

@@ -4,15 +4,13 @@
 #include <QComboBox>
 #include <QDir>
 #include <QDoubleSpinBox>
-#include <QFileDialog>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QLineEdit>
 #include <QMessageBox>
-#include <QProgressBar>
 #include <QPushButton>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
@@ -82,7 +80,7 @@ MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
     max_audio_seg_length = m_settings->get(GameInferKeys::MaxAudioSegLength);
 
     // Automatically load config when widget is initialized
-    const auto modelPath = std::filesystem::path(m_modelPathEdit->text().toLocal8Bit().toStdString());
+    const auto modelPath = std::filesystem::path(m_modelPath->path().toLocal8Bit().toStdString());
     if (!modelPath.empty()) {
         loadLanguagesFromConfig(modelPath);
         updateTimeStepInfo(modelPath);
@@ -99,20 +97,23 @@ void MainWidget::setupModelGroup() {
     auto *layout = new QGridLayout(group);
 
     // Model path
-    layout->addWidget(new QLabel("Model Path:"), 0, 0);
-    m_modelPathEdit = new QLineEdit();
+    m_modelPath = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::Directory, "Model Path:");
 
     const QString savedModelPath = m_settings->get(GameInferKeys::ModelPath);
     if (savedModelPath.isEmpty()) {
-        m_modelPathEdit->setText(QApplication::applicationDirPath() + "/model/GAME-1.0.3-small-onnx");
+        m_modelPath->setPath(QApplication::applicationDirPath() + "/model/GAME-1.0.3-small-onnx");
     } else {
-        m_modelPathEdit->setText(savedModelPath);
+        m_modelPath->setPath(savedModelPath);
     }
-    layout->addWidget(m_modelPathEdit, 0, 1, 1, 3);
+    layout->addWidget(m_modelPath, 0, 0, 1, 5);
 
-    m_browseModelBtn = new QPushButton("Browse...");
-    connect(m_browseModelBtn, &QPushButton::clicked, this, &MainWidget::browseModelPath);
-    layout->addWidget(m_browseModelBtn, 0, 4);
+    connect(m_modelPath, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &dir) {
+        m_settings->set(GameInferKeys::ModelPath, dir);
+        if (!dir.isEmpty()) {
+            loadLanguagesFromConfig(std::filesystem::path(dir.toStdWString()));
+            updateTimeStepInfo(std::filesystem::path(dir.toStdWString()));
+        }
+    });
 
     // Provider selection
     layout->addWidget(new QLabel("Execution Provider:"), 1, 0);
@@ -136,8 +137,6 @@ void MainWidget::setupModelGroup() {
     // Status label
     m_modelStatusLabel = new QLabel("Not loaded");
     layout->addWidget(m_modelStatusLabel, 2, 0, 1, 3);
-
-    // Removed Load Model button
 
     auto *mainLayout = qobject_cast<QVBoxLayout *>(this->layout());
     mainLayout->addWidget(group);
@@ -272,47 +271,36 @@ void MainWidget::setupAudioGroup() {
     auto *layout = new QVBoxLayout(group);
 
     // WAV file selection
-    const auto wavPathLayout = new QGridLayout();
-    const auto wavPathLabel = new QLabel("Input Audio File:");
-    m_wavPathLineEdit = new QLineEdit();
-    m_wavPathLineEdit->setText(m_settings->get(GameInferKeys::WavPath));
-    m_wavPathButton = new QPushButton("Browse...");
-    wavPathLayout->addWidget(wavPathLabel, 0, 0);
-    wavPathLayout->addWidget(m_wavPathLineEdit, 0, 1);
-    wavPathLayout->addWidget(m_wavPathButton, 0, 2);
-    layout->addLayout(wavPathLayout);
+    m_wavPath = new dstools::widgets::PathSelector(
+        dstools::widgets::PathSelector::OpenFile, "Input Audio File:",
+        "Audio Files (*.wav *.flac *.mp3);;WAV Files (*.wav);;FLAC Files (*.flac);;MP3 Files (*.mp3)");
+    m_wavPath->setPath(m_settings->get(GameInferKeys::WavPath));
+    layout->addWidget(m_wavPath);
 
     const auto wavTip =
         new QLabel("Note: Mono WAV files are recommended. Multi-channel/FLAC/MP3 are for testing only.");
     layout->addWidget(wavTip);
 
     // Output MIDI file
-    const auto outputMidiLayout = new QGridLayout();
-    const auto outputMidiLabel = new QLabel("Output MIDI File:");
-    m_outputMidiLineEdit = new QLineEdit();
-    m_outputMidiLineEdit->setText(m_settings->get(GameInferKeys::OutputMidiPath));
-    m_outputMidiButton = new QPushButton("Browse...");
-    outputMidiLayout->addWidget(outputMidiLabel, 0, 0);
-    outputMidiLayout->addWidget(m_outputMidiLineEdit, 0, 1);
-    outputMidiLayout->addWidget(m_outputMidiButton, 0, 2);
-    layout->addLayout(outputMidiLayout);
+    m_outputMidi = new dstools::widgets::PathSelector(
+        dstools::widgets::PathSelector::SaveFile, "Output MIDI File:", "MIDI Files (*.mid)");
+    m_outputMidi->setPath(m_settings->get(GameInferKeys::OutputMidiPath));
+    layout->addWidget(m_outputMidi);
 
     // Progress bar and run button
-    const auto progressLayout = new QHBoxLayout();
-    m_progressBar = new QProgressBar();
-    m_progressBar->setMinimum(0);
-    m_progressBar->setMaximum(100);
-    m_progressBar->setValue(0);
-    progressLayout->addWidget(m_progressBar);
-    m_runButton = new QPushButton("Convert");
-    progressLayout->addWidget(m_runButton);
-    layout->addLayout(progressLayout);
+    m_audioRun = new dstools::widgets::RunProgressRow("Convert");
+    layout->addWidget(m_audioRun);
 
     // Connections
-    connect(m_wavPathButton, &QPushButton::clicked, this, &MainWidget::onBrowseWavPath);
-    connect(m_outputMidiButton, &QPushButton::clicked, this, &MainWidget::onBrowseOutputMidi);
-    connect(m_wavPathLineEdit, &QLineEdit::textChanged, this, &MainWidget::onWavPathChanged);
-    connect(m_runButton, &QPushButton::clicked, this, &MainWidget::onExportMidiTask);
+    connect(m_wavPath, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &wavPath) {
+        m_settings->set(GameInferKeys::WavPath, wavPath);
+        generateMidiOutputPath(wavPath);
+    });
+    connect(m_outputMidi, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &path) {
+        m_settings->set(GameInferKeys::OutputMidiPath, path);
+    });
+    connect(m_wavPath, &dstools::widgets::PathSelector::pathChanged, this, &MainWidget::onWavPathChanged);
+    connect(m_audioRun, &dstools::widgets::RunProgressRow::runClicked, this, &MainWidget::onExportMidiTask);
 
     auto *mainLayout = qobject_cast<QVBoxLayout *>(this->layout());
     mainLayout->addWidget(group);
@@ -329,21 +317,6 @@ void MainWidget::setupActionButtons() {
 
     auto *mainLayout = qobject_cast<QVBoxLayout *>(this->layout());
     mainLayout->addLayout(layout);
-}
-
-void MainWidget::browseModelPath() {
-    const QString dir =
-        QFileDialog::getExistingDirectory(this, "Select Model Directory", m_modelPathEdit->text().toLocal8Bit(),
-                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-
-    if (!dir.isEmpty()) {
-        m_modelPathEdit->setText(dir);
-        m_settings->set(GameInferKeys::ModelPath, dir);
-
-        // Auto-load config when model path changes
-        loadLanguagesFromConfig(std::filesystem::path(dir.toStdWString()));
-        updateTimeStepInfo(std::filesystem::path(dir.toStdWString()));
-    }
 }
 
 void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
@@ -370,14 +343,6 @@ void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
     const int currentValue = m_segRadiusFrameSpin->value();
     const double ms = currentValue * (m_timeStepSeconds * 1000.0);
     m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
-}
-
-bool MainWidget::loadModel(std::string &message) {
-    const QString modelPathText = m_modelPathEdit->text();
-    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-    const int deviceId = m_deviceCombo->selectedDeviceId();
-
-    return loadModel(modelPathText, provider, deviceId, message);
 }
 
 bool MainWidget::loadModel(const QString &modelPathText, Game::ExecutionProvider provider, int deviceId, std::string &message) {
@@ -499,27 +464,8 @@ void MainWidget::resetToDefaults() const {
     m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
 }
 
-void MainWidget::onBrowseWavPath() {
-    const QString wavPath = QFileDialog::getOpenFileName(
-        this, "Select Input Audio File", "",
-        "Audio Files (*.wav *.flac *.mp3);;WAV Files (*.wav);;FLAC Files (*.flac);;MP3 Files (*.mp3)");
-    if (!wavPath.isEmpty()) {
-        m_wavPathLineEdit->setText(wavPath);
-        m_settings->set(GameInferKeys::WavPath, wavPath);
-        generateMidiOutputPath(wavPath);
-    }
-}
-
-void MainWidget::onBrowseOutputMidi() {
-    if (const QString file = QFileDialog::getSaveFileName(this, "Select Output MIDI File", "", "MIDI Files (*.mid)");
-        !file.isEmpty()) {
-        m_outputMidiLineEdit->setText(file);
-        m_settings->set(GameInferKeys::OutputMidiPath, file);
-    }
-}
-
 void MainWidget::onWavPathChanged(const QString &wavPath) const {
-    if (!wavPath.isEmpty() && m_outputMidiLineEdit->text().isEmpty()) {
+    if (!wavPath.isEmpty() && m_outputMidi->path().isEmpty()) {
         generateMidiOutputPath(wavPath);
     }
 }
@@ -531,23 +477,21 @@ static QString replaceFileExtension(const QString &filePath, const QString &newE
 
 void MainWidget::generateMidiOutputPath(const QString &wavPath) const {
     const QFileInfo fileInfo(wavPath);
-    const QString dir = fileInfo.absolutePath();
     const QString midiPath = replaceFileExtension(wavPath, "mid");
-    m_outputMidiLineEdit->setText(midiPath);
+    m_outputMidi->setPath(midiPath);
     m_settings->set(GameInferKeys::OutputMidiPath, midiPath);
 }
 
 void MainWidget::onExportMidiTask() {
-    if (m_wavPathLineEdit->text().isEmpty() || m_outputMidiLineEdit->text().isEmpty()) {
+    if (m_wavPath->path().isEmpty() || m_outputMidi->path().isEmpty()) {
         QMessageBox::warning(this, "Warning", "Please fill input audio file and output MIDI file paths");
         return;
     }
 
-    m_runButton->setEnabled(false);
-    m_progressBar->setValue(0);
+    m_audioRun->setRunning(true);
 
-    const QString wavPath = m_wavPathLineEdit->text();
-    const QString outputMidiPath = m_outputMidiLineEdit->text();
+    const QString wavPath = m_wavPath->path();
+    const QString outputMidiPath = m_outputMidi->path();
     const float tempo = static_cast<float>(m_tempoSpin->value());
     const int maxAudioSegLength = this->max_audio_seg_length;
     const int segRadiusFrame = m_segRadiusFrameSpin->value();
@@ -555,7 +499,7 @@ void MainWidget::onExportMidiTask() {
     const double estThreshold = m_estThresholdSpin->value();
     const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
     const int languageId = m_languageCombo->currentData().toInt();
-    const QString modelPathText = m_modelPathEdit->text();
+    const QString modelPathText = m_modelPath->path();
     const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
     const int deviceId = m_deviceCombo->selectedDeviceId();
 
@@ -574,7 +518,7 @@ void MainWidget::onExportMidiTask() {
                                               .arg(wavPath));
                 },
                 Qt::QueuedConnection);
-            QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+            QMetaObject::invokeMethod(this, [this] { m_audioRun->setRunning(false); }, Qt::QueuedConnection);
             return;
         }
 
@@ -587,7 +531,7 @@ void MainWidget::onExportMidiTask() {
                         QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg_));
                     },
                     Qt::QueuedConnection);
-                QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+                QMetaObject::invokeMethod(this, [this] { m_audioRun->setRunning(false); }, Qt::QueuedConnection);
                 return;
             }
         }
@@ -604,7 +548,7 @@ void MainWidget::onExportMidiTask() {
         const bool success = m_game->get_midi(
             wavPath.toLocal8Bit().toStdString(), midis, tempo, msg,
             [this](const int progress) {
-                QMetaObject::invokeMethod(m_progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, progress));
+                QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
             },
             maxAudioSegLength);
 
@@ -623,98 +567,63 @@ void MainWidget::onExportMidiTask() {
                 Qt::QueuedConnection);
         }
 
-        QMetaObject::invokeMethod(m_runButton, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+        QMetaObject::invokeMethod(this, [this] { m_audioRun->setRunning(false); }, Qt::QueuedConnection);
     });
 }
 
 void MainWidget::setupAlignGroup() {
     auto *group = new QGroupBox("Align CSV");
-    auto *layout = new QGridLayout(group);
+    auto *layout = new QVBoxLayout(group);
 
-    // Row 0: Input CSV
-    layout->addWidget(new QLabel("Input CSV:"), 0, 0);
-    m_alignCsvInputEdit = new QLineEdit();
-    m_alignCsvInputEdit->setText(m_settings->get(GameInferKeys::AlignCsvInputPath));
-    layout->addWidget(m_alignCsvInputEdit, 0, 1);
-    m_alignCsvInputBtn = new QPushButton("Browse...");
-    layout->addWidget(m_alignCsvInputBtn, 0, 2);
+    // Input CSV
+    m_alignCsvInput = new dstools::widgets::PathSelector(
+        dstools::widgets::PathSelector::OpenFile, "Input CSV:", "CSV Files (*.csv)");
+    m_alignCsvInput->setPath(m_settings->get(GameInferKeys::AlignCsvInputPath));
+    layout->addWidget(m_alignCsvInput);
 
-    // Row 1: WAV Directory
-    layout->addWidget(new QLabel("WAV Directory:"), 1, 0);
-    m_alignWavDirEdit = new QLineEdit();
-    m_alignWavDirEdit->setText(m_settings->get(GameInferKeys::AlignWavDir));
-    layout->addWidget(m_alignWavDirEdit, 1, 1);
-    m_alignWavDirBtn = new QPushButton("Browse...");
-    layout->addWidget(m_alignWavDirBtn, 1, 2);
+    // WAV Directory
+    m_alignWavDir = new dstools::widgets::PathSelector(
+        dstools::widgets::PathSelector::Directory, "WAV Directory:");
+    m_alignWavDir->setPath(m_settings->get(GameInferKeys::AlignWavDir));
+    layout->addWidget(m_alignWavDir);
 
-    // Row 2: Output CSV
-    layout->addWidget(new QLabel("Output CSV:"), 2, 0);
-    m_alignOutputEdit = new QLineEdit();
-    m_alignOutputEdit->setText(m_settings->get(GameInferKeys::AlignOutputPath));
-    layout->addWidget(m_alignOutputEdit, 2, 1);
-    m_alignOutputBtn = new QPushButton("Browse...");
-    layout->addWidget(m_alignOutputBtn, 2, 2);
+    // Output CSV
+    m_alignOutput = new dstools::widgets::PathSelector(
+        dstools::widgets::PathSelector::SaveFile, "Output CSV:", "CSV Files (*.csv)");
+    m_alignOutput->setPath(m_settings->get(GameInferKeys::AlignOutputPath));
+    layout->addWidget(m_alignOutput);
 
-    // Row 3: Progress + Run
-    auto *progressLayout = new QHBoxLayout();
-    m_alignProgressBar = new QProgressBar();
-    m_alignProgressBar->setMinimum(0);
-    m_alignProgressBar->setMaximum(100);
-    m_alignProgressBar->setValue(0);
-    progressLayout->addWidget(m_alignProgressBar);
-    m_alignRunBtn = new QPushButton("Align");
-    progressLayout->addWidget(m_alignRunBtn);
-    layout->addLayout(progressLayout, 3, 0, 1, 3);
+    // Progress + Run
+    m_alignRun = new dstools::widgets::RunProgressRow("Align");
+    layout->addWidget(m_alignRun);
 
     // Connections
-    connect(m_alignCsvInputBtn, &QPushButton::clicked, this, &MainWidget::onBrowseAlignCsvInput);
-    connect(m_alignWavDirBtn, &QPushButton::clicked, this, &MainWidget::onBrowseAlignWavDir);
-    connect(m_alignOutputBtn, &QPushButton::clicked, this, &MainWidget::onBrowseAlignOutput);
-    connect(m_alignRunBtn, &QPushButton::clicked, this, &MainWidget::onAlignCsvTask);
+    connect(m_alignCsvInput, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &path) {
+        m_settings->set(GameInferKeys::AlignCsvInputPath, path);
+    });
+    connect(m_alignWavDir, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &path) {
+        m_settings->set(GameInferKeys::AlignWavDir, path);
+    });
+    connect(m_alignOutput, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &path) {
+        m_settings->set(GameInferKeys::AlignOutputPath, path);
+    });
+    connect(m_alignRun, &dstools::widgets::RunProgressRow::runClicked, this, &MainWidget::onAlignCsvTask);
 
     auto *mainLayout = qobject_cast<QVBoxLayout *>(this->layout());
     mainLayout->addWidget(group);
 }
 
-void MainWidget::onBrowseAlignCsvInput() {
-    const QString file =
-        QFileDialog::getOpenFileName(this, "Select Input CSV File", m_alignCsvInputEdit->text(), "CSV Files (*.csv)");
-    if (!file.isEmpty()) {
-        m_alignCsvInputEdit->setText(file);
-        m_settings->set(GameInferKeys::AlignCsvInputPath, file);
-    }
-}
-
-void MainWidget::onBrowseAlignWavDir() {
-    const QString dir = QFileDialog::getExistingDirectory(this, "Select WAV Directory", m_alignWavDirEdit->text(),
-                                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-    if (!dir.isEmpty()) {
-        m_alignWavDirEdit->setText(dir);
-        m_settings->set(GameInferKeys::AlignWavDir, dir);
-    }
-}
-
-void MainWidget::onBrowseAlignOutput() {
-    const QString file =
-        QFileDialog::getSaveFileName(this, "Select Output CSV File", m_alignOutputEdit->text(), "CSV Files (*.csv)");
-    if (!file.isEmpty()) {
-        m_alignOutputEdit->setText(file);
-        m_settings->set(GameInferKeys::AlignOutputPath, file);
-    }
-}
-
 void MainWidget::onAlignCsvTask() {
-    if (m_alignCsvInputEdit->text().isEmpty() || m_alignWavDirEdit->text().isEmpty() ||
-        m_alignOutputEdit->text().isEmpty()) {
+    if (m_alignCsvInput->path().isEmpty() || m_alignWavDir->path().isEmpty() ||
+        m_alignOutput->path().isEmpty()) {
         QMessageBox::warning(this, "Warning", "Please fill all align CSV paths");
         return;
     }
 
-    m_alignRunBtn->setEnabled(false);
-    m_alignProgressBar->setValue(0);
+    m_alignRun->setRunning(true);
 
-    const QString csvInputPath = m_alignCsvInputEdit->text();
-    const QFileInfo outputInfo(m_alignOutputEdit->text());
+    const QString csvInputPath = m_alignCsvInput->path();
+    const QFileInfo outputInfo(m_alignOutput->path());
     const std::filesystem::path csvPath = csvInputPath.toLocal8Bit().toStdString();
     const std::filesystem::path savePath = outputInfo.absolutePath().toLocal8Bit().toStdString();
     const std::string saveFilename = outputInfo.fileName().toLocal8Bit().toStdString();
@@ -723,7 +632,7 @@ void MainWidget::onAlignCsvTask() {
     const double estThreshold = m_estThresholdSpin->value();
     const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
     const int languageId = m_languageCombo->currentData().toInt();
-    const QString modelPathText = m_modelPathEdit->text();
+    const QString modelPathText = m_modelPath->path();
     const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
     const int deviceId = m_deviceCombo->selectedDeviceId();
 
@@ -741,7 +650,7 @@ void MainWidget::onAlignCsvTask() {
                         QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg_));
                     },
                     Qt::QueuedConnection);
-                QMetaObject::invokeMethod(m_alignRunBtn, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+                QMetaObject::invokeMethod(this, [this] { m_alignRun->setRunning(false); }, Qt::QueuedConnection);
                 return;
             }
         }
@@ -759,8 +668,8 @@ void MainWidget::onAlignCsvTask() {
 
         const bool success = m_game->alignCSV(csvPath, savePath, saveFilename, true, options, msg,
                                               [this](const int progress) {
-                                                  QMetaObject::invokeMethod(m_alignProgressBar, "setValue",
-                                                                           Qt::QueuedConnection, Q_ARG(int, progress));
+                                                  QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
+                                                                           Qt::QueuedConnection);
                                               });
 
         if (success) {
@@ -777,6 +686,6 @@ void MainWidget::onAlignCsvTask() {
                 Qt::QueuedConnection);
         }
 
-        QMetaObject::invokeMethod(m_alignRunBtn, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+        QMetaObject::invokeMethod(this, [this] { m_alignRun->setRunning(false); }, Qt::QueuedConnection);
     });
 }

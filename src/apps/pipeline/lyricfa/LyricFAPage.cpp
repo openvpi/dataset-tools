@@ -1,11 +1,13 @@
 #include "LyricFAPage.h"
 
 #include <QApplication>
-#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QStandardPaths>
+
+#include <dstools/PathSelector.h>
+#include <dstools/ModelLoadPanel.h>
 
 #include "AsrTask.h"
 #include "LyricMatchTask.h"
@@ -13,6 +15,9 @@
 #include "MatchLyric.h"
 
 #include <cpp-pinyin/Pinyin.h>
+
+using dstools::widgets::PathSelector;
+using dstools::widgets::ModelLoadPanel;
 
 LyricFAPage::LyricFAPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
     m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
@@ -28,44 +33,20 @@ LyricFAPage::~LyricFAPage() {
 }
 
 void LyricFAPage::init() {
-    auto *labLabel = new QLabel("Lab Out Path:", this);
-    m_labEdit = new QLineEdit("", this);
-    auto *btnLab = new QPushButton("Open Folder", this);
-    auto *labLayout = new QHBoxLayout();
-    labLayout->addWidget(m_labEdit);
-    labLayout->addWidget(btnLab);
-
-    auto *jsonLabel = new QLabel("Json Out Path:", this);
-    m_jsonEdit = new QLineEdit("", this);
-    auto *btnJson = new QPushButton("Open Folder", this);
-    auto *jsonLayout = new QHBoxLayout();
-    jsonLayout->addWidget(m_jsonEdit);
-    jsonLayout->addWidget(btnJson);
-
-    auto *lyricLabel = new QLabel("Raw Lyric Path:", this);
-    m_lyricEdit = new QLineEdit("", this);
-    auto *btnLyric = new QPushButton("Lyric Folder", this);
-    auto *lyricLayout = new QHBoxLayout();
-    lyricLayout->addWidget(m_lyricEdit);
-    lyricLayout->addWidget(btnLyric);
+    m_labPath = new PathSelector(PathSelector::Directory, "Lab Out Path:", {}, this);
+    m_jsonPath = new PathSelector(PathSelector::Directory, "Json Out Path:", {}, this);
+    m_lyricPath = new PathSelector(PathSelector::Directory, "Raw Lyric Path:", {}, this);
 
     m_pinyinBox = new QCheckBox("ASR result saved as pinyin", this);
     m_matchBtn = new QPushButton("Match Lyrics", this);
     connect(m_matchBtn, &QPushButton::clicked, this, &LyricFAPage::slot_matchLyric);
 
-    m_rightPanel->addWidget(labLabel);
-    m_rightPanel->addLayout(labLayout);
-    m_rightPanel->addWidget(jsonLabel);
-    m_rightPanel->addLayout(jsonLayout);
-    m_rightPanel->addWidget(lyricLabel);
-    m_rightPanel->addLayout(lyricLayout);
+    m_rightPanel->addWidget(m_labPath);
+    m_rightPanel->addWidget(m_jsonPath);
+    m_rightPanel->addWidget(m_lyricPath);
     m_rightPanel->addWidget(m_pinyinBox);
     m_rightPanel->addWidget(m_matchBtn);
     m_rightPanel->addStretch();
-
-    connect(btnLab, &QPushButton::clicked, this, &LyricFAPage::slot_labPath);
-    connect(btnJson, &QPushButton::clicked, this, &LyricFAPage::slot_jsonPath);
-    connect(btnLyric, &QPushButton::clicked, this, &LyricFAPage::slot_lyricPath);
 
     const QString defaultModelPath = QDir::cleanPath(
 #ifdef Q_OS_MAC
@@ -75,23 +56,10 @@ void LyricFAPage::init() {
 #endif
     );
 
-    auto *modelLabel = new QLabel("ASR Model Folder:", this);
-    m_modelEdit = new QLineEdit(this);
-    m_modelEdit->setText(defaultModelPath);
-    auto *browseBtn = new QPushButton("Browse...", this);
-    auto *loadBtn = new QPushButton("Load Model", this);
-    m_modelStatusLabel = new QLabel("Model not loaded", this);
-
-    auto *loadModelLayout = new QHBoxLayout();
-    loadModelLayout->addWidget(modelLabel);
-    loadModelLayout->addWidget(m_modelEdit);
-    loadModelLayout->addWidget(browseBtn);
-    loadModelLayout->addWidget(loadBtn);
-    loadModelLayout->addWidget(m_modelStatusLabel);
-    m_topLayout->addLayout(loadModelLayout);
-
-    connect(browseBtn, &QPushButton::clicked, this, &LyricFAPage::slot_browseModel);
-    connect(loadBtn, &QPushButton::clicked, this, &LyricFAPage::slot_loadModel);
+    m_modelPanel = new ModelLoadPanel(PathSelector::Directory, "ASR Model Folder:", {}, this);
+    m_modelPanel->pathSelector()->setPath(defaultModelPath);
+    connect(m_modelPanel, &ModelLoadPanel::loadRequested, this, &LyricFAPage::slot_loadModel);
+    m_topLayout->addWidget(m_modelPanel);
 
     slot_loadModel();
 }
@@ -107,7 +75,7 @@ void LyricFAPage::runTask() {
     m_logOutput->clear();
     threadPool()->clear();
 
-    const QString labOutPath = m_labEdit->text();
+    const QString labOutPath = m_labPath->path();
     if (!QDir(labOutPath).exists()) {
         QMessageBox::information(this, "Warning", "Lab Out Path does not exist.");
         m_isRunning = false;
@@ -166,9 +134,9 @@ void LyricFAPage::onTaskFinished() {
 }
 
 void LyricFAPage::slot_matchLyric() {
-    const QString lyricFolder = m_lyricEdit->text();
-    const QString labFolder = m_labEdit->text();
-    const QString jsonFolder = m_jsonEdit->text();
+    const QString lyricFolder = m_lyricPath->path();
+    const QString labFolder = m_labPath->path();
+    const QString jsonFolder = m_jsonPath->path();
 
     if (!QDir(lyricFolder).exists() || !QDir(labFolder).exists() || !QDir(jsonFolder).exists()) {
         QMessageBox::information(this, "Warning", "Please ensure all three paths exist.");
@@ -211,43 +179,23 @@ void LyricFAPage::slot_matchLyric() {
     }
 }
 
-void LyricFAPage::slot_labPath() {
-    QString path = QFileDialog::getExistingDirectory(this, "Select Lab Output Directory");
-    if (!path.isEmpty()) m_labEdit->setText(path);
-}
-
-void LyricFAPage::slot_jsonPath() {
-    QString path = QFileDialog::getExistingDirectory(this, "Select Json Output Directory");
-    if (!path.isEmpty()) m_jsonEdit->setText(path);
-}
-
-void LyricFAPage::slot_lyricPath() {
-    QString path = QFileDialog::getExistingDirectory(this, "Select Raw Lyric Directory");
-    if (!path.isEmpty()) m_lyricEdit->setText(path);
-}
-
-void LyricFAPage::slot_browseModel() {
-    QString path = QFileDialog::getExistingDirectory(this, "Select ASR Model Folder", m_modelEdit->text());
-    if (!path.isEmpty()) m_modelEdit->setText(path);
-}
-
 void LyricFAPage::slot_loadModel() {
-    QString modelFolder = m_modelEdit->text().trimmed();
+    QString modelFolder = m_modelPanel->path().trimmed();
     if (modelFolder.isEmpty()) {
-        m_modelStatusLabel->setText("Model folder path is empty.");
+        m_modelPanel->setStatus("Model folder path is empty.", false);
         m_runBtn->setEnabled(false);
         return;
     }
 
     QDir dir(modelFolder);
     if (!dir.exists()) {
-        m_modelStatusLabel->setText("Model folder does not exist.");
+        m_modelPanel->setStatus("Model folder does not exist.", false);
         m_runBtn->setEnabled(false);
         return;
     }
 
     if (!QFile::exists(dir.absoluteFilePath("model.onnx")) || !QFile::exists(dir.absoluteFilePath("vocab.txt"))) {
-        m_modelStatusLabel->setText("Missing model.onnx or vocab.txt");
+        m_modelPanel->setStatus("Missing model.onnx or vocab.txt", false);
         m_runBtn->setEnabled(false);
         return;
     }
@@ -255,10 +203,10 @@ void LyricFAPage::slot_loadModel() {
     if (m_asr) { delete m_asr; m_asr = nullptr; }
     m_asr = new LyricFA::Asr(modelFolder);
     if (m_asr->initialized()) {
-        m_modelStatusLabel->setText("Model loaded successfully.");
+        m_modelPanel->setStatus("Model loaded successfully.", true);
         m_runBtn->setEnabled(true);
     } else {
-        m_modelStatusLabel->setText("Failed to load model.");
+        m_modelPanel->setStatus("Failed to load model.", false);
         delete m_asr; m_asr = nullptr;
         m_runBtn->setEnabled(false);
     }

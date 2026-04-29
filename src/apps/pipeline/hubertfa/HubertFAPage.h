@@ -3,9 +3,12 @@
 #include <QButtonGroup>
 #include <QCheckBox>
 #include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
 #include <QTextCharFormat>
+
+namespace dstools::widgets {
+class PathSelector;
+class ModelLoadPanel;
+}
 
 namespace HFA {
 class HFA;
@@ -23,17 +26,13 @@ protected:
     void onTaskFinished() override;
 
 private slots:
-    void slot_outTgPath();
-    void slot_browseModel();
     void slot_loadModel();
     void slot_hfaFailed(const QString &filename, const QString &msg);
     void slot_hfaFinished(const QString &filename, const QString &msg);
 
 private:
-    QLineEdit *m_outTgEdit;
-    QLineEdit *m_modelEdit;
-    QLabel *m_modelStatusLabel;
-    QPushButton *m_modelLoadBtn;
+    dstools::widgets::PathSelector *m_outTgPath;
+    dstools::widgets::ModelLoadPanel *m_modelPanel;
     QButtonGroup *m_languageGroup = nullptr;
     QHBoxLayout *m_nonSpeechPhLayout = nullptr;
     QWidget *m_dynamicContainer = nullptr;

@@ -2,7 +2,6 @@
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
-#include <QFileDialog>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -15,24 +14,12 @@ namespace Minlabel {
 
         auto *layout = new QFormLayout(this);
 
-        outputDirEdit = new QLineEdit(this);
-        outputDirEdit->setText(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
-        outputDirButton = new QPushButton("...", this);
-        outputDirButton->setMaximumWidth(100);
-
-        connect(outputDirButton, &QPushButton::clicked, this, [=] {
-            const QString dirname = QFileDialog::getExistingDirectory(this, "Select Directory", outputDirEdit->text());
-            if (!dirname.isEmpty()) {
-                outputDirEdit->setText(dirname);
-            }
-        });
-
-        const auto hLayout = new QHBoxLayout();
-        hLayout->addWidget(outputDirEdit);
-        hLayout->addWidget(outputDirButton);
+        m_outputDir = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::Directory,
+                                                         "", "", this);
+        m_outputDir->setPath(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation));
 
         layout->addRow(new QLabel("Out Directory:", this));
-        layout->addRow(hLayout);
+        layout->addRow(m_outputDir);
 
         folderNameEdit = new QLineEdit(this);
         folderNameEdit->setText("minlabel_export");
@@ -58,7 +45,7 @@ namespace Minlabel {
         connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
         connect(this, &QDialog::accepted, this, [=] {
-            exportInfo.outputDir = outputDirEdit->text();
+            exportInfo.outputDir = m_outputDir->path();
             exportInfo.folderName = folderNameEdit->text();
             exportInfo.exportAudio = expAudio->isChecked();
             exportInfo.labFile = labFile->isChecked();

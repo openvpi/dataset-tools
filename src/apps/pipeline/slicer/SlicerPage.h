@@ -5,6 +5,10 @@
 #include <QSpinBox>
 #include <QCheckBox>
 
+namespace dstools::widgets {
+class PathSelector;
+}
+
 class SlicerPage : public dstools::widgets::TaskWindow {
     Q_OBJECT
 public:
@@ -16,7 +20,6 @@ protected:
     void runTask() override;
 
 private slots:
-    void onBrowseOutputDir();
     void onOneFinished(const QString &filename, int listIndex);
     void onOneFailed(const QString &errmsg, int listIndex);
 
@@ -33,7 +36,7 @@ private:
     QComboBox *m_cmbSlicingMode;
     QSpinBox *m_spnSuffixDigits;
     QCheckBox *m_chkOverwriteMarkers;
-    QLineEdit *m_lineOutputDir;
+    dstools::widgets::PathSelector *m_outputDir;
 
     int m_workTotal = 0;
     int m_workFinished = 0;

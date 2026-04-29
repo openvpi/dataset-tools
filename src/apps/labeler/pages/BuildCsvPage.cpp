@@ -1,8 +1,6 @@
 #include "BuildCsvPage.h"
 
-#include <QFileDialog>
 #include <QFormLayout>
-#include <QHBoxLayout>
 #include <QMessageBox>
 #include <QVBoxLayout>
 
@@ -18,19 +16,10 @@ void BuildCsvPage::buildUi() {
     // Parameter panel
     auto *form = new QFormLayout;
 
-    auto *dictRow = new QHBoxLayout;
-    m_dictPath = new QLineEdit;
-    m_dictPath->setPlaceholderText(tr("Path to dictionary file"));
-    auto *btnBrowseDict = new QPushButton(tr("Browse..."));
-    connect(btnBrowseDict, &QPushButton::clicked, this, [this]() {
-        auto path = QFileDialog::getOpenFileName(this, tr("Select Dictionary File"),
-                                                  m_workingDir, tr("All Files (*)"));
-        if (!path.isEmpty())
-            m_dictPath->setText(path);
-    });
-    dictRow->addWidget(m_dictPath);
-    dictRow->addWidget(btnBrowseDict);
-    form->addRow(tr("Dictionary:"), dictRow);
+    m_dictPath = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::OpenFile, "",
+                                                    tr("All Files (*)"));
+    m_dictPath->setPlaceholder(tr("Path to dictionary file"));
+    form->addRow(tr("Dictionary:"), m_dictPath);
 
     m_chkPhNum = new QCheckBox(tr("Calculate ph_num"));
     m_chkPhNum->setChecked(true);
@@ -38,15 +27,9 @@ void BuildCsvPage::buildUi() {
 
     vLayout->addLayout(form);
 
-    // Run button + progress
-    auto *runRow = new QHBoxLayout;
-    m_btnRun = new QPushButton(tr("Run"));
-    m_progress = new QProgressBar;
-    m_progress->setRange(0, 100);
-    m_progress->setValue(0);
-    runRow->addWidget(m_btnRun);
-    runRow->addWidget(m_progress, 1);
-    vLayout->addLayout(runRow);
+    // Run progress row
+    m_runProgress = new dstools::widgets::RunProgressRow(tr("Run"));
+    vLayout->addWidget(m_runProgress);
 
     // Log area
     m_log = new QTextEdit;
@@ -62,7 +45,7 @@ void BuildCsvPage::buildUi() {
                                     "This step will convert TextGrid files to transcriptions.csv "
                                     "and optionally calculate ph_num values."));
     };
-    connect(m_btnRun, &QPushButton::clicked, this, runSlot);
+    connect(m_runProgress, &dstools::widgets::RunProgressRow::runClicked, this, runSlot);
     connect(m_runAction, &QAction::triggered, this, runSlot);
 }
 

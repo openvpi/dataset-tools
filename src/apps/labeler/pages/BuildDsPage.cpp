@@ -1,8 +1,6 @@
 #include "BuildDsPage.h"
 
-#include <QFileDialog>
 #include <QFormLayout>
-#include <QHBoxLayout>
 #include <QMessageBox>
 #include <QVBoxLayout>
 
@@ -18,19 +16,10 @@ void BuildDsPage::buildUi() {
     // Parameter panel
     auto *form = new QFormLayout;
 
-    auto *modelRow = new QHBoxLayout;
-    m_rmvpePath = new QLineEdit;
-    m_rmvpePath->setPlaceholderText(tr("Path to RMVPE model file"));
-    auto *btnBrowseModel = new QPushButton(tr("Browse..."));
-    connect(btnBrowseModel, &QPushButton::clicked, this, [this]() {
-        auto path = QFileDialog::getOpenFileName(this, tr("Select RMVPE Model"),
-                                                  m_workingDir, tr("ONNX Model (*.onnx)"));
-        if (!path.isEmpty())
-            m_rmvpePath->setText(path);
-    });
-    modelRow->addWidget(m_rmvpePath);
-    modelRow->addWidget(btnBrowseModel);
-    form->addRow(tr("RMVPE Model:"), modelRow);
+    m_rmvpePath = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::OpenFile, "",
+                                                     tr("ONNX Model (*.onnx)"));
+    m_rmvpePath->setPlaceholder(tr("Path to RMVPE model file"));
+    form->addRow(tr("RMVPE Model:"), m_rmvpePath);
 
     m_gpuSelector = new QComboBox;
     m_gpuSelector->addItem(tr("CPU"));
@@ -51,15 +40,9 @@ void BuildDsPage::buildUi() {
 
     vLayout->addLayout(form);
 
-    // Run button + progress
-    auto *runRow = new QHBoxLayout;
-    m_btnRun = new QPushButton(tr("Run"));
-    m_progress = new QProgressBar;
-    m_progress->setRange(0, 100);
-    m_progress->setValue(0);
-    runRow->addWidget(m_btnRun);
-    runRow->addWidget(m_progress, 1);
-    vLayout->addLayout(runRow);
+    // Run progress row
+    m_runProgress = new dstools::widgets::RunProgressRow(tr("Run"));
+    vLayout->addWidget(m_runProgress);
 
     // Log area
     m_log = new QTextEdit;
@@ -75,7 +58,7 @@ void BuildDsPage::buildUi() {
                                     "This step will convert transcriptions.csv to .ds files "
                                     "and extract F0 curves using RMVPE."));
     };
-    connect(m_btnRun, &QPushButton::clicked, this, runSlot);
+    connect(m_runProgress, &dstools::widgets::RunProgressRow::runClicked, this, runSlot);
     connect(m_runAction, &QAction::triggered, this, runSlot);
 }
 

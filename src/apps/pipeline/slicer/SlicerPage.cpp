@@ -2,7 +2,6 @@
 
 #include <QApplication>
 #include <QDir>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -12,8 +11,12 @@
 #include <QSet>
 #include <QVBoxLayout>
 
+#include <dstools/PathSelector.h>
+
 #include "Enumerations.h"
 #include "WorkThread.h"
+
+using dstools::widgets::PathSelector;
 
 SlicerPage::SlicerPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
     setMaxThreadCount(1);
@@ -76,14 +79,8 @@ void SlicerPage::init() {
     m_rightPanel->addWidget(paramGroup);
 
     // Output dir
-    auto *outLayout = new QHBoxLayout();
-    outLayout->addWidget(new QLabel(tr("Output Dir:")));
-    m_lineOutputDir = new QLineEdit();
-    outLayout->addWidget(m_lineOutputDir);
-    auto *browseBtn = new QPushButton(tr("Browse..."));
-    connect(browseBtn, &QPushButton::clicked, this, &SlicerPage::onBrowseOutputDir);
-    outLayout->addWidget(browseBtn);
-    m_rightPanel->addLayout(outLayout);
+    m_outputDir = new PathSelector(PathSelector::Directory, tr("Output Dir:"), {}, this);
+    m_rightPanel->addWidget(m_outputDir);
 
     m_rightPanel->addStretch();
 }
@@ -190,7 +187,7 @@ void SlicerPage::runTask() {
         auto *item = m_taskListWidget->item(i);
         auto path = item->data(Qt::UserRole + 1).toString();
         auto *runnable = new WorkThread(
-            path, m_lineOutputDir->text(),
+            path, m_outputDir->path(),
             m_lineThreshold->text().toDouble(),
             m_lineMinLength->text().toLongLong(),
             m_lineMinInterval->text().toLongLong(),
@@ -204,13 +201,6 @@ void SlicerPage::runTask() {
         connect(runnable, &WorkThread::oneInfo, this, &SlicerPage::logMessage);
         connect(runnable, &WorkThread::oneError, this, &SlicerPage::logMessage);
         threadPool()->start(runnable);
-    }
-}
-
-void SlicerPage::onBrowseOutputDir() {
-    QString path = QFileDialog::getExistingDirectory(this, tr("Browse Output Directory"), ".");
-    if (!path.isEmpty()) {
-        m_lineOutputDir->setText(QDir::toNativeSeparators(path));
     }
 }
 
