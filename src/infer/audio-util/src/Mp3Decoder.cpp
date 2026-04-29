@@ -107,7 +107,7 @@ namespace AudioUtil
                 const sf_count_t written = outBuf.writef(pcm_buffer.data(), num_samples / channels);
 
                 if (written > 0)
-                    sf_vio.info.frames += written;
+                    sf_vio.info.frames += written / channels;
             }
         } else {
             // 16-bit integer buffer for multi-channel audio
