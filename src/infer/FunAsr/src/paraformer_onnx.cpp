@@ -9,6 +9,8 @@
 #include <iostream>
 #include <memory>
 
+#include <dstools/OnnxEnv.h>
+
 
 namespace FunAsr {
     ModelImp::ModelImp(const std::filesystem::path &path, const int &nNumThread) {
@@ -21,10 +23,10 @@ namespace FunAsr {
         sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
 #ifdef _WIN32
-        m_session = std::make_unique<Ort::Session>(env, model_path.wstring().c_str(), sessionOptions);
+        m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
         vocab = std::make_unique<Vocab>(vocab_path.wstring().c_str());
 #else
-        m_session = std::make_unique<Ort::Session>(env, model_path.c_str(), sessionOptions);
+        m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
         vocab = std::make_unique<Vocab>(vocab_path.c_str());
 #endif
 

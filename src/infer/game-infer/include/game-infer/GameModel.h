@@ -76,7 +76,6 @@ namespace Game
         std::unique_ptr<Ort::Session> sessBd2dur; // bd2dur.onnx: boundaries → durations
         std::unique_ptr<Ort::Session> sessDur2bd; // dur2bd.onnx: durations → boundaries (optional)
 
-        Ort::Env env;
         Ort::SessionOptions sessionOptions;
         Ort::RunOptions m_runOptions;
         std::atomic<bool> m_terminated{false};

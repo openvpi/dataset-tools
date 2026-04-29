@@ -28,7 +28,6 @@ namespace FunAsr {
 #endif
 
         std::unique_ptr<Ort::Session> m_session;
-        Ort::Env env = Ort::Env(ORT_LOGGING_LEVEL_ERROR, "paraformer");
         Ort::SessionOptions sessionOptions = Ort::SessionOptions();
 
         std::vector<std::string> m_strInputNames, m_strOutputNames;

@@ -7,134 +7,12 @@
 #include <numeric>
 
 #include <nlohmann/json.hpp>
-
-#ifdef ONNXRUNTIME_ENABLE_DML
-#include <dml_provider_factory.h>
-#endif
+#include <dstools/OnnxEnv.h>
 
 namespace Game
 {
-    // 初始化DirectML执行提供者
-    static inline bool initDirectML(Ort::SessionOptions &options, const int deviceIndex,
-                                    std::string *errorMessage = nullptr) {
-#ifdef ONNXRUNTIME_ENABLE_DML
-        if (!options) {
-            if (errorMessage) {
-                *errorMessage = "SessionOptions must not be nullptr!";
-            }
-            return false;
-        }
-
-        if (deviceIndex < 0) {
-            if (errorMessage) {
-                *errorMessage = "GPU device index must be a non-negative integer!";
-            }
-            return false;
-        }
-
-        const OrtApi &ortApi = Ort::GetApi();
-        const OrtDmlApi *ortDmlApi;
-        const Ort::Status getApiStatus(
-            (ortApi.GetExecutionProviderApi("DML", ORT_API_VERSION, reinterpret_cast<const void **>(&ortDmlApi))));
-        if (!getApiStatus.IsOK()) {
-            // Failed to get DirectML API.
-            if (errorMessage) {
-                *errorMessage = getApiStatus.GetErrorMessage();
-            }
-            return false;
-        }
-
-        // Successfully get DirectML API
-        options.DisableMemPattern();
-        options.SetExecutionMode(ORT_SEQUENTIAL);
-
-        const Ort::Status appendStatus(ortDmlApi->SessionOptionsAppendExecutionProvider_DML(options, deviceIndex));
-        if (!appendStatus.IsOK()) {
-            if (errorMessage) {
-                *errorMessage = appendStatus.GetErrorMessage();
-            }
-            return false;
-        }
-        return true;
-#else
-        if (errorMessage) {
-            *errorMessage = "The library is not built with DirectML support.";
-        }
-        return false;
-#endif
-    }
-
-    // 初始化CUDA执行提供者
-    static inline bool initCUDA(Ort::SessionOptions &options, int deviceIndex, std::string *errorMessage = nullptr) {
-#ifdef ONNXRUNTIME_ENABLE_CUDA
-        if (!options) {
-            if (errorMessage) {
-                *errorMessage = "SessionOptions must not be nullptr!";
-            }
-            return false;
-        }
-
-        if (deviceIndex < 0) {
-            if (errorMessage) {
-                *errorMessage = "GPU device index must be a non-negative integer!";
-            }
-            return false;
-        }
-
-        const OrtApi &ortApi = Ort::GetApi();
-
-        OrtCUDAProviderOptionsV2 *cudaOptionsPtr = nullptr;
-        Ort::Status createStatus(ortApi.CreateCUDAProviderOptions(&cudaOptionsPtr));
-
-        // Currently, ORT C++ API does not have a wrapper for CUDAProviderOptionsV2.
-        // Let the smart pointer take ownership of cudaOptionsPtr so it will be released when it
-        // goes out of scope.
-        std::unique_ptr<OrtCUDAProviderOptionsV2, decltype(ortApi.ReleaseCUDAProviderOptions)> cudaOptions(
-            cudaOptionsPtr, ortApi.ReleaseCUDAProviderOptions);
-
-        if (!createStatus.IsOK()) {
-            if (errorMessage) {
-                *errorMessage = createStatus.GetErrorMessage();
-            }
-            return false;
-        }
-
-        // The following block of code sets device_id
-        {
-            // Device ID from int to string
-            auto cudaDeviceIdStr = std::to_string(deviceIndex);
-            auto cudaDeviceIdCStr = cudaDeviceIdStr.c_str();
-
-            constexpr int CUDA_OPTIONS_SIZE = 2;
-            const char *cudaOptionsKeys[CUDA_OPTIONS_SIZE] = {"device_id", "cudnn_conv_algo_search"};
-            const char *cudaOptionsValues[CUDA_OPTIONS_SIZE] = {cudaDeviceIdCStr, "DEFAULT"};
-            Ort::Status updateStatus(ortApi.UpdateCUDAProviderOptions(cudaOptions.get(), cudaOptionsKeys,
-                                                                      cudaOptionsValues, CUDA_OPTIONS_SIZE));
-            if (!updateStatus.IsOK()) {
-                if (errorMessage) {
-                    *errorMessage = updateStatus.GetErrorMessage();
-                }
-                return false;
-            }
-        }
-        Ort::Status appendStatus(ortApi.SessionOptionsAppendExecutionProvider_CUDA_V2(options, cudaOptions.get()));
-        if (!appendStatus.IsOK()) {
-            if (errorMessage) {
-                *errorMessage = appendStatus.GetErrorMessage();
-            }
-            return false;
-        }
-        return true;
-#else
-        if (errorMessage) {
-            *errorMessage = "The library is not built with CUDA support.";
-        }
-        return false;
-#endif
-    }
-
     GameModel::GameModel() :
-        env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "GameModel")), sessionOptions(Ort::SessionOptions()) {}
+        sessionOptions(Ort::SessionOptions()) {}
 
     GameModel::~GameModel() = default;
 
@@ -188,41 +66,8 @@ namespace Game
             }
         }
 
-        sessionOptions = Ort::SessionOptions();
-        sessionOptions.SetInterOpNumThreads(4);
+        sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
         sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
-
-        // Choose execution provider based on the provided option
-        switch (provider) {
-#ifdef ONNXRUNTIME_ENABLE_DML
-        case ExecutionProvider::DML:
-            {
-                std::string errorMessage;
-                if (!initDirectML(sessionOptions, device_id, &errorMessage)) {
-                    std::cout << "Failed to enable Dml: " << errorMessage << ". Falling back to CPU." << std::endl;
-                } else {
-                    std::cout << "Use Dml execution provider" << std::endl;
-                }
-                break;
-            }
-#endif
-
-#ifdef ONNXRUNTIME_ENABLE_CUDA
-        case ExecutionProvider::CUDA:
-            {
-                std::string errorMessage;
-                if (!initCUDA(sessionOptions, device_id, &errorMessage)) {
-                    std::cout << "Failed to enable CUDA: " << errorMessage << std::endl;
-                } else {
-                    std::cout << "Using CUDA execution provider" << std::endl;
-                }
-                break;
-            }
-#endif
-
-        default:
-            break;
-        }
 
         auto loadSession = [&](const std::string &name, std::unique_ptr<Ort::Session> &session)
         {
@@ -232,9 +77,9 @@ namespace Game
                 return false;
             }
 #ifdef _WIN32
-            session = std::make_unique<Ort::Session>(env, model_path.wstring().c_str(), sessionOptions);
+            session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
 #else
-            session = std::make_unique<Ort::Session>(env, model_path.c_str(), sessionOptions);
+            session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
 #endif
             return true;
         };

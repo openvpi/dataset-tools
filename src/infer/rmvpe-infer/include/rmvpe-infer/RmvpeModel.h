@@ -22,7 +22,6 @@ namespace Rmvpe
         void terminate();
 
     private:
-        Ort::Env m_env;
         Ort::RunOptions run_options;
         Ort::SessionOptions m_session_options;
         Ort::Session m_session;

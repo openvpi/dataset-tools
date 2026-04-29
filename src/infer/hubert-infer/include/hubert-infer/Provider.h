@@ -1,8 +1,10 @@
 #ifndef HFAPROVIDER_H
 #define HFAPROVIDER_H
 
+#include <dstools/ExecutionProvider.h>
+
 namespace HFA {
-    enum class ExecutionProvider { CPU, DML, CUDA };
+    using ExecutionProvider = dstools::infer::ExecutionProvider;
 }
 
 #endif // HFAPROVIDER_H

@@ -1,9 +1,11 @@
 #ifndef SOMEPROVIDER_H
 #define SOMEPROVIDER_H
 
+#include <dstools/ExecutionProvider.h>
+
 namespace Some
 {
-    enum class ExecutionProvider { CPU, DML, CUDA };
+    using ExecutionProvider = dstools::infer::ExecutionProvider;
 }
 
 #endif // SOMEPROVIDER_H

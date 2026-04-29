@@ -62,28 +62,7 @@ find_package(nlohmann_json REQUIRED)
 
 set(ONNX_RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../onnxruntime)
 
-include_directories(${ONNX_RUNTIME_PATH}/include)
-target_include_directories(${PROJECT_NAME}
-        PUBLIC
-        $<BUILD_INTERFACE:${ONNX_RUNTIME_PATH}/include>
-        $<INSTALL_INTERFACE:include>
-)
-
-target_link_directories(${PROJECT_NAME}
-        PUBLIC
-        $<BUILD_INTERFACE:${ONNX_RUNTIME_PATH}/lib>
-        $<INSTALL_INTERFACE:lib>
-)
-
-if (ONNXRUNTIME_ENABLE_CUDA)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ONNXRUNTIME_ENABLE_CUDA)
-endif ()
-
-if (ONNXRUNTIME_ENABLE_DML)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ONNXRUNTIME_ENABLE_DML)
-endif ()
-
-target_link_libraries(${PROJECT_NAME} PUBLIC onnxruntime)
+target_link_libraries(${PROJECT_NAME} PUBLIC onnxruntime dstools-infer-common)
 target_link_libraries(${PROJECT_NAME} PRIVATE SndFile::sndfile nlohmann_json::nlohmann_json audio-util dstools-core)
 
 target_sources(${PROJECT_NAME} PRIVATE ${_src})

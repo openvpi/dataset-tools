@@ -1,9 +1,11 @@
 #ifndef RMVPEPROVIDER_H
 #define RMVPEPROVIDER_H
 
+#include <dstools/ExecutionProvider.h>
+
 namespace Rmvpe
 {
-    enum class ExecutionProvider { CPU, DML, CUDA };
+    using ExecutionProvider = dstools::infer::ExecutionProvider;
 }
 
 #endif // RMVPEPROVIDER_H

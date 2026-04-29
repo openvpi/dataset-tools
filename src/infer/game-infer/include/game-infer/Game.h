@@ -8,12 +8,15 @@
 #include <string>
 #include <vector>
 
+#include <dstools/ExecutionProvider.h>
+
 #include "GameGlobal.h"
 #include "NoteAlignment.h"
 #include "WordParser.h"
 
 namespace Game
 {
+    using ExecutionProvider = dstools::infer::ExecutionProvider;
 
     struct GameMidi {
         int note;
@@ -43,8 +46,6 @@ namespace Game
         UvNoteCond uvNoteCond = UvNoteCond::Predict;
         bool useWordBoundary = true; // false = no word-note alignment (--no-wb)
     };
-
-    enum class ExecutionProvider { CPU, DML, CUDA };
 
     class GameModel; // Forward declaration
 
