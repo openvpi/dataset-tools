@@ -12,8 +12,9 @@
 
 namespace LyricFA {
 
-    Asr::Asr(const QString &modelPath) {
-        m_asrHandle = std::unique_ptr<FunAsr::Model>(FunAsr::create_model(modelPath.toUtf8().toStdString().c_str(), 4));
+    Asr::Asr(const QString &modelPath, FunAsr::ExecutionProvider provider, int deviceId) {
+        m_asrHandle = std::unique_ptr<FunAsr::Model>(
+            FunAsr::create_model(modelPath.toUtf8().toStdString().c_str(), 4, provider, deviceId));
 
         if (!m_asrHandle) {
             qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";

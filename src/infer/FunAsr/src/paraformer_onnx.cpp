@@ -13,14 +13,14 @@
 
 
 namespace FunAsr {
-    ModelImp::ModelImp(const std::filesystem::path &path, const int &nNumThread) {
+    ModelImp::ModelImp(const std::filesystem::path &path, const int &nNumThread,
+                       ExecutionProvider provider, int deviceId) {
         const auto model_path = path / "model.onnx";
         const auto vocab_path = path / "vocab.txt";
 
         fe = std::make_unique<FeatureExtract>(3);
 
-        sessionOptions.SetInterOpNumThreads(nNumThread);
-        sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
+        sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, deviceId, nNumThread);
 
 #ifdef _WIN32
         m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
