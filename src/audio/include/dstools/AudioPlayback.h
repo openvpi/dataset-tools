@@ -1,4 +1,5 @@
 #pragma once
+#include <dstools/WaveFormat.h>
 #include <QObject>
 #include <QStringList>
 #include <memory>
@@ -31,8 +32,12 @@ public:
     /// Release audio subsystem.
     void dispose();
 
-    /// Set decoder source
+    /// Set decoder source (takes ownership)
     void setDecoder(AudioDecoder *decoder);
+
+    /// Open/close audio file (manages internal decoder)
+    bool openFile(const QString &path);
+    void closeFile();
 
     /// Playback control
     void play();
@@ -46,6 +51,13 @@ public:
     /// State
     enum State { Stopped, Playing };
     State state() const;
+
+    /// Thread-safe decoder access (locks internal mutex)
+    void decoderSetPosition(qint64 pos);
+    qint64 decoderPosition() const;
+    qint64 decoderLength() const;
+    bool decoderIsOpen() const;
+    WaveFormat decoderFormat() const;
 
 signals:
     void stateChanged(AudioPlayback::State newState);

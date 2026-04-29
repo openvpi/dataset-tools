@@ -12,7 +12,6 @@ class QActionGroup;
 class QAction;
 
 namespace dstools::audio {
-class AudioDecoder;
 class AudioPlayback;
 }
 
@@ -59,9 +58,8 @@ private:
     QActionGroup *m_deviceActionGroup;
 
     // Audio backend
-    dstools::audio::AudioDecoder *m_decoder = nullptr;
     dstools::audio::AudioPlayback *m_playback = nullptr;
-    bool m_valid = false;  // BUG-001 fix
+    bool m_valid = false;
 
     // State
     int m_notifyTimerId = 0;

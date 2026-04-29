@@ -10,7 +10,7 @@
 namespace dstools::audio {
 
 struct AudioPlayback::Impl {
-    AudioDecoder *decoder = nullptr;
+    std::unique_ptr<AudioDecoder> decoder;
     SDL_AudioDeviceID deviceId = 0;
     bool sdlInitialized = false;
     bool available = false;
@@ -20,7 +20,7 @@ struct AudioPlayback::Impl {
     int bufferSize = 1024;
 
     std::atomic<State> currentState{Stopped};
-    std::mutex decoderMutex;
+    mutable std::mutex decoderMutex;
     QString currentDeviceName;
 
     static void audioCallback(void *userdata, Uint8 *stream, int len);
@@ -37,7 +37,6 @@ void AudioPlayback::Impl::audioCallback(void *userdata, Uint8 *stream, int len) 
     int bytesRead = impl->decoder->read(reinterpret_cast<char *>(stream), 0, len);
     if (bytesRead < len) {
         memset(stream + bytesRead, 0, len - bytesRead);
-        // Reached end
         impl->currentState.store(Stopped);
     }
 }
@@ -81,7 +80,18 @@ void AudioPlayback::dispose() {
 
 void AudioPlayback::setDecoder(AudioDecoder *decoder) {
     std::lock_guard lock(d->decoderMutex);
-    d->decoder = decoder;
+    d->decoder.reset(decoder);
+}
+
+bool AudioPlayback::openFile(const QString &path) {
+    std::lock_guard lock(d->decoderMutex);
+    if (!d->decoder) d->decoder = std::make_unique<AudioDecoder>();
+    return d->decoder->open(path);
+}
+
+void AudioPlayback::closeFile() {
+    std::lock_guard lock(d->decoderMutex);
+    if (d->decoder) d->decoder->close();
 }
 
 void AudioPlayback::play() {
@@ -166,6 +176,35 @@ void AudioPlayback::setDevice(const QString &device) {
 
 AudioPlayback::State AudioPlayback::state() const {
     return d->currentState.load();
+}
+
+void AudioPlayback::decoderSetPosition(qint64 pos) {
+    std::lock_guard lock(d->decoderMutex);
+    if (auto* dec = d->decoder.get()) dec->setPosition(pos);
+}
+
+qint64 AudioPlayback::decoderPosition() const {
+    std::lock_guard lock(d->decoderMutex);
+    auto* dec = d->decoder.get();
+    return dec ? dec->position() : 0;
+}
+
+qint64 AudioPlayback::decoderLength() const {
+    std::lock_guard lock(d->decoderMutex);
+    auto* dec = d->decoder.get();
+    return dec ? dec->length() : 0;
+}
+
+bool AudioPlayback::decoderIsOpen() const {
+    std::lock_guard lock(d->decoderMutex);
+    auto* dec = d->decoder.get();
+    return dec ? dec->isOpen() : false;
+}
+
+WaveFormat AudioPlayback::decoderFormat() const {
+    std::lock_guard lock(d->decoderMutex);
+    auto* dec = d->decoder.get();
+    return dec ? dec->format() : WaveFormat();
 }
 
 } // namespace dstools::audio

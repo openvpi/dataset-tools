@@ -1,5 +1,4 @@
 #include <dstools/PlayWidget.h>
-#include <dstools/AudioDecoder.h>
 #include <dstools/AudioPlayback.h>
 
 #include <QAction>
@@ -74,18 +73,15 @@ PlayWidget::~PlayWidget() {
 }
 
 void PlayWidget::initAudio() {
-    m_decoder = new dstools::audio::AudioDecoder();
     m_playback = new dstools::audio::AudioPlayback(this);
 
     if (!m_playback->setup(44100, 2, 1024)) {
         QMessageBox::warning(this, qApp->applicationName(),
             tr("Failed to initialize audio playback. Audio features will be disabled."));
         delete m_playback; m_playback = nullptr;
-        delete m_decoder; m_decoder = nullptr;
         m_valid = false;
         return;
     }
-    m_playback->setDecoder(m_decoder);
     m_valid = true;
 }
 
@@ -96,16 +92,14 @@ void PlayWidget::uninitAudio() {
     }
     delete m_playback;
     m_playback = nullptr;
-    delete m_decoder;
-    m_decoder = nullptr;
 }
 
 void PlayWidget::openFile(const QString &path) {
     if (!m_valid) return;
     m_playback->stop();
-    m_decoder->close();
+    m_playback->closeFile();
     m_filename = path;
-    if (m_decoder->open(path)) {
+    if (m_playback->openFile(path)) {
         m_fileLabel->setText(QFileInfo(path).fileName());
         reloadSliderStatus();
     }
@@ -114,7 +108,11 @@ void PlayWidget::openFile(const QString &path) {
 void PlayWidget::closeFile() {
     if (!m_valid) return;
     m_playback->stop();
-    m_decoder->close();
+    if (m_notifyTimerId) {
+        killTimer(m_notifyTimerId);
+        m_notifyTimerId = 0;
+    }
+    m_playback->closeFile();
     m_filename.clear();
     m_fileLabel->setText(tr("Select audio file."));
 }
@@ -139,30 +137,30 @@ void PlayWidget::setPlaying(bool playing) {
 }
 
 void PlayWidget::seek(double sec) {
-    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return;
-    auto fmt = m_decoder->format();
+    if (!m_valid || !m_playback || !m_playback->decoderIsOpen()) return;
+    auto fmt = m_playback->decoderFormat();
     if (fmt.averageBytesPerSecond() <= 0) return;
     qint64 pos = static_cast<qint64>(sec * fmt.averageBytesPerSecond());
-    m_decoder->setPosition(pos);
+    m_playback->decoderSetPosition(pos);
     reloadFinePlayheadStatus(static_cast<uint64_t>(sec * 1000));
     reloadSliderStatus();
 }
 
 double PlayWidget::duration() const {
-    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return 0.0;
-    auto fmt = m_decoder->format();
+    if (!m_valid || !m_playback || !m_playback->decoderIsOpen()) return 0.0;
+    auto fmt = m_playback->decoderFormat();
     if (fmt.averageBytesPerSecond() <= 0) return 0.0;
-    return static_cast<double>(m_decoder->length()) / fmt.averageBytesPerSecond();
+    return static_cast<double>(m_playback->decoderLength()) / fmt.averageBytesPerSecond();
 }
 
 void PlayWidget::setPlayRange(double startSec, double endSec) {
     m_rangeStart = startSec;
     m_rangeEnd = endSec;
     m_hasRange = true;
-    if (m_valid && m_decoder && m_decoder->isOpen()) {
-        auto fmt = m_decoder->format();
+    if (m_valid && m_playback && m_playback->decoderIsOpen()) {
+        auto fmt = m_playback->decoderFormat();
         qint64 pos = static_cast<qint64>(startSec * fmt.averageBytesPerSecond());
-        m_decoder->setPosition(pos);
+        m_playback->decoderSetPosition(pos);
     }
 }
 
@@ -191,11 +189,10 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
                     reloadButtonStatus();
                 }
             } else {
-                // Compute position from decoder for accurate non-range playback
-                if (m_decoder && m_decoder->isOpen()) {
-                    auto fmt = m_decoder->format();
+                if (m_playback->decoderIsOpen()) {
+                    auto fmt = m_playback->decoderFormat();
                     if (fmt.averageBytesPerSecond() > 0) {
-                        double decoderSec = static_cast<double>(m_decoder->position()) /
+                        double decoderSec = static_cast<double>(m_playback->decoderPosition()) /
                                             fmt.averageBytesPerSecond();
                         emit playheadChanged(decoderSec);
                     }
@@ -206,15 +203,14 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
                 killTimer(m_notifyTimerId);
                 m_notifyTimerId = 0;
             }
-            // EOF: reset position to range start or beginning
-            if (m_decoder && m_decoder->isOpen()) {
-                if (m_decoder->position() >= m_decoder->length()) {
+            if (m_playback->decoderIsOpen()) {
+                if (m_playback->decoderPosition() >= m_playback->decoderLength()) {
                     if (m_hasRange) {
-                        auto fmt = m_decoder->format();
-                        m_decoder->setPosition(
+                        auto fmt = m_playback->decoderFormat();
+                        m_playback->decoderSetPosition(
                             static_cast<qint64>(m_rangeStart * fmt.averageBytesPerSecond()));
                     } else {
-                        m_decoder->setPosition(0);
+                        m_playback->decoderSetPosition(0);
                     }
                 }
             }
@@ -250,14 +246,13 @@ void PlayWidget::reloadButtonStatus() {
 }
 
 void PlayWidget::reloadSliderStatus() {
-    if (!m_decoder || !m_decoder->isOpen()) return;
-    qint64 len = m_decoder->length();
-    qint64 pos = m_decoder->position();
+    if (!m_playback || !m_playback->decoderIsOpen()) return;
+    qint64 len = m_playback->decoderLength();
+    qint64 pos = m_playback->decoderPosition();
     if (len > 0) {
         m_slider->setValue(static_cast<int>(pos * 10000 / len));
     }
-    // Update time label
-    auto fmt = m_decoder->format();
+    auto fmt = m_playback->decoderFormat();
     if (fmt.averageBytesPerSecond() > 0) {
         int curMs = static_cast<int>(pos * 1000 / fmt.averageBytesPerSecond());
         int totMs = static_cast<int>(len * 1000 / fmt.averageBytesPerSecond());
@@ -278,12 +273,11 @@ void PlayWidget::reloadDeviceActionStatus() {
 }
 
 void PlayWidget::reloadFinePlayheadStatus(uint64_t timeMs) {
-    // Update steady_clock tracking
     if (timeMs == UINT64_MAX) {
-        if (!m_decoder || !m_decoder->isOpen()) return;
-        auto fmt = m_decoder->format();
+        if (!m_playback || !m_playback->decoderIsOpen()) return;
+        auto fmt = m_playback->decoderFormat();
         if (fmt.averageBytesPerSecond() > 0) {
-            timeMs = m_decoder->position() * 1000 / fmt.averageBytesPerSecond();
+            timeMs = m_playback->decoderPosition() * 1000 / fmt.averageBytesPerSecond();
         } else {
             timeMs = 0;
         }
@@ -300,12 +294,12 @@ void PlayWidget::onPlayClicked() {
 void PlayWidget::onStopClicked() {
     if (!m_valid) return;
     m_playback->stop();
-    if (m_decoder && m_decoder->isOpen()) {
+    if (m_playback->decoderIsOpen()) {
         if (m_hasRange) {
-            auto fmt = m_decoder->format();
-            m_decoder->setPosition(static_cast<qint64>(m_rangeStart * fmt.averageBytesPerSecond()));
+            auto fmt = m_playback->decoderFormat();
+            m_playback->decoderSetPosition(static_cast<qint64>(m_rangeStart * fmt.averageBytesPerSecond()));
         } else {
-            m_decoder->setPosition(0);
+            m_playback->decoderSetPosition(0);
         }
     }
     reloadSliderStatus();
@@ -318,10 +312,10 @@ void PlayWidget::onDevClicked() {
 }
 
 void PlayWidget::onSliderReleased() {
-    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return;
-    qint64 len = m_decoder->length();
+    if (!m_valid || !m_playback || !m_playback->decoderIsOpen()) return;
+    qint64 len = m_playback->decoderLength();
     qint64 pos = static_cast<qint64>(m_slider->value()) * len / 10000;
-    m_decoder->setPosition(pos);
+    m_playback->decoderSetPosition(pos);
     reloadFinePlayheadStatus();
 }
 
