@@ -90,7 +90,7 @@ Write-Host ""
 # -------------------------------------------------------------------------
 Write-Host "[L3] Build Output Verification" -ForegroundColor Cyan
 
-$requiredApps = @("MinLabel", "SlurCutter", "AudioSlicer", "LyricFA", "HubertFA", "GameInfer")
+$requiredApps = @("DatasetPipeline", "MinLabel", "PhonemeLabeler", "PitchLabeler", "GameInfer", "DiffSingerLabeler")
 foreach ($app in $requiredApps) {
     $path = Join-Path $BuildDir "$app.exe"
     if (Test-Path $path) {
