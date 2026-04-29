@@ -1,8 +1,11 @@
 #pragma once
 
-#include <codecvt>
 #include <onnxruntime_cxx_api.h>
 #include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace FunAsr {
     typedef struct {
@@ -12,16 +15,15 @@ namespace FunAsr {
 
 #ifdef _WIN32
 
-    inline std::wstring string2wstring(const std::string &str, const std::string &locale) {
-        typedef std::codecvt_byname<wchar_t, char, std::mbstate_t> F;
-        std::wstring_convert<F> strCnv(new F(locale));
-        return strCnv.from_bytes(str);
-    }
-
     inline std::wstring strToWstr(const std::string &str) {
         if (str.empty())
             return L"";
-        return string2wstring(str, "zh-CN");
+        int len = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, nullptr, 0);
+        if (len <= 0)
+            return L"";
+        std::wstring result(len - 1, L'\0');
+        MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, &result[0], len);
+        return result;
     }
 
 #endif
