@@ -212,9 +212,9 @@ namespace Minlabel {
         QString labContent, txtContent;
 
         const QString jsonFilePath = audioToOtherSuffix(filename, "json");
-        if (QJsonObject readData; readJsonFile(jsonFilePath, readData)) {
-            txtContent = readData.contains("raw_text") ? readData["raw_text"].toString() : "";
-            labContent = readData.contains("lab") ? readData["lab"].toString() : "";
+        if (nlohmann::json readData; readJsonFile(jsonFilePath, readData)) {
+            txtContent = QString::fromStdString(readData.value("raw_text", std::string{}));
+            labContent = QString::fromStdString(readData.value("lab", std::string{}));
         }
         textWidget->contentText->setPlainText(labContent);
         textWidget->wordsText->setText(txtContent);
@@ -244,11 +244,10 @@ namespace Minlabel {
 
         static QRegularExpression rm_s("\\s+");
 
-        QFile jsonFile(jsonFilePath);
-        QJsonObject writeData;
-        writeData["lab"] = labContent.replace(rm_s, " ");
-        writeData["raw_text"] = txtContent;
-        writeData["lab_without_tone"] = withoutTone.replace(rm_s, " ");
+        nlohmann::json writeData;
+        writeData["lab"] = labContent.replace(rm_s, " ").toStdString();
+        writeData["raw_text"] = txtContent.toStdString();
+        writeData["lab_without_tone"] = withoutTone.replace(rm_s, " ").toStdString();
         writeData["isCheck"] = true;
 
         if (!writeJsonFile(jsonFilePath, writeData)) {
@@ -421,12 +420,11 @@ namespace Minlabel {
                             withoutTone = inputList.join(" ");
                         }
 
-                        QFile jsonFile(jsonFilePath);
-                        QJsonObject writeData;
+                        nlohmann::json writeData;
                         static const QRegularExpression multiSpace("\\s+");
-                    writeData["lab"] = labContent.replace(multiSpace, " ");
-                    writeData["raw_text"] = txtContent;
-                    writeData["lab_without_tone"] = withoutTone.replace(multiSpace, " ");
+                    writeData["lab"] = labContent.replace(multiSpace, " ").toStdString();
+                    writeData["raw_text"] = txtContent.toStdString();
+                    writeData["lab_without_tone"] = withoutTone.replace(multiSpace, " ").toStdString();
 
                         if (!writeJsonFile(jsonFilePath, writeData)) {
                             QMessageBox::critical(this, QApplication::applicationName(),

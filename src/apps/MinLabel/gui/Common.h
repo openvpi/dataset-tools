@@ -5,6 +5,8 @@
 #include <QString>
 #include <utility>
 
+#include <nlohmann/json.hpp>
+
 namespace Minlabel {
     QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix);
     QString labFileToAudioFile(const QString &filename);
@@ -39,7 +41,7 @@ namespace Minlabel {
     int jsonCount(const QString &dirName);
     void mkdir(const ExportInfo &exportInfo);
     QList<CopyInfo> mkCopylist(const QString &sourcePath, const QString &outputDir);
-    bool readJsonFile(const QString &fileName, QJsonObject &jsonObject);
-    bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject);
+    bool readJsonFile(const QString &fileName, nlohmann::json &jsonData);
+    bool writeJsonFile(const QString &fileName, const nlohmann::json &jsonData);
 }
 #endif // DATASET_TOOLS_COMMON_H

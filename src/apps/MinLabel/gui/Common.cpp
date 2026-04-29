@@ -1,23 +1,12 @@
 #include "Common.h"
 #include <QDebug>
 #include <QDir>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QMessageBox>
 
 #include <dstools/AudioFileResolver.h>
 #include <dstools/JsonHelper.h>
 
 namespace Minlabel {
-    // QJsonObject ↔ nlohmann::json boundary conversion
-    static QJsonObject nlohmannToQt(const nlohmann::json &j) {
-        return QJsonDocument::fromJson(
-            QByteArray::fromStdString(j.dump())).object();
-    }
-    static nlohmann::json qtToNlohmann(const QJsonObject &obj) {
-        return nlohmann::json::parse(
-            QJsonDocument(obj).toJson(QJsonDocument::Compact).toStdString());
-    }
 
     QString audioToOtherSuffix(const QString &filename, const QString &tarSuffix) {
         return dstools::AudioFileResolver::audioToDataFile(filename, tarSuffix);
@@ -50,16 +39,10 @@ namespace Minlabel {
         int count = 0;
         for (const QFileInfo &fileInfo : fileInfoList) {
             if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
-                QFile file(fileInfo.filePath());
-                if (file.open(QIODevice::ReadOnly)) {
-                    const QJsonDocument jsonDoc = QJsonDocument::fromJson(file.readAll());
-                    if (jsonDoc.isObject()) {
-                        const QJsonObject jsonObj = jsonDoc.object();
-                        if (jsonObj.contains("isCheck") && jsonObj["isCheck"].toBool() == true) {
-                            count++;
-                        }
-                    }
-                    file.close();
+                std::string error;
+                auto j = dstools::JsonHelper::loadFile(fileInfo.filePath().toStdString(), error);
+                if (error.empty() && j.contains("isCheck") && j.value("isCheck", false)) {
+                    count++;
                 }
             }
         }
@@ -92,11 +75,11 @@ namespace Minlabel {
                 QString sourceJson = audioToOtherSuffix(sourceAudio, "json");
 
                 QString labContent, txtContent, unToneLab;
-                QJsonObject readData;
+                nlohmann::json readData;
                 if (readJsonFile(sourceJson, readData)) {
-                    txtContent = readData.contains("raw_text") ? readData["raw_text"].toString() : "";
-                    labContent = readData.contains("lab") ? readData["lab"].toString() : "";
-                    unToneLab = readData.contains("lab_without_tone") ? readData["lab_without_tone"].toString() : "";
+                    txtContent = QString::fromStdString(readData.value("raw_text", std::string{}));
+                    labContent = QString::fromStdString(readData.value("lab", std::string{}));
+                    unToneLab = QString::fromStdString(readData.value("lab_without_tone", std::string{}));
                 }
 
                 if (exportInfo.exportAudio) {
@@ -204,20 +187,14 @@ namespace Minlabel {
         return copyList;
     }
 
-    bool readJsonFile(const QString &fileName, QJsonObject &jsonObject) {
+    bool readJsonFile(const QString &fileName, nlohmann::json &jsonData) {
         std::string error;
-        auto j = dstools::JsonHelper::loadFile(fileName.toStdString(), error);
-        if (!error.empty())
-            return false;
-        jsonObject = nlohmannToQt(j);
-        return true;
+        jsonData = dstools::JsonHelper::loadFile(fileName.toStdString(), error);
+        return error.empty();
     }
 
-    bool writeJsonFile(const QString &fileName, const QJsonObject &jsonObject) {
+    bool writeJsonFile(const QString &fileName, const nlohmann::json &jsonData) {
         std::string error;
-        auto j = qtToNlohmann(jsonObject);
-        if (!dstools::JsonHelper::saveFile(fileName.toStdString(), j, error))
-            return false;
-        return true;
+        return dstools::JsonHelper::saveFile(fileName.toStdString(), jsonData, error);
     }
 }
