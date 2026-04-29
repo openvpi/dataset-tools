@@ -11,7 +11,7 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_settings("GameInfer"),
-      m_statusLabel(nullptr), m_progressBar(nullptr) {
+      m_progressBar(nullptr) {
 
     setWindowTitle("GameInfer - \u97f3\u9891\u8f6cMIDI\u5de5\u5177");
     resize(800, 450);

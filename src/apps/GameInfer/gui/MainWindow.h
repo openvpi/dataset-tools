@@ -2,16 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QHBoxLayout>
-#include <QLabel>
 #include <QMainWindow>
 #include <QProgressBar>
-#include <QTabWidget>
 #include <QVBoxLayout>
 
 #include <dstools/AppSettings.h>
-#include <game-infer/Game.h>
 
-class ConfigWidget;
 class MainWidget;
 
 class MainWindow : public QMainWindow {
@@ -30,16 +26,11 @@ private:
     void setupStatusBar();
 
     QHBoxLayout *m_mainLayout;
-    QTabWidget *m_tabWidget;
-    ConfigWidget *m_configWidget;
     MainWidget *m_mainWidget;
 
     dstools::AppSettings m_settings;
 
-    std::shared_ptr<Game::Game> m_game;
-
     // Status bar widgets
-    QLabel *m_statusLabel;
     QProgressBar *m_progressBar;
 };
 
