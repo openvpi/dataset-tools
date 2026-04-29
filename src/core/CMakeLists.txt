@@ -20,7 +20,6 @@ set(CORE_SOURCES
     src/TranscriptionPipeline.cpp
     src/LocalFileIOProvider.cpp
     src/DsDocumentAdapter.cpp
-    src/TextGridDocumentAdapter.cpp
     src/ModelManager.cpp
     src/DsItemManager.cpp
     src/DsProject.cpp
@@ -29,6 +28,7 @@ set(CORE_SOURCES
 set(CORE_HEADERS
     include/dstools/AppInit.h
     include/dstools/AppSettings.h
+    include/dstools/CommonKeys.h
     include/dstools/CsvToDsConverter.h
     include/dstools/DsDocument.h
     include/dstools/JsonHelper.h
@@ -45,7 +45,6 @@ set(CORE_HEADERS
     include/dstools/LocalFileIOProvider.h
     include/dstools/IDocument.h
     include/dstools/DsDocumentAdapter.h
-    include/dstools/TextGridDocumentAdapter.h
     include/dstools/IExportFormat.h
     include/dstools/IG2PProvider.h
     include/dstools/IModelDownloader.h
