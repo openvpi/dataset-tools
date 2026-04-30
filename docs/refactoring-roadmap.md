@@ -94,6 +94,8 @@
 
 ### T-0.4 修复 pipeline-pages 相对路径源文件引用 [G3]
 
+> **已完成** — slicer、lyricfa、hubertfa 已独立构建为静态库，pipeline-pages 已通过 target_link_libraries 链接。无需额外修改。
+
 **现状**: `pipeline-pages` CMakeLists 通过 `../slicer/` 等相对路径直接引用源码。
 
 **方案**:
