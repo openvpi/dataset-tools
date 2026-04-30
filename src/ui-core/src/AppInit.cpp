@@ -17,16 +17,19 @@
 #include <QBreakpadHandler.h>
 #endif
 
-#ifdef HAS_CPP_PINYIN
-#include <cpp-pinyin/G2pglobal.h>
-#include <dstools/PinyinG2PProvider.h>
-#include <filesystem>
-#endif
-
 namespace dstools {
 
-bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
-    // 1. Root privilege check — from original MinLabel/SlurCutter main.cpp
+std::vector<AppInit::InitHook> &AppInit::hooks() {
+    static std::vector<InitHook> s_hooks;
+    return s_hooks;
+}
+
+void AppInit::registerPostInitHook(InitHook hook) {
+    hooks().push_back(std::move(hook));
+}
+
+bool AppInit::init(QApplication &app, bool initCrashHandler) {
+    // 1. Root privilege check
 #ifdef Q_OS_WIN
     if (IsUserAnAdmin() && !app.arguments().contains("--allow-root")) {
         QString title = app.applicationName();
@@ -46,7 +49,6 @@ bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
         return false;
     }
 #else
-    // macOS: show GUI warning
     if (geteuid() == 0 && !app.arguments().contains("--allow-root")) {
         QString title = app.applicationName();
         QString msg = QString("You're trying to start %1 as root, which may cause "
@@ -57,9 +59,8 @@ bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
     }
 #endif
 
-    // 2. Font setup — from original various main.cpp Windows font logic
+    // 2. Font setup
 #ifdef Q_OS_WIN
-    // Use Win32 API to retrieve system font metrics (from LyricFA/HubertFA pattern)
     NONCLIENTMETRICSW metrics = {sizeof(NONCLIENTMETRICSW)};
     if (SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &metrics, 0)) {
         QString fontFace = QString::fromWCharArray(metrics.lfMessageFont.lfFaceName);
@@ -75,7 +76,6 @@ bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
         }
         app.setFont(font);
     } else {
-        // Fallback to Microsoft YaHei (original MinLabel/SlurCutter pattern)
         QFont f("Microsoft YaHei");
         f.setPointSize(9);
         app.setFont(f);
@@ -85,7 +85,6 @@ bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
     // 3. Crash handler (optional)
     if (initCrashHandler) {
 #ifdef HAS_QBREAKPAD
-        // QBreakpad initialization — from original MinLabel main.cpp
         static QBreakpadHandler *handler = nullptr;
         if (!handler) {
             handler = new QBreakpadHandler();
@@ -99,38 +98,23 @@ bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
 #endif
     }
 
-    // 4. cpp-pinyin dictionary (optional)
-    if (initPinyin) {
-#ifdef HAS_CPP_PINYIN
-        std::filesystem::path dictPath =
-#ifdef Q_OS_MAC
-            std::filesystem::path(app.applicationDirPath().toStdString()) / ".." / "Resources" / "dict";
-#else
-            std::filesystem::path(app.applicationDirPath().toStdWString()) / "dict";
-#endif
-        Pinyin::setDictionaryPath(dictPath.make_preferred().string());
-#endif
-    }
-
-    // 5. Ensure config directory exists
+    // 4. Ensure config directory exists
     QString configDirPath = app.applicationDirPath() + "/config";
     QDir configDir(configDirPath);
     if (!configDir.exists()) {
         configDir.mkpath(".");
     }
 
-    // 6. Register core services with ServiceLocator
+    // 5. Register core services with ServiceLocator
     if (!ServiceLocator::get<ModelManager>()) {
         auto *modelMgr = new ModelManager(&app);
         ServiceLocator::set<ModelManager>(modelMgr);
     }
 
-#ifdef HAS_CPP_PINYIN
-    if (initPinyin && !ServiceLocator::get<IG2PProvider>()) {
-        auto *g2p = new PinyinG2PProvider;
-        ServiceLocator::set<IG2PProvider>(g2p);
+    // 6. Call registered post-init hooks
+    for (const auto &hook : hooks()) {
+        hook(app);
     }
-#endif
 
     return true;
 }
