@@ -1,6 +1,7 @@
 #include <dstools/PlayWidget.h>
 #include <dstools/IAudioPlayer.h>
 #include <dstools/AudioPlayer.h>
+#include <dstools/ServiceLocator.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -125,6 +126,13 @@ PlayWidget::~PlayWidget() {
 }
 
 void PlayWidget::initAudio() {
+    // Check if a shared audio player is already registered
+    if (auto *shared = ServiceLocator::get<audio::IAudioPlayer>()) {
+        m_player = shared;
+        m_valid = true;
+        return;
+    }
+
     m_ownedPlayer = std::make_unique<audio::AudioPlayer>();
     m_player = m_ownedPlayer.get();
 
@@ -137,13 +145,22 @@ void PlayWidget::initAudio() {
         return;
     }
     m_valid = true;
+
+    // Register the first successfully created player as the shared instance
+    ServiceLocator::set<audio::IAudioPlayer>(m_player);
 }
 
 void PlayWidget::uninitAudio() {
     if (m_player) {
         m_player->stop();
     }
-    m_ownedPlayer.reset();
+    if (m_ownedPlayer) {
+        // If we registered this player, remove from ServiceLocator
+        if (ServiceLocator::get<audio::IAudioPlayer>() == m_player) {
+            ServiceLocator::reset<audio::IAudioPlayer>();
+        }
+        m_ownedPlayer.reset();
+    }
     m_player = nullptr;
 }
 

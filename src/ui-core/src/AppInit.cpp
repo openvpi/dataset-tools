@@ -1,5 +1,8 @@
 #include <dstools/AppInit.h>
 
+#include <dstools/ModelManager.h>
+#include <dstools/ServiceLocator.h>
+
 #include <QApplication>
 #include <QDir>
 #include <QFont>
@@ -16,6 +19,7 @@
 
 #ifdef HAS_CPP_PINYIN
 #include <cpp-pinyin/G2pglobal.h>
+#include <dstools/PinyinG2PProvider.h>
 #include <filesystem>
 #endif
 
@@ -114,6 +118,20 @@ bool AppInit::init(QApplication &app, bool initPinyin, bool initCrashHandler) {
     if (!configDir.exists()) {
         configDir.mkpath(".");
     }
+
+    // 6. Register core services with ServiceLocator
+    if (!ServiceLocator::get<ModelManager>()) {
+        auto *modelMgr = new ModelManager(&app);
+        ServiceLocator::set<ModelManager>(modelMgr);
+    }
+
+#ifdef HAS_CPP_PINYIN
+    if (initPinyin && !ServiceLocator::get<IG2PProvider>()) {
+        auto *g2p = new PinyinG2PProvider;
+        ServiceLocator::set<IG2PProvider>(g2p);
+    }
+#endif
+
     return true;
 }
 
