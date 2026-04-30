@@ -19,6 +19,7 @@ add_subdirectory(types)
 add_subdirectory(framework)
 
 # Shared layers (must come before apps)
+add_subdirectory(domain)
 add_subdirectory(core)
 add_subdirectory(ui-core)
 add_subdirectory(audio)
