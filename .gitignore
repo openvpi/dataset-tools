@@ -98,3 +98,4 @@ CMakeSettings.json
 setup-vcpkg.json
 setup-vcpkg-temp*
 /src/libs/onnxruntime/
+docs/api/
