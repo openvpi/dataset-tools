@@ -175,6 +175,8 @@ namespace dstools {
 
                     file.write(QJsonDocument(json).toJson());
                     file.close();
+                } else {
+                    qWarning() << "PitchLabeler: Failed to save state file:" << stateFile;
                 }
             }
 
@@ -207,6 +209,8 @@ namespace dstools {
                             m_savedFiles.insert(fullPath);
                         }
                     }
+                } else {
+                    qDebug() << "PitchLabeler: No saved state file found (first run or file removed):" << stateFile;
                 }
             }
 

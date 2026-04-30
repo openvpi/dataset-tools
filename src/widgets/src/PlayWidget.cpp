@@ -172,6 +172,8 @@ void PlayWidget::openFile(const QString &path) {
     if (m_player->open(path)) {
         m_fileLabel->setText(QFileInfo(path).fileName());
         reloadSliderStatus();
+    } else {
+        qWarning() << "PlayWidget: Failed to open audio file:" << path;
     }
 }
 

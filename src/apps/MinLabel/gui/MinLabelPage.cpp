@@ -436,6 +436,8 @@ namespace Minlabel {
                         }
                     }
                     count++;
+                } else {
+                    qWarning() << "MinLabel: Failed to open lab file for reading:" << labFilePath;
                 }
             }
         }
