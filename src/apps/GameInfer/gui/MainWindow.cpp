@@ -9,12 +9,15 @@
 #include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
+static constexpr int kDefaultWidth = 800;
+static constexpr int kDefaultHeight = 450;
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_settings("GameInfer"),
       m_progressBar(nullptr) {
 
     setWindowTitle("GameInfer - \u97f3\u9891\u8f6cMIDI\u5de5\u5177");
-    resize(800, 450);
+    resize(kDefaultWidth, kDefaultHeight);
 
     setupMenuBar();
     setupCentralWidget();

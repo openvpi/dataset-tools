@@ -15,6 +15,9 @@
 
 namespace Minlabel {
 
+    static constexpr int kDefaultWidth = 1280;
+    static constexpr int kDefaultHeight = 720;
+
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         setAcceptDrops(true);
 
@@ -26,7 +29,7 @@ namespace Minlabel {
         connect(m_page, &MinLabelPage::workingDirectoryChanged, this, &MainWindow::updateWindowTitle);
 
         updateWindowTitle();
-        resize(1280, 720);
+        resize(kDefaultWidth, kDefaultHeight);
     }
 
     MainWindow::~MainWindow() = default;

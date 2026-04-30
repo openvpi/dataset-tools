@@ -35,11 +35,13 @@ static std::vector<float> generateD3pmTimesteps(int nSteps) {
     return ts;
 }
 
+static constexpr int kDefaultMidiResolution = 480;
+
 static bool makeMidiFile(const std::filesystem::path &midi_path, std::vector<Game::GameMidi> midis, const float tempo) {
     Midi::MidiFile midi;
     midi.setFileFormat(1);
     midi.setDivisionType(Midi::MidiFile::DivisionType::PPQ);
-    midi.setResolution(480);
+    midi.setResolution(kDefaultMidiResolution);
 
     midi.createTrack();
 

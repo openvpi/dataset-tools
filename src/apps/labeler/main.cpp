@@ -14,8 +14,11 @@ int main(int argc, char *argv[]) {
         return 0;
     dstools::Theme::instance().init(app);
 
+    static constexpr int kDefaultWidth = 1400;
+    static constexpr int kDefaultHeight = 900;
+
     dstools::labeler::LabelerWindow window;
-    window.resize(1400, 900);
+    window.resize(kDefaultWidth, kDefaultHeight);
     window.show();
 
     // Handle command-line .dsproj argument

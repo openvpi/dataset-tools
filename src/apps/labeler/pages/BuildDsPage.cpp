@@ -9,6 +9,9 @@
 
 namespace dstools::labeler {
 
+static constexpr int kDefaultHopSize = 512;
+static constexpr int kDefaultSampleRate = 44100;
+
 BuildDsPage::BuildDsPage(QWidget *parent) : QWidget(parent) {
     buildUi();
 }
@@ -31,13 +34,13 @@ void BuildDsPage::buildUi() {
 
     m_hopSize = new QSpinBox;
     m_hopSize->setRange(64, 1024);
-    m_hopSize->setValue(512);
+    m_hopSize->setValue(kDefaultHopSize);
     m_hopSize->setSingleStep(64);
     form->addRow(tr("Hop Size:"), m_hopSize);
 
     m_sampleRate = new QSpinBox;
     m_sampleRate->setRange(8000, 48000);
-    m_sampleRate->setValue(44100);
+    m_sampleRate->setValue(kDefaultSampleRate);
     m_sampleRate->setSingleStep(100);
     form->addRow(tr("Sample Rate:"), m_sampleRate);
 

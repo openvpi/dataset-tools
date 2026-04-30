@@ -12,10 +12,13 @@
 #include <dstools/ShortcutEditorWidget.h>
 #include <dstools/Theme.h>
 
+static constexpr int kDefaultWidth = 1200;
+static constexpr int kDefaultHeight = 800;
+
 PipelineWindow::PipelineWindow(QWidget *parent)
     : QMainWindow(parent), m_settings("DatasetPipeline") {
     setWindowTitle("Dataset Pipeline");
-    resize(1200, 800);
+    resize(kDefaultWidth, kDefaultHeight);
     setupUI();
     setupMenuBar();
 

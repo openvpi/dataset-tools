@@ -113,12 +113,15 @@ ShortcutEditorWidget::~ShortcutEditorWidget() {
     commitPendingEdit();
 }
 
+static constexpr int kDialogWidth = 520;
+static constexpr int kDialogHeight = 420;
+
 void ShortcutEditorWidget::showDialog(dstools::AppSettings *settings,
                                       const std::vector<ShortcutEntry> &entries,
                                       QWidget *parent) {
     QDialog dlg(parent);
     dlg.setWindowTitle(QObject::tr("Keyboard Shortcuts"));
-    dlg.resize(520, 420);
+    dlg.resize(kDialogWidth, kDialogHeight);
 
     dstools::FramelessHelper::applyToDialog(&dlg);
 

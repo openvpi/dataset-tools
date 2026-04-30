@@ -9,6 +9,10 @@
 #include <QStandardPaths>
 
 namespace Minlabel {
+
+    static constexpr int kDefaultDialogWidth = 500;
+    static constexpr int kDefaultDialogHeight = 300;
+
     ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
         setWindowTitle("Export");
 
@@ -53,7 +57,7 @@ namespace Minlabel {
             exportInfo.removeTone = removeTone->isChecked();
         });
 
-        resize(500, 300);
+        resize(kDefaultDialogWidth, kDefaultDialogHeight);
     }
 
     ExportDialog::~ExportDialog() = default;
