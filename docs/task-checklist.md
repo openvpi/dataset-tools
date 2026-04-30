@@ -1,7 +1,6 @@
 # 框架抽取实施路线图
 
-> **关键路径**: T-10 → T-11 → T-22 → T-27 → T-28  
-> **当前进度**: Phase 0 ✅ | Phase 1 进行中（T-10~T-11 剩余）| Phase 2 ✅ | Phase 2.5 进行中（T-22 起） | Phase 3 进行中（T-33 剩余）
+> **当前进度**: Phase 0 ✅ | Phase 1 ✅（待全量编译验证）| Phase 2 ✅ | Phase 2.5 ✅（待回归测试）| Phase 3 进行中（T-33 剩余）
 
 ---
 
@@ -19,17 +18,8 @@
 
 ## Phase 1: Core 层分离
 
-### T-10: 删除/降级旧 dstools-core 🟡 ⏩
-**耗时**: 0.3d | **依赖**: T-09 ✅ | **执行批次**: B-7
-
-- 将 hubertfa-lib、lyricfa-lib、dstools-ui-core、dstools-widgets 的 CMakeLists 中 `dstools-core` 替换为 `dsfw-core`
-- 删除 `src/core/` 目录
-- 从 `src/CMakeLists.txt` 移除 `add_subdirectory(core)`
-
----
-
 ### T-11: 全量编译验证 🔴 ⛓️
-**耗时**: 0.5d | **依赖**: T-10 | **执行批次**: B-7
+**耗时**: 0.5d | **依赖**: T-10 ✅ | **执行批次**: B-7
 
 - 三平台全量编译
 - 运行已有测试 `TestAudioUtil`、`TestGame`、`TestRmvpe`
@@ -39,9 +29,9 @@
 ---
 
 ### Phase 1 检查点
-- [ ] `dsfw-core` 包含全部 12+ 通用类，独立编译通过
-- [ ] `dstools-domain` 包含全部 14 领域类，编译通过
-- [ ] 旧 `src/core/` 已删除
+- [x] `dsfw-core` 包含全部 12+ 通用类，独立编译通过
+- [x] `dstools-domain` 包含全部 14 领域类，编译通过
+- [x] 旧 `src/core/` 已删除
 - [ ] 三平台全量编译通过
 - [ ] 已有测试无回归
 
@@ -49,57 +39,17 @@
 
 ## Phase 2.5: AppShell 实现与迁移
 
-### T-22: 实现 AppShell 框架组件 🔴 ⏩
-**耗时**: 2d | **依赖**: T-15 ✅, T-21 ✅ | **执行批次**: B-6
+### T-28: 回归测试 🟡 ⛓️
+**耗时**: 1d | **依赖**: T-27 ✅ | **执行批次**: B-10
 
-- AppShell(QMainWindow): FramelessHelper + TitleBar + IconNavBar + QStackedWidget + QStatusBar
-- 核心 API: `addPage()`, 页面切换（菜单/快捷键/标题/状态栏）, 单页模式, 全局操作注入, closeEvent, 拖拽转发
-
-**风险**: 窗口框架层变更影响所有应用；跨平台 FramelessHelper 行为不一致
-
----
-
-### T-23: 迁移 GameInfer 到 AppShell 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-19 ✅, T-22 | **执行批次**: B-8
-
----
-
-### T-24: 迁移 MinLabel 到 AppShell 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-16 ✅, T-22 | **执行批次**: B-8
-
----
-
-### T-25: 迁移 PhonemeLabeler 到 AppShell 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-17 ✅, T-22 | **执行批次**: B-8
-
----
-
-### T-26: 迁移 PitchLabeler 到 AppShell 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-18 ✅, T-22 | **执行批次**: B-8
-
----
-
-### T-27: 迁移 DiffSingerLabeler 到 AppShell 多页面模式 🔴 ⛓️
-**耗时**: 1.5d | **依赖**: T-23~T-26 | **执行批次**: B-9
-
-- 9 页面注册、全局操作注入、删除 LabelerWindow/StepNavigator
-
-**风险**: 最复杂的迁移，菜单/快捷键/状态栏切换 + 全局操作 + 工作目录传递
-
----
-
-### T-28: 清理旧代码 + 回归测试 🟡 ⛓️
-**耗时**: 1d | **依赖**: T-27 | **执行批次**: B-10
-
-- 删除所有旧 MainWindow、StepNavigator 等遗留代码
 - 三平台构建 + 6 个应用功能回归
 
 ---
 
 ### Phase 2.5 检查点
-- [ ] AppShell 组件功能完整（单页/多页模式）
-- [ ] 6 个应用全部迁移到 AppShell
-- [ ] 所有旧 MainWindow/LabelerWindow 已删除
+- [x] AppShell 组件功能完整（单页/多页模式）
+- [x] 6 个应用全部迁移到 AppShell
+- [x] 所有旧 MainWindow/LabelerWindow 已删除
 - [ ] 三平台编译通过 + 功能回归通过
 
 ---
@@ -114,7 +64,7 @@
 ---
 
 ### Phase 3 检查点
-- [ ] WorkThread 已降为薄壳
+- [x] WorkThread 已降为薄壳
 - [ ] DatasetPipeline 三个 tab 功能正常
 
 ---
@@ -216,19 +166,17 @@
 | 任务 | 风险描述 | 缓解措施 |
 |------|----------|----------|
 | T-11 (全量编译验证) | Phase 1 所有问题集中暴露 | 预留 1 天调试时间 |
-| T-22 (AppShell 实现) | 窗口框架层影响所有应用；跨平台行为不一致 | 先最小可用版本；三平台逐步验证 |
-| T-27 (DSLabeler 多页面迁移) | 9 页面切换极复杂 | 逐页面迁移验证；完整走通标注流程 |
 
 ---
 
 ## 下一步行动
 
-**立即可开始（无阻塞依赖）**:
-- T-10（删除/降级 dstools-core）— 依赖 T-09 ✅
-- T-22（AppShell 实现）— 依赖 T-15 ✅, T-21 ✅
-- T-33（Pipeline 全量验证）— 依赖 T-32 ✅
+**需要手动验证**:
+- T-11（全量编译验证）— 三平台编译 + ctest
+- T-28（回归测试）— 6 个应用功能回归
+- T-33（Pipeline 验证）— slicer/lyricfa/hubertfa 手动测试
 
-**并行策略**:
-- B-7: T-10 + T-35（T-35 依赖 T-11，需等 T-10 验证后）
-- B-8: T-23 ~ T-26（4 个应用迁移可并行，均依赖 T-22）
-- B-9: T-27 → T-28（串行）
+**这些验证通过后可继续**:
+- Phase 4: T-35~T-38（CMake 包）
+- Phase 5: T-39~T-42（单元测试）
+- Phase 6: T-44~T-46（文档）
