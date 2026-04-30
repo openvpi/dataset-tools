@@ -1,4 +1,4 @@
-#include <dstools/ModelManager.h>
+#include <dsfw/ModelManager.h>
 
 #include <QCoreApplication>
 #include <QDateTime>

@@ -1,6 +1,6 @@
 #include <dstools/AppInit.h>
 
-#include <dstools/ModelManager.h>
+#include <dsfw/ModelManager.h>
 #include <dsfw/ServiceLocator.h>
 
 #include <QApplication>
