@@ -6,7 +6,7 @@
 
 namespace dstools::widgets {
 
-struct GpuInfo {
+struct DSTOOLS_WIDGETS_API GpuInfo {
     int index = -1;
     QString name;
     size_t dedicatedMemory = 0;
