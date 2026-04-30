@@ -4,8 +4,8 @@
 #include <QPushButton>
 #include <QSharedPointer>
 
-#include "IPageActions.h"
-#include "IPageLifecycle.h"
+#include <dsfw/IPageActions.h>
+#include <dsfw/IPageLifecycle.h>
 
 namespace dstools::widgets {
 class PathSelector;

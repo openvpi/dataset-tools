@@ -1,7 +1,7 @@
 #pragma once
 
-#include "IPageActions.h"
-#include "IPageProgress.h"
+#include <dsfw/IPageActions.h>
+#include <dsfw/IPageProgress.h>
 
 #include <QTextEdit>
 #include <QWidget>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <IPageActions.h>
+#include <dsfw/IPageActions.h>
 
 #include <QFileSystemModel>
 #include <QSplitter>

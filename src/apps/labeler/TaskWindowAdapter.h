@@ -1,6 +1,6 @@
 #pragma once
-#include "IPageActions.h"
-#include "IPageLifecycle.h"
+#include <dsfw/IPageActions.h>
+#include <dsfw/IPageLifecycle.h>
 #include <dstools/TaskWindow.h>
 #include <QVBoxLayout>
 

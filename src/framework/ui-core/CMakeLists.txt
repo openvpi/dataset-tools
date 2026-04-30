@@ -6,12 +6,19 @@ set(CMAKE_AUTORCC ON)
 set(DSFW_UI_CORE_SOURCES
     src/Theme.cpp
     src/FramelessHelper.cpp
+    src/IconNavBar.cpp
+    src/AppShell.cpp
 )
 
 set(DSFW_UI_CORE_HEADERS
     include/dsfw/Theme.h
     include/dsfw/FramelessHelper.h
     include/dsfw/IStepPlugin.h
+    include/dsfw/IPageActions.h
+    include/dsfw/IPageLifecycle.h
+    include/dsfw/IPageProgress.h
+    include/dsfw/IconNavBar.h
+    include/dsfw/AppShell.h
 )
 
 set(DSFW_UI_CORE_RESOURCES

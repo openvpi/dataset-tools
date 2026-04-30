@@ -1,7 +1,7 @@
 ﻿#include "LabelerWindow.h"
 #include "CleanupDialog.h"
-#include "IPageActions.h"
-#include "IPageLifecycle.h"
+#include <dsfw/IPageActions.h>
+#include <dsfw/IPageLifecycle.h>
 #include "MinLabelPage.h"
 #include "PhonemeLabelerPage.h"
 #include "PitchLabelerPage.h"
