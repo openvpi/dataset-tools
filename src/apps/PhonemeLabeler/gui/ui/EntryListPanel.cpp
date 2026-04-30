@@ -7,6 +7,12 @@
 #include <QWheelEvent>
 #include <QListWidgetItem>
 
+namespace {
+    constexpr int IntervalIndexRole = Qt::UserRole;
+    constexpr int IntervalStartRole = Qt::UserRole + 1;
+    constexpr int IntervalEndRole   = Qt::UserRole + 2;
+} // namespace
+
 namespace dstools {
 namespace phonemelabeler {
 
@@ -79,9 +85,9 @@ void EntryListPanel::rebuildEntries() {
         }
 
         auto *item = new QListWidgetItem(display, m_listWidget);
-        item->setData(Qt::UserRole, i);         // interval index
-        item->setData(Qt::UserRole + 1, start); // start time
-        item->setData(Qt::UserRole + 2, end);   // end time
+        item->setData(IntervalIndexRole, i);     // interval index
+        item->setData(IntervalStartRole, start); // start time
+        item->setData(IntervalEndRole, end);     // end time
     }
 
     // Restore previous selection, or default to first entry
@@ -103,7 +109,7 @@ int EntryListPanel::currentEntryIndex() const {
     int row = m_listWidget->currentRow();
     if (row < 0) return -1;
     auto *item = m_listWidget->item(row);
-    return item ? item->data(Qt::UserRole).toInt() : -1;
+    return item ? item->data(IntervalIndexRole).toInt() : -1;
 }
 
 void EntryListPanel::wheelEvent(QWheelEvent *event) {
@@ -139,9 +145,9 @@ void EntryListPanel::onCurrentRowChanged(int row) {
     auto *item = m_listWidget->item(row);
     if (!item) return;
 
-    int intervalIndex = item->data(Qt::UserRole).toInt();
-    double start = item->data(Qt::UserRole + 1).toDouble();
-    double end = item->data(Qt::UserRole + 2).toDouble();
+    int intervalIndex = item->data(IntervalIndexRole).toInt();
+    double start = item->data(IntervalStartRole).toDouble();
+    double end = item->data(IntervalEndRole).toDouble();
     int tier = m_document->activeTierIndex();
 
     centerEntryInViewport(intervalIndex);
