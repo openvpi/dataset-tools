@@ -1,7 +1,7 @@
 # 框架抽取实施路线图
 
-> **关键路径**: T-09 → T-10 → T-11 → T-22 → T-27 → T-28  
-> **当前进度**: Phase 0 ✅ | Phase 1 进行中（T-05a~f ✅，T-06~T-08 ✅，剩余 T-05g/h, T-09~T-11）| Phase 2 ✅ | Phase 2.5 进行中 | Phase 3 部分就绪  
+> **关键路径**: T-10 → T-11 → T-22 → T-27 → T-28  
+> **当前进度**: Phase 0 ✅ | Phase 1 进行中（T-10~T-11 剩余）| Phase 2 ✅ | Phase 2.5 进行中（T-22 起） | Phase 3 进行中（T-33 剩余）
 
 ---
 
@@ -19,33 +19,12 @@
 
 ## Phase 1: Core 层分离
 
-### T-05g: ModelManager 拆分 🔴
-- 提取通用 `IModelRegistry` 接口到 `dsfw/`
-- DiffSinger 特定逻辑留在 `src/domain/`
-- **风险**: 混合通用/领域逻辑，拆分边界需仔细判断
+### T-10: 删除/降级旧 dstools-core 🟡 ⏩
+**耗时**: 0.3d | **依赖**: T-09 ✅ | **执行批次**: B-7
 
-### T-05h: ModelDownloader 🟡
-- 通用下载逻辑搬到 `dsfw/`，模型 URL 配置留在 `src/domain/`
-
-**检验方式**: `cmake --build build --target dsfw-core` 通过；`dsfw-core` 不依赖 `dstools` 命名空间
-
----
-
-### T-09: 更新所有 include 路径 🟡 ⛓️
-**耗时**: 0.5d | **依赖**: T-06 ✅, T-07 ✅ | **执行批次**: B-6
-
-- 全局搜索替换: `#include <dstools/XXX.h>` → `#include <dsfw/XXX.h>`（12 个框架类）
-- 影响 `src/apps/`、`src/ui-core/`、`src/widgets/`、`src/domain/`
-
-**检验方式**: `cmake --build build` 全量通过
-
----
-
-### T-10: 删除/降级旧 dstools-core 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-09 | **执行批次**: B-7
-
-- 降级为薄壳或直接删除 `src/core/`
-- 更新所有 `target_link_libraries` 从 `dstools-core` 改为 `dsfw-core` + `dstools-domain`
+- 将 hubertfa-lib、lyricfa-lib、dstools-ui-core、dstools-widgets 的 CMakeLists 中 `dstools-core` 替换为 `dsfw-core`
+- 删除 `src/core/` 目录
+- 从 `src/CMakeLists.txt` 移除 `add_subdirectory(core)`
 
 ---
 
@@ -62,46 +41,15 @@
 ### Phase 1 检查点
 - [ ] `dsfw-core` 包含全部 12+ 通用类，独立编译通过
 - [ ] `dstools-domain` 包含全部 14 领域类，编译通过
-- [ ] 旧 `src/core/` 已删除或降级
+- [ ] 旧 `src/core/` 已删除
 - [ ] 三平台全量编译通过
 - [ ] 已有测试无回归
 
 ---
 
-## Phase 2: UI-Core 清理
-
-### T-14: 验证 CommonKeys 在 UI 层的引用 🟢 ⛓️
-**耗时**: 0.2d | **依赖**: T-13 ✅ | **执行批次**: B-8
-
----
-
 ## Phase 2.5: AppShell 实现与迁移
 
-### T-16: MinLabelPage 实现完整接口 🟡 ⛓️
-**耗时**: 0.5d | **依赖**: T-15 ✅ | **执行批次**: B-5
-
-- 从 MainWindow 提取菜单/拖拽/状态栏逻辑到 MinLabelPage
-
----
-
-### T-17: PhonemeLabelerPage 实现完整接口 🟡 ⛓️
-**耗时**: 0.5d | **依赖**: T-15 ✅ | **执行批次**: B-5
-
----
-
-### T-18: PitchLabelerPage 实现完整接口 🟡 ⛓️
-**耗时**: 0.5d | **依赖**: T-15 ✅ | **执行批次**: B-5
-
----
-
-### T-20: Pipeline 页面适配 🟢 ⛓️
-**耗时**: 0.3d | **依赖**: T-15 ✅ | **执行批次**: B-5
-
-- 补充 TaskWindowAdapter / BuildCsvPage / BuildDsPage 的 `createMenuBar()`
-
----
-
-### T-22: 实现 AppShell 框架组件 🔴 ⛓️
+### T-22: 实现 AppShell 框架组件 🔴 ⏩
 **耗时**: 2d | **依赖**: T-15 ✅, T-21 ✅ | **执行批次**: B-6
 
 - AppShell(QMainWindow): FramelessHelper + TitleBar + IconNavBar + QStackedWidget + QStatusBar
@@ -117,17 +65,17 @@
 ---
 
 ### T-24: 迁移 MinLabel 到 AppShell 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-16, T-22 | **执行批次**: B-8
+**耗时**: 0.3d | **依赖**: T-16 ✅, T-22 | **执行批次**: B-8
 
 ---
 
 ### T-25: 迁移 PhonemeLabeler 到 AppShell 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-17, T-22 | **执行批次**: B-8
+**耗时**: 0.3d | **依赖**: T-17 ✅, T-22 | **执行批次**: B-8
 
 ---
 
 ### T-26: 迁移 PitchLabeler 到 AppShell 🟡 ⛓️
-**耗时**: 0.3d | **依赖**: T-18, T-22 | **执行批次**: B-8
+**耗时**: 0.3d | **依赖**: T-18 ✅, T-22 | **执行批次**: B-8
 
 ---
 
@@ -158,16 +106,8 @@
 
 ## Phase 3: Pipeline 子模块独立化
 
-### T-32: WorkThread 业务逻辑分离 🟡 ⛓️
-**耗时**: 1d | **依赖**: T-29~T-31 ✅ | **执行批次**: B-6
-
-- 在 `slicer-lib` 中新增 `SliceJob` 纯算法类
-- `WorkThread` 改为薄壳
-
----
-
-### T-33: Pipeline 全量验证 🟢 ⛓️
-**耗时**: 0.3d | **依赖**: T-32 | **执行批次**: B-6
+### T-33: Pipeline 全量验证 🟢 ⏩
+**耗时**: 0.3d | **依赖**: T-32 ✅ | **执行批次**: B-6
 
 - 编译全部应用，手动测试 slicer/lyricfa/hubertfa
 
@@ -275,7 +215,6 @@
 
 | 任务 | 风险描述 | 缓解措施 |
 |------|----------|----------|
-| T-05g (ModelManager 拆分) | 通用/领域逻辑边界模糊，拆分不当导致循环依赖 | 先画依赖图；先定接口再实现 |
 | T-11 (全量编译验证) | Phase 1 所有问题集中暴露 | 预留 1 天调试时间 |
 | T-22 (AppShell 实现) | 窗口框架层影响所有应用；跨平台行为不一致 | 先最小可用版本；三平台逐步验证 |
 | T-27 (DSLabeler 多页面迁移) | 9 页面切换极复杂 | 逐页面迁移验证；完整走通标注流程 |
@@ -285,8 +224,11 @@
 ## 下一步行动
 
 **立即可开始（无阻塞依赖）**:
-- T-09（更新所有 include 路径）— 依赖 T-06 ✅, T-07 ✅
-- T-05g/h（ModelManager 拆分 + ModelDownloader 迁移）
-- T-14（验证 CommonKeys 在 UI 层的引用，依赖 T-13 ✅）
-- T-16 ~ T-18, T-20（Page 接口实现，依赖 T-15 ✅）
-- T-32（WorkThread 分离，依赖 T-29~T-31 ✅）
+- T-10（删除/降级 dstools-core）— 依赖 T-09 ✅
+- T-22（AppShell 实现）— 依赖 T-15 ✅, T-21 ✅
+- T-33（Pipeline 全量验证）— 依赖 T-32 ✅
+
+**并行策略**:
+- B-7: T-10 + T-35（T-35 依赖 T-11，需等 T-10 验证后）
+- B-8: T-23 ~ T-26（4 个应用迁移可并行，均依赖 T-22）
+- B-9: T-27 → T-28（串行）
