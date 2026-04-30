@@ -1,8 +1,17 @@
 #pragma once
 #include <dstools/AppSettings.h>
 
-/// Common settings keys shared across multiple applications.
-/// App-specific keys remain in their respective *Keys.h headers.
+/// @file CommonKeys.h
+/// @brief Common settings keys shared across multiple applications.
+///
+/// Boundary rules for this file:
+/// - ONLY keys used by 2+ applications belong here.
+/// - Keys specific to a single application go in that app's *Keys.h
+///   (e.g., MinLabelKeys, PhonemeLabelerKeys, PitchLabelerKeys,
+///    GameInferKeys, PipelineKeys).
+/// - Domain-specific constants (DiffSinger format keys, model type
+///   identifiers, etc.) must NOT be placed here. They belong in
+///   dstools-domain or the relevant app module.
 namespace dstools::CommonKeys {
     // General
     inline const SettingsKey<QString> LastDir("General/lastDir", "");
