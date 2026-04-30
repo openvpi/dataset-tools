@@ -73,9 +73,11 @@
 **类型**: Feature | **优先级**: P1 | **估计工作量**: M (2-8h)
 
 **验收标准**:
-- [ ] `install(TARGETS dstools-types EXPORT ...)` 规则
-- [ ] 外部项目可 `find_package(dstools-types CONFIG REQUIRED)`
-- [ ] header-only 属性正确导出
+- [x] `install(TARGETS dstools-types EXPORT ...)` 规则
+- [x] 外部项目可 `find_package(dstools-types CONFIG REQUIRED)`
+- [x] header-only 属性正确导出
+
+> **已完成**: CMake export/install 规则已实现，支持 find_package(dstools-types CONFIG REQUIRED)。
 
 ---
 
