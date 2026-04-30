@@ -140,7 +140,7 @@
 
 **类型**: Refactor | **优先级**: P2 | **估计工作量**: S (< 2h)
 
-> **状态**: ModelManager 和 ModelDownloader 仍在 `src/framework/core/`（含 IModelDownloader 接口）。Roadmap T-1.1 涵盖定义 IModelManager 接口并将具体实现迁移到 domain 层，此 Issue 将随 T-1.1 一并解决。
+> **部分完成**: 具体实现仍在 dsfw-core，完整迁移见 T-1.1。
 
 ---
 
