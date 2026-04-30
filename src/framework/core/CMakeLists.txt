@@ -25,6 +25,11 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IModelDownloader.h
     include/dsfw/IQualityMetrics.h
     include/dsfw/IG2PProvider.h
+    include/dsfw/ISlicerService.h
+    include/dsfw/IAlignmentService.h
+    include/dsfw/IAsrService.h
+    include/dsfw/IPitchService.h
+    include/dsfw/ITranscriptionService.h
     include/dsfw/CommonKeys.h
     include/dsfw/ModelDownloader.h
     include/dsfw/ModelManager.h
