@@ -357,7 +357,14 @@ bool MainWidget::loadModel(const QString &modelPathText, Game::ExecutionProvider
 
     QMetaObject::invokeMethod(
         this, [this] { setModelLoadingStatus("Model is loading, please wait 3-10 seconds!"); }, Qt::QueuedConnection);
-    if (m_game->load_model(modelPath, provider, deviceId, msg)) {
+
+    bool loadSuccess;
+    {
+        std::lock_guard<std::mutex> lock(m_gameMutex);
+        loadSuccess = m_game->load_model(modelPath, provider, deviceId, msg);
+    }
+
+    if (loadSuccess) {
         QMetaObject::invokeMethod(
             this,
             [this, modelPath] {
@@ -431,6 +438,8 @@ bool MainWidget::updateParameterValues() const {
     if (!m_game)
         return false;
 
+    std::lock_guard<std::mutex> lock(m_gameMutex);
+
     // Update segmentation threshold
     m_game->set_seg_threshold(m_segThresholdSpin->value());
 
@@ -483,6 +492,11 @@ void MainWidget::generateMidiOutputPath(const QString &wavPath) const {
 }
 
 void MainWidget::onExportMidiTask() {
+    if (m_runningTask.isRunning()) {
+        QMessageBox::warning(this, "Warning", "A task is already running.");
+        return;
+    }
+
     if (m_wavPath->path().isEmpty() || m_outputMidi->path().isEmpty()) {
         QMessageBox::warning(this, "Warning", "Please fill input audio file and output MIDI file paths");
         return;
@@ -536,39 +550,45 @@ void MainWidget::onExportMidiTask() {
             }
         }
 
-        m_game->set_seg_threshold(segThreshold);
-        m_game->set_seg_radius_frames(segRadiusFrame);
-        m_game->set_est_threshold(estThreshold);
-        m_game->set_language(languageId);
+        {
+            std::lock_guard<std::mutex> lock(m_gameMutex);
 
-        if (d3pmNSteps > 0) {
-            m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
+            m_game->set_seg_threshold(segThreshold);
+            m_game->set_seg_radius_frames(segRadiusFrame);
+            m_game->set_est_threshold(estThreshold);
+            m_game->set_language(languageId);
+
+            if (d3pmNSteps > 0) {
+                m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
+            }
+
+            const bool success = m_game->get_midi(
+                wavPath.toLocal8Bit().toStdString(), midis, tempo, msg,
+                [this](const int progress) {
+                    QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
+                },
+                maxAudioSegLength);
+
+            if (!success) {
+                std::cerr << "Error: " << msg << std::endl;
+                QMetaObject::invokeMethod(
+                    this,
+                    [this, msg] {
+                        QMessageBox::critical(this, "Error", QString("Conversion failed: %1").arg(msg.c_str()));
+                    },
+                    Qt::QueuedConnection);
+                QMetaObject::invokeMethod(this, [this] { m_audioRun->setRunning(false); }, Qt::QueuedConnection);
+                return;
+            }
         }
 
-        const bool success = m_game->get_midi(
-            wavPath.toLocal8Bit().toStdString(), midis, tempo, msg,
-            [this](const int progress) {
-                QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
-            },
-            maxAudioSegLength);
-
-        if (success) {
-            if (!makeMidiFile(outputMidiPath.toLocal8Bit().toStdString(), midis, tempo)) {
-                QMetaObject::invokeMethod(
-                    this, [this] { QMessageBox::warning(this, "Warning", "Failed to save MIDI file."); },
-                    Qt::QueuedConnection);
-            } else {
-                QMetaObject::invokeMethod(
-                    this, [this] { QMessageBox::information(this, "Success", "MIDI file generated!"); },
-                    Qt::QueuedConnection);
-            }
-        } else {
-            std::cerr << "Error: " << msg << std::endl;
+        if (!makeMidiFile(outputMidiPath.toLocal8Bit().toStdString(), midis, tempo)) {
             QMetaObject::invokeMethod(
-                this,
-                [this, msg] {
-                    QMessageBox::critical(this, "Error", QString("Conversion failed: %1").arg(msg.c_str()));
-                },
+                this, [this] { QMessageBox::warning(this, "Warning", "Failed to save MIDI file."); },
+                Qt::QueuedConnection);
+        } else {
+            QMetaObject::invokeMethod(
+                this, [this] { QMessageBox::information(this, "Success", "MIDI file generated!"); },
                 Qt::QueuedConnection);
         }
 
@@ -619,6 +639,11 @@ void MainWidget::setupAlignGroup() {
 }
 
 void MainWidget::onAlignCsvTask() {
+    if (m_runningTask.isRunning()) {
+        QMessageBox::warning(this, "Warning", "A task is already running.");
+        return;
+    }
+
     if (m_alignCsvInput->path().isEmpty() || m_alignWavDir->path().isEmpty() ||
         m_alignOutput->path().isEmpty()) {
         QMessageBox::warning(this, "Warning", "Please fill all align CSV paths");
@@ -660,36 +685,42 @@ void MainWidget::onAlignCsvTask() {
             }
         }
 
-        m_game->set_seg_threshold(segThreshold);
-        m_game->set_seg_radius_frames(segRadiusFrame);
-        m_game->set_est_threshold(estThreshold);
-        m_game->set_language(languageId);
+        {
+            std::lock_guard<std::mutex> lock(m_gameMutex);
 
-        if (d3pmNSteps > 0) {
-            m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
+            m_game->set_seg_threshold(segThreshold);
+            m_game->set_seg_radius_frames(segRadiusFrame);
+            m_game->set_est_threshold(estThreshold);
+            m_game->set_language(languageId);
+
+            if (d3pmNSteps > 0) {
+                m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
+            }
+
+            Game::AlignOptions options;
+
+            const bool success = m_game->alignCSV(csvPath, savePath, saveFilename, true, options, msg,
+                                                  [this](const int progress) {
+                                                      QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
+                                                                               Qt::QueuedConnection);
+                                                  });
+
+            if (!success) {
+                std::cerr << "Align error: " << msg << std::endl;
+                QMetaObject::invokeMethod(
+                    this,
+                    [this, msg] {
+                        QMessageBox::critical(this, "Error", QString("Align failed: %1").arg(msg.c_str()));
+                    },
+                    Qt::QueuedConnection);
+                QMetaObject::invokeMethod(this, [this] { m_alignRun->setRunning(false); }, Qt::QueuedConnection);
+                return;
+            }
         }
 
-        Game::AlignOptions options;
-
-        const bool success = m_game->alignCSV(csvPath, savePath, saveFilename, true, options, msg,
-                                              [this](const int progress) {
-                                                  QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
-                                                                           Qt::QueuedConnection);
-                                              });
-
-        if (success) {
-            QMetaObject::invokeMethod(
-                this, [this] { QMessageBox::information(this, "Success", "Align CSV completed!"); },
-                Qt::QueuedConnection);
-        } else {
-            std::cerr << "Align error: " << msg << std::endl;
-            QMetaObject::invokeMethod(
-                this,
-                [this, msg] {
-                    QMessageBox::critical(this, "Error", QString("Align failed: %1").arg(msg.c_str()));
-                },
-                Qt::QueuedConnection);
-        }
+        QMetaObject::invokeMethod(
+            this, [this] { QMessageBox::information(this, "Success", "Align CSV completed!"); },
+            Qt::QueuedConnection);
 
         QMetaObject::invokeMethod(this, [this] { m_alignRun->setRunning(false); }, Qt::QueuedConnection);
     });

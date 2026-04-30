@@ -16,6 +16,7 @@
 
 #include <QFuture>
 #include <map>
+#include <mutex>
 #include <string>
 
 class MainWidget : public QWidget {
@@ -85,6 +86,7 @@ private:
 
     // Game instance
     std::shared_ptr<Game::Game> m_game = nullptr;
+    mutable std::mutex m_gameMutex;
 
     // Language mapping
     std::map<int, std::string> m_languageIdToName;
