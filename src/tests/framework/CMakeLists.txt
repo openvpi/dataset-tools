@@ -11,6 +11,8 @@ set(DSFW_TESTS
     TestLocalFileIOProvider
     TestModelManager
     TestModelDownloader
+    TestIDocument
+    TestIFileIOProviderMock
 )
 
 foreach(test_name ${DSFW_TESTS})
