@@ -13,6 +13,8 @@ add_executable(${PROJECT_NAME} WIN32
     main.cpp
     PipelineWindow.h
     PipelineWindow.cpp
+    PipelinePage.h
+    PipelinePage.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
