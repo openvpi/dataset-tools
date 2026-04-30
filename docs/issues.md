@@ -221,3 +221,24 @@
 ### Issue #28: TranscriptionPipeline 可测试性改造
 
 **类型**: Refactor | **优先级**: P2 | **估计工作量**: M (2-8h)
+
+> **审查结果 (2026-05-01)**:
+>
+> #### 当前设计
+> - `TranscriptionPipeline::run()` 是一个静态方法，内部串行执行 4 个步骤（TextGrid 提取 → PhNum 计算 → GAME 对齐 → DS 转换）
+> - GAME 对齐和 F0 回调通过 `std::function` 注入——这是好的设计，允许外部控制推理行为
+>
+> #### 可测试性障碍
+> 1. **直接依赖文件系统**: `TextGridToCsv::extractDirectory()` 直接读取 `opts.textGridDir` 目录中的 TextGrid 文件；`QFileInfo::exists(opts.csvPath)` 检查文件存在；`TranscriptionCsv::read/write` 直接操作文件——测试必须准备真实文件
+> 2. **`PhNumCalculator` 硬编码实例化**: 在 run() 内部直接 `PhNumCalculator calc; calc.loadDictionary(opts.dictPath, ...)`，无法注入 mock。字典文件也必须存在
+> 3. **`CsvToDsConverter::convertFromMemory` 静态调用**: 无法替换为 mock，且该函数内部可能涉及文件 I/O（写 .ds 文件到 outputDir）
+> 4. **`TextGridToCsv::extractDirectory` 静态调用**: 同上，无法在测试中替换
+> 5. **单个巨型静态函数**: 150 行逻辑全在一个函数中，无法单独测试某个步骤（如只测 Step 7 的字符串解析逻辑）
+> 6. **Checkpoint/resume 逻辑与主流程耦合**: CSV 存在性检查和 resume 跳转混在 run() 开头，增加了测试路径组合
+>
+> #### 改进建议
+> 1. **引入接口**: 为 `TextGridToCsv`、`PhNumCalculator`、`CsvToDsConverter` 定义轻量接口（或将它们作为回调注入），使测试可提供 mock
+> 2. **拆分为独立步骤方法**: 将 run() 拆为 `extractTextGrids()`、`calculatePhNum()`、`gameAlign()`、`convertToDs()` 四个方法，每个可独立测试
+> 3. **文件 I/O 抽象**: 通过注入 `IFileSystem` 接口或将文件操作封装为回调，消除对真实文件系统的依赖
+> 4. **将字符串解析逻辑提取为纯函数**: Step 7 中 phSeq/phDur/phNum 的 split→vector 转换和 notes→row 回写逻辑可提取为无副作用的工具函数，直接单元测试
+> 5. **将 PhNumCalculator 作为构造参数或回调注入**: 类似已有的 `GameAlignCallback` 模式
