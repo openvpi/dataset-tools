@@ -11,6 +11,13 @@
 
 namespace Game
 {
+    static std::unique_ptr<bool[]> toBoolArray(const std::vector<uint8_t> &v) {
+        auto result = std::make_unique<bool[]>(v.size());
+        for (size_t i = 0; i < v.size(); ++i)
+            result[i] = v[i] != 0;
+        return result;
+    }
+
     GameModel::GameModel() :
         sessionOptions(Ort::SessionOptions()) {}
 
@@ -326,8 +333,9 @@ namespace Game
             m_memoryInfo, tempDurations.data(), durations.size(), durationsShape.data(), durationsShape.size());
 
         std::vector<uint8_t> tempMaskT(maskT.begin(), maskT.end());
+        auto tempMaskTBool = toBoolArray(tempMaskT);
         Ort::Value maskTTensor =
-            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()), tempMaskT.size(),
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, tempMaskTBool.get(), tempMaskT.size(),
                                            maskTShape.data(), maskTShape.size());
 
         const char *inputNames[] = {"durations", "maskT"};
@@ -390,18 +398,21 @@ namespace Game
                                                                     xSegShapeArr.data(), xSegShapeArr.size());
 
             std::vector<uint8_t> maskTBoolVec(maskTBool.begin(), maskTBool.end());
+            auto maskTBoolArr = toBoolArray(maskTBoolVec);
             Ort::Value maskTTensor =
-                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(maskTBoolVec.data()),
+                Ort::Value::CreateTensor<bool>(m_memoryInfo, maskTBoolArr.get(),
                                                maskTBoolVec.size(), boundariesShape.data(), boundariesShape.size());
 
             std::vector<uint8_t> knownBdVec(knownBd.begin(), knownBd.end());
+            auto knownBdBoolArr = toBoolArray(knownBdVec);
             Ort::Value knownBdTensor =
-                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(knownBdVec.data()),
+                Ort::Value::CreateTensor<bool>(m_memoryInfo, knownBdBoolArr.get(),
                                                knownBdVec.size(), boundariesShape.data(), boundariesShape.size());
 
             std::vector<uint8_t> currentBdVec(currentBoundaries.begin(), currentBoundaries.end());
+            auto currentBdBoolArr = toBoolArray(currentBdVec);
             Ort::Value prevBdTensor =
-                Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(currentBdVec.data()),
+                Ort::Value::CreateTensor<bool>(m_memoryInfo, currentBdBoolArr.get(),
                                                currentBdVec.size(), boundariesShape.data(), boundariesShape.size());
 
             std::array<int64_t, 1> langShape = {1};
@@ -479,13 +490,15 @@ namespace Game
         const std::array<int64_t, 2> maskTShape = {1, static_cast<int64_t>(maskT.size())};
 
         std::vector<uint8_t> tempBoundaries(boundaries.begin(), boundaries.end());
+        auto tempBoundariesBool = toBoolArray(tempBoundaries);
         Ort::Value boundariesTensor =
-            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempBoundaries.data()),
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, tempBoundariesBool.get(),
                                            boundaries.size(), boundariesShape.data(), boundariesShape.size());
 
         std::vector<uint8_t> tempMaskT(maskT.begin(), maskT.end());
+        auto tempMaskTBool = toBoolArray(tempMaskT);
         Ort::Value maskTTensor =
-            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskT.data()), tempMaskT.size(),
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, tempMaskTBool.get(), tempMaskT.size(),
                                            maskTShape.data(), maskTShape.size());
 
         const char *inputNames[] = {"boundaries", "maskT"};
@@ -565,8 +578,9 @@ namespace Game
         }
 
         std::array<int64_t, 2> maskTShapeForTensor = {1, T};
+        auto maskTVecBool = toBoolArray(maskTVec);
         Ort::Value maskTTensor =
-            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(maskTVec.data()), maskTVec.size(),
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, maskTVecBool.get(), maskTVec.size(),
                                            maskTShapeForTensor.data(), maskTShapeForTensor.size());
 
         std::vector<uint8_t> boundariesVec;
@@ -575,8 +589,9 @@ namespace Game
             boundariesVec.push_back(val != 0);
         }
         std::array<int64_t, 2> bdShape = {1, static_cast<int64_t>(boundariesAdjusted.size())};
+        auto boundariesVecBool = toBoolArray(boundariesVec);
         Ort::Value boundariesTensor =
-            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(boundariesVec.data()),
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, boundariesVecBool.get(),
                                            boundariesVec.size(), bdShape.data(), bdShape.size());
 
         std::vector<uint8_t> tempMaskN;
@@ -586,8 +601,9 @@ namespace Game
         }
 
         std::array<int64_t, 2> maskNShape = {1, static_cast<int64_t>(tempMaskN.size())};
+        auto tempMaskNBool = toBoolArray(tempMaskN);
         Ort::Value maskNTensor =
-            Ort::Value::CreateTensor<bool>(m_memoryInfo, reinterpret_cast<bool *>(tempMaskN.data()), tempMaskN.size(),
+            Ort::Value::CreateTensor<bool>(m_memoryInfo, tempMaskNBool.get(), tempMaskN.size(),
                                            maskNShape.data(), maskNShape.size());
 
         std::vector<float> threshVec = {threshold};

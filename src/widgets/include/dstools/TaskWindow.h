@@ -10,6 +10,8 @@
 #include <QHBoxLayout>
 #include <QThreadPool>
 
+#include <atomic>
+
 namespace dstools::widgets {
 
 /// Batch task window base class.
@@ -58,10 +60,10 @@ protected:
 
     // State
     int m_totalTasks = 0;
-    int m_finishedTasks = 0;
-    int m_errorTasks = 0;
+    std::atomic<int> m_finishedTasks{0};
+    std::atomic<int> m_errorTasks{0};
     QStringList m_errorDetails;
-    bool m_isRunning = false;
+    std::atomic<bool> m_isRunning{false};
 
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
