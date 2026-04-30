@@ -10,6 +10,7 @@ set(LYRICFA_SOURCES
     LyricMatchTask.cpp
     MatchLyric.cpp
     SequenceAligner.cpp
+    SmartHighlighter.cpp
     Utils.cpp
 )
 
@@ -22,6 +23,7 @@ set(LYRICFA_HEADERS
     LyricMatchTask.h
     MatchLyric.h
     SequenceAligner.h
+    SmartHighlighter.h
     Utils.h
 )
 

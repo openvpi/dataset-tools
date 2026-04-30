@@ -12,8 +12,6 @@ set(PAGE_SOURCES
     # LyricFA
     ${CMAKE_CURRENT_SOURCE_DIR}/../lyricfa/LyricFAPage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../lyricfa/LyricFAPage.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../lyricfa/SmartHighlighter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../lyricfa/SmartHighlighter.h
 
     # HubertFA
     ${CMAKE_CURRENT_SOURCE_DIR}/../hubertfa/HubertFAPage.cpp
