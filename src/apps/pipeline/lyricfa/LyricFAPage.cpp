@@ -6,19 +6,19 @@
 #include <QMessageBox>
 #include <QStandardPaths>
 
-#include <dstools/PathSelector.h>
 #include <dstools/ModelLoadPanel.h>
+#include <dstools/PathSelector.h>
 
+#include "Asr.h"
 #include "AsrTask.h"
 #include "LyricMatchTask.h"
-#include "Asr.h"
 #include "MatchLyric.h"
 
 #include <QDir>
 #include <cpp-pinyin/Pinyin.h>
 
-using dstools::widgets::PathSelector;
 using dstools::widgets::ModelLoadPanel;
+using dstools::widgets::PathSelector;
 
 LyricFAPage::LyricFAPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
     m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
@@ -110,7 +110,7 @@ void LyricFAPage::runTask() {
         const QString labFilePath = labOutPath + QDir::separator() + QFileInfo(filename).completeBaseName() + ".lab";
 
         auto *asrTask = new LyricFA::AsrThread(m_asr, filename, filePath, labFilePath,
-                                                QSharedPointer<Pinyin::Pinyin>(toPinyin ? m_mandarin : nullptr));
+                                               QSharedPointer<Pinyin::Pinyin>(toPinyin ? m_mandarin : nullptr));
         connect(asrTask, &LyricFA::AsrThread::oneFailed, this, &TaskWindow::slot_oneFailed);
         connect(asrTask, &LyricFA::AsrThread::oneFinished, this, &TaskWindow::slot_oneFinished);
         threadPool()->start(asrTask);
@@ -118,20 +118,28 @@ void LyricFAPage::runTask() {
 }
 
 void LyricFAPage::onTaskFinished() {
-    QString msg = (m_currentMode == Mode_Asr)
-        ? QString("ASR completed! Total: %1, Success: %2, Failed: %3")
-              .arg(m_totalTasks).arg(m_totalTasks - m_errorTasks).arg(m_errorTasks)
-        : QString("Lyric matching completed! Total: %1, Success: %2, Failed: %3")
-              .arg(m_totalTasks).arg(m_totalTasks - m_errorTasks).arg(m_errorTasks);
+    const int total = m_totalTasks;
+    const int errors = m_errorTasks.load();
+    const QString msg = (m_currentMode == Mode_Asr)
+                            ? QString("ASR completed! Total: %1, Success: %2, Failed: %3")
+                                  .arg(total)
+                                  .arg(total - errors)
+                                  .arg(errors)
+                            : QString("Lyric matching completed! Total: %1, Success: %2, Failed: %3")
+                                  .arg(total)
+                                  .arg(total - errors)
+                                  .arg(errors);
 
-    if (m_errorTasks > 0) {
+    if (errors > 0) {
         m_logOutput->appendPlainText("Failed tasks:");
         for (const QString &detail : m_errorDetails)
             m_logOutput->appendPlainText("  " + detail);
     }
 
     QMessageBox::information(this, qApp->applicationName(), msg);
-    m_totalTasks = m_finishedTasks = m_errorTasks = 0;
+    m_totalTasks = 0;
+    m_finishedTasks = 0;
+    m_errorTasks = 0;
 }
 
 void LyricFAPage::slot_matchLyric() {
@@ -173,9 +181,9 @@ void LyricFAPage::slot_matchLyric() {
     for (const QString &labPath : labPaths) {
         QString labName = QFileInfo(labPath).completeBaseName();
         const QString jsonPath = jsonFolder + QDir::separator() + labName + ".json";
-         auto *task = new LyricFA::LyricMatchTask(m_match, labName, labPath, jsonPath);
-         connect(task, &LyricFA::LyricMatchTask::oneFailed, this, &TaskWindow::slot_oneFailed);
-         connect(task, &LyricFA::LyricMatchTask::oneFinished, this, &TaskWindow::slot_oneFinished);
+        auto *task = new LyricFA::LyricMatchTask(m_match, labName, labPath, jsonPath);
+        connect(task, &LyricFA::LyricMatchTask::oneFailed, this, &TaskWindow::slot_oneFailed);
+        connect(task, &LyricFA::LyricMatchTask::oneFinished, this, &TaskWindow::slot_oneFinished);
         threadPool()->start(task);
     }
 }
@@ -201,14 +209,18 @@ void LyricFAPage::slot_loadModel() {
         return;
     }
 
-    if (m_asr) { delete m_asr; m_asr = nullptr; }
+    if (m_asr) {
+        delete m_asr;
+        m_asr = nullptr;
+    }
     m_asr = new LyricFA::Asr(modelFolder);
     if (m_asr->initialized()) {
         m_modelPanel->setStatus("Model loaded successfully.", true);
         m_runBtn->setEnabled(true);
     } else {
         m_modelPanel->setStatus("Failed to load model.", false);
-        delete m_asr; m_asr = nullptr;
+        delete m_asr;
+        m_asr = nullptr;
         m_runBtn->setEnabled(false);
     }
 }

@@ -8,16 +8,16 @@ namespace Rmvpe
 {
     RmvpeModel::RmvpeModel(const std::filesystem::path &modelPath, const ExecutionProvider provider,
                            const int device_id) :
-        m_session_options(dstools::infer::OnnxEnv::createSessionOptions(provider, device_id)),
         m_session(nullptr), m_waveform_input_name("waveform"), m_threshold_input_name("threshold"),
         m_f0_output_name("f0"), m_uv_output_name("uv") {
 
-        // Create ONNX Runtime Session
+        auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
+
         try {
 #ifdef _WIN32
-            m_session = Ort::Session(dstools::infer::OnnxEnv::env(), modelPath.wstring().c_str(), m_session_options);
+            m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), modelPath.wstring().c_str(), sessionOptions);
 #else
-            m_session = Ort::Session(dstools::infer::OnnxEnv::env(), modelPath.c_str(), m_session_options);
+            m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), modelPath.c_str(), sessionOptions);
 #endif
         } catch (const Ort::Exception &e) {
             std::cout << "Failed to create session: " << e.what() << std::endl;
@@ -70,7 +70,7 @@ namespace Rmvpe
                 m_activeRunOptions = &runOptions;
             }
             auto output_tensors =
-                m_session.Run(runOptions, input_names, input_tensors, 2,
+                m_session->Run(runOptions, input_names, input_tensors, 2,
                                output_names, 2
                 );
             {

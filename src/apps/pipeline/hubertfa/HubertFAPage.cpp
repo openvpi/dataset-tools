@@ -114,15 +114,19 @@ void HubertFAPage::runTask() {
 }
 
 void HubertFAPage::onTaskFinished() {
+    const int total = m_totalTasks;
+    const int errors = m_errorTasks.load();
     QString msg = QString("Alignment completed! Total: %1, Success: %2, Failed: %3")
-                      .arg(m_totalTasks).arg(m_totalTasks - m_errorTasks).arg(m_errorTasks);
-    if (m_errorTasks > 0) {
+                      .arg(total).arg(total - errors).arg(errors);
+    if (errors > 0) {
         m_logOutput->appendPlainText("Failed tasks:");
         for (const QString &d : m_errorDetails)
             m_logOutput->appendPlainText("  " + d);
     }
     QMessageBox::information(this, qApp->applicationName(), msg);
-    m_totalTasks = m_finishedTasks = m_errorTasks = 0;
+    m_totalTasks = 0;
+    m_finishedTasks = 0;
+    m_errorTasks = 0;
 }
 
 void HubertFAPage::slot_loadModel() {

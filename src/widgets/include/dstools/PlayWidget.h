@@ -12,16 +12,17 @@ class QActionGroup;
 class QAction;
 
 namespace dstools::audio {
-class AudioPlayback;
+class IAudioPlayer;
+class AudioPlayer;
 }
 
 namespace dstools::widgets {
 
-/// Unified audio playback widget. Merges original MinLabel::PlayWidget and SlurCutter::PlayWidget.
 class DSTOOLS_WIDGETS_API PlayWidget : public QWidget {
     Q_OBJECT
 public:
     explicit PlayWidget(QWidget *parent = nullptr);
+    explicit PlayWidget(dstools::audio::IAudioPlayer *player, QWidget *parent = nullptr);
     ~PlayWidget() override;
 
     void openFile(const QString &path);
@@ -29,25 +30,20 @@ public:
     bool isPlaying() const;
     void setPlaying(bool playing);
 
-    /// Seek to a specific position in seconds
     void seek(double sec);
 
-    /// Get total audio duration in seconds (0 if no file loaded)
     double duration() const;
 
-    /// Set play range (seconds). After setting, only audio in this range is played.
     void setPlayRange(double startSec, double endSec);
     void clearPlayRange();
 
 signals:
-    /// Playhead position changed (seconds). Only emitted when play range is set.
     void playheadChanged(double positionSec);
 
 protected:
     void timerEvent(QTimerEvent *event) override;
 
 private:
-    // UI components
     QPushButton *m_playBtn;
     QPushButton *m_stopBtn;
     QPushButton *m_devBtn;
@@ -57,20 +53,17 @@ private:
     QMenu *m_deviceMenu;
     QActionGroup *m_deviceActionGroup;
 
-    // Audio backend
-    dstools::audio::AudioPlayback *m_playback = nullptr;
+    dstools::audio::IAudioPlayer *m_player = nullptr;
+    std::unique_ptr<dstools::audio::AudioPlayer> m_ownedPlayer;
     bool m_valid = false;
 
-    // State
     int m_notifyTimerId = 0;
     QString m_filename;
 
-    // Range playback
     double m_rangeStart = 0.0;
     double m_rangeEnd = 0.0;
     bool m_hasRange = false;
 
-    // Playhead tracking (SlurCutter steady_clock precision)
     uint64_t m_lastObtainedTimeMs = 0;
     std::chrono::time_point<std::chrono::steady_clock> m_lastObtainedTimePoint;
     uint64_t estimatedTimeMs() const;

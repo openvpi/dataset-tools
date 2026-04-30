@@ -25,7 +25,6 @@ namespace HFA {
         bool forward(const std::vector<std::vector<float>> &input_data, HfaLogits &result, std::string &msg) const;
 
     private:
-        Ort::SessionOptions m_session_options;
         std::unique_ptr<Ort::Session> m_model_session;
         Ort::AllocatorWithDefaultOptions m_allocator;
 

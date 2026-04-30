@@ -16,6 +16,8 @@ add_executable(${PROJECT_NAME}
     IPageProgress.h
     StepPlugins.cpp
     StepPlugins.h
+    TaskWindowAdapter.cpp
+    TaskWindowAdapter.h
     pages/BuildCsvPage.cpp
     pages/BuildCsvPage.h
     pages/GameAlignPage.cpp

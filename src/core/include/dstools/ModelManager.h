@@ -16,21 +16,17 @@ public:
     explicit ModelManager(QObject *parent = nullptr);
     ~ModelManager() override;
 
-    // Registration
     void registerProvider(ModelType type, std::unique_ptr<IModelProvider> provider);
     IModelProvider *provider(ModelType type) const;
 
-    // Lifecycle
-    bool ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex, std::string &error);
+    Result<void> ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex);
     void unload(ModelType type);
     void unloadAll();
 
-    // Memory management
     void setMemoryLimit(int64_t bytes);
     int64_t memoryLimit() const;
     int64_t currentMemoryUsage() const;
 
-    // Query
     ModelStatus status(ModelType type) const;
     QList<ModelType> loadedModels() const;
 
@@ -52,4 +48,4 @@ private:
     void evictIfNeeded(int64_t requiredBytes);
 };
 
-} // namespace dstools
+}

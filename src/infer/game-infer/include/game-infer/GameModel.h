@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <onnxruntime_cxx_api.h>
+#include <dstools/OnnxEnv.h>
 
 #include "Game.h"
 
@@ -77,7 +77,6 @@ namespace Game
         std::unique_ptr<Ort::Session> sessBd2dur; // bd2dur.onnx: boundaries → durations
         std::unique_ptr<Ort::Session> sessDur2bd; // dur2bd.onnx: durations → boundaries (optional)
 
-        Ort::SessionOptions sessionOptions;
         mutable std::mutex m_runMutex;
         mutable Ort::RunOptions *m_activeRunOptions = nullptr;
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);

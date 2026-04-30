@@ -53,9 +53,21 @@ static Theme::Palette makeLightPalette() {
 
 // ── Singleton ────────────────────────────────────────────────────────
 
+static std::unique_ptr<Theme> s_customInstance;
+
 Theme &Theme::instance() {
+    if (s_customInstance)
+        return *s_customInstance;
     static Theme s;
     return s;
+}
+
+void Theme::setInstance(std::unique_ptr<Theme> theme) {
+    s_customInstance = std::move(theme);
+}
+
+void Theme::resetInstance() {
+    s_customInstance.reset();
 }
 
 Theme::Theme(QObject *parent) : QObject(parent) {}

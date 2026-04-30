@@ -17,7 +17,5 @@ dstools_add_infer_library(${PROJECT_NAME}
 find_package(SndFile CONFIG REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(wolf-midi CONFIG REQUIRED)
-
 target_link_libraries(${PROJECT_NAME} PUBLIC SndFile::sndfile nlohmann_json::nlohmann_json audio-util wolf-midi::wolf-midi dstools-infer-common)
 target_link_libraries(${PROJECT_NAME} PRIVATE dstools-core)
-

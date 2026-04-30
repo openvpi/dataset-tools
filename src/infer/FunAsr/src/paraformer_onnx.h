@@ -30,7 +30,6 @@ namespace FunAsr {
 #endif
 
         std::unique_ptr<Ort::Session> m_session;
-        Ort::SessionOptions sessionOptions = Ort::SessionOptions();
 
         std::vector<std::string> m_strInputNames, m_strOutputNames;
         std::vector<const char *> m_szInputNames;

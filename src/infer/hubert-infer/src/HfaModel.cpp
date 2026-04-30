@@ -6,17 +6,15 @@
 
 namespace HFA {
     HfaModel::HfaModel(const std::filesystem::path &model_Path, const ExecutionProvider provider, const int device_id)
-        : m_session_options(dstools::infer::OnnxEnv::createSessionOptions(provider, device_id)),
-          m_model_session(nullptr) {
+        : m_model_session(nullptr) {
 
-        // Create ONNX Runtime Session
+        auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
+
         try {
 #ifdef _WIN32
-            m_model_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(),
-                                                             model_Path.wstring().c_str(), m_session_options);
+            m_model_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_Path.wstring().c_str(), sessionOptions);
 #else
-            m_model_session =
-                std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_Path.c_str(), m_session_options);
+            m_model_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_Path.c_str(), sessionOptions);
 #endif
         } catch (const Ort::Exception &e) {
             std::cout << "Failed to create session: " << e.what() << std::endl;

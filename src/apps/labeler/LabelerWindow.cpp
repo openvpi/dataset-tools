@@ -5,13 +5,13 @@
 #include "MinLabelPage.h"
 #include "PhonemeLabelerPage.h"
 #include "PitchLabelerPage.h"
+#include "TaskWindowAdapter.h"
 #include "pages/BuildCsvPage.h"
 #include "pages/BuildDsPage.h"
 #include "pages/GameAlignPage.h"
-
-#include <pipeline/slicer/SlicerPage.h>
-#include <pipeline/lyricfa/LyricFAPage.h>
-#include <pipeline/hubertfa/HubertFAPage.h>
+#include "slicer/SlicerPage.h"
+#include "lyricfa/LyricFAPage.h"
+#include "hubertfa/HubertFAPage.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -220,12 +220,20 @@ QWidget *LabelerWindow::ensurePage(int step) {
         QWidget *page = nullptr;
 
         switch (step) {
-        case 0: { // Step 1: Slice
-            page = new SlicerPage(this);
+        case 0: {
+            auto *slicerPage = new SlicerPage(this);
+            auto *adapter = new TaskWindowAdapter(slicerPage, this);
+            if (!m_workingDir.isEmpty())
+                adapter->setWorkingDirectory(m_workingDir);
+            page = adapter;
             break;
         }
-        case 1: { // Step 2: ASR
-            page = new LyricFAPage(this);
+        case 1: {
+            auto *lyricPage = new LyricFAPage(this);
+            auto *adapter = new TaskWindowAdapter(lyricPage, this);
+            if (!m_workingDir.isEmpty())
+                adapter->setWorkingDirectory(m_workingDir);
+            page = adapter;
             break;
         }
         case 2: { // Step 3: Label (MinLabel)
@@ -235,8 +243,12 @@ QWidget *LabelerWindow::ensurePage(int step) {
             page = p;
             break;
         }
-        case 3: { // Step 4: Align
-            page = new HubertFAPage(this);
+        case 3: {
+            auto *hubertPage = new HubertFAPage(this);
+            auto *adapter = new TaskWindowAdapter(hubertPage, this);
+            if (!m_workingDir.isEmpty())
+                adapter->setWorkingDirectory(m_workingDir);
+            page = adapter;
             break;
         }
         case 4: { // Step 5: Phone (PhonemeLabeler)

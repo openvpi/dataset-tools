@@ -29,36 +29,31 @@ IModelProvider *ModelManager::provider(ModelType type) const {
     return it->second.provider.get();
 }
 
-bool ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex,
-                                std::string &error) {
+Result<void> ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex) {
     Q_ASSERT(QThread::currentThread() == QCoreApplication::instance()->thread());
     auto it = m_entries.find(type);
     if (it == m_entries.end()) {
-        error = "No provider registered for this model type";
-        return false;
+        return Result<void>::Error("No provider registered for this model type");
     }
 
     auto &entry = it->second;
     if (entry.provider->status() == ModelStatus::Ready && entry.lastPath == modelPath &&
         entry.lastGpuIndex == gpuIndex) {
         entry.lastUsedTimestamp = QDateTime::currentMSecsSinceEpoch();
-        return true;
+        return Result<void>::Ok();
     }
 
-    // Unload if currently loaded with different config
     if (entry.provider->status() == ModelStatus::Ready)
         entry.provider->unload();
 
-    // Evict other models if needed
     evictIfNeeded(entry.provider->estimatedMemoryBytes());
 
     emit modelStatusChanged(type, ModelStatus::Loading);
 
     auto loadResult = entry.provider->load(modelPath, gpuIndex);
     if (!loadResult) {
-        error = loadResult.error();
         emit modelStatusChanged(type, ModelStatus::Error);
-        return false;
+        return loadResult;
     }
 
     entry.lastPath = modelPath;
@@ -67,7 +62,7 @@ bool ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gp
 
     emit modelStatusChanged(type, ModelStatus::Ready);
     emit memoryUsageChanged(currentMemoryUsage());
-    return true;
+    return Result<void>::Ok();
 }
 
 void ModelManager::unload(ModelType type) {
@@ -132,7 +127,6 @@ void ModelManager::evictIfNeeded(int64_t requiredBytes) {
         return;
 
     while (currentMemoryUsage() + requiredBytes > m_memoryLimit) {
-        // Find the ready provider with the oldest timestamp
         ModelType oldest = {};
         qint64 oldestTimestamp = std::numeric_limits<qint64>::max();
         bool found = false;
@@ -153,4 +147,4 @@ void ModelManager::evictIfNeeded(int64_t requiredBytes) {
     }
 }
 
-} // namespace dstools
+}

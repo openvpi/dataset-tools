@@ -18,8 +18,7 @@ namespace Game
         return result;
     }
 
-    GameModel::GameModel() :
-        sessionOptions(Ort::SessionOptions()) {}
+    GameModel::GameModel() {}
 
     GameModel::~GameModel() = default;
 
@@ -73,7 +72,7 @@ namespace Game
             }
         }
 
-        sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
+        auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
         sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
 
         auto loadSession = [&](const std::string &name, std::unique_ptr<Ort::Session> &session)

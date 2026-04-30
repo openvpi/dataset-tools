@@ -21,7 +21,9 @@ namespace FunAsr {
         try {
             fe = std::make_unique<FeatureExtract>(3);
 
-            sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, deviceId, nNumThread);
+            auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(
+                dstools::infer::ExecutionProvider::CPU, 0, nNumThread);
+            sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
 #ifdef _WIN32
             m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);

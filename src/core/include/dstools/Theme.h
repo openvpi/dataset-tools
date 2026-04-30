@@ -20,9 +20,9 @@
 
 #include "AppSettings.h"
 
-
 #include <QApplication>
 #include <QColor>
+#include <memory>
 #include <QObject>
 #include <QPalette>
 
@@ -54,8 +54,11 @@ public:
         QColor warning;
     };
 
-    /// Global singleton.
     static Theme &instance();
+    static void setInstance(std::unique_ptr<Theme> theme);
+    static void resetInstance();
+
+    ~Theme() override = default;
 
     /// Initialize theme system. Call once from main(), before showing any window.
     /// Reads saved preference from AppSettings key "theme" (per-app).
@@ -84,7 +87,6 @@ signals:
 
 private:
     explicit Theme(QObject *parent = nullptr);
-    ~Theme() override = default;
 
     void applyTheme(bool dark);
     bool resolveIsDark() const;

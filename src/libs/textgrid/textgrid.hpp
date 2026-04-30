@@ -167,9 +167,8 @@ class PointTier : public Tier {
 class IntervalTier : public Tier {
  public:
   IntervalTier(const std::string& name, Number min_time, Number max_time,
-               const std::string& text = "")
+               const std::string& /*text*/ = "")
       : Tier(name, min_time, max_time), intervals_() {
-    // intervals_.push_back(Interval(min_time, max_time, text));
   }
   IntervalTier(const std::string& name, Number min_time, Number max_time,
                size_t number_of_intervals_to_reserve)

@@ -6,12 +6,15 @@ set(AUDIO_SOURCES
     src/WaveFormat.cpp
     src/AudioDecoder.cpp
     src/AudioPlayback.cpp
+    src/AudioPlayer.cpp
 )
 
 set(AUDIO_HEADERS
     include/dstools/WaveFormat.h
     include/dstools/AudioDecoder.h
     include/dstools/AudioPlayback.h
+    include/dstools/IAudioPlayer.h
+    include/dstools/AudioPlayer.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${AUDIO_SOURCES} ${AUDIO_HEADERS})

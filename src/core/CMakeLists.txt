@@ -23,6 +23,7 @@ set(CORE_SOURCES
     src/ModelManager.cpp
     src/DsItemManager.cpp
     src/DsProject.cpp
+    src/ServiceLocator.cpp
     src/PinyinG2PProvider.cpp
     src/ModelDownloader.cpp
     src/QualityMetrics.cpp
@@ -32,6 +33,8 @@ set(CORE_HEADERS
     include/dstools/AppInit.h
     include/dstools/AppSettings.h
     include/dstools/CommonKeys.h
+    include/dstools/Result.h
+    include/dstools/ServiceLocator.h
     include/dstools/CsvToDsConverter.h
     include/dstools/DsDocument.h
     include/dstools/JsonHelper.h
