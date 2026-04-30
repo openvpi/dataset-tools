@@ -96,6 +96,15 @@ jobs:
       - name: Deploy
         run: cmake --build ${{github.workspace}}/build --target install
 
+      - name: Verify find_package(dsfw)
+        shell: bash
+        run: |
+          cmake -B tests/test-find-package/build -S tests/test-find-package -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DCMAKE_PREFIX_PATH="${{env.GH_WORKSPACE}}/deploy;${{env.QT_DIR}}/lib/cmake/Qt6/" \
+            -DCMAKE_TOOLCHAIN_FILE=${{env.GH_WORKSPACE}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          cmake --build tests/test-find-package/build
+
       - name: Set Commit ID
         shell: bash
         working-directory: ${{github.workspace}}/build
