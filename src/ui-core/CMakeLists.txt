@@ -18,7 +18,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dsfw-ui-core
-    dstools-core
+    dsfw-core
     Qt${QT_VERSION_MAJOR}::Widgets
 )
 

@@ -38,7 +38,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    dstools-core
+    dsfw-core
     audio-util
     FunAsr
     cpp-pinyin::cpp-pinyin

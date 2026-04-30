@@ -17,7 +17,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    dstools-core
+    dsfw-core
     hubert-infer
     textgrid
     Qt${QT_VERSION_MAJOR}::Core
