@@ -15,5 +15,4 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     dsfw-core
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Network
-    nlohmann_json::nlohmann_json
 )
