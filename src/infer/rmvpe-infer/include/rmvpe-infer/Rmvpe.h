@@ -5,6 +5,7 @@
 #include <functional>
 
 #include <audio-util/SndfileVio.h>
+#include <dstools/IInferenceEngine.h>
 #include <rmvpe-infer/Provider.h>
 #include <rmvpe-infer/RmvpeGlobal.h>
 
@@ -18,17 +19,20 @@ namespace Rmvpe
         std::vector<bool> uv;
     };
 
-    class RMVPE_INFER_EXPORT Rmvpe {
+    class RMVPE_INFER_EXPORT Rmvpe : public dstools::infer::IInferenceEngine {
     public:
         explicit Rmvpe(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id);
-        ~Rmvpe();
+        ~Rmvpe() override;
 
         bool is_open() const;
+        bool isOpen() const override { return is_open(); }
 
         bool get_f0(const std::filesystem::path &filepath, float threshold, std::vector<RmvpeRes> &res,
                     std::string &msg, const std::function<void(int)> &progressChanged) const;
 
-        void terminate() const;
+        void terminate() override;
+
+        const char *engineName() const override { return "RMVPE"; }
 
     private:
         std::unique_ptr<RmvpeModel> m_rmvpe;

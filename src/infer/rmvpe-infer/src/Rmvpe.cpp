@@ -155,6 +155,6 @@ namespace Rmvpe
         return true;
     }
 
-    void Rmvpe::terminate() const { m_rmvpe->terminate(); }
+    void Rmvpe::terminate() { m_rmvpe->terminate(); }
 
 } // namespace Rmvpe
