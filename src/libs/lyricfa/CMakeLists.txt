@@ -33,11 +33,15 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 find_package(SndFile CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    dsfw-core
+    dstools-core
+    audio-util
     FunAsr
+    cpp-pinyin::cpp-pinyin
     SndFile::sndfile
     nlohmann_json::nlohmann_json
     Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Widgets
 )
