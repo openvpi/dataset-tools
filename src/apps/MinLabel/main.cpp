@@ -3,7 +3,7 @@
 #include <dstools/FramelessHelper.h>
 #include <dstools/Theme.h>
 #include <dstools/PinyinG2PProvider.h>
-#include <dstools/ServiceLocator.h>
+#include <dsfw/ServiceLocator.h>
 #include <cpp-pinyin/G2pglobal.h>
 #include "gui/MainWindow.h"
 

@@ -3,7 +3,7 @@
 /// @file ExportFormats.h
 /// @brief Concrete IExportFormat implementations for HTS Label and Sinsy XML.
 
-#include <dstools/IExportFormat.h>
+#include <dsfw/IExportFormat.h>
 
 #include <QStringList>
 

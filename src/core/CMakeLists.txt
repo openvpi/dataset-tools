@@ -13,12 +13,10 @@ set(CORE_SOURCES
     src/TextGridToCsv.cpp
     src/TranscriptionCsv.cpp
     src/TranscriptionPipeline.cpp
-    src/LocalFileIOProvider.cpp
     src/DsDocumentAdapter.cpp
     src/ModelManager.cpp
     src/DsItemManager.cpp
     src/DsProject.cpp
-    src/ServiceLocator.cpp
     src/PinyinG2PProvider.cpp
     src/ModelDownloader.cpp
     src/QualityMetrics.cpp
@@ -26,7 +24,6 @@ set(CORE_SOURCES
 
 set(CORE_HEADERS
     include/dstools/CommonKeys.h
-    include/dstools/ServiceLocator.h
     include/dstools/CsvToDsConverter.h
     include/dstools/DsDocument.h
     include/dstools/PhNumCalculator.h
@@ -36,11 +33,7 @@ set(CORE_HEADERS
     include/dstools/TextGridToCsv.h
     include/dstools/TranscriptionCsv.h
     include/dstools/TranscriptionPipeline.h
-    include/dstools/IFileIOProvider.h
-    include/dstools/LocalFileIOProvider.h
-    include/dstools/IDocument.h
     include/dstools/DsDocumentAdapter.h
-    include/dstools/IExportFormat.h
     include/dstools/ExportFormats.h
     include/dstools/IG2PProvider.h
     include/dstools/PinyinG2PProvider.h
@@ -68,13 +61,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     Qt${QT_VERSION_MAJOR}::Network
 )
 
-# JSON support
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
 
-# textgrid (header-only) for TextGridToCsv
 target_link_libraries(${PROJECT_NAME} PRIVATE textgrid)
 
-# SndFile for built-in F0 extraction fallback
 find_package(SndFile CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE SndFile::sndfile)

@@ -1,7 +1,7 @@
 #include <dstools/AppInit.h>
 
 #include <dstools/ModelManager.h>
-#include <dstools/ServiceLocator.h>
+#include <dsfw/ServiceLocator.h>
 
 #include <QApplication>
 #include <QDir>

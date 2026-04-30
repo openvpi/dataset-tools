@@ -1,7 +1,7 @@
 #include <dstools/PlayWidget.h>
 #include <dstools/IAudioPlayer.h>
 #include <dstools/AudioPlayer.h>
-#include <dstools/ServiceLocator.h>
+#include <dsfw/ServiceLocator.h>
 
 #include <QAction>
 #include <QActionGroup>

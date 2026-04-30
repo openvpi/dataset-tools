@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dstools/IDocument.h>
+#include <dsfw/IDocument.h>
 #include <dstools/DsDocument.h>
 
 #include <memory>
