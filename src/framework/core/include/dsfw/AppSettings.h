@@ -23,11 +23,23 @@
 
 namespace dstools {
 
+/// @brief Typed key descriptor for a single setting entry.
+///
+/// Combines a slash-delimited JSON path with a compile-time default value.
+///
+/// @code
+/// inline const SettingsKey<int> Volume("Audio/volume", 80);
+/// @endcode
+///
+/// @tparam T Value type (QString, int, double, bool, QKeySequence, std::string).
 template <typename T>
 struct SettingsKey {
-    const char *path;
-    T defaultValue;
+    const char *path;  ///< Slash-delimited JSON path (e.g. "General/lastDir").
+    T defaultValue;    ///< Fallback returned when the key is absent.
 
+    /// @brief Construct a settings key.
+    /// @param path Slash-delimited JSON path.
+    /// @param defaultValue Fallback value.
     SettingsKey(const char *path, T defaultValue)
         : path(path), defaultValue(std::move(defaultValue)) {}
 };
@@ -111,13 +123,34 @@ namespace detail {
 
 } // namespace detail
 
+/// @brief Type-safe, reactive, JSON-backed persistent settings.
+///
+/// Settings are stored as a flat JSON file under the application config directory.
+/// Changes are coalesced via a debounce timer and flushed to disk automatically.
+/// Observers registered with observe() are notified synchronously on value change.
+///
+/// @code
+/// AppSettings settings("myApp");
+/// settings.set(Volume, 80);
+/// int vol = settings.get(Volume);
+/// settings.observe(Volume, [](int v) { qDebug() << v; });
+/// @endcode
+///
+/// @note Thread-safe. All public methods lock an internal mutex.
 class AppSettings : public QObject {
     Q_OBJECT
 
 public:
+    /// @brief Construct settings for the given application name.
+    /// @param appName Used to derive the settings file path.
+    /// @param parent Optional QObject parent.
     explicit AppSettings(const QString &appName, QObject *parent = nullptr);
     ~AppSettings() override;
 
+    /// @brief Read a setting value, returning the key's default if absent.
+    /// @tparam T Value type.
+    /// @param key The settings key to read.
+    /// @return Current value or default.
     template <typename T>
     T get(const SettingsKey<T> &key) const {
         std::lock_guard lock(m_mutex);
@@ -126,6 +159,10 @@ public:
         return key.defaultValue;
     }
 
+    /// @brief Write a setting value; emits keyChanged and notifies observers if changed.
+    /// @tparam T Value type.
+    /// @param key The settings key to write.
+    /// @param value New value.
     template <typename T>
     void set(const SettingsKey<T> &key, const T &value) {
         bool changed = false;
@@ -146,6 +183,12 @@ public:
         }
     }
 
+    /// @brief Register a callback invoked whenever the key's value changes.
+    /// @tparam T Value type.
+    /// @param key The settings key to observe.
+    /// @param callback Invoked with the new value on change.
+    /// @param context If non-null, the observer is auto-removed when context is destroyed.
+    /// @return Observer ID that can be passed to removeObserver().
     template <typename T>
     int observe(const SettingsKey<T> &key, std::function<void(const T &)> callback,
                 QObject *context = nullptr) {
@@ -162,22 +205,37 @@ public:
         return id;
     }
 
+    /// @brief Remove an observer by ID.
+    /// @param id Observer ID returned by observe().
     void removeObserver(int id);
 
+    /// @brief Convenience: read a shortcut key as QKeySequence.
+    /// @param key A SettingsKey<QString> storing a key sequence string.
+    /// @return Parsed QKeySequence.
     QKeySequence shortcut(const SettingsKey<QString> &key) const {
         return QKeySequence(get(key));
     }
 
+    /// @brief Convenience: write a shortcut key from QKeySequence.
+    /// @param key A SettingsKey<QString> storing a key sequence string.
+    /// @param seq The key sequence to store.
     void setShortcut(const SettingsKey<QString> &key, const QKeySequence &seq) {
         set(key, seq.toString());
     }
 
+    /// @brief Check whether a key is present in the JSON store.
+    /// @tparam T Value type.
+    /// @param key The settings key to check.
+    /// @return True if the key exists.
     template <typename T>
     bool contains(const SettingsKey<T> &key) const {
         std::lock_guard lock(m_mutex);
         return JsonHelper::resolve(m_data, key.path) != nullptr;
     }
 
+    /// @brief Remove a key from the store and flush to disk immediately.
+    /// @tparam T Value type.
+    /// @param key The settings key to remove.
     template <typename T>
     void remove(const SettingsKey<T> &key) {
         bool removed = false;
@@ -210,11 +268,17 @@ public:
         }
     }
 
+    /// @brief Reload settings from disk, discarding in-memory changes.
     void reload();
+    /// @brief Flush pending changes to disk immediately.
     void flush();
+    /// @brief Return the absolute path to the settings JSON file.
+    /// @return File path string.
     QString filePath() const { return m_filePath; }
 
 signals:
+    /// @brief Emitted when any setting value changes.
+    /// @param keyPath The slash-delimited path of the changed key.
     void keyChanged(const QString &keyPath);
 
 private:

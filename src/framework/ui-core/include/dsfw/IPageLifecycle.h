@@ -1,31 +1,37 @@
 #pragma once
 
+/// @file IPageLifecycle.h
+/// @brief Page lifecycle interface for activation, deactivation, and shutdown callbacks.
+
 #include <QString>
 
 namespace dstools::labeler {
 
-/// Page lifecycle interface.
-/// Called by LabelerWindow when the user switches steps.
+/// @brief Page lifecycle interface.
+///
+/// Called by AppShell/LabelerWindow when the user switches steps or the application closes.
+/// Implement on page widgets to respond to visibility and directory changes.
 class IPageLifecycle {
 public:
     virtual ~IPageLifecycle() = default;
 
-    /// Called when this page becomes the active (visible) page.
+    /// @brief Called when this page becomes the active (visible) page.
     virtual void onActivated() {}
 
-    /// Called when this page is about to become inactive.
-    /// Return false to veto the switch.
+    /// @brief Called when this page is about to become inactive.
+    /// @return False to veto the switch and remain active.
     virtual bool onDeactivating() { return true; }
 
-    /// Called after the page has been deactivated.
+    /// @brief Called after the page has been deactivated.
     virtual void onDeactivated() {}
 
-    /// Called when the working directory changes.
+    /// @brief Called when the working directory changes.
+    /// @param newDir New working directory path.
     virtual void onWorkingDirectoryChanged(const QString &newDir) {
         Q_UNUSED(newDir);
     }
 
-    /// Called before the page is destroyed (app closing).
+    /// @brief Called before the page is destroyed (app closing).
     virtual void onShutdown() {}
 };
 

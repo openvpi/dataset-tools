@@ -1,29 +1,38 @@
 #pragma once
 
+/// @file IPageProgress.h
+/// @brief Page progress interface for reporting batch operation or file review progress.
+
 #include <QObject>
 #include <QString>
 
 namespace dstools::labeler {
 
-/// Page progress reporting interface.
-/// Batch pages report progress; interactive pages report file review progress.
+/// @brief Page progress reporting interface.
+///
+/// Batch pages report processing progress; interactive pages report file review progress.
+/// AppShell queries this interface to update the status bar.
 class IPageProgress {
 public:
     virtual ~IPageProgress() = default;
 
-    /// Total number of items to process
+    /// @brief Return the total number of items to process.
+    /// @return Total item count, or 0 if not applicable.
     virtual int progressTotal() const { return 0; }
 
-    /// Number of items processed
+    /// @brief Return the number of items processed so far.
+    /// @return Processed item count.
     virtual int progressCurrent() const { return 0; }
 
-    /// Whether a batch operation is currently running
+    /// @brief Check whether a batch operation is currently running.
+    /// @return True if running.
     virtual bool isRunning() const { return false; }
 
-    /// Human-readable status message for the status bar
+    /// @brief Return a human-readable status message for the status bar.
+    /// @return Status message string.
     virtual QString progressMessage() const { return {}; }
 
-    /// Request to cancel the current operation
+    /// @brief Request cancellation of the current operation.
     virtual void cancelOperation() {}
 };
 
