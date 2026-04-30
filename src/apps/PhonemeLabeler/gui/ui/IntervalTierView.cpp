@@ -13,6 +13,8 @@
 #include <QMenu>
 #include <QDebug>
 
+#include <dstools/Theme.h>
+
 namespace dstools {
 namespace phonemelabeler {
 
@@ -48,7 +50,8 @@ void IntervalTierView::setActive(bool active) {
 
 void IntervalTierView::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
-    painter.fillRect(rect(), m_active ? QColor(50, 50, 60) : QColor(40, 40, 45));
+    const auto &pe = dstools::Theme::instance().palette().phonemeEditor;
+    painter.fillRect(rect(), m_active ? pe.tierBackground : pe.tierBackgroundInactive);
 
     if (!m_doc || m_tierIndex < 0 || m_tierIndex >= m_doc->tierCount()) {
         painter.setPen(Qt::gray);
@@ -80,11 +83,11 @@ void IntervalTierView::drawIntervals(QPainter &painter) {
         if (x2 < 0 || x1 > width()) continue;
 
         // Alternating colors for readability
-        QColor color = (i % 2 == 0) ? QColor(70, 100, 140) : QColor(60, 90, 130);
+        QColor color = (i % 2 == 0) ? dstools::Theme::instance().palette().phonemeEditor.intervalFillA : dstools::Theme::instance().palette().phonemeEditor.intervalFillB;
         painter.fillRect(QRect(x1, 0, x2 - x1, height()), color);
 
         // Border
-        painter.setPen(QColor(100, 140, 200));
+        painter.setPen(dstools::Theme::instance().palette().phonemeEditor.intervalBorder);
         painter.drawRect(x1, 0, x2 - x1 - 1, height() - 1);
     }
 }
@@ -97,11 +100,11 @@ void IntervalTierView::drawBoundaries(QPainter &painter) {
 
         // Choose pen based on state
         if (m_state == State::Dragging && b == m_draggedBoundary) {
-            painter.setPen(QPen(QColor(255, 200, 100), 2));
+            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
         } else if (b == m_hoveredBoundary && m_hoveredBoundary >= 0) {
-            painter.setPen(QPen(QColor(255, 255, 255), 2));
+            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
         } else {
-            painter.setPen(QPen(QColor(180, 180, 200), 1));
+            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryNormal, 1));
         }
 
         painter.drawLine(bx, 0, bx, height());
@@ -110,7 +113,7 @@ void IntervalTierView::drawBoundaries(QPainter &painter) {
 
 void IntervalTierView::drawLabels(QPainter &painter) {
     if (!m_doc) return;
-    painter.setPen(Qt::white);
+    painter.setPen(dstools::Theme::instance().palette().phonemeEditor.labelText);
     int count = m_doc->intervalCount(m_tierIndex);
     for (int i = 0; i < count; ++i) {
         double xmin = m_doc->intervalStart(m_tierIndex, i);
@@ -131,7 +134,7 @@ void IntervalTierView::drawLabels(QPainter &painter) {
 void IntervalTierView::drawBindingLines(QPainter &painter) {
     if (m_dragAligned.empty()) return;
 
-    painter.setPen(QPen(QColor(255, 200, 100, 120), 1, Qt::DashLine));
+    painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryBindingLine, 1, Qt::DashLine));
 
     // Draw vertical lines at aligned boundary positions in other tiers
     // The parent widget (TierEditWidget) will handle cross-tier drawing
@@ -353,7 +356,7 @@ void IntervalTierView::drawSelection(QPainter &painter) {
     int x1 = timeToX(m_doc->intervalStart(m_tierIndex, m_selectedInterval));
     int x2 = timeToX(m_doc->intervalEnd(m_tierIndex, m_selectedInterval));
 
-    painter.setPen(QPen(QColor(255, 255, 0), 2));
+    painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.selectionBorder, 2));
     painter.drawRect(x1, 0, x2 - x1 - 1, height() - 1);
 }
 

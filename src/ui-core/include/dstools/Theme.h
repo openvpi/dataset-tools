@@ -52,6 +52,56 @@ public:
         QColor success;
         QColor error;
         QColor warning;
+
+        // Piano roll domain colors
+        struct {
+            QColor background;
+            QColor gridSemitone;
+            QColor gridCents;
+            QColor barLine;
+            QColor rulerBg;
+            QColor rulerTick;
+            QColor rulerText;
+            QColor pianoWhiteKey;
+            QColor pianoBlackKey;
+            QColor pianoBg;
+            QColor noteDefault;
+            QColor noteDefaultTop;
+            QColor noteDefaultBottom;
+            QColor noteBorder;
+            QColor noteSlur;
+            QColor noteSlurBorder;
+            QColor noteRestFill;
+            QColor noteRestBorder;
+            QColor noteText;
+            QColor noteSelectedTop;
+            QColor noteSelectedBottom;
+            QColor noteSelectedBorder;
+            QColor noteSelectedGlow;
+            QColor f0Default;
+            QColor f0Dimmed;
+            QColor f0Selected;
+            QColor snapGuide;
+            QColor rubberBandBorder;
+            QColor rubberBandFill;
+            QColor playhead;
+            QColor playheadIdle;
+        } pianoRoll;
+
+        // Phoneme editor domain colors
+        struct {
+            QColor tierBackground;
+            QColor tierBackgroundInactive;
+            QColor intervalFillA;
+            QColor intervalFillB;
+            QColor intervalBorder;
+            QColor boundaryNormal;
+            QColor boundaryHovered;
+            QColor boundaryDragged;
+            QColor boundaryBindingLine;
+            QColor labelText;
+            QColor selectionBorder;
+        } phonemeEditor;
     };
 
     static Theme &instance();

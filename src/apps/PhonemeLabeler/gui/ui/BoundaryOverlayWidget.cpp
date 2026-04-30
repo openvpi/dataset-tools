@@ -6,6 +6,8 @@
 #include <QEvent>
 #include <QResizeEvent>
 
+#include <dstools/Theme.h>
+
 namespace dstools {
 namespace phonemelabeler {
 
@@ -74,11 +76,11 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
         if (x < 0 || x > w) continue;
 
         if (b == m_draggedBoundary) {
-            painter.setPen(QPen(QColor(255, 200, 100), 2));
+            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
         } else if (b == m_hoveredBoundary) {
-            painter.setPen(QPen(QColor(255, 255, 255), 2));
+            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
         } else {
-            painter.setPen(QPen(QColor(180, 180, 200, 180), 1, Qt::SolidLine));
+            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
         }
         painter.drawLine(x, 0, x, h);
     }
