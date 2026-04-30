@@ -5,12 +5,14 @@ set(CMAKE_AUTOMOC ON)
 set(SLICER_PAGE_SOURCES
         SlicerPage.cpp
         WorkThread.cpp
+        SliceJob.cpp
         MarkerIO.cpp
 )
 
 set(SLICER_PAGE_HEADERS
         SlicerPage.h
         WorkThread.h
+        SliceJob.h
         MarkerIO.h
 )
 
