@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -77,8 +78,8 @@ namespace Game
         std::unique_ptr<Ort::Session> sessDur2bd; // dur2bd.onnx: durations → boundaries (optional)
 
         Ort::SessionOptions sessionOptions;
-        Ort::RunOptions m_runOptions;
-        std::atomic<bool> m_terminated{false};
+        mutable std::mutex m_runMutex;
+        mutable Ort::RunOptions *m_activeRunOptions = nullptr;
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
         std::filesystem::path modelDir;

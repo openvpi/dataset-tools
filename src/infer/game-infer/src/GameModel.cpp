@@ -122,6 +122,12 @@ namespace Game
                             std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
                             std::string &msg) const {
         try {
+            Ort::RunOptions runOptions;
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = &runOptions;
+            }
+
             InferenceInput input;
             input.waveform = waveform_data;
             input.duration = static_cast<float>(waveform_data.size()) / static_cast<float>(sampleRate);
@@ -151,9 +157,17 @@ namespace Game
             presence = output.presence;
             scores = output.scores;
 
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = nullptr;
+            }
             return true;
         }
         catch (const std::exception &e) {
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = nullptr;
+            }
             msg = "Error during inference: " + std::string(e.what());
             return false;
         }
@@ -164,6 +178,12 @@ namespace Game
                                               std::vector<float> &presence, std::vector<float> &scores,
                                               std::string &msg) const {
         try {
+            Ort::RunOptions runOptions;
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = &runOptions;
+            }
+
             if (!sessDur2bd) {
                 msg = "dur2bd.onnx not loaded. Align mode requires dur2bd.onnx in model directory.";
                 return false;
@@ -193,9 +213,17 @@ namespace Game
             presence = output.presence;
             scores = output.scores;
 
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = nullptr;
+            }
             return true;
         }
         catch (const std::exception &e) {
+            {
+                std::lock_guard lock(m_runMutex);
+                m_activeRunOptions = nullptr;
+            }
             msg = "Error during align inference: " + std::string(e.what());
             return false;
         }
@@ -276,7 +304,7 @@ namespace Game
         const char *outputNames[] = {"x_seg", "x_est", "maskT"};
 
         auto outputTensors =
-            sessEncoder->Run(m_runOptions, inputNames.data(), inputTensors.data(), inputTensors.size(), outputNames, 3);
+            sessEncoder->Run(*m_activeRunOptions, inputNames.data(), inputTensors.data(), inputTensors.size(), outputNames, 3);
 
         return std::make_tuple(std::move(outputTensors[0]), std::move(outputTensors[1]), std::move(outputTensors[2]));
     }
@@ -310,7 +338,7 @@ namespace Game
         const char *outputNames[] = {"boundaries"};
 
         const auto outputTensors =
-            sessDur2bd->Run(m_runOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 1);
+            sessDur2bd->Run(*m_activeRunOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 1);
 
         const bool *boundaryData = outputTensors[0].GetTensorData<bool>();
         const size_t boundaryCount = outputTensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
@@ -416,7 +444,7 @@ namespace Game
             }
 
             const char *outputNames[] = {"boundaries"};
-            auto outputs = sessSegmenter->Run(m_runOptions, inputNames.data(), inputTensors.data(), inputTensors.size(),
+            auto outputs = sessSegmenter->Run(*m_activeRunOptions, inputNames.data(), inputTensors.data(), inputTensors.size(),
                                               outputNames, 1);
 
             const bool *outData = outputs[0].GetTensorData<bool>();
@@ -468,7 +496,7 @@ namespace Game
         const char *outputNames[] = {"durations", "maskN"};
 
         const auto outputTensors =
-            sessBd2dur->Run(m_runOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 2);
+            sessBd2dur->Run(*m_activeRunOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 2);
 
         const float *durData = outputTensors[0].GetTensorData<float>();
         const size_t durCount = outputTensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
@@ -578,7 +606,7 @@ namespace Game
         const char *outputNames[] = {"presence", "scores"};
 
         auto outputTensors =
-            sessEstimator->Run(m_runOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 2);
+            sessEstimator->Run(*m_activeRunOptions, inputNames, inputTensors.data(), inputTensors.size(), outputNames, 2);
 
         const bool *presenceDataBool = outputTensors[0].GetTensorData<bool>();
         size_t presenceCount = outputTensors[0].GetTensorTypeAndShapeInfo().GetElementCount();
