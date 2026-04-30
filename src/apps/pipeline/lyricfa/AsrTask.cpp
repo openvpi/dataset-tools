@@ -6,23 +6,22 @@
 namespace LyricFA {
     AsrThread::AsrThread(Asr *asr, QString filename, QString wavPath, QString labPath,
                          const QSharedPointer<Pinyin::Pinyin> &g2p)
-        : m_asr(asr), m_filename(std::move(filename)), m_wavPath(std::move(wavPath)), m_labPath(std::move(labPath)),
+        : AsyncTask(std::move(filename)), m_asr(asr), m_wavPath(std::move(wavPath)), m_labPath(std::move(labPath)),
           m_g2p(g2p) {
     }
 
-    void AsrThread::run() {
+    bool AsrThread::execute(QString &msg) {
         std::string asrMsg;
 
         if (const auto asrRes = m_asr->recognize(m_wavPath.toLocal8Bit().toStdString(), asrMsg); !asrRes) {
-            Q_EMIT this->oneFailed(m_filename, QString::fromStdString(asrMsg));
-            return;
+            msg = QString::fromStdString(asrMsg);
+            return false;
         }
 
         QFile labFile(m_labPath);
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            Q_EMIT this->oneFailed(m_filename,
-                                   QString("Failed to write to file %1").arg(m_labPath));
-            return;
+            msg = QString("Failed to write to file %1").arg(m_labPath);
+            return false;
         }
 
         QTextStream labIn(&labFile);
@@ -33,6 +32,7 @@ namespace LyricFA {
 
         labIn << QString::fromStdString(asrMsg);
         labFile.close();
-        Q_EMIT this->oneFinished(m_filename, QString::fromStdString(asrMsg));
+        msg = QString::fromStdString(asrMsg);
+        return true;
     }
 }

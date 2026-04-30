@@ -19,6 +19,7 @@ set(CORE_SOURCES
     src/ModelManager.cpp
     src/DsItemManager.cpp
     src/DsProject.cpp
+    src/AsyncTask.cpp
     src/ServiceLocator.cpp
     src/PinyinG2PProvider.cpp
     src/ModelDownloader.cpp
@@ -26,6 +27,7 @@ set(CORE_SOURCES
 )
 
 set(CORE_HEADERS
+    include/dstools/AsyncTask.h
     include/dstools/AppSettings.h
     include/dstools/CommonKeys.h
     include/dstools/ServiceLocator.h

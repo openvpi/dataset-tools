@@ -8,6 +8,7 @@
 
 #include <dstools/ModelLoadPanel.h>
 #include <dstools/PathSelector.h>
+#include <dstools/AsyncTask.h>
 
 #include "Asr.h"
 #include "AsrTask.h"
@@ -111,8 +112,8 @@ void LyricFAPage::runTask() {
 
         auto *asrTask = new LyricFA::AsrThread(m_asr, filename, filePath, labFilePath,
                                                QSharedPointer<Pinyin::Pinyin>(toPinyin ? m_mandarin : nullptr));
-        connect(asrTask, &LyricFA::AsrThread::oneFailed, this, &TaskWindow::slot_oneFailed);
-        connect(asrTask, &LyricFA::AsrThread::oneFinished, this, &TaskWindow::slot_oneFinished);
+        connect(asrTask, &dstools::AsyncTask::failed, this, &TaskWindow::slot_oneFailed);
+        connect(asrTask, &dstools::AsyncTask::succeeded, this, &TaskWindow::slot_oneFinished);
         threadPool()->start(asrTask);
     }
 }
@@ -182,8 +183,8 @@ void LyricFAPage::slot_matchLyric() {
         QString labName = QFileInfo(labPath).completeBaseName();
         const QString jsonPath = jsonFolder + QDir::separator() + labName + ".json";
         auto *task = new LyricFA::LyricMatchTask(m_match, labName, labPath, jsonPath);
-        connect(task, &LyricFA::LyricMatchTask::oneFailed, this, &TaskWindow::slot_oneFailed);
-        connect(task, &LyricFA::LyricMatchTask::oneFinished, this, &TaskWindow::slot_oneFinished);
+        connect(task, &dstools::AsyncTask::failed, this, &TaskWindow::slot_oneFailed);
+        connect(task, &dstools::AsyncTask::succeeded, this, &TaskWindow::slot_oneFinished);
         threadPool()->start(task);
     }
 }

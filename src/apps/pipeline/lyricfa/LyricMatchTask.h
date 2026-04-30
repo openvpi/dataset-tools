@@ -1,28 +1,24 @@
 #ifndef LYRICMATCHTASK_H
 #define LYRICMATCHTASK_H
 
-#include <QRunnable>
-#include <QThread>
+#include <dstools/AsyncTask.h>
 
 #include "MatchLyric.h"
 
 namespace LyricFA {
 
-    class LyricMatchTask final : public QObject, public QRunnable {
+    class LyricMatchTask final : public dstools::AsyncTask {
         Q_OBJECT
     public:
         LyricMatchTask(MatchLyric *match, QString filename, QString labPath, QString jsonPath);
-        void run() override;
+
+    protected:
+        bool execute(QString &msg) override;
 
     private:
         MatchLyric *m_match;
-        QString m_filename;
         QString m_labPath;
         QString m_jsonPath;
-
-    signals:
-        void oneFailed(const QString &filename, const QString &msg);
-        void oneFinished(const QString &filename, const QString &msg);
     };
 
 } // LyricFA

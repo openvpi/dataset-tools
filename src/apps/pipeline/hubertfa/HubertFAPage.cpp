@@ -13,6 +13,7 @@
 #include <dstools/PathSelector.h>
 #include <dstools/ModelLoadPanel.h>
 #include <dstools/JsonHelper.h>
+#include <dstools/AsyncTask.h>
 
 #include <hubert-infer/Hfa.h>
 #include "HfaTask.h"
@@ -107,8 +108,8 @@ void HubertFAPage::runTask() {
         QString outTgPath = outDir + QDir::separator() + baseName + ".TextGrid";
 
         auto *thread = new HFA::HfaThread(m_hfa, filename, filePath, outTgPath, language, non_speech_ph);
-        connect(thread, &HFA::HfaThread::oneFailed, this, &HubertFAPage::slot_hfaFailed);
-        connect(thread, &HFA::HfaThread::oneFinished, this, &HubertFAPage::slot_hfaFinished);
+        connect(thread, &dstools::AsyncTask::failed, this, &HubertFAPage::slot_hfaFailed);
+        connect(thread, &dstools::AsyncTask::succeeded, this, &HubertFAPage::slot_hfaFinished);
         threadPool()->start(thread);
     }
 }
