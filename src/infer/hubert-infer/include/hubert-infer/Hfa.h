@@ -4,6 +4,8 @@
 #include <hubert-infer/HubertInferGlobal.h>
 #include <hubert-infer/HfaModel.h>
 
+#include <dstools/IInferenceEngine.h>
+
 #include <filesystem>
 #include <memory>
 
@@ -23,12 +25,12 @@ namespace HFA {
     /// Wraps an ONNX HuBERT model to perform phoneme-level forced alignment
     /// on audio files. Supports multiple languages via pluggable G2P
     /// dictionaries and handles non-lexical sounds (breath, silence).
-    class HUBERT_INFER_EXPORT HFA {
+    class HUBERT_INFER_EXPORT HFA : public dstools::infer::IInferenceEngine {
     public:
         /// Load the model from @p model_folder using the given execution
         /// provider and device. Check initialized() after construction.
         explicit HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id);
-        ~HFA();
+        ~HFA() override;
 
         /// Run forced alignment on a single audio file.
         /// @param wavPath      Path to the input WAV file.
@@ -45,6 +47,9 @@ namespace HFA {
         bool initialized() const {
             return m_hfa != nullptr;
         }
+
+        bool isOpen() const override { return initialized(); }
+        const char *engineName() const override { return "HuBERT-FA"; }
 
     private:
         std::unique_ptr<HfaModel> m_hfa;
