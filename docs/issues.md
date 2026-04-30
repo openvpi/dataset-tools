@@ -172,6 +172,42 @@
 
 **类型**: Tech Debt | **优先级**: P3 | **估计工作量**: M (2-8h)
 
+> **审查结果 (2026-05-01)**:
+>
+> #### DsDocumentAdapter 职责
+> - **角色**: 适配器模式——将 `DsDocument`（DS 文件的内存表示）适配为框架层的 `IDocument` 接口
+> - **具体职责**:
+>   - 实现 `IDocument` 的 Identity（filePath、format、formatDisplayName）、Lifecycle（load/save/saveAs/close）、State（isModified/setModified/info）接口
+>   - 提供 Content access 方法：`entryCount()`（委托 sentenceCount）和 `durationSec()`（遍历句子计算总时长）
+>   - 管理自身的 `m_filePath` 和 `m_modified` 状态（DsDocument 本身不跟踪修改标志）
+>   - 通过 `inner()` / `innerShared()` 暴露底层 DsDocument 供上层直接操作句子数据
+>   - 在 load/save 中做 QString ↔ std::string 错误类型转换（IDocument 接口用 std::string，DsDocument 用 QString）
+>
+> #### DsItemManager 职责
+> - **角色**: 管理 `.dsitem` JSON 文件，跟踪 DiffSinger 数据集处理流水线中每个文件在每个步骤的处理状态
+> - **具体职责**:
+>   - 文件路径计算：`projectRoot/dstemp/<step>/<baseName>.dsitem`
+>   - CRUD：load/save DsItemRecord（JSON 序列化/反序列化）
+>   - 增量处理判断：`needsProcessing()` 比较源文件修改时间与 .dsitem 时间戳
+>   - 批量查询：`summarizeStep()` 统计某步骤的 completed/failed/pending 数量
+>   - 状态更新：`markCompleted()` / `markFailed()`
+>   - 枚举映射：PipelineStep ↔ string、ItemStatus ↔ string
+>
+> #### DsDocument 职责（参考）
+> - DS 文件（JSON 数组格式）的纯数据模型：加载、保存、句子访问、字段类型处理
+> - 不涉及修改状态跟踪或框架接口
+>
+> #### 职责边界评估
+> - **无重叠**: DsDocumentAdapter 和 DsItemManager 职责完全不同——前者是 IDocument 接口适配器，后者是流水线状态追踪器。两者在不同场景使用，不存在交叉
+> - **DsDocumentAdapter 的 `durationSec()` 包含业务逻辑**: 遍历句子并解析 `ph_dur` 字段来计算时长，这属于 DS 文件语义理解，可考虑下沉到 DsDocument 本身
+> - **DsItemManager 的 `DsDocument::toFsPath` 依赖**: `needsProcessing()` 调用了 `DsDocument::toFsPath()`，形成对 DsDocument 的编译依赖。该静态方法实质上是通用路径转换工具，可考虑提取到独立工具类
+> - **命名可能引起混淆**: 两者均以 `Ds` 前缀命名且位于同一命名空间，但管理完全不同的概念（DS 文件内容 vs 流水线处理状态）。当前代码中职责清晰，不需要改名
+>
+> #### 改进建议（不影响当前功能）
+> 1. 将 `DsDocumentAdapter::durationSec()` 中的时长计算逻辑移至 `DsDocument`，让 Adapter 纯粹委托
+> 2. 将 `DsDocument::toFsPath()` 提取为独立工具函数（如 `PathUtils::toFsPath`），消除 DsItemManager 对 DsDocument 的不必要依赖
+> 3. 考虑为 DsDocumentAdapter 的 load/save 迁移到 Result-based API（DsDocument 已有 `loadFile()` / `saveFile()` 返回 Result，但 Adapter 仍使用已弃用的 QString error 版本）
+
 ---
 
 ### Issue #27: clang-tidy 和静态分析集成到 CI
