@@ -15,6 +15,9 @@ add_custom_target(DeployedTargets)
 # Shared types (header-only, must come before everything)
 add_subdirectory(types)
 
+# Framework layers
+add_subdirectory(framework)
+
 # Shared layers (must come before apps)
 add_subdirectory(core)
 add_subdirectory(ui-core)
