@@ -2,22 +2,21 @@
 #define RMVPEMODEL_H
 
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <onnxruntime_cxx_api.h>
 #include <rmvpe-infer/Provider.h>
-#include <rmvpe-infer/RmvpeGlobal.h>
 #include <string>
 #include <vector>
 
 namespace Rmvpe
 {
-    class RMVPE_INFER_EXPORT RmvpeModel {
+    class RmvpeModel {
     public:
         explicit RmvpeModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id);
         ~RmvpeModel();
 
         bool is_open() const;
-        // Forward pass through the model
         bool forward(const std::vector<float> &waveform_data, float threshold, std::vector<float> &f0,
                      std::vector<bool> &uv, std::string &msg);
 
@@ -26,13 +25,12 @@ namespace Rmvpe
     private:
         std::mutex m_runMutex;
         Ort::RunOptions *m_activeRunOptions = nullptr;
-        Ort::SessionOptions m_session_options;
-        Ort::Session m_session;
+        std::unique_ptr<Ort::Session> m_session;
         Ort::AllocatorWithDefaultOptions m_allocator;
-        const char *m_waveform_input_name; // Name of the waveform input
-        const char *m_threshold_input_name; // Name of the threshold input
-        const char *m_f0_output_name; // Name of the f0 output
-        const char *m_uv_output_name; // Name of the uv output
+        const char *m_waveform_input_name;
+        const char *m_threshold_input_name;
+        const char *m_f0_output_name;
+        const char *m_uv_output_name;
 
 #ifdef _WIN_X86
         Ort::MemoryInfo m_memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
@@ -42,5 +40,4 @@ namespace Rmvpe
     };
 
 } // namespace Rmvpe
-
 #endif // RMVPEMODEL_H

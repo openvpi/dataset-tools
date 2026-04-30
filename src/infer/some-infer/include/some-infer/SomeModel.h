@@ -2,6 +2,7 @@
 #define SOMEMODEL_H
 
 #include <filesystem>
+#include <memory>
 #include <mutex>
 #include <onnxruntime_cxx_api.h>
 #include <some-infer/Provider.h>
@@ -16,7 +17,6 @@ namespace Some
         ~SomeModel();
 
         bool is_open() const;
-        // Forward pass through the model
         bool forward(const std::vector<float> &waveform_data, std::vector<float> &note_midi,
                      std::vector<bool> &note_rest, std::vector<float> &note_dur, std::string &msg);
 
@@ -25,13 +25,11 @@ namespace Some
     private:
         std::mutex m_runMutex;
         Ort::RunOptions *m_activeRunOptions = nullptr;
-        Ort::SessionOptions m_session_options;
-        Ort::Session m_session;
-        Ort::AllocatorWithDefaultOptions m_allocator;
-        const char *m_waveform_input_name; // Name of the waveform input
-        const char *m_note_midi_output_name; // Name of the midi input
-        const char *m_note_rest_output_name; // Name of the rest output
-        const char *m_note_dur_output_name; // Name of the dur output
+        std::unique_ptr<Ort::Session> m_session;
+        const char *m_waveform_input_name;
+        const char *m_note_midi_output_name;
+        const char *m_note_rest_output_name;
+        const char *m_note_dur_output_name;
 
 #ifdef _WIN_X86
         Ort::MemoryInfo m_memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
@@ -41,5 +39,4 @@ namespace Some
     };
 
 } // namespace Some
-
 #endif // SOMEMODEL_H
