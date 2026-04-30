@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dstools/IQualityMetrics.h>
+#include <dsfw/IQualityMetrics.h>
 
 namespace dstools {
 

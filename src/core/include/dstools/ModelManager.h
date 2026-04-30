@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dstools/IModelProvider.h>
+#include <dsfw/IModelProvider.h>
 
 #include <QObject>
 #include <QString>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dstools/IModelDownloader.h>
+#include <dsfw/IModelDownloader.h>
 
 #include <QCryptographicHash>
 #include <QMap>

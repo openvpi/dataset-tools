@@ -19,6 +19,10 @@ set(DSFW_CORE_HEADERS
     include/dsfw/LocalFileIOProvider.h
     include/dsfw/IDocument.h
     include/dsfw/IExportFormat.h
+    include/dsfw/IModelProvider.h
+    include/dsfw/IModelDownloader.h
+    include/dsfw/IQualityMetrics.h
+    include/dsfw/IG2PProvider.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})

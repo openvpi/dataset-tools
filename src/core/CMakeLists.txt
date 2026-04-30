@@ -35,13 +35,9 @@ set(CORE_HEADERS
     include/dstools/TranscriptionPipeline.h
     include/dstools/DsDocumentAdapter.h
     include/dstools/ExportFormats.h
-    include/dstools/IG2PProvider.h
     include/dstools/PinyinG2PProvider.h
-    include/dstools/IModelDownloader.h
     include/dstools/ModelDownloader.h
-    include/dstools/IQualityMetrics.h
     include/dstools/QualityMetrics.h
-    include/dstools/IModelProvider.h
     include/dstools/ModelManager.h
     include/dstools/DsItemManager.h
     include/dstools/DsProject.h

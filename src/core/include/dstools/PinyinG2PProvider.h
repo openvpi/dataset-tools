@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <dstools/IG2PProvider.h>
+#include <dsfw/IG2PProvider.h>
 
 namespace dstools {
 
