@@ -9,6 +9,12 @@ set(PAGE_SOURCES
     DSFile.h
     ui/FileListPanel.cpp
     ui/FileListPanel.h
+    ui/PitchProcessor.cpp
+    ui/PitchProcessor.h
+    ui/PianoRollRenderer.cpp
+    ui/PianoRollRenderer.h
+    ui/PianoRollInputHandler.cpp
+    ui/PianoRollInputHandler.h
     ui/PianoRollView.cpp
     ui/PianoRollView.h
     ui/PropertyPanel.cpp

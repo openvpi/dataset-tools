@@ -12,6 +12,10 @@
 #include <dstools/PitchUtils.h>
 #include <dstools/ViewportController.h>
 
+#include "PianoRollRenderer.h"
+#include "PianoRollInputHandler.h"
+#include "PitchProcessor.h"
+
 #include <memory>
 #include <set>
 #include <map>
@@ -32,13 +36,6 @@ using dstools::midiToFreq;
 using dstools::midiToNoteName;
 using dstools::midiToNoteString;
 using dstools::shiftNoteCents;
-
-/// Tool modes for pitch editing (matches Python reference ToolMode)
-enum ToolMode {
-    ToolSelect = 0,
-    ToolModulation = 1,
-    ToolDrift = 2,
-};
 
 /// Piano roll view for editing notes and F0
 class PianoRollView : public QFrame {
@@ -106,6 +103,9 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
+    // Composed components
+    PianoRollInputHandler m_inputHandler;
+
     // Viewport controller (shared horizontal zoom/scroll)
     dstools::widgets::ViewportController *m_viewport = nullptr;
     void onViewportChanged(const dstools::widgets::ViewportState &state);
@@ -113,19 +113,19 @@ private:
     // Data
     std::shared_ptr<DSFile> m_dsFile;
     QUndoStack *m_undoStack = nullptr;
-    double m_audioDuration = 0.0;  // audio file duration in seconds (0 = no limit)
+    double m_audioDuration = 0.0;
 
     // Display parameters
-    double m_hScale = 100.0;        // pixels per second (horizontal zoom)
-    double m_vScale = 20.0;         // pixels per semitone (vertical zoom)
+    double m_hScale = 100.0;
+    double m_vScale = 20.0;
 
     // Scroll bars
     QScrollBar *m_hScrollBar = nullptr;
     QScrollBar *m_vScrollBar = nullptr;
 
-    // Viewport offset (scroll position in pixels)
-    double m_scrollX = 0.0;         // horizontal scroll offset in pixels
-    double m_scrollY = 0.0;         // vertical scroll offset in pixels
+    // Viewport offset
+    double m_scrollX = 0.0;
+    double m_scrollY = 0.0;
 
     // Playhead
     double m_playheadPos = 0.0;
@@ -138,79 +138,36 @@ private:
     bool m_abComparisonActive = false;
     std::vector<double> m_originalF0;
 
-    // Display options (matching SlurCutter pattern)
+    // Display options
     bool m_showPitchTextOverlay = false;
     bool m_showPhonemeTexts = true;
     bool m_showCrosshairAndPitch = true;
     bool m_snapToKey = false;
 
-    // Mouse state
-    QPoint m_dragStart;
-    QPoint m_mousePos;              // for crosshair tracking
-    bool m_isDragging = false;
-    Qt::MouseButton m_dragButton = Qt::NoButton;
-    int m_contextNoteIndex = -1;    // note under right-click
+    // Context note for right-click menu
+    int m_contextNoteIndex = -1;
 
-    // Multi-selection (matching Python reference: set of note indices)
+    // Multi-selection
     std::set<int> m_selectedNotes;
-
-    // Note pitch drag state (SELECT mode)
-    bool m_draggingNote = false;
-    double m_dragStartMidi = 0.0;
-    int m_dragAccumulatedCents = 0;
-    std::map<int, double> m_dragOrigMidi;  // original MIDI per selected note
-
-    // Modulation/Drift drag state
-    bool m_modulationDragging = false;
-    bool m_driftDragging = false;
-    double m_modulationDragStartY = 0.0;
-    double m_driftDragStartY = 0.0;
-    double m_modulationDragAmount = 1.0;
-    double m_driftDragAmount = 1.0;
-    std::vector<double> m_preAdjustF0;  // snapshot before drag
-
-    // Rubber-band selection
-    bool m_rubberBandActive = false;
-    QPoint m_rubberBandStart;
-    QRect m_rubberBandRect;
-
-    // Ruler scrub
-    bool m_rulerDragging = false;
-
-    static constexpr double ModulationDragSensitivity = 80.0;
 
     // Layout constants
     static constexpr int PianoWidth = 52;
     static constexpr int RulerHeight = 24;
     static constexpr int ScrollBarSize = 14;
-    static constexpr int MinMidi = 24;   // C2
-    static constexpr int MaxMidi = 96;   // C7
+    static constexpr int MinMidi = 24;
+    static constexpr int MaxMidi = 96;
 
-    // Coordinate conversion (scene coordinates)
+    // Coordinate conversion
     double timeToX(double time) const;
     double xToTime(double x) const;
     double midiToY(double midi) const;
     double yToMidi(double y) const;
-
-    // Scene to widget coordinates (accounting for scroll)
     int sceneXToWidget(double sceneX) const;
     int sceneYToWidget(double sceneY) const;
     double widgetXToScene(int wx) const;
     double widgetYToScene(int wy) const;
 
     void updateScrollBars();
-
-    // Drawing helpers
-    void drawGrid(QPainter &p, int w, int h);
-    void drawPianoKeys(QPainter &p, int h);
-    void drawRuler(QPainter &p, int w);
-    void drawNotes(QPainter &p, int w, int h);
-    void drawF0Curve(QPainter &p, int w, int h);
-    void drawPlayhead(QPainter &p, int w, int h);
-    void drawCrosshair(QPainter &p, int w, int h);
-
-    // Get rest note MIDI from nearest non-rest neighbor
-    double getRestMidi(int index) const;
 
     // Note helpers
     int getNoteAtPosition(int x, int y) const;
@@ -220,14 +177,17 @@ private:
     void selectAllNotes();
     void clearSelection();
 
-    // Pitch editing helpers
+    // Pitch editing
     void doPitchMove(const std::vector<int> &indices, int deltaCents);
-    void applyModulationDriftPreview();
-    static std::vector<double> movingAverage(const std::vector<double> &values, int window);
 
-    // Drawing helpers for selection
-    void drawRubberBand(QPainter &p);
-    void drawSnapGuide(QPainter &p, int w, int h);
+    // Build RenderState snapshot for renderer
+    RenderState buildRenderState() const;
+
+    // Setup input handler callbacks
+    void setupInputCallbacks();
+
+    // Restore cursor to tool-mode default
+    void restoreToolCursor();
 
     // Context menus
     QMenu *m_bgMenu = nullptr;
@@ -237,7 +197,6 @@ private:
     QAction *m_actShowCrosshairAndPitch = nullptr;
     QAction *m_actSnapToKey = nullptr;
 
-    // Note menu actions
     QAction *m_actMergeLeft = nullptr;
     QAction *m_actToggleRest = nullptr;
     QAction *m_actToggleSlur = nullptr;
@@ -249,9 +208,6 @@ private:
     void buildContextMenu();
     void buildNoteMenu();
     void updateNoteMenuState();
-
-    // Restore cursor to the tool-mode default (ArrowCursor for Select, SizeVerCursor for Modulation/Drift)
-    void restoreToolCursor();
 };
 
 } // namespace ui
