@@ -1,4 +1,4 @@
-#include <dstools/ModelDownloader.h>
+#include <dsfw/ModelDownloader.h>
 
 #include <QFile>
 

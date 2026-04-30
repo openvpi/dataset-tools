@@ -8,6 +8,8 @@ set(DSFW_CORE_SOURCES
     src/JsonHelper.cpp
     src/ServiceLocator.cpp
     src/LocalFileIOProvider.cpp
+    src/ModelDownloader.cpp
+    src/ModelManager.cpp
 )
 
 set(DSFW_CORE_HEADERS
@@ -24,6 +26,8 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IQualityMetrics.h
     include/dsfw/IG2PProvider.h
     include/dsfw/CommonKeys.h
+    include/dsfw/ModelDownloader.h
+    include/dsfw/ModelManager.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})

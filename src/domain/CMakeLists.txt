@@ -14,11 +14,9 @@ set(DOMAIN_SOURCES
     src/TranscriptionCsv.cpp
     src/TranscriptionPipeline.cpp
     src/DsDocumentAdapter.cpp
-    src/ModelManager.cpp
     src/DsItemManager.cpp
     src/DsProject.cpp
     src/PinyinG2PProvider.cpp
-    src/ModelDownloader.cpp
     src/QualityMetrics.cpp
 )
 
@@ -35,9 +33,7 @@ set(DOMAIN_HEADERS
     include/dstools/DsDocumentAdapter.h
     include/dstools/ExportFormats.h
     include/dstools/PinyinG2PProvider.h
-    include/dstools/ModelDownloader.h
     include/dstools/QualityMetrics.h
-    include/dstools/ModelManager.h
     include/dstools/DsItemManager.h
     include/dstools/DsProject.h
 )
