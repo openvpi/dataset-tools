@@ -1,9 +1,7 @@
 # 框架抽取实施路线图
 
-> **剩余工时估计**: 18 ~ 28 天（单人）  
-> **关键路径**: T-05 → T-06 → T-09 → T-10 → T-11 → T-12 → T-22 → T-27 → T-28  
-> **当前进度**: Phase 0 ✅ | Phase 1 进行中（T-05 ✅，T-06~T-08 ✅）| Phase 2 完成（T-12 ✅, T-13 ✅）  
-> **已完成**: T-01 ~ T-08, T-12, T-13, T-15, T-19, T-21, T-29 ~ T-31, T-34, T-43
+> **关键路径**: T-09 → T-10 → T-11 → T-22 → T-27 → T-28  
+> **当前进度**: Phase 0 ✅ | Phase 1 进行中（T-05a~f ✅，T-06~T-08 ✅，剩余 T-05g/h, T-09~T-11）| Phase 2 ✅ | Phase 2.5 进行中 | Phase 3 部分就绪  
 
 ---
 
@@ -19,80 +17,22 @@
 
 ---
 
-## Phase 1: Core 层分离（3 ~ 5 天）
+## Phase 1: Core 层分离
 
-### T-05: 迁移通用类到框架 ✅
-**耗时**: 1.5d | **依赖**: T-04 ✅ | **执行批次**: B-4 | **完成**: e3fc4c3, e959894, 1ce1cd2
-
-逐文件搬迁，每搬一个类编译验证。按风险从低到高排序：
-
-#### T-05a: AppSettings ✅
-- 搬迁 `src/core/include/dstools/AppSettings.h` → `src/framework/core/include/dsfw/AppSettings.h`
-- 搬迁 `src/core/src/AppSettings.cpp` → `src/framework/core/src/AppSettings.cpp`
-
-#### T-05b: JsonHelper ✅
-- 搬迁 `src/core/include/dstools/JsonHelper.h` → `src/framework/core/include/dsfw/JsonHelper.h`
-- 搬迁 `src/core/src/JsonHelper.cpp` → `src/framework/core/src/JsonHelper.cpp`
-
-#### T-05c: AsyncTask ✅
-- 搬迁 `src/core/include/dstools/AsyncTask.h` → `src/framework/core/include/dsfw/AsyncTask.h`
-- 搬迁 `src/core/src/AsyncTask.cpp` → `src/framework/core/src/AsyncTask.cpp`
-
-#### T-05d: ServiceLocator ✅
-- 搬迁到 `src/framework/core/`
-- **需清理**: 遗留 `fileIO()` 便捷 API 可能耦合领域类型
-
-#### T-05e: IDocument / IFileIOProvider / LocalFileIOProvider / IExportFormat ✅
-- 搬迁 6 个头文件 + 1 个源文件到 `src/framework/core/`
-- `IDocument.h` 需重构: `DocumentFormat` 枚举含领域值，需抽象为泛型
-
-#### T-05f: IModelProvider / IModelDownloader / IQualityMetrics / IG2PProvider ✅
-- 搬迁 4 个接口头文件到 `src/framework/core/include/dsfw/`
-- `IModelProvider.h` 需重构: `ModelType` 枚举含 DiffSinger 特定值
-
-#### T-05g: ModelManager 拆分 🔴
+### T-05g: ModelManager 拆分 🔴
 - 提取通用 `IModelRegistry` 接口到 `dsfw/`
 - DiffSinger 特定逻辑留在 `src/domain/`
 - **风险**: 混合通用/领域逻辑，拆分边界需仔细判断
 
-#### T-05h: ModelDownloader 🟡
+### T-05h: ModelDownloader 🟡
 - 通用下载逻辑搬到 `dsfw/`，模型 URL 配置留在 `src/domain/`
 
 **检验方式**: `cmake --build build --target dsfw-core` 通过；`dsfw-core` 不依赖 `dstools` 命名空间
 
 ---
 
-### T-06: 迁移领域类到 domain 库 ✅ ⛓️
-**耗时**: 1d | **依赖**: T-05 ✅ | **执行批次**: B-5 | **完成**: 94fb30d
-
-- 将 14 个领域头文件从 `src/core/include/dstools/` 搬到 `src/domain/include/dstools/`
-- 将 13 个源文件从 `src/core/src/` 搬到 `src/domain/src/`
-- 更新 `src/domain/CMakeLists.txt`
-
-**检验方式**: `cmake --build build --target dstools-domain` 通过
-
----
-
-### T-07: CommonKeys 拆分 ✅ ⏩
-**耗时**: 0.3d | **依赖**: T-05 ✅ | **执行批次**: B-5 | **完成**: 94fb30d
-
-- 通用 key 提取到 `src/framework/core/include/dsfw/CommonKeys.h`
-- DiffSinger 特定 key 保留在 `src/domain/include/dstools/CommonKeys.h`
-
-**检验方式**: 全量编译通过；grep 确认无未解析引用
-
----
-
-### T-08: 移除 textgrid/SndFile 依赖到 domain ✅ ⛓️
-**耗时**: 0.2d | **依赖**: T-06 ✅ | **执行批次**: B-6 | **完成**: 94fb30d
-
-- 在 `src/domain/CMakeLists.txt` 添加 textgrid/SndFile 链接
-- 确认 `dsfw-core` 无第三方领域依赖
-
----
-
 ### T-09: 更新所有 include 路径 🟡 ⛓️
-**耗时**: 0.5d | **依赖**: T-06, T-07 | **执行批次**: B-6
+**耗时**: 0.5d | **依赖**: T-06 ✅, T-07 ✅ | **执行批次**: B-6
 
 - 全局搜索替换: `#include <dstools/XXX.h>` → `#include <dsfw/XXX.h>`（12 个框架类）
 - 影响 `src/apps/`、`src/ui-core/`、`src/widgets/`、`src/domain/`
@@ -128,36 +68,14 @@
 
 ---
 
-## Phase 2: UI-Core 清理（1 天）
-
-### T-12: 移除 cpp-pinyin 硬依赖 ✅
-**耗时**: 0.5d | **依赖**: T-11 | **执行批次**: B-8 | **完成**: d95c9a4
-
-- 定义 `InitHook` 回调机制，将 cpp-pinyin 字典加载提取到 `src/domain/`
-- 从 `dsfw-ui-core` CMakeLists 移除 cpp-pinyin 链接
-
----
-
-### T-13: 迁移 UI-Core 通用类到框架 ✅ ⛓️
-**耗时**: 0.3d | **依赖**: T-12 ✅ | **执行批次**: B-8 | **完成**: 779db9a
-
-- 搬迁 `Theme.h/.cpp`、`FramelessHelper.h/.cpp`、`IStepPlugin.h`、`AppInit.h/.cpp` 到 `src/framework/ui-core/`
-
----
+## Phase 2: UI-Core 清理
 
 ### T-14: 验证 CommonKeys 在 UI 层的引用 🟢 ⛓️
-**耗时**: 0.2d | **依赖**: T-13 | **执行批次**: B-8
+**耗时**: 0.2d | **依赖**: T-13 ✅ | **执行批次**: B-8
 
 ---
 
-### Phase 2 检查点
-- [ ] `dsfw-ui-core` 无领域依赖
-- [ ] 全量编译通过
-- [ ] MinLabel/PhonemeLabeler 启动正常
-
----
-
-## Phase 2.5: AppShell 实现与迁移（7 ~ 10 天）
+## Phase 2.5: AppShell 实现与迁移
 
 ### T-16: MinLabelPage 实现完整接口 🟡 ⛓️
 **耗时**: 0.5d | **依赖**: T-15 ✅ | **执行批次**: B-5
@@ -238,7 +156,7 @@
 
 ---
 
-## Phase 3: Pipeline 子模块独立化（2 ~ 3 天）
+## Phase 3: Pipeline 子模块独立化
 
 ### T-32: WorkThread 业务逻辑分离 🟡 ⛓️
 **耗时**: 1d | **依赖**: T-29~T-31 ✅ | **执行批次**: B-6
@@ -261,7 +179,7 @@
 
 ---
 
-## Phase 4: 框架打包为独立 CMake 包（2 ~ 3 天）
+## Phase 4: 框架打包为独立 CMake 包
 
 ### T-35: 编写 CMake export 配置 🟡 ⛓️
 **耗时**: 1d | **依赖**: T-34 ✅, T-11 | **执行批次**: B-7
@@ -297,7 +215,7 @@
 
 ---
 
-## Phase 5: 单元测试（3 ~ 5 天）
+## Phase 5: 单元测试
 
 ### T-39: 测试基础设施搭建 🟢 ⛓️
 **耗时**: 0.3d | **依赖**: T-11 | **执行批次**: B-9
@@ -327,7 +245,7 @@
 
 ---
 
-## Phase 6: 文档（2 ~ 3 天）
+## Phase 6: 文档
 
 ### T-44: 框架头文件 Doxygen 注释 🟢 ⛓️
 **耗时**: 1d | **依赖**: T-11 | **执行批次**: B-9
@@ -366,9 +284,9 @@
 
 ## 下一步行动
 
-**立即可开始**: T-09（更新所有 include 路径）— 关键路径上的下一个任务（T-06 ✅, T-07 ✅）
-
-**可并行推进**:
+**立即可开始（无阻塞依赖）**:
+- T-09（更新所有 include 路径）— 依赖 T-06 ✅, T-07 ✅
+- T-05g/h（ModelManager 拆分 + ModelDownloader 迁移）
 - T-14（验证 CommonKeys 在 UI 层的引用，依赖 T-13 ✅）
 - T-16 ~ T-18, T-20（Page 接口实现，依赖 T-15 ✅）
 - T-32（WorkThread 分离，依赖 T-29~T-31 ✅）
