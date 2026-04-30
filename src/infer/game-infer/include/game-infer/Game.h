@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <dstools/ExecutionProvider.h>
+#include <dstools/IInferenceEngine.h>
 
 #include "GameGlobal.h"
 #include "NoteAlignment.h"
@@ -49,7 +50,7 @@ namespace Game
 
     class GameModel; // Forward declaration
 
-    class GAME_INFER_EXPORT Game {
+    class GAME_INFER_EXPORT Game : public dstools::infer::IInferenceEngine {
     public:
         Game();
         ~Game();
@@ -58,6 +59,10 @@ namespace Game
                         std::string &msg) const;
         bool is_open() const;
         static void terminate();
+
+        // IInferenceEngine overrides
+        bool isOpen() const override;
+        const char *engineName() const override;
 
         int get_target_sample_rate() const;
         float get_timestep() const;

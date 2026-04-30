@@ -300,6 +300,10 @@ namespace Game
 
     void Game::terminate() {}
 
+    bool Game::isOpen() const { return is_open(); }
+
+    const char *Game::engineName() const { return "GAME"; }
+
     bool Game::align(const AlignInput &input, const AlignOptions &options, std::vector<AlignedNote> &output,
                      std::string &msg) const {
         if (!m_gameModel) {
