@@ -127,6 +127,7 @@ private:
     void buildToolbar();
     void connectSignals();
     void applyConfig();
+    void updateAllBoundaryOverlays();
 
     // File operations
     void onFileSelected(const QString &path);

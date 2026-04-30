@@ -312,34 +312,21 @@ void PhonemeLabelerPage::connectSignals() {
 
     // Active tier → repaint boundary overlays on all chart widgets
     connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int) {
-        m_waveformWidget->updateBoundaryOverlay();
-        m_powerWidget->updateBoundaryOverlay();
-        m_spectrogramWidget->updateBoundaryOverlay();
-        m_boundaryOverlay->update();
+        updateAllBoundaryOverlays();
     });
     // Also repaint overlays when boundaries move (real-time during drag)
     connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, double) {
-        m_waveformWidget->updateBoundaryOverlay();
-        m_powerWidget->updateBoundaryOverlay();
-        m_spectrogramWidget->updateBoundaryOverlay();
-        m_boundaryOverlay->update();
-        // Repaint all tier views so binding-state boundaries update in real-time
+        updateAllBoundaryOverlays();
         m_tierEditWidget->update();
         for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
             child->update();
         }
     });
     connect(m_document, &TextGridDocument::boundaryInserted, this, [this](int, int) {
-        m_waveformWidget->updateBoundaryOverlay();
-        m_powerWidget->updateBoundaryOverlay();
-        m_spectrogramWidget->updateBoundaryOverlay();
-        m_boundaryOverlay->update();
+        updateAllBoundaryOverlays();
     });
     connect(m_document, &TextGridDocument::boundaryRemoved, this, [this](int, int) {
-        m_waveformWidget->updateBoundaryOverlay();
-        m_powerWidget->updateBoundaryOverlay();
-        m_spectrogramWidget->updateBoundaryOverlay();
-        m_boundaryOverlay->update();
+        updateAllBoundaryOverlays();
     });
 
     // File list
@@ -401,6 +388,13 @@ void PhonemeLabelerPage::connectSignals() {
     connect(m_waveformWidget, &WaveformWidget::boundaryDragFinished, this, onDragFinished);
     connect(m_powerWidget, &PowerWidget::boundaryDragFinished, this, onDragFinished);
     connect(m_spectrogramWidget, &SpectrogramWidget::boundaryDragFinished, this, onDragFinished);
+}
+
+void PhonemeLabelerPage::updateAllBoundaryOverlays() {
+    m_waveformWidget->updateBoundaryOverlay();
+    m_powerWidget->updateBoundaryOverlay();
+    m_spectrogramWidget->updateBoundaryOverlay();
+    m_boundaryOverlay->update();
 }
 
 void PhonemeLabelerPage::applyConfig() {
