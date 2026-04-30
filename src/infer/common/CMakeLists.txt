@@ -5,6 +5,7 @@ set(INFER_COMMON_SOURCES
 )
 
 set(INFER_COMMON_HEADERS
+        include/dstools/IInferenceEngine.h
         include/dstools/OnnxEnv.h
 )
 
