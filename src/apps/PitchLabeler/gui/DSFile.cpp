@@ -125,6 +125,9 @@ std::pair<std::shared_ptr<DSFile>, QString> DSFile::load(const QString &path) {
 
     auto ds = std::make_shared<DSFile>();
     ds->m_doc = std::move(doc);
+    if (ds->m_doc.sentenceCount() <= 0) {
+        return {nullptr, QString("No sentences found in file")};
+    }
     ds->loadFromJson(ds->m_doc.sentence(0));
     return {ds, QString()};
 }
