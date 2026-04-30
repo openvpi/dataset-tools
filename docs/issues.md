@@ -136,11 +136,15 @@
 
 **类型**: Refactor | **优先级**: P2 | **估计工作量**: S (< 2h)
 
+> **状态**: ModelManager 和 ModelDownloader 仍在 `src/framework/core/`（含 IModelDownloader 接口）。Roadmap T-1.1 涵盖定义 IModelManager 接口并将具体实现迁移到 domain 层，此 Issue 将随 T-1.1 一并解决。
+
 ---
 
 ### Issue #23: QualityMetrics 实现迁移到 domain 层
 
 **类型**: Refactor | **优先级**: P2 | **估计工作量**: S (< 2h)
+
+> **已完成**: QualityMetrics.cpp / QualityMetrics.h 已在 `src/domain/`，CMakeLists.txt 已包含。
 
 ---
 
@@ -148,11 +152,15 @@
 
 **类型**: Refactor | **优先级**: P2 | **估计工作量**: S (< 2h)
 
+> **已完成**: PinyinG2PProvider.cpp / PinyinG2PProvider.h 已在 `src/domain/`，CMakeLists.txt 已包含。
+
 ---
 
 ### Issue #25: ExportFormats.h header-only 实现移到 .cpp
 
 **类型**: Tech Debt | **优先级**: P3 | **估计工作量**: S (< 2h)
+
+> **已完成**: ExportFormats.h 仅包含类声明，实现已在 ExportFormats.cpp 中。
 
 ---
 
