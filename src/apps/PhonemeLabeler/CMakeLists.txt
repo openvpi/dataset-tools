@@ -8,8 +8,6 @@ add_subdirectory(gui)
 
 add_executable(${PROJECT_NAME}
     main.cpp
-    gui/MainWindow.cpp
-    gui/MainWindow.h
     PhonemeLabelerKeys.h
 )
 
