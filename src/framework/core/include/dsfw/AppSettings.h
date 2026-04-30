@@ -5,7 +5,6 @@
 
 #include <QCoreApplication>
 #include <QDir>
-#include <QKeySequence>
 #include <QObject>
 #include <QString>
 #include <QTimer>
@@ -31,7 +30,7 @@ namespace dstools {
 /// inline const SettingsKey<int> Volume("Audio/volume", 80);
 /// @endcode
 ///
-/// @tparam T Value type (QString, int, double, bool, QKeySequence, std::string).
+/// @tparam T Value type (QString, int, double, bool, std::string).
 template <typename T>
 struct SettingsKey {
     const char *path;  ///< Slash-delimited JSON path (e.g. "General/lastDir").
@@ -52,7 +51,6 @@ namespace detail {
     inline nlohmann::json toJson(double v) { return v; }
     inline nlohmann::json toJson(float v) { return static_cast<double>(v); }
     inline nlohmann::json toJson(bool v) { return v; }
-    inline nlohmann::json toJson(const QKeySequence &v) { return v.toString().toStdString(); }
 
     template <typename T>
     T fromJson(const nlohmann::json &j, const T &fallback);
@@ -90,12 +88,6 @@ namespace detail {
     template <>
     inline bool fromJson<bool>(const nlohmann::json &j, const bool &fallback) {
         if (j.is_boolean()) return j.get<bool>();
-        return fallback;
-    }
-
-    template <>
-    inline QKeySequence fromJson<QKeySequence>(const nlohmann::json &j, const QKeySequence &fallback) {
-        if (j.is_string()) return QKeySequence(QString::fromStdString(j.get<std::string>()));
         return fallback;
     }
 
@@ -209,18 +201,18 @@ public:
     /// @param id Observer ID returned by observe().
     void removeObserver(int id);
 
-    /// @brief Convenience: read a shortcut key as QKeySequence.
+    /// @brief Convenience: read a shortcut key as a plain string.
     /// @param key A SettingsKey<QString> storing a key sequence string.
-    /// @return Parsed QKeySequence.
-    QKeySequence shortcut(const SettingsKey<QString> &key) const {
-        return QKeySequence(get(key));
+    /// @return The shortcut string (e.g. "Ctrl+S").
+    QString shortcut(const SettingsKey<QString> &key) const {
+        return get(key);
     }
 
-    /// @brief Convenience: write a shortcut key from QKeySequence.
+    /// @brief Convenience: write a shortcut key from a plain string.
     /// @param key A SettingsKey<QString> storing a key sequence string.
-    /// @param seq The key sequence to store.
-    void setShortcut(const SettingsKey<QString> &key, const QKeySequence &seq) {
-        set(key, seq.toString());
+    /// @param seq The key sequence string to store.
+    void setShortcut(const SettingsKey<QString> &key, const QString &seq) {
+        set(key, seq);
     }
 
     /// @brief Check whether a key is present in the JSON store.
