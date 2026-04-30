@@ -451,18 +451,18 @@ namespace dstools {
                 if (!m_currentFile || idx < 0 || idx >= static_cast<int>(m_currentFile->notes.size())) return;
                 auto &note = m_currentFile->notes[idx];
                 if (note.isRest()) {
-                    // Find nearest non-rest note name to assign
-                    for (int off = 1; off < static_cast<int>(m_currentFile->notes.size()); ++off) {
+                    bool found = false;
+                    for (int off = 1; off < static_cast<int>(m_currentFile->notes.size()) && !found; ++off) {
                         for (int j : {idx - off, idx + off}) {
                             if (j >= 0 && j < static_cast<int>(m_currentFile->notes.size()) &&
                                 !m_currentFile->notes[j].isRest()) {
                                 note.name = m_currentFile->notes[j].name;
-                                goto done;
+                                found = true;
+                                break;
                             }
                         }
                     }
-                    note.name = "C4"; // fallback
-                    done:;
+                    if (!found) note.name = "C4";
                 } else {
                     note.name = "rest";
                 }
