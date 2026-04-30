@@ -2,7 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QMenu>
 
 namespace Minlabel {
 
@@ -21,11 +20,6 @@ namespace Minlabel {
 
     private:
         MinLabelPage *m_page = nullptr;
-
-        QMenu *m_fileMenu = nullptr;
-        QMenu *m_editMenu = nullptr;
-        QMenu *m_playMenu = nullptr;
-        QMenu *m_helpMenu = nullptr;
 
         void buildMenuBar();
         void updateWindowTitle();

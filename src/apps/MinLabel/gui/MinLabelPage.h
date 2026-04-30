@@ -1,5 +1,7 @@
 #pragma once
 
+#include <IPageActions.h>
+
 #include <QFileSystemModel>
 #include <QSplitter>
 #include <QTreeView>
@@ -17,8 +19,10 @@
 
 namespace Minlabel {
 
-    class MinLabelPage : public QWidget {
+    class MinLabelPage : public QWidget, public dstools::labeler::IPageActions {
         Q_OBJECT
+        Q_INTERFACES(dstools::labeler::IPageActions)
+
     public:
         explicit MinLabelPage(QWidget *parent = nullptr);
         ~MinLabelPage() override;
@@ -32,12 +36,20 @@ namespace Minlabel {
         QAction *playAction() const;
 
         // Working directory
-        void setWorkingDirectory(const QString &dir);
-        QString workingDirectory() const;
+        void setWorkingDirectory(const QString &dir) override;
+        QString workingDirectory() const override;
 
         // State
-        bool hasUnsavedChanges() const;
-        bool save();
+        bool hasUnsavedChanges() const override;
+        bool save() override;
+
+        // IPageActions
+        QMenuBar *createMenuBar(QWidget *parent) override;
+        QWidget *createStatusBarContent(QWidget *parent) override;
+        QString windowTitle() const override;
+        bool supportsDragDrop() const override;
+        void handleDragEnter(QDragEnterEvent *event) override;
+        void handleDrop(QDropEvent *event) override;
 
         // Settings access for MainWindow
         dstools::AppSettings &settings();

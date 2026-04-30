@@ -6,6 +6,8 @@
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QKeyEvent>
@@ -15,9 +17,11 @@
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QTreeWidget>
 
 #include <dstools/ShortcutManager.h>
+#include <dsfw/Theme.h>
 
 namespace Minlabel {
 
@@ -219,6 +223,111 @@ namespace Minlabel {
 
     dstools::widgets::ShortcutManager *MinLabelPage::shortcutManager() const {
         return m_shortcutManager;
+    }
+
+    QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
+        auto *bar = new QMenuBar(parent);
+
+        auto *fileMenu = bar->addMenu(tr("File(&F)"));
+        fileMenu->addAction(m_browseAction);
+        fileMenu->addAction(m_exportAction);
+        fileMenu->addAction(m_convertAction);
+
+        auto *editMenu = bar->addMenu(tr("Edit(&E)"));
+        editMenu->addAction(m_nextAction);
+        editMenu->addAction(m_prevAction);
+        editMenu->addSeparator();
+        {
+            auto *shortcutAction = editMenu->addAction(tr("Shortcut Settings..."));
+            connect(shortcutAction, &QAction::triggered, this, [this]() {
+                m_shortcutManager->showEditor(this);
+            });
+        }
+
+        auto *playMenu = bar->addMenu(tr("Playback(&P)"));
+        playMenu->addAction(m_playAction);
+
+        auto *viewMenu = bar->addMenu(tr("View(&V)"));
+        dsfw::Theme::instance().populateThemeMenu(viewMenu);
+
+        auto *helpMenu = bar->addMenu(tr("Help(&H)"));
+        auto *aboutAppAction = helpMenu->addAction(
+            tr("About %1").arg(QApplication::applicationName()));
+        auto *aboutQtAction = helpMenu->addAction(tr("About Qt"));
+
+        connect(helpMenu, &QMenu::triggered, this, [this](const QAction *action) {
+            if (action->text().startsWith("About Qt")) {
+                QMessageBox::aboutQt(this);
+            } else {
+                QMessageBox::information(
+                    this, QApplication::applicationName(),
+                    QString("%1 %2, Copyright OpenVPI.")
+                        .arg(QApplication::applicationName(), QApplication::applicationVersion()));
+            }
+        });
+
+        return bar;
+    }
+
+    QWidget *MinLabelPage::createStatusBarContent(QWidget *parent) {
+        Q_UNUSED(parent);
+        return nullptr;
+    }
+
+    QString MinLabelPage::windowTitle() const {
+        return dirname.isEmpty()
+                   ? QApplication::applicationName()
+                   : QString("%1 - %2").arg(QApplication::applicationName(),
+                                            QDir::toNativeSeparators(QFileInfo(dirname).baseName()));
+    }
+
+    bool MinLabelPage::supportsDragDrop() const {
+        return true;
+    }
+
+    void MinLabelPage::handleDragEnter(QDragEnterEvent *event) {
+        const QMimeData *mime = event->mimeData();
+        if (mime->hasUrls()) {
+            auto urls = mime->urls();
+            QStringList filenames;
+            for (auto &url : urls) {
+                if (url.isLocalFile()) {
+                    filenames.append(url.toLocalFile());
+                }
+            }
+            bool ok = false;
+            if (filenames.size() == 1) {
+                if (const QString &filename = filenames.front(); QFile::exists(filename)) {
+                    ok = true;
+                }
+            }
+            if (ok) {
+                event->acceptProposedAction();
+            }
+        }
+    }
+
+    void MinLabelPage::handleDrop(QDropEvent *event) {
+        if (const QMimeData *mime = event->mimeData(); mime->hasUrls()) {
+            auto urls = mime->urls();
+            QStringList filenames;
+            for (auto &url : urls) {
+                if (url.isLocalFile()) {
+                    filenames.append(url.toLocalFile());
+                }
+            }
+            bool ok = false;
+            if (filenames.size() == 1) {
+                if (const QString &filename = filenames.front(); QFile::exists(filename)) {
+                    ok = true;
+                    const QFileInfo fi(filename);
+                    setWorkingDirectory(fi.isDir() ? filename : fi.absolutePath());
+                }
+            }
+            if (ok) {
+                event->acceptProposedAction();
+            }
+        }
     }
 
     void MinLabelPage::openDirectory(const QString &dirName) const {
