@@ -10,8 +10,10 @@ QString DsDocumentAdapter::filePath() const {
     return m_filePath;
 }
 
-DocumentFormat DsDocumentAdapter::format() const {
-    return DocumentFormat::DsFile;
+static const auto DsFileFormat = registerDocumentFormat("DsFile");
+
+DocumentFormatId DsDocumentAdapter::format() const {
+    return DsFileFormat;
 }
 
 QString DsDocumentAdapter::formatDisplayName() const {
@@ -73,7 +75,7 @@ void DsDocumentAdapter::setModified(bool modified) {
 DocumentInfo DsDocumentAdapter::info() const {
     DocumentInfo di;
     di.filePath = m_filePath;
-    di.format = DocumentFormat::DsFile;
+    di.format = DsFileFormat;
     di.isModified = m_modified;
     return di;
 }

@@ -15,21 +15,21 @@ ModelManager::~ModelManager() {
     unloadAll();
 }
 
-void ModelManager::registerProvider(ModelType type, std::unique_ptr<IModelProvider> provider) {
+void ModelManager::registerProvider(ModelTypeId type, std::unique_ptr<IModelProvider> provider) {
     Q_ASSERT(QThread::currentThread() == QCoreApplication::instance()->thread());
     Entry entry;
     entry.provider = std::move(provider);
     m_entries.emplace(type, std::move(entry));
 }
 
-IModelProvider *ModelManager::provider(ModelType type) const {
+IModelProvider *ModelManager::provider(ModelTypeId type) const {
     auto it = m_entries.find(type);
     if (it == m_entries.end())
         return nullptr;
     return it->second.provider.get();
 }
 
-Result<void> ModelManager::ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex) {
+Result<void> ModelManager::ensureLoaded(ModelTypeId type, const QString &modelPath, int gpuIndex) {
     Q_ASSERT(QThread::currentThread() == QCoreApplication::instance()->thread());
     auto it = m_entries.find(type);
     if (it == m_entries.end()) {
@@ -65,7 +65,7 @@ Result<void> ModelManager::ensureLoaded(ModelType type, const QString &modelPath
     return Result<void>::Ok();
 }
 
-void ModelManager::unload(ModelType type) {
+void ModelManager::unload(ModelTypeId type) {
     Q_ASSERT(QThread::currentThread() == QCoreApplication::instance()->thread());
     auto it = m_entries.find(type);
     if (it == m_entries.end())
@@ -106,15 +106,15 @@ int64_t ModelManager::currentMemoryUsage() const {
     return total;
 }
 
-ModelStatus ModelManager::status(ModelType type) const {
+ModelStatus ModelManager::status(ModelTypeId type) const {
     auto it = m_entries.find(type);
     if (it == m_entries.end())
         return ModelStatus::Unloaded;
     return it->second.provider->status();
 }
 
-QList<ModelType> ModelManager::loadedModels() const {
-    QList<ModelType> result;
+QList<ModelTypeId> ModelManager::loadedModels() const {
+    QList<ModelTypeId> result;
     for (auto it = m_entries.begin(); it != m_entries.end(); ++it) {
         if (it->second.provider->status() == ModelStatus::Ready)
             result.append(it->first);
@@ -127,7 +127,7 @@ void ModelManager::evictIfNeeded(int64_t requiredBytes) {
         return;
 
     while (currentMemoryUsage() + requiredBytes > m_memoryLimit) {
-        ModelType oldest = {};
+        ModelTypeId oldest;
         qint64 oldestTimestamp = std::numeric_limits<qint64>::max();
         bool found = false;
 

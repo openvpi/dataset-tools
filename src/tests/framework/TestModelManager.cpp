@@ -3,6 +3,9 @@
 
 using namespace dstools;
 
+static const auto TestCustomType = registerModelType("Custom");
+static const auto TestAsrType = registerModelType("Asr");
+
 class MockModelProvider : public IModelProvider {
 public:
     int loadCount = 0;
@@ -10,7 +13,7 @@ public:
     ModelStatus m_status = ModelStatus::Unloaded;
     int64_t m_mem = 1024;
 
-    ModelType type() const override { return ModelType::Custom; }
+    ModelTypeId type() const override { return TestCustomType; }
     QString displayName() const override { return "MockModel"; }
 
     Result<void> load(const QString & /*modelPath*/, int /*gpuIndex*/) override {
@@ -41,34 +44,34 @@ void TestModelManager::testRegisterProvider() {
     ModelManager mgr;
     auto mock = std::make_unique<MockModelProvider>();
     auto *ptr = mock.get();
-    mgr.registerProvider(ModelType::Custom, std::move(mock));
-    QCOMPARE(mgr.provider(ModelType::Custom), ptr);
+    mgr.registerProvider(TestCustomType, std::move(mock));
+    QCOMPARE(mgr.provider(TestCustomType), ptr);
 }
 
 void TestModelManager::testStatusUnloaded() {
     ModelManager mgr;
-    QCOMPARE(mgr.status(ModelType::Custom), ModelStatus::Unloaded);
+    QCOMPARE(mgr.status(TestCustomType), ModelStatus::Unloaded);
 }
 
 void TestModelManager::testProviderReturnsNull() {
     ModelManager mgr;
-    QVERIFY(mgr.provider(ModelType::Asr) == nullptr);
+    QVERIFY(mgr.provider(TestAsrType) == nullptr);
 }
 
 void TestModelManager::testMockLoadUnload() {
     ModelManager mgr;
     auto mock = std::make_unique<MockModelProvider>();
     auto *ptr = mock.get();
-    mgr.registerProvider(ModelType::Custom, std::move(mock));
+    mgr.registerProvider(TestCustomType, std::move(mock));
 
-    auto r = mgr.ensureLoaded(ModelType::Custom, "/fake/path", 0);
+    auto r = mgr.ensureLoaded(TestCustomType, "/fake/path", 0);
     QVERIFY(r.ok());
     QCOMPARE(ptr->loadCount, 1);
-    QCOMPARE(mgr.status(ModelType::Custom), ModelStatus::Ready);
+    QCOMPARE(mgr.status(TestCustomType), ModelStatus::Ready);
 
-    mgr.unload(ModelType::Custom);
+    mgr.unload(TestCustomType);
     QCOMPARE(ptr->unloadCount, 1);
-    QCOMPARE(mgr.status(ModelType::Custom), ModelStatus::Unloaded);
+    QCOMPARE(mgr.status(TestCustomType), ModelStatus::Unloaded);
 }
 
 QTEST_GUILESS_MAIN(TestModelManager)

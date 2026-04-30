@@ -31,11 +31,11 @@ public:
     /// @brief Register a model provider for the given type.
     /// @param type Model type identifier.
     /// @param provider Ownership is transferred to the manager.
-    void registerProvider(ModelType type, std::unique_ptr<IModelProvider> provider);
+    void registerProvider(ModelTypeId type, std::unique_ptr<IModelProvider> provider);
     /// @brief Get the provider for a model type, or nullptr if not registered.
     /// @param type Model type identifier.
     /// @return Raw pointer to the provider (owned by this manager).
-    IModelProvider *provider(ModelType type) const;
+    IModelProvider *provider(ModelTypeId type) const;
 
     /// @brief Ensure a model is loaded, loading it if necessary.
     /// @param type Model type identifier.
@@ -43,10 +43,10 @@ public:
     /// @param gpuIndex GPU device index (-1 for CPU).
     /// @return Success or error.
     /// @note May evict other models to stay within the memory limit.
-    Result<void> ensureLoaded(ModelType type, const QString &modelPath, int gpuIndex);
+    Result<void> ensureLoaded(ModelTypeId type, const QString &modelPath, int gpuIndex);
     /// @brief Unload a specific model.
     /// @param type Model type to unload.
-    void unload(ModelType type);
+    void unload(ModelTypeId type);
     /// @brief Unload all models.
     void unloadAll();
 
@@ -63,16 +63,16 @@ public:
     /// @brief Return the status of a specific model type.
     /// @param type Model type identifier.
     /// @return Model status, or Unloaded if not registered.
-    ModelStatus status(ModelType type) const;
+    ModelStatus status(ModelTypeId type) const;
     /// @brief Return the list of currently loaded model types.
-    /// @return List of ModelType values with Ready status.
-    QList<ModelType> loadedModels() const;
+    /// @return List of ModelTypeId values with Ready status.
+    QList<ModelTypeId> loadedModels() const;
 
 signals:
     /// @brief Emitted when a model's status changes.
     /// @param type Model type whose status changed.
     /// @param status New status value.
-    void modelStatusChanged(ModelType type, ModelStatus status);
+    void modelStatusChanged(ModelTypeId type, ModelStatus status);
     /// @brief Emitted when total memory usage changes.
     /// @param totalBytes New total memory usage in bytes.
     void memoryUsageChanged(int64_t totalBytes);
@@ -85,7 +85,7 @@ private:
         qint64 lastUsedTimestamp = 0;
     };
 
-    std::map<ModelType, Entry> m_entries;
+    std::map<ModelTypeId, Entry> m_entries;
     int64_t m_memoryLimit = 0;
 
     void evictIfNeeded(int64_t requiredBytes);

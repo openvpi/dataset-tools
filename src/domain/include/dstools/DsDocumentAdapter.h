@@ -13,7 +13,7 @@ public:
 
     // Identity
     QString filePath() const override;
-    DocumentFormat format() const override;
+    DocumentFormatId format() const override;
     QString formatDisplayName() const override;
 
     // Lifecycle

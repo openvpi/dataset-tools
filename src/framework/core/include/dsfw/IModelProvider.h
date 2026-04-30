@@ -8,20 +8,37 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <unordered_map>
 
 #include <dstools/Result.h>
 
 namespace dstools {
 
-/// @brief Type of ML model.
-enum class ModelType {
-    Asr,    ///< Automatic speech recognition (FunASR).
-    HuBERT, ///< HuBERT phoneme alignment model.
-    GAME,   ///< GAME audio-to-MIDI transcription model.
-    RMVPE,  ///< RMVPE pitch estimation model.
-    SOME,   ///< SOME pitch estimation model.
-    Custom  ///< Application-defined custom model type.
+/// @brief Extensible model type identifier (replaces fixed enum).
+class ModelTypeId {
+public:
+    constexpr ModelTypeId() : m_id(-1) {}
+    constexpr explicit ModelTypeId(int id) : m_id(id) {}
+    constexpr int id() const { return m_id; }
+    constexpr bool isValid() const { return m_id >= 0; }
+    constexpr bool operator==(const ModelTypeId &o) const { return m_id == o.m_id; }
+    constexpr bool operator!=(const ModelTypeId &o) const { return m_id != o.m_id; }
+    constexpr bool operator<(const ModelTypeId &o) const { return m_id < o.m_id; }
+private:
+    int m_id;
 };
+
+/// @brief Register (or look up) a named model type, returning a stable ID.
+inline ModelTypeId registerModelType(const std::string &name) {
+    static int s_nextId = 0;
+    static std::unordered_map<std::string, int> s_registry;
+    auto it = s_registry.find(name);
+    if (it != s_registry.end())
+        return ModelTypeId(it->second);
+    int id = s_nextId++;
+    s_registry[name] = id;
+    return ModelTypeId(id);
+}
 
 /// @brief Lifecycle status of a model.
 enum class ModelStatus {
@@ -43,8 +60,8 @@ class IModelProvider {
 public:
     virtual ~IModelProvider() = default;
     /// @brief Return the model type.
-    /// @return ModelType enum value.
-    virtual ModelType type() const = 0;
+    /// @return ModelTypeId value.
+    virtual ModelTypeId type() const = 0;
     /// @brief Return a human-readable name for this model.
     /// @return Display name string.
     virtual QString displayName() const = 0;
