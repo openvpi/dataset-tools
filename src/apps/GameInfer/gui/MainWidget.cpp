@@ -35,7 +35,7 @@ static std::vector<float> generateD3pmTimesteps(int nSteps) {
     return ts;
 }
 
-static void makeMidiFile(const std::filesystem::path &midi_path, std::vector<Game::GameMidi> midis, const float tempo) {
+static bool makeMidiFile(const std::filesystem::path &midi_path, std::vector<Game::GameMidi> midis, const float tempo) {
     Midi::MidiFile midi;
     midi.setFileFormat(1);
     midi.setDivisionType(Midi::MidiFile::DivisionType::PPQ);
@@ -58,7 +58,7 @@ static void makeMidiFile(const std::filesystem::path &midi_path, std::vector<Gam
         midi.createNoteOffEvent(1, start + duration, 0, note, 64);
     }
 
-    midi.save(midi_path);
+    return midi.save(midi_path);
 }
 
 MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
@@ -553,10 +553,15 @@ void MainWidget::onExportMidiTask() {
             maxAudioSegLength);
 
         if (success) {
-            makeMidiFile(outputMidiPath.toLocal8Bit().toStdString(), midis, tempo);
-            QMetaObject::invokeMethod(
-                this, [this] { QMessageBox::information(this, "Success", "MIDI file generated!"); },
-                Qt::QueuedConnection);
+            if (!makeMidiFile(outputMidiPath.toLocal8Bit().toStdString(), midis, tempo)) {
+                QMetaObject::invokeMethod(
+                    this, [this] { QMessageBox::warning(this, "Warning", "Failed to save MIDI file."); },
+                    Qt::QueuedConnection);
+            } else {
+                QMetaObject::invokeMethod(
+                    this, [this] { QMessageBox::information(this, "Success", "MIDI file generated!"); },
+                    Qt::QueuedConnection);
+            }
         } else {
             std::cerr << "Error: " << msg << std::endl;
             QMetaObject::invokeMethod(
