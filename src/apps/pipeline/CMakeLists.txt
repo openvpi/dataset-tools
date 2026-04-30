@@ -4,6 +4,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+add_subdirectory(slicer)
+add_subdirectory(lyricfa)
+add_subdirectory(hubertfa)
 add_subdirectory(pages)
 
 add_executable(${PROJECT_NAME} WIN32
