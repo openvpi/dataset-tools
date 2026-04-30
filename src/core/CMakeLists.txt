@@ -6,6 +6,7 @@ set(CORE_SOURCES
     src/AppSettings.cpp
     src/CsvToDsConverter.cpp
     src/DsDocument.cpp
+    src/ExportFormats.cpp
     src/JsonHelper.cpp
     src/PitchUtils.cpp
     src/AudioFileResolver.cpp
