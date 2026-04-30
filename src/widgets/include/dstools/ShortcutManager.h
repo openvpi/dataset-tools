@@ -31,6 +31,9 @@ public:
     /// Show the shortcut editor dialog. Calls applyAll() after dialog closes.
     void showEditor(QWidget *parent);
 
+    /// Enable or disable all bound action shortcuts (for page scope isolation).
+    void setEnabled(bool enabled);
+
 private:
     struct Binding {
         QAction *action;

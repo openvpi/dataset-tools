@@ -38,4 +38,10 @@ void ShortcutManager::showEditor(QWidget *parent) {
     applyAll();
 }
 
+void ShortcutManager::setEnabled(bool enabled) {
+    for (const auto &b : m_bindings) {
+        b.action->setEnabled(enabled);
+    }
+}
+
 } // namespace dstools::widgets
