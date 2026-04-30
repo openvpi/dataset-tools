@@ -11,8 +11,6 @@ add_subdirectory(pages)
 
 add_executable(${PROJECT_NAME} WIN32
     main.cpp
-    PipelineWindow.h
-    PipelineWindow.cpp
     PipelinePage.h
     PipelinePage.cpp
 )

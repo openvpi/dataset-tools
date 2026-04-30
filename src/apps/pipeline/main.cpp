@@ -1,11 +1,12 @@
 ﻿#include <QApplication>
 #include <dstools/AppInit.h>
-#include <dsfw/FramelessHelper.h>
+#include <dsfw/AppShell.h>
+#include <dsfw/AppSettings.h>
 #include <dsfw/Theme.h>
 #include <dstools/PinyinG2PProvider.h>
 #include <dsfw/ServiceLocator.h>
 #include <cpp-pinyin/G2pglobal.h>
-#include "PipelineWindow.h"
+#include "PipelinePage.h"
 
 #include <filesystem>
 
@@ -35,8 +36,12 @@ int main(int argc, char *argv[]) {
         return 0;
     dsfw::Theme::instance().init(app);
 
-    PipelineWindow window;
-    dsfw::FramelessHelper::apply(&window);
-    window.show();
+    dsfw::AppShell shell;
+    dstools::AppSettings settings("DatasetPipeline");
+    auto *page = new PipelinePage(&settings, &shell);
+    shell.addPage(page, "pipeline", {}, "Pipeline");
+    shell.setWindowTitle(page->windowTitle());
+    shell.resize(1200, 800);
+    shell.show();
     return app.exec();
 }
