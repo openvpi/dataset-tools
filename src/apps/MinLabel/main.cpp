@@ -1,11 +1,11 @@
 ﻿#include <QApplication>
 #include <dstools/AppInit.h>
-#include <dsfw/FramelessHelper.h>
+#include <dsfw/AppShell.h>
 #include <dsfw/Theme.h>
 #include <dstools/PinyinG2PProvider.h>
 #include <dsfw/ServiceLocator.h>
 #include <cpp-pinyin/G2pglobal.h>
-#include "gui/MainWindow.h"
+#include "gui/MinLabelPage.h"
 
 #include <filesystem>
 
@@ -35,8 +35,10 @@ int main(int argc, char *argv[]) {
         return 0;
     dsfw::Theme::instance().init(app);
 
-    Minlabel::MainWindow w;
-    dsfw::FramelessHelper::apply(&w);
-    w.show();
+    dsfw::AppShell shell;
+    auto *page = new Minlabel::MinLabelPage(&shell);
+    shell.addPage(page, "min-label", {}, "MinLabel");
+    shell.resize(1280, 720);
+    shell.show();
     return app.exec();
 }

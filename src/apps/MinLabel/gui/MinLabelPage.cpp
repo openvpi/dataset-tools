@@ -163,8 +163,33 @@ namespace Minlabel {
     }
 
     MinLabelPage::~MinLabelPage() {
+        onShutdown();
+
         if (QFile::exists(lastFile)) {
             saveFile(lastFile);
+        }
+    }
+
+    bool MinLabelPage::onDeactivating() {
+        if (hasUnsavedChanges()) {
+            const auto result = QMessageBox::question(
+                this, tr("Unsaved Changes"),
+                tr("You have unsaved changes. Do you want to save before closing?"),
+                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+                QMessageBox::Save);
+            if (result == QMessageBox::Cancel)
+                return false;
+            if (result == QMessageBox::Save)
+                save();
+        }
+        return true;
+    }
+
+    void MinLabelPage::onShutdown() {
+        m_shortcutManager->saveAll();
+
+        if (!dirname.isEmpty()) {
+            m_settings.set(MinLabelKeys::LastDir, dirname);
         }
     }
 

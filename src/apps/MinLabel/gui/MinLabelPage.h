@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dsfw/IPageActions.h>
+#include <dsfw/IPageLifecycle.h>
 
 #include <QFileSystemModel>
 #include <QSplitter>
@@ -19,9 +20,11 @@
 
 namespace Minlabel {
 
-    class MinLabelPage : public QWidget, public dstools::labeler::IPageActions {
+    class MinLabelPage : public QWidget,
+                         public dstools::labeler::IPageActions,
+                         public dstools::labeler::IPageLifecycle {
         Q_OBJECT
-        Q_INTERFACES(dstools::labeler::IPageActions)
+        Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
 
     public:
         explicit MinLabelPage(QWidget *parent = nullptr);
@@ -54,6 +57,10 @@ namespace Minlabel {
         // Settings access for MainWindow
         dstools::AppSettings &settings();
         dstools::widgets::ShortcutManager *shortcutManager() const;
+
+        // IPageLifecycle
+        bool onDeactivating() override;
+        void onShutdown() override;
 
     signals:
         void workingDirectoryChanged(const QString &dir);

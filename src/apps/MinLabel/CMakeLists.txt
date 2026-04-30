@@ -6,7 +6,7 @@ set(CMAKE_AUTOUIC ON)
 
 add_subdirectory(gui)
 
-add_executable(${PROJECT_NAME} main.cpp gui/MainWindow.cpp gui/MainWindow.h MinLabelKeys.h res.qrc)
+add_executable(${PROJECT_NAME} main.cpp MinLabelKeys.h res.qrc)
 
 find_package(cpp-pinyin CONFIG REQUIRED)
 
