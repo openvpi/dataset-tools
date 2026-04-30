@@ -65,7 +65,7 @@ public:
             const auto *node = resolve(root, path);
             if (!node) return defaultValue;
             return node->get<T>();
-        } catch (...) {
+        } catch (const std::exception &) {
             return defaultValue;
         }
     }
@@ -77,7 +77,7 @@ public:
             if (!root.is_object() || !root.contains(key))
                 return defaultValue;
             return root[key].get<T>();
-        } catch (...) {
+        } catch (const std::exception &) {
             return defaultValue;
         }
     }
@@ -92,7 +92,7 @@ public:
                 return QString::fromStdString(node->get<std::string>());
             }
             return defaultValue;
-        } catch (...) {
+        } catch (const std::exception &) {
             return defaultValue;
         }
     }
@@ -107,7 +107,7 @@ public:
                 return QString::fromStdString(node.get<std::string>());
             }
             return defaultValue;
-        } catch (...) {
+        } catch (const std::exception &) {
             return defaultValue;
         }
     }
@@ -130,7 +130,7 @@ public:
             const auto *node = resolve(root, path);
             if (!node || !node->is_object()) return {};
             return node->get<std::map<K, V>>();
-        } catch (...) {
+        } catch (const std::exception &) {
             return {};
         }
     }
@@ -142,7 +142,7 @@ public:
             const auto *node = resolve(root, path);
             if (!node || !node->is_array()) return {};
             return node->get<std::vector<T>>();
-        } catch (...) {
+        } catch (const std::exception &) {
             return {};
         }
     }
