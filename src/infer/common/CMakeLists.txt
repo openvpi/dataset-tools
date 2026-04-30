@@ -2,11 +2,13 @@ project(dstools-infer-common)
 
 set(INFER_COMMON_SOURCES
         src/OnnxEnv.cpp
+        src/OnnxModelBase.cpp
 )
 
 set(INFER_COMMON_HEADERS
         include/dstools/IInferenceEngine.h
         include/dstools/OnnxEnv.h
+        include/dstools/OnnxModelBase.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${INFER_COMMON_SOURCES} ${INFER_COMMON_HEADERS})
