@@ -42,7 +42,7 @@ jobs:
           vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
 
       - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
+        uses: seanmiddleditch/gha-setup-ninja@v4
 
       - name: Build Vcpkg packages
         working-directory: ${{github.workspace}}/vcpkg

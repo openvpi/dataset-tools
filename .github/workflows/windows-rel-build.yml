@@ -59,7 +59,7 @@ jobs:
           vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958 # Grabbed on 2026-01-01 23:00
 
       - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
+        uses: seanmiddleditch/gha-setup-ninja@v4
 
       - name: Build Vcpkg packages
         shell: cmd
@@ -118,7 +118,8 @@ jobs:
           7z a dataset-tools-msvc2022-x64-${{env.VERSION}}.zip ./*
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             ${{env.GH_WORKSPACE}}/deploy/dataset-tools-msvc2022-x64-${{env.VERSION}}.zip
