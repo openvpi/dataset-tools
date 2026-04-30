@@ -82,6 +82,8 @@ namespace Minlabel {
         void labToJson(const QString &dirName);
         void exportAudio(const ExportInfo &exportInfo);
 
+        static QString removeTone(const QString &labContent);
+
         void applyConfig();
 
         void _q_fileMenuTriggered(const QAction *action);

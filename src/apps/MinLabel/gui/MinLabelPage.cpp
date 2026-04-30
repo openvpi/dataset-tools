@@ -21,6 +21,17 @@
 
 namespace Minlabel {
 
+    QString MinLabelPage::removeTone(const QString &labContent) {
+        if (labContent.isEmpty() || !labContent.contains(" "))
+            return "";
+        static const QRegularExpression nonLowerAlpha("[^a-z]");
+        QStringList inputList = labContent.split(" ");
+        for (QString &item : inputList) {
+            item.remove(nonLowerAlpha);
+        }
+        return inputList.join(" ");
+    }
+
     MinLabelPage::MinLabelPage(QWidget *parent) : QWidget(parent), m_settings("MinLabel") {
         playing = false;
 
@@ -232,15 +243,7 @@ namespace Minlabel {
     bool MinLabelPage::saveFile(const QString &filename) {
         const QString txtContent = textWidget->wordsText->text();
         QString labContent = textWidget->contentText->toPlainText();
-        QString withoutTone = "";
-        static QRegularExpression rm_alpha("[^a-z]");
-        if (!labContent.isEmpty() && labContent.contains(" ")) {
-            QStringList inputList = labContent.split(" ");
-            for (QString &item : inputList) {
-                item.remove(rm_alpha);
-            }
-            withoutTone = inputList.join(" ");
-        }
+        QString withoutTone = removeTone(labContent);
 
 
         const QString jsonFilePath = audioToOtherSuffix(filename, "json");
@@ -418,15 +421,7 @@ namespace Minlabel {
                         textWidget->contentText->setPlainText(labContent);
                         textWidget->wordsText->setText(labContent);
                     } else {
-                        QString withoutTone = "";
-                        if (!labContent.isEmpty() && labContent.contains(" ")) {
-                        QStringList inputList = labContent.split(" ");
-                        static const QRegularExpression nonLowerAlpha("[^a-z]");
-                        for (QString &item : inputList) {
-                            item.remove(nonLowerAlpha);
-                        }
-                            withoutTone = inputList.join(" ");
-                        }
+                        QString withoutTone = removeTone(labContent);
 
                         nlohmann::json writeData;
                         static const QRegularExpression multiSpace("\\s+");
