@@ -7,6 +7,8 @@ set(SLICER_PAGE_SOURCES
         WorkThread.cpp
         SliceJob.cpp
         MarkerIO.cpp
+        AudioFileLoader.cpp
+        AudioChunkWriter.cpp
 )
 
 set(SLICER_PAGE_HEADERS
@@ -14,6 +16,8 @@ set(SLICER_PAGE_HEADERS
         WorkThread.h
         SliceJob.h
         MarkerIO.h
+        AudioFileLoader.h
+        AudioChunkWriter.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${SLICER_PAGE_SOURCES} ${SLICER_PAGE_HEADERS})
