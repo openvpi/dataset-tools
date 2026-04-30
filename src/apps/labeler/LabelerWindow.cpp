@@ -9,9 +9,9 @@
 #include "pages/BuildCsvPage.h"
 #include "pages/BuildDsPage.h"
 #include "pages/GameAlignPage.h"
-#include "slicer/SlicerPage.h"
-#include "lyricfa/LyricFAPage.h"
-#include "hubertfa/HubertFAPage.h"
+#include "SlicerPage.h"
+#include "LyricFAPage.h"
+#include "HubertFAPage.h"
 
 #include <QApplication>
 #include <QCloseEvent>

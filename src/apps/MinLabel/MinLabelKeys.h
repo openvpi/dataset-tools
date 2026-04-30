@@ -1,14 +1,14 @@
-#pragma once
+﻿#pragma once
 #include <dsfw/AppSettings.h>
-#include <dstools/CommonKeys.h>
+#include <dsfw/CommonKeys.h>
 
 /// MinLabel settings key schema -- all persisted keys in one place.
 namespace MinLabelKeys {
     // Re-exported from CommonKeys
-    using dstools::CommonKeys::LastDir;
-    using dstools::CommonKeys::ShortcutOpen;
-    using dstools::CommonKeys::NavigationPrev;
-    using dstools::CommonKeys::NavigationNext;
+    using dsfw::CommonKeys::LastDir;
+    using dsfw::CommonKeys::ShortcutOpen;
+    using dsfw::CommonKeys::NavigationPrev;
+    using dsfw::CommonKeys::NavigationNext;
 
     // Shortcuts
     inline const dstools::SettingsKey<QString> ShortcutExport("Shortcuts/export", "Ctrl+E");
