@@ -9,7 +9,7 @@
 #include <QStatusBar>
 #include <QToolBar>
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include "../PhonemeLabelerKeys.h"
 
 namespace dstools {

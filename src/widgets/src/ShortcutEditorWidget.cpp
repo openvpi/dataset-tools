@@ -1,5 +1,5 @@
 #include <dstools/ShortcutEditorWidget.h>
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include <dstools/FramelessHelper.h>
 
 #include <QBoxLayout>

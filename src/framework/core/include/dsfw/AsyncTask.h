@@ -1,5 +1,5 @@
-#ifndef DSTOOLS_ASYNCTASK_H
-#define DSTOOLS_ASYNCTASK_H
+#ifndef DSFW_ASYNCTASK_H
+#define DSFW_ASYNCTASK_H
 
 #include <QObject>
 #include <QRunnable>
@@ -30,4 +30,4 @@ namespace dstools {
 
 } // namespace dstools
 
-#endif // DSTOOLS_ASYNCTASK_H
+#endif // DSFW_ASYNCTASK_H

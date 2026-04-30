@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dstools/WidgetsGlobal.h>
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 
 #include <QObject>
 #include <QList>

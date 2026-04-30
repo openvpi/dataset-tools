@@ -12,7 +12,7 @@
 #include <QKeyEvent>
 #include <QDebug>
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 
 #include <cmath>
 #include <algorithm>

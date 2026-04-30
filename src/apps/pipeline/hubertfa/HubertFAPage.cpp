@@ -12,8 +12,8 @@
 
 #include <dstools/PathSelector.h>
 #include <dstools/ModelLoadPanel.h>
-#include <dstools/JsonHelper.h>
-#include <dstools/AsyncTask.h>
+#include <dsfw/JsonHelper.h>
+#include <dsfw/AsyncTask.h>
 
 #include <hubert-infer/Hfa.h>
 #include "HfaTask.h"

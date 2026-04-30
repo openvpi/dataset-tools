@@ -4,7 +4,7 @@
 #include <QMessageBox>
 
 #include <dstools/AudioFileResolver.h>
-#include <dstools/JsonHelper.h>
+#include <dsfw/JsonHelper.h>
 
 namespace Minlabel {
 

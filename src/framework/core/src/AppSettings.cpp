@@ -1,5 +1,5 @@
-#include <dstools/AppSettings.h>
-#include <dstools/JsonHelper.h>
+#include <dsfw/AppSettings.h>
+#include <dsfw/JsonHelper.h>
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -44,7 +44,6 @@ void AppSettings::loadFromDisk() {
         qWarning() << "AppSettings:" << QString::fromStdString(error);
         m_data = nlohmann::json::object();
     }
-    // loadFile may return an array (valid JSON but not our format)
     if (!m_data.is_object()) {
         qWarning() << "AppSettings: root is not a JSON object in" << m_filePath;
         m_data = nlohmann::json::object();
@@ -52,7 +51,6 @@ void AppSettings::loadFromDisk() {
 }
 
 bool AppSettings::saveToDisk() {
-    // Use QSaveFile for Qt-native atomic writes (preferred in Qt context)
     QSaveFile file(m_filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qWarning() << "AppSettings: cannot open" << m_filePath << "for writing";

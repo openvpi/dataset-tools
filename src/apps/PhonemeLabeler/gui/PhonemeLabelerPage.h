@@ -9,7 +9,7 @@
 #include <QMenu>
 #include <QToolBar>
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include <dstools/PlayWidget.h>
 #include <dstools/ShortcutManager.h>
 

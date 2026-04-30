@@ -18,7 +18,7 @@
 ///   });
 /// @endcode
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 
 #include <QApplication>
 #include <QColor>

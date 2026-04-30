@@ -12,7 +12,7 @@
 #include <QShortcut>
 #include <QUndoStack>
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include <dstools/PlayWidget.h>
 #include <dstools/ShortcutManager.h>
 #include <dstools/ViewportController.h>

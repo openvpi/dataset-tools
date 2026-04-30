@@ -1,6 +1,6 @@
 #include <dstools/Theme.h>
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include <dstools/CommonKeys.h>
 
 #include <QActionGroup>

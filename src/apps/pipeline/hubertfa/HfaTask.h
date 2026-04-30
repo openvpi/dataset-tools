@@ -1,7 +1,7 @@
 #ifndef HFATHREAD_H
 #define HFATHREAD_H
 
-#include <dstools/AsyncTask.h>
+#include <dsfw/AsyncTask.h>
 
 #include <hubert-infer/Hfa.h>
 

@@ -1,5 +1,5 @@
 #pragma once
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 
 /// GameInfer settings key schema -- all persisted keys in one place.
 namespace GameInferKeys {

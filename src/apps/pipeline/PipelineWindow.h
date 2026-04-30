@@ -1,7 +1,7 @@
 #pragma once
 #include <QMainWindow>
 #include <QTabWidget>
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 
 class SlicerPage;
 class LyricFAPage;

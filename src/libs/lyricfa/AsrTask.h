@@ -1,7 +1,7 @@
 #ifndef ASRTHREAD_H
 #define ASRTHREAD_H
 
-#include <dstools/AsyncTask.h>
+#include <dsfw/AsyncTask.h>
 
 #include <QSharedPointer>
 

@@ -1,5 +1,5 @@
 #pragma once
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include <dstools/CommonKeys.h>
 
 /// PitchLabeler settings key schema -- all persisted keys in one place.

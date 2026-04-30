@@ -1,5 +1,5 @@
 #pragma once
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 
 /// @file CommonKeys.h
 /// @brief Common settings keys shared across multiple applications.

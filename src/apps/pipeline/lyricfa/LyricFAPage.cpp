@@ -8,7 +8,7 @@
 
 #include <dstools/ModelLoadPanel.h>
 #include <dstools/PathSelector.h>
-#include <dstools/AsyncTask.h>
+#include <dsfw/AsyncTask.h>
 
 #include "Asr.h"
 #include "AsrTask.h"

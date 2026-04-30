@@ -6,7 +6,7 @@
 #include <QProgressBar>
 #include <QVBoxLayout>
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 
 class MainWidget;
 

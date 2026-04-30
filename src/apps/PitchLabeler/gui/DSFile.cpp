@@ -1,6 +1,6 @@
 #include "DSFile.h"
 
-#include <dstools/JsonHelper.h>
+#include <dsfw/JsonHelper.h>
 #include <QStringList>
 
 #include <cmath>

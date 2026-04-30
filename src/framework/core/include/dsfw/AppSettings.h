@@ -2,40 +2,6 @@
 
 /// @file AppSettings.h
 /// @brief Type-safe, reactive, JSON-backed persistent settings system.
-///
-/// Design goals:
-///   1. **Type safety** -- each setting is a compile-time typed key, no magic strings at call sites
-///   2. **Reactive** -- per-key `valueChanged` signal via Qt signal/slot
-///   3. **Immediate persistence** -- every `set()` writes JSON to disk immediately
-///   4. **Schema-driven** -- all keys, types, and defaults defined in one place per app
-///   5. **Zero QSettings dependency** -- pure nlohmann::json + file I/O
-///
-/// Usage example:
-/// @code
-///   // 1. Define your settings schema (typically in a header):
-///   namespace MyAppKeys {
-///       inline const dstools::SettingsKey<QString> LastDir("General/lastDir", "");
-///       inline const dstools::SettingsKey<int>     LastTab("General/lastTab", 0);
-///       inline const dstools::SettingsKey<double>  Threshold("Processing/threshold", 0.2);
-///       inline const dstools::SettingsKey<bool>    SnapToKey("F0Widget/snapToKey", false);
-///       inline const dstools::SettingsKey<QString> ShortcutOpen("Shortcuts/open", "Ctrl+O");
-///   }
-///
-///   // 2. Create the settings store (one per app):
-///   dstools::AppSettings settings("MyApp");      // loads <appDir>/config/MyApp.json
-///
-///   // 3. Read:
-///   QString dir = settings.get(MyAppKeys::LastDir);
-///   int tab     = settings.get(MyAppKeys::LastTab);
-///
-///   // 4. Write (automatically persists to disk):
-///   settings.set(MyAppKeys::LastDir, QString("/some/path"));
-///
-///   // 5. React to changes (auto-disconnects when widget is destroyed):
-///   settings.observe(MyAppKeys::Threshold, [](double val) {
-///       qDebug() << "Threshold changed to" << val;
-///   }, myWidget);
-/// @endcode
 
 #include <QCoreApplication>
 #include <QDir>
@@ -45,7 +11,7 @@
 #include <QTimer>
 #include <QVariant>
 
-#include <dstools/JsonHelper.h>
+#include <dsfw/JsonHelper.h>
 #include <nlohmann/json.hpp>
 
 #include <functional>
@@ -57,13 +23,6 @@
 
 namespace dstools {
 
-// ─── SettingsKey ──────────────────────────────────────────────────────────
-
-/// A typed, named settings key with a default value.
-/// The `path` uses '/' as a logical separator (e.g. "General/lastDir").
-/// In the JSON file this maps to nested objects: { "General": { "lastDir": "..." } }
-///
-/// Keys are typically declared as `inline const` at namespace scope in a schema header.
 template <typename T>
 struct SettingsKey {
     const char *path;
@@ -73,11 +32,8 @@ struct SettingsKey {
         : path(path), defaultValue(std::move(defaultValue)) {}
 };
 
-// ─── JSON conversion helpers ──────────────────────────────────────────────
-
 namespace detail {
 
-    // --- to JSON ---
     inline nlohmann::json toJson(const QString &v) { return v.toStdString(); }
     inline nlohmann::json toJson(const std::string &v) { return v; }
     inline nlohmann::json toJson(int v) { return v; }
@@ -86,7 +42,6 @@ namespace detail {
     inline nlohmann::json toJson(bool v) { return v; }
     inline nlohmann::json toJson(const QKeySequence &v) { return v.toString().toStdString(); }
 
-    // --- from JSON ---
     template <typename T>
     T fromJson(const nlohmann::json &j, const T &fallback);
 
@@ -132,8 +87,6 @@ namespace detail {
         return fallback;
     }
 
-    /// Set a value at a "/"-separated path, creating intermediate objects as needed.
-    /// Does nothing for empty paths.
     inline void assign(nlohmann::json &root, const char *path, const nlohmann::json &value) {
         if (!path || path[0] == '\0')
             return;
@@ -158,25 +111,13 @@ namespace detail {
 
 } // namespace detail
 
-// ─── AppSettings ──────────────────────────────────────────────────────────
-
-/// Persistent, reactive settings store backed by a single JSON file.
-///
-/// Thread safety: all public methods acquire m_mutex. The file I/O is
-/// guarded by the same mutex, so concurrent writes are serialized.
-/// Signal emission happens outside the lock.
 class AppSettings : public QObject {
     Q_OBJECT
 
 public:
-    /// @param appName  Used to derive the file path: <appDir>/config/<appName>.json
-    /// @param parent   QObject parent (optional)
     explicit AppSettings(const QString &appName, QObject *parent = nullptr);
     ~AppSettings() override;
 
-    // ── Typed access ──
-
-    /// Read a typed value. Returns the key's default if not present in JSON.
     template <typename T>
     T get(const SettingsKey<T> &key) const {
         std::lock_guard lock(m_mutex);
@@ -185,7 +126,6 @@ public:
         return key.defaultValue;
     }
 
-    /// Write a typed value. Persists to disk immediately. Emits change signal if value differs.
     template <typename T>
     void set(const SettingsKey<T> &key, const T &value) {
         bool changed = false;
@@ -206,14 +146,6 @@ public:
         }
     }
 
-    // ── Observation ──
-
-    /// Register a callback invoked when a specific key changes.
-    /// The callback receives the new value with the correct type.
-    /// Returns a connection ID that can be used with removeObserver().
-    ///
-    /// If @p context is non-null, the observer is automatically removed when
-    /// the context QObject is destroyed (prevents dangling callbacks).
     template <typename T>
     int observe(const SettingsKey<T> &key, std::function<void(const T &)> callback,
                 QObject *context = nullptr) {
@@ -230,10 +162,7 @@ public:
         return id;
     }
 
-    /// Remove an observer by its connection ID.
     void removeObserver(int id);
-
-    // ── Convenience: QKeySequence shortcuts ──
 
     QKeySequence shortcut(const SettingsKey<QString> &key) const {
         return QKeySequence(get(key));
@@ -243,17 +172,12 @@ public:
         set(key, seq.toString());
     }
 
-    // ── Bulk / migration ──
-
-    /// Check if a key has been explicitly stored (not just default).
     template <typename T>
     bool contains(const SettingsKey<T> &key) const {
         std::lock_guard lock(m_mutex);
         return JsonHelper::resolve(m_data, key.path) != nullptr;
     }
 
-    /// Remove a key from storage. Next get() will return the key's default.
-    /// Emits keyChanged if the key was present.
     template <typename T>
     void remove(const SettingsKey<T> &key) {
         bool removed = false;
@@ -286,17 +210,11 @@ public:
         }
     }
 
-    /// Force re-read from disk (e.g., if external tool edited the file).
     void reload();
-
-    /// Force write to disk (normally not needed since set() writes immediately).
     void flush();
-
-    /// Returns the file path used for persistence.
     QString filePath() const { return m_filePath; }
 
 signals:
-    /// Emitted when any key changes. The argument is the key path string.
     void keyChanged(const QString &keyPath);
 
 private:
@@ -319,7 +237,7 @@ private:
             std::lock_guard lock(m_mutex);
             auto it = m_observers.find(std::string(path));
             if (it != m_observers.end())
-                entries = it->second;  // copy under lock
+                entries = it->second;
         }
         for (auto &entry : entries)
             entry.callback(&value);

@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <dstools/JsonHelper.h>
+#include <dsfw/JsonHelper.h>
 #include <wolf-midi/MidiFile.h>
 
 GameInferService::GameInferService(QObject *parent) : QObject(parent) {

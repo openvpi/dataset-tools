@@ -7,7 +7,7 @@
 #include <QSpinBox>
 #include <QWidget>
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include <dstools/GpuSelector.h>
 #include <dstools/PathSelector.h>
 #include <dstools/RunProgressRow.h>

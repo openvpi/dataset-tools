@@ -9,7 +9,7 @@
 #include "Common.h"
 #include "TextWidget.h"
 
-#include <dstools/AppSettings.h>
+#include <dsfw/AppSettings.h>
 #include <dstools/FileProgressTracker.h>
 #include <dstools/FileStatusDelegate.h>
 #include <dstools/PlayWidget.h>

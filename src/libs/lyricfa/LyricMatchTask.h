@@ -1,7 +1,7 @@
 #ifndef LYRICMATCHTASK_H
 #define LYRICMATCHTASK_H
 
-#include <dstools/AsyncTask.h>
+#include <dsfw/AsyncTask.h>
 
 #include "MatchLyric.h"
 
