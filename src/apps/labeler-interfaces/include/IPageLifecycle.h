@@ -31,5 +31,5 @@ public:
 
 } // namespace dstools::labeler
 
-#define LABELER_PAGE_LIFECYCLE_IID "dstools.labeler.IPageLifecycle"
+#define LABELER_PAGE_LIFECYCLE_IID "dstools.labeler.IPageLifecycle/1.0"
 Q_DECLARE_INTERFACE(dstools::labeler::IPageLifecycle, LABELER_PAGE_LIFECYCLE_IID)

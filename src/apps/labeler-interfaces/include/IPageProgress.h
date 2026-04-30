@@ -29,5 +29,5 @@ public:
 
 } // namespace dstools::labeler
 
-#define LABELER_PAGE_PROGRESS_IID "dstools.labeler.IPageProgress"
+#define LABELER_PAGE_PROGRESS_IID "dstools.labeler.IPageProgress/1.0"
 Q_DECLARE_INTERFACE(dstools::labeler::IPageProgress, LABELER_PAGE_PROGRESS_IID)

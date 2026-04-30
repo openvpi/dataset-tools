@@ -38,5 +38,5 @@ public:
 
 } // namespace dstools::labeler
 
-#define LABELER_PAGE_ACTIONS_IID "dstools.labeler.IPageActions"
+#define LABELER_PAGE_ACTIONS_IID "dstools.labeler.IPageActions/1.0"
 Q_DECLARE_INTERFACE(dstools::labeler::IPageActions, LABELER_PAGE_ACTIONS_IID)
