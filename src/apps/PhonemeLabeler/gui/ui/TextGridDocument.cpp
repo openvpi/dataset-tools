@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDebug>
+#include <QMessageBox>
 #include <QStringDecoder>
 
 #include <sstream>
@@ -18,6 +19,7 @@ TextGridDocument::TextGridDocument(QObject *parent)
 bool TextGridDocument::load(const QString &path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(nullptr, tr("Error"), tr("Failed to open file: %1").arg(file.errorString()));
         return false;
     }
 
@@ -99,6 +101,7 @@ bool TextGridDocument::save(const QString &path) {
 
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QMessageBox::warning(nullptr, tr("Error"), tr("Failed to save file: %1").arg(file.errorString()));
             return false;
         }
         file.write(QByteArray::fromStdString(content));

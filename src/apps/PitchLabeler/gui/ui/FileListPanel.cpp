@@ -8,6 +8,7 @@
 #include <QJsonObject>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QMessageBox>
 
 #include <dstools/FileProgressTracker.h>
 
@@ -177,6 +178,7 @@ namespace dstools {
                     file.close();
                 } else {
                     qWarning() << "PitchLabeler: Failed to save state file:" << stateFile;
+                    QMessageBox::warning(this, tr("Error"), tr("Failed to save file: %1").arg(file.errorString()));
                 }
             }
 
@@ -209,6 +211,9 @@ namespace dstools {
                             m_savedFiles.insert(fullPath);
                         }
                     }
+                } else if (QFile::exists(stateFile)) {
+                    qWarning() << "PitchLabeler: State file exists but cannot be opened:" << stateFile;
+                    QMessageBox::warning(this, tr("Error"), tr("Failed to open state file: %1").arg(file.errorString()));
                 } else {
                     qDebug() << "PitchLabeler: No saved state file found (first run or file removed):" << stateFile;
                 }

@@ -476,6 +476,7 @@ void PhonemeLabelerPage::onFileSelected(const QString &path) {
                 m_spectrogramWidget->setAudioData(monoSamples, sampleRate);
             } else {
                 qWarning() << "PhonemeLabeler: Failed to open audio file for decoding:" << audioFilePath;
+                QMessageBox::warning(this, tr("Error"), tr("Failed to open audio file: %1").arg(audioFilePath));
             }
     }
 
