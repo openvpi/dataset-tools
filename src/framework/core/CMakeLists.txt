@@ -6,6 +6,7 @@ set(DSFW_CORE_SOURCES)
 set(DSFW_CORE_HEADERS)
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})
+add_library(dsfw::core ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
