@@ -4,6 +4,7 @@
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QMenu>
 #include <QMessageBox>
 
 #include <dstools/AppInit.h>
@@ -153,9 +154,9 @@ int main(int argc, char *argv[]) {
 
     // ── Global menu actions (File menu) ──────────────────────────────────
 
-    QList<QAction *> globalActions;
+    auto *fileMenu = new QMenu(QObject::tr("&File"), &shell);
 
-    auto *openAction = new QAction(QObject::tr("Open Project..."), &shell);
+    auto *openAction = fileMenu->addAction(QObject::tr("Open Project..."));
     QObject::connect(openAction, &QAction::triggered, &shell, [&]() {
         auto path = QFileDialog::getOpenFileName(
             &shell, QObject::tr("Open Project"), QString(),
@@ -163,35 +164,27 @@ int main(int argc, char *argv[]) {
         if (!path.isEmpty())
             loadProject(path);
     });
-    globalActions << openAction;
 
-    auto *saveAction = new QAction(QObject::tr("Save Project"), &shell);
+    auto *saveAction = fileMenu->addAction(QObject::tr("Save Project"));
     saveAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
     QObject::connect(saveAction, &QAction::triggered, &shell, [&]() { saveProject(); });
-    globalActions << saveAction;
 
-    auto *saveAsAction = new QAction(QObject::tr("Save Project As..."), &shell);
+    auto *saveAsAction = fileMenu->addAction(QObject::tr("Save Project As..."));
     QObject::connect(saveAsAction, &QAction::triggered, &shell, [&]() { saveProjectAs(); });
-    globalActions << saveAsAction;
 
-    auto *separator1 = new QAction(&shell);
-    separator1->setSeparator(true);
-    globalActions << separator1;
+    fileMenu->addSeparator();
 
-    auto *setDirAction = new QAction(QObject::tr("Set Working Directory..."), &shell);
+    auto *setDirAction = fileMenu->addAction(QObject::tr("Set Working Directory..."));
     QObject::connect(setDirAction, &QAction::triggered, &shell, [&]() {
         auto dir = QFileDialog::getExistingDirectory(
             &shell, QObject::tr("Select Working Directory"), shell.workingDirectory());
         if (!dir.isEmpty())
             shell.setWorkingDirectory(dir);
     });
-    globalActions << setDirAction;
 
-    auto *separator2 = new QAction(&shell);
-    separator2->setSeparator(true);
-    globalActions << separator2;
+    fileMenu->addSeparator();
 
-    auto *cleanupAction = new QAction(QObject::tr("Clean Working Directory..."), &shell);
+    auto *cleanupAction = fileMenu->addAction(QObject::tr("Clean Working Directory..."));
     QObject::connect(cleanupAction, &QAction::triggered, &shell, [&]() {
         auto workingDir = shell.workingDirectory();
         if (workingDir.isEmpty()) {
@@ -237,18 +230,14 @@ int main(int argc, char *argv[]) {
                 .arg(totalFiles)
                 .arg(totalSize / (1024 * 1024)));
     });
-    globalActions << cleanupAction;
 
-    auto *separator3 = new QAction(&shell);
-    separator3->setSeparator(true);
-    globalActions << separator3;
+    fileMenu->addSeparator();
 
-    auto *exitAction = new QAction(QObject::tr("Exit"), &shell);
+    auto *exitAction = fileMenu->addAction(QObject::tr("Exit"));
     exitAction->setShortcut(QKeySequence::Quit);
     QObject::connect(exitAction, &QAction::triggered, &shell, &QWidget::close);
-    globalActions << exitAction;
 
-    shell.addGlobalMenuActions(globalActions);
+    shell.addGlobalMenuActions({fileMenu->menuAction()});
 
     // ── Show and handle command-line argument ────────────────────────────
 

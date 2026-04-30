@@ -53,6 +53,7 @@ find_package(FFTW3 CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-widgets
+    dstools-domain
     dstools-audio
     labeler-interfaces
     textgrid

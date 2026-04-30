@@ -21,6 +21,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     pipeline-pages
+    dstools-domain
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

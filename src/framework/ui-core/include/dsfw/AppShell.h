@@ -7,6 +7,7 @@
 class QStackedWidget;
 class QStatusBar;
 class QAction;
+class QMenuBar;
 
 namespace dsfw {
 
@@ -59,6 +60,7 @@ private:
     QVector<PageEntry> m_pages;
     QList<QAction *> m_globalActions;
     QString m_workingDir;
+    QMenuBar *m_menuBar = nullptr; // persistent — never replaced, only cleared/repopulated
 };
 
 } // namespace dsfw

@@ -73,6 +73,8 @@ public:
         m_titleLabel = new QLabel(this);
         m_titleLabel->setAlignment(Qt::AlignCenter);
         m_titleLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+        m_titleLabel->setAttribute(Qt::WA_NoSystemBackground);
+        m_titleLabel->setStyleSheet(QStringLiteral("background: transparent;"));
 
         connect(m_minBtn, &QToolButton::clicked, window, &QWidget::showMinimized);
         connect(m_maxBtn, &QToolButton::clicked, this, [this]() {
@@ -107,6 +109,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override {
         QWidget::resizeEvent(event);
         m_titleLabel->setGeometry(0, 0, width(), height());
+        m_titleLabel->lower(); // keep behind menuBar and buttons
     }
 
 private:
@@ -165,11 +168,16 @@ void FramelessHelper::apply(QMainWindow *window) {
     window->setAttribute(Qt::WA_DontCreateNativeAncestors);
 
     auto *agent = new QWK::WidgetWindowAgent(window);
-    agent->setup(window);
+    if (!agent->setup(window)) {
+        // QWindowKit setup failed — fall back to native title bar so the window still shows
+        qWarning() << "FramelessHelper: QWindowKit setup failed, falling back to native frame";
+        delete agent;
+        return;
+    }
 
     auto *titleBar = new TitleBar(window);
 
-    if (auto *menuBar = window->menuBar(); menuBar && !menuBar->actions().isEmpty()) {
+    if (auto *menuBar = window->menuBar()) {
         auto *layout = qobject_cast<QHBoxLayout *>(titleBar->layout());
         if (layout) {
             layout->insertWidget(0, menuBar);
@@ -254,7 +262,11 @@ void FramelessHelper::applyToDialog(QDialog *dialog) {
     dialog->setAttribute(Qt::WA_DontCreateNativeAncestors);
 
     auto *agent = new QWK::WidgetWindowAgent(dialog);
-    agent->setup(dialog);
+    if (!agent->setup(dialog)) {
+        qWarning() << "FramelessHelper: QWindowKit setup failed for dialog, falling back to native frame";
+        delete agent;
+        return;
+    }
 
     auto *titleBar = new DialogTitleBar(dialog);
 

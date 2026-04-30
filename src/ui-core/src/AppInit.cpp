@@ -29,6 +29,9 @@ void AppInit::registerPostInitHook(InitHook hook) {
 }
 
 bool AppInit::init(QApplication &app, bool initCrashHandler) {
+    // 0. Required by QWindowKit (frameless window) — must be set before any widget is created
+    QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+
     // 1. Root privilege check
 #ifdef Q_OS_WIN
     if (IsUserAnAdmin() && !app.arguments().contains("--allow-root")) {
