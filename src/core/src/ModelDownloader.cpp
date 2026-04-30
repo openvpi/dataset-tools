@@ -35,7 +35,10 @@ bool ModelDownloader::startDownload(const QString &modelId, const QUrl &url, con
     m_statuses.insert(modelId, DownloadStatus::Downloading);
 
     connect(reply, &QNetworkReply::readyRead, this, [file, reply]() {
-        file->write(reply->readAll());
+        const QByteArray data = reply->readAll();
+        if (file->write(data) != data.size()) {
+            qWarning() << "ModelDownloader: write error for" << file->fileName();
+        }
     });
 
     if (progress) {
