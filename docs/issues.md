@@ -108,9 +108,11 @@
 **类型**: Tech Debt | **优先级**: P2 | **估计工作量**: M (2-8h)
 
 **验收标准**:
-- [ ] 确认 12 个 widget 类正确使用导出宏
-- [ ] 确认内部实现类未被导出
+- [x] 确认 12 个 widget 类正确使用导出宏
+- [x] 确认内部实现类未被导出
 - [ ] 三平台编译验证
+
+> **审查结果**: 审查全部 12 个 widget 类 + 2 个公开 struct（GpuInfo、ViewportState、ShortcutEntry）。发现 `GpuInfo` 缺少 `DSTOOLS_WIDGETS_API` 宏，已修复。其余类/struct 均正确导出，无内部类被误导出。
 
 ---
 
@@ -123,6 +125,8 @@
 ### Issue #20: dstools-infer-common 与框架层解耦
 
 **类型**: Refactor | **优先级**: P2 | **估计工作量**: M (2-8h)
+
+> **已完成**: T-0.3 已移除 Qt 依赖，dstools-infer-common 现仅依赖 dstools-types（header-only）+ onnxruntime。
 
 ---
 
@@ -173,6 +177,8 @@
 ### Issue #27: clang-tidy 和静态分析集成到 CI
 
 **类型**: Feature | **优先级**: P3 | **估计工作量**: M (2-8h)
+
+> **进展**: `.clang-tidy` 配置文件已创建（bugprone/modernize/readability/performance 检查）。CI 集成待完成——需要 CMake configure 生成 `compile_commands.json` 后才能在 CI 中运行 clang-tidy。
 
 ---
 

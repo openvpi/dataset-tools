@@ -1,0 +1,20 @@
+---
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity,
+  performance-*,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-prefer-member-initializer
+WarningsAsErrors: ''
+HeaderFilterRegex: 'src/(framework|domain|widgets|ui-core|types|libs|infer/common)/.*'
+FormatStyle: file
