@@ -8,8 +8,10 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QLabel>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QProxyStyle>
 #include <QShortcut>
@@ -122,6 +124,158 @@ namespace dstools {
 
         bool PitchLabelerPage::saveAll() {
             return saveAllFiles();
+        }
+
+        QMenuBar *PitchLabelerPage::createMenuBar(QWidget *parent) {
+            auto *bar = new QMenuBar(parent);
+
+            // ---- 文件 ----
+            auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
+
+            auto *actOpenDir = new QAction(QStringLiteral("打开工作目录(&O)..."), bar);
+            actOpenDir->setStatusTip(QStringLiteral("打开包含 .ds 文件的目录"));
+            fileMenu->addAction(actOpenDir);
+            connect(actOpenDir, &QAction::triggered, this, &PitchLabelerPage::openDirectory);
+
+            auto *actCloseDir = new QAction(QStringLiteral("关闭工作目录(&C)"), bar);
+            actCloseDir->setStatusTip(QStringLiteral("关闭当前工作目录"));
+            fileMenu->addAction(actCloseDir);
+            connect(actCloseDir, &QAction::triggered, this, &PitchLabelerPage::closeDirectory);
+
+            fileMenu->addSeparator();
+            fileMenu->addAction(m_actSave);
+            fileMenu->addAction(m_actSaveAll);
+            fileMenu->addSeparator();
+
+            auto *actExit = new QAction(QStringLiteral("退出(&X)"), bar);
+            actExit->setStatusTip(QStringLiteral("退出应用程序"));
+            fileMenu->addAction(actExit);
+            connect(actExit, &QAction::triggered, this, [this]() {
+                if (auto *w = window()) w->close();
+            });
+
+            // ---- 编辑 ----
+            auto *editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
+            editMenu->addAction(m_actUndo);
+            editMenu->addAction(m_actRedo);
+
+            // ---- 视图 ----
+            auto *viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
+            viewMenu->addAction(m_actZoomIn);
+            viewMenu->addAction(m_actZoomOut);
+            viewMenu->addAction(m_actZoomReset);
+            viewMenu->addSeparator();
+            dsfw::Theme::instance().populateThemeMenu(viewMenu);
+
+            // ---- 工具 ----
+            auto *toolsMenu = bar->addMenu(QStringLiteral("工具(&T)"));
+            toolsMenu->addAction(m_actABCompare);
+            toolsMenu->addSeparator();
+            {
+                auto *shortcutAction = new QAction(QStringLiteral("快捷键设置(&K)..."), bar);
+                toolsMenu->addAction(shortcutAction);
+                connect(shortcutAction, &QAction::triggered, this, [this]() {
+                    m_shortcutManager->showEditor(this);
+                });
+            }
+
+            // ---- 帮助 ----
+            auto *helpMenu = bar->addMenu(QStringLiteral("帮助(&H)"));
+            auto *actAbout = new QAction(QStringLiteral("关于(&A)"), bar);
+            actAbout->setStatusTip(QStringLiteral("关于 DiffSinger 音高标注器"));
+            helpMenu->addAction(actAbout);
+            connect(actAbout, &QAction::triggered, this, []() {
+                QMessageBox::about(nullptr, QStringLiteral("关于 DiffSinger 音高标注器"),
+                                   QStringLiteral("DiffSinger 音高标注器\n版本 0.1.0\n\n"
+                                   "DiffSinger 数据标注工作流的音高标注编辑器。"));
+            });
+
+            // Bind shortcuts
+            m_shortcutManager->bind(actOpenDir, PitchLabelerKeys::ShortcutOpen, QStringLiteral("Open Directory"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_actSave, PitchLabelerKeys::ShortcutSave, QStringLiteral("Save"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_actSaveAll, PitchLabelerKeys::ShortcutSaveAll, QStringLiteral("Save All"), QStringLiteral("File"));
+            m_shortcutManager->bind(actExit, PitchLabelerKeys::ShortcutExit, QStringLiteral("Exit"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_actUndo, PitchLabelerKeys::ShortcutUndo, QStringLiteral("Undo"), QStringLiteral("Edit"));
+            m_shortcutManager->bind(m_actRedo, PitchLabelerKeys::ShortcutRedo, QStringLiteral("Redo"), QStringLiteral("Edit"));
+            m_shortcutManager->bind(m_actZoomIn, PitchLabelerKeys::ShortcutZoomIn, QStringLiteral("Zoom In"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_actZoomOut, PitchLabelerKeys::ShortcutZoomOut, QStringLiteral("Zoom Out"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_actZoomReset, PitchLabelerKeys::ShortcutZoomReset, QStringLiteral("Reset Zoom"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_actABCompare, PitchLabelerKeys::ShortcutABCompare, QStringLiteral("A/B Compare"), QStringLiteral("Tools"));
+            m_shortcutManager->applyAll();
+
+            return bar;
+        }
+
+        QWidget *PitchLabelerPage::createStatusBarContent(QWidget *parent) {
+            auto *container = new QWidget(parent);
+            auto *layout = new QHBoxLayout(container);
+            layout->setContentsMargins(0, 0, 0, 0);
+
+            auto *statusFile = new QLabel(QStringLiteral("未加载文件"));
+            statusFile->setMinimumWidth(160);
+            layout->addWidget(statusFile);
+
+            auto *statusPosition = new QLabel("00:00.000");
+            statusPosition->setMinimumWidth(100);
+            layout->addWidget(statusPosition);
+
+            auto *statusZoom = new QLabel("100%");
+            statusZoom->setMinimumWidth(60);
+            layout->addWidget(statusZoom);
+
+            auto *statusTool = new QLabel(QStringLiteral("工具: 选择"));
+            statusTool->setMinimumWidth(100);
+            layout->addWidget(statusTool);
+
+            layout->addStretch();
+
+            auto *statusNotes = new QLabel(QStringLiteral("音符数: 0"));
+            statusNotes->setMinimumWidth(80);
+            layout->addWidget(statusNotes);
+
+            // Connect signals to update labels
+            connect(this, &PitchLabelerPage::fileStatusChanged, statusFile, [statusFile](const QString &name) {
+                statusFile->setText(name.isEmpty() ? QStringLiteral("未加载文件") : name);
+            });
+            connect(this, &PitchLabelerPage::positionChanged, statusPosition, [statusPosition](double sec) {
+                int minutes = static_cast<int>(sec) / 60;
+                double seconds = sec - minutes * 60;
+                statusPosition->setText(
+                    QString("%1:%2").arg(minutes, 2, 10, QChar('0')).arg(seconds, 6, 'f', 3, QChar('0')));
+            });
+            connect(this, &PitchLabelerPage::zoomChanged, statusZoom, [statusZoom](int percent) {
+                statusZoom->setText(QString::number(percent) + "%");
+            });
+            connect(this, &PitchLabelerPage::noteCountChanged, statusNotes, [statusNotes](int count) {
+                statusNotes->setText(QStringLiteral("音符数: ") + QString::number(count));
+            });
+            connect(this, &PitchLabelerPage::toolModeChanged, statusTool, [statusTool](int mode) {
+                switch (mode) {
+                    case 0: statusTool->setText(QStringLiteral("工具: 选择")); break;
+                    case 1: statusTool->setText(QStringLiteral("工具: 颤音调制")); break;
+                    case 2: statusTool->setText(QStringLiteral("工具: 音高偏移")); break;
+                    default: break;
+                }
+            });
+
+            return container;
+        }
+
+        QString PitchLabelerPage::windowTitle() const {
+            QString title = QStringLiteral("DiffSinger 音高标注器");
+            if (!m_workingDirectory.isEmpty() && !m_currentFilePath.isEmpty()) {
+                QString fileName = QFileInfo(m_currentFilePath).fileName();
+                title = fileName + (hasUnsavedChanges() ? " *" : "") + " - " + title;
+            }
+            return title;
+        }
+
+        void PitchLabelerPage::openDirectory() {
+            QString dir =
+                QFileDialog::getExistingDirectory(this, QStringLiteral("打开工作目录"), QString(), QFileDialog::ShowDirsOnly);
+            if (dir.isEmpty())
+                return;
+            setWorkingDirectory(dir);
         }
 
         void PitchLabelerPage::saveConfig() {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <IPageActions.h>
+
 #include <QWidget>
 #include <QAction>
 #include <QActionGroup>
@@ -34,23 +36,31 @@ class FileListPanel;
 
 /// Reusable page widget containing all PitchLabeler UI and logic.
 /// MainWindow becomes a thin shell providing menus, status bar, and window chrome.
-class PitchLabelerPage : public QWidget {
+class PitchLabelerPage : public QWidget, public dstools::labeler::IPageActions {
     Q_OBJECT
+    Q_INTERFACES(dstools::labeler::IPageActions)
 
 public:
     explicit PitchLabelerPage(QWidget *parent = nullptr);
     ~PitchLabelerPage() override;
 
-    void setWorkingDirectory(const QString &dir);
+    void setWorkingDirectory(const QString &dir) override;
     void closeDirectory();
-    [[nodiscard]] QString workingDirectory() const { return m_workingDirectory; }
+    [[nodiscard]] QString workingDirectory() const override { return m_workingDirectory; }
 
-    [[nodiscard]] QList<QAction *> editActions() const;   // Undo, Redo, Save, SaveAll
-    [[nodiscard]] QList<QAction *> viewActions() const;   // ZoomIn, ZoomOut, ZoomReset
-    [[nodiscard]] QList<QAction *> toolActions() const;   // ABCompare
-    [[nodiscard]] bool hasUnsavedChanges() const;
-    bool save();
+    [[nodiscard]] QList<QAction *> editActions() const override;   // Undo, Redo, Save, SaveAll
+    [[nodiscard]] QList<QAction *> viewActions() const override;   // ZoomIn, ZoomOut, ZoomReset
+    [[nodiscard]] QList<QAction *> toolActions() const override;   // ABCompare
+    [[nodiscard]] bool hasUnsavedChanges() const override;
+    bool save() override;
     bool saveAll();
+
+    // IPageActions
+    QMenuBar *createMenuBar(QWidget *parent) override;
+    QWidget *createStatusBarContent(QWidget *parent) override;
+    QString windowTitle() const override;
+
+    void openDirectory();
 
     // Access for MainWindow shortcut binding
     [[nodiscard]] QAction *saveAction() const { return m_actSave; }
