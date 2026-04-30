@@ -92,7 +92,7 @@ namespace dstools::infer {
             return session;
         } catch (const Ort::Exception &e) {
             if (errorMsg) {
-                *errorMsg = QString::fromStdString(e.what());
+                *errorMsg = e.what();
             }
             return nullptr;
         }

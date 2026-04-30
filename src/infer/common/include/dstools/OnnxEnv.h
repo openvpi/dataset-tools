@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QString>
 #include <dstools/ExecutionProvider.h>
 #include <memory>
 #include <onnxruntime_cxx_api.h>
@@ -24,7 +23,7 @@ namespace dstools::infer {
         /// @return Session on success, nullptr on failure
         static std::unique_ptr<Ort::Session> createSession(const std::wstring &modelPath,
                                                            ExecutionProvider provider = ExecutionProvider::CPU,
-                                                           int deviceId = 0, QString *errorMsg = nullptr);
+                                                           int deviceId = 0, std::string *errorMsg = nullptr);
 
     private:
         OnnxEnv() = delete;

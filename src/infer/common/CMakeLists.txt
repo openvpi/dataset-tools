@@ -24,7 +24,6 @@ target_link_directories(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME} PUBLIC
         dstools-types
         onnxruntime
-        Qt${QT_VERSION_MAJOR}::Core
 )
 
 # Export/Install so downstream export sets can reference this target
