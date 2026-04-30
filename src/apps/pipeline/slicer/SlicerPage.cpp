@@ -188,11 +188,11 @@ void SlicerPage::runTask() {
         auto path = item->data(Qt::UserRole + 1).toString();
         auto *runnable = new WorkThread(
             path, m_outputDir->path(),
-            m_lineThreshold->text().toDouble(),
-            m_lineMinLength->text().toLongLong(),
-            m_lineMinInterval->text().toLongLong(),
-            m_lineHopSize->text().toLongLong(),
-            m_lineMaxSilence->text().toLongLong(),
+            threshold,
+            minLength,
+            minInterval,
+            hopSize,
+            maxSilKept,
             m_cmbOutputFormat->currentData().toInt(),
             saveAudio, saveMarkers, loadMarkers, overwriteMarkers,
             m_spnSuffixDigits->value(), i);
