@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(Qt6 COMPONENTS Core Gui Network Widgets)
+find_dependency(nlohmann_json CONFIG)
+find_dependency(QWindowKit CONFIG)
+find_dependency(dstools-types CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/dsfwTargets.cmake")
+
+check_required_components(dsfw)

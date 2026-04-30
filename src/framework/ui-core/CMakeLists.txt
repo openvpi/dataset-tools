@@ -30,6 +30,7 @@ add_library(dsfw::ui-core ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -41,3 +42,20 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 find_package(QWindowKit CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC QWindowKit::Widgets)
+
+# Install rules
+include(GNUInstallDirs)
+
+install(TARGETS ${PROJECT_NAME}
+    EXPORT dsfwTargets
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+)
+
+install(DIRECTORY include/
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+install(FILES ${DSFW_UI_CORE_RESOURCES}
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/dsfw"
+)
