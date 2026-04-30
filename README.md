@@ -137,6 +137,28 @@ cmake --build build --target install
 | Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestAudioUtil.exe` |
 | Shared libraries | `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `rmvpe-infer.dll`, `hubert-infer.dll` |
 
+## Framework (dsfw)
+
+The project includes a reusable C++17/Qt6 desktop application framework (`dsfw`) that can be consumed independently via `find_package(dsfw)`. The framework provides:
+
+- **dsfw-core** — Type-safe settings, JSON utilities, service locator, document/model/G2P/export interfaces, file I/O, async tasks
+- **dsfw-ui-core** — AppShell unified window shell (single/multi-page modes), theme system, frameless window helper, icon navigation bar, page lifecycle interfaces
+
+After building and installing the project, external projects can use:
+
+```cmake
+find_package(dsfw REQUIRED)
+target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
+```
+
+### Framework Documentation
+
+| Document | Description |
+|---|---|
+| [Getting Started](docs/framework-getting-started.md) | Quick start guide with hello world examples |
+| [Architecture](docs/framework-architecture.md) | Detailed architecture design and layer descriptions |
+| [Migration Guide](docs/migration-guide.md) | How to migrate from QMainWindow to AppShell |
+
 ## Libraries
 
 ### Related Projects
