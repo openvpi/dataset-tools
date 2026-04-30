@@ -66,9 +66,9 @@ public:
         m_maxBtn = new TitleBarButton(TitleBarButton::Maximize, this);
         m_closeBtn = new TitleBarButton(TitleBarButton::Close, this);
 
-        layout->addWidget(m_minBtn);
-        layout->addWidget(m_maxBtn);
-        layout->addWidget(m_closeBtn);
+        layout->addWidget(m_minBtn, 0, Qt::AlignTop);
+        layout->addWidget(m_maxBtn, 0, Qt::AlignTop);
+        layout->addWidget(m_closeBtn, 0, Qt::AlignTop);
 
         m_titleLabel = new QLabel(this);
         m_titleLabel->setAlignment(Qt::AlignCenter);
@@ -85,7 +85,9 @@ public:
         });
         connect(m_closeBtn, &QToolButton::clicked, window, &QWidget::close);
 
-        setFixedHeight(32);
+        // Use minimum height instead of fixed so the title bar can grow
+        // when QMenuBar wraps items to a second row on narrow windows.
+        setMinimumHeight(32);
         setAutoFillBackground(true);
         updateTitle();
         applyTheme();
@@ -181,7 +183,7 @@ void FramelessHelper::apply(QMainWindow *window) {
         auto *layout = qobject_cast<QHBoxLayout *>(titleBar->layout());
         if (layout) {
             layout->insertWidget(0, menuBar);
-            menuBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+            menuBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
             agent->setHitTestVisible(menuBar, true);
         }
     }

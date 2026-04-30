@@ -8,12 +8,62 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QHBoxLayout>
+#include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QTimer>
+
+#ifdef Q_OS_WIN
+#  include <windows.h>
+#endif
 
 namespace dsfw {
+
+    // Strip accelerator markers for menu title comparison.
+    // Handles both "&File" and "File(&F)" styles.
+    static QString menuTitleKey(const QString &title) {
+        QString s = title;
+        s.remove(QLatin1Char('&'));
+        // Remove trailing "(X)" accelerator hint, e.g. "文件(&F)" → "文件"
+        static const QRegularExpression trailingAccel(QStringLiteral("\\(\\w\\)$"));
+        s.remove(trailingAccel);
+        return s.trimmed();
+    }
+
+    // Work around a Windows-specific issue where QMenu popups from a QMenuBar
+    // inside a frameless (QWK) title bar can render behind the main window.
+    // The DWM compositor may re-raise the main HWND between menu switches,
+    // burying subsequent popup windows.  We hook each QMenu::aboutToShow and
+    // force the popup to the foreground.
+    static void installMenuPopupRaiseFix(QMenuBar *menuBar) {
+#ifdef Q_OS_WIN
+        for (auto *action : menuBar->actions()) {
+            auto *menu = action->menu();
+            if (!menu)
+                continue;
+            // Disconnect any prior connection from a previous rebuildMenuBar() call
+            // (relevant for global menus that persist across rebuilds).
+            QObject::disconnect(menu, &QMenu::aboutToShow, menu, nullptr);
+            QObject::connect(menu, &QMenu::aboutToShow, menu, [menu]() {
+                QTimer::singleShot(0, menu, [menu]() {
+                    menu->raise();
+                    menu->activateWindow();
+                    if (auto hwnd = reinterpret_cast<HWND>(menu->winId())) {
+                        ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                        ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+                                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                    }
+                });
+            });
+        }
+#else
+        Q_UNUSED(menuBar);
+#endif
+    }
 
     AppShell::AppShell(QWidget *parent) : QMainWindow(parent) {
         setAcceptDrops(true);
@@ -171,27 +221,79 @@ namespace dsfw {
     // Let the current page populate menus
     if (actions) {
         if (auto *pageBar = actions->createMenuBar(this)) {
-            // Transfer all menus/actions from the temporary bar into our persistent bar.
-            // We must reparent QMenus so they survive pageBar deletion.
-            while (!pageBar->actions().isEmpty()) {
-                auto *action = pageBar->actions().first();
-                pageBar->removeAction(action);
-                if (auto *menu = action->menu())
-                    menu->setParent(m_menuBar);
-                m_menuBar->addAction(action);
+            // Transfer menus from the temporary bar into our persistent bar.
+            // We create new QMenu wrappers on the persistent bar and steal
+            // the actions from the page's menus.  This avoids calling
+            // QMenu::setParent() which resets Qt::Popup window flags and
+            // breaks popup z-order on frameless (QWK) windows.
+            for (auto *srcAction : pageBar->actions()) {
+                if (auto *srcMenu = srcAction->menu()) {
+                    auto *dstMenu = m_menuBar->addMenu(srcMenu->title());
+                    // Move all actions (including sub-menus) from srcMenu → dstMenu.
+                    // Re-parent each action so it survives pageBar deletion.
+                    const auto srcActions = srcMenu->actions();
+                    for (auto *a : srcActions) {
+                        srcMenu->removeAction(a);
+                        a->setParent(dstMenu);
+                        dstMenu->addAction(a);
+                    }
+                } else if (srcAction->isSeparator()) {
+                    m_menuBar->addSeparator();
+                } else {
+                    srcAction->setParent(m_menuBar);
+                    m_menuBar->addAction(srcAction);
+                }
             }
             pageBar->deleteLater();
         }
     }
 
-        // Prepend global actions before page menus
+        // Merge global actions into page menus.
+        // If a global action owns a QMenu whose title matches a page menu (e.g. both
+        // named "File"), merge the global menu's items into the top of the page menu
+        // instead of creating a duplicate top-level menu.
         if (!m_globalActions.isEmpty()) {
-            auto existingActions = m_menuBar->actions();
-            QAction *firstAction = existingActions.isEmpty() ? nullptr : existingActions.first();
+            // Build lookup: stripped title → page menu action
+            QHash<QString, QAction *> pageMenuByTitle;
+            for (auto *a : m_menuBar->actions()) {
+                if (a->menu())
+                    pageMenuByTitle.insert(menuTitleKey(a->menu()->title()), a);
+            }
+
+            QAction *firstAction = m_menuBar->actions().isEmpty()
+                                       ? nullptr
+                                       : m_menuBar->actions().first();
+
             for (auto *ga : m_globalActions) {
-                m_menuBar->insertAction(firstAction, ga);
+                auto *globalMenu = ga->menu();
+                if (!globalMenu) {
+                    // Plain action — prepend as before
+                    m_menuBar->insertAction(firstAction, ga);
+                    continue;
+                }
+
+                auto *pageMenuAction = pageMenuByTitle.value(menuTitleKey(globalMenu->title()));
+                if (pageMenuAction && pageMenuAction->menu()) {
+                    // Merge: prepend global items + separator into the matching page menu
+                    auto *pageMenu = pageMenuAction->menu();
+                    auto pageActions = pageMenu->actions();
+                    QAction *insertBefore = pageActions.isEmpty() ? nullptr : pageActions.first();
+
+                    for (auto *item : globalMenu->actions()) {
+                        pageMenu->insertAction(insertBefore, item);
+                    }
+                    // Separator between global and page items
+                    if (insertBefore)
+                        pageMenu->insertSeparator(insertBefore);
+                } else {
+                    // No matching page menu — prepend as a standalone top-level menu
+                    m_menuBar->insertAction(firstAction, ga);
+                }
             }
         }
+
+        // Fix QMenu popup z-order on Windows frameless windows (QWK).
+        installMenuPopupRaiseFix(m_menuBar);
     }
 
     void AppShell::rebuildStatusBar() {
