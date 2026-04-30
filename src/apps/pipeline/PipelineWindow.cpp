@@ -1,4 +1,4 @@
-#include "PipelineWindow.h"
+﻿#include "PipelineWindow.h"
 #include "PipelineKeys.h"
 #include "slicer/SlicerPage.h"
 #include "lyricfa/LyricFAPage.h"
@@ -10,7 +10,7 @@
 #include <QStatusBar>
 
 #include <dstools/ShortcutEditorWidget.h>
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 static constexpr int kDefaultWidth = 1200;
 static constexpr int kDefaultHeight = 800;
@@ -61,7 +61,7 @@ void PipelineWindow::setupMenuBar() {
     fileMenu->addAction(tr("Quit"), qApp, &QApplication::quit, QKeySequence::Quit);
 
     auto *viewMenu = menuBar()->addMenu(tr("View(&V)"));
-    dstools::Theme::instance().populateThemeMenu(viewMenu);
+    dsfw::Theme::instance().populateThemeMenu(viewMenu);
 
     auto *helpMenu = menuBar()->addMenu(tr("Help(&H)"));
     helpMenu->addAction(tr("About %1").arg(qApp->applicationName()), this, [this]() {

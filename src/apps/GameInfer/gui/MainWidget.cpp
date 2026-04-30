@@ -1,4 +1,4 @@
-#include "MainWidget.h"
+﻿#include "MainWidget.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -18,7 +18,7 @@
 
 #include "../GameInferKeys.h"
 #include "../GameInferService.h"
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 static QString replaceFileExtension(const QString &filePath, const QString &newExt) {
     const QFileInfo info(filePath);
@@ -110,7 +110,7 @@ void MainWidget::setModelLoadingStatus(const QString &status) {
     QMetaObject::invokeMethod(
         this,
         [this, status] {
-            const auto &pal = dstools::Theme::instance().palette();
+            const auto &pal = dsfw::Theme::instance().palette();
             QColor color;
             bool bold = false;
             bool italic = false;

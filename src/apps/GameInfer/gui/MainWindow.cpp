@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+﻿#include "MainWindow.h"
 #include "MainWidget.h"
 
 #include <QApplication>
@@ -7,7 +7,7 @@
 #include <QStatusBar>
 
 #include <dstools/ShortcutEditorWidget.h>
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 static constexpr int kDefaultWidth = 800;
 static constexpr int kDefaultHeight = 450;
@@ -48,7 +48,7 @@ void MainWindow::setupStatusBar() {
 
 void MainWindow::setupMenuBar() {
     auto *viewMenu = menuBar()->addMenu(tr("View(&V)"));
-    dstools::Theme::instance().populateThemeMenu(viewMenu);
+    dsfw::Theme::instance().populateThemeMenu(viewMenu);
 
     viewMenu->addSeparator();
     auto *shortcutAction = viewMenu->addAction(tr("Shortcut Settings..."));

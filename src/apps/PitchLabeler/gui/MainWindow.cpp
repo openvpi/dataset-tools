@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+﻿#include "MainWindow.h"
 #include "PitchLabelerPage.h"
 #include "../PitchLabelerKeys.h"
 
@@ -9,7 +9,7 @@
 #include <QMessageBox>
 #include <QStatusBar>
 
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 #include <dstools/ShortcutManager.h>
 
 namespace dstools {
@@ -131,7 +131,7 @@ namespace dstools {
             m_viewMenu->addAction(m_page->zoomOutAction());
             m_viewMenu->addAction(m_page->zoomResetAction());
             m_viewMenu->addSeparator();
-            dstools::Theme::instance().populateThemeMenu(m_viewMenu);
+            dsfw::Theme::instance().populateThemeMenu(m_viewMenu);
 
             // ---- 工具 ----
             m_toolsMenu = bar->addMenu(QStringLiteral("工具(&T)"));

@@ -1,4 +1,4 @@
-#include "LabelerWindow.h"
+﻿#include "LabelerWindow.h"
 #include "CleanupDialog.h"
 #include "IPageActions.h"
 #include "IPageLifecycle.h"
@@ -25,7 +25,7 @@
 #include <QStatusBar>
 
 #include <dstools/DsProject.h>
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 namespace dstools::labeler {
 
@@ -315,7 +315,7 @@ void LabelerWindow::updateDynamicMenus() {
         if (!actions->viewActions().isEmpty())
             m_viewMenu->addSeparator();
     }
-    dstools::Theme::instance().populateThemeMenu(m_viewMenu);
+    dsfw::Theme::instance().populateThemeMenu(m_viewMenu);
 
     // Tools menu: Shortcuts + page tool actions
     if (actions) {

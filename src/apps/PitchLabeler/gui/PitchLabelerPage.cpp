@@ -1,4 +1,4 @@
-#include "PitchLabelerPage.h"
+﻿#include "PitchLabelerPage.h"
 
 #include "DSFile.h"
 #include "../PitchLabelerKeys.h"
@@ -19,7 +19,7 @@
 #include <QHBoxLayout>
 
 #include <dstools/ShortcutManager.h>
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 #include <dstools/AudioFileResolver.h>
 
 #include <algorithm>

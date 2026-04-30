@@ -1,7 +1,6 @@
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 #include <dsfw/AppSettings.h>
-#include <dstools/CommonKeys.h>
 
 #include <QActionGroup>
 #include <QDebug>
@@ -11,27 +10,26 @@
 #include <QStyleFactory>
 #include <QStyleHints>
 
-namespace dstools {
+namespace dsfw {
 
-// ── Palette definitions (JetBrains New UI inspired) ──────────────────
+static const SettingsKey<int> kThemeModeKey("General/themeMode", 0);
 
 static Theme::Palette makeDarkPalette() {
     Theme::Palette p;
-    p.bgPrimary    = QColor(0x1E, 0x1F, 0x22); // #1E1F22
-    p.bgSecondary  = QColor(0x2B, 0x2D, 0x30); // #2B2D30
-    p.bgSurface    = QColor(0x39, 0x3B, 0x40); // #393B40
-    p.bgHover      = QColor(0x39, 0x3B, 0x40); // #393B40
-    p.accent       = QColor(0x35, 0x74, 0xF0); // #3574F0
-    p.textPrimary  = QColor(0xDF, 0xE1, 0xE5); // #DFE1E5
-    p.textSecondary= QColor(0x6F, 0x73, 0x7A); // #6F737A
-    p.textDisabled = QColor(0x5A, 0x5D, 0x63); // #5A5D63
-    p.border       = QColor(0x43, 0x45, 0x4A); // #43454A
-    p.borderLight  = QColor(0x4E, 0x51, 0x57); // #4E5157
-    p.success      = QColor(0x57, 0x96, 0x5C); // #57965C
-    p.error        = QColor(0xDB, 0x5C, 0x5C); // #DB5C5C
-    p.warning      = QColor(0xD6, 0xAE, 0x58); // #D6AE58
+    p.bgPrimary    = QColor(0x1E, 0x1F, 0x22);
+    p.bgSecondary  = QColor(0x2B, 0x2D, 0x30);
+    p.bgSurface    = QColor(0x39, 0x3B, 0x40);
+    p.bgHover      = QColor(0x39, 0x3B, 0x40);
+    p.accent       = QColor(0x35, 0x74, 0xF0);
+    p.textPrimary  = QColor(0xDF, 0xE1, 0xE5);
+    p.textSecondary= QColor(0x6F, 0x73, 0x7A);
+    p.textDisabled = QColor(0x5A, 0x5D, 0x63);
+    p.border       = QColor(0x43, 0x45, 0x4A);
+    p.borderLight  = QColor(0x4E, 0x51, 0x57);
+    p.success      = QColor(0x57, 0x96, 0x5C);
+    p.error        = QColor(0xDB, 0x5C, 0x5C);
+    p.warning      = QColor(0xD6, 0xAE, 0x58);
 
-    // Piano roll
     p.pianoRoll.background         = QColor("#1A1A22");
     p.pianoRoll.gridSemitone       = QColor("#26262E");
     p.pianoRoll.gridCents          = QColor("#1F1F28");
@@ -64,7 +62,6 @@ static Theme::Palette makeDarkPalette() {
     p.pianoRoll.playhead           = QColor("#EF5350");
     p.pianoRoll.playheadIdle       = QColor("#F0F1F2");
 
-    // Phoneme editor
     p.phonemeEditor.tierBackground         = QColor(50, 50, 60);
     p.phonemeEditor.tierBackgroundInactive  = QColor(40, 40, 45);
     p.phonemeEditor.intervalFillA           = QColor(70, 100, 140);
@@ -82,21 +79,20 @@ static Theme::Palette makeDarkPalette() {
 
 static Theme::Palette makeLightPalette() {
     Theme::Palette p;
-    p.bgPrimary    = QColor(0xFF, 0xFF, 0xFF); // #FFFFFF
-    p.bgSecondary  = QColor(0xF7, 0xF8, 0xFA); // #F7F8FA
-    p.bgSurface    = QColor(0xEB, 0xEC, 0xF0); // #EBECF0
-    p.bgHover      = QColor(0xED, 0xF3, 0xFF); // #EDF3FF
-    p.accent       = QColor(0x35, 0x74, 0xF0); // #3574F0
-    p.textPrimary  = QColor(0x00, 0x00, 0x00); // #000000
-    p.textSecondary= QColor(0x81, 0x85, 0x94); // #818594
-    p.textDisabled = QColor(0xA8, 0xAD, 0xBD); // #A8ADBD
-    p.border       = QColor(0xEB, 0xEC, 0xF0); // #EBECF0
-    p.borderLight  = QColor(0xC9, 0xCC, 0xD6); // #C9CCD6
-    p.success      = QColor(0x20, 0x8A, 0x3C); // #208A3C
-    p.error        = QColor(0xDB, 0x3B, 0x4B); // #DB3B4B
-    p.warning      = QColor(0xA4, 0x67, 0x04); // #A46704
+    p.bgPrimary    = QColor(0xFF, 0xFF, 0xFF);
+    p.bgSecondary  = QColor(0xF7, 0xF8, 0xFA);
+    p.bgSurface    = QColor(0xEB, 0xEC, 0xF0);
+    p.bgHover      = QColor(0xED, 0xF3, 0xFF);
+    p.accent       = QColor(0x35, 0x74, 0xF0);
+    p.textPrimary  = QColor(0x00, 0x00, 0x00);
+    p.textSecondary= QColor(0x81, 0x85, 0x94);
+    p.textDisabled = QColor(0xA8, 0xAD, 0xBD);
+    p.border       = QColor(0xEB, 0xEC, 0xF0);
+    p.borderLight  = QColor(0xC9, 0xCC, 0xD6);
+    p.success      = QColor(0x20, 0x8A, 0x3C);
+    p.error        = QColor(0xDB, 0x3B, 0x4B);
+    p.warning      = QColor(0xA4, 0x67, 0x04);
 
-    // Piano roll
     p.pianoRoll.background         = QColor("#F0F0F5");
     p.pianoRoll.gridSemitone       = QColor("#E0E0E8");
     p.pianoRoll.gridCents          = QColor("#E8E8EE");
@@ -129,7 +125,6 @@ static Theme::Palette makeLightPalette() {
     p.pianoRoll.playhead           = QColor("#E04040");
     p.pianoRoll.playheadIdle       = QColor("#404050");
 
-    // Phoneme editor
     p.phonemeEditor.tierBackground         = QColor(220, 225, 235);
     p.phonemeEditor.tierBackgroundInactive  = QColor(235, 237, 242);
     p.phonemeEditor.intervalFillA           = QColor(170, 200, 240);
@@ -144,8 +139,6 @@ static Theme::Palette makeLightPalette() {
 
     return p;
 }
-
-// ── Singleton ────────────────────────────────────────────────────────
 
 static std::unique_ptr<Theme> s_customInstance;
 
@@ -166,19 +159,16 @@ void Theme::resetInstance() {
 
 Theme::Theme(QObject *parent) : QObject(parent) {}
 
-// ── Public API ───────────────────────────────────────────────────────
-
 void Theme::init(QApplication &app, Mode defaultMode, AppSettings *settings) {
     m_app = &app;
     m_settings = settings;
 
     if (m_settings) {
-        m_mode = static_cast<Mode>(m_settings->get(CommonKeys::ThemeMode));
+        m_mode = static_cast<Mode>(m_settings->get(kThemeModeKey));
     } else {
         m_mode = defaultMode;
     }
 
-    // Listen for system theme changes
     if (auto *hints = QGuiApplication::styleHints()) {
         connect(hints, &QStyleHints::colorSchemeChanged,
                 this, &Theme::onSystemSchemeChanged);
@@ -193,12 +183,11 @@ void Theme::setMode(Mode mode) {
     m_mode = mode;
 
     if (m_settings) {
-        m_settings->set(CommonKeys::ThemeMode, static_cast<int>(mode));
+        m_settings->set(kThemeModeKey, static_cast<int>(mode));
     }
 
     applyTheme(resolveIsDark());
 
-    // Update action group if it exists
     if (m_actionGroup) {
         const auto actions = m_actionGroup->actions();
         for (auto *action : actions) {
@@ -251,15 +240,12 @@ void Theme::populateThemeMenu(QMenu *menu) {
     }
 }
 
-// ── Private ──────────────────────────────────────────────────────────
-
 bool Theme::resolveIsDark() const {
     if (m_mode == Dark)
         return true;
     if (m_mode == Light)
         return false;
 
-    // FollowSystem
     if (auto *hints = QGuiApplication::styleHints()) {
         auto scheme = hints->colorScheme();
         if (scheme == Qt::ColorScheme::Light)
@@ -267,7 +253,6 @@ bool Theme::resolveIsDark() const {
         if (scheme == Qt::ColorScheme::Dark)
             return true;
     }
-    // Unknown / unsupported → default dark
     return true;
 }
 
@@ -278,12 +263,8 @@ void Theme::applyTheme(bool dark) {
     if (!m_app)
         return;
 
-    // Fusion is required for QSS to render correctly on Windows.
-    // Native styles (windowsvista) don't fully respect QSS, causing
-    // mixed native/custom painting (black-white artifacts on Win10).
     m_app->setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
 
-    // Load QSS
     QString qssPath = dark ? QStringLiteral(":/themes/dark.qss")
                            : QStringLiteral(":/themes/light.qss");
     QFile qssFile(qssPath);
@@ -295,7 +276,6 @@ void Theme::applyTheme(bool dark) {
         m_app->setStyleSheet({});
     }
 
-    // QPalette fallback for widgets not covered by QSS
     QPalette pal;
     pal.setColor(QPalette::Window, m_palette.bgPrimary);
     pal.setColor(QPalette::WindowText, m_palette.textPrimary);
@@ -311,7 +291,6 @@ void Theme::applyTheme(bool dark) {
     pal.setColor(QPalette::PlaceholderText, m_palette.textSecondary);
     pal.setColor(QPalette::Disabled, QPalette::Text, m_palette.textDisabled);
     pal.setColor(QPalette::Disabled, QPalette::ButtonText, m_palette.textDisabled);
-    // setPalette AFTER setStyle — setStyle can reset palette
     m_app->setPalette(pal);
 
     emit themeChanged();
@@ -323,4 +302,4 @@ void Theme::onSystemSchemeChanged() {
     applyTheme(resolveIsDark());
 }
 
-} // namespace dstools
+} // namespace dsfw

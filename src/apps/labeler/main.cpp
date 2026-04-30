@@ -1,6 +1,6 @@
-#include <QApplication>
+﻿#include <QApplication>
 #include <dstools/AppInit.h>
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 #include "LabelerWindow.h"
 
@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 
     if (!dstools::AppInit::init(app))
         return 0;
-    dstools::Theme::instance().init(app);
+    dsfw::Theme::instance().init(app);
 
     static constexpr int kDefaultWidth = 1400;
     static constexpr int kDefaultHeight = 900;

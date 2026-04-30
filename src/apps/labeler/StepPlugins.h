@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dstools/IStepPlugin.h>
+#include <dsfw/IStepPlugin.h>
 
 class SlicerPage;
 class LyricFAPage;
@@ -22,83 +22,65 @@ class BuildCsvPage;
 class BuildDsPage;
 class GameAlignPage;
 
-// ─── Step 1: Slice ──────────────────────────────────────────────────────
-
-class SlicerStepPlugin : public IStepPlugin {
+class SlicerStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 2: ASR ────────────────────────────────────────────────────────
-
-class AsrStepPlugin : public IStepPlugin {
+class AsrStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 3: Label (MinLabel) ───────────────────────────────────────────
-
-class LabelStepPlugin : public IStepPlugin {
+class LabelStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 4: Align (HubertFA) ───────────────────────────────────────────
-
-class AlignStepPlugin : public IStepPlugin {
+class AlignStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 5: Phone (PhonemeLabeler) ─────────────────────────────────────
-
-class PhoneStepPlugin : public IStepPlugin {
+class PhoneStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 6: CSV ────────────────────────────────────────────────────────
-
-class BuildCsvStepPlugin : public IStepPlugin {
+class BuildCsvStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 7: MIDI (GAME) ────────────────────────────────────────────────
-
-class GameAlignStepPlugin : public IStepPlugin {
+class GameAlignStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 8: DS ─────────────────────────────────────────────────────────
-
-class BuildDsStepPlugin : public IStepPlugin {
+class BuildDsStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };
 
-// ─── Step 9: Pitch (PitchLabeler) ───────────────────────────────────────
-
-class PitchStepPlugin : public IStepPlugin {
+class PitchStepPlugin : public dsfw::IStepPlugin {
 public:
-    StepPluginInfo info() const override;
+    dsfw::StepPluginInfo info() const override;
     QWidget *createPage(QWidget *parent) override;
     bool isAvailable(std::string &reason) const override;
 };

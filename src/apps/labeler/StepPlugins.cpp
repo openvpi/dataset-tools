@@ -1,4 +1,4 @@
-#include "StepPlugins.h"
+﻿#include "StepPlugins.h"
 
 #include <QApplication>
 #include <QDir>
@@ -37,7 +37,7 @@ static bool modelDirExists(const QString &subdir, std::string &reason) {
 
 // ─── Step 1: Slice ──────────────────────────────────────────────────────
 
-StepPluginInfo SlicerStepPlugin::info() const {
+dsfw::StepPluginInfo SlicerStepPlugin::info() const {
     return {"slicer", "Audio Slicer", "RMS-based audio slicing", {}, 0, true};
 }
 
@@ -51,7 +51,7 @@ bool SlicerStepPlugin::isAvailable(std::string & /*reason*/) const {
 
 // ─── Step 2: ASR ────────────────────────────────────────────────────────
 
-StepPluginInfo AsrStepPlugin::info() const {
+dsfw::StepPluginInfo AsrStepPlugin::info() const {
     return {"asr", "ASR (LyricFA)", "FunASR lyric forced alignment", {}, 1, true};
 }
 
@@ -65,7 +65,7 @@ bool AsrStepPlugin::isAvailable(std::string &reason) const {
 
 // ─── Step 3: Label (MinLabel) ───────────────────────────────────────────
 
-StepPluginInfo LabelStepPlugin::info() const {
+dsfw::StepPluginInfo LabelStepPlugin::info() const {
     return {"label", "Label (MinLabel)", "Audio labeling with G2P conversion", {}, 2, false};
 }
 
@@ -79,7 +79,7 @@ bool LabelStepPlugin::isAvailable(std::string & /*reason*/) const {
 
 // ─── Step 4: Align (HubertFA) ───────────────────────────────────────────
 
-StepPluginInfo AlignStepPlugin::info() const {
+dsfw::StepPluginInfo AlignStepPlugin::info() const {
     return {"align", "Align (HubertFA)", "HuBERT phoneme forced alignment", {}, 3, true};
 }
 
@@ -93,7 +93,7 @@ bool AlignStepPlugin::isAvailable(std::string &reason) const {
 
 // ─── Step 5: Phone (PhonemeLabeler) ─────────────────────────────────────
 
-StepPluginInfo PhoneStepPlugin::info() const {
+dsfw::StepPluginInfo PhoneStepPlugin::info() const {
     return {"phone", "Phone (PhonemeLabeler)", "TextGrid phoneme boundary editing", {}, 4, false};
 }
 
@@ -107,7 +107,7 @@ bool PhoneStepPlugin::isAvailable(std::string & /*reason*/) const {
 
 // ─── Step 6: CSV ────────────────────────────────────────────────────────
 
-StepPluginInfo BuildCsvStepPlugin::info() const {
+dsfw::StepPluginInfo BuildCsvStepPlugin::info() const {
     return {"csv", "Build CSV", "Generate transcription CSV from labels", {}, 5, true};
 }
 
@@ -121,7 +121,7 @@ bool BuildCsvStepPlugin::isAvailable(std::string & /*reason*/) const {
 
 // ─── Step 7: MIDI (GAME) ────────────────────────────────────────────────
 
-StepPluginInfo GameAlignStepPlugin::info() const {
+dsfw::StepPluginInfo GameAlignStepPlugin::info() const {
     return {"midi", "MIDI (GAME)", "GAME audio-to-MIDI transcription", {}, 6, true};
 }
 
@@ -142,7 +142,7 @@ bool GameAlignStepPlugin::isAvailable(std::string &reason) const {
 
 // ─── Step 8: DS ─────────────────────────────────────────────────────────
 
-StepPluginInfo BuildDsStepPlugin::info() const {
+dsfw::StepPluginInfo BuildDsStepPlugin::info() const {
     return {"ds", "Build DS", "Build DiffSinger .ds files with F0 extraction", {}, 7, true};
 }
 
@@ -159,7 +159,7 @@ bool BuildDsStepPlugin::isAvailable(std::string &reason) const {
 
 // ─── Step 9: Pitch (PitchLabeler) ───────────────────────────────────────
 
-StepPluginInfo PitchStepPlugin::info() const {
+dsfw::StepPluginInfo PitchStepPlugin::info() const {
     return {"pitch", "Pitch (PitchLabeler)", "DiffSinger .ds F0 curve editing", {}, 8, false};
 }
 

@@ -1,7 +1,7 @@
-#include <QApplication>
+﻿#include <QApplication>
 #include <dstools/AppInit.h>
-#include <dstools/FramelessHelper.h>
-#include <dstools/Theme.h>
+#include <dsfw/FramelessHelper.h>
+#include <dsfw/Theme.h>
 #include "gui/MainWindow.h"
 
 int main(int argc, char *argv[]) {
@@ -12,10 +12,10 @@ int main(int argc, char *argv[]) {
 
     if (!dstools::AppInit::init(app))
         return 0;
-    dstools::Theme::instance().init(app);
+    dsfw::Theme::instance().init(app);
 
     MainWindow window;
-    dstools::FramelessHelper::apply(&window);
+    dsfw::FramelessHelper::apply(&window);
     window.show();
     return app.exec();
 }

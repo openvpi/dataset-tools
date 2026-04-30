@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace dstools {
+namespace dsfw {
 
 struct StepPluginInfo {
     QString id;
@@ -40,4 +40,4 @@ public:
     }
 };
 
-} // namespace dstools
+} // namespace dsfw

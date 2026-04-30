@@ -1,4 +1,4 @@
-#include "IntervalTierView.h"
+﻿#include "IntervalTierView.h"
 #include "commands/MoveBoundaryCommand.h"
 #include "commands/SetIntervalTextCommand.h"
 #include "commands/InsertBoundaryCommand.h"
@@ -13,7 +13,7 @@
 #include <QMenu>
 #include <QDebug>
 
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -50,7 +50,7 @@ void IntervalTierView::setActive(bool active) {
 
 void IntervalTierView::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
-    const auto &pe = dstools::Theme::instance().palette().phonemeEditor;
+    const auto &pe = dsfw::Theme::instance().palette().phonemeEditor;
     painter.fillRect(rect(), m_active ? pe.tierBackground : pe.tierBackgroundInactive);
 
     if (!m_doc || m_tierIndex < 0 || m_tierIndex >= m_doc->tierCount()) {
@@ -83,11 +83,11 @@ void IntervalTierView::drawIntervals(QPainter &painter) {
         if (x2 < 0 || x1 > width()) continue;
 
         // Alternating colors for readability
-        QColor color = (i % 2 == 0) ? dstools::Theme::instance().palette().phonemeEditor.intervalFillA : dstools::Theme::instance().palette().phonemeEditor.intervalFillB;
+        QColor color = (i % 2 == 0) ? dsfw::Theme::instance().palette().phonemeEditor.intervalFillA : dsfw::Theme::instance().palette().phonemeEditor.intervalFillB;
         painter.fillRect(QRect(x1, 0, x2 - x1, height()), color);
 
         // Border
-        painter.setPen(dstools::Theme::instance().palette().phonemeEditor.intervalBorder);
+        painter.setPen(dsfw::Theme::instance().palette().phonemeEditor.intervalBorder);
         painter.drawRect(x1, 0, x2 - x1 - 1, height() - 1);
     }
 }
@@ -100,11 +100,11 @@ void IntervalTierView::drawBoundaries(QPainter &painter) {
 
         // Choose pen based on state
         if (m_state == State::Dragging && b == m_draggedBoundary) {
-            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
+            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
         } else if (b == m_hoveredBoundary && m_hoveredBoundary >= 0) {
-            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
+            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
         } else {
-            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryNormal, 1));
+            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryNormal, 1));
         }
 
         painter.drawLine(bx, 0, bx, height());
@@ -113,7 +113,7 @@ void IntervalTierView::drawBoundaries(QPainter &painter) {
 
 void IntervalTierView::drawLabels(QPainter &painter) {
     if (!m_doc) return;
-    painter.setPen(dstools::Theme::instance().palette().phonemeEditor.labelText);
+    painter.setPen(dsfw::Theme::instance().palette().phonemeEditor.labelText);
     int count = m_doc->intervalCount(m_tierIndex);
     for (int i = 0; i < count; ++i) {
         double xmin = m_doc->intervalStart(m_tierIndex, i);
@@ -134,7 +134,7 @@ void IntervalTierView::drawLabels(QPainter &painter) {
 void IntervalTierView::drawBindingLines(QPainter &painter) {
     if (m_dragAligned.empty()) return;
 
-    painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryBindingLine, 1, Qt::DashLine));
+    painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryBindingLine, 1, Qt::DashLine));
 
     // Draw vertical lines at aligned boundary positions in other tiers
     // The parent widget (TierEditWidget) will handle cross-tier drawing
@@ -356,7 +356,7 @@ void IntervalTierView::drawSelection(QPainter &painter) {
     int x1 = timeToX(m_doc->intervalStart(m_tierIndex, m_selectedInterval));
     int x2 = timeToX(m_doc->intervalEnd(m_tierIndex, m_selectedInterval));
 
-    painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.selectionBorder, 2));
+    painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.selectionBorder, 2));
     painter.drawRect(x1, 0, x2 - x1 - 1, height() - 1);
 }
 

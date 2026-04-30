@@ -7,9 +7,9 @@
 
 #include <audio-util/Slicer.h>
 #include <audio-util/Util.h>
-#include "NoteUtils.h"
 #include <game-infer/DiffSingerParser.h>
 #include <game-infer/GameModel.h>
+#include "NoteUtils.h"
 
 namespace Game
 {
@@ -297,8 +297,6 @@ namespace Game
 
         return true;
     }
-
-    void Game::terminate() {}
 
     bool Game::isOpen() const { return is_open(); }
 

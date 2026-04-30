@@ -1,7 +1,7 @@
-#include <QApplication>
+﻿#include <QApplication>
 #include <dstools/AppInit.h>
-#include <dstools/FramelessHelper.h>
-#include <dstools/Theme.h>
+#include <dsfw/FramelessHelper.h>
+#include <dsfw/Theme.h>
 #include <dstools/PinyinG2PProvider.h>
 #include <dsfw/ServiceLocator.h>
 #include <cpp-pinyin/G2pglobal.h>
@@ -33,10 +33,10 @@ int main(int argc, char *argv[]) {
     dstools::AppInit::registerPostInitHook(&initPinyin);
     if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
-    dstools::Theme::instance().init(app);
+    dsfw::Theme::instance().init(app);
 
     Minlabel::MainWindow w;
-    dstools::FramelessHelper::apply(&w);
+    dsfw::FramelessHelper::apply(&w);
     w.show();
     return app.exec();
 }

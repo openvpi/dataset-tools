@@ -1,4 +1,4 @@
-#include "BoundaryOverlayWidget.h"
+﻿#include "BoundaryOverlayWidget.h"
 #include "TextGridDocument.h"
 
 #include <QPainter>
@@ -6,7 +6,7 @@
 #include <QEvent>
 #include <QResizeEvent>
 
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -76,11 +76,11 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
         if (x < 0 || x > w) continue;
 
         if (b == m_draggedBoundary) {
-            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
+            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
         } else if (b == m_hoveredBoundary) {
-            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
+            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
         } else {
-            painter.setPen(QPen(dstools::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
+            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
         }
         painter.drawLine(x, 0, x, h);
     }

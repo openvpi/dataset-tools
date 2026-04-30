@@ -26,10 +26,10 @@ namespace Game
     };
 
     struct GameNote {
-        float pitch;    // Floating-point MIDI pitch (A4 = 69.0, cents as decimals)
-        float onset;    // Onset time in seconds
+        float pitch; // Floating-point MIDI pitch (A4 = 69.0, cents as decimals)
+        float onset; // Onset time in seconds
         float duration; // Duration in seconds
-        bool voiced;    // true = voiced note, false = rest/unvoiced
+        bool voiced; // true = voiced note, false = rest/unvoiced
     };
 
     /** Input for a single align operation */
@@ -58,7 +58,6 @@ namespace Game
         bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
                         std::string &msg) const;
         bool is_open() const;
-        static void terminate();
 
         // IInferenceEngine overrides
         bool isOpen() const override;

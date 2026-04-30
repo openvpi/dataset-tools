@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+﻿#include "MainWindow.h"
 #include "MinLabelPage.h"
 #include "../MinLabelKeys.h"
 
@@ -11,7 +11,7 @@
 #include <QMimeData>
 
 #include <dstools/ShortcutManager.h>
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 namespace Minlabel {
 
@@ -79,7 +79,7 @@ namespace Minlabel {
         bar->addMenu(m_playMenu);
 
         auto *viewMenu = new QMenu("View(&V)", this);
-        dstools::Theme::instance().populateThemeMenu(viewMenu);
+        dsfw::Theme::instance().populateThemeMenu(viewMenu);
         bar->addMenu(viewMenu);
 
         bar->addMenu(m_helpMenu);

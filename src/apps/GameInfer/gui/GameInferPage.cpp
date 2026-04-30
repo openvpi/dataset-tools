@@ -1,4 +1,4 @@
-#include "GameInferPage.h"
+﻿#include "GameInferPage.h"
 #include "MainWidget.h"
 
 #include <QDragEnterEvent>
@@ -9,7 +9,7 @@
 #include <QProgressBar>
 
 #include <dstools/ShortcutEditorWidget.h>
-#include <dstools/Theme.h>
+#include <dsfw/Theme.h>
 
 GameInferPage::GameInferPage(dstools::AppSettings *settings, QWidget *parent)
     : QWidget(parent), m_settings(settings) {
@@ -22,7 +22,7 @@ GameInferPage::GameInferPage(dstools::AppSettings *settings, QWidget *parent)
 QMenuBar *GameInferPage::createMenuBar(QWidget *parent) {
     auto *menuBar = new QMenuBar(parent);
     auto *viewMenu = menuBar->addMenu(tr("View(&V)"));
-    dstools::Theme::instance().populateThemeMenu(viewMenu);
+    dsfw::Theme::instance().populateThemeMenu(viewMenu);
 
     viewMenu->addSeparator();
     auto *shortcutAction = viewMenu->addAction(tr("Shortcut Settings..."));

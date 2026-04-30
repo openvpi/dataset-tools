@@ -1,23 +1,5 @@
 #pragma once
 
-/// @file Theme.h
-/// @brief Application theme manager with Dark/Light/FollowSystem support.
-///
-/// Usage:
-/// @code
-///   // In main.cpp — initialize once:
-///   dstools::Theme::instance().init(app);  // reads saved pref, defaults to Dark
-///
-///   // In any MainWindow — add theme menu:
-///   auto *viewMenu = menuBar()->addMenu(tr("View(&V)"));
-///   dstools::Theme::instance().populateThemeMenu(viewMenu);
-///
-///   // React to theme changes:
-///   connect(&dstools::Theme::instance(), &dstools::Theme::themeChanged, this, [this]() {
-///       // update custom-painted widgets
-///   });
-/// @endcode
-
 #include <dsfw/AppSettings.h>
 
 #include <QApplication>
@@ -29,7 +11,7 @@
 class QActionGroup;
 class QMenu;
 
-namespace dstools {
+namespace dsfw {
 
 class Theme : public QObject {
     Q_OBJECT
@@ -53,7 +35,6 @@ public:
         QColor error;
         QColor warning;
 
-        // Piano roll domain colors
         struct {
             QColor background;
             QColor gridSemitone;
@@ -88,7 +69,6 @@ public:
             QColor playheadIdle;
         } pianoRoll;
 
-        // Phoneme editor domain colors
         struct {
             QColor tierBackground;
             QColor tierBackgroundInactive;
@@ -110,29 +90,19 @@ public:
 
     ~Theme() override = default;
 
-    /// Initialize theme system. Call once from main(), before showing any window.
-    /// Reads saved preference from AppSettings key "theme" (per-app).
-    /// @param defaultMode  fallback if no saved preference exists
-    /// @param settings     optional AppSettings for persisting theme preference
     void init(QApplication &app, Mode defaultMode = Dark, AppSettings *settings = nullptr);
 
-    /// Switch theme at runtime (persists the choice).
     void setMode(Mode mode);
 
-    /// Current mode setting (may be FollowSystem).
     Mode mode() const;
 
-    /// Whether the currently active appearance is dark.
     bool isDark() const;
 
-    /// Semantic color palette for the active theme.
     const Palette &palette() const;
 
-    /// Add "Dark / Light / Follow System" radio actions to a menu.
     void populateThemeMenu(QMenu *menu);
 
 signals:
-    /// Emitted after theme switch completes. Connect to repaint custom widgets.
     void themeChanged();
 
 private:
@@ -150,4 +120,4 @@ private:
     QActionGroup *m_actionGroup = nullptr;
 };
 
-} // namespace dstools
+} // namespace dsfw
