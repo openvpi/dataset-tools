@@ -54,6 +54,7 @@ find_package(FFTW3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-widgets
     dstools-audio
+    labeler-interfaces
     textgrid
     FFTW3::fftw3
     Qt${QT_VERSION_MAJOR}::Core

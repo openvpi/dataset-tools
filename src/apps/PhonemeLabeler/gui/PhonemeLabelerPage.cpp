@@ -14,6 +14,8 @@
 
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QLabel>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QVBoxLayout>
@@ -23,6 +25,8 @@
 #include <dstools/WaveFormat.h>
 #include <dstools/AudioFileResolver.h>
 #include <dstools/ShortcutManager.h>
+#include <dstools/ShortcutEditorWidget.h>
+#include <dsfw/Theme.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -623,6 +627,121 @@ void PhonemeLabelerPage::playBoundarySegment(double timeSec) {
     m_playWidget->setPlayRange(segStart, segEnd);
     m_playWidget->seek(segStart);
     m_playWidget->setPlaying(true);
+}
+
+QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
+    auto *menuBar = new QMenuBar(parent);
+
+    // File menu
+    auto *fileMenu = menuBar->addMenu(tr("&File"));
+
+    auto *actOpenDir = fileMenu->addAction(tr("Open &Directory..."), [this]() {
+        QString dir = QFileDialog::getExistingDirectory(
+            this, tr("Open Directory"), m_settings.get(PhonemeLabelerKeys::LastDir));
+        if (!dir.isEmpty()) {
+            setWorkingDirectory(dir);
+        }
+    });
+
+    fileMenu->addAction(tr("Open &File..."), [this]() {
+        QString path = QFileDialog::getOpenFileName(
+            this, tr("Open TextGrid File"),
+            m_settings.get(PhonemeLabelerKeys::LastDir),
+            tr("TextGrid Files (*.TextGrid *.textgrid);;All Files (*.*)"));
+        if (!path.isEmpty()) {
+            openFile(path);
+        }
+    });
+
+    fileMenu->addSeparator();
+    fileMenu->addAction(m_actSave);
+    fileMenu->addAction(m_actSaveAs);
+    fileMenu->addSeparator();
+
+    auto *actExit = fileMenu->addAction(tr("E&xit"), [parent]() {
+        if (auto *w = parent->window())
+            w->close();
+    });
+
+    // Bind menu-owned shortcuts
+    m_shortcutManager->bind(actOpenDir, PhonemeLabelerKeys::ShortcutOpen, tr("Open Directory"), tr("File"));
+    m_shortcutManager->bind(actExit, PhonemeLabelerKeys::ShortcutExit, tr("Exit"), tr("File"));
+    m_shortcutManager->applyAll();
+
+    // Edit menu
+    auto *editMenu = menuBar->addMenu(tr("&Edit"));
+    editMenu->addAction(m_actUndo);
+    editMenu->addAction(m_actRedo);
+
+    // View menu
+    auto *viewMenu = menuBar->addMenu(tr("&View"));
+    for (auto *act : viewActions()) {
+        if (act)
+            viewMenu->addAction(act);
+        else
+            viewMenu->addSeparator();
+    }
+    viewMenu->addMenu(m_spectrogramColorMenu);
+
+    viewMenu->addSeparator();
+    dsfw::Theme::instance().populateThemeMenu(viewMenu);
+
+    viewMenu->addSeparator();
+    viewMenu->addAction(tr("&Keyboard Shortcuts..."), [this]() {
+        m_shortcutManager->showEditor(this);
+    });
+
+    // Help menu
+    auto *helpMenu = menuBar->addMenu(tr("&Help"));
+    helpMenu->addAction(tr("&About"), [this]() {
+        QMessageBox::about(this, tr("About PhonemeLabeler"),
+            tr("<h3>PhonemeLabeler 0.1.0</h3>"
+               "<p>A TextGrid editor for DiffSinger dataset preparation.</p>"
+               "<p>Built with Qt %1 and C++17.</p>")
+               .arg(QT_VERSION_STR));
+    });
+
+    return menuBar;
+}
+
+QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
+    auto *container = new QWidget(parent);
+    auto *layout = new QHBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    auto *fileLabel = new QLabel(tr("No file"), container);
+    auto *posLabel = new QLabel(QStringLiteral("0.000s"), container);
+    auto *zoomLabel = new QLabel(QStringLiteral("200.0 px/s"), container);
+    auto *bindLabel = new QLabel(tr("Binding: ON"), container);
+
+    layout->addWidget(fileLabel, 1);
+    layout->addWidget(posLabel);
+    layout->addWidget(zoomLabel);
+    layout->addWidget(bindLabel);
+
+    connect(this, &PhonemeLabelerPage::fileStatusChanged, fileLabel, &QLabel::setText);
+    connect(this, &PhonemeLabelerPage::positionChanged, this, [posLabel](double sec) {
+        posLabel->setText(QString::number(sec, 'f', 3) + "s");
+    });
+    connect(this, &PhonemeLabelerPage::zoomChanged, this, [zoomLabel](double pps) {
+        zoomLabel->setText(QString::number(pps, 'f', 1) + " px/s");
+    });
+    connect(this, &PhonemeLabelerPage::bindingChanged, this, [bindLabel](bool enabled) {
+        bindLabel->setText(QStringLiteral("Binding: %1").arg(enabled ? "ON" : "OFF"));
+    });
+
+    return container;
+}
+
+QString PhonemeLabelerPage::windowTitle() const {
+    QString title = tr("PhonemeLabeler");
+    if (!m_currentFilePath.isEmpty()) {
+        title += " - " + QFileInfo(m_currentFilePath).fileName();
+        if (hasUnsavedChanges()) {
+            title += " *";
+        }
+    }
+    return title;
 }
 
 } // namespace phonemelabeler

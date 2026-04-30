@@ -1,5 +1,7 @@
 #pragma once
 
+#include <IPageActions.h>
+
 #include <QWidget>
 #include <QSplitter>
 #include <QScrollBar>
@@ -32,29 +34,35 @@ namespace phonemelabeler {
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
 
-class PhonemeLabelerPage : public QWidget {
+class PhonemeLabelerPage : public QWidget, public dstools::labeler::IPageActions {
     Q_OBJECT
+    Q_INTERFACES(dstools::labeler::IPageActions)
 
 public:
     explicit PhonemeLabelerPage(QWidget *parent = nullptr);
     ~PhonemeLabelerPage() override;
 
-    void setWorkingDirectory(const QString &dir);
-    [[nodiscard]] QString workingDirectory() const { return m_currentDir; }
+    void setWorkingDirectory(const QString &dir) override;
+    [[nodiscard]] QString workingDirectory() const override { return m_currentDir; }
 
     void openFile(const QString &path);
 
-    [[nodiscard]] QList<QAction *> editActions() const;
-    [[nodiscard]] QList<QAction *> viewActions() const;
+    [[nodiscard]] QList<QAction *> editActions() const override;
+    [[nodiscard]] QList<QAction *> viewActions() const override;
     [[nodiscard]] QMenu *spectrogramColorMenu() const { return m_spectrogramColorMenu; }
     [[nodiscard]] dstools::widgets::ShortcutManager *shortcutManager() const { return m_shortcutManager; }
     [[nodiscard]] dstools::AppSettings &settings() { return m_settings; }
 
     [[nodiscard]] QUndoStack *undoStack() const { return m_undoStack; }
     [[nodiscard]] QString currentFilePath() const { return m_currentFilePath; }
-    [[nodiscard]] bool hasUnsavedChanges() const;
-    bool save();
+    [[nodiscard]] bool hasUnsavedChanges() const override;
+    bool save() override;
     bool saveAs();
+
+    // IPageActions
+    QMenuBar *createMenuBar(QWidget *parent) override;
+    QWidget *createStatusBarContent(QWidget *parent) override;
+    QString windowTitle() const override;
     bool maybeSave();
 
     [[nodiscard]] QToolBar *toolbar() const { return m_toolbar; }
