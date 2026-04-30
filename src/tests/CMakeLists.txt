@@ -19,3 +19,5 @@ endif()
 if (TARGET TestAudioUtil)
     add_test(NAME TestAudioUtil COMMAND TestAudioUtil)
 endif()
+
+add_subdirectory(framework)
