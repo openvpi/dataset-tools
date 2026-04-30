@@ -160,6 +160,9 @@ void WorkThread::run() {
             emit oneFailed(m_filename, m_listIndex);
         }
 
+        constexpr qint64 kBlockSamples = 65536;
+        std::vector<double> buf(kBlockSamples);
+
         int idx = 0;
         for (auto chunk : chunks) {
             auto beginFrame = chunk.first;
@@ -181,12 +184,24 @@ void WorkThread::run() {
 
             auto writer = createWavWriter(outFilePath, sr, channels, mapFormatEnum(m_outputWaveFormat));
             reader->seek(beginFrame);
-            std::vector<double> tmp(frameCount * channels);
-            auto samplesRead = reader->read(tmp.data(), tmp.size());
-            auto samplesWritten = writer->write(tmp.data(), tmp.size());
-            if (samplesWritten != static_cast<qint64>(tmp.size())) {
+            qint64 remaining = frameCount * channels;
+            bool chunkOk = true;
+            while (remaining > 0) {
+                qint64 toRead = std::min(remaining, static_cast<qint64>(buf.size()));
+                auto samplesRead = reader->read(buf.data(), toRead);
+                if (samplesRead <= 0) {
+                    chunkOk = false;
+                    break;
+                }
+                auto samplesWritten = writer->write(buf.data(), samplesRead);
+                if (samplesWritten != samplesRead) {
+                    chunkOk = false;
+                    break;
+                }
+                remaining -= samplesRead;
+            }
+            if (!chunkOk) {
                 isAudioWriteError = true;
-                idx++;
                 break;
             }
             idx++;
