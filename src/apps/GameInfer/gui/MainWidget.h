@@ -12,12 +12,12 @@
 #include <dstools/PathSelector.h>
 #include <dstools/RunProgressRow.h>
 #include <game-infer/Game.h>
-#include <nlohmann/json.hpp>
 
 #include <QFuture>
 #include <map>
-#include <mutex>
 #include <string>
+
+class GameInferService;
 
 class MainWidget : public QWidget {
     Q_OBJECT
@@ -40,7 +40,7 @@ private:
     void setupAlignGroup();
     void setupActionButtons();
     void setupProcessingGroup();
-    bool updateParameterValues() const;
+    void updateParameterValues() const;
     void loadLanguagesFromConfig(const std::filesystem::path &modelPath);
     void updateLanguageCombo();
     void updateTimeStepInfo(const std::filesystem::path &modelPath);
@@ -84,17 +84,16 @@ private:
     // Settings
     dstools::AppSettings *m_settings;
 
-    // Game instance
-    std::shared_ptr<Game::Game> m_game = nullptr;
-    mutable std::mutex m_gameMutex;
+    // Service (owns Game instance + mutex)
+    GameInferService *m_service;
 
-    // Language mapping
+    // Language mapping (UI-side, populated from config)
     std::map<int, std::string> m_languageIdToName;
     std::map<std::string, int> m_languageNameToId;
 
     int max_audio_seg_length = 60;
 
-    // Time step information
+    // Time step information (UI display only)
     float m_timeStepSeconds;
     double m_framesPerSecond;
 

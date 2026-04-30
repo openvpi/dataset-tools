@@ -17,55 +17,17 @@
 #include <iostream>
 
 #include "../GameInferKeys.h"
-#include <dstools/JsonHelper.h>
+#include "../GameInferService.h"
 #include <dstools/Theme.h>
 
-#include <wolf-midi/MidiFile.h>
-
-static std::vector<float> generateD3pmTimesteps(int nSteps) {
-    std::vector<float> ts;
-    if (nSteps <= 0)
-        return ts;
-    constexpr float t0 = 0.0f;
-    const float step = (1.0f - t0) / nSteps;
-    ts.reserve(nSteps);
-    for (int i = 0; i < nSteps; ++i) {
-        ts.push_back(t0 + i * step);
-    }
-    return ts;
-}
-
-static constexpr int kDefaultMidiResolution = 480;
-
-static bool makeMidiFile(const std::filesystem::path &midi_path, std::vector<Game::GameMidi> midis, const float tempo) {
-    Midi::MidiFile midi;
-    midi.setFileFormat(1);
-    midi.setDivisionType(Midi::MidiFile::DivisionType::PPQ);
-    midi.setResolution(kDefaultMidiResolution);
-
-    midi.createTrack();
-
-    midi.createTimeSignatureEvent(0, 0, 4, 4);
-    midi.createTempoEvent(0, 0, tempo);
-
-    std::vector<char> trackName;
-    std::string str = "Game";
-    trackName.insert(trackName.end(), str.begin(), str.end());
-
-    midi.createTrack();
-    midi.createMetaEvent(1, 0, Midi::MidiEvent::MetaNumbers::TrackName, trackName);
-
-    for (const auto &[note, start, duration] : midis) {
-        midi.createNoteOnEvent(1, start, 0, note, 64);
-        midi.createNoteOffEvent(1, start + duration, 0, note, 64);
-    }
-
-    return midi.save(midi_path);
+static QString replaceFileExtension(const QString &filePath, const QString &newExt) {
+    const QFileInfo info(filePath);
+    return info.absolutePath() + QDir::separator() + info.completeBaseName() + "." + newExt;
 }
 
 MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
     : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.01f), m_framesPerSecond(1.0 / 0.01) {
-    m_game = std::make_shared<Game::Game>();
+    m_service = new GameInferService(this);
 
     auto *mainLayout = new QVBoxLayout(this);
 
@@ -322,24 +284,8 @@ void MainWidget::setupActionButtons() {
 }
 
 void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
-    const std::filesystem::path configPath = modelPath / "config.json";
-    std::string jsonErr;
-    auto config = dstools::JsonHelper::loadFile(configPath, jsonErr);
-
-    if (jsonErr.empty()) {
-        // Use JsonHelper::get with defaults - handles missing keys and type mismatches
-        m_timeStepSeconds = dstools::JsonHelper::get(config, "timestep", 0.01f);
-        if (m_timeStepSeconds > 0) {
-            m_framesPerSecond = 1.0 / m_timeStepSeconds;
-        } else {
-            m_timeStepSeconds = 0.01f;
-            m_framesPerSecond = 1.0 / 0.01;
-        }
-    } else {
-        std::cerr << "Error loading config.json: " << jsonErr << std::endl;
-        m_timeStepSeconds = 0.01f;
-        m_framesPerSecond = 1.0 / 0.01;
-    }
+    m_timeStepSeconds = m_service->loadTimestepFromConfig(modelPath);
+    m_framesPerSecond = 1.0 / m_timeStepSeconds;
 
     // Update ms label display
     const int currentValue = m_segRadiusFrameSpin->value();
@@ -355,16 +301,12 @@ bool MainWidget::loadModel(const QString &modelPathText, Game::ExecutionProvider
     }
 
     std::filesystem::path modelPath = modelPathText.toLocal8Bit().toStdString();
-    std::string msg;
 
     QMetaObject::invokeMethod(
         this, [this] { setModelLoadingStatus("Model is loading, please wait 3-10 seconds!"); }, Qt::QueuedConnection);
 
-    bool loadSuccess;
-    {
-        std::lock_guard<std::mutex> lock(m_gameMutex);
-        loadSuccess = m_game->load_model(modelPath, provider, deviceId, msg);
-    }
+    std::string msg;
+    bool loadSuccess = m_service->loadModel(modelPath, provider, deviceId, msg);
 
     if (loadSuccess) {
         QMetaObject::invokeMethod(
@@ -385,33 +327,7 @@ bool MainWidget::loadModel(const QString &modelPathText, Game::ExecutionProvider
 }
 
 void MainWidget::loadLanguagesFromConfig(const std::filesystem::path &modelPath) {
-    // Clear existing mappings
-    m_languageIdToName.clear();
-    m_languageNameToId.clear();
-
-    // Add default option
-    m_languageIdToName[0] = "default";
-    m_languageNameToId["default"] = 0;
-
-    // Try to load languages from config.json
-    const std::filesystem::path configPath = modelPath / "config.json";
-    std::string jsonErr;
-    auto config = dstools::JsonHelper::loadFile(configPath, jsonErr);
-
-    if (jsonErr.empty()) {
-        auto languages = dstools::JsonHelper::getObject(config, "languages");
-        if (languages.is_object()) {
-            for (auto &[key, value] : languages.items()) {
-                if (value.is_number_integer()) {
-                    int id = value.get<int>();
-                    m_languageIdToName[id] = key;
-                    m_languageNameToId[key] = id;
-                }
-            }
-        }
-    }
-
-    // Update the language combo box
+    m_service->loadLanguagesFromConfig(modelPath, m_languageIdToName, m_languageNameToId);
     updateLanguageCombo();
 }
 
@@ -436,30 +352,12 @@ void MainWidget::updateLanguageCombo() {
     }
 }
 
-bool MainWidget::updateParameterValues() const {
-    if (!m_game)
-        return false;
-
-    std::lock_guard<std::mutex> lock(m_gameMutex);
-
-    // Update segmentation threshold
-    m_game->set_seg_threshold(m_segThresholdSpin->value());
-
-    // Update segmentation radius in frames
-    m_game->set_seg_radius_frames(m_segRadiusFrameSpin->value());
-
-    // Update estimation threshold
-    m_game->set_est_threshold(m_estThresholdSpin->value());
-
-    // Update D3PM nsteps (generate time steps automatically with t0=0)
-    const int nSteps = m_segD3PMNStepsCombo->currentData().toInt();
-    m_game->set_d3pm_ts(generateD3pmTimesteps(nSteps));
-
-    // Update language - get the selected ID from the combo box
-    const int languageId = m_languageCombo->currentData().toInt();
-    m_game->set_language(languageId);
-
-    return true;
+void MainWidget::updateParameterValues() const {
+    m_service->setSegThreshold(m_segThresholdSpin->value());
+    m_service->setSegRadiusFrames(m_segRadiusFrameSpin->value());
+    m_service->setEstThreshold(m_estThresholdSpin->value());
+    m_service->setD3pmTimesteps(m_segD3PMNStepsCombo->currentData().toInt());
+    m_service->setLanguage(m_languageCombo->currentData().toInt());
 }
 
 void MainWidget::resetToDefaults() const {
@@ -479,11 +377,6 @@ void MainWidget::onWavPathChanged(const QString &wavPath) const {
     if (!wavPath.isEmpty() && m_outputMidi->path().isEmpty()) {
         generateMidiOutputPath(wavPath);
     }
-}
-
-static QString replaceFileExtension(const QString &filePath, const QString &newExt) {
-    const QFileInfo info(filePath);
-    return info.absolutePath() + QDir::separator() + info.completeBaseName() + "." + newExt;
 }
 
 void MainWidget::generateMidiOutputPath(const QString &wavPath) const {
@@ -522,7 +415,6 @@ void MainWidget::onExportMidiTask() {
     m_runningTask = QtConcurrent::run([this, wavPath, outputMidiPath, tempo, maxAudioSegLength,
                                        segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId,
                                        modelPathText, provider, deviceId] {
-        std::vector<Game::GameMidi> midis;
         std::string msg;
 
         if (!exists(std::filesystem::path(wavPath.toLocal8Bit().toStdString()))) {
@@ -538,7 +430,7 @@ void MainWidget::onExportMidiTask() {
             return;
         }
 
-        if (!m_game->is_open()) {
+        if (!m_service->isModelOpen()) {
             std::string msg_;
             if (!loadModel(modelPathText, provider, deviceId, msg_)) {
                 QMetaObject::invokeMethod(
@@ -552,41 +444,30 @@ void MainWidget::onExportMidiTask() {
             }
         }
 
-        {
-            std::lock_guard<std::mutex> lock(m_gameMutex);
+        // Set parameters on service before running
+        m_service->setSegThreshold(segThreshold);
+        m_service->setSegRadiusFrames(segRadiusFrame);
+        m_service->setEstThreshold(estThreshold);
+        m_service->setLanguage(languageId);
+        m_service->setD3pmTimesteps(d3pmNSteps);
 
-            m_game->set_seg_threshold(segThreshold);
-            m_game->set_seg_radius_frames(segRadiusFrame);
-            m_game->set_est_threshold(estThreshold);
-            m_game->set_language(languageId);
+        GameInferService::MidiExportParams params;
+        params.wavPath = wavPath.toLocal8Bit().toStdString();
+        params.outputMidiPath = outputMidiPath.toLocal8Bit().toStdString();
+        params.tempo = tempo;
+        params.maxAudioSegLength = maxAudioSegLength;
 
-            if (d3pmNSteps > 0) {
-                m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
-            }
+        const bool success = m_service->exportMidi(params, msg, [this](const int progress) {
+            QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
+        });
 
-            const bool success = m_game->get_midi(
-                wavPath.toLocal8Bit().toStdString(), midis, tempo, msg,
-                [this](const int progress) {
-                    QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
-                },
-                maxAudioSegLength);
-
-            if (!success) {
-                std::cerr << "Error: " << msg << std::endl;
-                QMetaObject::invokeMethod(
-                    this,
-                    [this, msg] {
-                        QMessageBox::critical(this, "Error", QString("Conversion failed: %1").arg(msg.c_str()));
-                    },
-                    Qt::QueuedConnection);
-                QMetaObject::invokeMethod(this, [this] { m_audioRun->setRunning(false); }, Qt::QueuedConnection);
-                return;
-            }
-        }
-
-        if (!makeMidiFile(outputMidiPath.toLocal8Bit().toStdString(), midis, tempo)) {
+        if (!success) {
+            std::cerr << "Error: " << msg << std::endl;
             QMetaObject::invokeMethod(
-                this, [this] { QMessageBox::warning(this, "Warning", "Failed to save MIDI file."); },
+                this,
+                [this, msg] {
+                    QMessageBox::critical(this, "Error", QString("Conversion failed: %1").arg(msg.c_str()));
+                },
                 Qt::QueuedConnection);
         } else {
             QMetaObject::invokeMethod(
@@ -673,7 +554,7 @@ void MainWidget::onAlignCsvTask() {
                                        modelPathText, provider, deviceId] {
         std::string msg;
 
-        if (!m_game->is_open()) {
+        if (!m_service->isModelOpen()) {
             std::string msg_;
             if (!loadModel(modelPathText, provider, deviceId, msg_)) {
                 QMetaObject::invokeMethod(
@@ -687,42 +568,36 @@ void MainWidget::onAlignCsvTask() {
             }
         }
 
-        {
-            std::lock_guard<std::mutex> lock(m_gameMutex);
+        // Set parameters on service before running
+        m_service->setSegThreshold(segThreshold);
+        m_service->setSegRadiusFrames(segRadiusFrame);
+        m_service->setEstThreshold(estThreshold);
+        m_service->setLanguage(languageId);
+        m_service->setD3pmTimesteps(d3pmNSteps);
 
-            m_game->set_seg_threshold(segThreshold);
-            m_game->set_seg_radius_frames(segRadiusFrame);
-            m_game->set_est_threshold(estThreshold);
-            m_game->set_language(languageId);
+        GameInferService::AlignCsvParams params;
+        params.csvPath = csvPath;
+        params.savePath = savePath;
+        params.saveFilename = saveFilename;
 
-            if (d3pmNSteps > 0) {
-                m_game->set_d3pm_ts(generateD3pmTimesteps(d3pmNSteps));
-            }
+        const bool success = m_service->alignCsv(params, msg, [this](const int progress) {
+            QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
+                                     Qt::QueuedConnection);
+        });
 
-            Game::AlignOptions options;
-
-            const bool success = m_game->alignCSV(csvPath, savePath, saveFilename, true, options, msg,
-                                                  [this](const int progress) {
-                                                      QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
-                                                                               Qt::QueuedConnection);
-                                                  });
-
-            if (!success) {
-                std::cerr << "Align error: " << msg << std::endl;
-                QMetaObject::invokeMethod(
-                    this,
-                    [this, msg] {
-                        QMessageBox::critical(this, "Error", QString("Align failed: %1").arg(msg.c_str()));
-                    },
-                    Qt::QueuedConnection);
-                QMetaObject::invokeMethod(this, [this] { m_alignRun->setRunning(false); }, Qt::QueuedConnection);
-                return;
-            }
+        if (!success) {
+            std::cerr << "Align error: " << msg << std::endl;
+            QMetaObject::invokeMethod(
+                this,
+                [this, msg] {
+                    QMessageBox::critical(this, "Error", QString("Align failed: %1").arg(msg.c_str()));
+                },
+                Qt::QueuedConnection);
+        } else {
+            QMetaObject::invokeMethod(
+                this, [this] { QMessageBox::information(this, "Success", "Align CSV completed!"); },
+                Qt::QueuedConnection);
         }
-
-        QMetaObject::invokeMethod(
-            this, [this] { QMessageBox::information(this, "Success", "Align CSV completed!"); },
-            Qt::QueuedConnection);
 
         QMetaObject::invokeMethod(this, [this] { m_alignRun->setRunning(false); }, Qt::QueuedConnection);
     });
