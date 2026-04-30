@@ -23,6 +23,7 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IModelDownloader.h
     include/dsfw/IQualityMetrics.h
     include/dsfw/IG2PProvider.h
+    include/dsfw/CommonKeys.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})

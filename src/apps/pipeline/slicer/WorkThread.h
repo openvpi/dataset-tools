@@ -1,16 +1,15 @@
 #ifndef AUDIO_SLICER_WORKTHREAD_H
 #define AUDIO_SLICER_WORKTHREAD_H
 
-#include <QObject>
-#include <QThread>
-#include <QRunnable>
+#include <dsfw/AsyncTask.h>
+
 #include <QString>
 #include <QStringList>
 
 #include "Enumerations.h"
 
-class WorkThread : public QObject, public QRunnable {
-Q_OBJECT
+class WorkThread : public dstools::AsyncTask {
+    Q_OBJECT
 public:
     WorkThread(const QString &filename,
                const QString &outPath,
@@ -24,12 +23,12 @@ public:
                bool saveMarkers = false,
                bool loadMarkers = false,
                bool overwriteMarkers = false,
-               int minimumDigits = 3,
-               int listIndex = -1);
-    void run() override;
+               int minimumDigits = 3);
+
+protected:
+    bool execute(QString &msg) override;
 
 private:
-    QString m_filename;
     QString m_outPath;
     double m_threshold;
     qint64 m_minLength;
@@ -42,14 +41,10 @@ private:
     bool m_loadMarkers;
     bool m_overwriteMarkers;
     int m_minimumDigits;
-    int m_listIndex;
 
 signals:
-    void oneFinished(const QString &filename, int listIndex);
     void oneInfo(const QString &infomsg);
     void oneError(const QString &errmsg);
-    void oneFailed(const QString &filename, int listIndex);
 };
-
 
 #endif //AUDIO_SLICER_WORKTHREAD_H

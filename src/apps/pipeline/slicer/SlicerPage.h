@@ -33,8 +33,8 @@ protected:
     void runTask() override;
 
 private slots:
-    void onOneFinished(const QString &filename, int listIndex);
-    void onOneFailed(const QString &errmsg, int listIndex);
+    void onOneFinished(const QString &identifier, const QString &msg);
+    void onOneFailed(const QString &identifier, const QString &msg);
 
 private:
     void logMessage(const QString &txt);

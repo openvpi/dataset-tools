@@ -195,9 +195,9 @@ void SlicerPage::runTask() {
             maxSilKept,
             m_cmbOutputFormat->currentData().toInt(),
             saveAudio, saveMarkers, loadMarkers, overwriteMarkers,
-            m_spnSuffixDigits->value(), i);
-        connect(runnable, &WorkThread::oneFinished, this, &SlicerPage::onOneFinished);
-        connect(runnable, &WorkThread::oneFailed, this, &SlicerPage::onOneFailed);
+            m_spnSuffixDigits->value());
+        connect(runnable, &dstools::AsyncTask::succeeded, this, &SlicerPage::onOneFinished);
+        connect(runnable, &dstools::AsyncTask::failed, this, &SlicerPage::onOneFailed);
         connect(runnable, &WorkThread::oneInfo, this, &SlicerPage::logMessage);
         connect(runnable, &WorkThread::oneError, this, &SlicerPage::logMessage);
         threadPool()->start(runnable);
@@ -221,7 +221,7 @@ void SlicerPage::addSingleAudioFile(const QString &fullPath) {
     m_taskListWidget->addItem(item);
 }
 
-void SlicerPage::onOneFinished(const QString &filename, int /*listIndex*/) {
+void SlicerPage::onOneFinished(const QString &filename, const QString & /*msg*/) {
     m_workFinished++;
     m_progressBar->setValue(m_workFinished);
     logMessage(QString("%1 finished.").arg(filename));
@@ -233,7 +233,7 @@ void SlicerPage::onOneFinished(const QString &filename, int /*listIndex*/) {
     }
 }
 
-void SlicerPage::onOneFailed(const QString &errmsg, int /*listIndex*/) {
+void SlicerPage::onOneFailed(const QString &errmsg, const QString & /*msg*/) {
     m_workFinished++;
     m_workError++;
     m_failIndex.append(errmsg);
