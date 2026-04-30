@@ -5,7 +5,6 @@ set(INFER_COMMON_SOURCES
 )
 
 set(INFER_COMMON_HEADERS
-        include/dstools/ExecutionProvider.h
         include/dstools/OnnxEnv.h
 )
 
@@ -22,6 +21,7 @@ target_link_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+        dstools-types
         onnxruntime
         Qt${QT_VERSION_MAJOR}::Core
 )

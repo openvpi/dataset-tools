@@ -7,7 +7,7 @@
 
 #include <audio-util/Slicer.h>
 #include <audio-util/Util.h>
-#include <dstools/PitchUtils.h>
+#include "NoteUtils.h"
 #include <game-infer/DiffSingerParser.h>
 #include <game-infer/GameModel.h>
 
@@ -371,11 +371,11 @@ namespace Game
             for (size_t i = 0; i < validScores.size(); ++i) {
                 if (options.uvNoteCond == UvNoteCond::Follow) {
                     // Defer v/uv to alignment; use raw pitch for all
-                    noteSeq.push_back(dstools::midiToNoteString(static_cast<double>(validScores[i])).toStdString());
+                    noteSeq.push_back(game_infer::midiToNoteString(static_cast<double>(validScores[i])));
                 } else {
                     // Predict: use presence to decide rest
                     if (validPresence[i] > 0.5f) {
-                        noteSeq.push_back(dstools::midiToNoteString(static_cast<double>(validScores[i])).toStdString());
+                        noteSeq.push_back(game_infer::midiToNoteString(static_cast<double>(validScores[i])));
                     } else {
                         noteSeq.push_back("rest");
                     }
@@ -398,7 +398,7 @@ namespace Game
             for (size_t i = 0; i < validScores.size(); ++i) {
                 std::string name;
                 if (validPresence[i] > 0.5f) {
-                    name = dstools::midiToNoteString(static_cast<double>(validScores[i])).toStdString();
+                    name = game_infer::midiToNoteString(static_cast<double>(validScores[i]));
                 } else {
                     name = "rest";
                 }

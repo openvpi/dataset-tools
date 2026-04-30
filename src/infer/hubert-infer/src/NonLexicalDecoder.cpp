@@ -39,7 +39,7 @@ namespace HFA {
         }
 
         // 计算帧数（如果wav_length有效）
-        int num_frames = cvnt_logits[0][0].size(); // 默认使用logits的长度
+        int num_frames = static_cast<int>(cvnt_logits[0][0].size()); // 默认使用logits的长度
         if (wav_length > 0) {
             num_frames =
                 static_cast<int>((wav_length * melspec_config_.sample_rate + 0.5f) / melspec_config_.hop_length);

@@ -7,13 +7,17 @@ if (NOT BUILD_TESTS)
     set(AUDIO_UTIL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
-find_package(QT NAMES Qt6 COMPONENTS Core Widgets Svg REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Svg REQUIRED)
+find_package(QT NAMES Qt6 COMPONENTS Core Gui Widgets Svg Network REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets Svg Network REQUIRED)
 
 add_custom_target(DeployedTargets)
 
+# Shared types (header-only, must come before everything)
+add_subdirectory(types)
+
 # Shared layers (must come before apps)
 add_subdirectory(core)
+add_subdirectory(ui-core)
 add_subdirectory(audio)
 add_subdirectory(widgets)
 add_subdirectory(libs)

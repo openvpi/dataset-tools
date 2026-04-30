@@ -1,3 +1,4 @@
+add_subdirectory(labeler-interfaces)
 add_subdirectory(pipeline)
 add_subdirectory(MinLabel)
 add_subdirectory(GameInfer)

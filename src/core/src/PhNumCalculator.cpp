@@ -74,7 +74,7 @@ bool PhNumCalculator::isLoaded() const {
     return m_loaded;
 }
 
-bool PhNumCalculator::calculate(const QString &phSeq, QString &phNum, QString &error) const {
+bool PhNumCalculator::calculate(const QString &phSeq, QString &phNum, QString &/*error*/) const {
     QStringList phones = phSeq.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     if (phones.isEmpty()) {
         phNum.clear();

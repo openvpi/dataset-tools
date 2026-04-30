@@ -221,7 +221,7 @@ void SlicerPage::addSingleAudioFile(const QString &fullPath) {
     m_taskListWidget->addItem(item);
 }
 
-void SlicerPage::onOneFinished(const QString &filename, int listIndex) {
+void SlicerPage::onOneFinished(const QString &filename, int /*listIndex*/) {
     m_workFinished++;
     m_progressBar->setValue(m_workFinished);
     logMessage(QString("%1 finished.").arg(filename));
@@ -233,7 +233,7 @@ void SlicerPage::onOneFinished(const QString &filename, int listIndex) {
     }
 }
 
-void SlicerPage::onOneFailed(const QString &errmsg, int listIndex) {
+void SlicerPage::onOneFailed(const QString &errmsg, int /*listIndex*/) {
     m_workFinished++;
     m_workError++;
     m_failIndex.append(errmsg);

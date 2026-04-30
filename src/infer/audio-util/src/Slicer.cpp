@@ -123,7 +123,7 @@ namespace AudioUtil
         int64_t silence_start = -1;
         int64_t clip_start = 0;
 
-        for (int64_t i = 0; i < rms_list.size(); ++i) {
+        for (int64_t i = 0; i < static_cast<int64_t>(rms_list.size()); ++i) {
             const double rms = rms_list[i];
 
             if (rms < threshold) {
@@ -189,7 +189,7 @@ namespace AudioUtil
                 chunks.emplace_back(sil_tags[i].second * hop_size, sil_tags[i + 1].first * hop_size);
             }
 
-            if (sil_tags.back().second < rms_list.size()) {
+            if (sil_tags.back().second < static_cast<int64_t>(rms_list.size())) {
                 chunks.emplace_back(sil_tags.back().second * hop_size, rms_list.size() * hop_size);
             }
             return chunks;

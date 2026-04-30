@@ -62,7 +62,7 @@ static bool makeMidiFile(const std::filesystem::path &midi_path, std::vector<Gam
 }
 
 MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
-    : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.01), m_framesPerSecond(1.0 / 0.01) {
+    : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.01f), m_framesPerSecond(1.0 / 0.01) {
     m_game = std::make_shared<Game::Game>();
 
     auto *mainLayout = new QVBoxLayout(this);
@@ -330,12 +330,12 @@ void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
         if (m_timeStepSeconds > 0) {
             m_framesPerSecond = 1.0 / m_timeStepSeconds;
         } else {
-            m_timeStepSeconds = 0.01;
+            m_timeStepSeconds = 0.01f;
             m_framesPerSecond = 1.0 / 0.01;
         }
     } else {
         std::cerr << "Error loading config.json: " << jsonErr << std::endl;
-        m_timeStepSeconds = 0.01;
+        m_timeStepSeconds = 0.01f;
         m_framesPerSecond = 1.0 / 0.01;
     }
 

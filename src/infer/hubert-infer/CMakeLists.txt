@@ -17,4 +17,4 @@ find_package(SndFile CONFIG REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC dstools-infer-common)
-target_link_libraries(${PROJECT_NAME} PRIVATE SndFile::sndfile nlohmann_json::nlohmann_json audio-util dstools-core)
+target_link_libraries(${PROJECT_NAME} PRIVATE SndFile::sndfile nlohmann_json::nlohmann_json audio-util)

@@ -41,6 +41,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+    dstools-ui-core
     dstools-core
     dstools-audio
     Qt${QT_VERSION_MAJOR}::Core

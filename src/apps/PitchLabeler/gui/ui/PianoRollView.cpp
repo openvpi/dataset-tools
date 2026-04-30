@@ -509,7 +509,7 @@ int PianoRollView::getNoteAtPosition(int x, int y) const {
 // Drawing
 // ============================================================================
 
-void PianoRollView::paintEvent(QPaintEvent *event) {
+void PianoRollView::paintEvent(QPaintEvent * /*event*/) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
@@ -670,8 +670,6 @@ void PianoRollView::drawNotes(QPainter &p, int w, int h) {
     // Collect note descriptions and phoneme texts for deferred drawing (like SlurCutter)
     QVector<QPair<QPointF, QString>> noteDescriptions;
     QVector<QPair<QPointF, QString>> phonemeTexts;
-
-    int phoneIdx = 0; // Track current phone index for matching to notes
 
     for (int i = 0; i < static_cast<int>(m_dsFile->notes.size()); ++i) {
         const auto &note = m_dsFile->notes[i];

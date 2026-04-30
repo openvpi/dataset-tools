@@ -156,14 +156,14 @@ MarkerList Slicer::slice()
             }
             movingRms.push(channelSum / static_cast<double>(channels));
         }
-        for (qint64 frame = framesRead; frame < buffer.size() / channels; frame++) {
+        for (qint64 frame = framesRead; frame < static_cast<qint64>(buffer.size()) / channels; frame++) {
             movingRms.push(0.0);
         }
         rms_list[rms_index++] = movingRms.rms();
         //qDebug() << samplesRead << "<->" << rms_list[rms_index - 1];
-    } while (rms_index < rms_list.size());
+    } while (rms_index < static_cast<qint64>(rms_list.size()));
 
-    while (rms_index < rms_list.size()) {
+    while (rms_index < static_cast<qint64>(rms_list.size())) {
         for (qint64 i = 0; i < m_hopSize; i++) {
             movingRms.push(0.0);
         }
@@ -177,7 +177,7 @@ MarkerList Slicer::slice()
 
     qint64 pos = 0, pos_l = 0, pos_r = 0;
 
-    for (qint64 i = 0; i < rms_list.size(); i++)
+    for (qint64 i = 0; i < static_cast<qint64>(rms_list.size()); i++)
     {
         double rms = rms_list[i];
         // Keep looping while frame is silent.
@@ -271,7 +271,7 @@ MarkerList Slicer::slice()
             end = s0;
             chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
         }
-        for (auto i = 0; i < sil_tags.size() - 1; i++) {
+        for (size_t i = 0; i < sil_tags.size() - 1; i++) {
             begin = sil_tags[i].second;
             end = sil_tags[i + 1].first;
             chunks.emplace_back(begin * m_hopSize, std::min(frames, end * m_hopSize));
@@ -296,7 +296,7 @@ QString Slicer::getErrorMsg() {
 template<class T>
 inline qint64 argmin_range_view(const std::vector<T>& v, qint64 begin, qint64 end) {
     // Ensure vector access is not out of bound
-    auto size = v.size();
+    auto size = static_cast<qint64>(v.size());
     if (begin > size)  begin = size;
     if (end > size)    end = size;
     if (begin >= end)  return 0;

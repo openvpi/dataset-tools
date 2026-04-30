@@ -125,7 +125,6 @@ cmake --build build --target install
 | `BUILD_TESTS` | `ON` | Build `src/tests/` subdirectory |
 | `AUDIO_UTIL_BUILD_TESTS` | `ON` | Build TestAudioUtil |
 | `GAME_INFER_BUILD_TESTS` | `ON` | Build TestGame |
-| `SOME_INFER_BUILD_TESTS` | `ON` | Build TestSome |
 | `RMVPE_INFER_BUILD_TESTS` | `ON` | Build TestRmvpe |
 | `ONNXRUNTIME_ENABLE_DML` | `ON` (Windows) | Enable DirectML GPU acceleration |
 | `ONNXRUNTIME_ENABLE_CUDA` | `OFF` | Enable CUDA GPU acceleration |
@@ -134,9 +133,9 @@ cmake --build build --target install
 
 | Type | Files |
 |---|---|
-| Applications | `DatasetPipeline.exe`, `MinLabel.exe`, `PhonemeLabeler.exe`, `PitchLabeler.exe`, `GameInfer.exe` |
-| Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestSome.exe`, `TestAudioUtil.exe` |
-| Shared libraries | `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `some-infer.dll`, `rmvpe-infer.dll` |
+| Applications | `DatasetPipeline.exe`, `MinLabel.exe`, `PhonemeLabeler.exe`, `PitchLabeler.exe`, `GameInfer.exe`, `DiffSingerLabeler.exe` |
+| Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestAudioUtil.exe` |
+| Shared libraries | `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `rmvpe-infer.dll`, `hubert-infer.dll` |
 
 ## Libraries
 

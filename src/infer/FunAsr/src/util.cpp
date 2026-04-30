@@ -22,7 +22,8 @@ namespace FunAsr {
             fclose(fp);
             return nullptr;
         }
-        int n = fread(params_addr, 1, nFileLen, fp);
+        size_t n = fread(params_addr, 1, nFileLen, fp);
+        (void)n;
         fclose(fp);
 
         return params_addr;

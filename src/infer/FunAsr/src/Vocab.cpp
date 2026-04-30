@@ -67,7 +67,7 @@ namespace FunAsr {
         std::list<std::string> words;
 
         int is_pre_english = false;
-        int pre_english_len = 0;
+        size_t pre_english_len = 0;
 
         int is_combining = false;
         std::string combine;

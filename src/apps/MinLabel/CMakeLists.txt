@@ -4,18 +4,14 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-file(GLOB_RECURSE _src *.h *.cpp)
-add_executable(${PROJECT_NAME} ${_src} res.qrc)
+add_subdirectory(gui)
+
+add_executable(${PROJECT_NAME} main.cpp gui/MainWindow.cpp gui/MainWindow.h MinLabelKeys.h res.qrc)
 
 find_package(cpp-pinyin CONFIG REQUIRED)
-find_package(cpp-kana CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    dstools-widgets
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Widgets
-    cpp-pinyin::cpp-pinyin
-    cpp-kana::cpp-kana
+    minlabel-page
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

@@ -46,7 +46,7 @@ void IntervalTierView::setActive(bool active) {
     }
 }
 
-void IntervalTierView::paintEvent(QPaintEvent *event) {
+void IntervalTierView::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
     painter.fillRect(rect(), m_active ? QColor(50, 50, 60) : QColor(40, 40, 45));
 
@@ -130,8 +130,6 @@ void IntervalTierView::drawLabels(QPainter &painter) {
 
 void IntervalTierView::drawBindingLines(QPainter &painter) {
     if (m_dragAligned.empty()) return;
-
-    int srcX = timeToX(m_doc->boundaryTime(m_tierIndex, m_draggedBoundary));
 
     painter.setPen(QPen(QColor(255, 200, 100, 120), 1, Qt::DashLine));
 

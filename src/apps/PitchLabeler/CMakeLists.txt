@@ -4,17 +4,21 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-file(GLOB_RECURSE _src *.h *.cpp)
-add_executable(${PROJECT_NAME} ${_src})
+add_subdirectory(gui)
+
+add_executable(${PROJECT_NAME}
+    main.cpp
+    gui/MainWindow.cpp
+    gui/MainWindow.h
+    PitchLabelerKeys.h
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        dstools-widgets
-        Qt${QT_VERSION_MAJOR}::Core
-        Qt${QT_VERSION_MAJOR}::Widgets
+    pitchlabeler-page
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-        APP_VERSION="${PROJECT_VERSION}"
+    APP_VERSION="${PROJECT_VERSION}"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)

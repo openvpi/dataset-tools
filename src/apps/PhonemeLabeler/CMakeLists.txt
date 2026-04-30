@@ -4,18 +4,17 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-file(GLOB_RECURSE _src *.h *.cpp)
-add_executable(${PROJECT_NAME} ${_src})
+add_subdirectory(gui)
 
-find_package(FFTW3 CONFIG REQUIRED)
+add_executable(${PROJECT_NAME}
+    main.cpp
+    gui/MainWindow.cpp
+    gui/MainWindow.h
+    PhonemeLabelerKeys.h
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    dstools-widgets
-    dstools-audio
-    textgrid
-    FFTW3::fftw3
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Widgets
+    phonemelabeler-page
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

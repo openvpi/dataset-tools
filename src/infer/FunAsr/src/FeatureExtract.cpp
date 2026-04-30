@@ -102,7 +102,7 @@ namespace FunAsr {
 
             int i;
             for (i = 0; i < 80; i++) {
-                float tmp = din[i] < 1e-7 ? 1e-7 : din[i];
+                float tmp = din[i] < 1e-7f ? 1e-7f : din[i];
                 tmp = log(tmp);
                 din[i] = (tmp - mean[i]) / std[i];
             }

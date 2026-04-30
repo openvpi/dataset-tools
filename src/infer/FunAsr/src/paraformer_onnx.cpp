@@ -14,7 +14,7 @@
 
 namespace FunAsr {
     ModelImp::ModelImp(const std::filesystem::path &path, const int &nNumThread,
-                       ExecutionProvider provider, int deviceId) {
+                       ExecutionProvider /*provider*/, int /*deviceId*/) {
         const auto model_path = path / "model.onnx";
         const auto vocab_path = path / "vocab.txt";
 

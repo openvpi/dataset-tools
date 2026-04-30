@@ -3,7 +3,7 @@
 namespace FunAsr {
     void *aligned_malloc(size_t alignment, size_t required_bytes) {
         void *p1; // original block
-        const int offset = alignment - 1 + sizeof(void *);
+        const size_t offset = alignment - 1 + sizeof(void *);
         if ((p1 = (void *) malloc(required_bytes + offset)) == nullptr) {
             return nullptr;
         }

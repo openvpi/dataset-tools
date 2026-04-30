@@ -6,11 +6,11 @@
 #include <vector>
 
 #include <audio-util/Util.h>
-#include <dstools/JsonHelper.h>
+#include "JsonUtils.h"
 
 
 namespace fs = std::filesystem;
-using dstools::JsonHelper;
+using hubert_infer::JsonUtils;
 
 namespace HFA {
 
@@ -19,14 +19,14 @@ namespace HFA {
             std::string jsonErr;
 
             const fs::path config_file = model_folder / "config.json";
-            auto config = JsonHelper::loadFile(config_file, jsonErr);
+            auto config = JsonUtils::loadFile(config_file, jsonErr);
             if (!jsonErr.empty()) {
                 std::cerr << "HFA: " << jsonErr << std::endl;
                 return;
             }
 
             std::map<std::string, float> mel_spec_config;
-            if (!JsonHelper::getRequiredMap<std::string, float>(config, "mel_spec_config", mel_spec_config, jsonErr)) {
+            if (!JsonUtils::getRequiredMap<std::string, float>(config, "mel_spec_config", mel_spec_config, jsonErr)) {
                 std::cerr << "HFA: " << jsonErr << std::endl;
                 return;
             }
@@ -36,13 +36,13 @@ namespace HFA {
             m_hfa = std::make_unique<HfaModel>(model_path, provider, device_id);
 
             const fs::path vocab_file = model_folder / "vocab.json";
-            auto vocab = JsonHelper::loadFile(vocab_file, jsonErr);
+            auto vocab = JsonUtils::loadFile(vocab_file, jsonErr);
             if (!jsonErr.empty()) {
                 std::cerr << "HFA: " << jsonErr << std::endl;
                 m_hfa.reset();
                 return;
             }
-            const auto dictionaries = JsonHelper::getObject(vocab, "dictionaries");
+            const auto dictionaries = JsonUtils::getObject(vocab, "dictionaries");
 
             for (const auto &[language, dict_node] : dictionaries.items()) {
                 if (!dict_node.is_null()) {
@@ -58,7 +58,7 @@ namespace HFA {
             }
 
             std::vector<std::string> silent_phonemes;
-            if (!JsonHelper::getRequiredVec<std::string>(vocab, "silent_phonemes", silent_phonemes, jsonErr)) {
+            if (!JsonUtils::getRequiredVec<std::string>(vocab, "silent_phonemes", silent_phonemes, jsonErr)) {
                 std::cerr << "HFA: " << jsonErr << std::endl;
                 m_hfa.reset();
                 return;
@@ -66,13 +66,13 @@ namespace HFA {
             m_silent_phonemes = std::unordered_set(silent_phonemes.begin(), silent_phonemes.end());
 
             std::map<std::string, int> vocab_dict;
-            if (!JsonHelper::getRequiredMap<std::string, int>(vocab, "vocab", vocab_dict, jsonErr)) {
+            if (!JsonUtils::getRequiredMap<std::string, int>(vocab, "vocab", vocab_dict, jsonErr)) {
                 std::cerr << "HFA: " << jsonErr << std::endl;
                 m_hfa.reset();
                 return;
             }
             std::vector<std::string> non_lexical_phonemes;
-            if (!JsonHelper::getRequiredVec<std::string>(vocab, "non_lexical_phonemes", non_lexical_phonemes, jsonErr)) {
+            if (!JsonUtils::getRequiredVec<std::string>(vocab, "non_lexical_phonemes", non_lexical_phonemes, jsonErr)) {
                 std::cerr << "HFA: " << jsonErr << std::endl;
                 m_hfa.reset();
                 return;

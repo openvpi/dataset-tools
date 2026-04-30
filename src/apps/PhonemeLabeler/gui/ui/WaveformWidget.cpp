@@ -109,7 +109,7 @@ void WaveformWidget::onPlayheadChanged(double sec) {
     setPlayhead(sec);
 }
 
-void WaveformWidget::paintEvent(QPaintEvent *event) {
+void WaveformWidget::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
     painter.fillRect(rect(), QColor(30, 30, 30));
 
