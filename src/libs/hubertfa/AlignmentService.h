@@ -16,15 +16,21 @@ public:
     AlignmentService() = default;
     ~AlignmentService() override;
 
-    dstools::Result<void> loadModel(const QString &modelPath, int gpuIndex = -1);
-    bool isModelLoaded() const;
-    void unloadModel();
+    dstools::Result<void> loadModel(const QString &modelPath, int gpuIndex = -1) override;
+    bool isModelLoaded() const override;
+    void unloadModel() override;
 
     void setLanguage(const std::string &language);
     void setNonSpeechPhonemes(const std::vector<std::string> &phonemes);
 
     Result<dstools::AlignmentResult> align(const QString &audioPath,
                                            const std::vector<QString> &phonemes) override;
+
+    Result<void> alignCSV(const QString &csvPath, const QString &savePath,
+                          const dstools::AlignCsvOptions &options = {},
+                          const std::function<void(int)> &progress = nullptr) override;
+
+    nlohmann::json vocabInfo() const override;
 
 private:
     std::unique_ptr<HFA::HFA> m_hfa;

@@ -1,7 +1,8 @@
-#ifndef GAMEINFERSERVICE_H
-#define GAMEINFERSERVICE_H
+#pragma once
 
 #include <QObject>
+
+#include <dsfw/ITranscriptionService.h>
 
 #include <filesystem>
 #include <functional>
@@ -11,17 +12,30 @@
 #include <string>
 #include <vector>
 
-#include <dstools/Result.h>
-#include <game-infer/Game.h>
+namespace Game {
+class Game;
+}
 
-class GameInferService : public QObject {
+class GameInferService : public QObject, public dstools::ITranscriptionService {
     Q_OBJECT
 
 public:
     explicit GameInferService(QObject *parent = nullptr);
 
-    dstools::Result<void> loadModel(const std::filesystem::path &modelPath, Game::ExecutionProvider provider, int deviceId);
-    bool isModelOpen() const;
+    dstools::Result<void> loadModel(const QString &modelPath, int gpuIndex = -1) override;
+    bool isModelLoaded() const override;
+    void unloadModel() override;
+
+    dstools::Result<dstools::TranscriptionResult> transcribe(const QString &audioPath) override;
+
+    dstools::Result<void> exportMidi(const QString &audioPath, const QString &outputPath,
+                                     float tempo,
+                                     const std::function<void(int)> &progress = nullptr) override;
+
+    dstools::Result<void> alignCSV(const QString &csvPath, const QString &savePath,
+                                   const std::function<void(int)> &progress = nullptr) override;
+
+    dstools::TranscriptionModelInfo modelInfo() const override;
 
     void setSegThreshold(float v);
     void setSegRadiusFrames(float v);
@@ -29,42 +43,10 @@ public:
     void setLanguage(int lang);
     void setD3pmTimesteps(int nSteps);
 
-    int targetSampleRate() const;
-    float timestep() const;
-    bool hasDur2bd() const;
-    std::map<std::string, int> languageMap() const;
-
-    void loadLanguagesFromConfig(const std::filesystem::path &modelPath,
-                                 std::map<int, std::string> &idToName,
-                                 std::map<std::string, int> &nameToId);
-
-    float loadTimestepFromConfig(const std::filesystem::path &modelPath);
-
-    struct MidiExportParams {
-        std::filesystem::path wavPath;
-        std::filesystem::path outputMidiPath;
-        float tempo;
-        int maxAudioSegLength;
-    };
-
-    struct AlignCsvParams {
-        std::filesystem::path csvPath;
-        std::filesystem::path savePath;
-        std::string saveFilename;
-    };
-
-    dstools::Result<void> exportMidi(const MidiExportParams &params,
-                                     const std::function<void(int)> &progress);
-
-    dstools::Result<void> alignCsv(const AlignCsvParams &params,
-                                   const std::function<void(int)> &progress);
-
 private:
     static std::vector<float> generateD3pmTimesteps(int nSteps);
-    static bool makeMidiFile(const std::filesystem::path &midiPath, std::vector<Game::GameMidi> midis, float tempo);
 
     std::shared_ptr<Game::Game> m_game;
     mutable std::mutex m_gameMutex;
+    dstools::TranscriptionModelInfo m_modelInfo;
 };
-
-#endif // GAMEINFERSERVICE_H

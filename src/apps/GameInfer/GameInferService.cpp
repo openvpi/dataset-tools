@@ -3,21 +3,52 @@
 #include <iostream>
 
 #include <dsfw/JsonHelper.h>
+#include <dstools/ExecutionProvider.h>
+#include <game-infer/Game.h>
 #include <wolf-midi/MidiFile.h>
 
 GameInferService::GameInferService(QObject *parent) : QObject(parent) {
     m_game = std::make_shared<Game::Game>();
 }
 
-dstools::Result<void> GameInferService::loadModel(const std::filesystem::path &modelPath, Game::ExecutionProvider provider,
-                                                   int deviceId) {
+dstools::Result<void> GameInferService::loadModel(const QString &modelPath, int gpuIndex) {
     std::lock_guard<std::mutex> lock(m_gameMutex);
-    return m_game->load_model(modelPath, provider, deviceId);
+
+    auto provider = gpuIndex < 0 ? Game::ExecutionProvider::CPU
+#ifdef ONNXRUNTIME_ENABLE_DML
+                                 : Game::ExecutionProvider::DML;
+#else
+                                 : Game::ExecutionProvider::CPU;
+#endif
+
+    auto result = m_game->load_model(modelPath.toStdWString(), provider, gpuIndex);
+    if (!result) {
+        return result;
+    }
+
+    m_modelInfo.targetSampleRate = m_game->get_target_sample_rate();
+    m_modelInfo.timestep = m_game->get_timestep();
+    m_modelInfo.hasDur2bd = m_game->has_dur2bd();
+
+    const auto &langMap = m_game->get_language_map();
+    for (const auto &[name, id] : langMap) {
+        m_modelInfo.languageMap[QString::fromStdString(name)] = id;
+    }
+
+    return dstools::Ok();
 }
 
-bool GameInferService::isModelOpen() const {
+bool GameInferService::isModelLoaded() const {
     std::lock_guard<std::mutex> lock(m_gameMutex);
-    return m_game->is_open();
+    return m_game && m_game->is_open();
+}
+
+void GameInferService::unloadModel() {
+    std::lock_guard<std::mutex> lock(m_gameMutex);
+    if (m_game) {
+        m_game->unload();
+    }
+    m_modelInfo = {};
 }
 
 void GameInferService::setSegThreshold(float v) {
@@ -47,87 +78,79 @@ void GameInferService::setD3pmTimesteps(int nSteps) {
     }
 }
 
-int GameInferService::targetSampleRate() const {
+dstools::Result<dstools::TranscriptionResult> GameInferService::transcribe(const QString &audioPath) {
     std::lock_guard<std::mutex> lock(m_gameMutex);
-    return m_game->get_target_sample_rate();
-}
-
-float GameInferService::timestep() const {
-    std::lock_guard<std::mutex> lock(m_gameMutex);
-    return m_game->get_timestep();
-}
-
-bool GameInferService::hasDur2bd() const {
-    std::lock_guard<std::mutex> lock(m_gameMutex);
-    return m_game->has_dur2bd();
-}
-
-std::map<std::string, int> GameInferService::languageMap() const {
-    std::lock_guard<std::mutex> lock(m_gameMutex);
-    return m_game->get_language_map();
-}
-
-void GameInferService::loadLanguagesFromConfig(const std::filesystem::path &modelPath,
-                                               std::map<int, std::string> &idToName,
-                                               std::map<std::string, int> &nameToId) {
-    idToName.clear();
-    nameToId.clear();
-
-    idToName[0] = "default";
-    nameToId["default"] = 0;
-
-    const std::filesystem::path configPath = modelPath / "config.json";
-    auto configResult = dstools::JsonHelper::loadFile(configPath);
-
-    if (configResult) {
-        auto &config = configResult.value();
-        auto languages = dstools::JsonHelper::getObject(config, "languages");
-        if (languages.is_object()) {
-            for (auto &[key, value] : languages.items()) {
-                if (value.is_number_integer()) {
-                    int id = value.get<int>();
-                    idToName[id] = key;
-                    nameToId[key] = id;
-                }
-            }
-        }
+    if (!m_game || !m_game->is_open()) {
+        return dstools::Err("Model not loaded");
     }
-}
 
-float GameInferService::loadTimestepFromConfig(const std::filesystem::path &modelPath) {
-    const std::filesystem::path configPath = modelPath / "config.json";
-    auto configResult = dstools::JsonHelper::loadFile(configPath);
-
-    if (configResult) {
-        float ts = dstools::JsonHelper::get(configResult.value(), "timestep", 0.01f);
-        if (ts > 0)
-            return ts;
+    std::vector<Game::GameNote> notes;
+    auto result = m_game->get_notes(audioPath.toStdWString(), notes, nullptr);
+    if (!result) {
+        return dstools::Err(result.error());
     }
-    return 0.01f;
+
+    dstools::TranscriptionResult out;
+    out.sampleRate = m_modelInfo.targetSampleRate;
+    for (const auto &n : notes) {
+        out.notes.push_back(dstools::NoteEvent{
+            static_cast<int>(std::round(n.pitch)),
+            static_cast<int64_t>(n.onset * m_modelInfo.targetSampleRate),
+            static_cast<int64_t>((n.onset + n.duration) * m_modelInfo.targetSampleRate),
+            n.voiced ? 0.8f : 0.0f,
+        });
+    }
+    return dstools::Ok(std::move(out));
 }
 
-dstools::Result<void> GameInferService::exportMidi(const MidiExportParams &params,
-                                                    const std::function<void(int)> &progress) {
+dstools::Result<void> GameInferService::exportMidi(const QString &audioPath, const QString &outputPath,
+                                                     float tempo,
+                                                     const std::function<void(int)> &progress) {
+    std::lock_guard<std::mutex> lock(m_gameMutex);
+    if (!m_game || !m_game->is_open()) {
+        return dstools::Err("Model not loaded");
+    }
+
     std::vector<Game::GameMidi> midis;
-
-    {
-        std::lock_guard<std::mutex> lock(m_gameMutex);
-        auto result = m_game->get_midi(params.wavPath, midis, params.tempo, progress, params.maxAudioSegLength);
-        if (!result)
-            return result;
+    auto result = m_game->get_midi(audioPath.toStdWString(), midis, tempo, progress);
+    if (!result) {
+        return dstools::Err(result.error());
     }
 
-    if (!makeMidiFile(params.outputMidiPath, std::move(midis), params.tempo)) {
+    Midi::MidiFile midi;
+    midi.setFileFormat(1);
+    midi.setDivisionType(Midi::MidiFile::DivisionType::PPQ);
+    midi.setResolution(480);
+
+    midi.createTrack();
+    midi.createTimeSignatureEvent(0, 0, 4, 4);
+    midi.createTempoEvent(0, 0, tempo);
+
+    midi.createTrack();
+    for (const auto &[note, start, duration] : midis) {
+        midi.createNoteOnEvent(1, start, 0, note, 64);
+        midi.createNoteOffEvent(1, start + duration, 0, note, 64);
+    }
+
+    if (!midi.save(outputPath.toStdWString())) {
         return dstools::Err("Failed to save MIDI file.");
     }
     return dstools::Ok();
 }
 
-dstools::Result<void> GameInferService::alignCsv(const AlignCsvParams &params,
-                                                  const std::function<void(int)> &progress) {
+dstools::Result<void> GameInferService::alignCSV(const QString &csvPath, const QString &savePath,
+                                                   const std::function<void(int)> &progress) {
     std::lock_guard<std::mutex> lock(m_gameMutex);
-    Game::AlignOptions options;
-    return m_game->alignCSV(params.csvPath, params.savePath, params.saveFilename, true, options, progress);
+    if (!m_game || !m_game->is_open()) {
+        return dstools::Err("Model not loaded");
+    }
+
+    Game::AlignOptions opts;
+    return m_game->alignCSV(csvPath.toStdWString(), savePath.toStdWString(), "", false, opts, progress);
+}
+
+dstools::TranscriptionModelInfo GameInferService::modelInfo() const {
+    return m_modelInfo;
 }
 
 std::vector<float> GameInferService::generateD3pmTimesteps(int nSteps) {
@@ -141,30 +164,4 @@ std::vector<float> GameInferService::generateD3pmTimesteps(int nSteps) {
         ts.push_back(t0 + i * step);
     }
     return ts;
-}
-
-bool GameInferService::makeMidiFile(const std::filesystem::path &midiPath, std::vector<Game::GameMidi> midis,
-                                    float tempo) {
-    Midi::MidiFile midi;
-    midi.setFileFormat(1);
-    midi.setDivisionType(Midi::MidiFile::DivisionType::PPQ);
-    midi.setResolution(480);
-
-    midi.createTrack();
-    midi.createTimeSignatureEvent(0, 0, 4, 4);
-    midi.createTempoEvent(0, 0, tempo);
-
-    std::vector<char> trackName;
-    std::string str = "Game";
-    trackName.insert(trackName.end(), str.begin(), str.end());
-
-    midi.createTrack();
-    midi.createMetaEvent(1, 0, Midi::MidiEvent::MetaNumbers::TrackName, trackName);
-
-    for (const auto &[note, start, duration] : midis) {
-        midi.createNoteOnEvent(1, start, 0, note, 64);
-        midi.createNoteOffEvent(1, start + duration, 0, note, 64);
-    }
-
-    return midi.save(midiPath);
 }

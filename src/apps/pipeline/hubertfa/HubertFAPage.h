@@ -5,16 +5,13 @@
 #include <QLabel>
 #include <QTextCharFormat>
 
+#include <dsfw/IAlignmentService.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
 
 namespace dstools::widgets {
 class PathSelector;
 class ModelLoadPanel;
-}
-
-namespace HFA {
-class HFA;
 }
 
 class HubertFAPage : public dstools::widgets::TaskWindow,
@@ -26,11 +23,9 @@ public:
     explicit HubertFAPage(QWidget *parent = nullptr);
     ~HubertFAPage() override;
 
-    // IPageActions
     void setWorkingDirectory(const QString &dir) override;
     QString workingDirectory() const override;
 
-    // IPageLifecycle
     void onWorkingDirectoryChanged(const QString &newDir) override;
 
 protected:
@@ -49,7 +44,7 @@ private:
     QButtonGroup *m_languageGroup = nullptr;
     QHBoxLayout *m_nonSpeechPhLayout = nullptr;
     QWidget *m_dynamicContainer = nullptr;
-    HFA::HFA *m_hfa = nullptr;
+    dstools::IAlignmentService *m_alignmentService = nullptr;
     QTextCharFormat m_errorFormat;
     QString m_workingDir;
 };

@@ -5,117 +5,59 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-#include <game-infer/Game.h>
+#include <dsfw/ServiceLocator.h>
 
 namespace dstools::labeler {
 
 GameAlignPage::GameAlignPage(QWidget *parent) : QWidget(parent) {
-    buildUi();
-}
-
-void GameAlignPage::buildUi() {
     auto *vLayout = new QVBoxLayout(this);
 
-    // Parameter panel
     auto *form = new QFormLayout;
 
-    m_modelPath = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::Directory, "",
-                                                     "");
+    m_modelPath = new QLineEdit;
     m_modelPath->setPlaceholder(tr("Path to GAME model directory"));
     form->addRow(tr("Model:"), m_modelPath);
 
-    m_gpuSelector = new dstools::widgets::GpuSelector;
+    m_gpuSelector = new QComboBox;
+    m_gpuSelector->addItem(tr("CPU"), -1);
+    m_gpuSelector->addItem(tr("GPU 0"), 0);
     form->addRow(tr("Device:"), m_gpuSelector);
 
     vLayout->addLayout(form);
 
-    // Run progress row
-    m_runProgress = new dstools::widgets::RunProgressRow(tr("Run"));
-    vLayout->addWidget(m_runProgress);
-
-    // Log area
-    m_log = new QTextEdit;
-    m_log->setReadOnly(true);
-    vLayout->addWidget(m_log, 1);
-
-    // Run action
-    m_runAction = new QAction(tr("Run MIDI Alignment"), this);
-    m_runAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
-    auto runSlot = [this]() {
-        if (m_workingDir.isEmpty()) {
-            QMessageBox::warning(this, tr("Error"), tr("No working directory set."));
-            return;
-        }
-        if (m_modelPath->path().isEmpty()) {
-            QMessageBox::warning(this, tr("Error"), tr("No GAME model directory selected."));
-            return;
-        }
-
-        const QString csvPath = m_workingDir + QStringLiteral("/dstemp/build_csv/transcriptions.csv");
-        const QString outCsvPath = m_workingDir + QStringLiteral("/dstemp/midi/transcriptions.csv");
-        QDir().mkpath(m_workingDir + QStringLiteral("/dstemp/midi"));
-
-        m_log->clear();
-        m_log->append(tr("Loading GAME model..."));
-
-        Game::Game game;
-        const int deviceId = m_gpuSelector->selectedDeviceId();
-        auto provider = deviceId >= 0 ? Game::ExecutionProvider::DML : Game::ExecutionProvider::CPU;
-        auto loadResult = game.load_model(m_modelPath->path().toStdString(), provider, deviceId);
-        if (!loadResult) {
-            m_log->append(tr("<b>Error:</b> Failed to load model: %1").arg(QString::fromStdString(loadResult.error())));
-            return;
-        }
-
-        m_log->append(tr("Running GAME alignment on CSV..."));
-        m_runProgress->setProgress(0);
-
-        Game::AlignOptions alignOpts;
-        auto alignResult = game.alignCSV(
-                csvPath.toStdString(), outCsvPath.toStdString(), "", false, alignOpts,
-                [this](int progress) { m_runProgress->setProgress(progress); });
-        if (!alignResult) {
-            m_log->append(tr("<b>Error:</b> %1").arg(QString::fromStdString(alignResult.error())));
-            QMessageBox::warning(this, tr("MIDI Alignment Failed"), QString::fromStdString(alignResult.error()));
-        } else {
-            m_runProgress->setProgress(100);
-            m_log->append(tr("<b>Done.</b> Output: %1").arg(outCsvPath));
-        }
-    };
-    connect(m_runProgress, &dstools::widgets::RunProgressRow::runClicked, this, runSlot);
-    connect(m_runAction, &QAction::triggered, this, runSlot);
+    vLayout->addStretch(1);
 }
 
-QList<QAction *> GameAlignPage::editActions() const {
-    return {m_runAction};
-}
+void GameAlignPage::onRunAlignment() {
+    if (m_modelPath->text().isEmpty()) {
+        QMessageBox::warning(this, tr("Error"), tr("No GAME model directory selected."));
+        return;
+    }
 
-void GameAlignPage::setWorkingDirectory(const QString &dir) {
-    m_workingDir = dir;
-}
+    auto *service = dstools::ServiceLocator::get<dstools::IAlignmentService>();
+    if (!service) {
+        QMessageBox::warning(this, tr("Error"), tr("No alignment service registered."));
+        return;
+    }
 
-QString GameAlignPage::workingDirectory() const {
-    return m_workingDir;
-}
+    const int gpuIndex = m_gpuSelector->currentData().toInt();
+    auto loadResult = service->loadModel(m_modelPath->text(), gpuIndex);
+    if (!loadResult) {
+        QMessageBox::warning(this, tr("Error"),
+                             tr("Failed to load model: %1").arg(QString::fromStdString(loadResult.error())));
+        return;
+    }
 
-int GameAlignPage::progressTotal() const {
-    return m_progressTotal;
-}
+    dstools::AlignCsvOptions opts;
+    auto alignResult = service->alignCSV(
+        m_modelPath->text(), "",
+        opts,
+        [](int progress) { (void)progress; });
 
-int GameAlignPage::progressCurrent() const {
-    return m_progressCurrent;
-}
-
-bool GameAlignPage::isRunning() const {
-    return m_running;
-}
-
-QString GameAlignPage::progressMessage() const {
-    return m_progressMessage;
-}
-
-void GameAlignPage::cancelOperation() {
-    m_running = false;
+    if (!alignResult) {
+        QMessageBox::warning(this, tr("MIDI Alignment Failed"),
+                             QString::fromStdString(alignResult.error()));
+    }
 }
 
 } // namespace dstools::labeler

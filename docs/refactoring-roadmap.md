@@ -142,7 +142,7 @@ Phase 0 (✅) → Phase 1 (✅) → Phase 2 (✅) → Phase 3 (✅) → Phase 4 
 
 ---
 
-#### T-5.1.2 应用层推理解耦 [ARCH-08 + T-4.7] — P1, M (2-8h)
+#### T-5.1.2 应用层推理解耦 [ARCH-08 + T-4.7] — P1, M (2-8h) ✅ 已完成
 
 **现状**: GameAlignPage、MainWidget (GameInfer)、HubertFAPage 直接 `#include` 推理库头文件并管理引擎生命周期，违反分层架构。
 
@@ -152,8 +152,20 @@ Phase 0 (✅) → Phase 1 (✅) → Phase 2 (✅) → Phase 3 (✅) → Phase 4 
 3. Apps 启动时统一注册（`registerServices()`），UI 层不再直接构造引擎
 
 **验收标准**:
-- [ ] UI 层 `.cpp` 文件不再 `#include` 任何 `*-infer/*.h` 头文件
-- [ ] 推理引擎生命周期由 domain 层管理
+- [x] UI 层 `.cpp` 文件不再 `#include` 任何 `*-infer/*.h` 头文件
+- [x] 推理引擎生命周期由 domain 层管理
+
+**成果**:
+- 扩展 IAlignmentService 接口：添加 loadModel()/isModelLoaded()/unloadModel()/alignCSV()/vocabInfo()
+- 扩展 ITranscriptionService 接口：添加 loadModel()/isModelLoaded()/unloadModel()/exportMidi()/alignCSV()/modelInfo()
+- 扩展 IPitchService 接口：添加 loadModel()/isModelLoaded()/unloadModel()/extractPitchWithProgress()
+- 创建 GameAlignmentService 和 GameTranscriptionService（libs/gameinfer/）
+- 创建 RmvpePitchService（libs/rmvpepitch/）
+- GameInferService 实现 ITranscriptionService 接口，注册到 ServiceLocator
+- GameAlignPage 改为通过 IAlignmentService 间接使用推理能力
+- HubertFAPage 改为通过 IAlignmentService 间接使用推理能力
+- MainWidget 移除对 Game::ExecutionProvider 的直接依赖
+- UI 层头文件不再 include 任何 *-infer/*.h
 
 ---
 

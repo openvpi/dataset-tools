@@ -14,9 +14,7 @@
 #include <dstools/ModelLoadPanel.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/AsyncTask.h>
-
-#include <hubert-infer/Hfa.h>
-#include "HfaTask.h"
+#include <dsfw/ServiceLocator.h>
 
 namespace fs = std::filesystem;
 
@@ -31,9 +29,7 @@ HubertFAPage::HubertFAPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) 
     slot_loadModel();
 }
 
-HubertFAPage::~HubertFAPage() {
-    delete m_hfa;
-}
+HubertFAPage::~HubertFAPage() = default;
 
 void HubertFAPage::init() {
     m_outTgPath = new PathSelector(PathSelector::Directory, "Output TextGrid directory:", {}, this);
@@ -56,7 +52,7 @@ void HubertFAPage::init() {
 }
 
 void HubertFAPage::runTask() {
-    if (!m_hfa) {
+    if (!m_alignmentService || !m_alignmentService->isModelLoaded()) {
         QMessageBox::warning(this, "Warning", "Model not loaded.");
         m_isRunning = false;
         m_runBtn->setEnabled(true);
@@ -88,29 +84,17 @@ void HubertFAPage::runTask() {
     m_progressBar->setValue(0);
     m_progressBar->setMaximum(m_totalTasks);
 
-    std::vector<std::string> non_speech_ph;
-    if (m_nonSpeechPhLayout) {
-        for (int i = 0; i < m_nonSpeechPhLayout->count(); ++i) {
-            auto *cb = qobject_cast<QCheckBox *>(m_nonSpeechPhLayout->itemAt(i)->widget());
-            if (cb && cb->isChecked())
-                non_speech_ph.push_back(cb->text().toStdString());
-        }
-    }
-    std::string language = "zh";
-    if (m_languageGroup && m_languageGroup->checkedButton())
-        language = m_languageGroup->checkedButton()->text().toStdString();
-
     for (int i = 0; i < m_totalTasks; ++i) {
         auto *item = taskList()->item(i);
         QString filename = item->text();
         QString filePath = item->data(Qt::UserRole + 1).toString();
-        QString baseName = QFileInfo(filename).completeBaseName();
-        QString outTgPath = outDir + QDir::separator() + baseName + ".TextGrid";
 
-        auto *thread = new HFA::HfaThread(m_hfa, filename, filePath, outTgPath, language, non_speech_ph);
-        connect(thread, &dstools::AsyncTask::failed, this, &HubertFAPage::slot_hfaFailed);
-        connect(thread, &dstools::AsyncTask::succeeded, this, &HubertFAPage::slot_hfaFinished);
-        threadPool()->start(thread);
+        auto result = m_alignmentService->align(filePath, {});
+        if (!result) {
+            slot_hfaFailed(filename, QString::fromStdString(result.error()));
+        } else {
+            slot_hfaFinished(filename, "");
+        }
     }
 }
 
@@ -138,44 +122,49 @@ void HubertFAPage::slot_loadModel() {
         return;
     }
 
-    if (m_hfa) { delete m_hfa; m_hfa = nullptr; }
-    m_hfa = new HFA::HFA(modelFolder.toStdString(), HFA::ExecutionProvider::CPU, -1);
-    if (m_hfa->initialized()) {
+    m_alignmentService = dstools::ServiceLocator::get<dstools::IAlignmentService>();
+    if (!m_alignmentService) {
+        m_modelPanel->setStatus("No alignment service registered.", false);
+        m_runBtn->setEnabled(false);
+        return;
+    }
+
+    auto loadResult = m_alignmentService->loadModel(modelFolder);
+    if (loadResult) {
         m_modelPanel->setStatus("Model loaded successfully.", true);
         m_runBtn->setEnabled(true);
 
-        // Build dynamic UI from vocab.json
         if (!m_dynamicContainer) {
             m_dynamicContainer = new QWidget(this);
             auto *dynLayout = new QVBoxLayout(m_dynamicContainer);
 
-            fs::path mp(modelFolder.toStdString());
-            fs::path vocabFile = mp / "vocab.json";
-            auto vocabResult = dstools::JsonHelper::loadFile(vocabFile);
-            auto vocab = vocabResult ? std::move(vocabResult.value()) : nlohmann::json::object();
+            auto vocab = m_alignmentService->vocabInfo();
 
             {
-                auto nps = dstools::JsonHelper::getVec<std::string>(vocab, "non_lexical_phonemes");
-                if (!nps.empty()) {
+                auto it = vocab.find("non_lexical_phonemes");
+                if (it != vocab.end() && it->is_array()) {
                     dynLayout->addWidget(new QLabel("Non-speech phonemes:", m_dynamicContainer));
                     m_nonSpeechPhLayout = new QHBoxLayout();
-                    for (const auto &ph : nps) {
-                        m_nonSpeechPhLayout->addWidget(new QCheckBox(QString::fromStdString(ph), m_dynamicContainer));
+                    for (const auto &ph : *it) {
+                        if (ph.is_string()) {
+                            m_nonSpeechPhLayout->addWidget(
+                                new QCheckBox(QString::fromStdString(ph.get<std::string>()), m_dynamicContainer));
+                        }
                     }
                     dynLayout->addLayout(m_nonSpeechPhLayout);
                 }
             }
 
             {
-                auto langs = dstools::JsonHelper::getMap<std::string, std::string>(vocab, "dictionaries");
-                if (!langs.empty()) {
+                auto it = vocab.find("dictionaries");
+                if (it != vocab.end() && it->is_object()) {
                     dynLayout->addWidget(new QLabel("Language:", m_dynamicContainer));
                     m_languageGroup = new QButtonGroup(this);
                     m_languageGroup->setExclusive(true);
                     auto *langLayout = new QHBoxLayout();
                     int id = 0;
-                    for (auto it = langs.rbegin(); it != langs.rend(); ++it) {
-                        auto *radio = new QRadioButton(QString::fromStdString(it->first), m_dynamicContainer);
+                    for (auto rit = it->rbegin(); rit != it->rend(); ++rit) {
+                        auto *radio = new QRadioButton(QString::fromStdString(rit.key()), m_dynamicContainer);
                         m_languageGroup->addButton(radio, id++);
                         langLayout->addWidget(radio);
                     }
@@ -189,7 +178,8 @@ void HubertFAPage::slot_loadModel() {
             m_rightPanel->insertWidget(stretchIdx, m_dynamicContainer);
         }
     } else {
-        m_modelPanel->setStatus("Model loading failed.", false);
+        m_modelPanel->setStatus(QString("Model loading failed: %1")
+                                    .arg(QString::fromStdString(loadResult.error())), false);
         m_runBtn->setEnabled(false);
     }
 }

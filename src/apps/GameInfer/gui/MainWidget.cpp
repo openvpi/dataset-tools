@@ -1,4 +1,4 @@
-﻿#include "MainWidget.h"
+#include "MainWidget.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -18,6 +18,7 @@
 
 #include "../GameInferKeys.h"
 #include "../GameInferService.h"
+#include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
 
 static QString replaceFileExtension(const QString &filePath, const QString &newExt) {
@@ -26,8 +27,10 @@ static QString replaceFileExtension(const QString &filePath, const QString &newE
 }
 
 MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
-    : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.01f), m_framesPerSecond(1.0 / 0.01) {
-    m_service = new GameInferService(this);
+    : QWidget(parent), m_settings(settings), m_service(nullptr), m_timeStepSeconds(0.01f), m_framesPerSecond(1.0 / 0.01) {
+    auto *service = new GameInferService(this);
+    dstools::ServiceLocator::set<dstools::ITranscriptionService>(service);
+    m_service = service;
 
     auto *mainLayout = new QVBoxLayout(this);
 
@@ -43,9 +46,8 @@ MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
 
     max_audio_seg_length = m_settings->get(GameInferKeys::MaxAudioSegLength);
 
-    // Automatically load config when widget is initialized
-    const auto modelPath = std::filesystem::path(m_modelPath->path().toLocal8Bit().toStdString());
-    if (!modelPath.empty()) {
+    const auto modelPath = m_modelPath->path();
+    if (!modelPath.isEmpty()) {
         loadLanguagesFromConfig(modelPath);
         updateTimeStepInfo(modelPath);
     }
@@ -60,7 +62,6 @@ void MainWidget::setupModelGroup() {
     auto *group = new QGroupBox("Model Configuration");
     auto *layout = new QGridLayout(group);
 
-    // Model path
     m_modelPath = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::Directory, "Model Path:");
 
     const QString savedModelPath = m_settings->get(GameInferKeys::ModelPath);
@@ -74,31 +75,27 @@ void MainWidget::setupModelGroup() {
     connect(m_modelPath, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &dir) {
         m_settings->set(GameInferKeys::ModelPath, dir);
         if (!dir.isEmpty()) {
-            loadLanguagesFromConfig(std::filesystem::path(dir.toStdWString()));
-            updateTimeStepInfo(std::filesystem::path(dir.toStdWString()));
+            loadLanguagesFromConfig(dir);
+            updateTimeStepInfo(dir);
         }
     });
 
-    // Provider selection
     layout->addWidget(new QLabel("Execution Provider:"), 1, 0);
     m_providerCombo = new QComboBox();
-    m_providerCombo->addItem("CPU", static_cast<int>(Game::ExecutionProvider::CPU));
-    m_providerCombo->addItem("DirectML", static_cast<int>(Game::ExecutionProvider::DML));
+    m_providerCombo->addItem("CPU", -1);
+    m_providerCombo->addItem("DirectML", 0);
     layout->addWidget(m_providerCombo, 1, 1);
 
-    // Device selection (GPU)
     layout->addWidget(new QLabel("Execution Device:"), 1, 2);
     m_deviceCombo = new dstools::widgets::GpuSelector(this);
     m_deviceCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     layout->addWidget(m_deviceCombo, 1, 3);
 
-    // Show/hide GPU selector based on provider
     connect(m_providerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
-        const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-        m_deviceCombo->setEnabled(provider == Game::ExecutionProvider::DML);
+        const int gpuIndex = m_providerCombo->currentData().toInt();
+        m_deviceCombo->setEnabled(gpuIndex >= 0);
     });
 
-    // Status label
     m_modelStatusLabel = new QLabel("Not loaded");
     layout->addWidget(m_modelStatusLabel, 2, 0, 1, 3);
 
@@ -142,12 +139,10 @@ void MainWidget::setModelLoadingStatus(const QString &status) {
         Qt::QueuedConnection);
 }
 
-
 void MainWidget::setupProcessingGroup() {
     auto *group = new QGroupBox("Processing Parameters");
     auto *layout = new QGridLayout(group);
 
-    // Row 0: Segmentation threshold
     layout->addWidget(new QLabel("分割阈值 (--seg-threshold):"), 0, 0);
     m_segThresholdSpin = new QDoubleSpinBox();
     m_segThresholdSpin->setRange(0.0, 1.0);
@@ -159,7 +154,6 @@ void MainWidget::setupProcessingGroup() {
     connect(m_segThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
             [this](const double value) { m_settings->set(GameInferKeys::SegThreshold, value); });
 
-    // Segmentation radius in frames
     layout->addWidget(new QLabel("分割半径(帧, ms):"), 0, 2);
     m_segRadiusFrameSpin = new QSpinBox();
     m_segRadiusFrameSpin->setRange(1, 1000);
@@ -174,13 +168,11 @@ void MainWidget::setupProcessingGroup() {
     m_segRadiusMsLabel = new QLabel("(ms)");
     layout->addWidget(m_segRadiusMsLabel, 0, 4);
 
-    // Connect frame spin to update ms label
     connect(m_segRadiusFrameSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](const int value) {
         const double ms = value * (m_timeStepSeconds * 1000.0);
         m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
     });
 
-    // Row 1: Estimation threshold
     layout->addWidget(new QLabel("估计阈值 (--est-threshold):"), 1, 0);
     m_estThresholdSpin = new QDoubleSpinBox();
     m_estThresholdSpin->setRange(0.0, 1.0);
@@ -192,7 +184,6 @@ void MainWidget::setupProcessingGroup() {
     connect(m_estThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
             [this](const double value) { m_settings->set(GameInferKeys::EstThreshold, value); });
 
-    // D3PM nsteps
     layout->addWidget(new QLabel("采样步数 (--seg-d3pm-nsteps):"), 1, 2);
     m_segD3PMNStepsCombo = new QComboBox();
     m_segD3PMNStepsCombo->addItem("1", 1);
@@ -205,17 +196,14 @@ void MainWidget::setupProcessingGroup() {
 
     m_segD3PMNStepsCombo->setCurrentIndex(m_settings->get(GameInferKeys::SegD3PMNSteps));
 
-    // Connect D3PM parameter to update immediately
     connect(m_segD3PMNStepsCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             [this](const int value) { m_settings->set(GameInferKeys::SegD3PMNSteps, value); });
 
-    // Row 2: Language
     layout->addWidget(new QLabel("语言ID (--language):"), 2, 0);
     m_languageCombo = new QComboBox();
     m_languageCombo->addItem("Default", 0);
     layout->addWidget(m_languageCombo, 2, 1);
 
-    // Tempo
     layout->addWidget(new QLabel("节拍 (--tempo):"), 2, 2);
     m_tempoSpin = new QDoubleSpinBox();
     m_tempoSpin->setRange(1.0, 300.0);
@@ -234,7 +222,6 @@ void MainWidget::setupAudioGroup() {
     auto *group = new QGroupBox("Audio Processing");
     auto *layout = new QVBoxLayout(group);
 
-    // WAV file selection
     m_wavPath = new dstools::widgets::PathSelector(
         dstools::widgets::PathSelector::OpenFile, "Input Audio File:",
         "Audio Files (*.wav *.flac *.mp3);;WAV Files (*.wav);;FLAC Files (*.flac);;MP3 Files (*.mp3)");
@@ -245,17 +232,14 @@ void MainWidget::setupAudioGroup() {
         new QLabel("Note: Mono WAV files are recommended. Multi-channel/FLAC/MP3 are for testing only.");
     layout->addWidget(wavTip);
 
-    // Output MIDI file
     m_outputMidi = new dstools::widgets::PathSelector(
         dstools::widgets::PathSelector::SaveFile, "Output MIDI File:", "MIDI Files (*.mid)");
     m_outputMidi->setPath(m_settings->get(GameInferKeys::OutputMidiPath));
     layout->addWidget(m_outputMidi);
 
-    // Progress bar and run button
     m_audioRun = new dstools::widgets::RunProgressRow("Convert");
     layout->addWidget(m_audioRun);
 
-    // Connections
     connect(m_wavPath, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &wavPath) {
         m_settings->set(GameInferKeys::WavPath, wavPath);
         generateMidiOutputPath(wavPath);
@@ -283,42 +267,46 @@ void MainWidget::setupActionButtons() {
     mainLayout->addLayout(layout);
 }
 
-void MainWidget::updateTimeStepInfo(const std::filesystem::path &modelPath) {
-    m_timeStepSeconds = m_service->loadTimestepFromConfig(modelPath);
+void MainWidget::updateTimeStepInfo(const QString &modelPath) {
+    auto configResult = dstools::JsonHelper::loadFile(
+        std::filesystem::path(modelPath.toStdWString()) / "config.json");
+
+    if (configResult) {
+        float ts = dstools::JsonHelper::get(configResult.value(), "timestep", 0.01f);
+        if (ts > 0)
+            m_timeStepSeconds = ts;
+    }
+
     m_framesPerSecond = 1.0 / m_timeStepSeconds;
 
-    // Update ms label display
     const int currentValue = m_segRadiusFrameSpin->value();
     const double ms = currentValue * (m_timeStepSeconds * 1000.0);
     m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
 }
 
-bool MainWidget::loadModel(const QString &modelPathText, Game::ExecutionProvider provider, int deviceId, std::string &message) {
+bool MainWidget::loadModel(const QString &modelPathText, int gpuIndex, std::string &message) {
     if (modelPathText.isEmpty()) {
         setModelLoadingStatus("Please select model path");
         message = "Please select model path";
         return false;
     }
 
-    std::filesystem::path modelPath = modelPathText.toLocal8Bit().toStdString();
-
     QMetaObject::invokeMethod(
         this, [this] { setModelLoadingStatus("Model is loading, please wait 3-10 seconds!"); }, Qt::QueuedConnection);
 
-    std::string msg;
-    bool loadSuccess = m_service->loadModel(modelPath, provider, deviceId, msg);
+    auto result = m_service->loadModel(modelPathText, gpuIndex);
 
-    if (loadSuccess) {
+    if (result) {
         QMetaObject::invokeMethod(
             this,
-            [this, modelPath] {
+            [this, modelPathText] {
                 updateParameterValues();
                 setModelLoadingStatus("Model loaded successfully!");
-                m_settings->set(GameInferKeys::ModelPath, QString::fromStdWString(modelPath.wstring()));
+                m_settings->set(GameInferKeys::ModelPath, modelPathText);
             },
             Qt::QueuedConnection);
     } else {
-        message = "Model loading failed: " + msg;
+        message = "Model loading failed: " + result.error();
         QMetaObject::invokeMethod(
             this, [this] { setModelLoadingStatus("Model loaded failed!"); }, Qt::QueuedConnection);
         return false;
@@ -326,24 +314,40 @@ bool MainWidget::loadModel(const QString &modelPathText, Game::ExecutionProvider
     return true;
 }
 
-void MainWidget::loadLanguagesFromConfig(const std::filesystem::path &modelPath) {
-    m_service->loadLanguagesFromConfig(modelPath, m_languageIdToName, m_languageNameToId);
+void MainWidget::loadLanguagesFromConfig(const QString &modelPath) {
+    m_languageIdToName.clear();
+    m_languageNameToId.clear();
+
+    m_languageIdToName[0] = "default";
+    m_languageNameToId["default"] = 0;
+
+    auto configResult = dstools::JsonHelper::loadFile(
+        std::filesystem::path(modelPath.toStdWString()) / "config.json");
+
+    if (configResult) {
+        auto languages = dstools::JsonHelper::getObject(configResult.value(), "languages");
+        if (languages.is_object()) {
+            for (auto &[key, value] : languages.items()) {
+                if (value.is_number_integer()) {
+                    int id = value.get<int>();
+                    m_languageIdToName[id] = key;
+                    m_languageNameToId[key] = id;
+                }
+            }
+        }
+    }
     updateLanguageCombo();
 }
 
 void MainWidget::updateLanguageCombo() {
-    // Store current selection
     const int currentId = m_languageCombo->currentData().toInt();
 
-    // Clear and repopulate the combo box
     m_languageCombo->clear();
 
-    // Add languages sorted by ID
     for (const auto &[id, name] : m_languageIdToName) {
         m_languageCombo->addItem(QString::fromStdString(name), id);
     }
 
-    // Restore previous selection or default to 0
     const int index = m_languageCombo->findData(currentId);
     if (index != -1) {
         m_languageCombo->setCurrentIndex(index);
@@ -353,11 +357,14 @@ void MainWidget::updateLanguageCombo() {
 }
 
 void MainWidget::updateParameterValues() const {
-    m_service->setSegThreshold(m_segThresholdSpin->value());
-    m_service->setSegRadiusFrames(m_segRadiusFrameSpin->value());
-    m_service->setEstThreshold(m_estThresholdSpin->value());
-    m_service->setD3pmTimesteps(m_segD3PMNStepsCombo->currentData().toInt());
-    m_service->setLanguage(m_languageCombo->currentData().toInt());
+    auto *gameService = qobject_cast<GameInferService *>(m_service);
+    if (!gameService) return;
+
+    gameService->setSegThreshold(m_segThresholdSpin->value());
+    gameService->setSegRadiusFrames(m_segRadiusFrameSpin->value());
+    gameService->setEstThreshold(m_estThresholdSpin->value());
+    gameService->setD3pmTimesteps(m_segD3PMNStepsCombo->currentData().toInt());
+    gameService->setLanguage(m_languageCombo->currentData().toInt());
 }
 
 void MainWidget::resetToDefaults() const {
@@ -368,7 +375,6 @@ void MainWidget::resetToDefaults() const {
     m_languageCombo->setCurrentIndex(0);
     m_tempoSpin->setValue(120.0);
 
-    // Reset ms label as well
     const double ms = 2 * (m_timeStepSeconds * 1000.0);
     m_segRadiusMsLabel->setText(QString("(%1ms)").arg(ms, 0, 'f', 2));
 }
@@ -409,34 +415,30 @@ void MainWidget::onExportMidiTask() {
     const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
     const int languageId = m_languageCombo->currentData().toInt();
     const QString modelPathText = m_modelPath->path();
-    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-    const int deviceId = m_deviceCombo->selectedDeviceId();
+    const int gpuIndex = m_deviceCombo->selectedDeviceId();
 
     m_runningTask = QtConcurrent::run([this, wavPath, outputMidiPath, tempo, maxAudioSegLength,
                                        segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId,
-                                       modelPathText, provider, deviceId] {
-        std::string msg;
-
-        if (!exists(std::filesystem::path(wavPath.toLocal8Bit().toStdString()))) {
+                                       modelPathText, gpuIndex] {
+        if (!QFile::exists(wavPath)) {
             QMetaObject::invokeMethod(
                 this,
                 [this, wavPath] {
                     QMessageBox::critical(this, "Error",
-                                          QString("Audio file does not exist: %1")
-                                              .arg(wavPath));
+                                          QString("Audio file does not exist: %1").arg(wavPath));
                 },
                 Qt::QueuedConnection);
             QMetaObject::invokeMethod(this, [this] { m_audioRun->setRunning(false); }, Qt::QueuedConnection);
             return;
         }
 
-        if (!m_service->isModelOpen()) {
-            std::string msg_;
-            if (!loadModel(modelPathText, provider, deviceId, msg_)) {
+        if (!m_service->isModelLoaded()) {
+            std::string msg;
+            if (!loadModel(modelPathText, gpuIndex, msg)) {
                 QMetaObject::invokeMethod(
                     this,
-                    [this, msg_] {
-                        QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg_));
+                    [this, msg] {
+                        QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg));
                     },
                     Qt::QueuedConnection);
                 QMetaObject::invokeMethod(this, [this] { m_audioRun->setRunning(false); }, Qt::QueuedConnection);
@@ -444,29 +446,25 @@ void MainWidget::onExportMidiTask() {
             }
         }
 
-        // Set parameters on service before running
-        m_service->setSegThreshold(segThreshold);
-        m_service->setSegRadiusFrames(segRadiusFrame);
-        m_service->setEstThreshold(estThreshold);
-        m_service->setLanguage(languageId);
-        m_service->setD3pmTimesteps(d3pmNSteps);
+        auto *gameService = qobject_cast<GameInferService *>(m_service);
+        if (gameService) {
+            gameService->setSegThreshold(segThreshold);
+            gameService->setSegRadiusFrames(segRadiusFrame);
+            gameService->setEstThreshold(estThreshold);
+            gameService->setLanguage(languageId);
+            gameService->setD3pmTimesteps(d3pmNSteps);
+        }
 
-        GameInferService::MidiExportParams params;
-        params.wavPath = wavPath.toLocal8Bit().toStdString();
-        params.outputMidiPath = outputMidiPath.toLocal8Bit().toStdString();
-        params.tempo = tempo;
-        params.maxAudioSegLength = maxAudioSegLength;
+        auto result = m_service->exportMidi(wavPath, outputMidiPath, tempo,
+            [this](int progress) {
+                QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
+            });
 
-        const bool success = m_service->exportMidi(params, msg, [this](const int progress) {
-            QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
-        });
-
-        if (!success) {
-            std::cerr << "Error: " << msg << std::endl;
+        if (!result) {
             QMetaObject::invokeMethod(
                 this,
-                [this, msg] {
-                    QMessageBox::critical(this, "Error", QString("Conversion failed: %1").arg(msg.c_str()));
+                [this, result] {
+                    QMessageBox::critical(this, "Error", QString("Conversion failed: %1").arg(QString::fromStdString(result.error())));
                 },
                 Qt::QueuedConnection);
         } else {
@@ -483,29 +481,24 @@ void MainWidget::setupAlignGroup() {
     auto *group = new QGroupBox("Align CSV");
     auto *layout = new QVBoxLayout(group);
 
-    // Input CSV
     m_alignCsvInput = new dstools::widgets::PathSelector(
         dstools::widgets::PathSelector::OpenFile, "Input CSV:", "CSV Files (*.csv)");
     m_alignCsvInput->setPath(m_settings->get(GameInferKeys::AlignCsvInputPath));
     layout->addWidget(m_alignCsvInput);
 
-    // WAV Directory
     m_alignWavDir = new dstools::widgets::PathSelector(
         dstools::widgets::PathSelector::Directory, "WAV Directory:");
     m_alignWavDir->setPath(m_settings->get(GameInferKeys::AlignWavDir));
     layout->addWidget(m_alignWavDir);
 
-    // Output CSV
     m_alignOutput = new dstools::widgets::PathSelector(
         dstools::widgets::PathSelector::SaveFile, "Output CSV:", "CSV Files (*.csv)");
     m_alignOutput->setPath(m_settings->get(GameInferKeys::AlignOutputPath));
     layout->addWidget(m_alignOutput);
 
-    // Progress + Run
     m_alignRun = new dstools::widgets::RunProgressRow("Align");
     layout->addWidget(m_alignRun);
 
-    // Connections
     connect(m_alignCsvInput, &dstools::widgets::PathSelector::pathChanged, this, [this](const QString &path) {
         m_settings->set(GameInferKeys::AlignCsvInputPath, path);
     });
@@ -537,30 +530,25 @@ void MainWidget::onAlignCsvTask() {
 
     const QString csvInputPath = m_alignCsvInput->path();
     const QFileInfo outputInfo(m_alignOutput->path());
-    const std::filesystem::path csvPath = csvInputPath.toLocal8Bit().toStdString();
-    const std::filesystem::path savePath = outputInfo.absolutePath().toLocal8Bit().toStdString();
-    const std::string saveFilename = outputInfo.fileName().toLocal8Bit().toStdString();
+    const QString savePath = outputInfo.absolutePath();
     const int segRadiusFrame = m_segRadiusFrameSpin->value();
     const double segThreshold = m_segThresholdSpin->value();
     const double estThreshold = m_estThresholdSpin->value();
     const int d3pmNSteps = m_segD3PMNStepsCombo->currentData().toInt();
     const int languageId = m_languageCombo->currentData().toInt();
     const QString modelPathText = m_modelPath->path();
-    const auto provider = static_cast<Game::ExecutionProvider>(m_providerCombo->currentData().toInt());
-    const int deviceId = m_deviceCombo->selectedDeviceId();
+    const int gpuIndex = m_deviceCombo->selectedDeviceId();
 
-    m_runningTask = QtConcurrent::run([this, csvPath, savePath, saveFilename,
+    m_runningTask = QtConcurrent::run([this, csvInputPath, savePath,
                                        segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId,
-                                       modelPathText, provider, deviceId] {
-        std::string msg;
-
-        if (!m_service->isModelOpen()) {
-            std::string msg_;
-            if (!loadModel(modelPathText, provider, deviceId, msg_)) {
+                                       modelPathText, gpuIndex] {
+        if (!m_service->isModelLoaded()) {
+            std::string msg;
+            if (!loadModel(modelPathText, gpuIndex, msg)) {
                 QMetaObject::invokeMethod(
                     this,
-                    [this, msg_] {
-                        QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg_));
+                    [this, msg] {
+                        QMessageBox::critical(this, "Error", "Model load failed! - " + QString::fromLocal8Bit(msg));
                     },
                     Qt::QueuedConnection);
                 QMetaObject::invokeMethod(this, [this] { m_alignRun->setRunning(false); }, Qt::QueuedConnection);
@@ -568,29 +556,26 @@ void MainWidget::onAlignCsvTask() {
             }
         }
 
-        // Set parameters on service before running
-        m_service->setSegThreshold(segThreshold);
-        m_service->setSegRadiusFrames(segRadiusFrame);
-        m_service->setEstThreshold(estThreshold);
-        m_service->setLanguage(languageId);
-        m_service->setD3pmTimesteps(d3pmNSteps);
+        auto *gameService = qobject_cast<GameInferService *>(m_service);
+        if (gameService) {
+            gameService->setSegThreshold(segThreshold);
+            gameService->setSegRadiusFrames(segRadiusFrame);
+            gameService->setEstThreshold(estThreshold);
+            gameService->setLanguage(languageId);
+            gameService->setD3pmTimesteps(d3pmNSteps);
+        }
 
-        GameInferService::AlignCsvParams params;
-        params.csvPath = csvPath;
-        params.savePath = savePath;
-        params.saveFilename = saveFilename;
+        auto result = m_service->alignCSV(csvInputPath, savePath,
+            [this](int progress) {
+                QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
+                                         Qt::QueuedConnection);
+            });
 
-        const bool success = m_service->alignCsv(params, msg, [this](const int progress) {
-            QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
-                                     Qt::QueuedConnection);
-        });
-
-        if (!success) {
-            std::cerr << "Align error: " << msg << std::endl;
+        if (!result) {
             QMetaObject::invokeMethod(
                 this,
-                [this, msg] {
-                    QMessageBox::critical(this, "Error", QString("Align failed: %1").arg(msg.c_str()));
+                [this, result] {
+                    QMessageBox::critical(this, "Error", QString("Align failed: %1").arg(QString::fromStdString(result.error())));
                 },
                 Qt::QueuedConnection);
         } else {

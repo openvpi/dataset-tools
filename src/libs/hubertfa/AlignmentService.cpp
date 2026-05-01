@@ -79,3 +79,17 @@ Result<dstools::AlignmentResult> AlignmentService::align(const QString &audioPat
 
     return Result<dstools::AlignmentResult>::Ok(std::move(result));
 }
+
+Result<void> AlignmentService::alignCSV(const QString &csvPath, const QString &savePath,
+                                          const dstools::AlignCsvOptions &options,
+                                          const std::function<void(int)> &progress) {
+    (void)csvPath;
+    (void)savePath;
+    (void)options;
+    (void)progress;
+    return dstools::Err("CSV alignment not supported by HFA alignment service");
+}
+
+nlohmann::json AlignmentService::vocabInfo() const {
+    return nlohmann::json::object();
+}

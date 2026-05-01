@@ -1,40 +1,57 @@
 #pragma once
 
-/// @file ITranscriptionService.h
-/// @brief Audio-to-MIDI transcription service interface.
-
 #include <QString>
-
 #include <dstools/Result.h>
-
 #include <cstdint>
+#include <functional>
+#include <map>
 #include <vector>
 
 namespace dstools {
 
-/// @brief A single MIDI note event.
 struct NoteEvent {
-    int pitch;          ///< MIDI note number (0-127).
-    int64_t startFrame; ///< Start position in audio frames.
-    int64_t endFrame;   ///< End position in audio frames.
-    float velocity;     ///< Note velocity (0.0-1.0).
+    int pitch;
+    int64_t startFrame;
+    int64_t endFrame;
+    float velocity;
 };
 
-/// @brief Result of an audio-to-MIDI transcription operation.
 struct TranscriptionResult {
-    std::vector<NoteEvent> notes; ///< Detected MIDI note events.
-    int sampleRate = 0;           ///< Sample rate of the source audio.
+    std::vector<NoteEvent> notes;
+    int sampleRate = 0;
 };
 
-/// @brief Abstract interface for audio-to-MIDI transcription backends.
+struct MidiNote {
+    int note;
+    int start;
+    int duration;
+};
+
+struct TranscriptionModelInfo {
+    int targetSampleRate = 0;
+    float timestep = 0.01f;
+    bool hasDur2bd = false;
+    std::map<QString, int> languageMap;
+};
+
 class ITranscriptionService {
 public:
     virtual ~ITranscriptionService() = default;
 
-    /// @brief Transcribe audio to MIDI note events.
-    /// @param audioPath Path to the input audio file.
-    /// @return TranscriptionResult on success, or an error description.
+    virtual Result<void> loadModel(const QString &modelPath, int gpuIndex = -1) = 0;
+    virtual bool isModelLoaded() const = 0;
+    virtual void unloadModel() = 0;
+
     virtual Result<TranscriptionResult> transcribe(const QString &audioPath) = 0;
+
+    virtual Result<void> exportMidi(const QString &audioPath, const QString &outputPath,
+                                    float tempo,
+                                    const std::function<void(int)> &progress = nullptr) = 0;
+
+    virtual Result<void> alignCSV(const QString &csvPath, const QString &savePath,
+                                  const std::function<void(int)> &progress = nullptr) = 0;
+
+    virtual TranscriptionModelInfo modelInfo() const = 0;
 };
 
 } // namespace dstools
