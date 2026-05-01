@@ -76,6 +76,10 @@ void SlicerPage::init() {
     m_chkOverwriteMarkers = new QCheckBox(tr("Overwrite Markers"));
     paramLayout->addWidget(m_chkOverwriteMarkers, 8, 0, 1, 2);
 
+    m_chkResume = new QCheckBox(tr("Continue from last time"));
+    m_chkResume->setVisible(false);
+    paramLayout->addWidget(m_chkResume, 9, 0, 1, 2);
+
     m_rightPanel->addWidget(paramGroup);
 
     // Output dir
@@ -256,6 +260,7 @@ void SlicerPage::setWorkingDirectory(const QString &dir) {
     m_workingDir = dir;
     if (m_outputDir)
         m_outputDir->setPath(dir);
+    updateResumeCheckbox();
 }
 
 QString SlicerPage::workingDirectory() const {
@@ -264,4 +269,19 @@ QString SlicerPage::workingDirectory() const {
 
 void SlicerPage::onWorkingDirectoryChanged(const QString &newDir) {
     setWorkingDirectory(newDir);
+}
+
+void SlicerPage::updateResumeCheckbox() {
+    if (!m_chkResume) return;
+    if (m_workingDir.isEmpty()) {
+        m_chkResume->setVisible(false);
+        return;
+    }
+    m_checkpoint = BatchCheckpoint::load(m_workingDir, QStringLiteral("audio_slicing"));
+    m_chkResume->setVisible(m_checkpoint.exists());
+    if (m_checkpoint.exists()) {
+        m_chkResume->setChecked(true);
+        m_chkResume->setText(tr("Continue from last time (%1 files done)")
+            .arg(m_checkpoint.processedFiles().size()));
+    }
 }

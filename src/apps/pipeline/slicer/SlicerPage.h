@@ -10,6 +10,7 @@
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
+#include <dsfw/BatchCheckpoint.h>
 #include <dstools/PathSelector.h>
 
 namespace dstools::widgets {
@@ -59,12 +60,16 @@ private:
     QComboBox *m_cmbOutputFormat;    ///< Output WAV format selector.
     QComboBox *m_cmbSlicingMode;     ///< Slicing mode selector.
     QSpinBox *m_spnSuffixDigits;     ///< Suffix digit count spin box.
-    QCheckBox *m_chkOverwriteMarkers; ///< Overwrite markers checkbox.
-    dstools::widgets::PathSelector *m_outputDir; ///< Output directory selector.
+    QCheckBox *m_chkOverwriteMarkers;
+    QCheckBox *m_chkResume = nullptr;
+    dstools::widgets::PathSelector *m_outputDir;
 
-    int m_workTotal = 0;       ///< Total number of files to process.
-    int m_workFinished = 0;    ///< Number of files processed successfully.
-    int m_workError = 0;       ///< Number of files that failed.
-    QStringList m_failIndex;   ///< List of failed file identifiers.
-    QString m_workingDir;      ///< Current working directory.
+    int m_workTotal = 0;
+    int m_workFinished = 0;
+    int m_workError = 0;
+    QStringList m_failIndex;
+    QString m_workingDir;
+    dstools::BatchCheckpoint m_checkpoint;
+
+    void updateResumeCheckbox();
 };

@@ -11,6 +11,7 @@
 #include <dsfw/ITaskProcessor.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
+#include <dsfw/BatchCheckpoint.h>
 #include <dstools/PathSelector.h>
 
 namespace dstools::widgets {
@@ -57,8 +58,12 @@ private:
     QButtonGroup *m_languageGroup = nullptr;            ///< Language selection radio group.
     QHBoxLayout *m_nonSpeechPhLayout = nullptr;         ///< Non-speech phoneme layout.
     QWidget *m_dynamicContainer = nullptr;              ///< Dynamic UI container.
-    std::unique_ptr<dstools::ITaskProcessor> m_processor; ///< Alignment task processor instance.
-    bool m_modelLoaded = false;                          ///< Whether the model is loaded and ready.
-    QTextCharFormat m_errorFormat;                      ///< Text format for error messages.
-    QString m_workingDir;                               ///< Current working directory.
+    QCheckBox *m_chkResume = nullptr;
+    std::unique_ptr<dstools::ITaskProcessor> m_processor;
+    bool m_modelLoaded = false;
+    QTextCharFormat m_errorFormat;
+    QString m_workingDir;
+    dstools::BatchCheckpoint m_checkpoint;
+
+    void updateResumeCheckbox();
 };

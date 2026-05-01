@@ -21,6 +21,7 @@ set(DSFW_CORE_SOURCES
     src/AppPaths.cpp
     src/AppSettings.cpp
     src/AsyncTask.cpp
+    src/BatchCheckpoint.cpp
     src/ServiceLocator.cpp
     src/LocalFileIOProvider.cpp
     src/Log.cpp
@@ -32,6 +33,7 @@ set(DSFW_CORE_HEADERS
     include/dsfw/AppPaths.h
     include/dsfw/AppSettings.h
     include/dsfw/AsyncTask.h
+    include/dsfw/BatchCheckpoint.h
     include/dsfw/ServiceLocator.h
     include/dsfw/IFileIOProvider.h
     include/dsfw/LocalFileIOProvider.h

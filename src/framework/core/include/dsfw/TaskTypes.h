@@ -51,9 +51,11 @@ struct BatchInput {
 
 /// @brief Batch processing output.
 struct BatchOutput {
-    int processedCount = 0;  ///< Number of items successfully processed.
-    int failedCount = 0;     ///< Number of items that failed.
-    QString outputPath;      ///< Path to output directory or file.
+    int processedCount = 0;
+    int failedCount = 0;
+    QString outputPath;
+    QStringList processedFiles;
+    QStringList failedFiles;
 };
 
 /// @brief Progress callback for batch operations.
