@@ -28,6 +28,7 @@ set(DSFW_CORE_SOURCES
     src/EventBus.cpp
     src/UpdateChecker.cpp
     src/RecentFiles.cpp
+    src/CrashHandler.cpp
 )
 
 set(DSFW_CORE_HEADERS
@@ -56,6 +57,7 @@ set(DSFW_CORE_HEADERS
     include/dsfw/EventBus.h
     include/dsfw/UpdateChecker.h
     include/dsfw/RecentFiles.h
+    include/dsfw/CrashHandler.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})
@@ -76,6 +78,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
+
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE dbghelp)
+endif()
 
 # Install rules
 include(GNUInstallDirs)
