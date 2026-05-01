@@ -22,9 +22,3 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-domain
     Qt${QT_VERSION_MAJOR}::Widgets
 )
-
-find_package(qBreakpad CONFIG QUIET)
-if(qBreakpad_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE qBreakpad::qBreakpad)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_QBREAKPAD)
-endif()

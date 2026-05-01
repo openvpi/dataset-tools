@@ -18,6 +18,7 @@ configure_file(
 )
 
 set(DSFW_CORE_SOURCES
+    src/AppPaths.cpp
     src/AppSettings.cpp
     src/AsyncTask.cpp
     src/ServiceLocator.cpp
@@ -28,6 +29,7 @@ set(DSFW_CORE_SOURCES
 )
 
 set(DSFW_CORE_HEADERS
+    include/dsfw/AppPaths.h
     include/dsfw/AppSettings.h
     include/dsfw/AsyncTask.h
     include/dsfw/ServiceLocator.h

@@ -43,6 +43,7 @@ Layer 4 ─ dsfw-widgets     通用 UI 组件 (SHARED DLL)
 Layer 3 ─ dsfw-ui-core     AppShell, IconNavBar, Theme, FramelessHelper, IPageActions
 Layer 2 ─ dsfw-audio       AudioDecoder (FFmpeg), AudioPlayback (SDL2)
 Layer 1 ─ dsfw-core        AppSettings, ServiceLocator, AsyncTask, JsonHelper, 接口集
+                           Logger, FileLogSink, CrashHandler, AppPaths, BatchCheckpoint
 Layer 0 ─ dsfw-types       Result<T>, ExecutionProvider (header-only)
 ```
 

@@ -37,6 +37,9 @@ public:
     /// @return Path to the dump directory.
     QString dumpDirectory() const;
 
+    /// @brief Invoke the crash callback if set. Called by platform-specific handlers.
+    void invokeCrashCallback(const QString &dumpPath);
+
 private:
     CrashHandler() = default;
     ~CrashHandler() = default;

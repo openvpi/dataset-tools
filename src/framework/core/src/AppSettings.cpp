@@ -1,20 +1,15 @@
 #include <dsfw/AppSettings.h>
+#include <dsfw/AppPaths.h>
 #include <dsfw/JsonHelper.h>
 
-#include <QCoreApplication>
 #include <QDebug>
-#include <QDir>
 #include <QSaveFile>
 
 namespace dstools {
 
 AppSettings::AppSettings(const QString &appName, QObject *parent)
     : QObject(parent) {
-    const QString configDir = QCoreApplication::applicationDirPath() + QStringLiteral("/config");
-    QDir dir(configDir);
-    if (!dir.exists())
-        dir.mkpath(QStringLiteral("."));
-
+    const QString configDir = dsfw::AppPaths::configDir();
     m_filePath = configDir + QStringLiteral("/") + appName + QStringLiteral(".json");
     loadFromDisk();
 

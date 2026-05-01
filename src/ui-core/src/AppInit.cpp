@@ -1,6 +1,7 @@
 #include <dstools/AppInit.h>
 
 #include <dstools/ModelManager.h>
+#include <dsfw/AppPaths.h>
 #include <dsfw/IModelManager.h>
 #include <dsfw/ServiceLocator.h>
 
@@ -12,10 +13,6 @@
 #ifdef Q_OS_WIN
 #include <ShlObj.h>
 #include <Windows.h>
-#endif
-
-#ifdef HAS_QBREAKPAD
-#include <QBreakpadHandler.h>
 #endif
 
 namespace dstools {
@@ -88,26 +85,13 @@ bool AppInit::init(QApplication &app, bool initCrashHandler) {
 
     // 3. Crash handler (optional)
     if (initCrashHandler) {
-#ifdef HAS_QBREAKPAD
-        static QBreakpadHandler *handler = nullptr;
-        if (!handler) {
-            handler = new QBreakpadHandler();
-            handler->setDumpPath(app.applicationDirPath() + "/dumps");
-#ifdef Q_OS_WIN
-            QBreakpadHandler::UniqueExtraHandler = []() {
-                MessageBoxW(nullptr, L"Crash!!!", L"QBreakpad", MB_OK | MB_ICONERROR);
-            };
-#endif
-        }
-#endif
+        dsfw::CrashHandler::instance().setDumpDirectory(dsfw::AppPaths::dumpDir());
+        dsfw::CrashHandler::instance().install();
     }
 
-    // 4. Ensure config directory exists
-    QString configDirPath = app.applicationDirPath() + "/config";
-    QDir configDir(configDirPath);
-    if (!configDir.exists()) {
-        configDir.mkpath(".");
-    }
+    // 4. Migrate legacy paths and ensure config directory exists
+    dsfw::AppPaths::migrateFromLegacyPaths();
+    dsfw::AppPaths::configDir();
 
     // 5. Register core services with ServiceLocator
     if (!ServiceLocator::get<IModelManager>()) {

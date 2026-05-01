@@ -61,6 +61,12 @@ IQualityMetrics 可扩展评估系统
 ### FR-13: AppShell 统一壳 (P1)
 单页面模式替代 MainWindow，多页面模式替代 LabelerWindow
 
+### FR-14: 崩溃处理与日志持久化 (P1)
+CrashHandler（跨平台 minidump/崩溃上下文）、FileLogSink（自动轮转文件日志）、AppPaths（跨平台数据路径管理）。AppInit 统一激活，所有应用自动受益。
+
+### FR-15: 批量处理 Checkpoint (P1)
+BatchCheckpoint 工具类：processBatch 自动记录已处理文件列表、支持断点续处理。归 dsfw-core，与 ITaskProcessor 集成。
+
 ---
 
 ## 4. 非功能需求
@@ -84,6 +90,8 @@ IQualityMetrics 可扩展评估系统
 2. 接口归框架，具体实现归消费者
 3. DiffSinger 特定格式 → 消费者
 4. FFmpeg/SDL2/ORT 封装 → 框架；FunASR/wolf-midi → 消费者
+5. 撤销/重做：Qt QUndoStack 直用（ADR-23），QUndoCommand 子类归消费者
+6. 崩溃处理/日志/路径/Checkpoint → 框架（所有应用通过 AppInit 自动受益）
 
 ---
 
