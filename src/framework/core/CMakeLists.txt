@@ -19,6 +19,10 @@ set(DSFW_CORE_SOURCES
     src/ServiceLocator.cpp
     src/LocalFileIOProvider.cpp
     src/Log.cpp
+    src/UndoStack.cpp
+    src/EventBus.cpp
+    src/UpdateChecker.cpp
+    src/RecentFiles.cpp
 )
 
 set(DSFW_CORE_HEADERS
@@ -42,6 +46,10 @@ set(DSFW_CORE_HEADERS
     include/dsfw/ITranscriptionService.h
     include/dsfw/CommonKeys.h
     include/dsfw/Log.h
+    include/dsfw/UndoStack.h
+    include/dsfw/EventBus.h
+    include/dsfw/UpdateChecker.h
+    include/dsfw/RecentFiles.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})
