@@ -1,3 +1,6 @@
+/// @file LyricFAPage.h
+/// @brief LyricFA ASR and lyric matching pipeline page.
+
 #pragma once
 #include <dstools/TaskWindow.h>
 #include <QCheckBox>
@@ -23,25 +26,34 @@ namespace Pinyin {
 class Pinyin;
 }
 
+/// @brief TaskWindow+IPageActions+IPageLifecycle page for batch ASR recognition
+/// and lyric-to-ASR matching.
 class LyricFAPage : public dstools::widgets::TaskWindow,
                     public dstools::labeler::IPageActions,
                     public dstools::labeler::IPageLifecycle {
     Q_OBJECT
     Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
 public:
+    /// @param parent Optional parent widget.
     explicit LyricFAPage(QWidget *parent = nullptr);
     ~LyricFAPage() override;
 
     // IPageActions
+    /// @brief Set the working directory for ASR input.
     void setWorkingDirectory(const QString &dir) override;
+    /// @brief Get the current working directory.
     QString workingDirectory() const override;
 
     // IPageLifecycle
+    /// @brief Handle working directory changes.
     void onWorkingDirectoryChanged(const QString &newDir) override;
 
 protected:
+    /// @brief Initialize UI elements.
     void init() override;
+    /// @brief Run the ASR or lyric matching task.
     void runTask() override;
+    /// @brief Handle task completion.
     void onTaskFinished() override;
 
 private slots:
@@ -49,19 +61,20 @@ private slots:
     void slot_loadModel();
 
 private:
-    dstools::widgets::PathSelector *m_labPath;
-    dstools::widgets::PathSelector *m_jsonPath;
-    dstools::widgets::PathSelector *m_lyricPath;
-    QCheckBox *m_pinyinBox;
-    QPushButton *m_matchBtn;
+    dstools::widgets::PathSelector *m_labPath;   ///< Label output path selector.
+    dstools::widgets::PathSelector *m_jsonPath;   ///< JSON output path selector.
+    dstools::widgets::PathSelector *m_lyricPath;  ///< Lyric input path selector.
+    QCheckBox *m_pinyinBox;                       ///< Pinyin conversion checkbox.
+    QPushButton *m_matchBtn;                      ///< Lyric match button.
 
-    dstools::widgets::ModelLoadPanel *m_modelPanel;
+    dstools::widgets::ModelLoadPanel *m_modelPanel; ///< Model loading panel.
 
-    LyricFA::Asr *m_asr = nullptr;
-    QSharedPointer<Pinyin::Pinyin> m_mandarin;
-    LyricFA::MatchLyric *m_match = nullptr;
+    LyricFA::Asr *m_asr = nullptr;                ///< ASR engine instance.
+    QSharedPointer<Pinyin::Pinyin> m_mandarin;    ///< Mandarin pinyin converter.
+    LyricFA::MatchLyric *m_match = nullptr;       ///< Lyric matching engine.
 
+    /// @brief Operating mode of the page.
     enum Mode { Mode_Asr, Mode_MatchLyric };
-    Mode m_currentMode = Mode_Asr;
-    QString m_workingDir;
+    Mode m_currentMode = Mode_Asr; ///< Current operating mode.
+    QString m_workingDir;          ///< Current working directory.
 };

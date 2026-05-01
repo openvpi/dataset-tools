@@ -1,3 +1,6 @@
+/// @file MinLabelPage.h
+/// @brief MinLabel audio labeling application main page.
+
 #pragma once
 
 #include <dsfw/IPageActions.h>
@@ -21,6 +24,7 @@
 
 namespace Minlabel {
 
+    /// @brief IPageActions and IPageLifecycle page providing audio browsing, G2P label editing, file navigation, and dataset export.
     class MinLabelPage : public QWidget,
                          public dstools::labeler::IPageActions,
                          public dstools::labeler::IPageLifecycle {

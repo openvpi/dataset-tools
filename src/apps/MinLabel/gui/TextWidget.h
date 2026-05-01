@@ -1,3 +1,6 @@
+/// @file TextWidget.h
+/// @brief G2P text conversion widget for MinLabel.
+
 #ifndef TEXTWIDGET_H
 #define TEXTWIDGET_H
 
@@ -12,14 +15,17 @@
 #include <cpp-pinyin/Pinyin.h>
 
 namespace Minlabel {
+    /// @brief Widget with text input, language selection (Mandarin/Cantonese/Japanese), and Pinyin/Jyutping conversion with configurable tone and formatting options.
     class TextWidget final : public QWidget {
         Q_OBJECT
     public:
+        /// @brief Constructs the text widget.
+        /// @param parent Optional parent widget.
         explicit TextWidget(QWidget *parent = nullptr);
         ~TextWidget() override;
 
-        QLineEdit *wordsText;
-        QPlainTextEdit *contentText;
+        QLineEdit *wordsText;         ///< Single-line input for words.
+        QPlainTextEdit *contentText;  ///< Multi-line pronunciation output.
 
     protected:
         QPushButton *replaceButton;

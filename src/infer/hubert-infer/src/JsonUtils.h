@@ -1,3 +1,6 @@
+/// @file JsonUtils.h
+/// @brief JSON file loading and path-based value extraction utilities.
+
 #pragma once
 
 #include <nlohmann/json.hpp>
@@ -11,8 +14,14 @@
 
 namespace hubert_infer {
 
+/// @brief Static utility for loading JSON files and resolving slash-delimited paths
+///        with typed extraction (maps, vectors).
 class JsonUtils {
 public:
+    /// @brief Resolves a slash-delimited path within a JSON tree.
+    /// @param root Root JSON object to search.
+    /// @param path Slash-delimited path (e.g. "config/mel_spec").
+    /// @return Pointer to the resolved node, or nullptr if not found.
     static const nlohmann::json *resolve(const nlohmann::json &root, const char *path) {
         if (!path || path[0] == '\0')
             return nullptr;
@@ -28,6 +37,10 @@ public:
         return node;
     }
 
+    /// @brief Loads and parses a JSON file.
+    /// @param path File path.
+    /// @param[out] error Error message on failure.
+    /// @return Parsed JSON object, or empty object on error.
     static nlohmann::json loadFile(const std::filesystem::path &path, std::string &error) {
         error.clear();
         if (!std::filesystem::exists(path)) {
@@ -55,12 +68,24 @@ public:
         }
     }
 
+    /// @brief Retrieves a JSON object at the given path.
+    /// @param root Root JSON object.
+    /// @param path Slash-delimited path.
+    /// @return The object at path, or an empty object if not found.
     static nlohmann::json getObject(const nlohmann::json &root, const char *path) {
         const auto *node = resolve(root, path);
         if (!node || !node->is_object()) return nlohmann::json::object();
         return *node;
     }
 
+    /// @brief Reads a required map from a JSON path.
+    /// @tparam K Map key type.
+    /// @tparam V Map value type.
+    /// @param root Root JSON object.
+    /// @param path Slash-delimited path.
+    /// @param[out] out Destination map.
+    /// @param[out] error Error message on failure.
+    /// @return True on success.
     template <typename K, typename V>
     static bool getRequiredMap(const nlohmann::json &root, const char *path, std::map<K, V> &out,
                                std::string &error) {
@@ -82,6 +107,13 @@ public:
         }
     }
 
+    /// @brief Reads a required vector from a JSON path.
+    /// @tparam T Element type.
+    /// @param root Root JSON object.
+    /// @param path Slash-delimited path.
+    /// @param[out] out Destination vector.
+    /// @param[out] error Error message on failure.
+    /// @return True on success.
     template <typename T>
     static bool getRequiredVec(const nlohmann::json &root, const char *path, std::vector<T> &out,
                                std::string &error) {

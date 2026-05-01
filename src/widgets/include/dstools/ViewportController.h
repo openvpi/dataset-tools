@@ -1,5 +1,8 @@
 #pragma once
 
+/// @file ViewportController.h
+/// @brief Re-exports dsfw::widgets::ViewportState and ViewportController into dstools::widgets namespace.
+
 #include <dsfw/widgets/ViewportController.h>
 
 namespace dstools::widgets {

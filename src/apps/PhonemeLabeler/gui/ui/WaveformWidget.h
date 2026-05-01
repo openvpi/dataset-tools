@@ -1,3 +1,6 @@
+/// @file WaveformWidget.h
+/// @brief Audio waveform visualization widget with playback cursor and boundary editing.
+
 #pragma once
 
 #include <QWidget>
@@ -19,36 +22,66 @@ namespace phonemelabeler {
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
 
+/// @brief Renders audio waveform with min/max caching, playback cursor, boundary overlay,
+///        and drag-based boundary editing.
 class WaveformWidget : public QWidget {
     Q_OBJECT
 
 public:
+    /// @brief Constructs the waveform widget.
+    /// @param viewport Viewport controller for time synchronization.
+    /// @param parent Optional parent widget.
     explicit WaveformWidget(ViewportController *viewport, QWidget *parent = nullptr);
     ~WaveformWidget() override;
 
+    /// @brief Sets the audio sample data.
+    /// @param samples Audio samples.
+    /// @param sampleRate Sample rate in Hz.
     void setAudioData(const std::vector<float> &samples, int sampleRate);
+
+    /// @brief Loads audio from a file path.
+    /// @param path Path to the audio file.
     void loadAudio(const QString &path);
+
+    /// @brief Sets the TextGrid document for boundary display.
+    /// @param doc TextGrid document.
     void setDocument(class TextGridDocument *doc);
+
+    /// @brief Sets the boundary binding manager.
     void setBindingManager(BoundaryBindingManager *mgr) { m_bindingMgr = mgr; }
+
+    /// @brief Sets the undo stack for boundary edit commands.
     void setUndoStack(QUndoStack *stack) { m_undoStack = stack; }
+
+    /// @brief Sets the play widget for audio playback integration.
     void setPlayWidget(dstools::widgets::PlayWidget *pw) { m_playWidget = pw; }
 
+    /// @brief Updates the viewport state.
+    /// @param state New viewport state.
     void setViewport(const ViewportState &state);
+
+    /// @brief Sets the playback cursor position.
+    /// @param sec Playback position in seconds, or -1 if not playing.
     void setPlayhead(double sec);
 
-    // Boundary overlay: draw active tier boundaries through this widget
+    /// @brief Enables or disables the boundary overlay.
+    /// @param enabled True to draw boundaries.
     void setBoundaryOverlayEnabled(bool enabled);
+
+    /// @brief Triggers a repaint of the boundary overlay.
     void updateBoundaryOverlay();
 
 signals:
-    void positionClicked(double sec);
-    void boundaryDragStarted(int tierIndex, int boundaryIndex);
-    void boundaryDragging(int tierIndex, int boundaryIndex, double newTime);
-    void boundaryDragFinished(int tierIndex, int boundaryIndex, double newTime);
-    void hoveredBoundaryChanged(int boundaryIndex);
-    void entryScrollRequested(int delta);
+    void positionClicked(double sec);            ///< Clicked position in seconds.
+    void boundaryDragStarted(int tierIndex, int boundaryIndex);  ///< Boundary drag began.
+    void boundaryDragging(int tierIndex, int boundaryIndex, double newTime); ///< Boundary being dragged.
+    void boundaryDragFinished(int tierIndex, int boundaryIndex, double newTime); ///< Boundary drag ended.
+    void hoveredBoundaryChanged(int boundaryIndex); ///< Hovered boundary changed.
+    void entryScrollRequested(int delta);           ///< Scroll request from wheel event.
 
 public slots:
+    /// @brief Updates the playhead position from playback.
+    /// @param sec Current playback position in seconds.
     void onPlayheadChanged(double sec);
 
 protected:
@@ -61,63 +94,62 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    void drawWaveform(QPainter &painter);
-    void drawPlayCursor(QPainter &painter);
-    void drawBoundaryOverlay(QPainter &painter);
-    void rebuildMinMaxCache();
+    void drawWaveform(QPainter &painter);               ///< Draws the waveform.
+    void drawPlayCursor(QPainter &painter);              ///< Draws the playback cursor.
+    void drawBoundaryOverlay(QPainter &painter);         ///< Draws boundary lines.
+    void rebuildMinMaxCache();                           ///< Rebuilds the min/max sample cache.
 
-    // Boundary interaction
-    [[nodiscard]] int hitTestBoundary(int x) const;
-    void startBoundaryDrag(int boundaryIndex, double time);
-    void updateBoundaryDrag(double currentTime);
-    void endBoundaryDrag(double finalTime);
+    [[nodiscard]] int hitTestBoundary(int x) const;     ///< Returns boundary index at x, or -1.
+    void startBoundaryDrag(int boundaryIndex, double time);   ///< Begins boundary drag.
+    void updateBoundaryDrag(double currentTime);              ///< Updates drag position.
+    void endBoundaryDrag(double finalTime);                   ///< Commits boundary drag.
 
-    // Context menu helpers
+    /// @brief Finds the boundaries surrounding a time position.
+    /// @param timeSec Time position in seconds.
+    /// @param[out] outStart Start boundary time.
+    /// @param[out] outEnd End boundary time.
     void findSurroundingBoundaries(double timeSec, double &outStart, double &outEnd) const;
 
-    // Coordinate conversion
-    [[nodiscard]] double xToTime(int x) const;
-    [[nodiscard]] int timeToX(double time) const;
+    [[nodiscard]] double xToTime(int x) const;          ///< Converts pixel x to time.
+    [[nodiscard]] int timeToX(double time) const;       ///< Converts time to pixel x.
 
-    ViewportController *m_viewport = nullptr;
-    TextGridDocument *m_document = nullptr;
-    BoundaryBindingManager *m_bindingMgr = nullptr;
-    QUndoStack *m_undoStack = nullptr;
-    dstools::widgets::PlayWidget *m_playWidget = nullptr;
+    ViewportController *m_viewport = nullptr;           ///< Viewport controller.
+    TextGridDocument *m_document = nullptr;             ///< Associated document.
+    BoundaryBindingManager *m_bindingMgr = nullptr;     ///< Binding manager.
+    QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
+    dstools::widgets::PlayWidget *m_playWidget = nullptr; ///< Play widget for audio playback.
 
-    std::vector<float> m_samples;
-    int m_sampleRate = 44100;
+    std::vector<float> m_samples;                       ///< Raw audio samples.
+    int m_sampleRate = 44100;                           ///< Audio sample rate in Hz.
 
-    // Min/max cache for fast rendering
+    /// @brief Cached min/max sample pair for fast waveform rendering.
     struct MinMaxPair {
-        float min;
-        float max;
+        float min; ///< Minimum sample value in the block.
+        float max; ///< Maximum sample value in the block.
     };
-    std::vector<MinMaxPair> m_minMaxCache;
-    double m_cachePixelsPerSecond = 0.0;
+    std::vector<MinMaxPair> m_minMaxCache;              ///< Min/max cache array.
+    double m_cachePixelsPerSecond = 0.0;                ///< Zoom level of cached data.
 
-    double m_viewStart = 0.0;
-    double m_viewEnd = 10.0;
-    double m_pixelsPerSecond = 200.0;
+    double m_viewStart = 0.0;                           ///< Visible range start in seconds.
+    double m_viewEnd = 10.0;                            ///< Visible range end in seconds.
+    double m_pixelsPerSecond = 200.0;                   ///< Current zoom level.
 
-    double m_playhead = -1.0; // -1 = not playing
-    bool m_boundaryOverlayEnabled = true;
+    double m_playhead = -1.0;                           ///< Playhead position, -1 if not playing.
+    bool m_boundaryOverlayEnabled = true;               ///< Whether boundary overlay is drawn.
 
-    // Drag state - viewport scrolling
-    bool m_dragging = false;
-    QPoint m_dragStartPos;
-    double m_dragStartTime = 0.0;
+    bool m_dragging = false;                            ///< Whether viewport is being scrolled.
+    QPoint m_dragStartPos;                              ///< Mouse position at drag start.
+    double m_dragStartTime = 0.0;                       ///< View start time at drag start.
 
-    // Drag state - boundary dragging
-    bool m_boundaryDragging = false;
-    int m_draggedBoundary = -1;
-    int m_draggedTier = -1;
-    double m_boundaryDragStartTime = 0.0;
-    std::vector<AlignedBoundary> m_dragAligned;
-    std::vector<double> m_dragAlignedStartTimes;
+    bool m_boundaryDragging = false;                    ///< Whether a boundary is being dragged.
+    int m_draggedBoundary = -1;                         ///< Index of dragged boundary.
+    int m_draggedTier = -1;                             ///< Tier of dragged boundary.
+    double m_boundaryDragStartTime = 0.0;               ///< Original time of dragged boundary.
+    std::vector<AlignedBoundary> m_dragAligned;          ///< Aligned boundaries during drag.
+    std::vector<double> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
 
-    static constexpr int kBoundaryHitWidth = 8; // pixels
-    int m_hoveredBoundary = -1;
+    static constexpr int kBoundaryHitWidth = 8;         ///< Hit-test width in pixels.
+    int m_hoveredBoundary = -1;                         ///< Hovered boundary index, or -1.
 };
 
 } // namespace phonemelabeler

@@ -1,3 +1,6 @@
+/// @file GameModel.h
+/// @brief ONNX Runtime model implementation for the GAME inference pipeline.
+
 #pragma once
 
 #include <atomic>
@@ -15,52 +18,102 @@
 namespace Game
 {
 
+    /// @brief Input data for a single inference slice.
     struct InferenceInput {
-        std::vector<float> waveform;
-        float duration;
-        std::vector<float> known_durations;
-        int language;
-        std::vector<bool> maskT;
-        float timestep;
+        std::vector<float> waveform;         ///< Audio waveform samples.
+        float duration;                      ///< Duration in seconds.
+        std::vector<float> known_durations;  ///< Pre-computed durations (empty if unknown).
+        int language;                        ///< Language ID.
+        std::vector<bool> maskT;             ///< Time-step mask.
+        float timestep;                      ///< Time step in seconds.
     };
 
+    /// @brief Output from a single inference slice.
     struct InferenceOutput {
-        std::vector<uint8_t> boundaries;
-        std::vector<float> durations;
-        std::vector<float> presence;
-        std::vector<float> scores;
-        std::vector<uint8_t> maskN;
+        std::vector<uint8_t> boundaries;  ///< Detected boundary flags.
+        std::vector<float> durations;     ///< Estimated note durations.
+        std::vector<float> presence;      ///< Note presence probabilities.
+        std::vector<float> scores;        ///< Pitch scores per note.
+        std::vector<uint8_t> maskN;       ///< Note-level mask.
     };
 
+    /// @brief CancellableOnnxModel with 4-stage ONNX pipeline (encoder, segmenter, bd2dur/dur2bd, estimator).
     class GAME_INFER_EXPORT GameModel : public dstools::infer::CancellableOnnxModel {
     public:
         GameModel();
         ~GameModel();
+
+        /// @brief Get the model's target sample rate.
+        /// @return Sample rate in Hz.
         int get_target_sample_rate() const;
+
+        /// @brief Get the model's time step.
+        /// @return Time step in seconds.
         float get_timestep() const;
+
+        /// @brief Check whether the model includes a dur2bd sub-model.
+        /// @return True if dur2bd is available.
         bool has_dur2bd() const;
+
+        /// @brief Get the supported language map.
+        /// @return Map of language name to language ID.
         const std::map<std::string, int> &get_language_map() const;
 
+        /// @brief Load the ONNX model files from a directory.
+        /// @param modelPath Path to the model directory.
+        /// @param provider Execution provider.
+        /// @param device_id Device index for GPU providers.
+        /// @param msg Output error message on failure.
+        /// @return True on success.
         bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
                         std::string &msg);
+
+        /// @brief Check whether a model is loaded.
+        /// @return True if a model is currently loaded.
         bool is_open() const;
 
+        /// @brief Run full inference on waveform data.
+        /// @param waveform_data Input audio samples.
+        /// @param boundaries Output boundary flags.
+        /// @param durations Output note durations.
+        /// @param presence Output note presence probabilities.
+        /// @param scores Output pitch scores.
+        /// @param msg Output error message on failure.
+        /// @return True on success.
         bool forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                      std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
                      std::string &msg) const;
 
+        /// @brief Run inference with pre-computed durations.
+        /// @param waveform_data Input audio samples.
+        /// @param known_durations Pre-computed note durations.
+        /// @param durations Output refined durations.
+        /// @param presence Output note presence probabilities.
+        /// @param scores Output pitch scores.
+        /// @param msg Output error message on failure.
+        /// @return True on success.
         bool forwardWithKnownDurations(const std::vector<float> &waveform_data,
                                        const std::vector<float> &known_durations, std::vector<float> &durations,
                                        std::vector<float> &presence, std::vector<float> &scores,
                                        std::string &msg) const;
 
+        /// @brief Generate D3PM timestep schedule.
+        /// @param t0 Initial timestep value.
+        /// @param n_steps Number of steps.
+        /// @return Vector of timestep values.
         static std::vector<float> generate_d3pm_ts(float t0, int n_steps);
 
+        /// @brief Set segmenter threshold.
         void set_seg_threshold(float threshold);
+        /// @brief Set segmenter radius in seconds.
         void set_seg_radius_seconds(float radius);
+        /// @brief Set segmenter radius in frames.
         void set_seg_radius_frames(float radiusFrames);
+        /// @brief Set estimator threshold.
         void set_est_threshold(float threshold);
+        /// @brief Set D3PM timestep schedule.
         void set_d3pm_ts(const std::vector<float> &ts);
+        /// @brief Set the inference language.
         void set_language(int language);
 
     private:

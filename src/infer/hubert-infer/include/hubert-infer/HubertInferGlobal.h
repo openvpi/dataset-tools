@@ -1,3 +1,6 @@
+/// @file HubertInferGlobal.h
+/// @brief DLL export/import macro definitions for the hubert-infer library.
+
 #ifndef HUBERTINFERGLOBAL_H
 #define HUBERTINFERGLOBAL_H
 

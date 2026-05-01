@@ -1,5 +1,8 @@
 #pragma once
 
+/// @file StringUtils.h
+/// @brief String parsing and formatting utilities for DiffSinger data fields.
+
 #include <QString>
 #include <QStringList>
 
@@ -9,6 +12,9 @@
 
 namespace dstools {
 
+/// @brief Format a duration to at most 6 decimal places, removing trailing zeros.
+/// @param d Duration value.
+/// @return Formatted string.
 inline QString formatDur6(double d) {
     QString s = QString::number(d, 'f', 6);
     if (s.contains(QLatin1Char('.'))) {
@@ -20,6 +26,9 @@ inline QString formatDur6(double d) {
     return s;
 }
 
+/// @brief Parse a space-separated phoneme sequence.
+/// @param phSeq Space-delimited phoneme string.
+/// @return Vector of phoneme strings.
 inline std::vector<std::string> parsePhSeq(const QString &phSeq) {
     const QStringList parts = phSeq.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     std::vector<std::string> result;
@@ -29,6 +38,9 @@ inline std::vector<std::string> parsePhSeq(const QString &phSeq) {
     return result;
 }
 
+/// @brief Parse space-separated phoneme durations.
+/// @param phDur Space-delimited duration string.
+/// @return Vector of duration values.
 inline std::vector<float> parsePhDur(const QString &phDur) {
     const QStringList parts = phDur.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     std::vector<float> result;
@@ -38,6 +50,9 @@ inline std::vector<float> parsePhDur(const QString &phDur) {
     return result;
 }
 
+/// @brief Parse space-separated phoneme counts.
+/// @param phNum Space-delimited count string.
+/// @return Vector of phoneme counts per note.
 inline std::vector<int> parsePhNum(const QString &phNum) {
     const QStringList parts = phNum.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     std::vector<int> result;
@@ -49,6 +64,9 @@ inline std::vector<int> parsePhNum(const QString &phNum) {
 
 struct TranscriptionRow;
 
+/// @brief Populate a TranscriptionRow with note sequence data.
+/// @param row Output row to populate.
+/// @param notes Vector of (noteName, duration, slur) tuples.
 inline void writeNotesToRow(TranscriptionRow &row,
                             const std::vector<std::tuple<std::string, float, int>> &notes);
 

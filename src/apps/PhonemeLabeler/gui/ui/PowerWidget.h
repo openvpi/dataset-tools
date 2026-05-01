@@ -1,3 +1,6 @@
+/// @file PowerWidget.h
+/// @brief Audio power (RMS energy) visualization widget.
+
 #pragma once
 
 #include <QWidget>
@@ -18,27 +21,45 @@ using dstools::widgets::ViewportState;
 
 class TextGridDocument;
 
+/// @brief Displays audio power curve synchronized with the viewport, with boundary
+///        overlay and dragging support.
 class PowerWidget : public QWidget {
     Q_OBJECT
 
 public:
+    /// @brief Constructs the power widget.
+    /// @param viewport Viewport controller for time synchronization.
+    /// @param parent Optional parent widget.
     explicit PowerWidget(ViewportController *viewport, QWidget *parent = nullptr);
     ~PowerWidget() override;
 
+    /// @brief Sets the audio sample data.
+    /// @param samples Audio samples.
+    /// @param sampleRate Sample rate in Hz.
     void setAudioData(const std::vector<float> &samples, int sampleRate);
+
+    /// @brief Updates the viewport state.
+    /// @param state New viewport state.
     void setViewport(const ViewportState &state);
+
+    /// @brief Sets the TextGrid document for boundary display.
     void setDocument(TextGridDocument *doc) { m_document = doc; }
+
+    /// @brief Sets the boundary binding manager.
     void setBindingManager(BoundaryBindingManager *mgr) { m_bindingMgr = mgr; }
+
+    /// @brief Sets the undo stack for boundary edit commands.
     void setUndoStack(QUndoStack *stack) { m_undoStack = stack; }
 
+    /// @brief Triggers a repaint of the boundary overlay.
     void updateBoundaryOverlay();
 
 signals:
-    void boundaryDragStarted(int tierIndex, int boundaryIndex);
-    void boundaryDragging(int tierIndex, int boundaryIndex, double newTime);
-    void boundaryDragFinished(int tierIndex, int boundaryIndex, double newTime);
-    void hoveredBoundaryChanged(int boundaryIndex);
-    void entryScrollRequested(int delta);
+    void boundaryDragStarted(int tierIndex, int boundaryIndex);  ///< Boundary drag began.
+    void boundaryDragging(int tierIndex, int boundaryIndex, double newTime); ///< Boundary being dragged.
+    void boundaryDragFinished(int tierIndex, int boundaryIndex, double newTime); ///< Boundary drag ended.
+    void hoveredBoundaryChanged(int boundaryIndex); ///< Hovered boundary changed.
+    void entryScrollRequested(int delta);           ///< Scroll request from wheel event.
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -49,57 +70,52 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    void rebuildPowerCache();
-    void drawPower(QPainter &painter);
-    void drawReferenceLines(QPainter &painter);
-    void drawBoundaryOverlay(QPainter &painter);
+    void rebuildPowerCache();                           ///< Recomputes cached power values.
+    void drawPower(QPainter &painter);                  ///< Draws the power curve.
+    void drawReferenceLines(QPainter &painter);         ///< Draws dB reference lines.
+    void drawBoundaryOverlay(QPainter &painter);        ///< Draws boundary lines.
 
-    // Boundary interaction
-    [[nodiscard]] int hitTestBoundary(int x) const;
-    void startBoundaryDrag(int boundaryIndex, double time);
-    void updateBoundaryDrag(double currentTime);
-    void endBoundaryDrag(double finalTime);
+    [[nodiscard]] int hitTestBoundary(int x) const;     ///< Returns boundary index at x, or -1.
+    void startBoundaryDrag(int boundaryIndex, double time);   ///< Begins boundary drag.
+    void updateBoundaryDrag(double currentTime);              ///< Updates drag position.
+    void endBoundaryDrag(double finalTime);                   ///< Commits boundary drag.
 
-    [[nodiscard]] double xToTime(int x) const;
-    [[nodiscard]] int timeToX(double time) const;
+    [[nodiscard]] double xToTime(int x) const;          ///< Converts pixel x to time.
+    [[nodiscard]] int timeToX(double time) const;       ///< Converts time to pixel x.
 
-    ViewportController *m_viewport = nullptr;
-    TextGridDocument *m_document = nullptr;
-    BoundaryBindingManager *m_bindingMgr = nullptr;
-    QUndoStack *m_undoStack = nullptr;
+    ViewportController *m_viewport = nullptr;           ///< Viewport controller.
+    TextGridDocument *m_document = nullptr;             ///< Associated document.
+    BoundaryBindingManager *m_bindingMgr = nullptr;     ///< Binding manager.
+    QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
 
-    std::vector<float> m_samples;
-    int m_sampleRate = 44100;
+    std::vector<float> m_samples;                       ///< Raw audio samples.
+    int m_sampleRate = 44100;                           ///< Audio sample rate in Hz.
 
-    // Power data: dB values per pixel column
-    std::vector<float> m_powerCache;
+    std::vector<float> m_powerCache;                    ///< Power dB values per pixel column.
 
-    double m_viewStart = 0.0;
-    double m_viewEnd = 10.0;
-    double m_pixelsPerSecond = 200.0;
+    double m_viewStart = 0.0;                           ///< Visible range start in seconds.
+    double m_viewEnd = 10.0;                            ///< Visible range end in seconds.
+    double m_pixelsPerSecond = 200.0;                   ///< Current zoom level.
 
-    // vLabeler reference parameters
-    static constexpr int kUnitSize = 60;
-    static constexpr int kWindowSize = 300;
-    static constexpr float kMinPower = -48.0f;
-    static constexpr float kMaxPower = 0.0f;
-    static constexpr float kRefValue = 32768.0f; // 2^15
+    static constexpr int kUnitSize = 60;                ///< RMS unit size in samples.
+    static constexpr int kWindowSize = 300;             ///< RMS window size in samples.
+    static constexpr float kMinPower = -48.0f;          ///< Minimum displayed power in dB.
+    static constexpr float kMaxPower = 0.0f;            ///< Maximum displayed power in dB.
+    static constexpr float kRefValue = 32768.0f;        ///< Reference value (2^15).
 
-    // Drag state - viewport scrolling
-    bool m_dragging = false;
-    QPoint m_dragStartPos;
-    double m_dragStartTime = 0.0;
+    bool m_dragging = false;                            ///< Whether viewport is being scrolled.
+    QPoint m_dragStartPos;                              ///< Mouse position at drag start.
+    double m_dragStartTime = 0.0;                       ///< View start time at drag start.
 
-    // Drag state - boundary dragging
-    bool m_boundaryDragging = false;
-    int m_draggedBoundary = -1;
-    int m_draggedTier = -1;
-    double m_boundaryDragStartTime = 0.0;
-    std::vector<AlignedBoundary> m_dragAligned;
-    std::vector<double> m_dragAlignedStartTimes;
+    bool m_boundaryDragging = false;                    ///< Whether a boundary is being dragged.
+    int m_draggedBoundary = -1;                         ///< Index of dragged boundary.
+    int m_draggedTier = -1;                             ///< Tier of dragged boundary.
+    double m_boundaryDragStartTime = 0.0;               ///< Original time of dragged boundary.
+    std::vector<AlignedBoundary> m_dragAligned;          ///< Aligned boundaries during drag.
+    std::vector<double> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
 
-    static constexpr int kBoundaryHitWidth = 8;
-    int m_hoveredBoundary = -1;
+    static constexpr int kBoundaryHitWidth = 8;         ///< Hit-test width in pixels.
+    int m_hoveredBoundary = -1;                         ///< Hovered boundary index, or -1.
 };
 
 } // namespace phonemelabeler

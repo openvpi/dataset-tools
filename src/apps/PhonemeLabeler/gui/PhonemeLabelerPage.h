@@ -1,3 +1,6 @@
+/// @file PhonemeLabelerPage.h
+/// @brief PhonemeLabeler TextGrid editor main page.
+
 #pragma once
 
 #include <dsfw/IPageActions.h>
@@ -34,6 +37,7 @@ namespace phonemelabeler {
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
 
+/// @brief IPageActions page providing waveform/spectrogram/power visualization, multi-tier TextGrid editing with undo/redo, boundary binding, and playback.
 class PhonemeLabelerPage : public QWidget, public dstools::labeler::IPageActions {
     Q_OBJECT
     Q_INTERFACES(dstools::labeler::IPageActions)

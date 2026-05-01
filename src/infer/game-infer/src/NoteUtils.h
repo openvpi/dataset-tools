@@ -1,3 +1,6 @@
+/// @file NoteUtils.h
+/// @brief MIDI note number to string conversion utility.
+
 #ifndef GAME_INFER_NOTEUTILS_H
 #define GAME_INFER_NOTEUTILS_H
 
@@ -7,6 +10,9 @@
 
 namespace game_infer {
 
+    /// @brief Convert a floating-point MIDI note number to a human-readable string.
+    /// @param midiFloat MIDI note number (e.g. 60.0 for C4, 69.25 for A4+25 cents).
+    /// @return Note string such as "C4", "A#3+25", or "Eb5-10".
     inline std::string midiToNoteString(double midiFloat) {
         int midiInt = static_cast<int>(std::round(midiFloat));
         int cents = static_cast<int>(std::round((midiFloat - midiInt) * 100));

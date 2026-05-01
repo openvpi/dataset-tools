@@ -1,3 +1,6 @@
+/// @file RmvpeGlobal.h
+/// @brief DLL export/import macro definitions for the rmvpe-infer library.
+
 #ifndef RMVPEGLOBAL_H
 #define RMVPEGLOBAL_H
 

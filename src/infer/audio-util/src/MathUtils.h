@@ -1,15 +1,19 @@
+/// @file MathUtils.h
+/// @brief Integer division with rounding utility.
+
 #ifndef MATHUTILS_H
 #define MATHUTILS_H
 
+/// @brief Integer division rounding to the closest integer without float conversion.
+/// @tparam T Integer type (int, int64_t, etc.).
+/// @param n Numerator.
+/// @param d Denominator.
+/// @return Rounded quotient.
 template<class T>
 inline T divIntRound(T n, T d);
 
 template<class T>
 inline T divIntRound(T n, T d) {
-    /*
-     * Integer division rounding to the closest integer, without converting to floating point numbers.
-     */
-    // T should be an integer type (int, int64_t, qint64, ...)
     return ((n < 0) ^ (d < 0)) ? \
                                ((n - (d / 2)) / d) : \
                                ((n + (d / 2)) / d);

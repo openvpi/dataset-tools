@@ -1,3 +1,6 @@
+/// @file ExportDialog.h
+/// @brief MinLabel dataset export dialog.
+
 #ifndef DATASET_TOOLS_EXPORTDIALOG_H
 #define DATASET_TOOLS_EXPORTDIALOG_H
 
@@ -10,22 +13,25 @@
 #include "Common.h"
 
 namespace Minlabel {
+    /// @brief Dialog for configuring dataset export settings (output dir, filename conversion, audio/label/text options).
     class ExportDialog final : public QDialog {
         Q_OBJECT
     public:
+        /// @brief Constructs the export dialog.
+        /// @param parent Optional parent widget.
         explicit ExportDialog(QWidget *parent = nullptr);
         ~ExportDialog() override;
 
-        ExportInfo exportInfo;
+        ExportInfo exportInfo;  ///< Collected export settings.
 
-        dstools::widgets::PathSelector *m_outputDir;
+        dstools::widgets::PathSelector *m_outputDir;  ///< Output directory selector.
 
-        QLineEdit *folderNameEdit;
-        QCheckBox *convertFilename{};
-        QCheckBox *expAudio;
-        QCheckBox *labFile;
-        QCheckBox *rawText;
-        QCheckBox *removeTone;
+        QLineEdit *folderNameEdit;       ///< Subfolder name input.
+        QCheckBox *convertFilename{};    ///< Option to convert filenames.
+        QCheckBox *expAudio;             ///< Option to export audio files.
+        QCheckBox *labFile;              ///< Option to export label files.
+        QCheckBox *rawText;              ///< Option to export raw text files.
+        QCheckBox *removeTone;           ///< Option to remove tone markers.
     };
 }
 #endif // DATASET_TOOLS_EXPORTDIALOG_H
