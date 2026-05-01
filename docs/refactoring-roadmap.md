@@ -369,7 +369,7 @@ public:
 
 ---
 
-### T-2.5 FunASR 适配器 [G3+G8]
+### T-2.5 FunASR 适配器 [G3+G8] ✅ 已完成
 
 **现状**: FunASR 是 vendor 代码，有自己的 `Model` 基类，不实现 `IInferenceEngine`。
 
@@ -500,6 +500,8 @@ public:
 
 **工作量**: M (2-8h)
 
+> ✅ 已完成 — FunAsrAdapter 已实现于 src/libs/lyricfa/，实现 IInferenceEngine 接口，通过 FunAsr::create_model() 管理模型生命周期，线程安全，不修改 vendor 源码。
+
 ---
 
 ## Phase 4 — 完善与扩展 (Week 13+)
@@ -588,7 +590,7 @@ Phase 2 (Week 6-8) — 库边界固化
   T-2.2 版本化 API (✅)                     ← depends T-2.1
   T-2.3 标准化模型配置加载 (✅)              ← depends T-1.4
   T-2.4 IInferenceEngine↔IModelProvider (✅) ← depends T-1.3, T-1.1
-  T-2.5 FunASR 适配器                     ← depends T-1.3
+  T-2.5 FunASR 适配器 (✅)                    ← depends T-1.3
   T-2.6 提取 pipeline 后端                ← depends T-0.4, T-1.5
       │
       ▼
