@@ -461,7 +461,7 @@ public:
 
 ---
 
-### T-3.4 控件稳定性审计 [G4]
+### T-3.4 控件稳定性审计 [G4] ✅ 已完成
 
 **现状**: dstools-widgets 13 个控件，缺乏单元测试。
 
@@ -471,6 +471,8 @@ public:
 3. 确认导出符号正确（`DSTOOLS_WIDGETS_EXPORT` 宏）
 
 **工作量**: M (2-8h)
+
+> ✅ 已完成 — 审计 PlayWidget/TaskWindow 等控件，添加空指针防护（m_player/m_logOutput/m_runBtn/m_progressBar），创建 dsfw-widgets-test 单元测试覆盖 PathSelector/ViewportController/RunProgressRow/FileProgressTracker。
 
 ---
 
@@ -608,7 +610,7 @@ Phase 2 (Week 6-8) — 库边界固化
       ▼
 Phase 3 (Week 9-12) — 增强
   T-3.1 日志系统 (✅)  T-3.2 Undo/Redo (✅)  T-3.3 事件总线 (✅)
-  T-3.4 控件审计       T-3.5 控件迁移 (✅)         T-3.6 CLI 工具 (✅)
+  T-3.4 控件审计 (✅)       T-3.5 控件迁移 (✅)         T-3.6 CLI 工具 (✅)
       │
       ▼
 Phase 4 (Week 13+) — 完善
