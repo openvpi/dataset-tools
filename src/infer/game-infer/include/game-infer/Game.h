@@ -62,6 +62,10 @@ namespace Game
         // IInferenceEngine overrides
         bool isOpen() const override;
         const char *engineName() const override;
+        bool load(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId,
+                  std::string &errorMsg) override;
+        void unload() override;
+        int64_t estimatedMemoryBytes() const override;
 
         int get_target_sample_rate() const;
         float get_timestep() const;

@@ -14,21 +14,33 @@ using hubert_infer::JsonUtils;
 
 namespace HFA {
 
+    HFA::HFA() = default;
+
     HFA::HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id) {
+        std::string unused;
+        load(model_folder, provider, device_id, unused);
+    }
+
+    HFA::~HFA() = default;
+
+    bool HFA::load(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id,
+                   std::string &errorMsg) {
+        unload();
+
         try {
             std::string jsonErr;
 
             const fs::path config_file = model_folder / "config.json";
             auto config = JsonUtils::loadFile(config_file, jsonErr);
             if (!jsonErr.empty()) {
-                std::cerr << "HFA: " << jsonErr << std::endl;
-                return;
+                errorMsg = jsonErr;
+                return false;
             }
 
             std::map<std::string, float> mel_spec_config;
             if (!JsonUtils::getRequiredMap<std::string, float>(config, "mel_spec_config", mel_spec_config, jsonErr)) {
-                std::cerr << "HFA: " << jsonErr << std::endl;
-                return;
+                errorMsg = jsonErr;
+                return false;
             }
             hfa_input_sample_rate = static_cast<int>(mel_spec_config.at("sample_rate"));
 
@@ -38,9 +50,9 @@ namespace HFA {
             const fs::path vocab_file = model_folder / "vocab.json";
             auto vocab = JsonUtils::loadFile(vocab_file, jsonErr);
             if (!jsonErr.empty()) {
-                std::cerr << "HFA: " << jsonErr << std::endl;
-                m_hfa.reset();
-                return;
+                errorMsg = jsonErr;
+                unload();
+                return false;
             }
             const auto dictionaries = JsonUtils::getObject(vocab, "dictionaries");
 
@@ -59,40 +71,51 @@ namespace HFA {
 
             std::vector<std::string> silent_phonemes;
             if (!JsonUtils::getRequiredVec<std::string>(vocab, "silent_phonemes", silent_phonemes, jsonErr)) {
-                std::cerr << "HFA: " << jsonErr << std::endl;
-                m_hfa.reset();
-                return;
+                errorMsg = jsonErr;
+                unload();
+                return false;
             }
             m_silent_phonemes = std::unordered_set(silent_phonemes.begin(), silent_phonemes.end());
 
             std::map<std::string, int> vocab_dict;
             if (!JsonUtils::getRequiredMap<std::string, int>(vocab, "vocab", vocab_dict, jsonErr)) {
-                std::cerr << "HFA: " << jsonErr << std::endl;
-                m_hfa.reset();
-                return;
+                errorMsg = jsonErr;
+                unload();
+                return false;
             }
             std::vector<std::string> non_lexical_phonemes;
             if (!JsonUtils::getRequiredVec<std::string>(vocab, "non_lexical_phonemes", non_lexical_phonemes, jsonErr)) {
-                std::cerr << "HFA: " << jsonErr << std::endl;
-                m_hfa.reset();
-                return;
+                errorMsg = jsonErr;
+                unload();
+                return false;
             }
             non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
             m_alignmentDecoder = std::make_unique<AlignmentDecoder>(vocab_dict, mel_spec_config);
             m_nonLexicalDecoder = std::make_unique<NonLexicalDecoder>(non_lexical_phonemes, mel_spec_config);
         } catch (const std::exception &e) {
-            std::cerr << "HFA: failed to load model from " << model_folder.string()
-                      << ": " << e.what() << std::endl;
-            m_hfa.reset();
-            return;
+            errorMsg = "Failed to load HFA model from " + model_folder.string() + ": " + e.what();
+            unload();
+            return false;
         }
 
         if (!m_hfa) {
-            std::cerr << "HFA: cannot load model, check model.onnx and vocab.json" << std::endl;
+            errorMsg = "Cannot load HFA model, check model.onnx and vocab.json";
+            return false;
         }
+        return true;
     }
 
-    HFA::~HFA() = default;
+    void HFA::unload() {
+        m_hfa.reset();
+        m_dictG2p.clear();
+        m_alignmentDecoder.reset();
+        m_nonLexicalDecoder.reset();
+        m_silent_phonemes.clear();
+    }
+
+    int64_t HFA::estimatedMemoryBytes() const {
+        return initialized() ? 300 * 1024 * 1024LL : 0;
+    }
 
     bool HFA::recognize(std::filesystem::path wavPath, const std::string &language,
                         const std::vector<std::string> &non_speech_ph, WordList &words, std::string &msg) const {

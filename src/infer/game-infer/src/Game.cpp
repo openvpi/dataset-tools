@@ -302,6 +302,19 @@ namespace Game
 
     const char *Game::engineName() const { return "GAME"; }
 
+    bool Game::load(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int deviceId,
+                    std::string &errorMsg) {
+        return load_model(modelPath, provider, deviceId, errorMsg);
+    }
+
+    void Game::unload() {
+        m_gameModel = std::make_unique<GameModel>();
+    }
+
+    int64_t Game::estimatedMemoryBytes() const {
+        return is_open() ? 500 * 1024 * 1024LL : 0;
+    }
+
     bool Game::align(const AlignInput &input, const AlignOptions &options, std::vector<AlignedNote> &output,
                      std::string &msg) const {
         if (!m_gameModel) {

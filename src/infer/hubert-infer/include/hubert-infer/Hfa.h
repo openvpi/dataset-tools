@@ -27,6 +27,7 @@ namespace HFA {
     /// dictionaries and handles non-lexical sounds (breath, silence).
     class HUBERT_INFER_EXPORT HFA : public dstools::infer::IInferenceEngine {
     public:
+        HFA();
         /// Load the model from @p model_folder using the given execution
         /// provider and device. Check initialized() after construction.
         explicit HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id);
@@ -50,6 +51,11 @@ namespace HFA {
 
         bool isOpen() const override { return initialized(); }
         const char *engineName() const override { return "HuBERT-FA"; }
+
+        bool load(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId,
+                  std::string &errorMsg) override;
+        void unload() override;
+        int64_t estimatedMemoryBytes() const override;
 
     private:
         std::unique_ptr<HfaModel> m_hfa;

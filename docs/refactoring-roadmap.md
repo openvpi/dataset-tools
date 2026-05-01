@@ -182,7 +182,7 @@
 
 ---
 
-### T-1.3 丰富 IInferenceEngine 接口 [G8]
+### T-1.3 丰富 IInferenceEngine 接口 [G8] ✅ 已完成
 
 **现状**: `IInferenceEngine` 仅有 `isOpen()`, `terminate()`, `engineName()` — 太薄，无法统一模型生命周期。
 

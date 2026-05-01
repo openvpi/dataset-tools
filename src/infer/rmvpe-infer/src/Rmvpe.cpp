@@ -10,12 +10,11 @@
 
 namespace Rmvpe
 {
-    Rmvpe::Rmvpe(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) {
-        m_rmvpe = std::make_unique<RmvpeModel>(modelPath, provider, device_id);
+    Rmvpe::Rmvpe() = default;
 
-        if (!is_open()) {
-            std::cout << "Cannot load RMVPE Model, there must be files " + modelPath.string() << std::endl;
-        }
+    Rmvpe::Rmvpe(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) {
+        std::string unused;
+        load(modelPath, provider, device_id, unused);
     }
 
     Rmvpe::~Rmvpe() = default;
@@ -156,5 +155,31 @@ namespace Rmvpe
     }
 
     void Rmvpe::terminate() { m_rmvpe->terminate(); }
+
+    bool Rmvpe::load(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int deviceId,
+                     std::string &errorMsg) {
+        unload();
+        try {
+            m_rmvpe = std::make_unique<RmvpeModel>(modelPath, provider, deviceId);
+            if (!m_rmvpe->is_open()) {
+                errorMsg = "Cannot load RMVPE Model from " + modelPath.string();
+                m_rmvpe.reset();
+                return false;
+            }
+            return true;
+        } catch (const std::exception &e) {
+            errorMsg = e.what();
+            m_rmvpe.reset();
+            return false;
+        }
+    }
+
+    void Rmvpe::unload() {
+        m_rmvpe.reset();
+    }
+
+    int64_t Rmvpe::estimatedMemoryBytes() const {
+        return is_open() ? 100 * 1024 * 1024LL : 0;
+    }
 
 } // namespace Rmvpe

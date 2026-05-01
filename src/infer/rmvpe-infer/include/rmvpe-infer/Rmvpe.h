@@ -21,6 +21,7 @@ namespace Rmvpe
 
     class RMVPE_INFER_EXPORT Rmvpe : public dstools::infer::IInferenceEngine {
     public:
+        Rmvpe();
         explicit Rmvpe(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id);
         ~Rmvpe() override;
 
@@ -33,6 +34,11 @@ namespace Rmvpe
         void terminate() override;
 
         const char *engineName() const override { return "RMVPE"; }
+
+        bool load(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId,
+                  std::string &errorMsg) override;
+        void unload() override;
+        int64_t estimatedMemoryBytes() const override;
 
     private:
         std::unique_ptr<RmvpeModel> m_rmvpe;
