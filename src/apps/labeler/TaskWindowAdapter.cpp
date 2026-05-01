@@ -21,10 +21,6 @@ dstools::widgets::TaskWindow *TaskWindowAdapter::innerPage() const {
     return false;
 }
 
-bool TaskWindowAdapter::save() {
-    return true;
-}
-
 void TaskWindowAdapter::setWorkingDirectory(const QString &dir) {
     m_workingDir = dir;
 }

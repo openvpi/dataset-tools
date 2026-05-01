@@ -49,7 +49,7 @@ public:
     [[nodiscard]] QString workingDirectory() const override { return m_workingDirectory; }
 
     [[nodiscard]] bool hasUnsavedChanges() const override;
-    bool save() override;
+    bool save();
     bool saveAll();
 
     // IPageActions

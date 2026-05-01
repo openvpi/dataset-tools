@@ -16,7 +16,6 @@ public:
     dstools::widgets::TaskWindow *innerPage() const;
 
     bool hasUnsavedChanges() const override;
-    bool save() override;
     void setWorkingDirectory(const QString &dir) override;
     QString workingDirectory() const override;
 

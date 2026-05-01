@@ -25,9 +25,6 @@ public:
     /// @brief Check whether this page has unsaved changes.
     /// @return True if there are unsaved modifications.
     virtual bool hasUnsavedChanges() const { return false; }
-    /// @brief Save the page's current state.
-    /// @return True on success.
-    virtual bool save() { return true; }
 
     /// @brief Set the working directory for this page.
     /// @param dir Absolute directory path (unused in default implementation).

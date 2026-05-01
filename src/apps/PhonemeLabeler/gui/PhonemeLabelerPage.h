@@ -54,7 +54,7 @@ public:
     [[nodiscard]] QUndoStack *undoStack() const { return m_undoStack; }
     [[nodiscard]] QString currentFilePath() const { return m_currentFilePath; }
     [[nodiscard]] bool hasUnsavedChanges() const override;
-    bool save() override;
+    bool save();
     bool saveAs();
 
     // IPageActions
