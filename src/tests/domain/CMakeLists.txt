@@ -11,6 +11,7 @@ set(DOMAIN_TESTS
     TestStringUtils
     TestTranscriptionPipeline
     TestTextGridToCsv
+    TestCsvToDsConverter
 )
 
 foreach(test_name ${DOMAIN_TESTS})
@@ -21,3 +22,11 @@ foreach(test_name ${DOMAIN_TESTS})
     )
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
+
+# PitchProcessor test (links pitchlabeler-page instead of dstools-domain)
+add_executable(TestPitchProcessor TestPitchProcessor.cpp)
+target_link_libraries(TestPitchProcessor PRIVATE
+    pitchlabeler-page
+    Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestPitchProcessor COMMAND TestPitchProcessor)
