@@ -48,7 +48,9 @@ int main(int argc, char *argv[]) {
     auto *page = new PipelinePage(&settings, &shell);
     shell.addPage(page, "pipeline", {}, "Pipeline");
     shell.setWindowTitle(page->windowTitle());
-    shell.resize(1200, 800);
+    constexpr int kDefaultWindowWidth = 1200;
+    constexpr int kDefaultWindowHeight = 800;
+    shell.resize(kDefaultWindowWidth, kDefaultWindowHeight);
     shell.show();
     return app.exec();
 }

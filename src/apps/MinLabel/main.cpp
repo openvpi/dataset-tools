@@ -38,7 +38,9 @@ int main(int argc, char *argv[]) {
     dsfw::AppShell shell;
     auto *page = new Minlabel::MinLabelPage(&shell);
     shell.addPage(page, "min-label", {}, "MinLabel");
-    shell.resize(1280, 720);
+    constexpr int kDefaultWindowWidth = 1280;
+    constexpr int kDefaultWindowHeight = 720;
+    shell.resize(kDefaultWindowWidth, kDefaultWindowHeight);
     shell.show();
     return app.exec();
 }

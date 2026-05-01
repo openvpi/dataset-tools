@@ -20,7 +20,9 @@ int main(int argc, char *argv[]) {
     auto *page = new GameInferPage(&settings, &shell);
     shell.addPage(page, "game-infer", {}, "GameInfer");
     shell.setWindowTitle("GameInfer - 音频转MIDI工具");
-    shell.resize(800, 450);
+    constexpr int kDefaultWindowWidth = 800;
+    constexpr int kDefaultWindowHeight = 450;
+    shell.resize(kDefaultWindowWidth, kDefaultWindowHeight);
     shell.show();
     return app.exec();
 }

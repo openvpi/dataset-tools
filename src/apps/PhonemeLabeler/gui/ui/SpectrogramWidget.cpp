@@ -61,6 +61,7 @@ std::vector<double> SpectrogramWidget::makeBlackmanHarrisWindow(int N) {
     std::vector<double> w(N);
     for (int n = 0; n < N; ++n) {
         double x = 2.0 * M_PI * n / (N - 1);
+        // Blackman-Harris window coefficients: a0, a1, a2, a3
         w[n] = 0.35875 - 0.48829 * std::cos(x) + 0.14128 * std::cos(2.0 * x) - 0.01168 * std::cos(3.0 * x);
     }
     return w;
