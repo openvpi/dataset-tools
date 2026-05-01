@@ -23,7 +23,7 @@
 
 ## Phase 0 — 预备工作 (Week 1-2)
 
-### T-0.1 泛化 ModelType 枚举 [G1+G7]
+### T-0.1 泛化 ModelType 枚举 [G1+G7] ✅ 已完成
 
 **现状**: `IModelProvider.h` 中 `ModelType` 枚举包含 DS 专有值 (`Asr`, `HuBERT`, `GAME`, `RMVPE`, `SOME`)，框架层不应感知业务领域模型类型。
 
@@ -111,7 +111,7 @@
 
 ---
 
-### T-0.5 审计 dsfw 的 DS 业务泄漏 [G7]
+### T-0.5 审计 dsfw 的 DS 业务泄漏 [G7] ✅ 已完成
 
 **现状**: 框架层（dsfw-core, dsfw-ui-core）应不包含任何 DiffSinger 专有逻辑。
 
@@ -568,11 +568,11 @@ public:
 
 ```
 Phase 0 (Week 1-2) — 预备
-  T-0.1 泛化 ModelType 枚举
+  T-0.1 泛化 ModelType 枚举 (✅)
   T-0.2 dsfw-core 去 Qt::Gui (✅)
   T-0.3 infer-common 去 Qt (✅)
   T-0.4 pipeline 相对路径修复 (✅)
-  T-0.5 DS 泄漏审计
+  T-0.5 DS 泄漏审计 (✅)
       │
       ▼
 Phase 1 (Week 3-5) — 核心分离
@@ -585,9 +585,9 @@ Phase 1 (Week 3-5) — 核心分离
       ▼
 Phase 2 (Week 6-8) — 库边界固化
   T-2.1 整理 dsfw 目录结构与导出       ← depends Phase 1
-  T-2.2 版本化 API                     ← depends T-2.1
-  T-2.3 标准化模型配置加载                  ← depends T-1.4
-  T-2.4 IInferenceEngine↔IModelProvider   ← depends T-1.3, T-1.1
+  T-2.2 版本化 API (✅)                     ← depends T-2.1
+  T-2.3 标准化模型配置加载 (✅)              ← depends T-1.4
+  T-2.4 IInferenceEngine↔IModelProvider (✅) ← depends T-1.3, T-1.1
   T-2.5 FunASR 适配器                     ← depends T-1.3
   T-2.6 提取 pipeline 后端                ← depends T-0.4, T-1.5
       │
