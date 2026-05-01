@@ -1,6 +1,7 @@
 #include "util.h"
 
 #include <cmath>
+#include <iostream>
 
 #include "alignedmem.h"
 namespace FunAsr {
@@ -45,6 +46,7 @@ namespace FunAsr {
         FILE *fp;
         fp = fopen(filename, "wb+");
         if (!fp) {
+            std::cerr << "Failed to open file for writing: " << filename << std::endl;
             return;
         }
         fwrite(data, 1, len, fp);

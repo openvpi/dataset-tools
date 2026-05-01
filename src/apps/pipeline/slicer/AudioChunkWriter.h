@@ -13,8 +13,9 @@ using MarkerList = std::vector<std::pair<qint64, qint64>>;
 
 /// @brief Result of a chunk writing operation.
 struct ChunkWriteResult {
-    bool success = false;   ///< Whether the write operation succeeded.
-    int chunksWritten = 0;  ///< Number of audio chunks written.
+    bool success = false;       ///< Whether the write operation succeeded.
+    int chunksWritten = 0;      ///< Number of audio chunks written.
+    QString errorMessage;       ///< Error message if the operation failed.
 };
 
 /// @brief Static utility for writing sliced audio chunks to individual files.

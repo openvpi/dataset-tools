@@ -87,6 +87,11 @@ namespace AudioUtil
         sf_vio.info.seekable = 1;
 
         SndfileHandle outBuf(sf_vio.vio, &sf_vio.data, SFM_WRITE, sf_vio.info.format, channels, rate);
+        if (!outBuf) {
+            std::cerr << "Failed to open SndfileHandle for MP3 VIO output" << std::endl;
+            mpg123_delete(mh);
+            return;
+        }
 
         if (encoding & MPG123_ENC_FLOAT_32) {
             // 32-bit float buffer for multi-channel audio

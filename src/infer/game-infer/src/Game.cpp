@@ -116,6 +116,9 @@ namespace Game
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
                          sf_vio.info.samplerate);
+        if (!sf) {
+            return dstools::Err("Failed to open resampled audio for Game inference: " + msg);
+        }
         const auto totalSize = sf.frames();
 
         std::vector<float> audio(totalSize);
@@ -193,6 +196,9 @@ namespace Game
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
                          sf_vio.info.samplerate);
+        if (!sf) {
+            return dstools::Err("Failed to open resampled audio for Game inference: " + msg);
+        }
         const auto totalSize = sf.frames();
 
         std::vector<float> audio(totalSize);
@@ -201,7 +207,6 @@ namespace Game
 
         const AudioUtil::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
         const auto chunks = slicer.slice(audio);
-
         if (chunks.empty()) {
             return dstools::Err("slicer: no audio chunks for output!");
         }
@@ -341,6 +346,9 @@ namespace Game
 
         SndfileHandle sf(sfVio.vio, &sfVio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sfVio.info.channels,
                          sfVio.info.samplerate);
+        if (!sf) {
+            return dstools::Err("Failed to open resampled audio for Game inference: " + audioMsg);
+        }
         const auto totalSize = sf.frames();
         std::vector<float> waveform(totalSize);
         sf.seek(0, SEEK_SET);

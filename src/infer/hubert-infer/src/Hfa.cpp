@@ -118,6 +118,9 @@ namespace HFA {
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
                          hfa_input_sample_rate);
+        if (!sf) {
+            return dstools::Err("Failed to open resampled audio for HFA: " + msg);
+        }
         const auto totalSize = sf.frames();
 
         std::vector<float> audio(totalSize);

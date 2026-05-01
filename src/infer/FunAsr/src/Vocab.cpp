@@ -21,6 +21,8 @@ namespace FunAsr {
                     line.erase(line.size() - 1);
                 vocab.push_back(line);
             }
+        } else {
+            std::cerr << "Warning: Failed to open vocab file: " << filename << std::endl;
         }
     }
 
@@ -35,6 +37,8 @@ namespace FunAsr {
             {
                 vocab.push_back(line);
             }
+        } else {
+            std::cerr << "Warning: Failed to open vocab file: " << filename << std::endl;
         }
     }
 #endif

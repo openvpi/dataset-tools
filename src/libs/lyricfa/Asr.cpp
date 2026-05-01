@@ -42,6 +42,10 @@ namespace LyricFA {
         auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, kAsrChannels, kAsrSampleRate);
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, kAsrChannels, kAsrSampleRate);
+        if (!sf) {
+            msg = "Failed to open resampled audio for ASR";
+            return false;
+        }
         const auto totalSize = sf.frames();
 
         std::vector<float> audio(totalSize);

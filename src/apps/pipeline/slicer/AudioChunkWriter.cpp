@@ -63,6 +63,12 @@ ChunkWriteResult AudioChunkWriter::writeChunks(const AudioData &audio, const Mar
         int sndfile_outputWaveFormat = determineSndFileFormat(outputWaveFormat);
         SndfileHandle wf = SndfileHandle(outFilePathStr.c_str(), SFM_WRITE,
                                          SF_FORMAT_WAV | sndfile_outputWaveFormat, channels, sr);
+        if (!wf) {
+            result.success = false;
+            result.errorMessage = QString("Failed to open output file for writing: %1").arg(outFilePath);
+            result.chunksWritten = idx + 1;
+            return result;
+        }
 
         // Write chunk from the pre-loaded sample buffer
         auto sampleOffset = beginFrame * channels;
