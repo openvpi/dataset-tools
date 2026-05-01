@@ -2,7 +2,7 @@
 
 **Task**: TASK-2.5  
 **Status**: Draft  
-**References**: `../08-project-format.md` §4~5, `01-subphase-a-document-model.md` TASK-2.5
+**References**: (original planning documents, no longer available)
 
 ---
 

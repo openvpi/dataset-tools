@@ -1,5 +1,8 @@
 #pragma once
 
+/// @file ModelTypes.h
+/// @brief Placeholder types for the model download subsystem.
+
 #include <string>
 
 namespace dstools {

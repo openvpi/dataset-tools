@@ -1,5 +1,8 @@
 #pragma once
 
+/// @file ExportTypes.h
+/// @brief Placeholder types for the export format subsystem.
+
 #include <string>
 
 namespace dstools {
