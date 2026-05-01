@@ -15,7 +15,6 @@ namespace HFA {
     }
 
     bool HfaThread::execute(QString &msg) {
-        std::string fblMsg;
         try {
             HfaLogits hfaRes;
             if (!QFile(m_wavPath).exists()) {
@@ -24,10 +23,11 @@ namespace HFA {
             }
 
             WordList words;
-            if (m_hfa->recognize(m_wavPath.toLocal8Bit().toStdString(), m_language, m_non_speech_ph, words, fblMsg)) {
+            auto recognizeResult = m_hfa->recognize(m_wavPath.toLocal8Bit().toStdString(), m_language, m_non_speech_ph, words);
+            if (recognizeResult) {
                 if (words.empty()) {
                     msg = QString::fromStdString("No words recognized in audio: " +
-                                                 m_wavPath.toLocal8Bit().toStdString() + "-" + fblMsg);
+                                                 m_wavPath.toLocal8Bit().toStdString());
                     return false;
                 }
 
@@ -60,7 +60,7 @@ namespace HFA {
                     return false;
                 }
             } else {
-                msg = QString::fromStdString("Failed to recognize audio: " + m_wavPath.toStdString() + " - " + fblMsg);
+                msg = QString::fromStdString("Failed to recognize audio: " + m_wavPath.toStdString() + " - " + recognizeResult.error());
                 return false;
             }
         } catch (const std::exception &e) {

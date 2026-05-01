@@ -6,7 +6,7 @@
 
 AlignmentService::~AlignmentService() = default;
 
-bool AlignmentService::loadModel(const QString &modelPath, int gpuIndex) {
+dstools::Result<void> AlignmentService::loadModel(const QString &modelPath, int gpuIndex) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto provider = gpuIndex < 0 ? dstools::infer::ExecutionProvider::CPU
@@ -17,12 +17,12 @@ bool AlignmentService::loadModel(const QString &modelPath, int gpuIndex) {
 #endif
 
     m_hfa = std::make_unique<HFA::HFA>();
-    std::string errorMsg;
-    if (!m_hfa->load(modelPath.toStdWString(), provider, gpuIndex, errorMsg)) {
+    auto result = m_hfa->load(modelPath.toStdWString(), provider, gpuIndex);
+    if (!result) {
         m_hfa.reset();
-        return false;
+        return dstools::Err(result.error());
     }
-    return true;
+    return dstools::Ok();
 }
 
 bool AlignmentService::isModelLoaded() const {
@@ -61,10 +61,9 @@ Result<dstools::AlignmentResult> AlignmentService::align(const QString &audioPat
         words.push_back(word);
     }
 
-    std::string msg;
-    bool ok = m_hfa->recognize(audioPath.toLocal8Bit().toStdString(), m_language, m_nonSpeechPh, words, msg);
-    if (!ok) {
-        return Result<dstools::AlignmentResult>::Error(msg);
+    auto recognizeResult = m_hfa->recognize(audioPath.toLocal8Bit().toStdString(), m_language, m_nonSpeechPh, words);
+    if (!recognizeResult) {
+        return Result<dstools::AlignmentResult>::Error(recognizeResult.error());
     }
 
     dstools::AlignmentResult result;

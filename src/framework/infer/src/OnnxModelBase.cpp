@@ -4,17 +4,17 @@
 
 namespace dstools::infer {
 
-    bool OnnxModelBase::loadSession(const std::filesystem::path &modelPath, std::string *errorMsg) {
-        return loadSession(modelPath, m_provider, m_deviceId, *errorMsg);
+    Result<void> OnnxModelBase::loadSession(const std::filesystem::path &modelPath) {
+        return loadSession(modelPath, m_provider, m_deviceId);
     }
 
-    bool OnnxModelBase::loadSession(const std::filesystem::path &modelPath, const ExecutionProvider provider,
-                                    const int deviceId, std::string &errorMsg) {
-        return loadSessionTo(m_session, modelPath, provider, deviceId, errorMsg);
+    Result<void> OnnxModelBase::loadSession(const std::filesystem::path &modelPath, const ExecutionProvider provider,
+                                             const int deviceId) {
+        return loadSessionTo(m_session, modelPath, provider, deviceId);
     }
 
-    bool OnnxModelBase::loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
-                                      const ExecutionProvider provider, const int deviceId, std::string &errorMsg) {
+    Result<void> OnnxModelBase::loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
+                                               const ExecutionProvider provider, const int deviceId) {
         try {
             auto options = OnnxEnv::createSessionOptions(provider, deviceId);
 #ifdef _WIN32
@@ -22,16 +22,12 @@ namespace dstools::infer {
 #else
             target = std::make_unique<Ort::Session>(OnnxEnv::env(), modelPath.c_str(), options);
 #endif
-            return true;
+            return Ok();
         } catch (const Ort::Exception &e) {
-            errorMsg = e.what();
-            return false;
+            return Err(std::string(e.what()));
+        } catch (const std::exception &e) {
+            return Err(std::string(e.what()));
         }
-    }
-
-    bool OnnxModelBase::loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
-                                      std::string *errorMsg) {
-        return loadSessionTo(target, modelPath, m_provider, m_deviceId, *errorMsg);
     }
 
     Result<nlohmann::json> OnnxModelBase::loadConfig(const std::filesystem::path &modelDir) {

@@ -90,7 +90,7 @@ const std::map<std::string, int> &GameInferService::languageMap() const {
 |------|------|--------|------|
 | ARCH-07 | labeler-interfaces 与 framework 接口重复（IID 版本不一致，ODR 风险） | **High** | ✅ 已修复 |
 | ARCH-08 | 应用层直接 #include 推理库头文件，UI 中管理推理生命周期（层违反） | High | 待修 |
-| ARCH-09 | 错误处理三套模式共存（Result\<T\> / bool+error / throw），推理层 throw 穿透 bool API | High | 待修 |
+| ARCH-09 | 错误处理三套模式共存（Result\<T\> / bool+error / throw），推理层 throw 穿透 bool API | High | ✅ 已修复 |
 | ARCH-10 | MinLabelPage 大量业务逻辑（文件 I/O、格式转换）在 UI 层 | Medium | 待修 |
 | ARCH-11 | 两套独立 Slicer 实现（audio-util vs libs/slicer），算法相同 | Medium | 待修 |
 | ARCH-12 | IDocument.h 中 `registerDocumentFormat()` 使用文件作用域静态变量，线程不安全 | Medium | 待验证 |

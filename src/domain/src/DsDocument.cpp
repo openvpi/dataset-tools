@@ -18,12 +18,13 @@ DsDocument DsDocument::load(const QString &path, QString &error) {
     DsDocument doc;
     error.clear();
 
-    std::string err;
-    auto json = JsonHelper::loadFile(toFsPath(path), err);
-    if (!err.empty()) {
-        error = QString::fromStdString(err);
+    auto jsonResult = JsonHelper::loadFile(toFsPath(path));
+    if (!jsonResult) {
+        error = QString::fromStdString(jsonResult.error());
         return doc;
     }
+
+    const auto &json = jsonResult.value();
 
     if (!json.is_array()) {
         error = QStringLiteral("DS file must be a JSON array");
@@ -69,9 +70,9 @@ bool DsDocument::save(const QString &path, QString &error) const {
         arr.push_back(s);
     }
 
-    std::string err;
-    if (!JsonHelper::saveFile(toFsPath(targetPath), arr, err)) {
-        error = QString::fromStdString(err);
+    auto saveResult = JsonHelper::saveFile(toFsPath(targetPath), arr);
+    if (!saveResult) {
+        error = QString::fromStdString(saveResult.error());
         return false;
     }
     return true;

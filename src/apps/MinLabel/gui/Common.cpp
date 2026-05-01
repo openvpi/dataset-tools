@@ -40,9 +40,8 @@ namespace Minlabel {
         int count = 0;
         for (const QFileInfo &fileInfo : fileInfoList) {
             if (fileInfo.suffix() == "json" && fileInfo.size() > 0) {
-                std::string error;
-                auto j = dstools::JsonHelper::loadFile(fileInfo.filePath().toStdString(), error);
-                if (error.empty() && j.contains("isCheck") && j.value("isCheck", false)) {
+                auto jResult = dstools::JsonHelper::loadFile(fileInfo.filePath().toStdString());
+                if (jResult && jResult.value().contains("isCheck") && jResult.value().value("isCheck", false)) {
                     count++;
                 }
             }
@@ -189,13 +188,14 @@ namespace Minlabel {
     }
 
     bool readJsonFile(const QString &fileName, nlohmann::json &jsonData) {
-        std::string error;
-        jsonData = dstools::JsonHelper::loadFile(fileName.toStdString(), error);
-        return error.empty();
+        auto result = dstools::JsonHelper::loadFile(fileName.toStdString());
+        if (!result)
+            return false;
+        jsonData = std::move(result.value());
+        return true;
     }
 
     bool writeJsonFile(const QString &fileName, const nlohmann::json &jsonData) {
-        std::string error;
-        return dstools::JsonHelper::saveFile(fileName.toStdString(), jsonData, error);
+        return dstools::JsonHelper::saveFile(fileName.toStdString(), jsonData).ok();
     }
 }

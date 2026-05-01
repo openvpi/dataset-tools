@@ -61,7 +61,12 @@ static void writeCsv(const std::string &csvFilename, const std::vector<Rmvpe::Rm
 // ---------------------------------------------------------------------------
 static bool runInference(const Rmvpe::Rmvpe &rmvpe, const std::filesystem::path &wavPath, const float threshold,
                          std::vector<Rmvpe::RmvpeRes> &res, std::string &msg) {
-    return rmvpe.get_f0(wavPath, threshold, res, msg, progressChanged);
+    auto result = rmvpe.get_f0(wavPath, threshold, res, progressChanged);
+    if (!result) {
+        msg = result.error();
+        return false;
+    }
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,8 +119,8 @@ static void test_f0_range(const Rmvpe::Rmvpe &rmvpe, const std::filesystem::path
     std::vector<Rmvpe::RmvpeRes> res;
     std::string msg;
 
-    const bool success = rmvpe.get_f0(wavPath, threshold, res, msg, progressChanged);
-    TEST_ASSERT(success, "Inference failed: " + msg);
+    auto f0Result = rmvpe.get_f0(wavPath, threshold, res, progressChanged);
+    TEST_ASSERT(f0Result, "Inference failed: " + f0Result.error());
     TEST_ASSERT(!res.empty(), "Result is empty");
 
     size_t voicedFrames = 0;

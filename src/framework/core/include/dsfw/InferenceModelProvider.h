@@ -20,11 +20,11 @@ public:
 
     Result<void> load(const QString &modelPath, int gpuIndex) override {
         m_status = ModelStatus::Loading;
-        std::string errorMsg;
         auto provider = gpuIndex < 0 ? ExecutionProvider::CPU : defaultGpuProvider();
-        if (!m_engine.load(modelPath.toStdWString(), provider, gpuIndex, errorMsg)) {
+        auto result = m_engine.load(modelPath.toStdWString(), provider, gpuIndex);
+        if (!result) {
             m_status = ModelStatus::Error;
-            return Err(QString::fromStdString(errorMsg));
+            return Err(QString::fromStdString(result.error()));
         }
         m_status = ModelStatus::Ready;
         return Ok();

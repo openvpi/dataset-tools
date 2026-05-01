@@ -1,25 +1,27 @@
 #pragma once
 
-#include <memory>
-
 #include <dsfw/IG2PProvider.h>
+
+#include <string>
+#include <vector>
 
 namespace dstools {
 
 class PinyinG2PProvider : public IG2PProvider {
 public:
-    PinyinG2PProvider();
-    ~PinyinG2PProvider() override;
+    PinyinG2PProvider() = default;
+    ~PinyinG2PProvider() override = default;
 
-    QString providerId() const override;
-    QStringList supportedLanguages() const override;
-    bool supportsLanguage(const QString &langCode) const override;
-    std::vector<G2PResult> convert(const QString &text, const QString &langCode, std::string &error) const override;
-    G2PResult convertWord(const QString &word, const QString &langCode, std::string &error) const override;
+    const char *providerName() const override;
+
+    Result<std::vector<G2PResult>> convert(const std::string &text,
+                                            const std::string &langCode) override;
+
+    Result<G2PResult> convertWord(const std::string &word,
+                                   const std::string &langCode) override;
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> m_impl;
+    static std::vector<std::string> toPinyin(const std::string &text);
 };
 
 } // namespace dstools

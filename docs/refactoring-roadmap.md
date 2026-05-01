@@ -117,7 +117,7 @@ Phase 0 (✅) → Phase 1 (✅) → Phase 2 (✅) → Phase 3 (✅) → Phase 4 
 
 ### 5.1 架构债清偿
 
-#### T-5.1.1 错误处理统一为 Result\<T\> [ARCH-09] — P1, M (2-8h)
+#### T-5.1.1 错误处理统一为 Result\<T\> [ARCH-09] — P1, M (2-8h) ✅ 已完成
 
 **现状**: 三套错误处理模式共存（`Result<T>` / `bool+error` / `throw`）。推理层 `throw std::runtime_error` 穿透 `bool` 返回值 API，调用方未预期异常。
 
@@ -127,8 +127,18 @@ Phase 0 (✅) → Phase 1 (✅) → Phase 2 (✅) → Phase 3 (✅) → Phase 4 
 3. 编写 lint 规则或 review checklist 禁止新增 throw-through-bool 模式
 
 **验收标准**:
-- [ ] 推理层所有 public 方法不再有未捕获异常穿透
-- [ ] 新增代码统一使用 `Result<T>`
+- [x] 推理层所有 public 方法不再有未捕获异常穿透
+- [x] 新增代码统一使用 `Result<T>`
+
+**成果**:
+- 修复 HfaModel.cpp 中 `throw std::runtime_error` 穿透 `catch(Ort::Exception)` 的 BUG，添加 `catch(const std::exception&)`
+- `Result<T>` 增加 `Ok()`/`Err()` 便捷函数，简化调用方代码
+- 推理层公共 API 全部改为 `Result<void>`：`IInferenceEngine::load()`、`OnnxModelBase::loadSession()`/`loadSessionTo()`、`Game::load_model()`/`get_midi()`/`get_notes()`/`align()`/`alignCSV()`、`HFA::load()`/`recognize()`、`Rmvpe::load()`/`get_f0()`
+- 框架核心接口全部改为 `Result<T>`：`IDocument`、`IExportFormat`、`IQualityMetrics`、`IModelDownloader`、`IG2PProvider`
+- `JsonHelper::loadFile()` 改为 `Result<json>`，`JsonHelper::saveFile()` 改为 `Result<void>`
+- `DsItemManager` 方法改为 `Result<T>`
+- 消除 `dsfw-core` 与 `dsfw-base` 中 JsonHelper 的重复定义
+- 所有调用方已更新适配新签名
 
 ---
 

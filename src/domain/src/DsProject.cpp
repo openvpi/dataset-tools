@@ -26,12 +26,13 @@ DsProject DsProject::load(const QString &path, QString &error) {
     DsProject proj;
     error.clear();
 
-    std::string err;
-    auto json = JsonHelper::loadFile(toFsPathLocal(path), err);
-    if (!err.empty()) {
-        error = fromStd(err);
+    auto jsonResult = JsonHelper::loadFile(toFsPathLocal(path));
+    if (!jsonResult) {
+        error = fromStd(jsonResult.error());
         return proj;
     }
+
+    const auto &json = jsonResult.value();
 
     if (!json.is_object()) {
         error = QStringLiteral("Project file must be a JSON object");
@@ -113,9 +114,9 @@ bool DsProject::save(const QString &path, QString &error) const {
 
     json["defaults"] = def;
 
-    std::string err;
-    if (!JsonHelper::saveFile(toFsPathLocal(targetPath), json, err)) {
-        error = fromStd(err);
+    auto saveResult = JsonHelper::saveFile(toFsPathLocal(targetPath), json);
+    if (!saveResult) {
+        error = fromStd(saveResult.error());
         return false;
     }
     return true;

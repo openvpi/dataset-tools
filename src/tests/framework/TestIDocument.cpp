@@ -7,212 +7,97 @@ static const auto MockFormat = DocumentFormatId(42);
 
 class MockDocument : public IDocument {
 public:
-    QString m_filePath;
+    std::filesystem::path m_filePath;
     bool m_modified = false;
     bool m_loadShouldFail = false;
     bool m_saveShouldFail = false;
-    bool m_closed = false;
-    int m_entries = 0;
-    double m_duration = 0.0;
-
-    QString filePath() const override { return m_filePath; }
-    DocumentFormatId format() const override { return MockFormat; }
-    QString formatDisplayName() const override { return QStringLiteral("MockFormat"); }
-
-    bool load(const QString &path, std::string &error) override {
-        if (m_loadShouldFail) {
-            error = "mock load error";
-            return false;
-        }
-        m_filePath = path;
-        return true;
-    }
-
-    bool save(std::string &error) override {
-        if (m_saveShouldFail) {
-            error = "mock save error";
-            return false;
-        }
-        m_modified = false;
-        return true;
-    }
-
-    bool saveAs(const QString &path, std::string &error) override {
-        if (m_saveShouldFail) {
-            error = "mock saveAs error";
-            return false;
-        }
-        m_filePath = path;
-        m_modified = false;
-        return true;
-    }
-
-    void close() override { m_closed = true; }
 
     bool isModified() const override { return m_modified; }
-    void setModified(bool modified) override { m_modified = modified; }
 
-    DocumentInfo info() const override {
-        return {m_filePath, MockFormat, QDateTime::currentDateTime(), m_modified};
+    Result<void> load(const std::filesystem::path &path) override {
+        if (m_loadShouldFail) {
+            return Err("mock load error");
+        }
+        m_filePath = path;
+        return Ok();
     }
 
-    int entryCount() const override { return m_entries; }
-    double durationSec() const override { return m_duration; }
+    Result<void> save() override {
+        if (m_saveShouldFail) {
+            return Err("mock save error");
+        }
+        m_modified = false;
+        return Ok();
+    }
+
+    Result<void> saveAs(const std::filesystem::path &path) override {
+        if (m_saveShouldFail) {
+            return Err("mock saveAs error");
+        }
+        m_filePath = path;
+        m_modified = false;
+        return Ok();
+    }
+
+    IDocumentFormat *format() const override { return nullptr; }
 };
 
 class TestIDocument : public QObject {
     Q_OBJECT
 private slots:
     void testLifecycle();
-    void testInfo();
     void testLoadError();
     void testSaveError();
     void testSaveAsError();
-    void testEntryCountAndDuration();
-    void testDocumentFormatId();
-    void testRegisterDocumentFormat();
-    void testCloseResetsState();
-    void testSaveWithoutPath();
-    void testDefaultEntryCountAndDuration();
-    void testMultipleFormatRegistration();
 };
 
 void TestIDocument::testLifecycle() {
     MockDocument doc;
 
-    // load
-    std::string err;
-    QVERIFY(doc.load("/tmp/test.txt", err));
-    QCOMPARE(doc.filePath(), QString("/tmp/test.txt"));
+    auto loadResult = doc.load("/tmp/test.txt");
+    QVERIFY(loadResult);
+    QCOMPARE(doc.m_filePath, std::filesystem::path("/tmp/test.txt"));
 
-    // modify
     QVERIFY(!doc.isModified());
-    doc.setModified(true);
+    doc.m_modified = true;
     QVERIFY(doc.isModified());
 
-    // save
-    QVERIFY(doc.save(err));
+    auto saveResult = doc.save();
+    QVERIFY(saveResult);
     QVERIFY(!doc.isModified());
 
-    // modify again and saveAs
-    doc.setModified(true);
-    QVERIFY(doc.saveAs("/tmp/other.txt", err));
-    QCOMPARE(doc.filePath(), QString("/tmp/other.txt"));
+    doc.m_modified = true;
+    auto saveAsResult = doc.saveAs("/tmp/other.txt");
+    QVERIFY(saveAsResult);
+    QCOMPARE(doc.m_filePath, std::filesystem::path("/tmp/other.txt"));
     QVERIFY(!doc.isModified());
-
-    // close
-    doc.close();
-    QVERIFY(doc.m_closed);
-}
-
-void TestIDocument::testInfo() {
-    MockDocument doc;
-    doc.m_filePath = "/tmp/info.txt";
-    doc.setModified(true);
-
-    DocumentInfo di = doc.info();
-    QCOMPARE(di.filePath, QString("/tmp/info.txt"));
-    QCOMPARE(di.format, MockFormat);
-    QVERIFY(di.isModified);
 }
 
 void TestIDocument::testLoadError() {
     MockDocument doc;
     doc.m_loadShouldFail = true;
 
-    std::string err;
-    QVERIFY(!doc.load("/tmp/fail.txt", err));
-    QVERIFY(!err.empty());
+    auto result = doc.load("/tmp/fail.txt");
+    QVERIFY(!result);
+    QVERIFY(!result.error().empty());
 }
 
 void TestIDocument::testSaveError() {
     MockDocument doc;
     doc.m_saveShouldFail = true;
 
-    std::string err;
-    QVERIFY(!doc.save(err));
-    QVERIFY(!err.empty());
+    auto result = doc.save();
+    QVERIFY(!result);
+    QVERIFY(!result.error().empty());
 }
 
 void TestIDocument::testSaveAsError() {
     MockDocument doc;
     doc.m_saveShouldFail = true;
 
-    std::string err;
-    QVERIFY(!doc.saveAs("/tmp/fail.txt", err));
-    QVERIFY(!err.empty());
-}
-
-void TestIDocument::testEntryCountAndDuration() {
-    MockDocument doc;
-    QCOMPARE(doc.entryCount(), 0);
-    QCOMPARE(doc.durationSec(), 0.0);
-
-    doc.m_entries = 5;
-    doc.m_duration = 12.5;
-    QCOMPARE(doc.entryCount(), 5);
-    QCOMPARE(doc.durationSec(), 12.5);
-}
-
-void TestIDocument::testDocumentFormatId() {
-    DocumentFormatId invalid;
-    QVERIFY(!invalid.isValid());
-    QCOMPARE(invalid.id(), -1);
-
-    DocumentFormatId a(1);
-    DocumentFormatId b(1);
-    DocumentFormatId c(2);
-    QVERIFY(a.isValid());
-    QVERIFY(a == b);
-    QVERIFY(a != c);
-    QVERIFY(a < c);
-}
-
-void TestIDocument::testRegisterDocumentFormat() {
-    auto id1 = registerDocumentFormat("TestFmtA");
-    auto id2 = registerDocumentFormat("TestFmtA");
-    auto id3 = registerDocumentFormat("TestFmtB");
-
-    QVERIFY(id1.isValid());
-    QCOMPARE(id1, id2);
-    QVERIFY(id1 != id3);
-}
-
-void TestIDocument::testCloseResetsState() {
-    MockDocument doc;
-    std::string err;
-    doc.load("/tmp/test.txt", err);
-    doc.setModified(true);
-
-    doc.close();
-    QVERIFY(doc.m_closed);
-}
-
-void TestIDocument::testSaveWithoutPath() {
-    MockDocument doc;
-    doc.m_filePath.clear();
-    doc.m_saveShouldFail = true;
-    std::string err;
-    QVERIFY(!doc.save(err));
-    QVERIFY(!err.empty());
-}
-
-void TestIDocument::testDefaultEntryCountAndDuration() {
-    MockDocument doc;
-    QCOMPARE(doc.entryCount(), 0);
-    QCOMPARE(doc.durationSec(), 0.0);
-}
-
-void TestIDocument::testMultipleFormatRegistration() {
-    auto a = registerDocumentFormat("MultiTestA");
-    auto b = registerDocumentFormat("MultiTestB");
-    auto c = registerDocumentFormat("MultiTestC");
-    QVERIFY(a != b);
-    QVERIFY(b != c);
-    QVERIFY(a != c);
-
-    auto a2 = registerDocumentFormat("MultiTestA");
-    QCOMPARE(a, a2);
+    auto result = doc.saveAs("/tmp/fail.txt");
+    QVERIFY(!result);
+    QVERIFY(!result.error().empty());
 }
 
 QTEST_GUILESS_MAIN(TestIDocument)

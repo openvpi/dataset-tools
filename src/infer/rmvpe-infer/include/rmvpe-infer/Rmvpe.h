@@ -6,6 +6,7 @@
 
 #include <audio-util/SndfileVio.h>
 #include <dstools/IInferenceEngine.h>
+#include <dstools/Result.h>
 #include <rmvpe-infer/Provider.h>
 #include <rmvpe-infer/RmvpeGlobal.h>
 
@@ -14,7 +15,7 @@ namespace Rmvpe
     class RmvpeModel;
 
     struct RmvpeRes {
-        float offset; // ms
+        float offset;
         std::vector<float> f0;
         std::vector<bool> uv;
     };
@@ -28,15 +29,14 @@ namespace Rmvpe
         bool is_open() const;
         bool isOpen() const override { return is_open(); }
 
-        bool get_f0(const std::filesystem::path &filepath, float threshold, std::vector<RmvpeRes> &res,
-                    std::string &msg, const std::function<void(int)> &progressChanged) const;
+        dstools::Result<void> get_f0(const std::filesystem::path &filepath, float threshold, std::vector<RmvpeRes> &res,
+                                     const std::function<void(int)> &progressChanged) const;
 
         void terminate() override;
 
         const char *engineName() const override { return "RMVPE"; }
 
-        bool load(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId,
-                  std::string &errorMsg) override;
+        dstools::Result<void> load(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId) override;
         void unload() override;
         int64_t estimatedMemoryBytes() const override;
 

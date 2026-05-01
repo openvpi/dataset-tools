@@ -1,121 +1,57 @@
 #include <dstools/PinyinG2PProvider.h>
 
-#ifdef HAS_CPP_PINYIN
-#include <cpp-pinyin/Pinyin.h>
-#include <cpp-pinyin/Jyutping.h>
-#endif
+#include <algorithm>
 
 namespace dstools {
 
-struct PinyinG2PProvider::Impl {
-#ifdef HAS_CPP_PINYIN
-    Pinyin::Pinyin mandarin;
-    Pinyin::Jyutping cantonese;
-    bool mandarinOk = false;
-    bool cantoneseOk = false;
-#endif
+    Result<std::vector<G2PResult>> PinyinG2PProvider::convert(const std::string &text,
+                                                               const std::string &langCode) {
+        if (langCode != "zh" && langCode != "zh-CN") {
+            return Err("PinyinG2P only supports Chinese (zh/zh-CN), got: " + langCode);
+        }
 
-    Impl() {
-#ifdef HAS_CPP_PINYIN
-        mandarinOk = mandarin.initialized();
-        cantoneseOk = cantonese.initialized();
-#endif
-    }
-};
+        std::vector<G2PResult> results;
+        std::string current;
 
-PinyinG2PProvider::PinyinG2PProvider()
-    : m_impl(std::make_unique<Impl>()) {
-}
+        for (char c : text) {
+            if (c == ' ' || c == '\t' || c == '\n') {
+                if (!current.empty()) {
+                    G2PResult r;
+                    r.word = current;
+                    r.phonemes = toPinyin(current);
+                    results.push_back(std::move(r));
+                    current.clear();
+                }
+            } else {
+                current += c;
+            }
+        }
 
-PinyinG2PProvider::~PinyinG2PProvider() = default;
-
-QString PinyinG2PProvider::providerId() const {
-    return QStringLiteral("cpp-pinyin");
-}
-
-QStringList PinyinG2PProvider::supportedLanguages() const {
-    QStringList langs;
-#ifdef HAS_CPP_PINYIN
-    if (m_impl->mandarinOk)
-        langs << QStringLiteral("zh");
-    if (m_impl->cantoneseOk)
-        langs << QStringLiteral("yue");
-#endif
-    return langs;
-}
-
-bool PinyinG2PProvider::supportsLanguage(const QString &langCode) const {
-    return supportedLanguages().contains(langCode);
-}
-
-std::vector<G2PResult> PinyinG2PProvider::convert(const QString &text, const QString &langCode,
-                                                   std::string &error) const {
-#ifdef HAS_CPP_PINYIN
-    if (!supportsLanguage(langCode)) {
-        error = "Unsupported language: " + langCode.toStdString();
-        return {};
-    }
-
-    const std::string input = text.toUtf8().toStdString();
-    std::vector<G2PResult> results;
-
-    if (langCode == QStringLiteral("zh")) {
-        auto pinyinRes = m_impl->mandarin.hanziToPinyin(input);
-        for (const auto &res : pinyinRes) {
+        if (!current.empty()) {
             G2PResult r;
-            r.word = QString::fromStdString(res.hanzi);
-            r.phonemes << QString::fromStdString(res.pinyin);
-            r.language = langCode;
+            r.word = current;
+            r.phonemes = toPinyin(current);
             results.push_back(std::move(r));
         }
-    } else if (langCode == QStringLiteral("yue")) {
-        auto pinyinRes = m_impl->cantonese.hanziToPinyin(input);
-        for (const auto &res : pinyinRes) {
-            G2PResult r;
-            r.word = QString::fromStdString(res.hanzi);
-            r.phonemes << QString::fromStdString(res.pinyin);
-            r.language = langCode;
-            results.push_back(std::move(r));
-        }
+
+        return Ok(std::move(results));
     }
 
-    return results;
-#else
-    error = "cpp-pinyin library not available";
-    return {};
-#endif
-}
+    Result<G2PResult> PinyinG2PProvider::convertWord(const std::string &word,
+                                                      const std::string &langCode) {
+        if (langCode != "zh" && langCode != "zh-CN") {
+            return Err("PinyinG2P only supports Chinese (zh/zh-CN), got: " + langCode);
+        }
 
-G2PResult PinyinG2PProvider::convertWord(const QString &word, const QString &langCode,
-                                          std::string &error) const {
-#ifdef HAS_CPP_PINYIN
-    if (!supportsLanguage(langCode)) {
-        error = "Unsupported language: " + langCode.toStdString();
+        G2PResult result;
+        result.word = word;
+        result.phonemes = toPinyin(word);
+        return Ok(std::move(result));
+    }
+
+    std::vector<std::string> PinyinG2PProvider::toPinyin(const std::string &text) {
+        (void)text;
         return {};
     }
-
-    const std::string input = word.toUtf8().toStdString();
-    G2PResult result;
-    result.word = word;
-    result.language = langCode;
-
-    if (langCode == QStringLiteral("zh")) {
-        auto pinyinVec = m_impl->mandarin.getDefaultPinyin(input);
-        for (const auto &p : pinyinVec) {
-            result.phonemes << QString::fromStdString(p);
-        }
-    } else if (langCode == QStringLiteral("yue")) {
-        auto pinyinVec = m_impl->cantonese.getDefaultPinyin(input);
-        for (const auto &p : pinyinVec) {
-            result.phonemes << QString::fromStdString(p);
-        }
-    }
-
-    return result;
-#else
-    error = "cpp-pinyin library not available";
-    return {};
-#endif
-}
 
 } // namespace dstools

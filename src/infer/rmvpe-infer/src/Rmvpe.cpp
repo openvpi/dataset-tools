@@ -13,8 +13,7 @@ namespace Rmvpe
     Rmvpe::Rmvpe() = default;
 
     Rmvpe::Rmvpe(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) {
-        std::string unused;
-        load(modelPath, provider, device_id, unused);
+        load(modelPath, provider, device_id);
     }
 
     Rmvpe::~Rmvpe() = default;
@@ -32,7 +31,6 @@ namespace Rmvpe
     static void interp_f0(std::vector<float> &f0, std::vector<bool> &uv) {
         const int n = static_cast<int>(f0.size());
 
-        // Edge case: No unvoiced frames, no interpolation needed.
         bool all_voiced = true;
         for (int i = 0; i < n; ++i) {
             if (!uv[i]) {
@@ -41,13 +39,12 @@ namespace Rmvpe
             }
         }
         if (all_voiced) {
-            return; // No unvoiced frames, no interpolation required.
+            return;
         }
 
         int first_true = -1;
         int last_true = -1;
 
-        // Find the first unvoiced frame
         for (int i = 0; i < n; ++i) {
             if (!uv[i]) {
                 first_true = i;
@@ -55,7 +52,6 @@ namespace Rmvpe
             }
         }
 
-        // Find the last unvoiced frame
         for (int i = n - 1; i >= 0; --i) {
             if (!uv[i]) {
                 last_true = i;
@@ -63,27 +59,23 @@ namespace Rmvpe
             }
         }
 
-        // If no unvoiced frames found, exit early (this should not happen with the previous check).
         if (first_true == -1 || last_true == -1) {
             return;
         }
 
-        // Fill frames before the first unvoiced frame with the value of the first unvoiced frame
         for (int i = 0; i < first_true; ++i) {
             f0[i] = f0[first_true];
         }
 
-        // Fill frames after the last unvoiced frame with the value of the last unvoiced frame
         for (int i = n - 1; i > last_true; --i) {
             f0[i] = f0[last_true];
         }
 
-        // Interpolate between the first and last unvoiced frames
         for (int i = first_true; i < last_true; ++i) {
-            if (uv[i]) { // Only interpolate for voiced frames
+            if (uv[i]) {
                 const int prev = i - 1;
                 int next = i + 1;
-                while (next < n && uv[next]) { // Find the next unvoiced frame
+                while (next < n && uv[next]) {
                     next++;
                 }
                 if (next < n) {
@@ -95,12 +87,13 @@ namespace Rmvpe
         }
     }
 
-    bool Rmvpe::get_f0(const std::filesystem::path &filepath, const float threshold, std::vector<RmvpeRes> &res,
-                       std::string &msg, const std::function<void(int)> &progressChanged) const {
+    dstools::Result<void> Rmvpe::get_f0(const std::filesystem::path &filepath, const float threshold, std::vector<RmvpeRes> &res,
+                                          const std::function<void(int)> &progressChanged) const {
         if (!m_rmvpe) {
-            return false;
+            return dstools::Err("RMVPE model not loaded");
         }
 
+        std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, 16000);
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
@@ -114,12 +107,11 @@ namespace Rmvpe
         const auto chunks = slicer.slice(audio);
 
         if (chunks.empty()) {
-            msg = "slicer: no audio chunks for output!";
-            return false;
+            return dstools::Err("slicer: no audio chunks for output!");
         }
 
 
-        int processedFrames = 0; // To track processed frames
+        int processedFrames = 0;
         const float slicerFrames = calculateSumOfDifferences(chunks);
 
         for (const auto &[fst, snd] : chunks) {
@@ -138,39 +130,34 @@ namespace Rmvpe
             tempRes.offset = static_cast<float>(static_cast<double>(fst) / (16000.0 / 1000));
             const bool success = m_rmvpe->forward(tmp, threshold, tempRes.f0, tempRes.uv, msg);
             if (!success)
-                return false;
+                return dstools::Err(msg);
             interp_f0(tempRes.f0, tempRes.uv);
             res.push_back(tempRes);
 
-            // Update the processed frames and calculate progress
             processedFrames += static_cast<int>(frameCount);
             int progress = static_cast<int>((static_cast<float>(processedFrames) / slicerFrames) * 100);
 
-            // Call the progress callback with the updated progress
             if (progressChanged) {
-                progressChanged(progress); // Trigger the callback with the progress value
+                progressChanged(progress);
             }
         }
-        return true;
+        return dstools::Ok();
     }
 
     void Rmvpe::terminate() { m_rmvpe->terminate(); }
 
-    bool Rmvpe::load(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int deviceId,
-                     std::string &errorMsg) {
+    dstools::Result<void> Rmvpe::load(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int deviceId) {
         unload();
         try {
             m_rmvpe = std::make_unique<RmvpeModel>(modelPath, provider, deviceId);
             if (!m_rmvpe->is_open()) {
-                errorMsg = "Cannot load RMVPE Model from " + modelPath.string();
                 m_rmvpe.reset();
-                return false;
+                return dstools::Err("Cannot load RMVPE Model from " + modelPath.string());
             }
-            return true;
+            return dstools::Ok();
         } catch (const std::exception &e) {
-            errorMsg = e.what();
             m_rmvpe.reset();
-            return false;
+            return dstools::Err(e.what());
         }
     }
 

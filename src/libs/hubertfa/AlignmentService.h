@@ -16,7 +16,7 @@ public:
     AlignmentService() = default;
     ~AlignmentService() override;
 
-    bool loadModel(const QString &modelPath, int gpuIndex = -1);
+    dstools::Result<void> loadModel(const QString &modelPath, int gpuIndex = -1);
     bool isModelLoaded() const;
     void unloadModel();
 

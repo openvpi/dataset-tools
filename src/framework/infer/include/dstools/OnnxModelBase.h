@@ -26,14 +26,11 @@ namespace dstools::infer {
         OnnxModelBase(ExecutionProvider provider, int deviceId)
             : m_provider(provider), m_deviceId(deviceId) {}
 
-        bool loadSession(const std::filesystem::path &modelPath, std::string *errorMsg = nullptr);
-        bool loadSession(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId,
-                         std::string &errorMsg);
+        Result<void> loadSession(const std::filesystem::path &modelPath);
+        Result<void> loadSession(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId);
 
-        static bool loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
-                                  ExecutionProvider provider, int deviceId, std::string &errorMsg);
-        bool loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
-                           std::string *errorMsg = nullptr);
+        static Result<void> loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
+                                          ExecutionProvider provider, int deviceId);
 
         Result<nlohmann::json> loadConfig(const std::filesystem::path &modelDir);
 

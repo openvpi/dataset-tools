@@ -9,10 +9,10 @@ GameInferService::GameInferService(QObject *parent) : QObject(parent) {
     m_game = std::make_shared<Game::Game>();
 }
 
-bool GameInferService::loadModel(const std::filesystem::path &modelPath, Game::ExecutionProvider provider,
-                                 int deviceId, std::string &msg) {
+dstools::Result<void> GameInferService::loadModel(const std::filesystem::path &modelPath, Game::ExecutionProvider provider,
+                                                   int deviceId) {
     std::lock_guard<std::mutex> lock(m_gameMutex);
-    return m_game->load_model(modelPath, provider, deviceId, msg);
+    return m_game->load_model(modelPath, provider, deviceId);
 }
 
 bool GameInferService::isModelOpen() const {
@@ -77,10 +77,10 @@ void GameInferService::loadLanguagesFromConfig(const std::filesystem::path &mode
     nameToId["default"] = 0;
 
     const std::filesystem::path configPath = modelPath / "config.json";
-    std::string jsonErr;
-    auto config = dstools::JsonHelper::loadFile(configPath, jsonErr);
+    auto configResult = dstools::JsonHelper::loadFile(configPath);
 
-    if (jsonErr.empty()) {
+    if (configResult) {
+        auto &config = configResult.value();
         auto languages = dstools::JsonHelper::getObject(config, "languages");
         if (languages.is_object()) {
             for (auto &[key, value] : languages.items()) {
@@ -96,41 +96,38 @@ void GameInferService::loadLanguagesFromConfig(const std::filesystem::path &mode
 
 float GameInferService::loadTimestepFromConfig(const std::filesystem::path &modelPath) {
     const std::filesystem::path configPath = modelPath / "config.json";
-    std::string jsonErr;
-    auto config = dstools::JsonHelper::loadFile(configPath, jsonErr);
+    auto configResult = dstools::JsonHelper::loadFile(configPath);
 
-    if (jsonErr.empty()) {
-        float ts = dstools::JsonHelper::get(config, "timestep", 0.01f);
+    if (configResult) {
+        float ts = dstools::JsonHelper::get(configResult.value(), "timestep", 0.01f);
         if (ts > 0)
             return ts;
     }
     return 0.01f;
 }
 
-bool GameInferService::exportMidi(const MidiExportParams &params, std::string &msg,
-                                  const std::function<void(int)> &progress) {
+dstools::Result<void> GameInferService::exportMidi(const MidiExportParams &params,
+                                                    const std::function<void(int)> &progress) {
     std::vector<Game::GameMidi> midis;
 
     {
         std::lock_guard<std::mutex> lock(m_gameMutex);
-        const bool success =
-            m_game->get_midi(params.wavPath, midis, params.tempo, msg, progress, params.maxAudioSegLength);
-        if (!success)
-            return false;
+        auto result = m_game->get_midi(params.wavPath, midis, params.tempo, progress, params.maxAudioSegLength);
+        if (!result)
+            return result;
     }
 
     if (!makeMidiFile(params.outputMidiPath, std::move(midis), params.tempo)) {
-        msg = "Failed to save MIDI file.";
-        return false;
+        return dstools::Err("Failed to save MIDI file.");
     }
-    return true;
+    return dstools::Ok();
 }
 
-bool GameInferService::alignCsv(const AlignCsvParams &params, std::string &msg,
-                                const std::function<void(int)> &progress) {
+dstools::Result<void> GameInferService::alignCsv(const AlignCsvParams &params,
+                                                  const std::function<void(int)> &progress) {
     std::lock_guard<std::mutex> lock(m_gameMutex);
     Game::AlignOptions options;
-    return m_game->alignCSV(params.csvPath, params.savePath, params.saveFilename, true, options, msg, progress);
+    return m_game->alignCSV(params.csvPath, params.savePath, params.saveFilename, true, options, progress);
 }
 
 std::vector<float> GameInferService::generateD3pmTimesteps(int nSteps) {

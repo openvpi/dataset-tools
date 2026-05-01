@@ -60,10 +60,10 @@ void GameAlignPage::buildUi() {
 
         Game::Game game;
         const int deviceId = m_gpuSelector->selectedDeviceId();
-        std::string msg;
         auto provider = deviceId >= 0 ? Game::ExecutionProvider::DML : Game::ExecutionProvider::CPU;
-        if (!game.load_model(m_modelPath->path().toStdString(), provider, deviceId, msg)) {
-            m_log->append(tr("<b>Error:</b> Failed to load model: %1").arg(QString::fromStdString(msg)));
+        auto loadResult = game.load_model(m_modelPath->path().toStdString(), provider, deviceId);
+        if (!loadResult) {
+            m_log->append(tr("<b>Error:</b> Failed to load model: %1").arg(QString::fromStdString(loadResult.error())));
             return;
         }
 
@@ -71,11 +71,12 @@ void GameAlignPage::buildUi() {
         m_runProgress->setProgress(0);
 
         Game::AlignOptions alignOpts;
-        if (!game.alignCSV(
-                csvPath.toStdString(), outCsvPath.toStdString(), "", false, alignOpts, msg,
-                [this](int progress) { m_runProgress->setProgress(progress); })) {
-            m_log->append(tr("<b>Error:</b> %1").arg(QString::fromStdString(msg)));
-            QMessageBox::warning(this, tr("MIDI Alignment Failed"), QString::fromStdString(msg));
+        auto alignResult = game.alignCSV(
+                csvPath.toStdString(), outCsvPath.toStdString(), "", false, alignOpts,
+                [this](int progress) { m_runProgress->setProgress(progress); });
+        if (!alignResult) {
+            m_log->append(tr("<b>Error:</b> %1").arg(QString::fromStdString(alignResult.error())));
+            QMessageBox::warning(this, tr("MIDI Alignment Failed"), QString::fromStdString(alignResult.error()));
         } else {
             m_runProgress->setProgress(100);
             m_log->append(tr("<b>Done.</b> Output: %1").arg(outCsvPath));

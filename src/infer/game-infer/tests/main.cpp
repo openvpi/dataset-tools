@@ -93,10 +93,9 @@ static void test_e2e(Game::Game &game, const std::filesystem::path &audioPath,
     std::cout << "[TC-GI-001] End-to-end audio to MIDI" << std::endl;
 
     std::vector<Game::GameMidi> midis;
-    std::string msg;
 
-    const bool success = game.get_midi(audioPath, midis, tempo, msg, progressChanged, 60);
-    TEST_ASSERT(success, "get_midi failed: " + msg);
+    auto midiResult = game.get_midi(audioPath, midis, tempo, progressChanged, 60);
+    TEST_ASSERT(midiResult, "get_midi failed: " + midiResult.error());
 
     std::cout << "    Notes: " << midis.size() << std::endl;
 
@@ -290,13 +289,12 @@ int main(int argc, char *argv[]) {
     std::cout << "Using provider: " << provider << ", device ID: " << deviceId << std::endl;
 
     Game::Game game;
-    std::string msg;
-    game.load_model(modelDir, gameProvider, deviceId, msg);
+    auto loadResult = game.load_model(modelDir, gameProvider, deviceId);
 
-    if (!game.is_open()) {
+    if (!loadResult || !game.is_open()) {
         std::cerr << "Cannot load GAME Model from " << modelDir << std::endl;
-        if (!msg.empty())
-            std::cerr << "  Message: " << msg << std::endl;
+        if (!loadResult)
+            std::cerr << "  Error: " << loadResult.error() << std::endl;
         return 1;
     }
 

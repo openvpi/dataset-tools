@@ -151,9 +151,8 @@ void HubertFAPage::slot_loadModel() {
 
             fs::path mp(modelFolder.toStdString());
             fs::path vocabFile = mp / "vocab.json";
-            std::string jsonErr;
-            auto vocab = dstools::JsonHelper::loadFile(vocabFile, jsonErr);
-            if (!jsonErr.empty()) vocab = nlohmann::json::object();
+            auto vocabResult = dstools::JsonHelper::loadFile(vocabFile);
+            auto vocab = vocabResult ? std::move(vocabResult.value()) : nlohmann::json::object();
 
             {
                 auto nps = dstools::JsonHelper::getVec<std::string>(vocab, "non_lexical_phonemes");

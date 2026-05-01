@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace dstools {
@@ -75,5 +76,30 @@ private:
     std::string m_error;
     bool m_ok = false;
 };
+
+inline Result<void> Ok() { return Result<void>::Ok(); }
+
+template <typename T>
+inline Result<std::decay_t<T>> Ok(T &&value) {
+    return Result<std::decay_t<T>>::Ok(std::forward<T>(value));
+}
+
+inline Result<void> Err(std::string error) {
+    return Result<void>::Error(std::move(error));
+}
+
+inline Result<void> Err(const char *error) {
+    return Result<void>::Error(error);
+}
+
+template <typename T>
+inline Result<T> Err(std::string error) {
+    return Result<T>::Error(std::move(error));
+}
+
+template <typename T>
+inline Result<T> Err(const char *error) {
+    return Result<T>::Error(error);
+}
 
 }

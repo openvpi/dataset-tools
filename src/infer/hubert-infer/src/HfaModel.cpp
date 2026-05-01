@@ -10,9 +10,9 @@ namespace HFA {
 #if defined(_M_IX86) || defined(__i386__)
         m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 #endif
-        std::string loadError;
-        if (!loadSession(model_Path, &loadError)) {
-            std::cout << "Failed to create session: " << loadError << std::endl;
+        auto loadResult = loadSession(model_Path);
+        if (!loadResult) {
+            std::cout << "Failed to create session: " << loadResult.error() << std::endl;
         }
     }
 
@@ -110,6 +110,9 @@ namespace HFA {
             return true;
         } catch (const Ort::Exception &e) {
             msg = "预测器推理错误: " + std::string(e.what());
+            return false;
+        } catch (const std::exception &e) {
+            msg = "预测器内部错误: " + std::string(e.what());
             return false;
         }
     }

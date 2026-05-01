@@ -17,14 +17,12 @@ namespace HFA {
     HFA::HFA() = default;
 
     HFA::HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id) {
-        std::string unused;
-        load(model_folder, provider, device_id, unused);
+        load(model_folder, provider, device_id);
     }
 
     HFA::~HFA() = default;
 
-    bool HFA::load(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id,
-                   std::string &errorMsg) {
+    dstools::Result<void> HFA::load(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id) {
         unload();
 
         try {
@@ -33,14 +31,12 @@ namespace HFA {
             const fs::path config_file = model_folder / "config.json";
             auto config = JsonUtils::loadFile(config_file, jsonErr);
             if (!jsonErr.empty()) {
-                errorMsg = jsonErr;
-                return false;
+                return dstools::Err(jsonErr);
             }
 
             std::map<std::string, float> mel_spec_config;
             if (!JsonUtils::getRequiredMap<std::string, float>(config, "mel_spec_config", mel_spec_config, jsonErr)) {
-                errorMsg = jsonErr;
-                return false;
+                return dstools::Err(jsonErr);
             }
             hfa_input_sample_rate = static_cast<int>(mel_spec_config.at("sample_rate"));
 
@@ -50,9 +46,8 @@ namespace HFA {
             const fs::path vocab_file = model_folder / "vocab.json";
             auto vocab = JsonUtils::loadFile(vocab_file, jsonErr);
             if (!jsonErr.empty()) {
-                errorMsg = jsonErr;
                 unload();
-                return false;
+                return dstools::Err(jsonErr);
             }
             const auto dictionaries = JsonUtils::getObject(vocab, "dictionaries");
 
@@ -71,38 +66,33 @@ namespace HFA {
 
             std::vector<std::string> silent_phonemes;
             if (!JsonUtils::getRequiredVec<std::string>(vocab, "silent_phonemes", silent_phonemes, jsonErr)) {
-                errorMsg = jsonErr;
                 unload();
-                return false;
+                return dstools::Err(jsonErr);
             }
             m_silent_phonemes = std::unordered_set(silent_phonemes.begin(), silent_phonemes.end());
 
             std::map<std::string, int> vocab_dict;
             if (!JsonUtils::getRequiredMap<std::string, int>(vocab, "vocab", vocab_dict, jsonErr)) {
-                errorMsg = jsonErr;
                 unload();
-                return false;
+                return dstools::Err(jsonErr);
             }
             std::vector<std::string> non_lexical_phonemes;
             if (!JsonUtils::getRequiredVec<std::string>(vocab, "non_lexical_phonemes", non_lexical_phonemes, jsonErr)) {
-                errorMsg = jsonErr;
                 unload();
-                return false;
+                return dstools::Err(jsonErr);
             }
             non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
             m_alignmentDecoder = std::make_unique<AlignmentDecoder>(vocab_dict, mel_spec_config);
             m_nonLexicalDecoder = std::make_unique<NonLexicalDecoder>(non_lexical_phonemes, mel_spec_config);
         } catch (const std::exception &e) {
-            errorMsg = "Failed to load HFA model from " + model_folder.string() + ": " + e.what();
             unload();
-            return false;
+            return dstools::Err("Failed to load HFA model from " + model_folder.string() + ": " + e.what());
         }
 
         if (!m_hfa) {
-            errorMsg = "Cannot load HFA model, check model.onnx and vocab.json";
-            return false;
+            return dstools::Err("Cannot load HFA model, check model.onnx and vocab.json");
         }
-        return true;
+        return dstools::Ok();
     }
 
     void HFA::unload() {
@@ -117,12 +107,13 @@ namespace HFA {
         return initialized() ? 300 * 1024 * 1024LL : 0;
     }
 
-    bool HFA::recognize(std::filesystem::path wavPath, const std::string &language,
-                        const std::vector<std::string> &non_speech_ph, WordList &words, std::string &msg) const {
+    dstools::Result<void> HFA::recognize(std::filesystem::path wavPath, const std::string &language,
+                                          const std::vector<std::string> &non_speech_ph, WordList &words) const {
         if (!m_hfa) {
-            return false;
+            return dstools::Err("HFA model not loaded");
         }
 
+        std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(wavPath, msg, 1, hfa_input_sample_rate);
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
@@ -136,9 +127,8 @@ namespace HFA {
         const float wav_length = static_cast<float>(sf.frames()) / hfa_input_sample_rate;
 
         if (wav_length > 60) {
-            msg = "The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
-                  "segment and rerun the recognition program.";
-            return false;
+            return dstools::Err("The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
+                  "segment and rerun the recognition program.");
         }
 
         std::string modelMsg;
@@ -146,14 +136,12 @@ namespace HFA {
         if (m_hfa->forward(std::vector<std::vector<float>>{audio}, hfaRes, modelMsg)) {
             const auto labPath = wavPath.replace_extension(".lab");
             if (!fs::exists(labPath)) {
-                msg = "Lab does not exist: " + labPath.string();
-                return false;
+                return dstools::Err("Lab does not exist: " + labPath.string());
             }
 
             std::ifstream labFile(labPath);
             if (!labFile.is_open()) {
-                msg = "Failed to open lab file: " + labPath.string();
-                return false;
+                return dstools::Err("Failed to open lab file: " + labPath.string());
             }
             std::string labContent((std::istreambuf_iterator<char>(labFile)), std::istreambuf_iterator<char>());
             labFile.close();
@@ -170,13 +158,12 @@ namespace HFA {
                     ph_seq.push_back(it == m_silent_phonemes.end() ? language + "/" + ph : ph);
                 }
             } else {
-                msg = "Language dictionary not found: " + language;
-                return false;
+                return dstools::Err("Language dictionary not found: " + language);
             }
 
             if (!m_alignmentDecoder->decode(hfaRes.ph_frame_logits, hfaRes.ph_edge_logits, wav_length, ph_seq, words,
                                             msg, word_seq, ph_idx_to_word_idx, true))
-                return false;
+                return dstools::Err(msg);
             const auto word_lists = m_nonLexicalDecoder->decode(hfaRes.cvnt_logits, wav_length, non_speech_ph);
 
             for (const auto &word_list : word_lists)
@@ -188,12 +175,10 @@ namespace HFA {
             words.add_SP(wav_length, "SP");
             const auto error_log = words.get_log();
             if (!(words.check() && error_log.empty())) {
-                msg = error_log;
-                return false;
+                return dstools::Err(error_log);
             }
-            return true;
+            return dstools::Ok();
         }
-        msg = modelMsg;
-        return false;
+        return dstools::Err(modelMsg);
     }
 } // namespace HFA

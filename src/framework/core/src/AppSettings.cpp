@@ -38,11 +38,12 @@ void AppSettings::loadFromDisk() {
         return;
     }
 
-    std::string error;
-    m_data = JsonHelper::loadFile(path, error);
-    if (!error.empty()) {
-        qWarning() << "AppSettings:" << QString::fromStdString(error);
+    auto loadResult = JsonHelper::loadFile(path);
+    if (!loadResult) {
+        qWarning() << "AppSettings:" << QString::fromStdString(loadResult.error());
         m_data = nlohmann::json::object();
+    } else {
+        m_data = std::move(loadResult.value());
     }
     if (!m_data.is_object()) {
         qWarning() << "AppSettings: root is not a JSON object in" << m_filePath;

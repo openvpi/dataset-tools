@@ -20,7 +20,6 @@ configure_file(
 set(DSFW_CORE_SOURCES
     src/AppSettings.cpp
     src/AsyncTask.cpp
-    src/JsonHelper.cpp
     src/ServiceLocator.cpp
     src/LocalFileIOProvider.cpp
     src/Log.cpp
@@ -34,7 +33,6 @@ set(DSFW_CORE_SOURCES
 set(DSFW_CORE_HEADERS
     include/dsfw/AppSettings.h
     include/dsfw/AsyncTask.h
-    include/dsfw/JsonHelper.h
     include/dsfw/ServiceLocator.h
     include/dsfw/IFileIOProvider.h
     include/dsfw/LocalFileIOProvider.h

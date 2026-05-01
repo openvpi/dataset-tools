@@ -14,9 +14,9 @@ namespace Rmvpe
 #if defined(_M_IX86) || defined(__i386__)
         m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 #endif
-        std::string loadError;
-        if (!loadSession(modelPath, &loadError)) {
-            std::cout << "Failed to create session: " << loadError << std::endl;
+        auto loadResult = loadSession(modelPath);
+        if (!loadResult) {
+            std::cout << "Failed to create session: " << loadResult.error() << std::endl;
         }
     }
 
