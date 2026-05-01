@@ -29,6 +29,11 @@ set(PROJECT_CMAKE_MODULES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_subdirectory(src)
 
+option(BUILD_EXAMPLES "Build example applications" OFF)
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
 # Documentation
 find_package(Doxygen QUIET)
 if(DOXYGEN_FOUND)
