@@ -1,19 +1,24 @@
 # DiffSinger Dataset Tools 改进方向
 
-> 更新时间：2026-05-01 | 详细任务见 [refactoring-roadmap.md](refactoring-roadmap.md)
+> 更新时间：2026-05-01 | 详细任务见 [refactoring-roadmap.md](refactoring-roadmap.md) | 架构设计见 [task-processor-design.md](task-processor-design.md)
 
 ---
+
+## P1 — 架构演进（核心价值）
+
+| 方向 | 路线图 | 状态 |
+|------|--------|------|
+| 死代码清理（11 个零消费者接口/基础设施） | G.1 | 📋 待执行 |
+| 任务处理器基础设施（ITaskProcessor + Registry + 数据类型） | G.2 | 📋 待执行 |
+| 处理器迁移（RMVPE → FunASR → HuBERT → GAME） | G.3 | 📋 待执行 |
+| 集成与清理（CLI/Labeler/GameInfer 切换 + 删除旧服务接口） | G.4 | 📋 待执行 |
 
 ## P2 — 有实际价值
 
 | 方向 | 路线图 | 状态 |
 |------|--------|------|
-| ServiceLocator void* → std::any 类型安全 | A.1 | ✅ 已完成 |
-| 服务接口一致性修复 (IAsrService 补齐虚方法 + IInferenceEngine::load 纯虚化) | A.2 | ✅ 已完成 |
-| CrashHandler 所有 app 启用 | A.3 | ✅ 已完成 |
 | 补齐领域模块单元测试 | B.1 | ⏳ 4 个模块待测 |
 | 框架模块独立编译 CI 验证 | D.1 | ⏳ 待创建 workflow |
-| 升级 C++20 | E.1 | ✅ 已完成 |
 
 ## P3 — 按需拾取
 
@@ -26,4 +31,3 @@
 | Doxygen CI | D.2 | 头文件注释已就绪 |
 | 跨平台包分发 | D.3 | ZIP/DMG/AppImage |
 | 示例项目 | F.1 | 有外部用户需求时做 |
-| Undo/Redo 迁移 | F.2 | 重构相关 app 时顺便做 |
