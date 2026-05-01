@@ -56,6 +56,8 @@
 
 **工作量**: M (2-8h)
 
+> ✅ 已完成 — dstools-cli 已创建于 src/apps/cli/，支持 slice/asr/align/pitch/transcribe 五个子命令，使用 syscmdline 解析参数，通过 ServiceLocator 调用后端服务接口，Qt-free 设计。
+
 ---
 
 ### T-0.2 移除 dsfw-core 对 Qt::Gui 的依赖 [G5] ✅ 已完成
@@ -493,7 +495,7 @@ public:
 
 ---
 
-### T-3.6 CLI 命令行工具 [G6]
+### T-3.6 CLI 命令行工具 [G6] ✅ 已完成
 
 **依赖**: T-1.2 (dsfw-base), T-2.6 (后端服务)
 
@@ -602,7 +604,7 @@ Phase 2 (Week 6-8) — 库边界固化
       ▼
 Phase 3 (Week 9-12) — 增强
   T-3.1 日志系统 (✅)  T-3.2 Undo/Redo (✅)  T-3.3 事件总线 (✅)
-  T-3.4 控件审计       T-3.5 控件迁移 (✅)         T-3.6 CLI 工具
+  T-3.4 控件审计       T-3.5 控件迁移 (✅)         T-3.6 CLI 工具 (✅)
       │
       ▼
 Phase 4 (Week 13+) — 完善
