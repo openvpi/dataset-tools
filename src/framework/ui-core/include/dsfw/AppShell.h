@@ -7,10 +7,19 @@
 #include <QMainWindow>
 #include <QVector>
 
+namespace dsfw::widgets {
+enum class ToastType;
+}
+
 class QStackedWidget;
 class QStatusBar;
 class QAction;
 class QMenuBar;
+class QShowEvent;
+
+namespace dstools {
+class AppSettings;
+}
 
 namespace dsfw {
 
@@ -71,12 +80,23 @@ public:
 
     // Working directory
 
+    /// @brief Attach an AppSettings instance for automatic geometry persistence.
+    /// @param settings Pointer to an AppSettings instance (caller retains ownership).
+    void setSettings(dstools::AppSettings *settings);
+
     /// @brief Set the shared working directory and notify all pages.
     /// @param dir Absolute directory path.
     void setWorkingDirectory(const QString &dir);
     /// @brief Return the current working directory.
     /// @return Working directory path.
     QString workingDirectory() const;
+
+    /// @brief Show a non-modal toast notification.
+    /// @param type Notification type (Info/Warning/Error).
+    /// @param message Message text.
+    /// @param timeoutMs Auto-dismiss timeout in milliseconds (default: 3000).
+    void showToast(dsfw::widgets::ToastType type, const QString &message,
+                   int timeoutMs = 3000);
 
 signals:
     /// @brief Emitted when the active page changes.
@@ -88,6 +108,7 @@ signals:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void showEvent(QShowEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
 
@@ -108,6 +129,8 @@ private:
     QList<QAction *> m_globalActions;
     QString m_workingDir;
     QMenuBar *m_menuBar = nullptr; // persistent — never replaced, only cleared/repopulated
+    dstools::AppSettings *m_settings = nullptr;
+    bool m_geometryRestored = false;
 };
 
 } // namespace dsfw

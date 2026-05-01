@@ -1,8 +1,10 @@
 #include <dsfw/AppShell.h>
+#include <dsfw/CommonKeys.h>
 #include <dsfw/FramelessHelper.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
 #include <dsfw/IconNavBar.h>
+#include <dsfw/widgets/ToastNotification.h>
 
 #include <QCloseEvent>
 #include <QDragEnterEvent>
@@ -12,6 +14,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QRegularExpression>
+#include <QShowEvent>
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QTimer>
@@ -171,6 +174,23 @@ namespace dsfw {
 
     QString AppShell::workingDirectory() const {
         return m_workingDir;
+    }
+
+    void AppShell::setSettings(dstools::AppSettings *settings) {
+        m_settings = settings;
+    }
+
+    void AppShell::showEvent(QShowEvent *event) {
+        QMainWindow::showEvent(event);
+        if (!m_geometryRestored && m_settings) {
+            m_geometryRestored = true;
+            auto geomB64 = m_settings->get(dsfw::CommonKeys::WindowGeometry);
+            if (!geomB64.isEmpty())
+                restoreGeometry(QByteArray::fromBase64(geomB64.toUtf8()));
+            auto stateB64 = m_settings->get(dsfw::CommonKeys::WindowState);
+            if (!stateB64.isEmpty())
+                restoreState(QByteArray::fromBase64(stateB64.toUtf8()));
+        }
     }
 
     void AppShell::onPageSwitched(int index) {
@@ -360,6 +380,15 @@ namespace dsfw {
                 lifecycle->onShutdown();
         }
 
+        // Save window geometry and state
+        if (m_settings) {
+            m_settings->set(dsfw::CommonKeys::WindowGeometry,
+                            QString::fromLatin1(saveGeometry().toBase64()));
+            m_settings->set(dsfw::CommonKeys::WindowState,
+                            QString::fromLatin1(saveState().toBase64()));
+            m_settings->flush();
+        }
+
         event->accept();
     }
 
@@ -385,6 +414,11 @@ namespace dsfw {
             }
         }
         event->ignore();
+    }
+
+    void AppShell::showToast(dsfw::widgets::ToastType type, const QString &message,
+                             int timeoutMs) {
+        widgets::ToastNotification::show(this, type, message, timeoutMs);
     }
 
 } // namespace dsfw

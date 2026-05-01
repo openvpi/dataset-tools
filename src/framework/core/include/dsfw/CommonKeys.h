@@ -13,4 +13,7 @@ namespace dsfw::CommonKeys {
     inline const dstools::SettingsKey<QString> ShortcutOpen("Shortcuts/open", "Ctrl+O");        ///< Open file shortcut.
     inline const dstools::SettingsKey<QString> NavigationPrev("Shortcuts/prevFile", "PgUp");     ///< Navigate to previous file shortcut.
     inline const dstools::SettingsKey<QString> NavigationNext("Shortcuts/nextFile", "PgDown");   ///< Navigate to next file shortcut.
+
+    inline const dstools::SettingsKey<QString> WindowGeometry("General/windowGeometry", "");    ///< Base64-encoded window geometry.
+    inline const dstools::SettingsKey<QString> WindowState("General/windowState", "");          ///< Base64-encoded window state.
 }
