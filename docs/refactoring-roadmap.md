@@ -92,7 +92,7 @@
 
 ---
 
-### T-0.4 修复 pipeline-pages 相对路径源文件引用 [G3]
+### T-0.4 修复 pipeline-pages 相对路径源文件引用 [G3] ✅ 已完成
 
 > **已完成** — slicer、lyricfa、hubertfa 已独立构建为静态库，pipeline-pages 已通过 target_link_libraries 链接。无需额外修改。
 
@@ -160,7 +160,7 @@
 
 ---
 
-### T-1.2 dsfw-core 拆分 Qt-free 基础层 [G5]
+### T-1.2 dsfw-core 拆分 Qt-free 基础层 [G5] ✅ 已完成
 
 **现状**: `dsfw-core` 中 `Result<T>`, `JsonHelper`(使用 nlohmann/json), 纯虚接口 (`IDocument`, `IFileIOProvider`, `IExportFormat`) 均不需要 Qt。
 
@@ -179,6 +179,8 @@
 - 缓解：`dsfw-core` PUBLIC 依赖 `dsfw-base`，现有消费者无感
 
 **工作量**: M (2-8h)
+
+> ✅ 已完成 — dsfw-base 已创建于 src/framework/base/，包含 JsonHelper（Qt-free）。dsfw-core 依赖 dsfw-base。
 
 ---
 
@@ -251,9 +253,11 @@
 
 **工作量**: L (1-3d)
 
+> ✅ 已完成 — OnnxModelBase + CancellableOnnxModel 已实现。GameModel 和 RmvpeModel 继承 CancellableOnnxModel，HFA 直接实现 IInferenceEngine。loadSessionTo() 支持 GameModel 的多 session 场景。
+
 ---
 
-### T-1.5 定义后端服务接口 [G6]
+### T-1.5 定义后端服务接口 [G6] ✅ 已完成
 
 **现状**: 应用逻辑与 UI 混合。例如 pipeline-pages 中切片/对齐逻辑直接在 Qt widget 回调中执行。
 
@@ -270,6 +274,8 @@
 **风险**: 低 — 新增接口，不影响现有代码
 
 **工作量**: M (2-8h)
+
+> ✅ 已完成 — ISlicerService、IAlignmentService、IAsrService、IPitchService、ITranscriptionService 已定义于 dsfw-core。
 
 ---
 
@@ -307,7 +313,7 @@
 
 ---
 
-### T-2.2 版本化 dsfw 公共 API [G1]
+### T-2.2 版本化 dsfw 公共 API [G1] ✅ 已完成
 
 **方案**:
 1. 在 `src/framework/CMakeLists.txt` 添加 `DSFW_VERSION` 宏 (`DSFW_VERSION_MAJOR.MINOR.PATCH`)

@@ -2,7 +2,6 @@ project(dsfw-core)
 
 set(CMAKE_AUTOMOC ON)
 
-# Standalone build guards — only activate when targets are not already defined
 if(NOT TARGET dstools-types::dstools-types)
     find_package(dstools-types CONFIG REQUIRED)
 endif()
@@ -11,6 +10,12 @@ if(NOT TARGET Qt6::Core)
     find_package(QT NAMES Qt6 COMPONENTS Core Network REQUIRED)
     find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network REQUIRED)
 endif()
+
+configure_file(
+    include/dsfw/Version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/dsfw/Version.h
+    @ONLY
+)
 
 set(DSFW_CORE_SOURCES
     src/AppSettings.cpp
@@ -57,6 +62,7 @@ add_library(dsfw::core ALIAS ${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
@@ -81,4 +87,8 @@ install(TARGETS ${PROJECT_NAME}
 
 install(DIRECTORY include/
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/dsfw/Version.h
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/dsfw"
 )
