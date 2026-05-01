@@ -248,12 +248,12 @@ P3 — 按需拾取
 | Issue # | 标题 | 路线图 | 状态 |
 |---------|------|--------|------|
 | #11 | 领域模块单元测试 | B.1 | ⏳ 部分完成 |
-| #15 | 框架模块独立编译 | D.1 | ⏳ CI 未验证 |
-| #16 | API 文档 | D.2 | ⏳ CI 未完成 |
+| #15 | 框架模块独立编译 | D.1 | ✅ 已完成 |
+| #16 | API 文档 | D.2 | ✅ 已完成 |
 | #28 | TranscriptionPipeline 可测试性 | B.1 | ⏳ 主要障碍已清除 |
 | #39 | God class 拆分 | C.1 | 📋 按需 |
-| #40 | 魔法数字 | C.2 | 📋 按需 |
-| — | 任务处理器架构 | G.1-G.4 | 📋 设计完成，待执行 |
+| #40 | 魔法数字 | C.2 | ✅ 已完成 |
+| — | 任务处理器架构 | G.1-G.4 | ✅ G.1-G.3 + G.4.1-3/5 已完成，G.4.4 待执行 |
 
 已关闭: #21 (CI 矩阵), #27 (clang-tidy), #37 (Slicer 合并), #38 (MinLabel 提取)
 
@@ -266,13 +266,11 @@ P3 — 按需拾取
 | TD-03 | 4 个领域模块缺测试 | 中 |
 | TD-04 | 部分文件操作缺错误分支 | 低 |
 | TD-05 | 2 个文件超 600 行 | 低 |
-| TD-06 | `4096` buffer size 3 处重复 | 低 |
-| TD-07 | 5 处 TODO/FIXME | 低 |
-| TD-10 | 11 个死接口/死基础设施占用维护成本 | 中 |
-| TD-11 | 4 个服务各自管理模型，ModelManager 闲置 | 高 |
-| TD-12 | DsProjectDefaults 硬编码 4 个模型路径字段 | 中 |
-| TD-13 | GameInfer UI 通过 dynamic_cast 绕过接口调用 5 个 setter | 中 |
-| TD-14 | LyricFAPage / SlicerPage 绕过服务层直接创建引擎 | 中 |
+| TD-10 | ~~11 个死接口/死基础设施占用维护成本~~ | ✅ 已清理 |
+| TD-11 | ~~4 个服务各自管理模型，ModelManager 闲置~~ | ✅ 已迁移至 TaskProcessor |
+| TD-12 | ~~DsProjectDefaults 硬编码 4 个模型路径字段~~ | ✅ 已演进为 TaskModelConfig |
+| TD-13 | ~~GameInfer UI 通过 dynamic_cast 绕过接口调用 5 个 setter~~ | ✅ 已消除 |
+| TD-14 | ~~LyricFAPage / SlicerPage 绕过服务层直接创建引擎~~ | ✅ 已切换到 TaskProcessorRegistry |
 
 > 更新时间：2026-05-01
 
@@ -284,50 +282,50 @@ P3 — 按需拾取
 
 ### 批次 2 — 清理 + 质量保障
 
-| # | 任务 | 工作量 | 涉及文件 | 并行 |关联 |
-|---|------|--------|---------|------|------|
-| 5 | **G.1** 死代码清理（11 个死接口/基础设施） | S (2-4h) | 见 Phase G.1 详细清单 | ✅ | TD-10 |
-| 6 | **B.1** 补齐领域模块单元测试 | L (1-3d) | `src/tests/domain/` | ✅ | TD-03, #11, #28 |
-| 7 | **D.1** 框架模块独立编译 CI 验证 | M (2-8h) | `.github/workflows/verify-modules.yml` | ✅ | #15 |
+| # | 任务 | 工作量 | 涉及文件 | 并行 |关联 | 状态 |
+|---|------|--------|---------|------|------|------|
+| 5 | **G.1** 死代码清理（11 个死接口/基础设施） | S (2-4h) | 见 Phase G.1 详细清单 | ✅ | TD-10 | ✅ |
+| 6 | **B.1** 补齐领域模块单元测试 | L (1-3d) | `src/tests/domain/` | ✅ | TD-03, #11, #28 | ⏳ |
+| 7 | **D.1** 框架模块独立编译 CI 验证 | M (2-8h) | `.github/workflows/verify-modules.yml` | ✅ | #15 | ✅ |
 
 ### 批次 3 — 任务处理器基础设施
 
-| # | 任务 | 工作量 | 涉及文件 | 并行 | 关联 |
-|---|------|--------|---------|------|------|
-| 8 | **G.2** 定义 TaskTypes + ITaskProcessor + TaskProcessorRegistry + DsProjectDefaults 演进 | M (1-2d) | 见 Phase G.2 详细清单 | — | TD-11, TD-12 |
+| # | 任务 | 工作量 | 涉及文件 | 并行 | 关联 | 状态 |
+|---|------|--------|---------|------|------|------|
+| 8 | **G.2** 定义 TaskTypes + ITaskProcessor + TaskProcessorRegistry + DsProjectDefaults 演进 | M (1-2d) | 见 Phase G.2 详细清单 | — | TD-11, TD-12 | ✅ |
 
 ### 批次 4 — 处理器迁移（4 个任务全部可并行）
 
-| # | 任务 | 工作量 | 涉及文件 | 并行 | 关联 |
-|---|------|--------|---------|------|------|
-| 9 | **G.3.1** RmvpePitchProcessor | S (2-4h) | `src/libs/rmvpepitch/` | ✅ | TD-11 |
-| 10 | **G.3.2** FunAsrProcessor | S (2-4h) | `src/libs/lyricfa/` | ✅ | TD-11, TD-14 |
-| 11 | **G.3.3** HubertAlignmentProcessor | M (4-8h) | `src/libs/hubertfa/` | ✅ | TD-11 |
-| 12 | **G.3.4** GameMidiProcessor | L (1-2d) | `src/libs/gameinfer/` | ✅ | TD-11, TD-13 |
+| # | 任务 | 工作量 | 涉及文件 | 并行 | 关联 | 状态 |
+|---|------|--------|---------|------|------|------|
+| 9 | **G.3.1** RmvpePitchProcessor | S (2-4h) | `src/libs/rmvpepitch/` | ✅ | TD-11 | ✅ |
+| 10 | **G.3.2** FunAsrProcessor | S (2-4h) | `src/libs/lyricfa/` | ✅ | TD-11, TD-14 | ✅ |
+| 11 | **G.3.3** HubertAlignmentProcessor | M (4-8h) | `src/libs/hubertfa/` | ✅ | TD-11 | ✅ |
+| 12 | **G.3.4** GameMidiProcessor | L (1-2d) | `src/libs/gameinfer/` | ✅ | TD-11, TD-13 | ✅ |
 
 ### 批次 5 — 集成与清理
 
-| # | 任务 | 工作量 | 涉及文件 | 并行 | 前置 | 关联 |
-|---|------|--------|---------|------|------|------|
-| 13 | **G.4.1** CLI 接入 TaskProcessorRegistry | M (4-8h) | `src/apps/cli/main.cpp` | ✅ | 批次 4 | — |
-| 14 | **G.4.2** DiffSingerLabeler 页面切换 | L (1-2d) | `src/apps/labeler/pages/` | ✅ | 批次 4 | TD-14 |
-| 15 | **G.4.3** GameInfer app 切换（消除 dynamic_cast） | M (4-8h) | `src/apps/GameInfer/` | ✅ | G.3.4 | TD-13 |
-| 16 | **G.4.4** 删除旧服务接口 (IAlignmentService 等 4 个) | S (2-4h) | `src/framework/core/` + 旧实现 | — | #13-15 | TD-11 |
-| 17 | **G.4.5** 接线 IExportFormat / IQualityMetrics | S (2-4h) | `src/apps/labeler/` | ✅ | 独立 | — |
+| # | 任务 | 工作量 | 涉及文件 | 并行 | 前置 | 关联 | 状态 |
+|---|------|--------|---------|------|------|------|------|
+| 13 | **G.4.1** CLI 接入 TaskProcessorRegistry | M (4-8h) | `src/apps/cli/main.cpp` | ✅ | 批次 4 | — | ✅ |
+| 14 | **G.4.2** DiffSingerLabeler 页面切换 | L (1-2d) | `src/apps/labeler/pages/` | ✅ | 批次 4 | TD-14 | ✅ |
+| 15 | **G.4.3** GameInfer app 切换（消除 dynamic_cast） | M (4-8h) | `src/apps/GameInfer/` | ✅ | G.3.4 | TD-13 | ✅ |
+| 16 | **G.4.4** 删除旧服务接口 (IAlignmentService 等 4 个) | S (2-4h) | `src/framework/core/` + 旧实现 | — | #13-15 | TD-11 | ⏳ |
+| 17 | **G.4.5** 接线 IExportFormat / IQualityMetrics | S (2-4h) | `src/apps/labeler/` | ✅ | 独立 | — | ✅ |
 
 ### 批次 6 — 小修小补
 
-| # | 任务 | 工作量 | 并行 | 关联 |
-|---|------|--------|------|------|
-| 18 | **B.2** TODO/FIXME 清理 (5 处) | S (<2h) | ✅ | TD-07 |
-| 19 | **B.3** 文件操作错误处理补全 | S (<2h) | ✅ | TD-04 |
-| 20 | **C.2** 魔法数字常量化 | S (<2h) | ✅ | TD-06 |
+| # | 任务 | 工作量 | 并行 | 关联 | 状态 |
+|---|------|--------|------|------|------|
+| 18 | **B.2** TODO/FIXME 清理 (5 处) | S (<2h) | ✅ | TD-07 | ✅ |
+| 19 | **B.3** 文件操作错误处理补全 | S (<2h) | ✅ | TD-04 | ⏳ |
+| 20 | **C.2** 魔法数字常量化 | S (<2h) | ✅ | TD-06 | ✅ |
 
 ### 批次 7 — 按需拾取
 
-| # | 任务 | 工作量 | 关联 |
-|---|------|--------|------|
-| 21 | **C.1** 大文件拆分 (PitchLabelerPage/PhonemeLabelerPage) | L (1-3d) | TD-05 |
-| 22 | **D.2** Doxygen CI | S (<2h) | #16 |
-| 23 | **D.3** 跨平台包分发 | L (1-3d) | — |
-| 24 | **F.1** 示例项目 | M (2-8h) | — |
+| # | 任务 | 工作量 | 关联 | 状态 |
+|---|------|--------|------|------|
+| 21 | **C.1** 大文件拆分 (PitchLabelerPage/PhonemeLabelerPage) | L (1-3d) | TD-05 | ⏳ |
+| 22 | **D.2** Doxygen CI | S (<2h) | #16 | ✅ |
+| 23 | **D.3** 跨平台包分发 | L (1-3d) | — | ⏳ |
+| 24 | **F.1** 示例项目 | M (2-8h) | — | ⏳ |
