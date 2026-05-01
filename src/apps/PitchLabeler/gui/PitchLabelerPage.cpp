@@ -1,6 +1,7 @@
-﻿#include "PitchLabelerPage.h"
+#include "PitchLabelerPage.h"
 
 #include "DSFile.h"
+#include "PitchFileService.h"
 #include "../PitchLabelerKeys.h"
 #include "ui/FileListPanel.h"
 #include "ui/PianoRollView.h"
@@ -48,7 +49,8 @@ namespace dstools {
     namespace pitchlabeler {
 
         PitchLabelerPage::PitchLabelerPage(QWidget *parent)
-            : QWidget(parent), m_playWidget(new dstools::widgets::PlayWidget()),
+            : QWidget(parent), m_fileService(new PitchFileService(this)),
+              m_playWidget(new dstools::widgets::PlayWidget()),
               m_undoStack(new QUndoStack(this)) {
 
             m_viewport = new dstools::widgets::ViewportController(this);
@@ -73,19 +75,17 @@ namespace dstools {
         }
 
         void PitchLabelerPage::closeDirectory() {
-            // Save any unsaved files first
-            if (m_currentFile && m_currentFile->modified) {
+            if (m_fileService->hasUnsavedChanges()) {
                 auto ret = QMessageBox::question(this, QStringLiteral("未保存的更改"),
                                                  QStringLiteral("关闭前是否保存？"),
                                                  QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
                 if (ret == QMessageBox::Save) {
-                    saveFile();
+                    m_fileService->saveFile();
                 } else if (ret == QMessageBox::Cancel) {
                     return;
                 }
             }
 
-            // Save file list progress before clearing
             m_fileListPanel->saveState();
 
             m_workingDirectory.clear();
@@ -103,15 +103,15 @@ namespace dstools {
         }
 
         bool PitchLabelerPage::hasUnsavedChanges() const {
-            return m_currentFile && m_currentFile->modified;
+            return m_fileService->hasUnsavedChanges();
         }
 
         bool PitchLabelerPage::save() {
-            return saveFile();
+            return m_fileService->saveFile();
         }
 
         bool PitchLabelerPage::saveAll() {
-            return saveAllFiles();
+            return m_fileService->saveAllFiles();
         }
 
         QMenuBar *PitchLabelerPage::createMenuBar(QWidget *parent) {
@@ -549,7 +549,7 @@ namespace dstools {
             });
             connect(m_pianoRoll, &ui::PianoRollView::fileEdited, this, [this]() {
                 if (m_currentFile) {
-                    m_currentFile->markModified();
+                    m_fileService->markCurrentFileModified();
                     updateStatusInfo();
                     m_fileListPanel->setFileModified(m_currentFilePath, true);
                     emit modificationChanged(true);
@@ -673,48 +673,33 @@ namespace dstools {
         }
 
         void PitchLabelerPage::loadFile(const QString &path) {
-            auto [ds, error] = DSFile::load(path);
-            if (!error.isEmpty()) {
-                QMessageBox::warning(this, QStringLiteral("错误"),
-                                     QStringLiteral("加载文件失败: ") + error);
+            if (!m_fileService->loadFile(path))
                 return;
-            }
 
-            m_currentFile = ds;
-            m_currentFilePath = path;
+            m_currentFile = m_fileService->currentFile();
+            m_currentFilePath = m_fileService->currentFilePath();
 
-            // Clear undo history for new file
             m_undoStack->clear();
-
-            // Switch from empty state to file content
             m_mainStack->setCurrentIndex(1);
-
-            // Update UI
-            m_pianoRoll->setDSFile(ds);
-            m_propertyPanel->setDSFile(ds);
-
-            // Enable save
+            m_pianoRoll->setDSFile(m_currentFile);
+            m_propertyPanel->setDSFile(m_currentFile);
             m_actSave->setEnabled(true);
 
-            // Find and load audio file
             QString audioPath = dstools::AudioFileResolver::findAudioFile(path);
             if (!audioPath.isEmpty()) {
                 m_playWidget->openFile(audioPath);
             }
 
-            // Limit piano roll length to audio file duration
             if (m_pianoRoll) {
                 double audioDur = m_playWidget->duration();
                 if (audioDur > 0)
                     m_pianoRoll->setAudioDuration(audioDur);
             }
 
-            // Store original F0 for A/B comparison
-            m_originalF0 = ds->f0.values;
+            m_originalF0 = m_currentFile->f0.values;
 
-            // Initialize progress bar
-            if (m_playbackProgressSlider && ds) {
-                double total = ds->getTotalDuration();
+            if (m_playbackProgressSlider && m_currentFile) {
+                double total = m_currentFile->getTotalDuration();
                 m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
                 m_playbackProgressSlider->setValue(0);
                 m_progressCurrentTime->setText("00:00.000");
@@ -724,21 +709,13 @@ namespace dstools {
             }
 
             updateStatusInfo();
-
             emit fileLoaded(path);
             emit fileSelected(path);
         }
 
         bool PitchLabelerPage::saveFile() {
-            if (!m_currentFile)
+            if (!m_fileService->saveFile())
                 return false;
-
-            auto [ok, error] = m_currentFile->save();
-            if (!ok) {
-                QMessageBox::warning(this, QStringLiteral("错误"),
-                                     QStringLiteral("保存失败: ") + error);
-                return false;
-            }
 
             updateStatusInfo();
             m_fileListPanel->setFileSaved(m_currentFilePath);
@@ -748,7 +725,7 @@ namespace dstools {
         }
 
         bool PitchLabelerPage::saveAllFiles() {
-            if (m_currentFile && m_currentFile->modified) {
+            if (m_fileService->hasUnsavedChanges()) {
                 return saveFile();
             }
             return true;
@@ -758,14 +735,14 @@ namespace dstools {
             m_undoStack->undo();
             m_pianoRoll->update();
             updateUndoRedoState();
-            emit modificationChanged(m_currentFile && m_currentFile->modified);
+            emit modificationChanged(m_fileService->hasUnsavedChanges());
         }
 
         void PitchLabelerPage::onRedo() {
             m_undoStack->redo();
             m_pianoRoll->update();
             updateUndoRedoState();
-            emit modificationChanged(m_currentFile && m_currentFile->modified);
+            emit modificationChanged(m_fileService->hasUnsavedChanges());
         }
 
         void PitchLabelerPage::updateUndoRedoState() {
@@ -883,7 +860,8 @@ namespace dstools {
 
         void PitchLabelerPage::reloadCurrentFile() {
             if (!m_currentFilePath.isEmpty()) {
-                loadFile(m_currentFilePath);
+                m_fileService->reloadCurrentFile();
+                m_currentFile = m_fileService->currentFile();
             }
         }
 

@@ -1,5 +1,6 @@
 #include "PhonemeLabelerPage.h"
 #include "ui/WaveformWidget.h"
+#include "ui/WaveformRenderer.h"
 #include "ui/TierEditWidget.h"
 #include "ui/PowerWidget.h"
 #include "ui/SpectrogramWidget.h"
@@ -37,7 +38,8 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
       m_document(new TextGridDocument(this)),
       m_undoStack(new QUndoStack(this)),
       m_viewport(new ViewportController(this)),
-      m_bindingManager(new BoundaryBindingManager(m_document, this))
+      m_bindingManager(new BoundaryBindingManager(m_document, this)),
+      m_renderer(new WaveformRenderer(this))
 {
     buildActions();
     buildToolbar();
@@ -436,43 +438,11 @@ void PhonemeLabelerPage::onFileSelected(const QString &path) {
             m_waveformWidget->loadAudio(audioFilePath);
             m_playWidget->openFile(audioFilePath);
 
-            // Load audio data for power and spectrogram widgets
-            dstools::audio::AudioDecoder decoder;
-            if (decoder.open(audioFilePath)) {
-                auto fmt = decoder.format();
-                int sampleRate = fmt.sampleRate();
-                int channels = fmt.channels();
-
-                std::vector<float> allSamples;
-                const int bufferSize = 4096;
-                std::vector<float> buffer(bufferSize);
-                while (true) {
-                    int read = decoder.read(buffer.data(), 0, bufferSize);
-                    if (read <= 0) break;
-                    allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
-                }
-                decoder.close();
-
-                // Convert to mono
-                std::vector<float> monoSamples;
-                if (channels > 1) {
-                    monoSamples.resize(allSamples.size() / channels);
-                    for (size_t i = 0; i < monoSamples.size(); ++i) {
-                        float sum = 0.0f;
-                        for (int c = 0; c < channels; ++c) {
-                            sum += allSamples[i * channels + c];
-                        }
-                        monoSamples[i] = sum / channels;
-                    }
-                } else {
-                    monoSamples = std::move(allSamples);
-                }
-
-                m_powerWidget->setAudioData(monoSamples, sampleRate);
-                m_spectrogramWidget->setAudioData(monoSamples, sampleRate);
+            if (m_renderer->loadAudio(audioFilePath)) {
+                m_powerWidget->setAudioData(m_renderer->samples(), m_renderer->sampleRate());
+                m_spectrogramWidget->setAudioData(m_renderer->samples(), m_renderer->sampleRate());
             } else {
-                qWarning() << "PhonemeLabeler: Failed to open audio file for decoding:" << audioFilePath;
-                QMessageBox::warning(this, tr("Error"), tr("Failed to open audio file: %1").arg(audioFilePath));
+                qWarning() << "PhonemeLabeler: Failed to decode audio for power/spectrogram:" << audioFilePath;
             }
     }
 

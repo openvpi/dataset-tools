@@ -96,6 +96,8 @@ private:
     // File management
     QString m_workingDirectory;
     PitchFileService *m_fileService = nullptr;
+    std::shared_ptr<DSFile> m_currentFile;
+    QString m_currentFilePath;
 
     // Services
     dstools::widgets::ViewportController *m_viewport = nullptr;
