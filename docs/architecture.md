@@ -39,7 +39,7 @@
 │ Theme/Frameless   │ │ WaveFormat    │  │
 │ IPageActions      │ │               │  │
 │ IPageLifecycle    │ │ FFmpeg + SDL2 │  │
-│ IStepPlugin       │ └───────────────┘  │
+│                   │ └───────────────┘  │
 └───────┬───────────┘                    │
         │ PUBLIC                         │
 ┌───────┴───────────┐                    │
@@ -49,10 +49,7 @@
 │ AppSettings       │                    │
 │ ServiceLocator    │                    │
 │ AsyncTask         │                    │
-│ EventBus · Logger │                    │
-│ UndoStack/ICommand│                    │
-│ RecentFiles       │                    │
-│ UpdateChecker     │                    │
+│ Logger            │                    │
 │ IDocument         │                    │
 │ IFileIOProvider   │                    │
 │ IModelProvider    │                    │
@@ -145,13 +142,13 @@ JSON 工具 (JsonHelper，纯 nlohmann/json 封装)。无 Qt 依赖，可用于 
 
 ### dsfw-core (静态库)
 
-通用框架核心。类型安全配置 (AppSettings)、服务定位器 (ServiceLocator)、异步任务 (AsyncTask)、事件总线 (EventBus)、结构化日志 (Logger)、撤销/重做 (UndoStack/ICommand)、最近文件列表 (RecentFiles)、更新检查 (UpdateChecker)、文档/文件/模型/导出/G2P/质量评估抽象接口 (IDocument, IModelManager, IModelDownloader 等)、后端服务接口 (ISlicerService, IAlignmentService, IAsrService, IPitchService, ITranscriptionService)。
+通用框架核心。类型安全配置 (AppSettings)、服务定位器 (ServiceLocator)、异步任务 (AsyncTask)、结构化日志 (Logger)、文档/文件/模型/导出/G2P/质量评估抽象接口 (IDocument, IModelManager, IModelDownloader 等)、后端服务接口 (ISlicerService, IAlignmentService, IAsrService, IPitchService, ITranscriptionService)。
 
 依赖：dsfw-base, dstools-types, Qt Core/Network, nlohmann_json
 
 ### dsfw-ui-core (静态库)
 
-Qt 应用 UI 框架。统一窗口壳 (AppShell)、图标侧边导航 (IconNavBar)、主题管理 (Theme)、无边框窗口 (FramelessHelper)、页面接口 (IPageActions/IPageLifecycle/IPageProgress)、步骤插件 (IStepPlugin)。
+Qt 应用 UI 框架。统一窗口壳 (AppShell)、图标侧边导航 (IconNavBar)、主题管理 (Theme)、无边框窗口 (FramelessHelper)、页面接口 (IPageActions/IPageLifecycle)。
 
 依赖：dsfw-core, Qt Widgets, QWindowKit
 
@@ -217,7 +214,7 @@ dataset-tools/
 │   │   ├── base/                # dsfw-base (STATIC, Qt-free)
 │   │   │   └── include/dsfw/   # JsonHelper
 │   │   ├── core/               # dsfw-core (STATIC)
-│   │   │   ├── include/dsfw/   # AppSettings, ServiceLocator, EventBus, Logger, ...
+│   │   │   ├── include/dsfw/   # AppSettings, ServiceLocator, Logger, ...
 │   │   │   └── src/
 │   │   └── ui-core/            # dsfw-ui-core (STATIC)
 │   │       ├── include/dsfw/   # AppShell, Theme, FramelessHelper, IPageActions, ...
