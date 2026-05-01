@@ -173,6 +173,53 @@ private slots:
         // No notes selected → f0 restored from snapshot, unchanged.
         QCOMPARE(ds.f0.values, pre);
     }
+
+    void testMovingAverage_allZeros() {
+        std::vector<double> input(10, 0.0);
+        auto out = PitchProcessor::movingAverage(input, 3);
+        QCOMPARE(out.size(), input.size());
+        for (auto v : out)
+            QCOMPARE(v, 0.0);
+    }
+
+    void testMovingAverage_singleElement() {
+        std::vector<double> input = {42.0};
+        auto out = PitchProcessor::movingAverage(input, 3);
+        QCOMPARE(out.size(), size_t(1));
+        QCOMPARE(out[0], 42.0);
+    }
+
+    void testGetRestMidi_lastNoteIsRest() {
+        auto ds = makeDSFile({QStringLiteral("C4"), QStringLiteral("E4"),
+                              QStringLiteral("rest")});
+        double midi = PitchProcessor::getRestMidi(ds, 2);
+        QCOMPARE(midi, 64.0);
+    }
+
+    void testApplyModulationDriftPreview_modulationOnly() {
+        auto ds = makeDSFile({QStringLiteral("C4")}, 50, 60.0);
+        std::vector<double> pre = ds.f0.values;
+        std::set<int> sel = {0};
+
+        PitchProcessor::applyModulationDriftPreview(ds, pre, sel, 0.5, 1.0);
+
+        QVERIFY(!ds.f0.values.empty());
+        for (size_t i = 0; i < ds.f0.values.size(); ++i) {
+            if (pre[i] > 0.0) {
+                QVERIFY(ds.f0.values[i] > 0.0);
+            }
+        }
+    }
+
+    void testApplyModulationDriftPreview_restNoteSkipped() {
+        auto ds = makeDSFile({QStringLiteral("C4"), QStringLiteral("rest")}, 100, 60.0);
+        std::vector<double> pre = ds.f0.values;
+        std::set<int> sel = {0, 1};
+
+        PitchProcessor::applyModulationDriftPreview(ds, pre, sel, 0.8, 0.8);
+
+        QVERIFY(!ds.f0.values.empty());
+    }
 };
 
 QTEST_GUILESS_MAIN(TestPitchProcessor)

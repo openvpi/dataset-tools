@@ -14,6 +14,11 @@ private slots:
     void testFullPipeline_withAllMocks();
     void testFullPipeline_stepFailure();
     void testProgressCallback();
+    void testCalculatePhNum_dictLoadFailure();
+    void testGameAlign_nullCallback();
+    void testConvertToDs_f0CallbackError();
+    void testExtractTextGrids_depFailure();
+    void testFullPipeline_checkpointResume();
 };
 
 void TestTranscriptionPipeline::testExtractTextGrids_withMockDeps() {
@@ -289,6 +294,157 @@ void TestTranscriptionPipeline::testProgressCallback() {
             hasExtract = true;
     }
     QVERIFY(hasExtract);
+}
+
+void TestTranscriptionPipeline::testCalculatePhNum_dictLoadFailure() {
+    TranscriptionPipeline::Deps deps;
+    deps.loadDictionary = [](const QString &, QSet<QString> &, QSet<QString> &, QString &error) {
+        error = "Dictionary file not found";
+        return false;
+    };
+
+    std::vector<TranscriptionRow> rows;
+    TranscriptionRow r;
+    r.name = "test1";
+    r.phSeq = "a b";
+    r.phDur = "0.1 0.2";
+    rows.push_back(r);
+
+    QString error;
+    QVERIFY(!TranscriptionPipeline::calculatePhNum("dummy_dict.txt", rows, error, deps));
+    QVERIFY(error.contains("Dictionary file not found"));
+}
+
+void TestTranscriptionPipeline::testGameAlign_nullCallback() {
+    std::vector<TranscriptionRow> rows;
+    TranscriptionRow r;
+    r.name = "test1";
+    r.phSeq = "a b";
+    r.phDur = "0.1 0.2";
+    r.phNum = "2";
+    rows.push_back(r);
+
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+
+    TranscriptionPipeline::Options opts;
+    opts.wavsDir = tmp.path();
+
+    QString error;
+    QVERIFY(TranscriptionPipeline::gameAlign(opts, nullptr, rows, nullptr, error));
+    QVERIFY(rows[0].noteSeq.isEmpty());
+}
+
+void TestTranscriptionPipeline::testConvertToDs_f0CallbackError() {
+    TranscriptionPipeline::Deps deps;
+    deps.convertToDs = [](const std::vector<TranscriptionRow> &,
+                          const CsvToDsConverter::Options &,
+                          CsvToDsConverter::F0Callback f0Cb,
+                          CsvToDsConverter::ProgressCallback, QString &error) {
+        if (f0Cb) {
+            std::vector<float> f0;
+            QString f0Error;
+            if (!f0Cb("test.wav", f0, f0Error)) {
+                error = f0Error;
+                return false;
+            }
+        }
+        return true;
+    };
+
+    std::vector<TranscriptionRow> rows;
+    TranscriptionRow r;
+    r.name = "test1";
+    r.phSeq = "a";
+    r.phDur = "0.1";
+    rows.push_back(r);
+
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+
+    TranscriptionPipeline::Options opts;
+    opts.wavsDir = tmp.path();
+    opts.outputDir = tmp.path();
+
+    auto failingF0 = [](const QString &, std::vector<float> &, QString &err) {
+        err = "F0 extraction failed";
+        return false;
+    };
+
+    QString error;
+    QVERIFY(!TranscriptionPipeline::convertToDs(opts, failingF0, rows, nullptr, error, deps));
+}
+
+void TestTranscriptionPipeline::testExtractTextGrids_depFailure() {
+    TranscriptionPipeline::Deps deps;
+    deps.extractTextGrids = [](const QString &, std::vector<TranscriptionRow> &, QString &error) {
+        error = "TextGrid extraction dependency failed";
+        return false;
+    };
+
+    std::vector<TranscriptionRow> rows;
+    QString error;
+    QVERIFY(!TranscriptionPipeline::extractTextGrids("dummy_dir", rows, error, deps));
+    QVERIFY(error.contains("TextGrid extraction dependency failed"));
+}
+
+void TestTranscriptionPipeline::testFullPipeline_checkpointResume() {
+    TranscriptionPipeline::Deps deps;
+    deps.extractTextGrids = [](const QString &, std::vector<TranscriptionRow> &, QString &) {
+        return true;
+    };
+
+    deps.loadDictionary = [](const QString &, QSet<QString> &vowels, QSet<QString> &consonants, QString &) {
+        vowels = {"a", "e", "i"};
+        consonants = {"sh", "n"};
+        return true;
+    };
+
+    deps.readCsv = [](const QString &, std::vector<TranscriptionRow> &rows, QString &) {
+        TranscriptionRow r;
+        r.name = "checkpoint";
+        r.phSeq = "a n";
+        r.phDur = "0.1 0.2";
+        r.phNum = "1 1";
+        r.noteSeq = "C4 D4";
+        r.noteDur = "0.1 0.2";
+        r.noteSlur = "0 0";
+        rows.push_back(r);
+        return true;
+    };
+
+    deps.writeCsv = [](const QString &, const std::vector<TranscriptionRow> &, QString &) {
+        return true;
+    };
+
+    deps.convertToDs = [](const std::vector<TranscriptionRow> &,
+                          const CsvToDsConverter::Options &,
+                          CsvToDsConverter::F0Callback,
+                          CsvToDsConverter::ProgressCallback, QString &) {
+        return true;
+    };
+
+    TranscriptionPipeline::GameAlignCallback gameAlignCb =
+        [](const QString &, const std::vector<std::string> &,
+           const std::vector<float> &, const std::vector<int> &,
+           std::vector<std::tuple<std::string, float, int>> &notes, QString &) {
+            notes.push_back({"C4", 0.3, 0});
+            return true;
+        };
+
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+
+    TranscriptionPipeline::Options opts;
+    opts.textGridDir = tmp.path();
+    opts.wavsDir = tmp.path();
+    opts.dictPath = tmp.path() + "/dict.txt";
+    opts.outputDir = tmp.path();
+    opts.writeCsv = true;
+    opts.csvPath = tmp.path() + "/transcriptions.csv";
+
+    QString error;
+    QVERIFY(TranscriptionPipeline::run(opts, gameAlignCb, nullptr, nullptr, deps, error));
 }
 
 QTEST_GUILESS_MAIN(TestTranscriptionPipeline)

@@ -15,6 +15,10 @@ private slots:
     void testExtractFromTextGrid_nonExistentFile();
     void testExtractDirectory();
     void testExtractDirectory_emptyDir();
+    void testExtractFromTextGrid_multipleTiers();
+    void testExtractFromTextGrid_noPhonesTier();
+    void testExtractFromTextGrid_malformedContent();
+    void testExtractFromTextGrid_allEmptyIntervals();
 };
 
 static bool writeTextGrid(const QString &path, const QString &content) {
@@ -172,6 +176,128 @@ void TestTextGridToCsv::testExtractDirectory_emptyDir() {
     QString error;
     QVERIFY(TextGridToCsv::extractDirectory(tmp.path(), rows, error));
     QVERIFY(rows.empty());
+}
+
+void TestTextGridToCsv::testExtractFromTextGrid_multipleTiers() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    QString content = QStringLiteral(
+        "File type = \"ooTextFile\"\n"
+        "Object class = \"TextGrid\"\n"
+        "\n"
+        "xmin = 0\n"
+        "xmax = 1.0\n"
+        "tiers? <exists>\n"
+        "size = 2\n"
+        "item []:\n"
+        "    item [1]:\n"
+        "        class = \"IntervalTier\"\n"
+        "        name = \"words\"\n"
+        "        xmin = 0\n"
+        "        xmax = 1.0\n"
+        "        intervals: size = 1\n"
+        "        intervals [1]:\n"
+        "            xmin = 0\n"
+        "            xmax = 1.0\n"
+        "            text = \"hello\"\n"
+        "    item [2]:\n"
+        "        class = \"IntervalTier\"\n"
+        "        name = \"phones\"\n"
+        "        xmin = 0\n"
+        "        xmax = 1.0\n"
+        "        intervals: size = 2\n"
+        "        intervals [1]:\n"
+        "            xmin = 0\n"
+        "            xmax = 0.5\n"
+        "            text = \"h\"\n"
+        "        intervals [2]:\n"
+        "            xmin = 0.5\n"
+        "            xmax = 1.0\n"
+        "            text = \"a\"\n");
+    QString tgPath = tmp.path() + "/multi_tier.TextGrid";
+    QVERIFY(writeTextGrid(tgPath, content));
+
+    TranscriptionRow row;
+    QString error;
+    QVERIFY(TextGridToCsv::extractFromTextGrid(tgPath, row, error));
+    QCOMPARE(row.phSeq, QString("h a"));
+}
+
+void TestTextGridToCsv::testExtractFromTextGrid_noPhonesTier() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    QString content = QStringLiteral(
+        "File type = \"ooTextFile\"\n"
+        "Object class = \"TextGrid\"\n"
+        "\n"
+        "xmin = 0\n"
+        "xmax = 1.0\n"
+        "tiers? <exists>\n"
+        "size = 1\n"
+        "item []:\n"
+        "    item [1]:\n"
+        "        class = \"IntervalTier\"\n"
+        "        name = \"words\"\n"
+        "        xmin = 0\n"
+        "        xmax = 1.0\n"
+        "        intervals: size = 1\n"
+        "        intervals [1]:\n"
+        "            xmin = 0\n"
+        "            xmax = 1.0\n"
+        "            text = \"hello\"\n");
+    QString tgPath = tmp.path() + "/no_phones.TextGrid";
+    QVERIFY(writeTextGrid(tgPath, content));
+
+    TranscriptionRow row;
+    QString error;
+    QVERIFY(!TextGridToCsv::extractFromTextGrid(tgPath, row, error));
+    QVERIFY(!error.isEmpty());
+}
+
+void TestTextGridToCsv::testExtractFromTextGrid_malformedContent() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    QString tgPath = tmp.path() + "/bad.TextGrid";
+    QVERIFY(writeTextGrid(tgPath, "this is not a valid TextGrid"));
+
+    TranscriptionRow row;
+    QString error;
+    QVERIFY(!TextGridToCsv::extractFromTextGrid(tgPath, row, error));
+}
+
+void TestTextGridToCsv::testExtractFromTextGrid_allEmptyIntervals() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    QString content = QStringLiteral(
+        "File type = \"ooTextFile\"\n"
+        "Object class = \"TextGrid\"\n"
+        "\n"
+        "xmin = 0\n"
+        "xmax = 1.0\n"
+        "tiers? <exists>\n"
+        "size = 1\n"
+        "item []:\n"
+        "    item [1]:\n"
+        "        class = \"IntervalTier\"\n"
+        "        name = \"phones\"\n"
+        "        xmin = 0\n"
+        "        xmax = 1.0\n"
+        "        intervals: size = 2\n"
+        "        intervals [1]:\n"
+        "            xmin = 0\n"
+        "            xmax = 0.5\n"
+        "            text = \"\"\n"
+        "        intervals [2]:\n"
+        "            xmin = 0.5\n"
+        "            xmax = 1.0\n"
+        "            text = \"\"\n");
+    QString tgPath = tmp.path() + "/all_empty.TextGrid";
+    QVERIFY(writeTextGrid(tgPath, content));
+
+    TranscriptionRow row;
+    QString error;
+    QVERIFY(TextGridToCsv::extractFromTextGrid(tgPath, row, error));
+    QVERIFY(row.phSeq.isEmpty() || row.phSeq.trimmed().isEmpty());
 }
 
 QTEST_GUILESS_MAIN(TestTextGridToCsv)
