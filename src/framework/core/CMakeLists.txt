@@ -2,14 +2,22 @@ project(dsfw-core)
 
 set(CMAKE_AUTOMOC ON)
 
+# Standalone build guards — only activate when targets are not already defined
+if(NOT TARGET dstools-types::dstools-types)
+    find_package(dstools-types CONFIG REQUIRED)
+endif()
+
+if(NOT TARGET Qt6::Core)
+    find_package(QT NAMES Qt6 COMPONENTS Core Network REQUIRED)
+    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network REQUIRED)
+endif()
+
 set(DSFW_CORE_SOURCES
     src/AppSettings.cpp
     src/AsyncTask.cpp
     src/JsonHelper.cpp
     src/ServiceLocator.cpp
     src/LocalFileIOProvider.cpp
-    src/ModelDownloader.cpp
-    src/ModelManager.cpp
 )
 
 set(DSFW_CORE_HEADERS
@@ -23,6 +31,7 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IExportFormat.h
     include/dsfw/IModelProvider.h
     include/dsfw/IModelDownloader.h
+    include/dsfw/IModelManager.h
     include/dsfw/IQualityMetrics.h
     include/dsfw/IG2PProvider.h
     include/dsfw/ISlicerService.h
@@ -31,8 +40,6 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IPitchService.h
     include/dsfw/ITranscriptionService.h
     include/dsfw/CommonKeys.h
-    include/dsfw/ModelDownloader.h
-    include/dsfw/ModelManager.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})
@@ -44,6 +51,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+    dsfw-base
     dstools-types::dstools-types
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Network
