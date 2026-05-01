@@ -18,6 +18,8 @@ set(DOMAIN_SOURCES
     src/DsProject.cpp
     src/PinyinG2PProvider.cpp
     src/QualityMetrics.cpp
+    src/ModelManager.cpp
+    src/ModelDownloader.cpp
 )
 
 set(DOMAIN_HEADERS
@@ -36,6 +38,8 @@ set(DOMAIN_HEADERS
     include/dstools/QualityMetrics.h
     include/dstools/DsItemManager.h
     include/dstools/DsProject.h
+    include/dstools/ModelManager.h
+    include/dstools/ModelDownloader.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DOMAIN_SOURCES} ${DOMAIN_HEADERS})

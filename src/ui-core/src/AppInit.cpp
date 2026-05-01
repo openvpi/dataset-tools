@@ -1,6 +1,7 @@
 #include <dstools/AppInit.h>
 
-#include <dsfw/ModelManager.h>
+#include <dstools/ModelManager.h>
+#include <dsfw/IModelManager.h>
 #include <dsfw/ServiceLocator.h>
 
 #include <QApplication>
@@ -109,9 +110,9 @@ bool AppInit::init(QApplication &app, bool initCrashHandler) {
     }
 
     // 5. Register core services with ServiceLocator
-    if (!ServiceLocator::get<ModelManager>()) {
+    if (!ServiceLocator::get<IModelManager>()) {
         auto *modelMgr = new ModelManager(&app);
-        ServiceLocator::set<ModelManager>(modelMgr);
+        ServiceLocator::set<IModelManager>(modelMgr);
     }
 
     // 6. Call registered post-init hooks
