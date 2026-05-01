@@ -58,10 +58,11 @@ AudioLoadResult AudioFileLoader::load(const QString &filePath) {
             return result;
         }
 
-        std::vector<float> buf(4096 * channels);
+        constexpr int kDefaultBufferSize = 4096;
+        std::vector<float> buf(kDefaultBufferSize * channels);
         qint64 framesRead = 0;
         while (framesRead < totalFrames) {
-            const int toRead = std::min(static_cast<qint64>(4096), totalFrames - framesRead);
+            const int toRead = std::min(static_cast<qint64>(kDefaultBufferSize), totalFrames - framesRead);
             const int n = decoder.read(buf.data(), static_cast<int>(framesRead), toRead * channels);
             if (n <= 0)
                 break;
