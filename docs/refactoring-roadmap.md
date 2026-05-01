@@ -514,13 +514,15 @@ public:
 
 ## Phase 4 — 完善与扩展 (Week 13+)
 
-### T-4.1 插件系统 [G2]
+### T-4.1 插件系统 [G2] ✅ 已完成
 
 - `dsfw/PluginManager.h` — 基于 `QPluginLoader` 的运行时加载
 - 定义 `IPlugin` 接口标准，版本化 ABI
 - 用于: 模型插件、导出格式插件、G2P 插件
 
 **工作量**: L (1-3d)
+
+> ✅ 已完成 — PluginManager 已实现于 dsfw-ui-core，基于 QPluginLoader 动态加载 IStepPlugin，支持模板化查询 plugins<T>()，集成 dsfw::Log 诊断输出。
 
 ### T-4.2 崩溃收集 [G2]
 
@@ -608,7 +610,7 @@ Phase 3 (Week 9-12) — 增强
       │
       ▼
 Phase 4 (Week 13+) — 完善
-  T-4.1 插件系统    T-4.2 崩溃收集    T-4.3 更新检查 (✅)
+  T-4.1 插件系统 (✅)    T-4.2 崩溃收集    T-4.3 更新检查 (✅)
   T-4.4 MRU 列表 (✅)  T-4.5 新增控件  T-4.6 控件画廊
   T-4.7 DI 强化
 ```
