@@ -4,12 +4,10 @@ set(CMAKE_AUTOMOC ON)
 
 set(RMVPEPITCH_SOURCES
     RmvpePitchProcessor.cpp
-    RmvpePitchService.cpp
 )
 
 set(RMVPEPITCH_HEADERS
     RmvpePitchProcessor.h
-    RmvpePitchService.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${RMVPEPITCH_SOURCES} ${RMVPEPITCH_HEADERS})

@@ -14,7 +14,8 @@
 #include <dstools/ModelLoadPanel.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/AsyncTask.h>
-#include <dsfw/ServiceLocator.h>
+#include <dsfw/TaskProcessorRegistry.h>
+#include <dstools/ModelManager.h>
 
 namespace fs = std::filesystem;
 
@@ -52,7 +53,7 @@ void HubertFAPage::init() {
 }
 
 void HubertFAPage::runTask() {
-    if (!m_alignmentService || !m_alignmentService->isModelLoaded()) {
+    if (!m_modelLoaded) {
         QMessageBox::warning(this, "Warning", "Model not loaded.");
         m_isRunning = false;
         m_runBtn->setEnabled(true);
@@ -89,7 +90,9 @@ void HubertFAPage::runTask() {
         QString filename = item->text();
         QString filePath = item->data(Qt::UserRole + 1).toString();
 
-        auto result = m_alignmentService->align(filePath, {});
+        dstools::TaskInput taskInput;
+        taskInput.audioPath = filePath;
+        auto result = m_processor->process(taskInput);
         if (!result) {
             slot_hfaFailed(filename, QString::fromStdString(result.error()));
         } else {
@@ -122,15 +125,23 @@ void HubertFAPage::slot_loadModel() {
         return;
     }
 
-    m_alignmentService = dstools::ServiceLocator::get<dstools::IAlignmentService>();
-    if (!m_alignmentService) {
-        m_modelPanel->setStatus("No alignment service registered.", false);
+    if (!m_processor) {
+        m_processor = dstools::TaskProcessorRegistry::instance().create(
+            QStringLiteral("phoneme_alignment"), QStringLiteral("hubert-fa"));
+    }
+    if (!m_processor) {
+        m_modelPanel->setStatus("No alignment processor registered.", false);
         m_runBtn->setEnabled(false);
         return;
     }
 
-    auto loadResult = m_alignmentService->loadModel(modelFolder);
+    dstools::ModelManager mm;
+    dstools::ProcessorConfig config;
+    config["path"] = modelFolder.toStdString();
+    config["deviceId"] = -1;
+    auto loadResult = m_processor->initialize(mm, config);
     if (loadResult) {
+        m_modelLoaded = true;
         m_modelPanel->setStatus("Model loaded successfully.", true);
         m_runBtn->setEnabled(true);
 
@@ -138,14 +149,14 @@ void HubertFAPage::slot_loadModel() {
             m_dynamicContainer = new QWidget(this);
             auto *dynLayout = new QVBoxLayout(m_dynamicContainer);
 
-            auto vocab = m_alignmentService->vocabInfo();
+            auto caps = m_processor->capabilities();
 
-            {
-                auto it = vocab.find("non_lexical_phonemes");
-                if (it != vocab.end() && it->is_array()) {
+            if (caps.contains("nonSpeechPhonemes")) {
+                auto &nsPh = caps["nonSpeechPhonemes"];
+                if (nsPh.contains("default") && nsPh["default"].is_array()) {
                     dynLayout->addWidget(new QLabel("Non-speech phonemes:", m_dynamicContainer));
                     m_nonSpeechPhLayout = new QHBoxLayout();
-                    for (const auto &ph : *it) {
+                    for (const auto &ph : nsPh["default"]) {
                         if (ph.is_string()) {
                             m_nonSpeechPhLayout->addWidget(
                                 new QCheckBox(QString::fromStdString(ph.get<std::string>()), m_dynamicContainer));
@@ -155,16 +166,16 @@ void HubertFAPage::slot_loadModel() {
                 }
             }
 
-            {
-                auto it = vocab.find("dictionaries");
-                if (it != vocab.end() && it->is_object()) {
+            if (caps.contains("language")) {
+                auto &lang = caps["language"];
+                if (lang.contains("values") && lang["values"].is_array()) {
                     dynLayout->addWidget(new QLabel("Language:", m_dynamicContainer));
                     m_languageGroup = new QButtonGroup(this);
                     m_languageGroup->setExclusive(true);
                     auto *langLayout = new QHBoxLayout();
                     int id = 0;
-                    for (auto rit = it->rbegin(); rit != it->rend(); ++rit) {
-                        auto *radio = new QRadioButton(QString::fromStdString(rit.key()), m_dynamicContainer);
+                    for (auto rit = lang["values"].rbegin(); rit != lang["values"].rend(); ++rit) {
+                        auto *radio = new QRadioButton(QString::fromStdString(rit->get<std::string>()), m_dynamicContainer);
                         m_languageGroup->addButton(radio, id++);
                         langLayout->addWidget(radio);
                     }
@@ -178,6 +189,7 @@ void HubertFAPage::slot_loadModel() {
             m_rightPanel->insertWidget(stretchIdx, m_dynamicContainer);
         }
     } else {
+        m_modelLoaded = false;
         m_modelPanel->setStatus(QString("Model loading failed: %1")
                                     .arg(QString::fromStdString(loadResult.error())), false);
         m_runBtn->setEnabled(false);

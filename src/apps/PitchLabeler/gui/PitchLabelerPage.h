@@ -27,6 +27,7 @@ namespace dstools {
 namespace pitchlabeler {
 
 class DSFile;
+class PitchFileService;
 
 namespace ui {
 class PianoRollView;
@@ -94,8 +95,7 @@ private:
 
     // File management
     QString m_workingDirectory;
-    QString m_currentFilePath;
-    std::shared_ptr<DSFile> m_currentFile;
+    PitchFileService *m_fileService = nullptr;
 
     // Services
     dstools::widgets::ViewportController *m_viewport = nullptr;
@@ -163,7 +163,8 @@ private:
     void applyConfig();
 
     // File operations
-    void loadFile(const QString &path);
+    void onFileLoaded(const QString &path, std::shared_ptr<DSFile> file);
+    void onFileSaved(const QString &path);
     bool saveFile();
     bool saveAllFiles();
 

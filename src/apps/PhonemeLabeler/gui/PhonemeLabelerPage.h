@@ -30,6 +30,7 @@
 #include "ui/FileListPanel.h"
 #include "ui/EntryListPanel.h"
 #include "ui/TimeRulerWidget.h"
+#include "ui/WaveformRenderer.h"
 
 namespace dstools {
 namespace phonemelabeler {
@@ -97,6 +98,7 @@ private:
     // Services
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
     dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
+    WaveformRenderer *m_renderer = nullptr;
 
     // UI Components
     QSplitter *m_mainSplitter = nullptr;

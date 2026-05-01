@@ -4,13 +4,11 @@ set(CMAKE_AUTOMOC ON)
 
 set(HUBERTFA_SOURCES
     HfaTask.cpp
-    AlignmentService.cpp
     HubertAlignmentProcessor.cpp
 )
 
 set(HUBERTFA_HEADERS
     HfaTask.h
-    AlignmentService.h
     HubertAlignmentProcessor.h
 )
 

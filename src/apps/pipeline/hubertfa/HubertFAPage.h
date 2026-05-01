@@ -8,7 +8,7 @@
 #include <QLabel>
 #include <QTextCharFormat>
 
-#include <dsfw/IAlignmentService.h>
+#include <dsfw/ITaskProcessor.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
 #include <dstools/PathSelector.h>
@@ -57,7 +57,8 @@ private:
     QButtonGroup *m_languageGroup = nullptr;            ///< Language selection radio group.
     QHBoxLayout *m_nonSpeechPhLayout = nullptr;         ///< Non-speech phoneme layout.
     QWidget *m_dynamicContainer = nullptr;              ///< Dynamic UI container.
-    dstools::IAlignmentService *m_alignmentService = nullptr; ///< Alignment service instance.
+    std::unique_ptr<dstools::ITaskProcessor> m_processor; ///< Alignment task processor instance.
+    bool m_modelLoaded = false;                          ///< Whether the model is loaded and ready.
     QTextCharFormat m_errorFormat;                      ///< Text format for error messages.
     QString m_workingDir;                               ///< Current working directory.
 };

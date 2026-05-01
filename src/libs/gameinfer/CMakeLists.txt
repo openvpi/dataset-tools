@@ -3,12 +3,10 @@ project(gameinfer-lib)
 set(CMAKE_AUTOMOC ON)
 
 set(GAMEINFER_SOURCES
-    GameInferService.cpp
     GameMidiProcessor.cpp
 )
 
 set(GAMEINFER_HEADERS
-    GameInferService.h
     GameMidiProcessor.h
 )
 
