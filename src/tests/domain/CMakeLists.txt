@@ -9,6 +9,7 @@ set(DOMAIN_TESTS
     TestPhNumCalculator
     TestTranscriptionCsv
     TestStringUtils
+    TestTranscriptionPipeline
 )
 
 foreach(test_name ${DOMAIN_TESTS})
