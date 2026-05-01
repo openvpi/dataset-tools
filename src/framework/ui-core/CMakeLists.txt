@@ -18,6 +18,7 @@ set(DSFW_UI_CORE_SOURCES
     src/FramelessHelper.cpp
     src/IconNavBar.cpp
     src/AppShell.cpp
+    src/PluginManager.cpp
 )
 
 set(DSFW_UI_CORE_HEADERS
@@ -29,6 +30,7 @@ set(DSFW_UI_CORE_HEADERS
     include/dsfw/IPageProgress.h
     include/dsfw/IconNavBar.h
     include/dsfw/AppShell.h
+    include/dsfw/PluginManager.h
 )
 
 set(DSFW_UI_CORE_RESOURCES
