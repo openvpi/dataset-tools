@@ -219,11 +219,13 @@ void TaskWindow::clearList() {
 
 void TaskWindow::slot_oneFinished(const QString &filename, const QString &info) {
     m_finishedTasks++;
-    m_logOutput->appendPlainText(filename + ": " + info);
+    if (m_logOutput)
+        m_logOutput->appendPlainText(filename + ": " + info);
     updateProgress();
     if (m_finishedTasks == m_totalTasks) {
         m_isRunning = false;
-        m_runBtn->setEnabled(true);
+        if (m_runBtn)
+            m_runBtn->setEnabled(true);
         onTaskFinished();
         emit allTasksFinished();
     }
@@ -233,11 +235,13 @@ void TaskWindow::slot_oneFailed(const QString &filename, const QString &error) {
     m_finishedTasks++;
     m_errorTasks++;
     m_errorDetails.append(filename + ": " + error);
-    m_logOutput->appendPlainText("[ERROR] " + filename + ": " + error);
+    if (m_logOutput)
+        m_logOutput->appendPlainText("[ERROR] " + filename + ": " + error);
     updateProgress();
     if (m_finishedTasks == m_totalTasks) {
         m_isRunning = false;
-        m_runBtn->setEnabled(true);
+        if (m_runBtn)
+            m_runBtn->setEnabled(true);
         onTaskFinished();
         emit allTasksFinished();
     }
@@ -248,7 +252,7 @@ void TaskWindow::addTopWidget(QWidget *widget) {
 }
 
 void TaskWindow::updateProgress() {
-    if (m_totalTasks > 0) {
+    if (m_totalTasks > 0 && m_progressBar) {
         m_progressBar->setValue(m_finishedTasks * 100 / m_totalTasks);
     }
 }
@@ -256,12 +260,14 @@ void TaskWindow::updateProgress() {
 void TaskWindow::onRunClicked() {
     if (m_isRunning) return;
     m_isRunning = true;
-    m_runBtn->setEnabled(false);
+    if (m_runBtn)
+        m_runBtn->setEnabled(false);
     m_finishedTasks = 0;
     m_errorTasks = 0;
     m_totalTasks = 0;
     m_errorDetails.clear();
-    m_progressBar->setValue(0);
+    if (m_progressBar)
+        m_progressBar->setValue(0);
     runTask();
 }
 

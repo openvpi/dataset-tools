@@ -22,3 +22,4 @@ endif()
 
 add_subdirectory(framework)
 add_subdirectory(domain)
+add_subdirectory(widgets)

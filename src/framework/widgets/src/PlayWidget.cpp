@@ -162,7 +162,8 @@ void PlayWidget::uninitAudio() {
 }
 
 void PlayWidget::openFile(const QString &path) {
-    if (!m_valid) return;
+    if (!m_valid || !m_player) return;
+    if (path.isEmpty()) return;
     m_player->stop();
     m_player->close();
     m_filename = path;
