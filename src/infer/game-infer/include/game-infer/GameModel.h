@@ -4,35 +4,35 @@
 #include <filesystem>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
-#include <dstools/OnnxEnv.h>
+#include <dstools/OnnxModelBase.h>
 
 #include "Game.h"
+#include "GameGlobal.h"
 
 namespace Game
 {
 
     struct InferenceInput {
-        std::vector<float> waveform; // [1, samples]
-        float duration; // seconds
-        std::vector<float> known_durations; // [1, N_known]
-        int language; // int64
-        std::vector<bool> maskT; // [1, T], bool (用于 dur2bd/bd2dur 辅助)
+        std::vector<float> waveform;
+        float duration;
+        std::vector<float> known_durations;
+        int language;
+        std::vector<bool> maskT;
         float timestep;
     };
 
     struct InferenceOutput {
-        std::vector<uint8_t> boundaries; // [1, T], float
-        std::vector<float> durations; // [1, N], float (seconds)
-        std::vector<float> presence; // [1, N], float (confidence)
-        std::vector<float> scores; // [1, N], float (MIDI pitch)
-        std::vector<uint8_t> maskN; // [1, N], bool (valid notes)
+        std::vector<uint8_t> boundaries;
+        std::vector<float> durations;
+        std::vector<float> presence;
+        std::vector<float> scores;
+        std::vector<uint8_t> maskN;
     };
 
-    class GameModel {
+    class GAME_INFER_EXPORT GameModel : public dstools::infer::CancellableOnnxModel {
     public:
         GameModel();
         ~GameModel();
@@ -49,11 +49,6 @@ namespace Game
                      std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
                      std::string &msg) const;
 
-        /**
-         * Forward pass with known durations for align mode.
-         * known_durations: word durations in seconds, used to inject known boundaries via dur2bd.
-         * Returns durations, presence, scores for the predicted notes.
-         */
         bool forwardWithKnownDurations(const std::vector<float> &waveform_data,
                                        const std::vector<float> &known_durations, std::vector<float> &durations,
                                        std::vector<float> &presence, std::vector<float> &scores,
@@ -61,7 +56,6 @@ namespace Game
 
         static std::vector<float> generate_d3pm_ts(float t0, int n_steps);
 
-        // Parameter setter methods
         void set_seg_threshold(float threshold);
         void set_seg_radius_seconds(float radius);
         void set_seg_radius_frames(float radiusFrames);
@@ -70,23 +64,18 @@ namespace Game
         void set_language(int language);
 
     private:
-        // ONNX sessions
         std::unique_ptr<Ort::Session> sessEncoder;
         std::unique_ptr<Ort::Session> sessSegmenter;
         std::unique_ptr<Ort::Session> sessEstimator;
-        std::unique_ptr<Ort::Session> sessBd2dur; // bd2dur.onnx: boundaries → durations
-        std::unique_ptr<Ort::Session> sessDur2bd; // dur2bd.onnx: durations → boundaries (optional)
-
-        mutable std::mutex m_runMutex;
-        mutable Ort::RunOptions *m_activeRunOptions = nullptr;
-        Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+        std::unique_ptr<Ort::Session> sessBd2dur;
+        std::unique_ptr<Ort::Session> sessDur2bd;
 
         std::filesystem::path modelDir;
         float timestep;
         int sampleRate;
         int embeddingDim;
 
-        std::vector<std::string> m_segInputNames; // Segmenter input names (populated at load time)
+        std::vector<std::string> m_segInputNames;
 
         float m_seg_threshold = 0.2f;
         float m_seg_radius_seconds = 0.02f;
@@ -122,7 +111,7 @@ namespace Game
                      const std::vector<uint8_t> &maskN, float threshold) const;
 
         InferenceOutput inferSlice(const InferenceInput &input, float segThreshold,
-                                   int segRadius, // 帧单位
+                                   int segRadius,
                                    float estThreshold, const std::vector<float> &d3pmTs) const;
     };
 } // namespace Game
