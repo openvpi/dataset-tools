@@ -13,21 +13,30 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets Svg Network REQUI
 add_custom_target(DeployedTargets)
 
 # Shared types (header-only, must come before everything)
+set(CMAKE_FOLDER "Libraries/Framework")
 add_subdirectory(types)
 
 # Framework layers
 add_subdirectory(framework)
 
 # Shared layers (must come before apps)
+set(CMAKE_FOLDER "Libraries")
 add_subdirectory(domain)
 add_subdirectory(ui-core)
 add_subdirectory(widgets)
+
+set(CMAKE_FOLDER "Libraries/Infer")
 add_subdirectory(infer)
+
+set(CMAKE_FOLDER "Libraries/Libs")
 add_subdirectory(libs)
 
+# Applications
+set(CMAKE_FOLDER "")
 add_subdirectory(apps)
 
 if (BUILD_TESTS)
+    set(CMAKE_FOLDER "Tests")
     add_subdirectory(tests)
 endif ()
 

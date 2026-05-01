@@ -87,7 +87,9 @@ target_sources(${PROJECT_NAME} PRIVATE ${_src})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 if (AUDIO_UTIL_BUILD_TESTS)
+    set(CMAKE_FOLDER "Tests")
     add_subdirectory(tests)
+    set(CMAKE_FOLDER "Libraries/Infer")
 endif ()
 
 # ----------------------------------

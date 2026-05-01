@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.17)
 
 project(dataset-tools)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if (WIN32)
     set(ONNXRUNTIME_ENABLE_DML ON)
 endif ()
