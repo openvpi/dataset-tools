@@ -6,7 +6,7 @@
 
 namespace dsfw {
 
-LogSink createFileLogSink(const QString &logDir, const QString &appName);
+dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName);
 
 void cleanOldLogFiles(const QString &logDir, int maxAgeDays = 7);
 

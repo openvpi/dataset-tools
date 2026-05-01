@@ -10,7 +10,7 @@
 
 namespace dsfw {
 
-LogSink createFileLogSink(const QString &logDir, const QString &appName) {
+dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName) {
     QDir dir(logDir);
     if (!dir.exists())
         dir.mkpath(QStringLiteral("."));
@@ -23,17 +23,17 @@ LogSink createFileLogSink(const QString &logDir, const QString &appName) {
 
     auto *mutex = new QMutex();
 
-    return [file, mutex](const LogEntry &entry) {
+    return [file, mutex](const dstools::LogEntry &entry) {
         QMutexLocker locker(mutex);
         if (!file->isOpen()) return;
 
         const char *levelStr = "TRACE";
         switch (entry.level) {
-            case LogLevel::Debug: levelStr = "DEBUG"; break;
-            case LogLevel::Info: levelStr = "INFO"; break;
-            case LogLevel::Warning: levelStr = "WARN"; break;
-            case LogLevel::Error: levelStr = "ERROR"; break;
-            case LogLevel::Fatal: levelStr = "FATAL"; break;
+            case dstools::LogLevel::Debug: levelStr = "DEBUG"; break;
+            case dstools::LogLevel::Info: levelStr = "INFO"; break;
+            case dstools::LogLevel::Warning: levelStr = "WARN"; break;
+            case dstools::LogLevel::Error: levelStr = "ERROR"; break;
+            case dstools::LogLevel::Fatal: levelStr = "FATAL"; break;
             default: break;
         }
 

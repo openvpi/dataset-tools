@@ -251,7 +251,7 @@ void HubertFAPage::updateResumeCheckbox() {
         m_chkResume->setVisible(false);
         return;
     }
-    m_checkpoint = BatchCheckpoint::load(m_workingDir, QStringLiteral("phoneme_alignment"));
+    m_checkpoint = dstools::BatchCheckpoint::load(m_workingDir, QStringLiteral("phoneme_alignment"));
     m_chkResume->setVisible(m_checkpoint.exists());
     if (m_checkpoint.exists()) {
         m_chkResume->setChecked(true);

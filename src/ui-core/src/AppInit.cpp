@@ -2,6 +2,7 @@
 
 #include <dstools/ModelManager.h>
 #include <dsfw/AppPaths.h>
+#include <dsfw/CrashHandler.h>
 #include <dsfw/FileLogSink.h>
 #include <dsfw/IModelManager.h>
 #include <dsfw/Log.h>

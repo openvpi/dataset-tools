@@ -277,7 +277,7 @@ void SlicerPage::updateResumeCheckbox() {
         m_chkResume->setVisible(false);
         return;
     }
-    m_checkpoint = BatchCheckpoint::load(m_workingDir, QStringLiteral("audio_slicing"));
+    m_checkpoint = dstools::BatchCheckpoint::load(m_workingDir, QStringLiteral("audio_slicing"));
     m_chkResume->setVisible(m_checkpoint.exists());
     if (m_checkpoint.exists()) {
         m_chkResume->setChecked(true);
