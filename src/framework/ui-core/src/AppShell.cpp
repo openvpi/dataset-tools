@@ -160,6 +160,12 @@ namespace dsfw {
                 actions->setWorkingDirectory(dir);
         }
 
+        // Notify pages of directory change
+        for (const auto &entry : m_pages) {
+            if (auto *lifecycle = qobject_cast<dstools::labeler::IPageLifecycle *>(entry.widget))
+                lifecycle->onWorkingDirectoryChanged(dir);
+        }
+
         emit workingDirectoryChanged(dir);
     }
 
@@ -346,6 +352,12 @@ namespace dsfw {
                 event->ignore();
                 return;
             }
+        }
+
+        // Dispatch shutdown to all pages
+        for (const auto &entry : m_pages) {
+            if (auto *lifecycle = qobject_cast<dstools::labeler::IPageLifecycle *>(entry.widget))
+                lifecycle->onShutdown();
         }
 
         event->accept();
