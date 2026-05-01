@@ -26,19 +26,19 @@ jobs:
             onnxruntime_ep: cpu
             dml: OFF
             artifact_name: linux-x64
-            archive_ext: tar.gz
+            package_ext: AppImage
           - os: macos-14
             triplet: arm64-osx
             onnxruntime_ep: cpu
             dml: OFF
             artifact_name: macos-arm64
-            archive_ext: zip
+            package_ext: dmg
           - os: windows-latest
             triplet: x64-windows
             onnxruntime_ep: dml
             dml: ON
-            artifact_name: msvc2022-x64
-            archive_ext: zip
+            artifact_name: windows-x64
+            package_ext: zip
 
     runs-on: ${{ matrix.os }}
 
@@ -52,7 +52,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache file
 
       - name: Setup ccache
         if: runner.os != 'Windows'
@@ -175,20 +175,116 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
-      - name: Create archive
+      # ── Windows: Portable ZIP ──────────────────────────────────────
+      - name: Package portable ZIP (Windows)
+        if: runner.os == 'Windows'
         working-directory: ${{github.workspace}}/deploy
         shell: bash
         run: |
-          ARCHIVE_NAME="dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.${{ matrix.archive_ext }}"
-          if [ "${{ matrix.archive_ext }}" = "tar.gz" ]; then
-            tar czf "$ARCHIVE_NAME" .
-          elif [ "$RUNNER_OS" = "Windows" ]; then
-            7z a "$ARCHIVE_NAME" ./*
-          else
-            zip -r "$ARCHIVE_NAME" .
+          ARCHIVE_NAME="dataset-tools-${{ matrix.artifact_name }}-${{ env.VERSION }}.zip"
+          7z a "$ARCHIVE_NAME" ./*
+          echo "PACKAGE_PATH=${{github.workspace}}/deploy/${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+      # ── macOS: DMG ─────────────────────────────────────────────────
+      - name: Package DMG (macOS)
+        if: runner.os == 'macOS'
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          DMG_NAME="dataset-tools-${{ matrix.artifact_name }}-${{ env.VERSION }}.dmg"
+          DMG_STAGING="${{ github.workspace }}/dmg_staging"
+
+          rm -rf "$DMG_STAGING"
+          mkdir -p "$DMG_STAGING"
+          cp -R *.app "$DMG_STAGING/"
+          ln -s /Applications "$DMG_STAGING/Applications"
+
+          hdiutil create \
+            -volname "Dataset Tools" \
+            -srcfolder "$DMG_STAGING" \
+            -ov -format UDZO \
+            "${{ github.workspace }}/deploy/${DMG_NAME}"
+
+          rm -rf "$DMG_STAGING"
+          echo "PACKAGE_PATH=${{ github.workspace }}/deploy/${DMG_NAME}" >> $GITHUB_ENV
+
+      # ── Linux: AppImage ────────────────────────────────────────────
+      - name: Download linuxdeploy tools (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ${{ github.workspace }}
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
+          chmod +x linuxdeploy
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage -O linuxdeploy-plugin-qt
+          chmod +x linuxdeploy-plugin-qt
+
+      - name: Package AppImage (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ${{ github.workspace }}
+        run: |
+          APPDIR="${{ github.workspace }}/AppDir"
+          DEPLOY="${{ github.workspace }}/deploy"
+
+          mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib" "$APPDIR/usr/share/applications"
+
+          for exe in DatasetPipeline MinLabel PhonemeLabeler PitchLabeler GameInfer DiffSingerLabeler; do
+            if [ -f "$DEPLOY/$exe" ]; then
+              cp "$DEPLOY/$exe" "$APPDIR/usr/bin/"
+            fi
+          done
+
+          if ls "$DEPLOY"/*.so* 1>/dev/null 2>&1; then
+            cp "$DEPLOY"/*.so* "$APPDIR/usr/lib/"
           fi
 
+          if [ -d "$DEPLOY/dict" ]; then
+            cp -R "$DEPLOY/dict" "$APPDIR/usr/bin/dict"
+          fi
+
+          cat > "$APPDIR/dataset-tools.desktop" << 'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=Dataset Tools
+          Comment=Dataset processing tools for singing voice synthesis
+          Exec=DatasetPipeline
+          Icon=dataset-tools
+          Categories=AudioVideo;Audio;
+          Terminal=false
+          DESKTOP
+
+          cat > "$APPDIR/AppRun" << 'LAUNCHER'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE=${SELF%/*}
+          export PATH="${HERE}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+          export QT_PLUGIN_PATH="${HERE}/usr/plugins:${QT_PLUGIN_PATH}"
+          export QML2_IMPORT_PATH="${HERE}/usr/qml:${QML2_IMPORT_PATH}"
+
+          CALLED_AS=$(basename "$0")
+          if [ "$CALLED_AS" != "AppRun" ] && [ "$CALLED_AS" != "dataset-tools" ] && [ -x "${HERE}/usr/bin/$CALLED_AS" ]; then
+              exec "${HERE}/usr/bin/$CALLED_AS" "$@"
+          fi
+
+          exec "${HERE}/usr/bin/DatasetPipeline" "$@"
+          LAUNCHER
+          chmod +x "$APPDIR/AppRun"
+
+          export QMAKE="${{ env.QT_DIR }}/bin/qmake"
+          export PATH="${{ env.QT_DIR }}/bin:$PATH"
+          export OUTPUT="${{ github.workspace }}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{ env.VERSION }}.AppImage"
+
+          ./linuxdeploy --appdir "$APPDIR" --plugin qt --output appimage
+
+          if [ ! -f "$OUTPUT" ]; then
+            echo "::error::AppImage was not created at expected path"
+            ls -la *.AppImage 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "PACKAGE_PATH=$OUTPUT" >> $GITHUB_ENV
+
+      # ── Upload to GitHub Release ───────────────────────────────────
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{github.workspace}}/deploy/dataset-tools-*.${{ matrix.archive_ext }}
+          files: ${{ env.PACKAGE_PATH }}
