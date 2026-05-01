@@ -102,18 +102,6 @@ namespace dstools {
             emit workingDirectoryChanged(QString());
         }
 
-        QList<QAction *> PitchLabelerPage::editActions() const {
-            return {m_actUndo, m_actRedo, m_actSave, m_actSaveAll};
-        }
-
-        QList<QAction *> PitchLabelerPage::viewActions() const {
-            return {m_actZoomIn, m_actZoomOut, m_actZoomReset};
-        }
-
-        QList<QAction *> PitchLabelerPage::toolActions() const {
-            return {m_actABCompare};
-        }
-
         bool PitchLabelerPage::hasUnsavedChanges() const {
             return m_currentFile && m_currentFile->modified;
         }

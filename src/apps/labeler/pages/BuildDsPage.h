@@ -18,7 +18,6 @@ class BuildDsPage : public QWidget, public IPageActions {
 public:
     explicit BuildDsPage(QWidget *parent = nullptr);
 
-    QList<QAction *> editActions() const override;
     void setWorkingDirectory(const QString &dir) override;
     QString workingDirectory() const override;
 

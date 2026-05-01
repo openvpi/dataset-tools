@@ -22,16 +22,6 @@ class IPageActions {
 public:
     virtual ~IPageActions() = default;
 
-    /// @brief Return edit-related actions (deprecated, use createMenuBar).
-    [[deprecated("Use createMenuBar() instead")]]
-    virtual QList<QAction *> editActions() const { return {}; }
-    /// @brief Return view-related actions (deprecated, use createMenuBar).
-    [[deprecated("Use createMenuBar() instead")]]
-    virtual QList<QAction *> viewActions() const { return {}; }
-    /// @brief Return tool-related actions (deprecated, use createMenuBar).
-    [[deprecated("Use createMenuBar() instead")]]
-    virtual QList<QAction *> toolActions() const { return {}; }
-
     /// @brief Check whether this page has unsaved changes.
     /// @return True if there are unsaved modifications.
     virtual bool hasUnsavedChanges() const { return false; }

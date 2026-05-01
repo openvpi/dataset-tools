@@ -157,10 +157,6 @@ void BuildCsvPage::buildUi() {
     connect(m_runAction, &QAction::triggered, this, runSlot);
 }
 
-QList<QAction *> BuildCsvPage::editActions() const {
-    return {m_runAction};
-}
-
 void BuildCsvPage::setWorkingDirectory(const QString &dir) {
     m_workingDir = dir;
 }

@@ -80,10 +80,6 @@ void PhonemeLabelerPage::openFile(const QString &path) {
     onFileSelected(path);
 }
 
-QList<QAction *> PhonemeLabelerPage::editActions() const {
-    return {m_actUndo, m_actRedo, nullptr, m_actSave, m_actSaveAs};
-}
-
 QList<QAction *> PhonemeLabelerPage::viewActions() const {
     return {m_actZoomIn, m_actZoomOut, m_actZoomReset, nullptr,
             m_actToggleBinding, nullptr,

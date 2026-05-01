@@ -100,10 +100,6 @@ void BuildDsPage::buildUi() {
     connect(m_runAction, &QAction::triggered, this, runSlot);
 }
 
-QList<QAction *> BuildDsPage::editActions() const {
-    return {m_runAction};
-}
-
 void BuildDsPage::setWorkingDirectory(const QString &dir) {
     m_workingDir = dir;
 }

@@ -17,7 +17,6 @@ class BuildCsvPage : public QWidget, public IPageActions {
 public:
     explicit BuildCsvPage(QWidget *parent = nullptr);
 
-    QList<QAction *> editActions() const override;
     void setWorkingDirectory(const QString &dir) override;
     QString workingDirectory() const override;
 

@@ -17,19 +17,7 @@ dstools::widgets::TaskWindow *TaskWindowAdapter::innerPage() const {
     return m_page;
 }
 
-QList<QAction *> TaskWindowAdapter::editActions() const {
-    return {};
-}
-
-QList<QAction *> TaskWindowAdapter::viewActions() const {
-    return {};
-}
-
-QList<QAction *> TaskWindowAdapter::toolActions() const {
-    return {};
-}
-
-bool TaskWindowAdapter::hasUnsavedChanges() const {
+    bool TaskWindowAdapter::hasUnsavedChanges() const {
     return false;
 }
 

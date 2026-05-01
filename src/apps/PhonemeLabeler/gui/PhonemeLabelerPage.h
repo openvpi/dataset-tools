@@ -47,8 +47,6 @@ public:
 
     void openFile(const QString &path);
 
-    [[nodiscard]] QList<QAction *> editActions() const override;
-    [[nodiscard]] QList<QAction *> viewActions() const override;
     [[nodiscard]] QMenu *spectrogramColorMenu() const { return m_spectrogramColorMenu; }
     [[nodiscard]] dstools::widgets::ShortcutManager *shortcutManager() const { return m_shortcutManager; }
     [[nodiscard]] dstools::AppSettings &settings() { return m_settings; }
@@ -130,6 +128,7 @@ private:
     QAction *m_actBindingToggle = nullptr;
 
     // Helpers
+    QList<QAction *> viewActions() const;
     void buildLayout();
     void buildActions();
     void buildToolbar();

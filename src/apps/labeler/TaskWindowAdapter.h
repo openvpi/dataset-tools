@@ -15,9 +15,6 @@ public:
 
     dstools::widgets::TaskWindow *innerPage() const;
 
-    QList<QAction *> editActions() const override;
-    QList<QAction *> viewActions() const override;
-    QList<QAction *> toolActions() const override;
     bool hasUnsavedChanges() const override;
     bool save() override;
     void setWorkingDirectory(const QString &dir) override;

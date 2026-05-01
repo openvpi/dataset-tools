@@ -48,9 +48,6 @@ public:
     void closeDirectory();
     [[nodiscard]] QString workingDirectory() const override { return m_workingDirectory; }
 
-    [[nodiscard]] QList<QAction *> editActions() const override;   // Undo, Redo, Save, SaveAll
-    [[nodiscard]] QList<QAction *> viewActions() const override;   // ZoomIn, ZoomOut, ZoomReset
-    [[nodiscard]] QList<QAction *> toolActions() const override;   // ABCompare
     [[nodiscard]] bool hasUnsavedChanges() const override;
     bool save() override;
     bool saveAll();
