@@ -10,6 +10,7 @@ set(DOMAIN_TESTS
     TestTranscriptionCsv
     TestStringUtils
     TestTranscriptionPipeline
+    TestTextGridToCsv
 )
 
 foreach(test_name ${DOMAIN_TESTS})
