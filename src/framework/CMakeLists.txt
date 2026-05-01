@@ -9,6 +9,7 @@ add_subdirectory(core)
 add_subdirectory(ui-core)
 add_subdirectory(audio)
 add_subdirectory(infer)
+add_subdirectory(widgets)
 
 # === dsfw package export/install ===
 include(GNUInstallDirs)

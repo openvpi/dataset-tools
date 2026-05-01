@@ -1,4 +1,4 @@
-#include <dstools/PathSelector.h>
+#include <dsfw/widgets/PathSelector.h>
 
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -11,7 +11,7 @@
 #include <QPushButton>
 #include <QUrl>
 
-namespace dstools::widgets {
+namespace dsfw::widgets {
 
 PathSelector::PathSelector(Mode mode, const QString &label,
                            const QString &filter, QWidget *parent)
@@ -107,4 +107,4 @@ void PathSelector::onBrowseClicked() {
         setPath(result);
 }
 
-} // namespace dstools::widgets
+} // namespace dsfw::widgets

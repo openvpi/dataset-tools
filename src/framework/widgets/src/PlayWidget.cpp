@@ -1,4 +1,4 @@
-#include <dstools/PlayWidget.h>
+#include <dsfw/widgets/PlayWidget.h>
 #include <dstools/IAudioPlayer.h>
 #include <dstools/AudioPlayer.h>
 #include <dsfw/ServiceLocator.h>
@@ -18,7 +18,7 @@
 #include <QTimerEvent>
 #include <QVBoxLayout>
 
-namespace dstools::widgets {
+namespace dsfw::widgets {
 
 PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
     initAudio();
@@ -57,9 +57,9 @@ PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
         connect(m_devBtn, &QPushButton::clicked, this, &PlayWidget::onDevClicked);
         connect(m_slider, &QSlider::sliderReleased, this, &PlayWidget::onSliderReleased);
         connect(m_deviceActionGroup, &QActionGroup::triggered, this, &PlayWidget::onDeviceAction);
-        connect(m_player, &audio::IAudioPlayer::stateChanged,
+        connect(m_player, &dstools::audio::IAudioPlayer::stateChanged,
                 this, &PlayWidget::onPlaybackStateChanged);
-        connect(m_player, &audio::IAudioPlayer::deviceChanged,
+        connect(m_player, &dstools::audio::IAudioPlayer::deviceChanged,
                 this, &PlayWidget::onDeviceChanged);
         reloadDevices();
     } else {
@@ -70,7 +70,7 @@ PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
     }
 }
 
-PlayWidget::PlayWidget(audio::IAudioPlayer *player, QWidget *parent) : QWidget(parent) {
+PlayWidget::PlayWidget(dstools::audio::IAudioPlayer *player, QWidget *parent) : QWidget(parent) {
     m_player = player;
     m_valid = (m_player != nullptr);
 
@@ -108,9 +108,9 @@ PlayWidget::PlayWidget(audio::IAudioPlayer *player, QWidget *parent) : QWidget(p
         connect(m_devBtn, &QPushButton::clicked, this, &PlayWidget::onDevClicked);
         connect(m_slider, &QSlider::sliderReleased, this, &PlayWidget::onSliderReleased);
         connect(m_deviceActionGroup, &QActionGroup::triggered, this, &PlayWidget::onDeviceAction);
-        connect(m_player, &audio::IAudioPlayer::stateChanged,
+        connect(m_player, &dstools::audio::IAudioPlayer::stateChanged,
                 this, &PlayWidget::onPlaybackStateChanged);
-        connect(m_player, &audio::IAudioPlayer::deviceChanged,
+        connect(m_player, &dstools::audio::IAudioPlayer::deviceChanged,
                 this, &PlayWidget::onDeviceChanged);
         reloadDevices();
     } else {
@@ -126,14 +126,13 @@ PlayWidget::~PlayWidget() {
 }
 
 void PlayWidget::initAudio() {
-    // Check if a shared audio player is already registered
-    if (auto *shared = ServiceLocator::get<audio::IAudioPlayer>()) {
+    if (auto *shared = dstools::ServiceLocator::get<dstools::audio::IAudioPlayer>()) {
         m_player = shared;
         m_valid = true;
         return;
     }
 
-    m_ownedPlayer = std::make_unique<audio::AudioPlayer>();
+    m_ownedPlayer = std::make_unique<dstools::audio::AudioPlayer>();
     m_player = m_ownedPlayer.get();
 
     if (!m_player->isOpen() && !m_player->setup(44100, 2, 1024)) {
@@ -146,8 +145,7 @@ void PlayWidget::initAudio() {
     }
     m_valid = true;
 
-    // Register the first successfully created player as the shared instance
-    ServiceLocator::set<audio::IAudioPlayer>(m_player);
+    dstools::ServiceLocator::set<dstools::audio::IAudioPlayer>(m_player);
 }
 
 void PlayWidget::uninitAudio() {
@@ -155,9 +153,8 @@ void PlayWidget::uninitAudio() {
         m_player->stop();
     }
     if (m_ownedPlayer) {
-        // If we registered this player, remove from ServiceLocator
-        if (ServiceLocator::get<audio::IAudioPlayer>() == m_player) {
-            ServiceLocator::reset<audio::IAudioPlayer>();
+        if (dstools::ServiceLocator::get<dstools::audio::IAudioPlayer>() == m_player) {
+            dstools::ServiceLocator::reset<dstools::audio::IAudioPlayer>();
         }
         m_ownedPlayer.reset();
     }
@@ -380,4 +377,4 @@ void PlayWidget::onDeviceChanged() {
     reloadDeviceActionStatus();
 }
 
-} // namespace dstools::widgets
+} // namespace dsfw::widgets

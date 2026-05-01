@@ -1,7 +1,7 @@
-#include <dstools/ViewportController.h>
+#include <dsfw/widgets/ViewportController.h>
 #include <algorithm>
 
-namespace dstools::widgets {
+namespace dsfw::widgets {
 
 ViewportController::ViewportController(QObject *parent) : QObject(parent) {}
 
@@ -61,4 +61,4 @@ void ViewportController::clampAndEmit() {
     emit viewportChanged(m_state);
 }
 
-} // namespace dstools::widgets
+} // namespace dsfw::widgets

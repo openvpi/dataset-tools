@@ -1,10 +1,10 @@
-#include <dstools/FileProgressTracker.h>
+#include <dsfw/widgets/FileProgressTracker.h>
 
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
 
-namespace dstools::widgets {
+namespace dsfw::widgets {
 
 FileProgressTracker::FileProgressTracker(DisplayStyle style, QWidget *parent)
     : QWidget(parent), m_style(style),
@@ -27,7 +27,6 @@ void FileProgressTracker::setDisplayStyle(DisplayStyle style) {
         return;
     m_style = style;
 
-    // Remove existing layout and widgets
     delete layout();
     delete m_label;
     m_label = nullptr;
@@ -92,4 +91,4 @@ void FileProgressTracker::updateDisplay() {
     }
 }
 
-} // namespace dstools::widgets
+} // namespace dsfw::widgets

@@ -1,4 +1,4 @@
-#include <dstools/TaskWindow.h>
+#include <dsfw/widgets/TaskWindow.h>
 
 #include <QApplication>
 #include <QDragEnterEvent>
@@ -16,7 +16,7 @@
 #include <QVBoxLayout>
 #include <QDir>
 
-namespace dstools::widgets {
+namespace dsfw::widgets {
 
 static const QStringList kAudioExtensions = {
     QStringLiteral("*.wav"), QStringLiteral("*.mp3"), QStringLiteral("*.m4a"),
@@ -61,7 +61,6 @@ void TaskWindow::setupUI() {
 void TaskWindow::setupClassicUI() {
     auto *mainLayout = new QHBoxLayout(this);
 
-    // Left panel: task list + buttons
     auto *leftPanel = new QVBoxLayout();
 
     m_taskListWidget = new QListWidget();
@@ -85,7 +84,6 @@ void TaskWindow::setupClassicUI() {
 
     mainLayout->addLayout(leftPanel, 1);
 
-    // Right panel: custom widgets + progress + log + run button
     auto *rightContainer = new QVBoxLayout();
 
     m_topLayout = new QHBoxLayout();
@@ -114,10 +112,8 @@ void TaskWindow::setupClassicUI() {
 void TaskWindow::setupPipelineStyleUI() {
     auto *mainLayout = new QVBoxLayout(this);
 
-    // Top area: file list (left) + parameters (right) side-by-side
     auto *topRow = new QHBoxLayout();
 
-    // Left panel: task list + buttons
     auto *leftPanel = new QVBoxLayout();
 
     m_taskListWidget = new QListWidget();
@@ -141,7 +137,6 @@ void TaskWindow::setupPipelineStyleUI() {
 
     topRow->addLayout(leftPanel, 1);
 
-    // Right panel: custom widgets + run button
     auto *rightContainer = new QVBoxLayout();
 
     m_topLayout = new QHBoxLayout();
@@ -157,7 +152,6 @@ void TaskWindow::setupPipelineStyleUI() {
     topRow->addLayout(rightContainer, 2);
     mainLayout->addLayout(topRow, 1);
 
-    // Bottom area: progress bar + log output (full width)
     auto *bottomPanel = new QVBoxLayout();
 
     m_progressBar = new QProgressBar();
@@ -301,4 +295,4 @@ void TaskWindow::dropEvent(QDropEvent *event) {
     event->acceptProposedAction();
 }
 
-} // namespace dstools::widgets
+} // namespace dsfw::widgets

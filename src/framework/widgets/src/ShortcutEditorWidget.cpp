@@ -1,4 +1,4 @@
-﻿#include <dstools/ShortcutEditorWidget.h>
+#include <dsfw/widgets/ShortcutEditorWidget.h>
 #include <dsfw/AppSettings.h>
 #include <dsfw/FramelessHelper.h>
 
@@ -14,16 +14,14 @@
 
 #include <map>
 
-namespace dstools::widgets {
+namespace dsfw::widgets {
 
-// Column indices
 enum Column {
     ColAction = 0,
     ColShortcut = 1,
     ColReset = 2,
 };
 
-// Role to store entry index on child items
 static constexpr int EntryIndexRole = Qt::UserRole + 1;
 
 ShortcutEditorWidget::ShortcutEditorWidget(dstools::AppSettings *settings,
@@ -51,7 +49,6 @@ ShortcutEditorWidget::ShortcutEditorWidget(dstools::AppSettings *settings,
 
     buildTree();
 
-    // Column sizing
     m_tree->header()->setStretchLastSection(false);
     m_tree->header()->setSectionResizeMode(ColAction, QHeaderView::Stretch);
     m_tree->header()->setSectionResizeMode(ColShortcut, QHeaderView::Interactive);
@@ -59,16 +56,14 @@ ShortcutEditorWidget::ShortcutEditorWidget(dstools::AppSettings *settings,
     m_tree->setColumnWidth(ColShortcut, 150);
     m_tree->setColumnWidth(ColReset, 60);
 
-    // Double-click to edit shortcut
     connect(m_tree, &QTreeWidget::itemDoubleClicked, this,
             [this](QTreeWidgetItem *item, int column) {
                 if (column != ColShortcut)
                     return;
                 QVariant v = item->data(0, EntryIndexRole);
                 if (!v.isValid())
-                    return; // category node
+                    return;
 
-                // Commit any previously active editor first
                 commitPendingEdit();
 
                 int idx = v.toInt();
@@ -97,7 +92,6 @@ void ShortcutEditorWidget::commitPendingEdit() {
     int idx = m_activeEntryIndex;
     QTreeWidgetItem *item = m_activeItem;
 
-    // Clear active state before modifying tree (removeItemWidget destroys the editor)
     m_activeEditor = nullptr;
     m_activeItem = nullptr;
     m_activeEntryIndex = -1;
@@ -125,7 +119,6 @@ void ShortcutEditorWidget::showDialog(dstools::AppSettings *settings,
 
     dsfw::FramelessHelper::applyToDialog(&dlg);
 
-    // applyToDialog creates a QVBoxLayout with title bar; add content below
     auto *layout = qobject_cast<QVBoxLayout *>(dlg.layout());
     auto *widget = new ShortcutEditorWidget(settings, entries, &dlg);
     layout->addWidget(widget);
@@ -146,13 +139,11 @@ void ShortcutEditorWidget::buildTree() {
     m_entryItems.clear();
     m_entryItems.resize(m_entries.size(), nullptr);
 
-    // Group entries by category, preserving order of first appearance.
     std::map<QString, QTreeWidgetItem *> categoryNodes;
 
     for (int i = 0; i < static_cast<int>(m_entries.size()); ++i) {
         const auto &entry = m_entries[i];
 
-        // Get or create category node
         QTreeWidgetItem *catItem = nullptr;
         auto it = categoryNodes.find(entry.category);
         if (it != categoryNodes.end()) {
@@ -168,7 +159,6 @@ void ShortcutEditorWidget::buildTree() {
             categoryNodes[entry.category] = catItem;
         }
 
-        // Create child item
         auto *child = new QTreeWidgetItem(catItem);
         child->setText(ColAction, entry.displayName);
         child->setText(ColShortcut, currentSequence(i));
@@ -176,7 +166,6 @@ void ShortcutEditorWidget::buildTree() {
         child->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         m_entryItems[i] = child;
 
-        // Reset button
         auto *resetBtn = new QPushButton(tr("Reset"), m_tree);
         resetBtn->setFixedWidth(54);
         m_tree->setItemWidget(child, ColReset, resetBtn);
@@ -216,7 +205,6 @@ void ShortcutEditorWidget::applyShortcut(int entryIndex, const QString &newSeque
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (result != QMessageBox::Yes)
             return;
-        // Clear the conflicting entry
         const auto &conflictEntry = m_entries[conflict];
         dstools::SettingsKey<QString> conflictKey(conflictEntry.settingsKeyPath,
                                                   conflictEntry.defaultSequence);
@@ -247,4 +235,4 @@ void ShortcutEditorWidget::resetAll() {
     }
 }
 
-} // namespace dstools::widgets
+} // namespace dsfw::widgets

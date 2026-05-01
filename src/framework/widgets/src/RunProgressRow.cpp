@@ -1,10 +1,10 @@
-#include <dstools/RunProgressRow.h>
+#include <dsfw/widgets/RunProgressRow.h>
 
 #include <QHBoxLayout>
 #include <QProgressBar>
 #include <QPushButton>
 
-namespace dstools::widgets {
+namespace dsfw::widgets {
 
 RunProgressRow::RunProgressRow(const QString &buttonText, QWidget *parent)
     : QWidget(parent), m_runText(buttonText) {
@@ -50,4 +50,4 @@ void RunProgressRow::reset() {
     m_progressBar->setValue(0);
 }
 
-} // namespace dstools::widgets
+} // namespace dsfw::widgets
