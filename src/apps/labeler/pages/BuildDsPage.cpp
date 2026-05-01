@@ -112,24 +112,4 @@ QString BuildDsPage::workingDirectory() const {
     return m_workingDir;
 }
 
-int BuildDsPage::progressTotal() const {
-    return m_progressTotal;
-}
-
-int BuildDsPage::progressCurrent() const {
-    return m_progressCurrent;
-}
-
-bool BuildDsPage::isRunning() const {
-    return m_running;
-}
-
-QString BuildDsPage::progressMessage() const {
-    return m_progressMessage;
-}
-
-void BuildDsPage::cancelOperation() {
-    m_running = false;
-}
-
 } // namespace dstools::labeler

@@ -25,7 +25,6 @@ set(DSFW_UI_CORE_HEADERS
     include/dsfw/FramelessHelper.h
     include/dsfw/IPageActions.h
     include/dsfw/IPageLifecycle.h
-    include/dsfw/IPageProgress.h
     include/dsfw/IconNavBar.h
     include/dsfw/AppShell.h
 )

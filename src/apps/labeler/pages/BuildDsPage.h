@@ -1,7 +1,6 @@
 #pragma once
 
 #include <dsfw/IPageActions.h>
-#include <dsfw/IPageProgress.h>
 
 #include <QComboBox>
 #include <QSpinBox>
@@ -12,9 +11,9 @@
 
 namespace dstools::labeler {
 
-class BuildDsPage : public QWidget, public IPageActions, public IPageProgress {
+class BuildDsPage : public QWidget, public IPageActions {
     Q_OBJECT
-    Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageProgress)
+    Q_INTERFACES(dstools::labeler::IPageActions)
 
 public:
     explicit BuildDsPage(QWidget *parent = nullptr);
@@ -22,13 +21,6 @@ public:
     QList<QAction *> editActions() const override;
     void setWorkingDirectory(const QString &dir) override;
     QString workingDirectory() const override;
-
-    // IPageProgress
-    int progressTotal() const override;
-    int progressCurrent() const override;
-    bool isRunning() const override;
-    QString progressMessage() const override;
-    void cancelOperation() override;
 
 private:
     void buildUi();
@@ -42,12 +34,6 @@ private:
     QAction *m_runAction = nullptr;
 
     QString m_workingDir;
-
-    // Progress state
-    int m_progressTotal = 0;
-    int m_progressCurrent = 0;
-    bool m_running = false;
-    QString m_progressMessage;
 };
 
 } // namespace dstools::labeler
