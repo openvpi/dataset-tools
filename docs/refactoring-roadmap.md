@@ -1,6 +1,6 @@
 # 架构重构路线图
 
-> 基于 2026-05-01 代码审计重新生成，删除已完成项，仅保留待办事项。
+> 基于 2026-05-01 代码审计重新生成，仅保留待办事项。
 >
 > **原则**: 功能齐全、简单可靠、不过度设计。接口保持一致性和合理的扩展预留。
 >
@@ -38,22 +38,6 @@
 | ADR-7 | FunASR 永远不直接修改 | vendor 代码只用适配器包装 |
 | ADR-8 | 单仓库模式 | 降低维护复杂度 |
 | ADR-9 | 允许 C++20 | 编译器均已支持，按需使用新特性，不强制全面迁移 |
-
----
-
-## Phase A — 可靠性与接口一致性 (P2) ✅ 已完成
-
-### A.1 ServiceLocator 改用 std::any — ✅ 已完成
-
-已在 commit `aa0192a` 中完成。ServiceLocator 内部存储已改为 `std::any`，使用 `std::any_cast` 进行类型安全取出。
-
-### A.2 服务接口一致性修复 — ✅ 已完成
-
-IAsrService 已补齐 `loadModel()`/`isModelLoaded()`/`unloadModel()` 纯虚方法。IInferenceEngine::load() 已改为纯虚 `= 0`。
-
-### A.3 CrashHandler 全量启用 — ✅ 已完成
-
-所有 6 个 GUI app (GameInfer, DiffSingerLabeler, PhonemeLabeler, DatasetPipeline, PitchLabeler, TestShell) 的 `AppInit::init()` 已改为 `initCrashHandler=true`。
 
 ---
 
@@ -133,7 +117,7 @@ dsfw-core / dsfw-ui-core 已有 `find_package` guards，但没有 CI 验证。
 
 ### D.2 Doxygen CI — P3, S (<2h)
 
-Doxyfile 已配置，23 个框架头文件已有 Doxygen 注释。添加 CI step 生成文档并发布到 GitHub Pages。
+Doxyfile 已配置，所有公共头文件已有 Doxygen 注释。添加 CI step 生成文档并发布到 GitHub Pages。
 
 ---
 
@@ -146,27 +130,11 @@ Doxyfile 已配置，23 个框架头文件已有 Doxygen 注释。添加 CI step
 
 ---
 
-## Phase E — C++20 升级 (P2) ✅ 已完成
-
-### E.1 升级 C++ 标准 — ✅ 已完成
-
-1. `CMakeLists.txt`: 已改为 `set(CMAKE_CXX_STANDARD 20)`
-2. README.md 已更新编译器要求为 C++20
-3. CI 验证待确认
-
-升级后按需使用 C++20 特性，不搞全面迁移运动。现有代码工作正常的不改。
-
----
-
 ## Phase F — 按需改进 (P3, 有需求时再做)
 
 ### F.1 示例项目 — P3, M (2-8h)
 
 在 `examples/` 创建最小非 DiffSinger 应用，演示 dsfw 框架独立使用。当有外部用户需要参考时再做。
-
-### ~~F.2 Undo/Redo 迁移~~ — 取消
-
-dsfw::UndoStack 无消费者，所有 app 直接用 QUndoStack。Phase G.4 中删除 dsfw::UndoStack。
 
 ---
 
@@ -249,12 +217,8 @@ P1 — 架构演进（核心价值）
   G.4  集成与清理 (L)              — 切换消费者 + 删除旧接口
 
 P2 — 有实际价值
-  A.1  ServiceLocator 类型安全 (S) — ✅ 已完成
-  A.2  服务接口一致性修复 (S)     — ✅ 已完成
-  A.3  CrashHandler 全量启用 (S)  — ✅ 已完成
   B.1  补齐领域测试 (L)           — 防止回归
   D.1  框架独立编译 CI 验证 (M)   — 确认外部可消费
-  E.1  升级 C++20 (S)             — ✅ 已完成
 
 P3 — 按需拾取
   B.2  TODO/FIXME 清理 (S)
@@ -269,7 +233,6 @@ P3 — 按需拾取
 ## 建议执行顺序
 
 ```
-批次 1: A.1 + A.2 + A.3 + E.1 — ✅ 全部完成
 批次 2: G.1 (死代码清理) + B.1 (领域测试) + D.1 (模块 CI) — 清理 + 质量保障
 批次 3: G.2 (任务处理器基础设施) — 新增，不破坏现有代码
 批次 4: G.3 (处理器迁移: RMVPE → FunASR → HuBERT → GAME) — 逐个迁移
@@ -300,15 +263,11 @@ P3 — 按需拾取
 
 | 编号 | 描述 | 严重性 |
 |------|------|--------|
-| ~~TD-01~~ | ~~ServiceLocator void* UB~~ | ✅ 已修复 |
-| ~~TD-02~~ | ~~IAsrService 缺虚方法~~ | ✅ 已修复 |
 | TD-03 | 4 个领域模块缺测试 | 中 |
 | TD-04 | 部分文件操作缺错误分支 | 低 |
 | TD-05 | 2 个文件超 600 行 | 低 |
 | TD-06 | `4096` buffer size 3 处重复 | 低 |
 | TD-07 | 5 处 TODO/FIXME | 低 |
-| ~~TD-08~~ | ~~IInferenceEngine::load() 非纯虚~~ | ✅ 已修复 |
-| ~~TD-09~~ | ~~CrashHandler 仅 1/6 app 启用~~ | ✅ 已修复 |
 | TD-10 | 11 个死接口/死基础设施占用维护成本 | 中 |
 | TD-11 | 4 个服务各自管理模型，ModelManager 闲置 | 高 |
 | TD-12 | DsProjectDefaults 硬编码 4 个模型路径字段 | 中 |
@@ -322,15 +281,6 @@ P3 — 按需拾取
 ## 任务执行清单
 
 > 按执行顺序排列。同一批次内的任务互不依赖，可并行。
-
-### 批次 1 — 接口加固 + 基础设施 ✅ 已完成
-
-| # | 任务 | 状态 | 关联 |
-|---|------|------|------|
-| 1 | **A.1** ServiceLocator void* → std::any | ✅ 已完成 | TD-01 |
-| 2 | **A.2** IAsrService 补齐虚方法；IInferenceEngine::load() 改纯虚 | ✅ 已完成 | TD-02, TD-08 |
-| 3 | **A.3** CrashHandler 全量启用 | ✅ 已完成 | TD-09 |
-| 4 | **E.1** CMake 升级 C++20 + README 更新编译器要求 | ✅ 已完成 | — |
 
 ### 批次 2 — 清理 + 质量保障
 
