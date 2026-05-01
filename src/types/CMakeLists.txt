@@ -1,32 +1,20 @@
 project(dstools-types)
 
-add_library(${PROJECT_NAME} INTERFACE)
-add_library(dstools-types::dstools-types ALIAS ${PROJECT_NAME})
-
-target_include_directories(${PROJECT_NAME} INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+dstools_add_library(${PROJECT_NAME}
+    INTERFACE
+    NAMESPACE dstools-types::dstools-types
+    EXPORT_SET ${PROJECT_NAME}Targets
 )
 
-# Export/Install so downstream export sets can reference this target
+# Package config for standalone consumption
 include(GNUInstallDirs)
-
-install(TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}Targets
-)
-
-install(DIRECTORY include/
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
+include(CMakePackageConfigHelpers)
 
 install(EXPORT ${PROJECT_NAME}Targets
     FILE ${PROJECT_NAME}Targets.cmake
     NAMESPACE ${PROJECT_NAME}::
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
 )
-
-# Package config file
-include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
     "${PROJECT_CMAKE_MODULES_DIR}/dstools-typesConfig.cmake.in"
