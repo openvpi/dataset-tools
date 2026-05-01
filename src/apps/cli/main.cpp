@@ -3,11 +3,9 @@
 
 #include <dsfw/Log.h>
 #include <dsfw/ISlicerService.h>
-#include <dsfw/IAsrService.h>
-#include <dsfw/IAlignmentService.h>
-#include <dsfw/IPitchService.h>
-#include <dsfw/ITranscriptionService.h>
 #include <dsfw/ServiceLocator.h>
+#include <dsfw/TaskProcessorRegistry.h>
+#include <dstools/ModelManager.h>
 
 #include <syscmdline/parser.h>
 #include <syscmdline/command.h>
@@ -48,87 +46,142 @@ static int cmdSlice(const ParseResult &result) {
 
 static int cmdAsr(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
+    QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto *service = dstools::ServiceLocator::get<dstools::IAsrService>();
-    if (!service) {
-        std::cerr << "Error: ASR service not available" << std::endl;
+    auto processor = dstools::TaskProcessorRegistry::instance().create(
+        QStringLiteral("asr"), QStringLiteral("funasr"));
+    if (!processor) {
+        std::cerr << "Error: ASR processor not registered" << std::endl;
         return 1;
     }
 
-    auto asrResult = service->recognize(input);
-    if (!asrResult) {
-        std::cerr << "Error: " << asrResult.error() << std::endl;
+    dstools::ModelManager mm;
+    dstools::ProcessorConfig config;
+    config["path"] = modelPath.toStdString();
+    auto initResult = processor->initialize(mm, config);
+    if (!initResult) {
+        std::cerr << "Error: " << initResult.error() << std::endl;
         return 1;
     }
 
-    std::cout << asrResult->text.toStdString() << std::endl;
+    dstools::TaskInput taskInput;
+    taskInput.audioPath = input;
+    auto processResult = processor->process(taskInput);
+    if (!processResult) {
+        std::cerr << "Error: " << processResult.error() << std::endl;
+        return 1;
+    }
+
+    if (processResult->layers.count(QStringLiteral("text"))) {
+        auto &textLayer = processResult->layers.at(QStringLiteral("text"));
+        if (textLayer.contains("text")) {
+            std::cout << textLayer["text"].get<std::string>() << std::endl;
+        }
+    }
     return 0;
 }
 
 static int cmdAlign(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
+    QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto *service = dstools::ServiceLocator::get<dstools::IAlignmentService>();
-    if (!service) {
-        std::cerr << "Error: alignment service not available" << std::endl;
+    auto processor = dstools::TaskProcessorRegistry::instance().create(
+        QStringLiteral("phoneme_alignment"), QStringLiteral("hubert-fa"));
+    if (!processor) {
+        std::cerr << "Error: alignment processor not registered" << std::endl;
         return 1;
     }
 
-    // Align requires phonemes but CLI input is simplified
-    std::vector<QString> phonemes;
-    auto alignResult = service->align(input, phonemes);
-    if (!alignResult) {
-        std::cerr << "Error: " << alignResult.error() << std::endl;
+    dstools::ModelManager mm;
+    dstools::ProcessorConfig config;
+    config["path"] = modelPath.toStdString();
+    auto initResult = processor->initialize(mm, config);
+    if (!initResult) {
+        std::cerr << "Error: " << initResult.error() << std::endl;
         return 1;
     }
 
-    for (const auto &phone : alignResult->phones) {
-        std::cout << phone.phone.toStdString() << "\t"
-                  << phone.startSec << "\t" << phone.endSec << std::endl;
+    dstools::TaskInput taskInput;
+    taskInput.audioPath = input;
+    auto processResult = processor->process(taskInput);
+    if (!processResult) {
+        std::cerr << "Error: " << processResult.error() << std::endl;
+        return 1;
+    }
+
+    if (processResult->layers.count(QStringLiteral("phoneme"))) {
+        auto &layer = processResult->layers.at(QStringLiteral("phoneme"));
+        std::cout << layer.dump(2) << std::endl;
     }
     return 0;
 }
 
 static int cmdPitch(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
+    QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto *service = dstools::ServiceLocator::get<dstools::IPitchService>();
-    if (!service) {
-        std::cerr << "Error: pitch service not available" << std::endl;
+    auto processor = dstools::TaskProcessorRegistry::instance().create(
+        QStringLiteral("pitch_extraction"), QStringLiteral("rmvpe"));
+    if (!processor) {
+        std::cerr << "Error: pitch processor not registered" << std::endl;
         return 1;
     }
 
-    auto pitchResult = service->extractPitch(input);
-    if (!pitchResult) {
-        std::cerr << "Error: " << pitchResult.error() << std::endl;
+    dstools::ModelManager mm;
+    dstools::ProcessorConfig config;
+    config["path"] = modelPath.toStdString();
+    auto initResult = processor->initialize(mm, config);
+    if (!initResult) {
+        std::cerr << "Error: " << initResult.error() << std::endl;
         return 1;
     }
 
-    std::cout << "Extracted " << pitchResult->f0.size() << " pitch frames"
-              << " (hop=" << pitchResult->hopMs << "ms)" << std::endl;
+    dstools::TaskInput taskInput;
+    taskInput.audioPath = input;
+    auto processResult = processor->process(taskInput);
+    if (!processResult) {
+        std::cerr << "Error: " << processResult.error() << std::endl;
+        return 1;
+    }
+
+    if (processResult->layers.count(QStringLiteral("pitch"))) {
+        auto &layer = processResult->layers.at(QStringLiteral("pitch"));
+        std::cout << layer.dump(2) << std::endl;
+    }
     return 0;
 }
 
 static int cmdTranscribe(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
+    QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto *service = dstools::ServiceLocator::get<dstools::ITranscriptionService>();
-    if (!service) {
-        std::cerr << "Error: transcription service not available" << std::endl;
+    auto processor = dstools::TaskProcessorRegistry::instance().create(
+        QStringLiteral("midi_transcription"), QStringLiteral("game"));
+    if (!processor) {
+        std::cerr << "Error: transcription processor not registered" << std::endl;
         return 1;
     }
 
-    auto transResult = service->transcribe(input);
-    if (!transResult) {
-        std::cerr << "Error: " << transResult.error() << std::endl;
+    dstools::ModelManager mm;
+    dstools::ProcessorConfig config;
+    config["path"] = modelPath.toStdString();
+    auto initResult = processor->initialize(mm, config);
+    if (!initResult) {
+        std::cerr << "Error: " << initResult.error() << std::endl;
         return 1;
     }
 
-    for (const auto &note : transResult->notes) {
-        std::cout << "Note: pitch=" << note.pitch
-                  << " start=" << note.startFrame
-                  << " end=" << note.endFrame
-                  << " vel=" << note.velocity << std::endl;
+    dstools::TaskInput taskInput;
+    taskInput.audioPath = input;
+    auto processResult = processor->process(taskInput);
+    if (!processResult) {
+        std::cerr << "Error: " << processResult.error() << std::endl;
+        return 1;
+    }
+
+    if (processResult->layers.count(QStringLiteral("midi"))) {
+        auto &layer = processResult->layers.at(QStringLiteral("midi"));
+        std::cout << layer.dump(2) << std::endl;
     }
     return 0;
 }
