@@ -17,9 +17,9 @@
 #include <iostream>
 
 #include "../GameInferKeys.h"
-#include "../GameInferService.h"
-#include <dsfw/ServiceLocator.h>
+#include <dsfw/TaskProcessorRegistry.h>
 #include <dsfw/Theme.h>
+#include <dstools/ModelManager.h>
 
 static QString replaceFileExtension(const QString &filePath, const QString &newExt) {
     const QFileInfo info(filePath);
@@ -27,10 +27,9 @@ static QString replaceFileExtension(const QString &filePath, const QString &newE
 }
 
 MainWidget::MainWidget(dstools::AppSettings *settings, QWidget *parent)
-    : QWidget(parent), m_settings(settings), m_service(nullptr), m_timeStepSeconds(0.01f), m_framesPerSecond(1.0 / 0.01) {
-    auto *service = new GameInferService(this);
-    dstools::ServiceLocator::set<dstools::ITranscriptionService>(service);
-    m_service = service;
+    : QWidget(parent), m_settings(settings), m_timeStepSeconds(0.01f), m_framesPerSecond(1.0 / 0.01) {
+    m_processor = dstools::TaskProcessorRegistry::instance().create(
+        QStringLiteral("midi_transcription"), QStringLiteral("game"));
 
     auto *mainLayout = new QVBoxLayout(this);
 
@@ -294,13 +293,17 @@ bool MainWidget::loadModel(const QString &modelPathText, int gpuIndex, std::stri
     QMetaObject::invokeMethod(
         this, [this] { setModelLoadingStatus("Model is loading, please wait 3-10 seconds!"); }, Qt::QueuedConnection);
 
-    auto result = m_service->loadModel(modelPathText, gpuIndex);
+    dstools::ModelManager mm;
+    dstools::ProcessorConfig modelConfig;
+    modelConfig["path"] = modelPathText.toStdString();
+    modelConfig["deviceId"] = gpuIndex;
+    auto result = m_processor->initialize(mm, modelConfig);
 
     if (result) {
+        m_initialized = true;
         QMetaObject::invokeMethod(
             this,
             [this, modelPathText] {
-                updateParameterValues();
                 setModelLoadingStatus("Model loaded successfully!");
                 m_settings->set(GameInferKeys::ModelPath, modelPathText);
             },
@@ -354,17 +357,6 @@ void MainWidget::updateLanguageCombo() {
     } else {
         m_languageCombo->setCurrentIndex(0);
     }
-}
-
-void MainWidget::updateParameterValues() const {
-    auto *gameService = dynamic_cast<GameInferService *>(m_service);
-    if (!gameService) return;
-
-    gameService->setSegThreshold(m_segThresholdSpin->value());
-    gameService->setSegRadiusFrames(m_segRadiusFrameSpin->value());
-    gameService->setEstThreshold(m_estThresholdSpin->value());
-    gameService->setD3pmTimesteps(m_segD3PMNStepsCombo->currentData().toInt());
-    gameService->setLanguage(m_languageCombo->currentData().toInt());
 }
 
 void MainWidget::resetToDefaults() const {
@@ -432,7 +424,7 @@ void MainWidget::onExportMidiTask() {
             return;
         }
 
-        if (!m_service->isModelLoaded()) {
+        if (!m_initialized) {
             std::string msg;
             if (!loadModel(modelPathText, gpuIndex, msg)) {
                 QMetaObject::invokeMethod(
@@ -446,19 +438,19 @@ void MainWidget::onExportMidiTask() {
             }
         }
 
-        auto *gameService = dynamic_cast<GameInferService *>(m_service);
-        if (gameService) {
-            gameService->setSegThreshold(segThreshold);
-            gameService->setSegRadiusFrames(segRadiusFrame);
-            gameService->setEstThreshold(estThreshold);
-            gameService->setLanguage(languageId);
-            gameService->setD3pmTimesteps(d3pmNSteps);
-        }
+        dstools::ProcessorConfig config;
+        config["segThreshold"] = segThreshold;
+        config["segRadiusFrames"] = segRadiusFrame;
+        config["estThreshold"] = estThreshold;
+        config["language"] = languageId;
+        config["d3pmTimesteps"] = d3pmNSteps;
+        config["tempo"] = tempo;
+        config["outputMidiPath"] = outputMidiPath.toStdString();
 
-        auto result = m_service->exportMidi(wavPath, outputMidiPath, tempo,
-            [this](int progress) {
-                QMetaObject::invokeMethod(this, [this, progress] { m_audioRun->setProgress(progress); }, Qt::QueuedConnection);
-            });
+        dstools::TaskInput taskInput;
+        taskInput.audioPath = wavPath;
+        taskInput.config = config;
+        auto result = m_processor->process(taskInput);
 
         if (!result) {
             QMetaObject::invokeMethod(
@@ -542,7 +534,7 @@ void MainWidget::onAlignCsvTask() {
     m_runningTask = QtConcurrent::run([this, csvInputPath, savePath,
                                        segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId,
                                        modelPathText, gpuIndex] {
-        if (!m_service->isModelLoaded()) {
+        if (!m_initialized) {
             std::string msg;
             if (!loadModel(modelPathText, gpuIndex, msg)) {
                 QMetaObject::invokeMethod(
@@ -556,17 +548,21 @@ void MainWidget::onAlignCsvTask() {
             }
         }
 
-        auto *gameService = dynamic_cast<GameInferService *>(m_service);
-        if (gameService) {
-            gameService->setSegThreshold(segThreshold);
-            gameService->setSegRadiusFrames(segRadiusFrame);
-            gameService->setEstThreshold(estThreshold);
-            gameService->setLanguage(languageId);
-            gameService->setD3pmTimesteps(d3pmNSteps);
-        }
+        dstools::ProcessorConfig config;
+        config["segThreshold"] = segThreshold;
+        config["segRadiusFrames"] = segRadiusFrame;
+        config["estThreshold"] = estThreshold;
+        config["language"] = languageId;
+        config["d3pmTimesteps"] = d3pmNSteps;
+        config["csvPath"] = csvInputPath.toStdString();
+        config["savePath"] = savePath.toStdString();
 
-        auto result = m_service->alignCSV(csvInputPath, savePath,
-            [this](int progress) {
+        dstools::BatchInput batchInput;
+        batchInput.workingDir = csvInputPath;
+        batchInput.config = config;
+        auto result = m_processor->processBatch(batchInput,
+            [this](int current, int total, const QString &) {
+                const int progress = total > 0 ? (current * 100 / total) : 0;
                 QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
                                          Qt::QueuedConnection);
             });

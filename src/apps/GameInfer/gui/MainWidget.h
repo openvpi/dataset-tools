@@ -11,13 +11,14 @@
 #include <QWidget>
 
 #include <dsfw/AppSettings.h>
-#include <dsfw/ITranscriptionService.h>
+#include <dsfw/ITaskProcessor.h>
 #include <dstools/GpuSelector.h>
 #include <dstools/PathSelector.h>
 #include <dstools/RunProgressRow.h>
 
 #include <QFuture>
 #include <map>
+#include <memory>
 #include <string>
 
 /// @brief Central widget containing model path selection, GPU configuration,
@@ -60,7 +61,6 @@ private:
     void setupAlignGroup();
     void setupActionButtons();
     void setupProcessingGroup();
-    void updateParameterValues() const;
     void loadLanguagesFromConfig(const QString &modelPath);
     void updateLanguageCombo();
     void updateTimeStepInfo(const QString &modelPath);
@@ -93,8 +93,9 @@ private:
 
     QPushButton *m_resetParamsBtn;  ///< Reset parameters button.
 
-    dstools::AppSettings *m_settings;          ///< Application settings.
-    dstools::ITranscriptionService *m_service; ///< Transcription service instance.
+    dstools::AppSettings *m_settings;                        ///< Application settings.
+    std::unique_ptr<dstools::ITaskProcessor> m_processor;    ///< Task processor instance.
+    bool m_initialized = false;                              ///< Whether processor is initialized.
 
     std::map<int, std::string> m_languageIdToName; ///< Language ID to name mapping.
     std::map<std::string, int> m_languageNameToId; ///< Language name to ID mapping.
