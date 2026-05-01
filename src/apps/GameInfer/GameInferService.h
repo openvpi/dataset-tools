@@ -35,7 +35,7 @@ public:
     int targetSampleRate() const;
     float timestep() const;
     bool hasDur2bd() const;
-    const std::map<std::string, int> &languageMap() const;
+    std::map<std::string, int> languageMap() const;
 
     // Config helpers
     void loadLanguagesFromConfig(const std::filesystem::path &modelPath,

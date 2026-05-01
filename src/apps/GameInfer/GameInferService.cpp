@@ -62,7 +62,7 @@ bool GameInferService::hasDur2bd() const {
     return m_game->has_dur2bd();
 }
 
-const std::map<std::string, int> &GameInferService::languageMap() const {
+std::map<std::string, int> GameInferService::languageMap() const {
     std::lock_guard<std::mutex> lock(m_gameMutex);
     return m_game->get_language_map();
 }
