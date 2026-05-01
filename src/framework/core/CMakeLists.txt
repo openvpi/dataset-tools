@@ -24,6 +24,7 @@ set(DSFW_CORE_SOURCES
     src/LocalFileIOProvider.cpp
     src/Log.cpp
     src/CrashHandler.cpp
+    src/TaskProcessorRegistry.cpp
 )
 
 set(DSFW_CORE_HEADERS
@@ -48,6 +49,9 @@ set(DSFW_CORE_HEADERS
     include/dsfw/CommonKeys.h
     include/dsfw/Log.h
     include/dsfw/CrashHandler.h
+    include/dsfw/TaskTypes.h
+    include/dsfw/ITaskProcessor.h
+    include/dsfw/TaskProcessorRegistry.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})
