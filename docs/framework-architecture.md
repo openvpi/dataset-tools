@@ -132,11 +132,8 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 
 | 阶段 | 状态 |
 |------|------|
-| 内部拆分 (dsfw-core / dstools-domain) | ✅ 完成 |
 | 接口泛化 (DocumentFormat/ModelType 枚举) | ⏳ 待做 |
-| 命名空间和头文件路径迁移 | ✅ 完成 |
 | 独立仓库 | ⏳ 待做 |
-| AppShell 统一壳迁移 | ✅ 完成 |
 
 ---
 
