@@ -8,7 +8,7 @@
 
 | 维度 | 选型 |
 |------|------|
-| 语言 | C++17 |
+| 语言 | C++20 |
 | GUI | Qt 6.8+ (Core, Gui, Widgets, Svg, Network) |
 | 推理 | ONNX Runtime (DirectML / CUDA / CPU) |
 | 构建 | CMake >= 3.17 + vcpkg |

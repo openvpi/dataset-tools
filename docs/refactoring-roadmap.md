@@ -6,7 +6,7 @@
 >
 > **范围**: 在本仓库内完成。所有模块作为 CMake 子目录共存。
 >
-> **C++ 标准**: 允许 C++20（当前 C++17，已有 `std::filesystem` 使用）。
+> **C++ 标准**: 允许 C++20（当前 C++20，已有 `std::filesystem` 使用）。
 
 ---
 
@@ -164,15 +164,90 @@ Doxyfile 已配置，23 个框架头文件已有 Doxygen 注释。添加 CI step
 
 在 `examples/` 创建最小非 DiffSinger 应用，演示 dsfw 框架独立使用。当有外部用户需要参考时再做。
 
-### F.2 Undo/Redo 迁移 — P3, L (1-3d)
+### ~~F.2 Undo/Redo 迁移~~ — 取消
 
-PhonemeLabeler / PitchLabeler 现有自定义实现工作正常。当需要重构这些 app 时顺便迁移到 dsfw UndoStack，不单独排期。
+dsfw::UndoStack 无消费者，所有 app 直接用 QUndoStack。Phase G.4 中删除 dsfw::UndoStack。
+
+---
+
+## Phase G — 任务处理器架构 (P1)
+
+> 详细设计见 [task-processor-design.md](task-processor-design.md)
+>
+> **目标**：每个处理阶段可接入 N 种模型实现，I/O 统一为 ds-format 的 layer 结构。
+> 统一 ITaskProcessor 替代 4 个 per-domain 服务接口，所有模型通过 ModelManager 管理。
+
+### G.1 死代码清理 — P1, S (2-4h)
+
+删除零消费者的基础设施。互不依赖，可全部并行。
+
+| 目标 | 涉及文件 |
+|------|---------|
+| 删除 EventBus | `EventBus.h`, `EventBus.cpp` |
+| 删除 PluginManager + IStepPlugin | `PluginManager.h/.cpp`, `IStepPlugin.h` |
+| 删除 UpdateChecker | `UpdateChecker.h/.cpp` |
+| 删除 RecentFiles | `RecentFiles.h/.cpp` |
+| 删除 dsfw::UndoStack + dsfw::ICommand | `UndoStack.h/.cpp`, `ICommand.h` |
+| 删除 IDocumentFormat + IDocument::format() | `IDocumentFormat.h`, 修改 `IDocument.h` 和 `DsDocumentAdapter.h/.cpp` |
+| 删除 IPageProgress | `IPageProgress.h` |
+| IPageActions 删除死方法 | `IPageActions.h`: 删除 `editActions()`, `viewActions()`, `toolActions()`, `save()` 及所有 override |
+| IPageLifecycle 激活 onShutdown/onWorkingDirectoryChanged | `AppShell.cpp`: 关闭时 dispatch onShutdown，setWorkingDirectory 后 dispatch onWorkingDirectoryChanged |
+| IModelManager 瘦身 | `IModelManager.h`: `setMemoryLimit/memoryLimit/currentMemoryUsage/status/loadedModels/registerProvider` 降级为 ModelManager 非虚方法 |
+| 更新 architecture.md 模块图 | 移除已删除组件 |
+
+### G.2 任务处理器基础设施 — P1, M (1-2d)
+
+新增文件，不破坏现有代码。
+
+| # | 任务 | 涉及文件 | 并行 |
+|---|------|---------|------|
+| 1 | 定义 `LayerData`, `TaskInput`, `TaskOutput`, `TaskSpec`, `BatchInput`, `BatchOutput` 数据类型 | `src/framework/core/include/dsfw/TaskTypes.h` | ✅ |
+| 2 | 定义 `ITaskProcessor` 接口（含 `process()` + `processBatch()` + `capabilities()`） | `src/framework/core/include/dsfw/ITaskProcessor.h` | ✅ |
+| 3 | 实现 `TaskProcessorRegistry`（单例 + Essentia 式 `Registrar<T>` 自注册） | `src/framework/core/include/dsfw/TaskProcessorRegistry.h`, `.cpp` | 依赖 #2 |
+| 4 | `DsProjectDefaults` 添加 `std::map<QString, TaskModelConfig> taskModels`（兼容旧字段解析） | `DsProject.h/.cpp` | ✅ |
+| 5 | 单元测试：TaskProcessorRegistry 注册/创建/列表 | `src/tests/framework/TestTaskProcessorRegistry.cpp` | 依赖 #3 |
+
+### G.3 处理器迁移 — P1, L (3-5d)
+
+逐个迁移，每个可独立完成和提交。旧服务接口并存，UI 页面逐步切换。
+
+| # | 任务 | 工作量 | 涉及文件 | 并行 | 前置 | 说明 |
+|---|------|--------|---------|------|------|------|
+| 1 | **RmvpePitchProcessor** — 最简单，验证设计 | S (2-4h) | 新建 `src/libs/rmvpepitch/RmvpePitchProcessor.h/.cpp` | ✅ | G.2 | 单模型，process() 返回 f0 数据；processBatch() 逐文件提取 |
+| 2 | **FunAsrProcessor** — 简单，单模型 | S (2-4h) | 新建 `src/libs/lyricfa/FunAsrProcessor.h/.cpp` | ✅ | G.2 | process() 返回 sentence 层；同时修复 LyricFAPage 绕过服务层的问题 |
+| 3 | **HubertAlignmentProcessor** — 中等，有 G2P 依赖和 capabilities | M (4-8h) | 新建 `src/libs/hubertfa/HubertAlignmentProcessor.h/.cpp` | ✅ | G.2 | capabilities() 返回 language/nonSpeechPh 配置；IG2PProvider 构造注入 |
+| 4 | **GameMidiProcessor** — 最复杂，多功能 | L (1-2d) | 新建 `src/libs/gameinfer/GameMidiProcessor.h/.cpp` | ✅ | G.2 | capabilities() 返回 5 个调参项；processBatch() 用 Game::alignCSV() 原生批量接口；注册为单个 ModelTypeId（不拆子模型） |
+
+每个处理器完成后需验证：
+- [ ] `TaskProcessorRegistry::Registrar<T>` 自注册生效
+- [ ] `capabilities()` 返回正确的参数描述
+- [ ] `initialize()` 通过 ModelManager 加载模型
+- [ ] `process()` 单条处理正确
+- [ ] `processBatch()` 批量处理正确（如适用）
+- [ ] 旧服务接口仍正常工作（并存期间）
+
+### G.4 集成与清理 — P1, L (2-3d)
+
+| # | 任务 | 工作量 | 涉及文件 | 前置 |
+|---|------|--------|---------|------|
+| 1 | CLI 接入 TaskProcessorRegistry（替代 5 个 ServiceLocator::get 调用）| M (4-8h) | `src/apps/cli/main.cpp` | G.3 全部 |
+| 2 | DiffSingerLabeler 页面切换到 TaskProcessorRegistry | L (1-2d) | `GameAlignPage.cpp`, `BuildDsPage.cpp`, `HubertFAPage.cpp`, `LyricFAPage.cpp` | G.3 全部 |
+| 3 | GameInfer app 切换（消除 dynamic_cast，用 capabilities + config） | M (4-8h) | `MainWidget.cpp`, `GameInferService.h/.cpp` | G.3.4 |
+| 4 | 删除旧服务接口 | S (2-4h) | `IAlignmentService.h`, `IAsrService.h`, `IPitchService.h`, `ITranscriptionService.h` + 所有旧实现 | #1-3 全部 |
+| 5 | 接线 IExportFormat 到 DiffSingerLabeler | S (2-4h) | `src/apps/labeler/` | 独立 |
+| 6 | 接线 IQualityMetrics 到 PipelineRunner（可选） | S (2-4h) | `src/domain/` | 独立 |
 
 ---
 
 ## 执行优先级
 
 ```
+P1 — 架构演进（核心价值）
+  G.1  死代码清理 (S)              — 减少维护负担
+  G.2  任务处理器基础设施 (M)      — ITaskProcessor + Registry + 数据类型
+  G.3  处理器迁移 (L)              — 逐个迁移 4 个处理器
+  G.4  集成与清理 (L)              — 切换消费者 + 删除旧接口
+
 P2 — 有实际价值
   A.1  ServiceLocator 类型安全 (S) — ✅ 已完成
   A.2  服务接口一致性修复 (S)     — ✅ 已完成
@@ -189,16 +264,18 @@ P3 — 按需拾取
   D.2  Doxygen CI (S)
   D.3  跨平台包分发 (L)
   F.1  示例项目 (M)
-  F.2  Undo/Redo 迁移 (L)
 ```
 
 ## 建议执行顺序
 
 ```
 批次 1: A.1 + A.2 + A.3 + E.1 — ✅ 全部完成
-批次 2: B.1 (领域测试) + D.1 (模块 CI) — 质量保障
-批次 3: B.2 + B.3 + C.2 — 小修小补，随手做
-批次 4: 其余按需
+批次 2: G.1 (死代码清理) + B.1 (领域测试) + D.1 (模块 CI) — 清理 + 质量保障
+批次 3: G.2 (任务处理器基础设施) — 新增，不破坏现有代码
+批次 4: G.3 (处理器迁移: RMVPE → FunASR → HuBERT → GAME) — 逐个迁移
+批次 5: G.4 (集成: CLI → Labeler → GameInfer → 删除旧接口)
+批次 6: B.2 + B.3 + C.2 — 小修小补
+批次 7: 其余按需
 ```
 
 ---
@@ -213,6 +290,7 @@ P3 — 按需拾取
 | #28 | TranscriptionPipeline 可测试性 | B.1 | ⏳ 主要障碍已清除 |
 | #39 | God class 拆分 | C.1 | 📋 按需 |
 | #40 | 魔法数字 | C.2 | 📋 按需 |
+| — | 任务处理器架构 | G.1-G.4 | 📋 设计完成，待执行 |
 
 已关闭: #21 (CI 矩阵), #27 (clang-tidy), #37 (Slicer 合并), #38 (MinLabel 提取)
 
@@ -222,15 +300,20 @@ P3 — 按需拾取
 
 | 编号 | 描述 | 严重性 |
 |------|------|--------|
-| ~~TD-01~~ | ~~ServiceLocator 使用 void* 存储，类型不匹配时 UB~~ | ✅ 已修复 |
-| ~~TD-02~~ | ~~IAsrService 缺模型生命周期虚方法，与其他服务接口不一致~~ | ✅ 已修复 |
+| ~~TD-01~~ | ~~ServiceLocator void* UB~~ | ✅ 已修复 |
+| ~~TD-02~~ | ~~IAsrService 缺虚方法~~ | ✅ 已修复 |
 | TD-03 | 4 个领域模块缺测试 | 中 |
 | TD-04 | 部分文件操作缺错误分支 | 低 |
 | TD-05 | 2 个文件超 600 行 | 低 |
 | TD-06 | `4096` buffer size 3 处重复 | 低 |
 | TD-07 | 5 处 TODO/FIXME | 低 |
-| ~~TD-08~~ | ~~IInferenceEngine::load() 非纯虚，子类可意外不实现~~ | ✅ 已修复 |
+| ~~TD-08~~ | ~~IInferenceEngine::load() 非纯虚~~ | ✅ 已修复 |
 | ~~TD-09~~ | ~~CrashHandler 仅 1/6 app 启用~~ | ✅ 已修复 |
+| TD-10 | 11 个死接口/死基础设施占用维护成本 | 中 |
+| TD-11 | 4 个服务各自管理模型，ModelManager 闲置 | 高 |
+| TD-12 | DsProjectDefaults 硬编码 4 个模型路径字段 | 中 |
+| TD-13 | GameInfer UI 通过 dynamic_cast 绕过接口调用 5 个 setter | 中 |
+| TD-14 | LyricFAPage / SlicerPage 绕过服务层直接创建引擎 | 中 |
 
 > 更新时间：2026-05-01
 
@@ -249,33 +332,52 @@ P3 — 按需拾取
 | 3 | **A.3** CrashHandler 全量启用 | ✅ 已完成 | TD-09 |
 | 4 | **E.1** CMake 升级 C++20 + README 更新编译器要求 | ✅ 已完成 | — |
 
-### 批次 2 — 质量保障
+### 批次 2 — 清理 + 质量保障
+
+| # | 任务 | 工作量 | 涉及文件 | 并行 |关联 |
+|---|------|--------|---------|------|------|
+| 5 | **G.1** 死代码清理（11 个死接口/基础设施） | S (2-4h) | 见 Phase G.1 详细清单 | ✅ | TD-10 |
+| 6 | **B.1** 补齐领域模块单元测试 | L (1-3d) | `src/tests/domain/` | ✅ | TD-03, #11, #28 |
+| 7 | **D.1** 框架模块独立编译 CI 验证 | M (2-8h) | `.github/workflows/verify-modules.yml` | ✅ | #15 |
+
+### 批次 3 — 任务处理器基础设施
+
+| # | 任务 | 工作量 | 涉及文件 | 并行 | 关联 |
+|---|------|--------|---------|------|------|
+| 8 | **G.2** 定义 TaskTypes + ITaskProcessor + TaskProcessorRegistry + DsProjectDefaults 演进 | M (1-2d) | 见 Phase G.2 详细清单 | — | TD-11, TD-12 |
+
+### 批次 4 — 处理器迁移（4 个任务全部可并行）
+
+| # | 任务 | 工作量 | 涉及文件 | 并行 | 关联 |
+|---|------|--------|---------|------|------|
+| 9 | **G.3.1** RmvpePitchProcessor | S (2-4h) | `src/libs/rmvpepitch/` | ✅ | TD-11 |
+| 10 | **G.3.2** FunAsrProcessor | S (2-4h) | `src/libs/lyricfa/` | ✅ | TD-11, TD-14 |
+| 11 | **G.3.3** HubertAlignmentProcessor | M (4-8h) | `src/libs/hubertfa/` | ✅ | TD-11 |
+| 12 | **G.3.4** GameMidiProcessor | L (1-2d) | `src/libs/gameinfer/` | ✅ | TD-11, TD-13 |
+
+### 批次 5 — 集成与清理
 
 | # | 任务 | 工作量 | 涉及文件 | 并行 | 前置 | 关联 |
 |---|------|--------|---------|------|------|------|
-| 5 | **B.1** 补齐领域模块单元测试 (CsvToDsConverter, TextGridToCsv, PitchProcessor, TranscriptionPipeline) | L (1-3d) | `src/tests/domain/` 新增 4 个测试文件 + `src/tests/data/` 样本数据 | ✅ 可并行 | — | TD-03, #11, #28 |
-| 6 | **D.1** 创建 `verify-modules.yml` CI 矩阵验证各框架模块独立编译 | M (2-8h) | `.github/workflows/verify-modules.yml` | ✅ 可并行 | — | #15 |
+| 13 | **G.4.1** CLI 接入 TaskProcessorRegistry | M (4-8h) | `src/apps/cli/main.cpp` | ✅ | 批次 4 | — |
+| 14 | **G.4.2** DiffSingerLabeler 页面切换 | L (1-2d) | `src/apps/labeler/pages/` | ✅ | 批次 4 | TD-14 |
+| 15 | **G.4.3** GameInfer app 切换（消除 dynamic_cast） | M (4-8h) | `src/apps/GameInfer/` | ✅ | G.3.4 | TD-13 |
+| 16 | **G.4.4** 删除旧服务接口 (IAlignmentService 等 4 个) | S (2-4h) | `src/framework/core/` + 旧实现 | — | #13-15 | TD-11 |
+| 17 | **G.4.5** 接线 IExportFormat / IQualityMetrics | S (2-4h) | `src/apps/labeler/` | ✅ | 独立 | — |
 
-> 批次 2 两个任务互不依赖，可同时进行。不依赖批次 1（但建议批次 1 先合入以减少 CI 噪音）。
+### 批次 6 — 小修小补
 
-### 批次 3 — 小修小补
+| # | 任务 | 工作量 | 并行 | 关联 |
+|---|------|--------|------|------|
+| 18 | **B.2** TODO/FIXME 清理 (5 处) | S (<2h) | ✅ | TD-07 |
+| 19 | **B.3** 文件操作错误处理补全 | S (<2h) | ✅ | TD-04 |
+| 20 | **C.2** 魔法数字常量化 | S (<2h) | ✅ | TD-06 |
 
-| # | 任务 | 工作量 | 涉及文件 | 并行 | 前置 | 关联 |
-|---|------|--------|---------|------|------|------|
-| 7 | **B.2** TODO/FIXME 清理 (5 处) | S (<2h) | `GameInferPage.cpp`, `BuildDsPage.cpp`, `game-infer/tests/main.cpp`, `DsItemManager.cpp` | ✅ 可并行 | — | TD-07 |
-| 8 | **B.3** 文件操作错误处理补全 (file.open 缺 else 分支) | S (<2h) | 散布于 `src/domain/`, `src/apps/` | ✅ 可并行 | — | TD-04 |
-| 9 | **C.2** 魔法数字常量化 (`4096` buffer 3 处重复) | S (<2h) | `WaveformWidget.cpp`, `PhonemeLabelerPage.cpp`, `AudioFileLoader.cpp` | ✅ 可并行 | — | TD-06, #40 |
+### 批次 7 — 按需拾取
 
-> 批次 3 三个任务互不依赖，可同时进行。无前置依赖。
-
-### 批次 4 — 按需拾取（无固定顺序）
-
-| # | 任务 | 工作量 | 并行 | 前置 | 关联 |
-|---|------|--------|------|------|------|
-| 10 | **C.1** PitchLabelerPage (781行) / PhonemeLabelerPage (630行) 拆分 | L (1-3d) | ✅ 两个文件可并行拆 | — | TD-05, #39 |
-| 11 | **D.2** Doxygen CI (生成文档 + 发布 GitHub Pages) | S (<2h) | ✅ 独立 | — | #16 |
-| 12 | **D.3** 跨平台包分发 (release.yml: ZIP/DMG/AppImage) | L (1-3d) | ✅ 独立 | — | — |
-| 13 | **F.1** 示例项目 (非 DiffSinger 应用) | M (2-8h) | ✅ 独立 | — | — |
-| 14 | **F.2** Undo/Redo 迁移 (PitchLabeler → dsfw UndoStack) | L (1-3d) | ✅ 独立 | — | — |
-
-> 批次 4 任务均独立，有需求时随时拾取，不阻塞其他工作。
+| # | 任务 | 工作量 | 关联 |
+|---|------|--------|------|
+| 21 | **C.1** 大文件拆分 (PitchLabelerPage/PhonemeLabelerPage) | L (1-3d) | TD-05 |
+| 22 | **D.2** Doxygen CI | S (<2h) | #16 |
+| 23 | **D.3** 跨平台包分发 | L (1-3d) | — |
+| 24 | **F.1** 示例项目 | M (2-8h) | — |

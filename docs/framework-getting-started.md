@@ -1,13 +1,13 @@
 # dsfw Getting Started Guide
 
-A practical guide to building desktop applications with the **dsfw** framework — a C++17/Qt6 application framework providing unified window shells, theme management, settings persistence, and service-oriented architecture.
+A practical guide to building desktop applications with the **dsfw** framework — a C++20/Qt6 application framework providing unified window shells, theme management, settings persistence, and service-oriented architecture.
 
 ## 1. Prerequisites
 
 | Component | Minimum Version | Notes |
 |-----------|----------------|-------|
 | **Qt** | 6.8+ | Modules: Core, Gui, Widgets, Svg, Network |
-| **C++ compiler** | C++17 | MSVC 2022, GCC, Clang |
+| **C++ compiler** | C++20 | MSVC 2022, GCC, Clang |
 | **CMake** | 3.17+ | 3.20+ recommended |
 | **vcpkg deps** | — | `nlohmann_json`, `QWindowKit` |
 

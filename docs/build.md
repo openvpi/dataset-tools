@@ -7,7 +7,7 @@
 | 组件 | 版本要求 | 说明 |
 |------|---------|------|
 | Qt | ≥ 6.8.0 | Core, Gui, Widgets, Svg, Network, Concurrent |
-| C++ 编译器 | C++17 | MSVC 2022 / GCC / Clang |
+| C++ 编译器 | C++20 | MSVC 2022 / GCC / Clang |
 | CMake | ≥ 3.17 | 推荐 ≥ 3.20 |
 | Ninja | 推荐 | 可选，但 CI 使用 Ninja |
 
