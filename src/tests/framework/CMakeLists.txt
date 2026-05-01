@@ -11,6 +11,7 @@ set(DSFW_TESTS
     TestLocalFileIOProvider
     TestIDocument
     TestIFileIOProviderMock
+    TestTaskProcessorRegistry
 )
 
 foreach(test_name ${DSFW_TESTS})
