@@ -23,7 +23,6 @@ set(DSFW_CORE_SOURCES
     src/ServiceLocator.cpp
     src/LocalFileIOProvider.cpp
     src/Log.cpp
-    src/UndoStack.cpp
     src/CrashHandler.cpp
 )
 
@@ -49,7 +48,6 @@ set(DSFW_CORE_HEADERS
     include/dsfw/InferenceModelProvider.h
     include/dsfw/CommonKeys.h
     include/dsfw/Log.h
-    include/dsfw/UndoStack.h
     include/dsfw/CrashHandler.h
 )
 
