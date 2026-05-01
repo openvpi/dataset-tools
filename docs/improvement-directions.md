@@ -8,12 +8,12 @@
 
 | 方向 | 路线图 | 状态 |
 |------|--------|------|
-| ServiceLocator void* → std::any 类型安全 | A.1 | 📋 待执行 |
-| 服务接口一致性修复 (IAsrService 补齐虚方法 + IInferenceEngine::load 纯虚化) | A.2 | 📋 待执行 |
-| CrashHandler 所有 app 启用 | A.3 | 📋 待执行 |
+| ServiceLocator void* → std::any 类型安全 | A.1 | ✅ 已完成 |
+| 服务接口一致性修复 (IAsrService 补齐虚方法 + IInferenceEngine::load 纯虚化) | A.2 | ✅ 已完成 |
+| CrashHandler 所有 app 启用 | A.3 | ✅ 已完成 |
 | 补齐领域模块单元测试 | B.1 | ⏳ 4 个模块待测 |
 | 框架模块独立编译 CI 验证 | D.1 | ⏳ 待创建 workflow |
-| 升级 C++20 | E.1 | 📋 待执行 |
+| 升级 C++20 | E.1 | ✅ 已完成 |
 
 ## P3 — 按需拾取
 
