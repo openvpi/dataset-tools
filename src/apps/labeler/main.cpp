@@ -9,8 +9,11 @@
 
 #include <dstools/AppInit.h>
 #include <dstools/DsProject.h>
+#include <dstools/ExportFormats.h>
+#include <dstools/QualityMetrics.h>
 #include <dsfw/AppShell.h>
 #include <dsfw/IPageActions.h>
+#include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
 
 #include "CleanupDialog.h"
@@ -41,6 +44,12 @@ int main(int argc, char *argv[]) {
 
     static constexpr int kDefaultWidth = 1400;
     static constexpr int kDefaultHeight = 900;
+
+    // Register export formats and quality metrics
+    static dstools::HtsLabelExportFormat htsExport;
+    static dstools::QualityMetrics qualityMetrics;
+    dstools::ServiceLocator::set<dstools::IExportFormat>(&htsExport);
+    dstools::ServiceLocator::set<dstools::IQualityMetrics>(&qualityMetrics);
 
     dsfw::AppShell shell;
     shell.setWindowTitle(QObject::tr("DiffSinger Labeler"));
