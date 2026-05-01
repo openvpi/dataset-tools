@@ -317,8 +317,17 @@ int main(int argc, char *argv[]) {
     game.set_d3pm_ts(d3pmTs);
 
     if (!language.empty()) {
-        // TODO: Map language string to ID from config.json languages map
-        game.set_language(0);
+        const auto &langMap = game.get_language_map();
+        auto it = langMap.find(language);
+        if (it != langMap.end()) {
+            game.set_language(it->second);
+        } else {
+            std::cerr << "Unknown language: " << language << ". Available:";
+            for (const auto &[name, id] : langMap)
+                std::cerr << " " << name;
+            std::cerr << std::endl;
+            return 1;
+        }
     }
 
     std::cout << "Applied configuration:" << std::endl;

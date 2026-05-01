@@ -86,7 +86,7 @@ void BuildDsPage::buildUi() {
         };
 
         // Pass nullptr as f0Callback to use the built-in autocorrelation fallback.
-        // TODO: Implement proper RMVPE-based F0 extraction when audio decode integration is ready.
+        // NOTE: RMVPE-based F0 extraction is handled by RmvpePitchProcessor via TaskProcessorRegistry.
         QString error;
         if (!dstools::CsvToDsConverter::convert(opts, nullptr, progressCb, error)) {
             m_log->append(tr("<b>Error:</b> %1").arg(error));

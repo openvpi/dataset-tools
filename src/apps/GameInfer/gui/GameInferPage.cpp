@@ -57,5 +57,5 @@ void GameInferPage::handleDragEnter(QDragEnterEvent *event) {
 
 void GameInferPage::handleDrop(QDropEvent *event) {
     Q_UNUSED(event);
-    // TODO: Forward file paths to MainWidget for processing
+    // NOTE: Drag-and-drop forwarding requires a public API on MainWidget (e.g. addFiles).
 }

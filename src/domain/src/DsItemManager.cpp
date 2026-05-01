@@ -1,9 +1,25 @@
 #include <dstools/DsItemManager.h>
 #include <dsfw/JsonHelper.h>
 
+#include <chrono>
+#include <ctime>
 #include <filesystem>
 
 namespace dstools {
+
+    static std::string currentIsoTimestamp() {
+        const auto now = std::chrono::system_clock::now();
+        const auto t = std::chrono::system_clock::to_time_t(now);
+        std::tm tm{};
+#ifdef _WIN32
+        localtime_s(&tm, &t);
+#else
+        localtime_r(&t, &tm);
+#endif
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &tm);
+        return buf;
+    }
 
     Result<void> DsItemManager::load(const std::filesystem::path &dsitemPath, DsItemRecord &record) {
         auto jsonResult = JsonHelper::loadFile(dsitemPath);
@@ -55,7 +71,7 @@ namespace dstools {
         if (!loadResult)
             return Err(loadResult.error());
         record.status = DsItemRecord::Status::Completed;
-        record.timestamp = ""; // TODO: add timestamp
+        record.timestamp = currentIsoTimestamp();
         return save(record, dsitemPath);
     }
 
@@ -66,7 +82,7 @@ namespace dstools {
             return Err(loadResult.error());
         record.status = DsItemRecord::Status::Failed;
         record.errorMsg = errorMsg;
-        record.timestamp = ""; // TODO: add timestamp
+        record.timestamp = currentIsoTimestamp();
         return save(record, dsitemPath);
     }
 
