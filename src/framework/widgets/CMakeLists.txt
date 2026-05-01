@@ -11,6 +11,10 @@ set(DSFW_WIDGETS_SOURCES
     src/ViewportController.cpp
     src/RunProgressRow.cpp
     src/FileProgressTracker.cpp
+    src/PropertyEditor.cpp
+    src/SettingsDialog.cpp
+    src/LogViewer.cpp
+    src/ProgressDialog.cpp
 )
 
 set(DSFW_WIDGETS_HEADERS
@@ -23,6 +27,10 @@ set(DSFW_WIDGETS_HEADERS
     include/dsfw/widgets/ViewportController.h
     include/dsfw/widgets/RunProgressRow.h
     include/dsfw/widgets/FileProgressTracker.h
+    include/dsfw/widgets/PropertyEditor.h
+    include/dsfw/widgets/SettingsDialog.h
+    include/dsfw/widgets/LogViewer.h
+    include/dsfw/widgets/ProgressDialog.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${DSFW_WIDGETS_SOURCES} ${DSFW_WIDGETS_HEADERS})
