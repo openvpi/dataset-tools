@@ -10,7 +10,18 @@
 
 #include <QString>
 
+#include <map>
+
 namespace dstools {
+
+/// @brief Configuration for a task's model backend.
+struct TaskModelConfig {
+    QString processorId;        ///< Processor implementation (e.g. "hubert-fa", "rmvpe").
+    QString modelPath;          ///< Path to model file or directory.
+    QString provider = "cpu";   ///< Execution provider: "cpu", "dml", or "cuda".
+    int deviceId = 0;           ///< GPU device index.
+    nlohmann::json extra;       ///< Engine-specific parameters.
+};
 
 /// Default model paths and inference parameters stored in a .dsproj file.
 struct DsProjectDefaults {
@@ -21,6 +32,7 @@ struct DsProjectDefaults {
     int gpuIndex = -1;  // -1 = CPU
     int hopSize = 512;
     int sampleRate = 44100;
+    std::map<QString, TaskModelConfig> taskModels;  ///< Task name → model config.
 };
 
 /// In-memory representation of a .dsproj project file.

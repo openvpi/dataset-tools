@@ -59,6 +59,32 @@ DsProject DsProject::load(const QString &path, QString &error) {
                 proj.m_defaults.gameModelPath = fromStd(models["game"].get<std::string>());
             if (models.contains("rmvpe") && models["rmvpe"].is_string())
                 proj.m_defaults.rmvpeModelPath = fromStd(models["rmvpe"].get<std::string>());
+
+            // Parse new object-format task model configs
+            for (auto it = models.begin(); it != models.end(); ++it) {
+                if (it->is_object()) {
+                    const auto &obj = *it;
+                    TaskModelConfig cfg;
+                    if (obj.contains("processor") && obj["processor"].is_string())
+                        cfg.processorId = fromStd(obj["processor"].get<std::string>());
+                    if (obj.contains("path") && obj["path"].is_string())
+                        cfg.modelPath = fromStd(obj["path"].get<std::string>());
+                    if (obj.contains("provider") && obj["provider"].is_string())
+                        cfg.provider = fromStd(obj["provider"].get<std::string>());
+                    if (obj.contains("deviceId") && obj["deviceId"].is_number_integer())
+                        cfg.deviceId = obj["deviceId"].get<int>();
+
+                    // Store remaining keys in extra
+                    for (auto eit = obj.begin(); eit != obj.end(); ++eit) {
+                        if (eit.key() != "processor" && eit.key() != "path" &&
+                            eit.key() != "provider" && eit.key() != "deviceId") {
+                            cfg.extra[eit.key()] = eit.value();
+                        }
+                    }
+
+                    proj.m_defaults.taskModels[fromStd(it.key())] = std::move(cfg);
+                }
+            }
         }
 
         if (def.contains("gpuIndex") && def["gpuIndex"].is_number_integer())
@@ -106,6 +132,18 @@ bool DsProject::save(const QString &path, QString &error) const {
         models["game"] = qstr(m_defaults.gameModelPath);
     if (!m_defaults.rmvpeModelPath.isEmpty())
         models["rmvpe"] = qstr(m_defaults.rmvpeModelPath);
+
+    // Write new object-format task model configs
+    for (const auto &[taskName, cfg] : m_defaults.taskModels) {
+        nlohmann::json obj = cfg.extra.is_object() ? cfg.extra : nlohmann::json::object();
+        if (!cfg.processorId.isEmpty())
+            obj["processor"] = qstr(cfg.processorId);
+        if (!cfg.modelPath.isEmpty())
+            obj["path"] = qstr(cfg.modelPath);
+        obj["provider"] = qstr(cfg.provider);
+        obj["deviceId"] = cfg.deviceId;
+        models[qstr(taskName)] = obj;
+    }
 
     def["models"] = models;
     def["gpuIndex"] = m_defaults.gpuIndex;
