@@ -1,8 +1,5 @@
 #pragma once
 
-/// @file OnnxModelBase.h
-/// @brief Shared base class for ONNX Runtime model wrappers.
-
 #include <dstools/ExecutionProvider.h>
 #include <dstools/OnnxEnv.h>
 
@@ -15,20 +12,26 @@
 
 namespace dstools::infer {
 
-    /// @brief Base class for single-session ONNX models.
     class OnnxModelBase {
     protected:
         std::unique_ptr<Ort::Session> m_session;
         Ort::MemoryInfo m_memoryInfo{Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)};
         Ort::AllocatorWithDefaultOptions m_allocator;
+        ExecutionProvider m_provider = ExecutionProvider::CPU;
+        int m_deviceId = 0;
 
-        /// @brief Create and store a session from model file.
+        OnnxModelBase() = default;
+        OnnxModelBase(ExecutionProvider provider, int deviceId)
+            : m_provider(provider), m_deviceId(deviceId) {}
+
+        bool loadSession(const std::filesystem::path &modelPath, std::string *errorMsg = nullptr);
         bool loadSession(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId,
                          std::string &errorMsg);
 
-        /// @brief Create a session into a custom target (for multi-session models).
         static bool loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
                                   ExecutionProvider provider, int deviceId, std::string &errorMsg);
+        bool loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
+                           std::string *errorMsg = nullptr);
 
     public:
         virtual ~OnnxModelBase() = default;
@@ -42,11 +45,14 @@ namespace dstools::infer {
         }
     };
 
-    /// @brief Mixin adding cancellable inference via Ort::RunOptions.
     class CancellableOnnxModel : public OnnxModelBase {
     protected:
-        std::mutex m_runMutex;
-        Ort::RunOptions *m_activeRunOptions = nullptr;
+        mutable std::mutex m_runMutex;
+        mutable Ort::RunOptions *m_activeRunOptions = nullptr;
+
+        CancellableOnnxModel() = default;
+        CancellableOnnxModel(ExecutionProvider provider, int deviceId)
+            : OnnxModelBase(provider, deviceId) {}
 
     public:
         void terminate();

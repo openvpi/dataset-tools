@@ -206,7 +206,7 @@
 
 ---
 
-### T-1.4 创建 OnnxModelBase 共享基类 [G8]
+### T-1.4 创建 OnnxModelBase 共享基类 [G8] ✅ 已完成
 
 **现状**: `GameModel`, `RmvpeModel`, `HfaModel` 三者重复代码：
 - `Ort::Session` 创建（平台 ifdef wstring vs c_str）

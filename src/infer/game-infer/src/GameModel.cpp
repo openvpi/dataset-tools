@@ -18,7 +18,8 @@ namespace Game
         return result;
     }
 
-    GameModel::GameModel() {}
+    GameModel::GameModel()
+        : CancellableOnnxModel(ExecutionProvider::CPU, 0) {}
 
     GameModel::~GameModel() = default;
 
@@ -75,19 +76,24 @@ namespace Game
         auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
         sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
 
-        auto loadSession = [&](const std::string &name, std::unique_ptr<Ort::Session> &session)
+        auto loadOneSession = [&](const std::string &name, std::unique_ptr<Ort::Session> &session)
         {
             const std::filesystem::path model_path = modelDir / name;
             if (!std::filesystem::exists(model_path)) {
                 msg = model_path.string() + " not exist!";
                 return false;
             }
+            try {
 #ifdef _WIN32
-            session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
+                session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
 #else
-            session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
+                session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
 #endif
-            return true;
+                return true;
+            } catch (const Ort::Exception &e) {
+                msg = e.what();
+                return false;
+            }
         };
 
         // Set default values from config or keep defaults
@@ -95,9 +101,9 @@ namespace Game
         m_seg_radius_seconds = config.value("seg_radius_seconds", 0.02f);
         m_est_threshold = config.value("est_threshold", 0.2f);
 
-        const bool coreLoaded = loadSession("encoder.onnx", sessEncoder) &&
-            loadSession("segmenter.onnx", sessSegmenter) && loadSession("estimator.onnx", sessEstimator) &&
-            loadSession("bd2dur.onnx", sessBd2dur);
+        const bool coreLoaded = loadOneSession("encoder.onnx", sessEncoder) &&
+            loadOneSession("segmenter.onnx", sessSegmenter) && loadOneSession("estimator.onnx", sessEstimator) &&
+            loadOneSession("bd2dur.onnx", sessBd2dur);
 
         if (!coreLoaded)
             return false;
@@ -116,7 +122,7 @@ namespace Game
         // dur2bd.onnx is optional (needed for align mode with known durations)
         const auto dur2bdPath = modelDir / "dur2bd.onnx";
         if (std::filesystem::exists(dur2bdPath)) {
-            loadSession("dur2bd.onnx", sessDur2bd);
+            loadOneSession("dur2bd.onnx", sessDur2bd);
         }
 
         return true;

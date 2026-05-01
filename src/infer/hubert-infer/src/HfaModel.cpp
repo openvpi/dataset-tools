@@ -6,29 +6,23 @@
 
 namespace HFA {
     HfaModel::HfaModel(const std::filesystem::path &model_Path, const ExecutionProvider provider, const int device_id)
-        : m_model_session(nullptr) {
-
-        auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
-
-        try {
-#ifdef _WIN32
-            m_model_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_Path.wstring().c_str(), sessionOptions);
-#else
-            m_model_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_Path.c_str(), sessionOptions);
+        : OnnxModelBase(provider, device_id) {
+#if defined(_M_IX86) || defined(__i386__)
+        m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 #endif
-        } catch (const Ort::Exception &e) {
-            std::cout << "Failed to create session: " << e.what() << std::endl;
+        std::string loadError;
+        if (!loadSession(model_Path, &loadError)) {
+            std::cout << "Failed to create session: " << loadError << std::endl;
         }
     }
 
     HfaModel::~HfaModel() {
-        m_model_session.reset();
         m_input_name = {};
     }
 
     bool HfaModel::forward(const std::vector<std::vector<float>> &input_data, HfaLogits &result,
                            std::string &msg) const {
-        if (!m_model_session) {
+        if (!m_session) {
             msg = "Model session not initialized";
             return false;
         }
@@ -60,7 +54,7 @@ namespace HFA {
             const std::vector<const char *> output_names = {m_predictor_output_name[0], m_predictor_output_name[1],
                                                             m_predictor_output_name[2]};
 
-            auto predictor_outputs = m_model_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1,
+            auto predictor_outputs = m_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1,
                                                           output_names.data(), output_names.size());
 
             auto parse_3d_output = [](Ort::Value &tensor) {

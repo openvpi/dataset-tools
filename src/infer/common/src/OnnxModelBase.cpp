@@ -2,6 +2,10 @@
 
 namespace dstools::infer {
 
+    bool OnnxModelBase::loadSession(const std::filesystem::path &modelPath, std::string *errorMsg) {
+        return loadSession(modelPath, m_provider, m_deviceId, *errorMsg);
+    }
+
     bool OnnxModelBase::loadSession(const std::filesystem::path &modelPath, const ExecutionProvider provider,
                                     const int deviceId, std::string &errorMsg) {
         return loadSessionTo(m_session, modelPath, provider, deviceId, errorMsg);
@@ -21,6 +25,11 @@ namespace dstools::infer {
             errorMsg = e.what();
             return false;
         }
+    }
+
+    bool OnnxModelBase::loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
+                                      std::string *errorMsg) {
+        return loadSessionTo(target, modelPath, m_provider, m_deviceId, *errorMsg);
     }
 
     void CancellableOnnxModel::terminate() {
