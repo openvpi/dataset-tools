@@ -554,7 +554,7 @@ public:
 
 > ✅ 已完成 — RecentFiles 已实现，基于 QSettings 后端。
 
-### T-4.5 新增标准控件 [G4]
+### T-4.5 新增标准控件 [G4] ✅ 已完成
 
 按需实现:
 - `PropertyEditor` — 属性面板
@@ -563,6 +563,8 @@ public:
 - `ProgressDialog` — 多任务进度对话框
 
 **工作量**: L (1-3d)
+
+> ✅ 已完成 — PropertyEditor（key-value 属性编辑器）、SettingsDialog（标签页设置对话框）、LogViewer（带级别过滤的日志查看器）、ProgressDialog（可取消进度对话框）已添加到 dsfw-widgets。
 
 ### T-4.6 控件画廊 App [G4]
 
@@ -615,7 +617,7 @@ Phase 3 (Week 9-12) — 增强
       ▼
 Phase 4 (Week 13+) — 完善
   T-4.1 插件系统 (✅)    T-4.2 崩溃收集 (✅)    T-4.3 更新检查 (✅)
-  T-4.4 MRU 列表 (✅)  T-4.5 新增控件  T-4.6 控件画廊
+  T-4.4 MRU 列表 (✅)  T-4.5 新增控件 (✅)  T-4.6 控件画廊
   T-4.7 DI 强化
 ```
 
