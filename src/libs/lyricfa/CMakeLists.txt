@@ -8,6 +8,7 @@ set(LYRICFA_SOURCES
     AsrTask.cpp
     ChineseProcessor.cpp
     FunAsrAdapter.cpp
+    FunAsrProcessor.cpp
     LyricMatcher.cpp
     LyricMatchTask.cpp
     MatchLyric.cpp
@@ -22,6 +23,7 @@ set(LYRICFA_HEADERS
     AsrTask.h
     ChineseProcessor.h
     FunAsrAdapter.h
+    FunAsrProcessor.h
     LyricData.h
     LyricMatcher.h
     LyricMatchTask.h
