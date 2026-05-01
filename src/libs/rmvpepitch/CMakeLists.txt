@@ -3,10 +3,12 @@ project(rmvpepitch-lib)
 set(CMAKE_AUTOMOC ON)
 
 set(RMVPEPITCH_SOURCES
+    RmvpePitchProcessor.cpp
     RmvpePitchService.cpp
 )
 
 set(RMVPEPITCH_HEADERS
+    RmvpePitchProcessor.h
     RmvpePitchService.h
 )
 
