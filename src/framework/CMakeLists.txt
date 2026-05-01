@@ -1,3 +1,9 @@
+# dsfw framework version
+set(DSFW_VERSION_MAJOR 1)
+set(DSFW_VERSION_MINOR 0)
+set(DSFW_VERSION_PATCH 0)
+set(DSFW_VERSION "${DSFW_VERSION_MAJOR}.${DSFW_VERSION_MINOR}.${DSFW_VERSION_PATCH}")
+
 add_subdirectory(base)
 add_subdirectory(core)
 add_subdirectory(ui-core)
@@ -20,7 +26,7 @@ configure_package_config_file(
 
 write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfigVersion.cmake"
-    VERSION 0.1.0
+    VERSION ${DSFW_VERSION}
     COMPATIBILITY SameMajorVersion
 )
 
