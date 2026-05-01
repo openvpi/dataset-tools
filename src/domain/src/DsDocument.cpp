@@ -1,5 +1,6 @@
 #include <dstools/DsDocument.h>
 #include <dsfw/JsonHelper.h>
+#include <dstools/PathUtils.h>
 
 #include <QDebug>
 
@@ -8,11 +9,7 @@ namespace dstools {
 // ── Path encoding ─────────────────────────────────────────────────────
 
 std::filesystem::path DsDocument::toFsPath(const QString &qpath) {
-#ifdef _WIN32
-    return std::filesystem::path(qpath.toStdWString());
-#else
-    return std::filesystem::path(qpath.toStdString());
-#endif
+    return dstools::toFsPath(qpath);
 }
 
 // ── File I/O ──────────────────────────────────────────────────────────
@@ -152,6 +149,22 @@ double DsDocument::numberOrString(const nlohmann::json &obj, const std::string &
         return ok ? val : defaultValue;
     }
     return defaultValue;
+}
+
+double DsDocument::durationSec() const {
+    double maxEnd = 0.0;
+    for (const auto &s : m_sentences) {
+        double offset = numberOrString(s, "offset", 0.0);
+        double dur = 0.0;
+        if (s.contains("ph_dur") && s["ph_dur"].is_string()) {
+            const auto parts = QString::fromStdString(s["ph_dur"].get<std::string>())
+                                   .split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            for (const auto &tok : parts)
+                dur += tok.toDouble();
+        }
+        maxEnd = std::max(maxEnd, offset + dur);
+    }
+    return maxEnd;
 }
 
 } // namespace dstools

@@ -204,4 +204,129 @@ bool TranscriptionPipeline::run(const Options &opts,
         }, error);
 }
 
+// ---------------------------------------------------------------------------
+// Individual step methods — for independent testing
+// ---------------------------------------------------------------------------
+
+bool TranscriptionPipeline::extractTextGrids(const QString &textGridDir,
+                                              std::vector<TranscriptionRow> &rows,
+                                              QString &error,
+                                              const Deps &deps) {
+    if (deps.extractTextGrids)
+        return deps.extractTextGrids(textGridDir, rows, error);
+    return TextGridToCsv::extractDirectory(textGridDir, rows, error);
+}
+
+bool TranscriptionPipeline::calculatePhNum(const QString &dictPath,
+                                            std::vector<TranscriptionRow> &rows,
+                                            QString &error,
+                                            const Deps &deps) {
+    PhNumCalculator calc;
+    if (deps.loadDictionary) {
+        QSet<QString> vowels, consonants;
+        if (!deps.loadDictionary(dictPath, vowels, consonants, error))
+            return false;
+        calc.setVowels(vowels);
+        calc.setConsonants(consonants);
+    } else {
+        if (!calc.loadDictionary(dictPath, error))
+            return false;
+    }
+    return calc.calculateBatch(rows, error);
+}
+
+bool TranscriptionPipeline::gameAlign(const Options &opts,
+                                       GameAlignCallback gameAlignCb,
+                                       std::vector<TranscriptionRow> &rows,
+                                       ProgressCallback progress,
+                                       QString &error) {
+    if (!gameAlignCb) {
+        error = "GAME align callback is null";
+        return false;
+    }
+
+    const int total = static_cast<int>(rows.size());
+    for (int i = 0; i < total; ++i) {
+        auto &row = rows[i];
+
+        const QStringList phSeqParts = row.phSeq.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        const QStringList phDurParts = row.phDur.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        const QStringList phNumParts = row.phNum.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+
+        std::vector<std::string> phSeqVec;
+        phSeqVec.reserve(phSeqParts.size());
+        for (const auto &s : phSeqParts)
+            phSeqVec.push_back(s.toStdString());
+
+        std::vector<float> phDurVec;
+        phDurVec.reserve(phDurParts.size());
+        for (const auto &s : phDurParts)
+            phDurVec.push_back(s.toFloat());
+
+        std::vector<int> phNumVec;
+        phNumVec.reserve(phNumParts.size());
+        for (const auto &s : phNumParts)
+            phNumVec.push_back(s.toInt());
+
+        const QString wavPath = QDir(opts.wavsDir).filePath(row.name + QStringLiteral(".wav"));
+
+        std::vector<std::tuple<std::string, float, int>> notes;
+        if (!gameAlignCb(wavPath, phSeqVec, phDurVec, phNumVec, notes, error))
+            return false;
+
+        QStringList noteSeq, noteDur, noteSlur;
+        noteSeq.reserve(static_cast<int>(notes.size()));
+        noteDur.reserve(static_cast<int>(notes.size()));
+        noteSlur.reserve(static_cast<int>(notes.size()));
+
+        for (const auto &[name, dur, slur] : notes) {
+            noteSeq << QString::fromStdString(name);
+            QString durStr = QString::number(dur, 'f', 6);
+            if (durStr.contains(QLatin1Char('.'))) {
+                while (durStr.endsWith(QLatin1Char('0')))
+                    durStr.chop(1);
+                if (durStr.endsWith(QLatin1Char('.')))
+                    durStr.chop(1);
+            }
+            noteDur << durStr;
+            noteSlur << QString::number(slur);
+        }
+
+        row.noteSeq = noteSeq.join(QLatin1Char(' '));
+        row.noteDur = noteDur.join(QLatin1Char(' '));
+        row.noteSlur = noteSlur.join(QLatin1Char(' '));
+
+        if (progress)
+            progress(Step::GameAlign, i + 1, total, row.name);
+    }
+    return true;
+}
+
+bool TranscriptionPipeline::convertToDs(const Options &opts,
+                                         F0Callback f0Callback,
+                                         const std::vector<TranscriptionRow> &rows,
+                                         ProgressCallback progress,
+                                         QString &error,
+                                         const Deps &deps) {
+    CsvToDsConverter::Options convOpts;
+    convOpts.wavsDir = opts.wavsDir;
+    convOpts.outputDir = opts.outputDir;
+    convOpts.sampleRate = opts.sampleRate;
+    convOpts.hopSize = opts.hopSize;
+
+    if (deps.convertToDs) {
+        return deps.convertToDs(rows, convOpts, f0Callback,
+            [&](int cur, int tot, const QString &name) {
+                if (progress)
+                    progress(Step::ConvertToDs, cur, tot, name);
+            }, error);
+    }
+
+    return CsvToDsConverter::convertFromMemory(rows, convOpts, f0Callback,
+        [&](int cur, int tot, const QString &name) {
+            if (progress)
+                progress(Step::ConvertToDs, cur, tot, name);
+        }, error);
+}
+
 } // namespace dstools

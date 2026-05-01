@@ -1,6 +1,6 @@
 #include <dstools/DsProject.h>
 #include <dsfw/JsonHelper.h>
-#include <dstools/DsDocument.h>
+#include <dstools/PathUtils.h>
 
 #include <filesystem>
 
@@ -8,8 +8,8 @@ namespace dstools {
 
 // ── helpers ───────────────────────────────────────────────────────────
 
-static std::filesystem::path toFsPath(const QString &qpath) {
-    return DsDocument::toFsPath(qpath);
+static std::filesystem::path toFsPathLocal(const QString &qpath) {
+    return dstools::toFsPath(qpath);
 }
 
 static std::string qstr(const QString &s) {
@@ -27,7 +27,7 @@ DsProject DsProject::load(const QString &path, QString &error) {
     error.clear();
 
     std::string err;
-    auto json = JsonHelper::loadFile(toFsPath(path), err);
+    auto json = JsonHelper::loadFile(toFsPathLocal(path), err);
     if (!err.empty()) {
         error = fromStd(err);
         return proj;
@@ -114,7 +114,7 @@ bool DsProject::save(const QString &path, QString &error) const {
     json["defaults"] = def;
 
     std::string err;
-    if (!JsonHelper::saveFile(toFsPath(targetPath), json, err)) {
+    if (!JsonHelper::saveFile(toFsPathLocal(targetPath), json, err)) {
         error = fromStd(err);
         return false;
     }

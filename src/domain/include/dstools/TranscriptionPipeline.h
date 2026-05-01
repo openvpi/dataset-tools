@@ -105,6 +105,35 @@ public:
                     ProgressCallback progress,
                     const Deps &deps,
                     QString &error);
+
+    // ── Individual step methods (for independent testing) ──────────────
+
+    /// Step 6a: Extract TextGrid files from directory into rows.
+    static bool extractTextGrids(const QString &textGridDir,
+                                  std::vector<TranscriptionRow> &rows,
+                                  QString &error,
+                                  const Deps &deps = {});
+
+    /// Step 6b: Calculate ph_num for each row using dictionary.
+    static bool calculatePhNum(const QString &dictPath,
+                                std::vector<TranscriptionRow> &rows,
+                                QString &error,
+                                const Deps &deps = {});
+
+    /// Step 7: Apply GAME alignment to each row.
+    static bool gameAlign(const Options &opts,
+                           GameAlignCallback gameAlignCb,
+                           std::vector<TranscriptionRow> &rows,
+                           ProgressCallback progress,
+                           QString &error);
+
+    /// Step 8: Convert rows to .ds files.
+    static bool convertToDs(const Options &opts,
+                             F0Callback f0Callback,
+                             const std::vector<TranscriptionRow> &rows,
+                             ProgressCallback progress,
+                             QString &error,
+                             const Deps &deps = {});
 };
 
 } // namespace dstools

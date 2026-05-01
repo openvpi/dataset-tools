@@ -1,6 +1,7 @@
 #include <dstools/DsItemManager.h>
-#include <dstools/DsDocument.h>
+#include <dstools/PathUtils.h>
 #include <dsfw/JsonHelper.h>
+#include <QString>
 
 #include <QDir>
 #include <QFile>
@@ -203,7 +204,7 @@ bool DsItemManager::needsProcessing(const QString &sourceFile, PipelineStep step
         return true;
 
     // Check if source file is newer than the .dsitem timestamp
-    auto sourceFsPath = DsDocument::toFsPath(sourceFile);
+    auto sourceFsPath = toFsPath(sourceFile);
     std::error_code ec;
     auto sourceTime = std::filesystem::last_write_time(sourceFsPath, ec);
     if (ec)

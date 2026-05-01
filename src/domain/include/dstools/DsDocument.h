@@ -95,6 +95,10 @@ public:
     static double numberOrString(const nlohmann::json &obj, const std::string &key,
                                  double defaultValue = 0.0);
 
+    /// Calculate the total audio duration across all sentences.
+    /// Sums offset + ph_dur for each sentence, returns the maximum end time.
+    double durationSec() const;
+
     // ── Path encoding ─────────────────────────────────────────────────
 
     /// Convert QString to std::filesystem::path with correct encoding.

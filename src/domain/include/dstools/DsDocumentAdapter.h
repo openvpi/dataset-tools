@@ -2,6 +2,7 @@
 
 #include <dsfw/IDocument.h>
 #include <dstools/DsDocument.h>
+#include <dstools/Result.h>
 
 #include <memory>
 
@@ -16,11 +17,15 @@ public:
     DocumentFormatId format() const override;
     QString formatDisplayName() const override;
 
-    // Lifecycle
+    // Lifecycle (legacy bool+error API)
     bool load(const QString &path, std::string &error) override;
     bool save(std::string &error) override;
     bool saveAs(const QString &path, std::string &error) override;
     void close() override;
+
+    // Lifecycle (Result-based API)
+    Result<void> loadFile(const QString &path);
+    Result<void> saveFile(const QString &path = {});
 
     // State
     bool isModified() const override;

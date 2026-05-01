@@ -21,40 +21,55 @@ QString DsDocumentAdapter::formatDisplayName() const {
 }
 
 bool DsDocumentAdapter::load(const QString &path, std::string &error) {
-    QString qerror;
-    auto doc = DsDocument::load(path, qerror);
-    if (doc.isEmpty() && !qerror.isEmpty()) {
-        error = qerror.toStdString();
+    auto result = loadFile(path);
+    if (!result) {
+        error = result.error();
         return false;
     }
-    *m_inner = std::move(doc);
+    return true;
+}
+
+Result<void> DsDocumentAdapter::loadFile(const QString &path) {
+    auto docResult = DsDocument::loadFile(path);
+    if (!docResult)
+        return Result<void>::Error(docResult.error());
+    *m_inner = std::move(docResult.value());
     m_filePath = path;
     m_modified = false;
-    return true;
+    return Result<void>::Ok();
 }
 
 bool DsDocumentAdapter::save(std::string &error) {
-    if (m_filePath.isEmpty()) {
-        error = "No file path set";
+    auto result = saveFile();
+    if (!result) {
+        error = result.error();
         return false;
     }
-    QString qerror;
-    if (!m_inner->save(m_filePath, qerror)) {
-        error = qerror.toStdString();
-        return false;
-    }
-    m_modified = false;
     return true;
 }
 
+Result<void> DsDocumentAdapter::saveFile(const QString &path) {
+    QString targetPath = path.isEmpty() ? m_filePath : path;
+    if (targetPath.isEmpty())
+        return Result<void>::Error("No file path set");
+    auto result = m_inner->saveFile(targetPath);
+    if (!result)
+        return result;
+    if (path.isEmpty())
+        m_modified = false;
+    else {
+        m_filePath = path;
+        m_modified = false;
+    }
+    return Result<void>::Ok();
+}
+
 bool DsDocumentAdapter::saveAs(const QString &path, std::string &error) {
-    QString qerror;
-    if (!m_inner->save(path, qerror)) {
-        error = qerror.toStdString();
+    auto result = saveFile(path);
+    if (!result) {
+        error = result.error();
         return false;
     }
-    m_filePath = path;
-    m_modified = false;
     return true;
 }
 
@@ -85,19 +100,7 @@ int DsDocumentAdapter::entryCount() const {
 }
 
 double DsDocumentAdapter::durationSec() const {
-    double maxEnd = 0.0;
-    for (const auto &s : m_inner->sentences()) {
-        double offset = DsDocument::numberOrString(s, "offset", 0.0);
-        double dur = 0.0;
-        if (s.contains("ph_dur") && s["ph_dur"].is_string()) {
-            const auto parts = QString::fromStdString(s["ph_dur"].get<std::string>())
-                                   .split(QLatin1Char(' '), Qt::SkipEmptyParts);
-            for (const auto &tok : parts)
-                dur += tok.toDouble();
-        }
-        maxEnd = std::max(maxEnd, offset + dur);
-    }
-    return maxEnd;
+    return m_inner->durationSec();
 }
 
 DsDocument *DsDocumentAdapter::inner() const {
