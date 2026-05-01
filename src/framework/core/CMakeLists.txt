@@ -49,6 +49,7 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IAsrService.h
     include/dsfw/IPitchService.h
     include/dsfw/ITranscriptionService.h
+    include/dsfw/InferenceModelProvider.h
     include/dsfw/CommonKeys.h
     include/dsfw/Log.h
     include/dsfw/UndoStack.h

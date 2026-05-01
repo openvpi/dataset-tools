@@ -58,7 +58,7 @@
 
 ---
 
-### T-0.2 移除 dsfw-core 对 Qt::Gui 的依赖 [G5]
+### T-0.2 移除 dsfw-core 对 Qt::Gui 的依赖 [G5] ✅ 已完成
 
 **现状**: dsfw-core 链接 `Qt::Gui`，CLI 场景被迫引入 GUI 运行时。已知使用点: `QColor`（AppSettings 中的颜色配置项）。
 
@@ -71,6 +71,8 @@
 **风险**: 低 — 影响面小
 
 **工作量**: S (<2h)
+
+> ✅ 已完成 — dsfw-core CMakeLists 现在仅链接 Qt::Core 和 Qt::Network，Qt::Gui 依赖已移除。
 
 ---
 
@@ -340,7 +342,7 @@ virtual void onConfigLoaded(const nlohmann::json &config) {}
 
 ---
 
-### T-2.4 IInferenceEngine ↔ IModelProvider 桥接模板 [G8]
+### T-2.4 IInferenceEngine ↔ IModelProvider 桥接模板 [G8] ✅ 已完成
 
 **现状**: `IInferenceEngine`（推理层）和 `IModelProvider`（框架层）是两套独立接口，应用层需手写粘合代码。
 
@@ -567,7 +569,7 @@ public:
 ```
 Phase 0 (Week 1-2) — 预备
   T-0.1 泛化 ModelType 枚举
-  T-0.2 dsfw-core 去 Qt::Gui
+  T-0.2 dsfw-core 去 Qt::Gui (✅)
   T-0.3 infer-common 去 Qt (✅)
   T-0.4 pipeline 相对路径修复 (✅)
   T-0.5 DS 泄漏审计
