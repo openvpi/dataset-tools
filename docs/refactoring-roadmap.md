@@ -38,6 +38,9 @@
 | ADR-7 | FunASR 永远不直接修改 | vendor 代码只用适配器包装 |
 | ADR-8 | 单仓库模式 | 降低维护复杂度 |
 | ADR-9 | 允许 C++20 | 编译器均已支持，按需使用新特性，不强制全面迁移 |
+| ADR-21 | 替换 QBreakpad，统一用 dsfw::CrashHandler | QBreakpad 为外部依赖且 dsfw::CrashHandler 已存在但未接入；修复后统一使用，减少依赖 |
+| ADR-22 | config/logs/dumps 迁移到 QStandardPaths::AppDataLocation | applicationDirPath() 在 macOS .app bundle 和 Linux /usr/bin 安装下可能只读 |
+| ADR-23 | 撤销重做直接使用 QUndoStack，不封装框架抽象 | Qt QUndoStack 已成熟，旧 dsfw::UndoStack 零消费者已删除；QUndoCommand 子类是纯业务逻辑无法泛化 |
 
 ---
 
@@ -55,8 +58,8 @@
 | TranscriptionPipeline | 4 步骤独立测试 (Deps 已支持注入) | mock 回调 |
 
 **验收标准**:
-- [ ] 4 个模块有单元测试
-- [ ] 测试样本数据放入 `src/tests/data/`
+- [x] 4 个模块有单元测试
+- [x] 测试样本数据放入 `src/tests/data/`
 
 ---
 
@@ -127,6 +130,173 @@ Doxyfile 已配置，所有公共头文件已有 Doxygen 注释。添加 CI step
 - Windows: 便携版 ZIP
 - macOS: DMG
 - Linux: AppImage
+
+---
+
+## Phase H — 用户体验与可靠性 (P1.5)
+
+> **框架 vs 应用边界**：
+>
+> - **H.1 撤销重做**：两个 app 均直接使用 `QUndoStack`（Qt 内置），不再封装框架层抽象（旧 `dsfw::UndoStack`/`dsfw::ICommand` 已在 G.1 中作为死代码删除）。`QUndoCommand` 子类是纯业务逻辑，归应用层。框架不介入。
+> - **H.2 文件日志**：`FileLogSink` 归 `dsfw-core`（与 `Logger` 同层），`AppInit` 负责注册。通用能力，所有应用自动受益。
+> - **H.3 批量 Checkpoint**：`BatchCheckpoint` 归 `dsfw-core`（与 `TaskTypes`/`ITaskProcessor` 同层），processBatch 默认实现自动接入。通用能力。
+> - **H.4 CrashHandler**：已在 `dsfw-core`，修复后由 `AppInit` 统一激活。通用能力。
+> - **H.5 AppPaths**：归 `dsfw-core`，集中管理跨平台数据路径。通用能力。
+
+### H.1 PitchLabeler 撤销重做补全 — P1.5, M (4-8h)
+
+> **不纳入框架**。`QUndoStack` 是 Qt 成熟的撤销/重做机制，PhonemeLabeler 和 PitchLabeler 均已直接使用。旧 `dsfw::UndoStack` 包装层在 G.1 中已删除（零消费者）。`QUndoCommand` 子类是纯领域逻辑（音符删除、滑音切换等），不存在可复用的框架抽象。
+
+现状：PitchLabeler 已有 `QUndoStack` + `PitchMoveCommand`（音符音高拖动）+ `ModulationDriftCommand`（颤音/偏移 F0 调整）。但以下 5 个编辑操作直接修改 `DSFile` 并调用 `markModified()`，绕过了 UndoStack，不可撤销：
+
+| 操作 | 信号来源 | 需要新建的 Command |
+|------|---------|-------------------|
+| 删除音符 | `noteDeleteRequested` | `DeleteNotesCommand` |
+| 修改滑音类型 | `noteGlideChanged` | `SetNoteGlideCommand` |
+| 切换连音标记 | `noteSlurToggled` | `ToggleNoteSlurCommand` |
+| 切换休止符 | `noteRestToggled` | `ToggleNoteRestCommand` |
+| 合并到左邻音符 | `noteMergeLeft` | `MergeNoteLeftCommand` |
+
+另外 `PianoRollInputHandler.cpp:305` 和 `:385` 也有直接 `markModified()` 调用，需确认是否属于已有 Command 覆盖的 F0 编辑路径，如果不是则需补充。
+
+**实现方式**：参照现有 `PhonemeLabeler/gui/ui/commands/` 模式（InsertBoundaryCommand 等），在 `PitchLabeler/gui/ui/commands/` 下新建 Command 类。每个 Command 在构造时快照受影响音符的旧状态，`redo()` 执行操作，`undo()` 恢复快照。
+
+**注意事项**：
+- `DeleteNotesCommand` 和 `MergeNoteLeftCommand` 涉及音符数量变化，undo 时需恢复音符并调用 `recomputeNoteStarts()`
+- `ToggleNoteRestCommand` 的 undo 需要记录原始 `note.name`（因为转为 rest 后原 name 丢失）
+- 所有 Command 的 `redo()`/`undo()` 末尾需调用 `markModified()` + 通知 PianoRollView 刷新
+
+**验收标准**:
+- [ ] 5+ 个操作均通过 `m_undoStack->push(new XxxCommand(...))` 执行
+- [ ] 每个操作可 Ctrl+Z 撤销、Ctrl+Shift+Z 重做
+- [ ] 撤销/重做后 PianoRoll 显示正确、文件脏标记正确
+- [ ] PitchLabelerPage::connectSignals() 中的 5 个 lambda 替换为 push Command
+- [ ] PianoRollInputHandler 中的直接 markModified() 调用已审计并补全
+
+---
+
+### H.2 全局文件日志 Sink — P1.5, S (2-4h) — `dsfw-core` 框架模块
+
+> **纳入框架**。`FileLogSink` 是 `Logger` 的配套设施，与 `Log.h` 同属 `dsfw-core`。所有应用通过 `AppInit` 自动注册，无需各 app 重复代码。
+
+现状：`Logger` 已有 pluggable sink 机制（`addSink()`），`AppInit::init()` 中未注册文件 sink。崩溃时只有 minidump，没有应用级别日志。
+
+**需求**：所有应用启动时自动注册一个文件日志 sink，将日志写入 `<AppDataLocation>/logs/<app_name>_<date>.log`（参见 H.5 路径迁移）。
+
+| # | 任务 | 涉及文件 |
+|---|------|---------|
+| 1 | 在 `dsfw-core` 新增 `FileLogSink` 工厂函数（接受路径，返回 `LogSink`） | `Log.h`, 新建 `FileLogSink.h/.cpp` 或直接加到 `Log.cpp` |
+| 2 | `AppInit::init()` 中创建日志目录并注册 `FileLogSink` | `AppInit.cpp` |
+| 3 | 日志自动轮转：保留最近 N 天（默认 7 天）的日志文件，启动时清理过期文件 | `AppInit.cpp` |
+| 4 | 崩溃 callback 中将最后 N 条日志附加到 dump 目录 | `AppInit.cpp` CrashHandler 回调 |
+
+**验收标准**:
+- [ ] 任意应用启动后 logs 目录下生成日志文件
+- [ ] 日志包含时间戳、级别、分类、消息
+- [ ] 超过 7 天的日志文件在启动时自动删除
+- [ ] 崩溃时 dump 目录下有对应的日志副本
+
+---
+
+### H.3 批量处理 Checkpoint — P1.5, M (4-8h) — `dsfw-core` 框架模块
+
+> **纳入框架**。`BatchCheckpoint` 操作 `TaskTypes.h` 中的 `BatchOutput`/`BatchInput`，与 `ITaskProcessor` 同层。`processBatch()` 默认实现自动接入 checkpoint，各处理器无需额外代码。
+
+现状：`BatchOutput` 记录 `processedCount`/`failedCount`，但无法知道具体哪些文件已处理。如果批量处理中途崩溃或用户中断，必须从头重新处理。
+
+**需求**：批量处理支持 checkpoint 文件，记录已完成的文件列表，支持断点续处理。
+
+| # | 任务 | 涉及文件 |
+|---|------|---------|
+| 1 | `BatchOutput` 新增 `QStringList processedFiles` 和 `QStringList failedFiles` 字段（failedFiles 包含错误原因） | `TaskTypes.h` |
+| 2 | 新增 `BatchCheckpoint` 工具类：写入/读取 `<workingDir>/dstemp/<taskName>.checkpoint.json` | 新建 `BatchCheckpoint.h/.cpp` |
+| 3 | `ITaskProcessor::processBatch()` 默认实现中接入 checkpoint：跳过已完成文件、每完成一个文件追加记录 | `ITaskProcessor.cpp` |
+| 4 | 各 TaskWindow 页面添加"继续上次处理"按钮（检测 checkpoint 文件存在时显示） | `SlicerPage`, `LyricFAPage`, `HubertFAPage`, `GameAlignPage` |
+| 5 | 处理完成后自动删除 checkpoint 文件 | `ITaskProcessor.cpp` |
+
+**Checkpoint 文件格式**:
+```json
+{
+  "taskName": "phoneme_alignment",
+  "processorId": "hubert-fa",
+  "startTime": "2026-05-01T10:30:00",
+  "processedFiles": ["001.wav", "002.wav"],
+  "failedFiles": [{"file": "003.wav", "error": "Model inference failed"}]
+}
+```
+
+**验收标准**:
+- [ ] 批量处理中每完成一个文件，checkpoint 文件实时更新
+- [ ] 中断后重启，检测到 checkpoint 时弹出"继续/重新开始"选择
+- [ ] 选择"继续"后跳过已处理文件，从断点继续
+- [ ] 全部处理完成后 checkpoint 文件自动清理
+- [ ] `failedFiles` 包含失败原因，用户可查看
+
+---
+
+### H.4 统一 CrashHandler（替换 QBreakpad）— P1.5, M (4-8h) — `dsfw-core` + `ui-core`
+
+> **已在框架**。`CrashHandler` 在 `dsfw-core`，`AppInit` 在 `ui-core`。修复后所有应用通过 `AppInit::init()` 自动激活。
+
+> ADR-21: 替换 QBreakpad，统一使用 dsfw::CrashHandler
+
+**现状问题**（代码审计发现）：
+
+1. **双崩溃处理并存**：`AppInit` 使用 `QBreakpad`（第三方依赖），`dsfw::CrashHandler` 已实现但从未被 `install()` 调用 — 是死代码
+2. **CrashHandler bug — `m_callback` 未调用**：Windows SEH filter 写完 dump 后直接 return，未调用 `setCrashCallback()` 设置的回调
+3. **CrashHandler bug — Unix 无 dump**：Unix 分支仅 `_exit(128 + sig)`，无任何持久化信息（不写 core dump 或日志）
+4. **CrashHandler bug — 缺少 `#include <csignal>`**：Unix 分支使用 `sigaction`/`SIGSEGV` 但未显式包含头文件，靠传递包含偶然编译
+
+| # | 任务 | 涉及文件 |
+|---|------|---------|
+| 1 | 修复 CrashHandler：添加 `#include <csignal>`，Windows filter 末尾调用 `m_callback`，Unix 分支写崩溃上下文到文件 | `CrashHandler.cpp` |
+| 2 | `AppInit::init()` 中替换 QBreakpad 为 `dsfw::CrashHandler::instance().install()` | `AppInit.cpp` |
+| 3 | 删除 QBreakpad 依赖 | `ui-core/CMakeLists.txt`, `scripts/vcpkg-manifest/vcpkg.json` |
+| 4 | CrashHandler 集成 FileLogSink：崩溃时将日志 flush 并复制到 dump 目录 | `CrashHandler.cpp`, `AppInit.cpp` |
+| 5 | 三平台验证（CI 已覆盖 Windows/macOS/Linux） | CI 自动验证 |
+
+**验收标准**:
+- [ ] QBreakpad 依赖完全移除（vcpkg.json + CMakeLists.txt）
+- [ ] Windows 崩溃写 .dmp + 调用 callback
+- [ ] macOS/Linux 崩溃写上下文信息到文件
+- [ ] `m_callback` 在所有平台崩溃时被调用
+- [ ] 三平台 CI 编译通过
+
+---
+
+### H.5 数据路径迁移到 QStandardPaths — P1.5, S (2-4h) — `dsfw-core` 框架模块
+
+> **纳入框架**。`AppPaths` 工具类归 `dsfw-core`，与 `AppSettings` 同层。集中管理 configDir/logDir/dumpDir/cacheDir，所有应用统一调用。
+
+> ADR-22: config/logs/dumps 迁移到 QStandardPaths::AppDataLocation
+
+**现状问题**：所有应用的 config、crash_dumps 路径基于 `applicationDirPath()`。在以下场景失败：
+
+- macOS `.app` bundle：`applicationDirPath()` 在 `Contents/MacOS/` 内，外部不可写
+- Linux `/usr/bin` 安装：需要 root 权限才能写入
+- Windows 便携模式：`applicationDirPath()` 可写，但安装到 `Program Files` 后不可写
+
+**涉及代码点**：
+
+| 位置 | 当前路径 | 迁移目标 |
+|------|---------|---------|
+| `AppSettings.cpp:13` | `applicationDirPath() + "/config"` | `QStandardPaths::AppDataLocation + "/config"` |
+| `CrashHandler.cpp:19` | `applicationDirPath() + "/crash_dumps"` | `QStandardPaths::AppDataLocation + "/crash_dumps"` |
+| `AppInit.cpp:95` | `applicationDirPath() + "/dumps"` | 同上（H.4 移除后此行删除） |
+| `AppInit.cpp:106` | `applicationDirPath() + "/config"` | `QStandardPaths::AppDataLocation + "/config"` |
+| H.2 新增日志 | — | `QStandardPaths::AppDataLocation + "/logs"` |
+
+| # | 任务 | 涉及文件 |
+|---|------|---------|
+| 1 | 新增 `dsfw::AppPaths` 工具类，集中管理 configDir/logDir/dumpDir/cacheDir | 新建 `AppPaths.h/.cpp` |
+| 2 | 替换所有 `applicationDirPath() + "/config"` 为 `AppPaths::configDir()` | `AppSettings.cpp`, `AppInit.cpp` |
+| 3 | 替换 crash dump 路径 | `CrashHandler.cpp` |
+| 4 | 首次运行时迁移：如果旧路径（applicationDirPath）存在配置文件，自动拷贝到新路径 | `AppPaths.cpp` |
+
+**验收标准**:
+- [ ] 三平台下 config/logs/dumps 写入用户数据目录
+- [ ] 旧路径存在时自动迁移
+- [ ] macOS .app bundle 场景正常工作
 
 ---
 
@@ -216,6 +386,13 @@ P1 — 架构演进（核心价值）
   G.3  处理器迁移 (L)              — 逐个迁移 4 个处理器
   G.4  集成与清理 (L)              — 切换消费者 + 删除旧接口
 
+P1.5 — 用户体验与可靠性
+  H.5  数据路径迁移 QStandardPaths (S) — 三平台路径统一（其他 H 任务的前置）
+  H.4  统一 CrashHandler (M)           — 替换 QBreakpad、修复 4 个 bug
+  H.2  全局文件日志 Sink (S)           — 崩溃前日志持久化（依赖 H.4+H.5）
+  H.1  PitchLabeler 撤销重做补全 (M)   — 5 个操作绕过 UndoStack（独立）
+  H.3  批量处理 Checkpoint (M)         — 已处理文件记录 + 断点续处理（独立）
+
 P2 — 有实际价值
   B.1  补齐领域测试 (L)           — 防止回归
   D.1  框架独立编译 CI 验证 (M)   — 确认外部可消费
@@ -237,8 +414,10 @@ P3 — 按需拾取
 批次 3: G.2 (任务处理器基础设施) — 新增，不破坏现有代码
 批次 4: G.3 (处理器迁移: RMVPE → FunASR → HuBERT → GAME) — 逐个迁移
 批次 5: G.4 (集成: CLI → Labeler → GameInfer → 删除旧接口)
-批次 6: B.2 + B.3 + C.2 — 小修小补
-批次 7: 其余按需
+批次 6: H.5 (路径迁移) + H.4 (CrashHandler 统一) → H.2 (文件日志) — 串行依赖
+         H.1 (PitchLabeler 撤销补全) + H.3 (批量 checkpoint) — 与上面并行
+批次 7: B.2 + B.3 + C.2 — 小修小补
+批次 8: 其余按需
 ```
 
 ---
@@ -247,13 +426,13 @@ P3 — 按需拾取
 
 | Issue # | 标题 | 路线图 | 状态 |
 |---------|------|--------|------|
-| #11 | 领域模块单元测试 | B.1 | ⏳ 部分完成 |
+| #11 | 领域模块单元测试 | B.1 | ✅ 已完成 |
 | #15 | 框架模块独立编译 | D.1 | ✅ 已完成 |
 | #16 | API 文档 | D.2 | ✅ 已完成 |
-| #28 | TranscriptionPipeline 可测试性 | B.1 | ⏳ 主要障碍已清除 |
-| #39 | God class 拆分 | C.1 | 📋 按需 |
+| #28 | TranscriptionPipeline 可测试性 | B.1 | ✅ 已完成 |
+| #39 | God class 拆分 | C.1 | ✅ 已完成 |
 | #40 | 魔法数字 | C.2 | ✅ 已完成 |
-| — | 任务处理器架构 | G.1-G.4 | ✅ G.1-G.3 + G.4.1-3/5 已完成，G.4.4 待执行 |
+| — | 任务处理器架构 | G.1-G.4 | ✅ 全部完成 |
 
 已关闭: #21 (CI 矩阵), #27 (clang-tidy), #37 (Slicer 合并), #38 (MinLabel 提取)
 
@@ -263,14 +442,19 @@ P3 — 按需拾取
 
 | 编号 | 描述 | 严重性 |
 |------|------|--------|
-| TD-03 | 4 个领域模块缺测试 | 中 |
-| TD-04 | 部分文件操作缺错误分支 | 低 |
-| TD-05 | 2 个文件超 600 行 | 低 |
+| TD-03 | ~~4 个领域模块缺测试~~ | ✅ 已补齐 |
+| TD-04 | ~~部分文件操作缺错误分支~~ | ✅ 已补全 |
+| TD-05 | ~~2 个文件超 600 行~~ | ✅ 已拆分 |
 | TD-10 | ~~11 个死接口/死基础设施占用维护成本~~ | ✅ 已清理 |
 | TD-11 | ~~4 个服务各自管理模型，ModelManager 闲置~~ | ✅ 已迁移至 TaskProcessor |
 | TD-12 | ~~DsProjectDefaults 硬编码 4 个模型路径字段~~ | ✅ 已演进为 TaskModelConfig |
 | TD-13 | ~~GameInfer UI 通过 dynamic_cast 绕过接口调用 5 个 setter~~ | ✅ 已消除 |
 | TD-14 | ~~LyricFAPage / SlicerPage 绕过服务层直接创建引擎~~ | ✅ 已切换到 TaskProcessorRegistry |
+| TD-15 | PitchLabeler 5+ 个编辑操作绕过 QUndoStack 不可撤销 | 中 |
+| TD-16 | 所有应用无持久化日志文件（仅有 minidump） | 中 |
+| TD-17 | 批量处理无 checkpoint，中断后须从头重来 | 中 |
+| TD-18 | config/logs/dumps 路径基于 applicationDirPath()，macOS/Linux 安装场景可能只读 | 中 |
+| TD-19 | dsfw::CrashHandler 是死代码且有 4 个 bug（未调用 callback、Unix 无 dump、缺 include、与 QBreakpad 并存） | 高 |
 
 > 更新时间：2026-05-01
 
@@ -285,7 +469,7 @@ P3 — 按需拾取
 | # | 任务 | 工作量 | 涉及文件 | 并行 |关联 | 状态 |
 |---|------|--------|---------|------|------|------|
 | 5 | **G.1** 死代码清理（11 个死接口/基础设施） | S (2-4h) | 见 Phase G.1 详细清单 | ✅ | TD-10 | ✅ |
-| 6 | **B.1** 补齐领域模块单元测试 | L (1-3d) | `src/tests/domain/` | ✅ | TD-03, #11, #28 | ⏳ |
+| 6 | **B.1** 补齐领域模块单元测试 | L (1-3d) | `src/tests/domain/` | ✅ | TD-03, #11, #28 | ✅ |
 | 7 | **D.1** 框架模块独立编译 CI 验证 | M (2-8h) | `.github/workflows/verify-modules.yml` | ✅ | #15 | ✅ |
 
 ### 批次 3 — 任务处理器基础设施
@@ -310,22 +494,32 @@ P3 — 按需拾取
 | 13 | **G.4.1** CLI 接入 TaskProcessorRegistry | M (4-8h) | `src/apps/cli/main.cpp` | ✅ | 批次 4 | — | ✅ |
 | 14 | **G.4.2** DiffSingerLabeler 页面切换 | L (1-2d) | `src/apps/labeler/pages/` | ✅ | 批次 4 | TD-14 | ✅ |
 | 15 | **G.4.3** GameInfer app 切换（消除 dynamic_cast） | M (4-8h) | `src/apps/GameInfer/` | ✅ | G.3.4 | TD-13 | ✅ |
-| 16 | **G.4.4** 删除旧服务接口 (IAlignmentService 等 4 个) | S (2-4h) | `src/framework/core/` + 旧实现 | — | #13-15 | TD-11 | ⏳ |
+| 16 | **G.4.4** 删除旧服务接口 (IAlignmentService 等 4 个) | S (2-4h) | `src/framework/core/` + 旧实现 | — | #13-15 | TD-11 | ✅ |
 | 17 | **G.4.5** 接线 IExportFormat / IQualityMetrics | S (2-4h) | `src/apps/labeler/` | ✅ | 独立 | — | ✅ |
 
-### 批次 6 — 小修小补
+### 批次 6 — 用户体验与可靠性
+
+| # | 任务 | 工作量 | 涉及文件 | 层级 | 并行 | 前置 | 关联 | 状态 |
+|---|------|--------|---------|------|------|------|------|------|
+| 25 | **H.5** 数据路径迁移 QStandardPaths | S (2-4h) | `dsfw-core`: 新建 `AppPaths.h/.cpp`; `AppSettings.cpp`, `CrashHandler.cpp`, `AppInit.cpp` | 框架 | ✅ | — | TD-18 | 📋 |
+| 26 | **H.4** 统一 CrashHandler（替换 QBreakpad） | M (4-8h) | `dsfw-core`: `CrashHandler.cpp`; `ui-core`: `AppInit.cpp`, `CMakeLists.txt`; `vcpkg.json` | 框架 | ✅ | — | TD-19 | 📋 |
+| 27 | **H.2** 全局文件日志 Sink + 日志轮转 | S (2-4h) | `dsfw-core`: `Log.h/.cpp` 或新建 `FileLogSink.h/.cpp`; `ui-core`: `AppInit.cpp` | 框架 | — | H.4+H.5 | TD-16 | 📋 |
+| 28 | **H.1** PitchLabeler 撤销重做补全（5+ 个操作） | M (4-8h) | `src/apps/PitchLabeler/gui/ui/commands/`, `PitchLabelerPage.cpp` | 应用 | ✅ | — | TD-15 | 📋 |
+| 29 | **H.3** 批量处理 Checkpoint（断点续处理） | M (4-8h) | `dsfw-core`: `TaskTypes.h`, 新建 `BatchCheckpoint.h/.cpp`, `ITaskProcessor.cpp`; 应用: TaskWindow 页面 | 框架+应用 | ✅ | — | TD-17 | 📋 |
+
+### 批次 7 — 小修小补
 
 | # | 任务 | 工作量 | 并行 | 关联 | 状态 |
 |---|------|--------|------|------|------|
 | 18 | **B.2** TODO/FIXME 清理 (5 处) | S (<2h) | ✅ | TD-07 | ✅ |
-| 19 | **B.3** 文件操作错误处理补全 | S (<2h) | ✅ | TD-04 | ⏳ |
+| 19 | **B.3** 文件操作错误处理补全 | S (<2h) | ✅ | TD-04 | ✅ |
 | 20 | **C.2** 魔法数字常量化 | S (<2h) | ✅ | TD-06 | ✅ |
 
-### 批次 7 — 按需拾取
+### 批次 8 — 按需拾取
 
 | # | 任务 | 工作量 | 关联 | 状态 |
 |---|------|--------|------|------|
-| 21 | **C.1** 大文件拆分 (PitchLabelerPage/PhonemeLabelerPage) | L (1-3d) | TD-05 | ⏳ |
+| 21 | **C.1** 大文件拆分 (PitchLabelerPage/PhonemeLabelerPage) | L (1-3d) | TD-05 | ✅ |
 | 22 | **D.2** Doxygen CI | S (<2h) | #16 | ✅ |
-| 23 | **D.3** 跨平台包分发 | L (1-3d) | — | ⏳ |
-| 24 | **F.1** 示例项目 | M (2-8h) | — | ⏳ |
+| 23 | **D.3** 跨平台包分发 | L (1-3d) | — | ✅ |
+| 24 | **F.1** 示例项目 | M (2-8h) | — | ✅ |
