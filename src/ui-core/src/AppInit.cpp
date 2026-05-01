@@ -2,7 +2,9 @@
 
 #include <dstools/ModelManager.h>
 #include <dsfw/AppPaths.h>
+#include <dsfw/FileLogSink.h>
 #include <dsfw/IModelManager.h>
+#include <dsfw/Log.h>
 #include <dsfw/ServiceLocator.h>
 
 #include <QApplication>
@@ -92,6 +94,11 @@ bool AppInit::init(QApplication &app, bool initCrashHandler) {
     // 4. Migrate legacy paths and ensure config directory exists
     dsfw::AppPaths::migrateFromLegacyPaths();
     dsfw::AppPaths::configDir();
+
+    // 4.5 Register file log sink and clean old logs
+    QString logDir = dsfw::AppPaths::logDir();
+    Logger::instance().addSink(dsfw::createFileLogSink(logDir, app.applicationName()));
+    dsfw::cleanOldLogFiles(logDir);
 
     // 5. Register core services with ServiceLocator
     if (!ServiceLocator::get<IModelManager>()) {
