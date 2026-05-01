@@ -11,17 +11,65 @@
 
 namespace dstools {
 
+// ---------------------------------------------------------------------------
+// Original API — delegates to the injectable overload with empty Deps.
+// ---------------------------------------------------------------------------
 bool TranscriptionPipeline::run(const Options &opts,
                                 GameAlignCallback gameAlign,
                                 F0Callback f0Callback,
                                 ProgressCallback progress,
                                 QString &error) {
+    return run(opts, std::move(gameAlign), std::move(f0Callback),
+               std::move(progress), Deps{}, error);
+}
+
+// ---------------------------------------------------------------------------
+// Injectable overload — each dependency falls back to production impl when
+// the corresponding Deps callback is nullptr.
+// ---------------------------------------------------------------------------
+bool TranscriptionPipeline::run(const Options &opts,
+                                GameAlignCallback gameAlign,
+                                F0Callback f0Callback,
+                                ProgressCallback progress,
+                                const Deps &deps,
+                                QString &error) {
+    // -- Resolve dependency functions (use injected or production default) --
+
+    auto doExtractTextGrids = deps.extractTextGrids
+        ? deps.extractTextGrids
+        : [](const QString &dir, std::vector<TranscriptionRow> &rows, QString &err) {
+              return TextGridToCsv::extractDirectory(dir, rows, err);
+          };
+
+    auto doReadCsv = deps.readCsv
+        ? deps.readCsv
+        : [](const QString &path, std::vector<TranscriptionRow> &rows, QString &err) {
+              return TranscriptionCsv::read(path, rows, err);
+          };
+
+    auto doWriteCsv = deps.writeCsv
+        ? deps.writeCsv
+        : [](const QString &path, const std::vector<TranscriptionRow> &rows, QString &err) {
+              return TranscriptionCsv::write(path, rows, err);
+          };
+
+    auto doConvertToDs = deps.convertToDs
+        ? deps.convertToDs
+        : [](const std::vector<TranscriptionRow> &rows,
+             const CsvToDsConverter::Options &convOpts,
+             F0Callback f0cb,
+             CsvToDsConverter::ProgressCallback prog,
+             QString &err) {
+              return CsvToDsConverter::convertFromMemory(rows, convOpts, std::move(f0cb),
+                                                         std::move(prog), err);
+          };
+
     std::vector<TranscriptionRow> rows;
 
     // Checkpoint resume: if CSV exists with MIDI columns, skip to Step 8
     if (opts.writeCsv && !opts.csvPath.isEmpty() && QFileInfo::exists(opts.csvPath)) {
         std::vector<TranscriptionRow> existingRows;
-        if (TranscriptionCsv::read(opts.csvPath, existingRows, error) &&
+        if (doReadCsv(opts.csvPath, existingRows, error) &&
             !existingRows.empty() && !existingRows.front().noteSeq.isEmpty()) {
             rows = std::move(existingRows);
             // Skip to Step 8
@@ -31,7 +79,7 @@ bool TranscriptionPipeline::run(const Options &opts,
             convOpts.sampleRate = opts.sampleRate;
             convOpts.hopSize = opts.hopSize;
 
-            return CsvToDsConverter::convertFromMemory(rows, convOpts, f0Callback,
+            return doConvertToDs(rows, convOpts, f0Callback,
                 [&](int cur, int tot, const QString &name) {
                     if (progress)
                         progress(Step::ConvertToDs, cur, tot, name);
@@ -40,7 +88,7 @@ bool TranscriptionPipeline::run(const Options &opts,
     }
 
     // Step 6a: TextGrid → rows
-    if (!TextGridToCsv::extractDirectory(opts.textGridDir, rows, error))
+    if (!doExtractTextGrids(opts.textGridDir, rows, error))
         return false;
 
     if (progress)
@@ -49,8 +97,16 @@ bool TranscriptionPipeline::run(const Options &opts,
 
     // Step 6b: PhNumCalculator
     PhNumCalculator calc;
-    if (!calc.loadDictionary(opts.dictPath, error))
-        return false;
+    if (deps.loadDictionary) {
+        QSet<QString> vowels, consonants;
+        if (!deps.loadDictionary(opts.dictPath, vowels, consonants, error))
+            return false;
+        calc.setVowels(vowels);
+        calc.setConsonants(consonants);
+    } else {
+        if (!calc.loadDictionary(opts.dictPath, error))
+            return false;
+    }
 
     if (!calc.calculateBatch(rows, error))
         return false;
@@ -61,7 +117,7 @@ bool TranscriptionPipeline::run(const Options &opts,
 
     // Write checkpoint CSV (after Step 6)
     if (opts.writeCsv && !opts.csvPath.isEmpty()) {
-        if (!TranscriptionCsv::write(opts.csvPath, rows, error))
+        if (!doWriteCsv(opts.csvPath, rows, error))
             return false;
     }
 
@@ -128,7 +184,7 @@ bool TranscriptionPipeline::run(const Options &opts,
 
         // Write checkpoint CSV (after Step 7)
         if (opts.writeCsv && !opts.csvPath.isEmpty()) {
-            if (!TranscriptionCsv::write(opts.csvPath, rows, error))
+            if (!doWriteCsv(opts.csvPath, rows, error))
                 return false;
         }
     }
@@ -141,7 +197,7 @@ bool TranscriptionPipeline::run(const Options &opts,
     convOpts.sampleRate = opts.sampleRate;
     convOpts.hopSize = opts.hopSize;
 
-    return CsvToDsConverter::convertFromMemory(rows, convOpts, f0Callback,
+    return doConvertToDs(rows, convOpts, f0Callback,
         [&](int cur, int tot, const QString &name) {
             if (progress)
                 progress(Step::ConvertToDs, cur, tot, name);

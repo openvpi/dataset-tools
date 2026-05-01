@@ -7,6 +7,7 @@
 #include <dstools/CsvToDsConverter.h>
 #include <functional>
 #include <QString>
+#include <QSet>
 #include <tuple>
 #include <vector>
 
@@ -54,11 +55,55 @@ public:
 
     using F0Callback = CsvToDsConverter::F0Callback;
 
-    /// Run the full pipeline.
+    /// @brief Injectable dependencies for testability (Issue #28).
+    ///
+    /// All fields default to nullptr. When nullptr, the pipeline uses the
+    /// real (production) implementations. Tests can inject mocks/stubs for
+    /// any subset of these to avoid file I/O and external tools.
+    struct Deps {
+        /// TextGrid extraction — replaces TextGridToCsv::extractDirectory.
+        std::function<bool(const QString &dir,
+                           std::vector<TranscriptionRow> &rows,
+                           QString &error)> extractTextGrids;
+
+        /// Dictionary loading — replaces PhNumCalculator::loadDictionary.
+        /// Should populate vowels/consonants sets from any source.
+        std::function<bool(const QString &dictPath,
+                           QSet<QString> &vowels,
+                           QSet<QString> &consonants,
+                           QString &error)> loadDictionary;
+
+        /// CSV read — replaces TranscriptionCsv::read.
+        std::function<bool(const QString &path,
+                           std::vector<TranscriptionRow> &rows,
+                           QString &error)> readCsv;
+
+        /// CSV write — replaces TranscriptionCsv::write.
+        std::function<bool(const QString &path,
+                           const std::vector<TranscriptionRow> &rows,
+                           QString &error)> writeCsv;
+
+        /// DS conversion — replaces CsvToDsConverter::convertFromMemory.
+        std::function<bool(const std::vector<TranscriptionRow> &rows,
+                           const CsvToDsConverter::Options &convOpts,
+                           F0Callback f0Callback,
+                           CsvToDsConverter::ProgressCallback progress,
+                           QString &error)> convertToDs;
+    };
+
+    /// Run the full pipeline (original API — uses real implementations).
     static bool run(const Options &opts,
                     GameAlignCallback gameAlign,
                     F0Callback f0Callback,
                     ProgressCallback progress,
+                    QString &error);
+
+    /// Run the full pipeline with injected dependencies (testable overload).
+    static bool run(const Options &opts,
+                    GameAlignCallback gameAlign,
+                    F0Callback f0Callback,
+                    ProgressCallback progress,
+                    const Deps &deps,
                     QString &error);
 };
 

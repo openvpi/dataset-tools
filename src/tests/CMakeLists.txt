@@ -21,3 +21,4 @@ if (TARGET TestAudioUtil)
 endif()
 
 add_subdirectory(framework)
+add_subdirectory(domain)
