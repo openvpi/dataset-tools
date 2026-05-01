@@ -102,7 +102,7 @@ void TestAppSettings::testObserveNotify() {
     SettingsKey<int> key("obs/val", 0);
 
     int received = -1;
-    settings.observe(key, [&](const int &v) { received = v; });
+    settings.observe<int>(key, [&](const int &v) { received = v; });
     settings.set(key, 77);
     QCOMPARE(received, 77);
 }

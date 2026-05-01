@@ -55,7 +55,8 @@ namespace HFA {
                     oss << outTg;
                     outTgStream << QString::fromStdString(oss.str());
                 } else {
-                    msg = QStringLiteral("Failed to open file for writing.");
+                    msg = QStringLiteral("Failed to open file for writing: %1 (%2)")
+                              .arg(m_outTgPath, outFile.errorString());
                     return false;
                 }
             } else {

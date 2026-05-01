@@ -186,16 +186,21 @@ void SlicerPage::runTask() {
     for (int i = 0; i < itemCount; i++) {
         auto *item = m_taskListWidget->item(i);
         auto path = item->data(Qt::UserRole + 1).toString();
-        auto *runnable = new WorkThread(
-            path, m_outputDir->path(),
-            threshold,
-            minLength,
-            minInterval,
-            hopSize,
-            maxSilKept,
-            m_cmbOutputFormat->currentData().toInt(),
-            saveAudio, saveMarkers, loadMarkers, overwriteMarkers,
-            m_spnSuffixDigits->value());
+
+        SliceJobParams params;
+        params.threshold = threshold;
+        params.minLength = minLength;
+        params.minInterval = minInterval;
+        params.hopSize = hopSize;
+        params.maxSilKept = maxSilKept;
+        params.outputWaveFormat = m_cmbOutputFormat->currentData().toInt();
+        params.saveAudio = saveAudio;
+        params.saveMarkers = saveMarkers;
+        params.loadMarkers = loadMarkers;
+        params.overwriteMarkers = overwriteMarkers;
+        params.minimumDigits = m_spnSuffixDigits->value();
+
+        auto *runnable = new WorkThread(path, m_outputDir->path(), params);
         connect(runnable, &dstools::AsyncTask::succeeded, this, &SlicerPage::onOneFinished);
         connect(runnable, &dstools::AsyncTask::failed, this, &SlicerPage::onOneFailed);
         connect(runnable, &WorkThread::oneInfo, this, &SlicerPage::logMessage);

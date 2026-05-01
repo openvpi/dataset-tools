@@ -71,6 +71,10 @@ private slots:
     void testEntryCountAndDuration();
     void testDocumentFormatId();
     void testRegisterDocumentFormat();
+    void testCloseResetsState();
+    void testSaveWithoutPath();
+    void testDefaultEntryCountAndDuration();
+    void testMultipleFormatRegistration();
 };
 
 void TestIDocument::testLifecycle() {
@@ -172,6 +176,43 @@ void TestIDocument::testRegisterDocumentFormat() {
     QVERIFY(id1.isValid());
     QCOMPARE(id1, id2);
     QVERIFY(id1 != id3);
+}
+
+void TestIDocument::testCloseResetsState() {
+    MockDocument doc;
+    std::string err;
+    doc.load("/tmp/test.txt", err);
+    doc.setModified(true);
+
+    doc.close();
+    QVERIFY(doc.m_closed);
+}
+
+void TestIDocument::testSaveWithoutPath() {
+    MockDocument doc;
+    doc.m_filePath.clear();
+    doc.m_saveShouldFail = true;
+    std::string err;
+    QVERIFY(!doc.save(err));
+    QVERIFY(!err.empty());
+}
+
+void TestIDocument::testDefaultEntryCountAndDuration() {
+    MockDocument doc;
+    QCOMPARE(doc.entryCount(), 0);
+    QCOMPARE(doc.durationSec(), 0.0);
+}
+
+void TestIDocument::testMultipleFormatRegistration() {
+    auto a = registerDocumentFormat("MultiTestA");
+    auto b = registerDocumentFormat("MultiTestB");
+    auto c = registerDocumentFormat("MultiTestC");
+    QVERIFY(a != b);
+    QVERIFY(b != c);
+    QVERIFY(a != c);
+
+    auto a2 = registerDocumentFormat("MultiTestA");
+    QCOMPARE(a, a2);
 }
 
 QTEST_GUILESS_MAIN(TestIDocument)

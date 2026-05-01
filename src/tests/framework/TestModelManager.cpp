@@ -1,5 +1,5 @@
 #include <QTest>
-#include <dsfw/ModelManager.h>
+#include <dstools/ModelManager.h>
 
 using namespace dstools;
 

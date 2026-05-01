@@ -23,9 +23,10 @@ namespace Minlabel {
         }
 
         QFile tar(target);
-        if (!tar.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            return false;
-        }
+    if (!tar.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "expFile: Failed to open file for writing:" << target << tar.errorString();
+        return false;
+    }
         QTextStream out(&tar);
         out << data;
         tar.close();

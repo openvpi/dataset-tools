@@ -1,5 +1,5 @@
 #include <QTest>
-#include <dsfw/ModelDownloader.h>
+#include <dstools/ModelDownloader.h>
 
 using namespace dstools;
 

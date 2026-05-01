@@ -15,6 +15,14 @@ private slots:
     void testRemoveFile();
     void testCopyFile();
     void testReadMissingFile();
+    void testReadTextMissingFile();
+    void testWriteToInvalidPath();
+    void testListFilesNonExistentDir();
+    void testCopyFromNonExistentSource();
+    void testRemoveNonExistentFile();
+    void testFileInfoNonExistent();
+    void testWriteOverwritesExisting();
+    void testCopyOverwritesDestination();
 };
 
 void TestLocalFileIOProvider::testWriteAndReadFile() {
@@ -120,6 +128,79 @@ void TestLocalFileIOProvider::testReadMissingFile() {
     auto r = io.readFile("/nonexistent/path/file.bin");
     QVERIFY(!r.ok());
     QVERIFY(!r.error().empty());
+}
+
+void TestLocalFileIOProvider::testReadTextMissingFile() {
+    LocalFileIOProvider io;
+    auto r = io.readText("/nonexistent/path/file.txt");
+    QVERIFY(!r.ok());
+    QVERIFY(!r.error().empty());
+}
+
+void TestLocalFileIOProvider::testWriteToInvalidPath() {
+    LocalFileIOProvider io;
+    QString invalidPath = QStringLiteral("Z:\\nonexistent_root_dir\\sub\\file.bin");
+    auto r = io.writeFile(invalidPath, QByteArray("data"));
+    QVERIFY(!r.ok());
+    QVERIFY(!r.error().empty());
+}
+
+void TestLocalFileIOProvider::testListFilesNonExistentDir() {
+    LocalFileIOProvider io;
+    auto r = io.listFiles("/nonexistent_dir", {"*.txt"}, false);
+    QVERIFY(!r.ok());
+    QVERIFY(!r.error().empty());
+}
+
+void TestLocalFileIOProvider::testCopyFromNonExistentSource() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    LocalFileIOProvider io;
+    auto r = io.copyFile("/nonexistent/src.txt", tmp.path() + "/dst.txt");
+    QVERIFY(!r.ok());
+    QVERIFY(!r.error().empty());
+}
+
+void TestLocalFileIOProvider::testRemoveNonExistentFile() {
+    LocalFileIOProvider io;
+    auto r = io.removeFile("/nonexistent/file.txt");
+    QVERIFY(!r.ok());
+    QVERIFY(!r.error().empty());
+}
+
+void TestLocalFileIOProvider::testFileInfoNonExistent() {
+    LocalFileIOProvider io;
+    auto fi = io.fileInfo("/nonexistent/file.txt");
+    QVERIFY(!fi.exists);
+    QVERIFY(!fi.isDirectory);
+    QCOMPARE(fi.size, qint64(0));
+}
+
+void TestLocalFileIOProvider::testWriteOverwritesExisting() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    LocalFileIOProvider io;
+    QString path = tmp.path() + "/overwrite.txt";
+    io.writeText(path, "first");
+    io.writeText(path, "second");
+    auto rd = io.readText(path);
+    QVERIFY(rd.ok());
+    QCOMPARE(rd.value(), QString("second"));
+}
+
+void TestLocalFileIOProvider::testCopyOverwritesDestination() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    LocalFileIOProvider io;
+    QString src = tmp.path() + "/src.txt";
+    QString dst = tmp.path() + "/dst.txt";
+    io.writeText(src, "source");
+    io.writeText(dst, "old_dest");
+    auto r = io.copyFile(src, dst);
+    QVERIFY(r.ok());
+    auto rd = io.readText(dst);
+    QVERIFY(rd.ok());
+    QCOMPARE(rd.value(), QString("source"));
 }
 
 QTEST_GUILESS_MAIN(TestLocalFileIOProvider)
