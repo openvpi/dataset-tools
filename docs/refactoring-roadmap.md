@@ -392,7 +392,7 @@ public:
 
 ---
 
-### T-2.6 提取 pipeline 后端逻辑 [G6]
+### T-2.6 提取 pipeline 后端逻辑 [G6] ✅ 已完成
 
 **依赖**: T-0.4 (slicer 等独立库化), T-1.5 (服务接口)
 
@@ -403,6 +403,8 @@ public:
 4. pipeline-pages 变为纯 UI 层，调用 service 接口
 
 **工作量**: L (1-3d)
+
+> ✅ 已完成 — SlicerService（src/libs/slicer/）、AsrService（src/libs/lyricfa/）、AlignmentService（src/libs/hubertfa/）已实现，分别对应 ISlicerService、IAsrService、IAlignmentService 接口。
 
 ---
 
@@ -591,7 +593,7 @@ Phase 2 (Week 6-8) — 库边界固化
   T-2.3 标准化模型配置加载 (✅)              ← depends T-1.4
   T-2.4 IInferenceEngine↔IModelProvider (✅) ← depends T-1.3, T-1.1
   T-2.5 FunASR 适配器 (✅)                    ← depends T-1.3
-  T-2.6 提取 pipeline 后端                ← depends T-0.4, T-1.5
+  T-2.6 提取 pipeline 后端 (✅)              ← depends T-0.4, T-1.5
       │
       ▼
 Phase 3 (Week 9-12) — 增强
