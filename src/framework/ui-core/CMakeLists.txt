@@ -3,6 +3,16 @@ project(dsfw-ui-core)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+# Standalone build guards — only activate when targets are not already defined
+if(NOT TARGET dsfw::core)
+    find_package(dsfw CONFIG REQUIRED)
+endif()
+
+if(NOT TARGET Qt6::Core)
+    find_package(QT NAMES Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets REQUIRED)
+endif()
+
 set(DSFW_UI_CORE_SOURCES
     src/Theme.cpp
     src/FramelessHelper.cpp
