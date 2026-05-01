@@ -472,7 +472,7 @@ public:
 
 ---
 
-### T-3.5 通用控件迁移到 dsfw [G4]
+### T-3.5 通用控件迁移到 dsfw [G4] ✅ 已完成
 
 **现状**: 部分 widget 是通用的（如 PlayWidget、TaskWindow、ShortcutManager），可归入框架。
 
@@ -488,6 +488,8 @@ public:
 - 缓解：过渡期 dstools-widgets 转发 (re-export) 迁出的符号
 
 **工作量**: M (2-8h)
+
+> ✅ 已完成 — dsfw-widgets (SHARED) 已创建于 src/framework/widgets/，包含 8 个通用控件（PlayWidget、TaskWindow、ShortcutManager、ShortcutEditorWidget、PathSelector、ViewportController、RunProgressRow、FileProgressTracker），使用 dsfw::widgets 命名空间。dstools-widgets 保留 4 个 DS 专有控件，通过转发头文件和命名空间别名保持向后兼容。
 
 ---
 
@@ -600,7 +602,7 @@ Phase 2 (Week 6-8) — 库边界固化
       ▼
 Phase 3 (Week 9-12) — 增强
   T-3.1 日志系统 (✅)  T-3.2 Undo/Redo (✅)  T-3.3 事件总线 (✅)
-  T-3.4 控件审计       T-3.5 控件迁移         T-3.6 CLI 工具
+  T-3.4 控件审计       T-3.5 控件迁移 (✅)         T-3.6 CLI 工具
       │
       ▼
 Phase 4 (Week 13+) — 完善
