@@ -74,7 +74,7 @@
 
 ---
 
-### T-0.3 推理公共层去 Qt 化 [G5]
+### T-0.3 推理公共层去 Qt 化 [G5] ✅ 已完成
 
 **现状**: `OnnxEnv.h` 包含 `#include <QString>`，`createSession()` 使用 `QString *errorMsg` 参数。`dstools-infer-common` 因此链接 `Qt::Core`。
 
@@ -142,7 +142,7 @@
 
 ## Phase 1 — 核心分离 (Week 3-5)
 
-### T-1.1 ModelManager / ModelDownloader 迁移到 domain [G1+G7]
+### T-1.1 ModelManager / ModelDownloader 迁移到 domain [G1+G7] ✅ 已完成
 
 **现状**: `ModelManager` 和 `ModelDownloader` 位于 `dsfw-core` 但强依赖 `ModelType` 枚举中的 DS 语义。
 
