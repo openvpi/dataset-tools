@@ -15,7 +15,8 @@ namespace dstools {
     /// Subclass and override execute(). The run() method calls execute() and emits
     /// succeeded() or failed() depending on the return value.
     ///
-    /// @note The task is auto-deleted by QThreadPool after run() completes.
+    /// @note autoDelete is set to false to avoid double-free with QObject parent.
+    ///       The task calls deleteLater() on itself after emitting succeeded/failed.
     class AsyncTask : public QObject, public QRunnable {
         Q_OBJECT
     public:

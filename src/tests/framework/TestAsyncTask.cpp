@@ -35,7 +35,6 @@ private slots:
 
 void TestAsyncTask::testSuccessSignal() {
     auto *task = new SuccessTask();
-    task->setAutoDelete(false);
     QSignalSpy spy(task, &AsyncTask::succeeded);
     QVERIFY(spy.isValid());
 
@@ -44,12 +43,11 @@ void TestAsyncTask::testSuccessSignal() {
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toString(), QString("success-task"));
     QCOMPARE(spy.at(0).at(1).toString(), QString("done"));
-    delete task;
+    // task deletes itself via deleteLater() after run()
 }
 
 void TestAsyncTask::testFailSignal() {
     auto *task = new FailTask();
-    task->setAutoDelete(false);
     QSignalSpy spy(task, &AsyncTask::failed);
     QVERIFY(spy.isValid());
 
@@ -58,7 +56,7 @@ void TestAsyncTask::testFailSignal() {
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toString(), QString("fail-task"));
     QCOMPARE(spy.at(0).at(1).toString(), QString("something failed"));
-    delete task;
+    // task deletes itself via deleteLater() after run()
 }
 
 void TestAsyncTask::testIdentifier() {

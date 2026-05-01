@@ -4,6 +4,7 @@ namespace dstools {
 
     AsyncTask::AsyncTask(QString identifier, QObject *parent)
         : QObject(parent), m_identifier(std::move(identifier)) {
+        setAutoDelete(false);
     }
 
     void AsyncTask::run() {
@@ -13,6 +14,7 @@ namespace dstools {
         } else {
             Q_EMIT failed(m_identifier, msg);
         }
+        deleteLater();
     }
 
     const QString &AsyncTask::identifier() const {
