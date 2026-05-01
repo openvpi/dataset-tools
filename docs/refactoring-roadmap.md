@@ -283,7 +283,7 @@
 
 ## Phase 2 — 库边界固化 (Week 6-8)
 
-### T-2.1 整理 dsfw 目录结构与 CMake 导出 [G1]
+### T-2.1 整理 dsfw 目录结构与 CMake 导出 [G1] ✅ 已完成
 
 **现状**: dsfw 各模块已在 `src/framework/` 下，但目录组织可进一步规范化，使其作为仓库内独立库清晰可辨。
 
@@ -312,6 +312,8 @@
 - 缓解：使用 `git mv`，一次原子提交
 
 **工作量**: M (2-8h)
+
+> ✅ 已完成 — src/audio/ 迁移至 src/framework/audio/，src/infer/common/ 迁移至 src/framework/infer/。目录结构现已符合规范，目标名称不变。
 
 ---
 
@@ -588,7 +590,7 @@ Phase 1 (Week 3-5) — 核心分离
       │
       ▼
 Phase 2 (Week 6-8) — 库边界固化
-  T-2.1 整理 dsfw 目录结构与导出       ← depends Phase 1
+  T-2.1 整理 dsfw 目录结构与导出 (✅)    ← depends Phase 1
   T-2.2 版本化 API (✅)                     ← depends T-2.1
   T-2.3 标准化模型配置加载 (✅)              ← depends T-1.4
   T-2.4 IInferenceEngine↔IModelProvider (✅) ← depends T-1.3, T-1.1
