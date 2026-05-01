@@ -45,7 +45,7 @@ namespace Minlabel {
 
         // State
         bool hasUnsavedChanges() const override;
-        bool save() override;
+        bool save();
 
         // IPageActions
         QMenuBar *createMenuBar(QWidget *parent) override;
