@@ -1,37 +1,10 @@
 project(GameInfer VERSION 0.1.0.0)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
-file(GLOB_RECURSE _src *.h *.cpp)
-add_executable(${PROJECT_NAME} ${_src})
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    dstools-ui-core
-    dstools-widgets
-    dsfw-ui-core
-    game-infer::game-infer
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Widgets
+dstools_add_executable(${PROJECT_NAME}
+    VERSION ${PROJECT_VERSION}
+    AUTOMOC AUTORCC AUTOUIC
+    DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
+    DEPENDS
+        PRIVATE dstools-ui-core dstools-widgets dsfw-ui-core game-infer::game-infer
+                Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
 )
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    APP_VERSION="${PROJECT_VERSION}"
-)
-
-target_include_directories(${PROJECT_NAME} PRIVATE .)
-
-if(WIN32)
-    include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)
-
-    if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Deb")
-        set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
-    endif()
-endif()
-
-if(APPLE)
-    set_target_properties(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE TRUE)
-endif()
-
-set_property(TARGET DeployedTargets APPEND PROPERTY TARGETS ${PROJECT_NAME})

@@ -1,46 +1,28 @@
 project(DatasetPipeline VERSION 1.0.0.0)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 add_subdirectory(slicer)
 add_subdirectory(lyricfa)
 add_subdirectory(hubertfa)
 add_subdirectory(pages)
 
-add_executable(${PROJECT_NAME} WIN32
-    main.cpp
-    PipelinePage.h
-    PipelinePage.cpp
+dstools_add_executable(${PROJECT_NAME}
+    VERSION ${PROJECT_VERSION}
+    AUTOMOC AUTORCC AUTOUIC
+    DEPLOY MACOSX_BUNDLE WINRC
+    SOURCES
+        main.cpp
+        PipelinePage.h
+        PipelinePage.cpp
+    DEPENDS
+        PRIVATE dstools-ui-core pipeline-pages dstools-domain dsfw-ui-core
+                $<$<BOOL:${ONNXRUNTIME_ENABLE_DML}>:dxgi>
 )
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    dstools-ui-core
-    pipeline-pages
-    dstools-domain
-    dsfw-ui-core
-)
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    APP_VERSION="${PROJECT_VERSION}"
-)
-
-if(WIN32)
-    include(${PROJECT_CMAKE_MODULES_DIR}/winrc.cmake)
-endif()
-
-if(APPLE)
-    set_target_properties(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE TRUE)
-endif()
 
 if(ONNXRUNTIME_ENABLE_DML)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ONNXRUNTIME_ENABLE_DML)
-    target_link_libraries(${PROJECT_NAME} PRIVATE dxgi)
 endif()
 
-set_property(TARGET DeployedTargets APPEND PROPERTY TARGETS ${PROJECT_NAME})
+# DatasetPipeline uses WIN32 unconditionally (set in original)
+if(WIN32)
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()

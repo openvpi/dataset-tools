@@ -1,28 +1,8 @@
 project(hubertfa-lib)
 
-set(CMAKE_AUTOMOC ON)
-
-set(HUBERTFA_SOURCES
-    HfaTask.cpp
-    HubertAlignmentProcessor.cpp
-)
-
-set(HUBERTFA_HEADERS
-    HfaTask.h
-    HubertAlignmentProcessor.h
-)
-
-add_library(${PROJECT_NAME} STATIC ${HUBERTFA_SOURCES} ${HUBERTFA_HEADERS})
-
-target_include_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    dsfw-core
-    dstools-infer-common
-    hubert-infer
-    textgrid
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Widgets
+dstools_add_library(${PROJECT_NAME}
+    STATIC
+    AUTOMOC
+    DEPENDS
+        PUBLIC dsfw-core dstools-infer-common hubert-infer textgrid Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
 )
