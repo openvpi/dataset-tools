@@ -9,6 +9,7 @@
 #include <QFrame>
 
 #include "commands/PitchCommands.h"
+#include "commands/NoteCommands.h"
 
 #include <dstools/PitchUtils.h>
 
@@ -360,7 +361,8 @@ void PianoRollInputHandler::handleMouseRelease(
 void PianoRollInputHandler::handleMouseDoubleClick(
     QMouseEvent *event,
     const std::shared_ptr<DSFile> &dsFile,
-    std::set<int> &selectedNotes)
+    std::set<int> &selectedNotes,
+    QUndoStack *undoStack)
 {
     if (event->button() == Qt::LeftButton) {
         int x = event->pos().x();
@@ -371,18 +373,22 @@ void PianoRollInputHandler::handleMouseDoubleClick(
         if (clicked >= 0 && dsFile && !selectedNotes.empty()) {
             if (selectedNotes.count(clicked) == 0)
                 m_cb.selectNotes({clicked});
-            for (int idx : selectedNotes) {
+            std::vector<int> indices(selectedNotes.begin(), selectedNotes.end());
+            std::vector<QString> oldNames;
+            bool hasSnap = false;
+            for (int idx : indices) {
                 if (idx < static_cast<int>(dsFile->notes.size())) {
-                    auto &note = dsFile->notes[idx];
-                    if (!note.isRest()) {
-                        auto pitch = parseNoteName(note.name);
-                        if (pitch.valid && pitch.cents != 0) {
-                            note.name = shiftNoteCents(note.name, -pitch.cents);
-                        }
+                    oldNames.push_back(dsFile->notes[idx].name);
+                    if (!dsFile->notes[idx].isRest()) {
+                        auto pitch = parseNoteName(dsFile->notes[idx].name);
+                        if (pitch.valid && pitch.cents != 0)
+                            hasSnap = true;
                     }
                 }
             }
-            dsFile->markModified();
+            if (hasSnap && undoStack) {
+                undoStack->push(new SnapToPitchCommand(dsFile, indices, oldNames));
+            }
             m_cb.emitFileEdited();
             m_cb.update();
         }

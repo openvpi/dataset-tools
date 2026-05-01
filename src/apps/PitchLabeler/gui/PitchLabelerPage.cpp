@@ -6,6 +6,7 @@
 #include "ui/FileListPanel.h"
 #include "ui/PianoRollView.h"
 #include "ui/PropertyPanel.h"
+#include "ui/commands/NoteCommands.h"
 
 #include <QApplication>
 #include <QDir>
@@ -559,69 +560,39 @@ namespace dstools {
             // Note editing from context menu
             connect(m_pianoRoll, &ui::PianoRollView::noteDeleteRequested, this, [this](const std::vector<int> &indices) {
                 if (!m_currentFile || indices.empty()) return;
-                // Delete in reverse order to keep indices valid
-                std::vector<int> sorted = indices;
-                std::sort(sorted.begin(), sorted.end(), std::greater<int>());
-                for (int idx : sorted) {
-                    if (idx >= 0 && idx < static_cast<int>(m_currentFile->notes.size())) {
-                        m_currentFile->notes.erase(m_currentFile->notes.begin() + idx);
-                    }
-                }
-                m_currentFile->recomputeNoteStarts();
-                m_currentFile->markModified();
+                m_undoStack->push(new ui::DeleteNotesCommand(m_currentFile, indices));
                 m_pianoRoll->setDSFile(m_currentFile);
                 m_fileListPanel->setFileModified(m_currentFilePath, true);
                 emit modificationChanged(true);
             });
             connect(m_pianoRoll, &ui::PianoRollView::noteGlideChanged, this, [this](int idx, const QString &glide) {
                 if (!m_currentFile || idx < 0 || idx >= static_cast<int>(m_currentFile->notes.size())) return;
-                m_currentFile->notes[idx].glide = glide;
-                m_currentFile->markModified();
+                QString oldGlide = m_currentFile->notes[idx].glide;
+                m_undoStack->push(new ui::SetNoteGlideCommand(m_currentFile, idx, oldGlide, glide));
                 m_pianoRoll->update();
                 m_fileListPanel->setFileModified(m_currentFilePath, true);
                 emit modificationChanged(true);
             });
             connect(m_pianoRoll, &ui::PianoRollView::noteSlurToggled, this, [this](int idx) {
                 if (!m_currentFile || idx < 0 || idx >= static_cast<int>(m_currentFile->notes.size())) return;
-                m_currentFile->notes[idx].slur = m_currentFile->notes[idx].slur ? 0 : 1;
-                m_currentFile->markModified();
+                int oldSlur = m_currentFile->notes[idx].slur;
+                m_undoStack->push(new ui::ToggleNoteSlurCommand(m_currentFile, idx, oldSlur));
                 m_pianoRoll->update();
                 m_fileListPanel->setFileModified(m_currentFilePath, true);
                 emit modificationChanged(true);
             });
             connect(m_pianoRoll, &ui::PianoRollView::noteRestToggled, this, [this](int idx) {
                 if (!m_currentFile || idx < 0 || idx >= static_cast<int>(m_currentFile->notes.size())) return;
-                auto &note = m_currentFile->notes[idx];
-                if (note.isRest()) {
-                    bool found = false;
-                    for (int off = 1; off < static_cast<int>(m_currentFile->notes.size()) && !found; ++off) {
-                        for (int j : {idx - off, idx + off}) {
-                            if (j >= 0 && j < static_cast<int>(m_currentFile->notes.size()) &&
-                                !m_currentFile->notes[j].isRest()) {
-                                note.name = m_currentFile->notes[j].name;
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!found) note.name = "C4";
-                } else {
-                    note.name = "rest";
-                }
-                m_currentFile->markModified();
+                QString oldName = m_currentFile->notes[idx].name;
+                bool wasRest = m_currentFile->notes[idx].isRest();
+                m_undoStack->push(new ui::ToggleNoteRestCommand(m_currentFile, idx, oldName, wasRest));
                 m_pianoRoll->update();
                 m_fileListPanel->setFileModified(m_currentFilePath, true);
                 emit modificationChanged(true);
             });
             connect(m_pianoRoll, &ui::PianoRollView::noteMergeLeft, this, [this](int idx) {
                 if (!m_currentFile || idx <= 0 || idx >= static_cast<int>(m_currentFile->notes.size())) return;
-                // Merge slur into left neighbor by extending left's duration
-                auto &left = m_currentFile->notes[idx - 1];
-                auto &cur = m_currentFile->notes[idx];
-                left.duration += cur.duration;
-                m_currentFile->notes.erase(m_currentFile->notes.begin() + idx);
-                m_currentFile->recomputeNoteStarts();
-                m_currentFile->markModified();
+                m_undoStack->push(new ui::MergeNoteLeftCommand(m_currentFile, idx));
                 m_pianoRoll->setDSFile(m_currentFile);
                 m_fileListPanel->setFileModified(m_currentFilePath, true);
                 emit modificationChanged(true);

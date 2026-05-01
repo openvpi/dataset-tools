@@ -23,6 +23,8 @@ set(PAGE_SOURCES
     ui/PropertyPanel.h
     ui/commands/PitchCommands.cpp
     ui/commands/PitchCommands.h
+    ui/commands/NoteCommands.cpp
+    ui/commands/NoteCommands.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${PAGE_SOURCES})

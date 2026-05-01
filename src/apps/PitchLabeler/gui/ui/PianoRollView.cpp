@@ -570,7 +570,7 @@ void PianoRollView::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void PianoRollView::mouseDoubleClickEvent(QMouseEvent *event) {
-    m_inputHandler.handleMouseDoubleClick(event, m_dsFile, m_selectedNotes);
+    m_inputHandler.handleMouseDoubleClick(event, m_dsFile, m_selectedNotes, m_undoStack);
 }
 
 void PianoRollView::keyPressEvent(QKeyEvent *event) {

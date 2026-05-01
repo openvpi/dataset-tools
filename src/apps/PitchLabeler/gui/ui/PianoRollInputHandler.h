@@ -95,7 +95,8 @@ public:
                             QUndoStack *undoStack);
     void handleMouseDoubleClick(QMouseEvent *event,
                                 const std::shared_ptr<DSFile> &dsFile,
-                                std::set<int> &selectedNotes);
+                                std::set<int> &selectedNotes,
+                                QUndoStack *undoStack);
     void handleWheel(QWheelEvent *event);
     void handleKeyPress(QKeyEvent *event,
                         const std::shared_ptr<DSFile> &dsFile,
