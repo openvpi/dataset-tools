@@ -7,10 +7,20 @@ on:
     branches:
       - main
       - master
+      - refactor
   pull_request:
     branches:
       - main
       - master
+      - refactor
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   BUILD_TYPE: Release
@@ -52,7 +62,14 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache
+
+      - name: Setup ccache
+        if: runner.os != 'Windows'
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.triplet }}
+          max-size: 500M
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -91,6 +108,14 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg/installed
+          key: vcpkg-installed-${{ matrix.triplet }}-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.triplet }}-
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
@@ -137,20 +162,76 @@ jobs:
       - name: Configure CMake
         shell: bash
         run: |
+          EXTRA_CMAKE_ARGS=""
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          fi
           cmake -B ${{github.workspace}}/build -G Ninja \
             -DBUILD_TESTS:BOOL=ON \
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
             -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deploy \
             -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
             -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }}
+            -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
+            $EXTRA_CMAKE_ARGS
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --target all
 
       - name: Run tests
         working-directory: ${{github.workspace}}/build
-        run: ctest --output-on-failure -C ${{env.BUILD_TYPE}}
+        run: ctest --output-on-failure --output-junit test-results.xml -C ${{env.BUILD_TYPE}}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.artifact_name }}
+          path: ${{github.workspace}}/build/test-results.xml
+
+      - name: Test Report
+        if: always() && github.event_name == 'push'
+        uses: dorny/test-reporter@v1
+        with:
+          name: Test Results (${{ matrix.artifact_name }})
+          path: ${{github.workspace}}/build/test-results.xml
+          reporter: java-junit
+
+      - name: Verify build outputs
+        shell: bash
+        run: |
+          echo "=== Verifying build outputs ==="
+          FAILED=0
+          for app in DatasetPipeline MinLabel PhonemeLabeler PitchLabeler GameInfer DiffSingerLabeler; do
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              EXE="${{github.workspace}}/build/bin/${app}.exe"
+            else
+              EXE="${{github.workspace}}/build/bin/${app}"
+            fi
+            if [ -f "$EXE" ]; then
+              echo "  [OK] $app"
+            else
+              echo "  [FAIL] $app (not found)"
+              FAILED=1
+            fi
+          done
+          for test_target in TestAudioUtil TestGame TestSome TestRmvpe; do
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              EXE="${{github.workspace}}/build/bin/${test_target}.exe"
+            else
+              EXE="${{github.workspace}}/build/bin/${test_target}"
+            fi
+            if [ -f "$EXE" ]; then
+              echo "  [OK] $test_target"
+            else
+              echo "  [FAIL] $test_target (not found)"
+              FAILED=1
+            fi
+          done
+          if [ $FAILED -ne 0 ]; then
+            echo "::error::Some expected build outputs are missing"
+            exit 1
+          fi
 
       - name: Deploy
         run: cmake --build ${{github.workspace}}/build --target install

@@ -266,7 +266,7 @@ Phase 0 (✅) → Phase 1 (✅) → Phase 2 (✅) → Phase 3 (✅) → Phase 4 
 
 ### 5.3 CI/CD 与工程化
 
-#### T-5.3.1 CI 矩阵构建 — P1, L (1-3d)
+#### T-5.3.1 CI 矩阵构建 — P1, L (1-3d) ✅ 已完成
 
 **方案**:
 1. GitHub Actions 矩阵：Windows (MSVC 2022) / macOS (arm64) / Linux (Ubuntu, GCC)
@@ -275,8 +275,17 @@ Phase 0 (✅) → Phase 1 (✅) → Phase 2 (✅) → Phase 3 (✅) → Phase 4 
 4. 缓存 vcpkg 安装目录
 
 **验收标准**:
-- [ ] 三平台 CI 全绿
-- [ ] 测试结果上报
+- [x] 三平台 CI 全绿
+- [x] 测试结果上报
+
+**成果**:
+- 添加 `refactor` 分支到 CI 触发器
+- 添加 `permissions`（contents: read, checks: write）和 `concurrency` 组（取消冗余运行）
+- 添加 ccache 加速 Linux/macOS 编译（`hendrikmuhs/ccache-action` + `CMAKE_CXX_COMPILER_LAUNCHER`）
+- 添加 vcpkg 已安装包缓存（`actions/cache@v4`，以 vcpkg.json hash 为 key）
+- ctest 添加 `--output-junit test-results.xml` 生成 JUnit XML 测试报告
+- 添加测试结果上传（`actions/upload-artifact`）和测试报告（`dorny/test-reporter`）
+- 添加构建产物验证步骤，检查 6 个 app + 4 个 test target 是否生成
 
 ---
 
