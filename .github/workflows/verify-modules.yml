@@ -1,0 +1,324 @@
+name: Verify Modules
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - refactor
+  pull_request:
+    branches:
+      - main
+      - master
+      - refactor
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  module-standalone:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            triplet: x64-linux
+            onnxruntime_ep: cpu
+            dml: OFF
+          - os: macos-14
+            triplet: arm64-osx
+            onnxruntime_ep: cpu
+            dml: OFF
+          - os: windows-latest
+            triplet: x64-windows
+            onnxruntime_ep: dml
+            dml: ON
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache
+
+      - name: Setup ccache
+        if: runner.os != 'Windows'
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.triplet }}-modules
+          max-size: 500M
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+
+      - name: Initialize MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Configure Qt6 path (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "QT_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" >> $GITHUB_ENV
+
+      - name: Configure Qt6 path (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "QT_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
+
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg/installed
+          key: vcpkg-installed-${{ matrix.triplet }}-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.triplet }}-
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Build Vcpkg packages (Unix)
+        if: runner.os != 'Windows'
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          ./vcpkg install \
+            --x-manifest-root=../scripts/vcpkg-manifest \
+            --x-install-root=./installed \
+            --triplet=${{ matrix.triplet }}
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
+          QT_DIR: ${{env.QT_DIR}}
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+
+      - name: Build Vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --triplet=${{ matrix.triplet }}
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
+          QT_DIR: ${{env.QT_DIR}}
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+
+      - name: Install OnnxRuntime (Unix)
+        if: runner.os != 'Windows'
+        working-directory: ${{github.workspace}}/src/infer
+        run: |
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Install OnnxRuntime (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: ${{github.workspace}}/src/infer
+        run: |
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          EXTRA_CMAKE_ARGS=""
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          fi
+          cmake -B ${{github.workspace}}/build -G Ninja \
+            -DBUILD_TESTS:BOOL=ON \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
+            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
+            $EXTRA_CMAKE_ARGS
+
+      - name: Verify framework modules build independently
+        run: |
+          echo "=== Verifying framework modules build independently ==="
+          cmake --build ${{github.workspace}}/build --target dsfw-base
+          cmake --build ${{github.workspace}}/build --target dsfw-core
+          cmake --build ${{github.workspace}}/build --target dsfw-ui-core
+          cmake --build ${{github.workspace}}/build --target dstools-domain
+          cmake --build ${{github.workspace}}/build --target dstools-types
+          cmake --build ${{github.workspace}}/build --target slicer-lib
+          cmake --build ${{github.workspace}}/build --target minlabel-lib
+          cmake --build ${{github.workspace}}/build --target dsfw-audio
+          cmake --build ${{github.workspace}}/build --target dsfw-widgets
+          echo "=== All framework modules built successfully ==="
+
+  find-package-consumer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            triplet: x64-linux
+            onnxruntime_ep: cpu
+            dml: OFF
+          - os: macos-14
+            triplet: arm64-osx
+            onnxruntime_ep: cpu
+            dml: OFF
+          - os: windows-latest
+            triplet: x64-windows
+            onnxruntime_ep: dml
+            dml: ON
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache
+
+      - name: Setup ccache
+        if: runner.os != 'Windows'
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.triplet }}-findpkg
+          max-size: 500M
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+
+      - name: Initialize MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Configure Qt6 path (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "QT_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" >> $GITHUB_ENV
+
+      - name: Configure Qt6 path (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "QT_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "QT6_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
+          echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
+
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg/installed
+          key: vcpkg-installed-${{ matrix.triplet }}-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.triplet }}-
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Build Vcpkg packages (Unix)
+        if: runner.os != 'Windows'
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          ./vcpkg install \
+            --x-manifest-root=../scripts/vcpkg-manifest \
+            --x-install-root=./installed \
+            --triplet=${{ matrix.triplet }}
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
+          QT_DIR: ${{env.QT_DIR}}
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+
+      - name: Build Vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --triplet=${{ matrix.triplet }}
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
+          QT_DIR: ${{env.QT_DIR}}
+          Qt6_DIR: ${{env.QT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+
+      - name: Install OnnxRuntime (Unix)
+        if: runner.os != 'Windows'
+        working-directory: ${{github.workspace}}/src/infer
+        run: |
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Install OnnxRuntime (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: ${{github.workspace}}/src/infer
+        run: |
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          EXTRA_CMAKE_ARGS=""
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          fi
+          cmake -B ${{github.workspace}}/build -G Ninja \
+            -DBUILD_TESTS:BOOL=ON \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deploy \
+            -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
+            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
+            $EXTRA_CMAKE_ARGS
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --target all
+
+      - name: Install
+        run: cmake --build ${{github.workspace}}/build --target install
+
+      - name: Verify find_package(dsfw)
+        shell: bash
+        run: |
+          cmake -B tests/test-find-package/build -S tests/test-find-package -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DCMAKE_PREFIX_PATH="${{github.workspace}}/deploy;${{env.QT_DIR}}/lib/cmake/Qt6/" \
+            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          cmake --build tests/test-find-package/build
