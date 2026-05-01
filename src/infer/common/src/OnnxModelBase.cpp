@@ -1,5 +1,7 @@
 #include <dstools/OnnxModelBase.h>
 
+#include <fstream>
+
 namespace dstools::infer {
 
     bool OnnxModelBase::loadSession(const std::filesystem::path &modelPath, std::string *errorMsg) {
@@ -30,6 +32,23 @@ namespace dstools::infer {
     bool OnnxModelBase::loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
                                       std::string *errorMsg) {
         return loadSessionTo(target, modelPath, m_provider, m_deviceId, *errorMsg);
+    }
+
+    Result<nlohmann::json> OnnxModelBase::loadConfig(const std::filesystem::path &modelDir) {
+        const auto configPath = modelDir / "config.json";
+        std::ifstream file(configPath);
+        if (!file.is_open()) {
+            return Err("Cannot open config.json in " + modelDir.string());
+        }
+        try {
+            nlohmann::json config = nlohmann::json::parse(file);
+            onConfigLoaded(config);
+            return Ok(std::move(config));
+        } catch (const nlohmann::json::parse_error &e) {
+            return Err(std::string("Failed to parse config.json: ") + e.what());
+        } catch (const nlohmann::json::type_error &e) {
+            return Err(std::string("Type error in config.json: ") + e.what());
+        }
     }
 
     void CancellableOnnxModel::terminate() {

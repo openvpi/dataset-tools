@@ -324,7 +324,7 @@
 
 ---
 
-### T-2.3 标准化模型配置加载 [G8]
+### T-2.3 标准化模型配置加载 [G8] ✅ 已完成
 
 **方案**:
 在 `OnnxModelBase` 添加:
@@ -406,7 +406,7 @@ public:
 
 ## Phase 3 — 框架增强 (Week 9-12)
 
-### T-3.1 结构化日志系统 [G2]
+### T-3.1 结构化日志系统 [G2] ✅ 已完成
 
 **现状**: 项目使用 `qDebug()` / `qWarning()` 零散输出。
 
@@ -418,9 +418,11 @@ public:
 
 **工作量**: M (2-8h)
 
+> ✅ 已完成 — Logger 单例已实现，支持 6 级 severity、category 标签、可插拔 sink。
+
 ---
 
-### T-3.2 Command / Undo-Redo 框架 [G2]
+### T-3.2 Command / Undo-Redo 框架 [G2] ✅ 已完成
 
 **现状**: PhonemeLabeler 和 PitchLabeler 已有自定义 undo/redo 实现。
 
@@ -434,9 +436,11 @@ public:
 
 **工作量**: L (1-3d)
 
+> ✅ 已完成 — ICommand + UndoStack 已实现于 dsfw-core。
+
 ---
 
-### T-3.3 类型安全事件总线 [G2]
+### T-3.3 类型安全事件总线 [G2] ✅ 已完成
 
 **方案**:
 - `dsfw/EventBus.h`: 跨模块发布/订阅，不依赖 QObject
@@ -444,6 +448,8 @@ public:
 - 用于模块间通信 (如: 推理完成通知 UI 刷新)
 
 **工作量**: M (2-8h)
+
+> ✅ 已完成 — EventBus 单例已实现，基于 std::any + std::type_index 的类型安全发布/订阅。
 
 ---
 
@@ -512,19 +518,23 @@ public:
 
 **工作量**: M (2-8h)
 
-### T-4.3 自动更新检查 [G2]
+### T-4.3 自动更新检查 [G2] ✅ 已完成
 
 - GitHub Releases API 轮询 + 语义版本比较
 - UI 通知（不静默安装）
 
 **工作量**: S (<2h)
 
-### T-4.4 MRU 最近文件列表 [G2]
+> ✅ 已完成 — UpdateChecker 已实现，通过 GitHub Releases API 检查更新。
+
+### T-4.4 MRU 最近文件列表 [G2] ✅ 已完成
 
 - `dsfw/RecentFiles.h` — 持久化最近文件列表
 - 基于 `QSettings` 后端
 
 **工作量**: S (<2h) (trivial)
+
+> ✅ 已完成 — RecentFiles 已实现，基于 QSettings 后端。
 
 ### T-4.5 新增标准控件 [G4]
 
@@ -558,17 +568,17 @@ public:
 Phase 0 (Week 1-2) — 预备
   T-0.1 泛化 ModelType 枚举
   T-0.2 dsfw-core 去 Qt::Gui
-  T-0.3 infer-common 去 Qt
-  T-0.4 pipeline 相对路径修复
+  T-0.3 infer-common 去 Qt (✅)
+  T-0.4 pipeline 相对路径修复 (✅)
   T-0.5 DS 泄漏审计
       │
       ▼
 Phase 1 (Week 3-5) — 核心分离
-  T-1.1 ModelManager 迁移至 domain        ← depends T-0.1
-  T-1.2 dsfw-core 拆分 dsfw-base          ← depends T-0.2
-  T-1.3 丰富 IInferenceEngine             ← independent
-  T-1.4 创建 OnnxModelBase                ← depends T-1.3
-  T-1.5 定义后端服务接口                    ← independent
+  T-1.1 ModelManager 迁移至 domain (✅)   ← depends T-0.1
+  T-1.2 dsfw-core 拆分 dsfw-base (✅)     ← depends T-0.2
+  T-1.3 丰富 IInferenceEngine (✅)        ← independent
+  T-1.4 创建 OnnxModelBase (✅)           ← depends T-1.3
+  T-1.5 定义后端服务接口 (✅)              ← independent
       │
       ▼
 Phase 2 (Week 6-8) — 库边界固化
@@ -581,13 +591,13 @@ Phase 2 (Week 6-8) — 库边界固化
       │
       ▼
 Phase 3 (Week 9-12) — 增强
-  T-3.1 日志系统       T-3.2 Undo/Redo    T-3.3 事件总线
-  T-3.4 控件审计       T-3.5 控件迁移      T-3.6 CLI 工具
+  T-3.1 日志系统 (✅)  T-3.2 Undo/Redo (✅)  T-3.3 事件总线 (✅)
+  T-3.4 控件审计       T-3.5 控件迁移         T-3.6 CLI 工具
       │
       ▼
 Phase 4 (Week 13+) — 完善
-  T-4.1 插件系统    T-4.2 崩溃收集    T-4.3 更新检查
-  T-4.4 MRU 列表    T-4.5 新增控件    T-4.6 控件画廊
+  T-4.1 插件系统    T-4.2 崩溃收集    T-4.3 更新检查 (✅)
+  T-4.4 MRU 列表 (✅)  T-4.5 新增控件  T-4.6 控件画廊
   T-4.7 DI 强化
 ```
 

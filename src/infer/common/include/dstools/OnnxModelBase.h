@@ -2,7 +2,9 @@
 
 #include <dstools/ExecutionProvider.h>
 #include <dstools/OnnxEnv.h>
+#include <dstools/Result.h>
 
+#include <nlohmann/json.hpp>
 #include <onnxruntime_cxx_api.h>
 
 #include <filesystem>
@@ -32,6 +34,10 @@ namespace dstools::infer {
                                   ExecutionProvider provider, int deviceId, std::string &errorMsg);
         bool loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
                            std::string *errorMsg = nullptr);
+
+        Result<nlohmann::json> loadConfig(const std::filesystem::path &modelDir);
+
+        virtual void onConfigLoaded(const nlohmann::json &config) { (void)config; }
 
     public:
         virtual ~OnnxModelBase() = default;
