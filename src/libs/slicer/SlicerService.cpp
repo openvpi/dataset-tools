@@ -1,30 +1,56 @@
 #include "SlicerService.h"
 
-#include "Slicer.h"
+#include <audio-util/Slicer.h>
 
 #include <QFileInfo>
 #include <sndfile.hh>
 
-Result<dstools::SliceResult> SlicerService::slice(const QString &audioPath, double threshold,
-                                                   int minLength, int minInterval, int hopSize) {
+dstools::Result<dstools::SliceResult> SlicerService::slice(const QString &audioPath, double threshold, int minLength,
+                                                           int minInterval, int hopSize, int maxSilKept) {
     if (!QFileInfo::exists(audioPath)) {
-        return Result<SliceResult>::Error("Audio file does not exist: " + audioPath.toStdString());
+        return dstools::Result<dstools::SliceResult>::Error("Audio file does not exist: " + audioPath.toStdString());
     }
 
     SndfileHandle sf(audioPath.toLocal8Bit().constData());
     if (sf.error()) {
-        return Result<SliceResult>::Error("Failed to open audio file: " + audioPath.toStdString());
+        return dstools::Result<dstools::SliceResult>::Error("Failed to open audio file: " + audioPath.toStdString());
     }
 
     int sampleRate = sf.samplerate();
-    qint64 maxSilKept = 5000;
 
-    Slicer slicer(&sf, threshold, minLength, minInterval, hopSize, maxSilKept);
-    MarkerList markers = slicer.slice();
+    AudioUtil::SlicerParams params;
+    params.threshold = threshold;
+    params.minLength = minLength;
+    params.minInterval = minInterval;
+    params.hopSize = hopSize;
+    params.maxSilKept = maxSilKept;
 
-    if (slicer.getErrorCode() != SLICER_OK) {
-        return Result<SliceResult>::Error(slicer.getErrorMsg().toStdString());
+    auto slicer = AudioUtil::Slicer::fromMilliseconds(sampleRate, params);
+    if (slicer.errorCode() != AudioUtil::SlicerError::Ok) {
+        return dstools::Result<dstools::SliceResult>::Error(slicer.errorMessage());
     }
+
+    sf.seek(0, SEEK_SET);
+    qint64 frames = sf.frames();
+    int channels = sf.channels();
+
+    std::vector<float> interleaved(frames * channels);
+    sf.readf(interleaved.data(), frames);
+
+    std::vector<float> monoSamples(frames);
+    if (channels == 1) {
+        monoSamples = std::move(interleaved);
+    } else {
+        for (qint64 i = 0; i < frames; ++i) {
+            double sum = 0.0;
+            for (int ch = 0; ch < channels; ++ch) {
+                sum += interleaved[i * channels + ch];
+            }
+            monoSamples[i] = static_cast<float>(sum / channels);
+        }
+    }
+
+    auto markers = slicer.slice(monoSamples);
 
     dstools::SliceResult result;
     result.sampleRate = sampleRate;
@@ -33,5 +59,5 @@ Result<dstools::SliceResult> SlicerService::slice(const QString &audioPath, doub
         result.chunks.emplace_back(marker.first, marker.second);
     }
 
-    return Result<SliceResult>::Ok(std::move(result));
+    return dstools::Result<dstools::SliceResult>::Ok(std::move(result));
 }

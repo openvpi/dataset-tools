@@ -1,6 +1,7 @@
 #include <dstools/CsvToDsConverter.h>
 #include <dstools/DsDocument.h>
 #include <dstools/TranscriptionCsv.h>
+#include <dstools/StringUtils.h>
 
 #include <QDir>
 #include <QFile>
@@ -18,21 +19,8 @@ namespace dstools {
 
 namespace {
 
-    /// Format a single float to 6 decimal places, strip trailing zeros.
-    /// Matches Python: str(round(d, 6))
-    QString formatDur6(double d) {
-        QString s = QString::number(d, 'f', 6);
-        if (s.contains(QLatin1Char('.'))) {
-            while (s.endsWith(QLatin1Char('0')))
-                s.chop(1);
-            if (s.endsWith(QLatin1Char('.')))
-                s.chop(1);
-        }
-        return s;
-    }
+    using dstools::formatDur6;
 
-    /// Re-round a space-separated duration string to 6 decimal places.
-    /// Matches Python: " ".join(str(round(d, 6)) for d in durations)
     QString reroundDurs(const QString &durStr) {
         if (durStr.isEmpty())
             return durStr;

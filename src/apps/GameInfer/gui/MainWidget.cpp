@@ -357,7 +357,7 @@ void MainWidget::updateLanguageCombo() {
 }
 
 void MainWidget::updateParameterValues() const {
-    auto *gameService = qobject_cast<GameInferService *>(m_service);
+    auto *gameService = dynamic_cast<GameInferService *>(m_service);
     if (!gameService) return;
 
     gameService->setSegThreshold(m_segThresholdSpin->value());
@@ -446,7 +446,7 @@ void MainWidget::onExportMidiTask() {
             }
         }
 
-        auto *gameService = qobject_cast<GameInferService *>(m_service);
+        auto *gameService = dynamic_cast<GameInferService *>(m_service);
         if (gameService) {
             gameService->setSegThreshold(segThreshold);
             gameService->setSegRadiusFrames(segRadiusFrame);
@@ -556,7 +556,7 @@ void MainWidget::onAlignCsvTask() {
             }
         }
 
-        auto *gameService = qobject_cast<GameInferService *>(m_service);
+        auto *gameService = dynamic_cast<GameInferService *>(m_service);
         if (gameService) {
             gameService->setSegThreshold(segThreshold);
             gameService->setSegRadiusFrames(segRadiusFrame);

@@ -9,16 +9,12 @@
 #include <QFile>
 #include <QFileInfo>
 
-#include <sndfile.hh>
-
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) || (defined(UNICODE) || defined(_UNICODE))
-#    define USE_WIDE_CHAR
-#endif
+#include <dsfw/ISlicerService.h>
+#include <dsfw/ServiceLocator.h>
 
 #include "AudioChunkWriter.h"
 #include "AudioFileLoader.h"
 #include "MarkerIO.h"
-#include "Slicer.h"
 
 SliceJobResult SliceJob::run(const QString &filename, const QString &outPath,
                              const SliceJobParams &params, ISliceJobSink *sink) {
@@ -74,24 +70,30 @@ SliceJobResult SliceJob::run(const QString &filename, const QString &outPath,
     if (!hasExistingMarkers) {
         info(QString("%1: calculating markers").arg(filename));
 
-        // Slicer needs a SndfileHandle; open the resolved path
-#ifdef USE_WIDE_CHAR
-        auto sndfilePathStr = loadResult.sndfilePath.toStdWString();
-#else
-        auto sndfilePathStr = loadResult.sndfilePath.toStdString();
-#endif
-        SndfileHandle sf(sndfilePathStr.c_str());
-        Slicer slicer(&sf, params.threshold, params.minLength, params.minInterval, params.hopSize, params.maxSilKept);
-
-        if (slicer.getErrorCode() != SlicerErrorCode::SLICER_OK) {
-            error("slicer: " + slicer.getErrorMsg());
+        auto *slicerService = dstools::ServiceLocator::get<dstools::ISlicerService>();
+        if (!slicerService) {
+            error("slicer service not available");
             if (!loadResult.tempFilePath.isEmpty())
                 QFile::remove(loadResult.tempFilePath);
             return {false, filename};
         }
 
-        MarkerList tmpChunks = slicer.slice();
-        std::swap(chunks, tmpChunks);
+        auto sliceResult = slicerService->slice(
+            loadResult.sndfilePath, params.threshold, static_cast<int>(params.minLength),
+            static_cast<int>(params.minInterval), static_cast<int>(params.hopSize),
+            static_cast<int>(params.maxSilKept));
+
+        if (!sliceResult) {
+            error(QString("slicer: %1").arg(QString::fromStdString(sliceResult.error())));
+            if (!loadResult.tempFilePath.isEmpty())
+                QFile::remove(loadResult.tempFilePath);
+            return {false, filename};
+        }
+
+        chunks.reserve(sliceResult->chunks.size());
+        for (const auto &marker : sliceResult->chunks) {
+            chunks.emplace_back(static_cast<qint64>(marker.first), static_cast<qint64>(marker.second));
+        }
     }
 
     // --- Save markers ---

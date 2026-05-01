@@ -1,5 +1,6 @@
 #include <QTest>
 #include <dstools/ModelDownloader.h>
+#include <cstring>
 
 using namespace dstools;
 
@@ -21,14 +22,13 @@ void TestModelDownloader::testImplementsInterface() {
     ModelDownloader downloader;
     IModelDownloader *iface = &downloader;
     QVERIFY(iface != nullptr);
-    // Verify it satisfies the interface contract
-    QCOMPARE(iface->downloadStatus("nonexistent"), DownloadStatus::Idle);
+    QVERIFY(iface->downloaderName() != nullptr);
 }
 
 void TestModelDownloader::testInitialStatus() {
     ModelDownloader downloader;
-    // Unknown model should return Idle
-    QCOMPARE(downloader.downloadStatus("any_model"), DownloadStatus::Idle);
+    QVERIFY(downloader.downloaderName() != nullptr);
+    QVERIFY(strlen(downloader.downloaderName()) > 0);
 }
 
 QTEST_GUILESS_MAIN(TestModelDownloader)

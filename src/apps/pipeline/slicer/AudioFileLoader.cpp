@@ -1,5 +1,6 @@
 #include "AudioFileLoader.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryFile>

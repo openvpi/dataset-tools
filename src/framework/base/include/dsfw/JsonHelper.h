@@ -3,9 +3,17 @@
 #include <dstools/Result.h>
 
 #include <filesystem>
+#include <sstream>
 #include <string>
 
 #include <nlohmann/json.hpp>
+
+// ADL overloads for QString <-> nlohmann::json
+#ifdef QT_CORE_LIB
+#include <QString>
+inline void to_json(nlohmann::json &j, const QString &s) { j = s.toStdString(); }
+inline void from_json(const nlohmann::json &j, QString &s) { s = QString::fromStdString(j.get<std::string>()); }
+#endif
 
 namespace dstools {
 
@@ -24,6 +32,24 @@ public:
             }
         }
         return defaultValue;
+    }
+
+    /// @brief Resolve a slash-delimited path in a JSON object.
+    /// @return Pointer to the node, or nullptr if not found.
+    static const nlohmann::json *resolve(const nlohmann::json &root, const char *path) {
+        if (!path || path[0] == '\0')
+            return nullptr;
+        const nlohmann::json *node = &root;
+        std::string segment;
+        std::istringstream ss(path);
+        while (std::getline(ss, segment, '/')) {
+            if (segment.empty())
+                continue;
+            if (!node->is_object() || !node->contains(segment))
+                return nullptr;
+            node = &(*node)[segment];
+        }
+        return node;
     }
 
     static nlohmann::json getObject(const nlohmann::json &j, const std::string &key) {

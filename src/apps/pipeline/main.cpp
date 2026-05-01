@@ -1,12 +1,14 @@
-﻿#include <QApplication>
+#include <QApplication>
 #include <dstools/AppInit.h>
 #include <dsfw/AppShell.h>
 #include <dsfw/AppSettings.h>
 #include <dsfw/Theme.h>
 #include <dstools/PinyinG2PProvider.h>
+#include <dsfw/ISlicerService.h>
 #include <dsfw/ServiceLocator.h>
 #include <cpp-pinyin/G2pglobal.h>
 #include "PipelinePage.h"
+#include "SlicerService.h"
 
 #include <filesystem>
 
@@ -22,6 +24,11 @@ static void initPinyin(QApplication &app) {
     if (!dstools::ServiceLocator::get<dstools::IG2PProvider>()) {
         auto *g2p = new dstools::PinyinG2PProvider;
         dstools::ServiceLocator::set<dstools::IG2PProvider>(g2p);
+    }
+
+    if (!dstools::ServiceLocator::get<dstools::ISlicerService>()) {
+        static SlicerService slicerService;
+        dstools::ServiceLocator::set<dstools::ISlicerService>(&slicerService);
     }
 }
 

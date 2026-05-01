@@ -8,6 +8,7 @@ set(DOMAIN_TESTS
     TestDsDocument
     TestPhNumCalculator
     TestTranscriptionCsv
+    TestStringUtils
 )
 
 foreach(test_name ${DOMAIN_TESTS})

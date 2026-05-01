@@ -1,6 +1,10 @@
 project(dsfw-widgets-test)
 
+set(CMAKE_AUTOMOC ON)
+
 enable_testing()
+
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Test REQUIRED)
 
 add_executable(${PROJECT_NAME} TestDsfwWidgets.cpp)
 

@@ -43,12 +43,12 @@ void AlignmentService::setNonSpeechPhonemes(const std::vector<std::string> &phon
     m_nonSpeechPh = phonemes;
 }
 
-Result<dstools::AlignmentResult> AlignmentService::align(const QString &audioPath,
+dstools::Result<dstools::AlignmentResult> AlignmentService::align(const QString &audioPath,
                                                           const std::vector<QString> &phonemes) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (!m_hfa || !m_hfa->isOpen()) {
-        return Result<dstools::AlignmentResult>::Error("Alignment model is not loaded");
+        return dstools::Result<dstools::AlignmentResult>::Error("Alignment model is not loaded");
     }
 
     HFA::WordList words;
@@ -63,7 +63,7 @@ Result<dstools::AlignmentResult> AlignmentService::align(const QString &audioPat
 
     auto recognizeResult = m_hfa->recognize(audioPath.toLocal8Bit().toStdString(), m_language, m_nonSpeechPh, words);
     if (!recognizeResult) {
-        return Result<dstools::AlignmentResult>::Error(recognizeResult.error());
+        return dstools::Result<dstools::AlignmentResult>::Error(recognizeResult.error());
     }
 
     dstools::AlignmentResult result;
@@ -77,10 +77,10 @@ Result<dstools::AlignmentResult> AlignmentService::align(const QString &audioPat
         }
     }
 
-    return Result<dstools::AlignmentResult>::Ok(std::move(result));
+    return dstools::Result<dstools::AlignmentResult>::Ok(std::move(result));
 }
 
-Result<void> AlignmentService::alignCSV(const QString &csvPath, const QString &savePath,
+dstools::Result<void> AlignmentService::alignCSV(const QString &csvPath, const QString &savePath,
                                           const dstools::AlignCsvOptions &options,
                                           const std::function<void(int)> &progress) {
     (void)csvPath;

@@ -12,6 +12,7 @@ find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     minlabel-page
+    dstools-ui-core
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

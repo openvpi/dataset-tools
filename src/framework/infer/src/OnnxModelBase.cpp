@@ -34,16 +34,16 @@ namespace dstools::infer {
         const auto configPath = modelDir / "config.json";
         std::ifstream file(configPath);
         if (!file.is_open()) {
-            return Err("Cannot open config.json in " + modelDir.string());
+            return Err<nlohmann::json>("Cannot open config.json in " + modelDir.string());
         }
         try {
             nlohmann::json config = nlohmann::json::parse(file);
             onConfigLoaded(config);
             return Ok(std::move(config));
         } catch (const nlohmann::json::parse_error &e) {
-            return Err(std::string("Failed to parse config.json: ") + e.what());
+            return Err<nlohmann::json>(std::string("Failed to parse config.json: ") + e.what());
         } catch (const nlohmann::json::type_error &e) {
-            return Err(std::string("Type error in config.json: ") + e.what());
+            return Err<nlohmann::json>(std::string("Type error in config.json: ") + e.what());
         }
     }
 

@@ -20,8 +20,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    dstools-ui-core
     pipeline-pages
     dstools-domain
+    dsfw-ui-core
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

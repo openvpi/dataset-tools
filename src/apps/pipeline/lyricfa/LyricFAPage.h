@@ -6,9 +6,10 @@
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
+#include <dstools/PathSelector.h>
 
 namespace dstools::widgets {
-class PathSelector;
+
 class ModelLoadPanel;
 }
 

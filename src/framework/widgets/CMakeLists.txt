@@ -42,11 +42,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    dsfw-ui-core
     dsfw-core
-    dstools-audio
-    Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    dsfw-ui-core
+    dstools-audio
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE DSFW_WIDGETS_BUILD)

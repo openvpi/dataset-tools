@@ -5,6 +5,13 @@
 
 namespace dstools {
 
+    ModelDownloader::ModelDownloader(QObject *parent) : QObject(parent) {}
+    ModelDownloader::~ModelDownloader() = default;
+
+    const char *ModelDownloader::downloaderName() const {
+        return "ModelDownloader";
+    }
+
     Result<void> ModelDownloader::startDownload(const std::string &modelId, const std::string &url,
                                                  const std::filesystem::path &destPath,
                                                  const std::function<void(int)> &progress) {

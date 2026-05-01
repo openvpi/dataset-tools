@@ -41,13 +41,13 @@ void RmvpePitchService::unloadModel() {
 Result<PitchResult> RmvpePitchService::extractPitch(const QString &audioPath) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_rmvpe) {
-        return Err("Model not loaded");
+        return Err<PitchResult>("Model not loaded");
     }
 
     std::vector<Rmvpe::RmvpeRes> res;
     auto result = m_rmvpe->get_f0(audioPath.toStdWString(), 0.03f, res, nullptr);
     if (!result) {
-        return Err(result.error());
+        return Err<PitchResult>(result.error());
     }
 
     PitchResult out;

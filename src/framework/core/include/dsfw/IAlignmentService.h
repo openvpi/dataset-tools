@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <dstools/Result.h>
+#include <nlohmann/json.hpp>
 #include <functional>
 #include <vector>
 

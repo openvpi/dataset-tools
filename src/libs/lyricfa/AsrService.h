@@ -6,11 +6,11 @@
 #include <mutex>
 
 namespace FunAsr {
-class Model;
+    class Model;
 }
 
 namespace LyricFA {
-class Asr;
+    class Asr;
 }
 
 class AsrService : public dstools::IAsrService {
@@ -18,11 +18,11 @@ public:
     AsrService() = default;
     ~AsrService() override;
 
-    bool loadModel(const QString &modelPath, int gpuIndex = -1);
-    bool isModelLoaded() const;
-    void unloadModel();
+    dstools::Result<void> loadModel(const QString &modelPath, int gpuIndex = -1) override;
+    bool isModelLoaded() const override;
+    void unloadModel() override;
 
-    Result<dstools::AsrResult> recognize(const QString &audioPath) override;
+    dstools::Result<dstools::AsrResult> recognize(const QString &audioPath) override;
 
 private:
     std::unique_ptr<LyricFA::Asr> m_asr;

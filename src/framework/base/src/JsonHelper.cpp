@@ -7,15 +7,15 @@ namespace dstools {
     Result<nlohmann::json> JsonHelper::loadFile(const std::filesystem::path &path) {
         std::ifstream file(path);
         if (!file.is_open()) {
-            return Err("Cannot open file: " + path.string());
+            return Err<nlohmann::json>("Cannot open file: " + path.string());
         }
         try {
             nlohmann::json data = nlohmann::json::parse(file);
             return Ok(std::move(data));
         } catch (const nlohmann::json::parse_error &e) {
-            return Err(std::string("JSON parse error: ") + e.what());
+            return Err<nlohmann::json>(std::string("JSON parse error: ") + e.what());
         } catch (const nlohmann::json::type_error &e) {
-            return Err(std::string("JSON type error: ") + e.what());
+            return Err<nlohmann::json>(std::string("JSON type error: ") + e.what());
         }
     }
 

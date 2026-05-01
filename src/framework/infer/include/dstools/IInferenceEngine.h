@@ -20,12 +20,7 @@ namespace dstools::infer {
         virtual const char *engineName() const = 0;
 
         virtual Result<void> load(const std::filesystem::path &modelPath,
-                                  ExecutionProvider provider, int deviceId) {
-            (void) modelPath;
-            (void) provider;
-            (void) deviceId;
-            return Err("load() not implemented");
-        }
+                                  ExecutionProvider provider, int deviceId) = 0;
 
         virtual void unload() {}
 

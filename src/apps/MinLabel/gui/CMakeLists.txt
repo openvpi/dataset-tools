@@ -25,6 +25,8 @@ find_package(cpp-kana CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-widgets
     dstools-domain
+    dsfw-ui-core
+    minlabel-lib
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
     cpp-pinyin::cpp-pinyin

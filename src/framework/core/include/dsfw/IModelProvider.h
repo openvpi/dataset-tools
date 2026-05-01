@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -29,7 +30,10 @@ private:
 };
 
 /// @brief Register (or look up) a named model type, returning a stable ID.
+/// @note Thread-safe: concurrent calls are serialized via an internal mutex.
 inline ModelTypeId registerModelType(const std::string &name) {
+    static std::mutex s_mutex;
+    std::lock_guard<std::mutex> lock(s_mutex);
     static int s_nextId = 0;
     static std::unordered_map<std::string, int> s_registry;
     auto it = s_registry.find(name);

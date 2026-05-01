@@ -7,7 +7,7 @@
 class QTabWidget;
 class QDialogButtonBox;
 
-namespace dsfw {
+namespace dstools {
 
 class AppSettings;
 

@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME}
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Concurrent REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    dstools-ui-core
     dstools-widgets
     minlabel-page
     phonemelabeler-page

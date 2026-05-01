@@ -3,6 +3,7 @@
 #include <dsfw/AppSettings.h>
 
 #include <QDialogButtonBox>
+#include <QPushButton>
 #include <QVBoxLayout>
 #include <QTabWidget>
 

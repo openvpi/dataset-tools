@@ -14,6 +14,7 @@ namespace HFA {
         float end;
         std::string text;
 
+        Phone() : start(0), end(0) {}
         Phone(float start, float end, const std::string &text);
     };
 
@@ -25,6 +26,7 @@ namespace HFA {
         std::vector<Phone> phones;
         std::vector<std::string> log;
 
+        Word() : start(0), end(0) {}
         Word(float start, float end, const std::string &text, bool init_phone = false);
 
         float dur() const;
@@ -139,3 +141,6 @@ namespace HFA {
     };
 
 } // namespace HFA
+
+// Backward compatibility alias
+namespace HFA { using Phoneme = Phone; }

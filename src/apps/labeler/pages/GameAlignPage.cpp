@@ -6,8 +6,8 @@
 #include <QVBoxLayout>
 
 #include <dsfw/ServiceLocator.h>
-
-namespace dstools::labeler {
+#include <QComboBox>
+#include <QLineEdit>
 
 GameAlignPage::GameAlignPage(QWidget *parent) : QWidget(parent) {
     auto *vLayout = new QVBoxLayout(this);
@@ -15,7 +15,7 @@ GameAlignPage::GameAlignPage(QWidget *parent) : QWidget(parent) {
     auto *form = new QFormLayout;
 
     m_modelPath = new QLineEdit;
-    m_modelPath->setPlaceholder(tr("Path to GAME model directory"));
+    m_modelPath->setPlaceholderText(tr("Path to GAME model directory"));
     form->addRow(tr("Model:"), m_modelPath);
 
     m_gpuSelector = new QComboBox;
@@ -59,5 +59,3 @@ void GameAlignPage::onRunAlignment() {
                              QString::fromStdString(alignResult.error()));
     }
 }
-
-} // namespace dstools::labeler

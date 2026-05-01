@@ -12,7 +12,7 @@ namespace dstools {
 
         const auto &j = jsonResult.value();
         try {
-            record.status = j.value("status", DsItemRecord::Status::Pending);
+            record.status = static_cast<DsItemRecord::Status>(j.value("status", 0));
             record.inputFile = j.value("inputFile", "");
             record.outputFile = j.value("outputFile", "");
             record.errorMsg = j.value("errorMsg", "");
@@ -25,7 +25,7 @@ namespace dstools {
 
     Result<void> DsItemManager::save(const DsItemRecord &record, const std::filesystem::path &dsitemPath) {
         nlohmann::json j;
-        j["status"] = record.status;
+        j["status"] = static_cast<int>(record.status);
         j["inputFile"] = record.inputFile;
         j["outputFile"] = record.outputFile;
         j["errorMsg"] = record.errorMsg;
@@ -37,7 +37,7 @@ namespace dstools {
         DsItemRecord record;
         auto loadResult = load(dsitemPath, record);
         if (!loadResult)
-            return Err(loadResult.error());
+            return Err<DsItemRecord::Status>(loadResult.error());
         return Ok(record.status);
     }
 
@@ -45,7 +45,7 @@ namespace dstools {
         DsItemRecord record;
         auto loadResult = load(dsitemPath, record);
         if (!loadResult)
-            return Err(loadResult.error());
+            return Err<bool>(loadResult.error());
         return Ok(record.status == DsItemRecord::Status::Pending);
     }
 
@@ -95,7 +95,7 @@ namespace dstools {
                 }
             }
         } catch (const std::exception &e) {
-            return Err(std::string("Failed to scan working directory: ") + e.what());
+            return Err<StepSummary>(std::string("Failed to scan working directory: ") + e.what());
         }
         return Ok(summary);
     }

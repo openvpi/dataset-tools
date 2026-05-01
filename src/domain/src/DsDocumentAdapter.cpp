@@ -9,31 +9,26 @@ namespace dstools {
     DsDocumentAdapter::DsDocumentAdapter(DsDocument &doc) : m_doc(doc) {}
 
     bool DsDocumentAdapter::isModified() const {
-        return m_doc.isModified();
+        return false; // DsDocument does not track modification state
     }
 
     Result<void> DsDocumentAdapter::load(const std::filesystem::path &path) {
-        std::string error;
-        if (!m_doc.load(path, error)) {
-            return Err(error);
+        QString qpath = QString::fromStdWString(path.wstring());
+        auto result = DsDocument::loadFile(qpath);
+        if (!result) {
+            return Err(result.error());
         }
+        m_doc = std::move(result.value());
         return Ok();
     }
 
     Result<void> DsDocumentAdapter::save() {
-        std::string error;
-        if (!m_doc.save(error)) {
-            return Err(error);
-        }
-        return Ok();
+        return m_doc.saveFile();
     }
 
     Result<void> DsDocumentAdapter::saveAs(const std::filesystem::path &path) {
-        std::string error;
-        if (!m_doc.save(path, error)) {
-            return Err(error);
-        }
-        return Ok();
+        QString qpath = QString::fromStdWString(path.wstring());
+        return m_doc.saveFile(qpath);
     }
 
     IDocumentFormat *DsDocumentAdapter::format() const {

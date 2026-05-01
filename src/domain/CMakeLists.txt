@@ -40,6 +40,8 @@ set(DOMAIN_HEADERS
     include/dstools/DsProject.h
     include/dstools/ModelManager.h
     include/dstools/ModelDownloader.h
+    include/dstools/StringUtils.h
+    include/dstools/PathUtils.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DOMAIN_SOURCES} ${DOMAIN_HEADERS})

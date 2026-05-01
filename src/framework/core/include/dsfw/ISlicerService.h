@@ -29,10 +29,11 @@ public:
     /// @param threshold RMS threshold for silence detection (dB).
     /// @param minLength Minimum chunk length in milliseconds.
     /// @param minInterval Minimum silence interval in milliseconds.
-    /// @param hopSize Hop size in samples for RMS calculation.
+    /// @param hopSize Hop size in milliseconds for RMS calculation.
+    /// @param maxSilKept Maximum silence kept in milliseconds.
     /// @return SliceResult on success, or an error description.
     virtual Result<SliceResult> slice(const QString &audioPath, double threshold, int minLength,
-                                     int minInterval, int hopSize) = 0;
+                                     int minInterval, int hopSize, int maxSilKept = 5000) = 0;
 };
 
 } // namespace dstools

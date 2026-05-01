@@ -26,10 +26,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dsfw-widgets
-    dstools-ui-core
-    dsfw-core
-    dstools-audio
-    Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
 )
 

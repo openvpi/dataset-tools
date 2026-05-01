@@ -12,7 +12,7 @@ namespace dstools {
 
         auto jsonResult = JsonHelper::loadFile(sourceFile);
         if (!jsonResult)
-            return Err(jsonResult.error());
+            return Err<ItemQualityReport>(jsonResult.error());
 
         const auto &j = jsonResult.value();
         (void)workingDir;
@@ -25,7 +25,7 @@ namespace dstools {
                 report.durationSec = j["duration"].get<float>();
             }
         } catch (const std::exception &e) {
-            return Err(std::string("Failed to evaluate quality: ") + e.what());
+            return Err<ItemQualityReport>(std::string("Failed to evaluate quality: ") + e.what());
         }
 
         return Ok(std::move(report));
@@ -44,7 +44,7 @@ namespace dstools {
                 }
             }
         } catch (const std::exception &e) {
-            return Err(std::string("Failed to scan working directory: ") + e.what());
+            return Err<std::vector<ItemQualityReport>>(std::string("Failed to scan working directory: ") + e.what());
         }
 
         return Ok(std::move(reports));

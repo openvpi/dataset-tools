@@ -16,7 +16,7 @@ class DSFW_WIDGETS_API ShortcutManager : public QObject {
 public:
     explicit ShortcutManager(dstools::AppSettings *settings, QObject *parent = nullptr);
 
-    void bind(QAction *action, const SettingsKey<QString> &key,
+    void bind(QAction *action, const dstools::SettingsKey<QString> &key,
               const QString &displayName, const QString &category);
 
     void applyAll();

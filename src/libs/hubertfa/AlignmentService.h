@@ -23,10 +23,10 @@ public:
     void setLanguage(const std::string &language);
     void setNonSpeechPhonemes(const std::vector<std::string> &phonemes);
 
-    Result<dstools::AlignmentResult> align(const QString &audioPath,
-                                           const std::vector<QString> &phonemes) override;
+    dstools::Result<dstools::AlignmentResult> align(const QString &audioPath,
+                                            const std::vector<QString> &phonemes) override;
 
-    Result<void> alignCSV(const QString &csvPath, const QString &savePath,
+    dstools::Result<void> alignCSV(const QString &csvPath, const QString &savePath,
                           const dstools::AlignCsvOptions &options = {},
                           const std::function<void(int)> &progress = nullptr) override;
 

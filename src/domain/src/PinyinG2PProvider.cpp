@@ -4,10 +4,14 @@
 
 namespace dstools {
 
+    const char *PinyinG2PProvider::providerName() const {
+        return "PinyinG2P";
+    }
+
     Result<std::vector<G2PResult>> PinyinG2PProvider::convert(const std::string &text,
                                                                const std::string &langCode) {
         if (langCode != "zh" && langCode != "zh-CN") {
-            return Err("PinyinG2P only supports Chinese (zh/zh-CN), got: " + langCode);
+            return Err<std::vector<G2PResult>>("PinyinG2P only supports Chinese (zh/zh-CN), got: " + langCode);
         }
 
         std::vector<G2PResult> results;
@@ -40,7 +44,7 @@ namespace dstools {
     Result<G2PResult> PinyinG2PProvider::convertWord(const std::string &word,
                                                       const std::string &langCode) {
         if (langCode != "zh" && langCode != "zh-CN") {
-            return Err("PinyinG2P only supports Chinese (zh/zh-CN), got: " + langCode);
+            return Err<G2PResult>("PinyinG2P only supports Chinese (zh/zh-CN), got: " + langCode);
         }
 
         G2PResult result;

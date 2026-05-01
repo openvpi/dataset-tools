@@ -58,13 +58,13 @@ void GameTranscriptionService::unloadModel() {
 Result<TranscriptionResult> GameTranscriptionService::transcribe(const QString &audioPath) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_game || !m_game->is_open()) {
-        return Err("Model not loaded");
+        return Err<TranscriptionResult>("Model not loaded");
     }
 
     std::vector<Game::GameNote> notes;
     auto result = m_game->get_notes(audioPath.toStdWString(), notes, nullptr);
     if (!result) {
-        return Err(result.error());
+        return Err<TranscriptionResult>(result.error());
     }
 
     TranscriptionResult out;
@@ -171,7 +171,7 @@ Result<AlignmentResult> GameAlignmentService::align(const QString &audioPath,
                                                       const std::vector<QString> &phonemes) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_game || !m_game->is_open()) {
-        return Err("Model not loaded");
+        return Err<AlignmentResult>("Model not loaded");
     }
 
     Game::AlignInput input;
@@ -184,7 +184,7 @@ Result<AlignmentResult> GameAlignmentService::align(const QString &audioPath,
     std::vector<Game::AlignedNote> output;
     auto result = m_game->align(input, opts, output);
     if (!result) {
-        return Err(result.error());
+        return Err<AlignmentResult>(result.error());
     }
 
     AlignmentResult out;

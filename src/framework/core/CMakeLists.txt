@@ -37,6 +37,7 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IFileIOProvider.h
     include/dsfw/LocalFileIOProvider.h
     include/dsfw/IDocument.h
+    include/dsfw/IDocumentFormat.h
     include/dsfw/IExportFormat.h
     include/dsfw/IModelProvider.h
     include/dsfw/IModelDownloader.h

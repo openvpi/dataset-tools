@@ -17,7 +17,7 @@ PluginManager::~PluginManager() {
 void PluginManager::loadFrom(const QString &dir) {
     QDir pluginDir(dir);
     if (!pluginDir.exists()) {
-        Log::warn("PluginManager") << "Plugin directory does not exist: " << dir.toStdString();
+        DSFW_LOG_WARN("PluginManager", ("Plugin directory does not exist: " + dir.toStdString()).c_str());
         return;
     }
 
@@ -31,7 +31,7 @@ void PluginManager::loadFrom(const QString &dir) {
         auto *loader = new QPluginLoader(filePath, this);
         QJsonObject meta = loader->metaData();
         if (meta.isEmpty()) {
-            Log::warn("PluginManager") << "No metadata in: " << filePath.toStdString();
+            DSFW_LOG_WARN("PluginManager", ("No metadata in: " + filePath.toStdString()).c_str());
             delete loader;
             continue;
         }
@@ -39,24 +39,22 @@ void PluginManager::loadFrom(const QString &dir) {
         QObject *instance = loader->instance();
         if (!instance) {
             QString error = loader->errorString();
-            Log::warn("PluginManager") << "Failed to load plugin: " << filePath.toStdString()
-                                       << " error: " << error.toStdString();
+            DSFW_LOG_WARN("PluginManager", ("Failed to load plugin: " + filePath.toStdString() + " error: " + error.toStdString()).c_str());
             emit pluginLoadFailed(fileName, error);
             delete loader;
             continue;
         }
 
-        auto *plugin = qobject_cast<IStepPlugin *>(instance);
+        auto *plugin = dynamic_cast<IStepPlugin *>(instance);
         if (!plugin) {
-            Log::warn("PluginManager") << "Plugin does not implement IStepPlugin: "
-                                       << filePath.toStdString();
+            DSFW_LOG_WARN("PluginManager", ("Plugin does not implement IStepPlugin: " + filePath.toStdString()).c_str());
             delete loader;
             continue;
         }
 
         m_loaders[filePath] = loader;
         m_plugins.append(plugin);
-        Log::info("PluginManager") << "Loaded plugin: " << filePath.toStdString();
+        DSFW_LOG_INFO("PluginManager", ("Loaded plugin: " + filePath.toStdString()).c_str());
         emit pluginLoaded(fileName, plugin);
     }
 }

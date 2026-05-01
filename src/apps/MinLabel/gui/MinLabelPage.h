@@ -12,6 +12,7 @@
 #include "Common.h"
 #include "TextWidget.h"
 
+#include <MinLabelService.h>
 #include <dsfw/AppSettings.h>
 #include <dstools/FileProgressTracker.h>
 #include <dstools/FileStatusDelegate.h>
@@ -100,8 +101,6 @@ namespace Minlabel {
         bool saveFile(const QString &filename);
         void labToJson(const QString &dirName);
         void exportAudio(const ExportInfo &exportInfo);
-
-        static QString removeTone(const QString &labContent);
 
         void applyConfig();
 

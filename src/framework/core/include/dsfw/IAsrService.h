@@ -29,9 +29,10 @@ class IAsrService {
 public:
     virtual ~IAsrService() = default;
 
-    /// @brief Recognize speech in an audio file.
-    /// @param audioPath Path to the input audio file.
-    /// @return AsrResult on success, or an error description.
+    virtual Result<void> loadModel(const QString &modelPath, int gpuIndex = -1) = 0;
+    virtual bool isModelLoaded() const = 0;
+    virtual void unloadModel() = 0;
+
     virtual Result<AsrResult> recognize(const QString &audioPath) = 0;
 };
 

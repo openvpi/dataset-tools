@@ -54,6 +54,7 @@ find_package(FFTW3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-widgets
     dstools-domain
+    dsfw-ui-core
     dstools-audio
     textgrid
     FFTW3::fftw3

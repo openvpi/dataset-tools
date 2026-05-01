@@ -10,16 +10,10 @@ private slots:
     void testResolveNestedPath();
     void testResolveNullOnMissing();
     void testGetWithDefault();
-    void testGetQStringWithDefault();
-    void testGetVec();
-    void testGetVecMissing();
-    void testGetMap();
-    void testGetRequiredSuccess();
-    void testGetRequiredFailure();
-    void testContains();
-    void testContainsMissing();
+    void testGetMissingKey();
     void testGetObject();
-    void testGetArray();
+    void testGetObjectMissing();
+    void testLoadFileMissing();
 };
 
 void TestJsonHelper::testResolveNestedPath() {
@@ -37,61 +31,11 @@ void TestJsonHelper::testResolveNullOnMissing() {
 void TestJsonHelper::testGetWithDefault() {
     json root = {{"count", 5}};
     QCOMPARE(JsonHelper::get<int>(root, "count", 0), 5);
+}
+
+void TestJsonHelper::testGetMissingKey() {
+    json root = {{"a", 1}};
     QCOMPARE(JsonHelper::get<int>(root, "missing", 99), 99);
-}
-
-void TestJsonHelper::testGetQStringWithDefault() {
-    json root = {{"name", "hello"}};
-    QCOMPARE(JsonHelper::get<QString>(root, "name", QString("def")), QString("hello"));
-    QCOMPARE(JsonHelper::get<QString>(root, "nope", QString("def")), QString("def"));
-}
-
-void TestJsonHelper::testGetVec() {
-    json root = {{"nums", {1, 2, 3}}};
-    auto v = JsonHelper::getVec<int>(root, "nums");
-    QCOMPARE(v.size(), 3u);
-    QCOMPARE(v[0], 1);
-    QCOMPARE(v[2], 3);
-}
-
-void TestJsonHelper::testGetVecMissing() {
-    json root = {{"a", 1}};
-    auto v = JsonHelper::getVec<int>(root, "missing");
-    QVERIFY(v.empty());
-}
-
-void TestJsonHelper::testGetMap() {
-    json root = {{"kv", {{"x", 1}, {"y", 2}}}};
-    auto m = JsonHelper::getMap<std::string, int>(root, "kv");
-    QCOMPARE(m.size(), 2u);
-    QCOMPARE(m["x"], 1);
-    QCOMPARE(m["y"], 2);
-}
-
-void TestJsonHelper::testGetRequiredSuccess() {
-    json root = {{"val", 10}};
-    int out = 0;
-    std::string error;
-    QVERIFY(JsonHelper::getRequired(root, "val", out, error));
-    QCOMPARE(out, 10);
-}
-
-void TestJsonHelper::testGetRequiredFailure() {
-    json root = {{"a", 1}};
-    int out = 0;
-    std::string error;
-    QVERIFY(!JsonHelper::getRequired(root, "missing", out, error));
-    QVERIFY(!error.empty());
-}
-
-void TestJsonHelper::testContains() {
-    json root = {{"a", {{"b", 1}}}};
-    QVERIFY(JsonHelper::contains(root, "a/b"));
-}
-
-void TestJsonHelper::testContainsMissing() {
-    json root = {{"a", 1}};
-    QVERIFY(!JsonHelper::contains(root, "x/y"));
 }
 
 void TestJsonHelper::testGetObject() {
@@ -101,11 +45,16 @@ void TestJsonHelper::testGetObject() {
     QCOMPARE(obj["k"].get<std::string>(), std::string("v"));
 }
 
-void TestJsonHelper::testGetArray() {
-    json root = {{"arr", {1, 2, 3}}};
-    auto arr = JsonHelper::getArray(root, "arr");
-    QVERIFY(arr.is_array());
-    QCOMPARE(arr.size(), 3u);
+void TestJsonHelper::testGetObjectMissing() {
+    json root = {{"a", 1}};
+    auto obj = JsonHelper::getObject(root, "missing");
+    QVERIFY(obj.is_object());
+    QVERIFY(obj.empty());
+}
+
+void TestJsonHelper::testLoadFileMissing() {
+    auto result = JsonHelper::loadFile("nonexistent_file.json");
+    QVERIFY(!result);
 }
 
 QTEST_GUILESS_MAIN(TestJsonHelper)

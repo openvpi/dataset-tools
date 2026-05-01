@@ -81,13 +81,13 @@ void GameInferService::setD3pmTimesteps(int nSteps) {
 dstools::Result<dstools::TranscriptionResult> GameInferService::transcribe(const QString &audioPath) {
     std::lock_guard<std::mutex> lock(m_gameMutex);
     if (!m_game || !m_game->is_open()) {
-        return dstools::Err("Model not loaded");
+        return dstools::Err<dstools::TranscriptionResult>("Model not loaded");
     }
 
     std::vector<Game::GameNote> notes;
     auto result = m_game->get_notes(audioPath.toStdWString(), notes, nullptr);
     if (!result) {
-        return dstools::Err(result.error());
+        return dstools::Err<dstools::TranscriptionResult>(result.error());
     }
 
     dstools::TranscriptionResult out;

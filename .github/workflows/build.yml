@@ -283,4 +283,150 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{github.workspace}}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.${{ matrix.archive_ext }}
+            ${{github.workspace}}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION }}.${{ matrix.archive_ext }}
+
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 clang-tidy
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg/installed
+          key: vcpkg-installed-x64-linux-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-installed-x64-linux-
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Build Vcpkg packages
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          ./vcpkg install \
+            --x-manifest-root=../scripts/vcpkg-manifest \
+            --x-install-root=./installed \
+            --triplet=x64-linux
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
+          QT_DIR: ${{env.QT_ROOT_DIR}}
+          Qt6_DIR: ${{env.QT_ROOT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+
+      - name: Install OnnxRuntime
+        working-directory: ${{github.workspace}}/src/infer
+        run: cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Configure CMake
+        run: |
+          cmake -B ${{github.workspace}}/build -G Ninja \
+            -DBUILD_TESTS:BOOL=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_PREFIX_PATH=${{env.QT_ROOT_DIR}}/lib/cmake/Qt6/ \
+            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DONNXRUNTIME_ENABLE_DML=OFF
+
+      - name: Run clang-tidy
+        working-directory: ${{github.workspace}}/build
+        run: |
+          run-clang-tidy -p . -quiet 2>&1 | tee clang-tidy-results.txt
+          if grep -qE "(warning|error):" clang-tidy-results.txt; then
+            echo "::warning::clang-tidy found issues, see clang-tidy-results.txt"
+          fi
+
+  module-standalone:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/vcpkg/installed
+          key: vcpkg-installed-x64-linux-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-installed-x64-linux-
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Build Vcpkg packages
+        working-directory: ${{github.workspace}}/vcpkg
+        run: |
+          ./vcpkg install \
+            --x-manifest-root=../scripts/vcpkg-manifest \
+            --x-install-root=./installed \
+            --triplet=x64-linux
+        env:
+          CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
+          QT_DIR: ${{env.QT_ROOT_DIR}}
+          Qt6_DIR: ${{env.QT_ROOT_DIR}}
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+
+      - name: Install OnnxRuntime
+        working-directory: ${{github.workspace}}/src/infer
+        run: cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
+
+      - name: Configure CMake
+        run: |
+          cmake -B ${{github.workspace}}/build -G Ninja \
+            -DBUILD_TESTS:BOOL=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=${{env.QT_ROOT_DIR}}/lib/cmake/Qt6/ \
+            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DONNXRUNTIME_ENABLE_DML=OFF
+
+      - name: Verify framework modules build independently
+        run: |
+          echo "=== Verifying framework modules build independently ==="
+          cmake --build build --target dsfw-base
+          cmake --build build --target dsfw-core
+          cmake --build build --target dstools-domain
+          cmake --build build --target dstools-types
+          cmake --build build --target slicer-lib
+          cmake --build build --target minlabel-lib
+          cmake --build build --target dsfw-audio
+          cmake --build build --target dsfw-widgets
+          echo "=== All framework modules built successfully ==="

@@ -9,6 +9,6 @@ public:
     SlicerService() = default;
     ~SlicerService() override = default;
 
-    Result<SliceResult> slice(const QString &audioPath, double threshold, int minLength,
-                              int minInterval, int hopSize) override;
+    dstools::Result<dstools::SliceResult> slice(const QString &audioPath, double threshold, int minLength,
+                                                int minInterval, int hopSize, int maxSilKept) override;
 };

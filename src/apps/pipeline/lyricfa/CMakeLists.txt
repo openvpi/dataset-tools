@@ -19,6 +19,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+    dsfw-ui-core
     dstools-widgets
     lyricfa-lib
     dsfw-core

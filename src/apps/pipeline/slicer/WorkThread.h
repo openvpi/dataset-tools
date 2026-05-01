@@ -7,8 +7,7 @@
 #include <QStringList>
 
 #include "Enumerations.h"
-
-struct SliceJobParams;
+#include "SliceJob.h"
 
 class WorkThread : public dstools::AsyncTask {
     Q_OBJECT

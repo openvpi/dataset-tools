@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dstools/WidgetsGlobal.h>
+#include <dstools/FileProgressTracker.h>
 
 #include <QWidget>
 #include <QStringList>
@@ -9,8 +10,6 @@ class QListWidget;
 class QListWidgetItem;
 
 namespace dstools::widgets {
-
-class FileProgressTracker;
 
 /// Base class for file list panels.
 /// Provides directory scanning, file filtering, selection, navigation.

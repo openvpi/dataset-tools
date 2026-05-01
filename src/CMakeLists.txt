@@ -5,7 +5,7 @@ if (NOT BUILD_TESTS)
     set(SOME_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(RMVPE_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(AUDIO_UTIL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-endif()
+endif ()
 
 find_package(QT NAMES Qt6 COMPONENTS Core Gui Widgets Svg Network REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets Svg Network REQUIRED)
@@ -32,7 +32,7 @@ set(CMAKE_FOLDER "Libraries/Libs")
 add_subdirectory(libs)
 
 # Applications
-set(CMAKE_FOLDER "")
+unset(CMAKE_FOLDER)
 add_subdirectory(apps)
 
 if (BUILD_TESTS)
@@ -67,11 +67,11 @@ if (WIN32)
 
     get_target_property(_deploy_targets DeployedTargets TARGETS)
     # Copy only deployed executables (not test executables)
-    foreach(_target ${_deploy_targets})
+    foreach (_target ${_deploy_targets})
         install(CODE "
             file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}\")
         ")
-    endforeach()
+    endforeach ()
     # Copy all DLLs (shared libraries needed at runtime)
     install(CODE "
         file(GLOB _dlls \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.dll\")

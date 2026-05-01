@@ -8,7 +8,9 @@ file(GLOB_RECURSE _src *.h *.cpp)
 add_executable(${PROJECT_NAME} ${_src})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    dstools-ui-core
     dstools-widgets
+    dsfw-ui-core
     game-infer::game-infer
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets

@@ -15,6 +15,14 @@ const char *FunAsrAdapter::engineName() const {
     return "FunASR";
 }
 
+dstools::Result<void> FunAsrAdapter::load(const std::filesystem::path &modelPath,
+                                            dstools::infer::ExecutionProvider provider, int deviceId) {
+    std::string errorMsg;
+    if (!load(modelPath, provider, deviceId, errorMsg))
+        return dstools::Result<void>::Error(errorMsg);
+    return dstools::Result<void>::Ok();
+}
+
 bool FunAsrAdapter::load(const std::filesystem::path &modelPath,
                           dstools::infer::ExecutionProvider provider, int deviceId,
                           std::string &errorMsg) {

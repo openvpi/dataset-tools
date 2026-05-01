@@ -29,9 +29,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 find_package(SndFile CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-        dstools-widgets
+        dsfw-ui-core
+    dstools-widgets
+        dstools-audio
         slicer-lib
-        audio-util
         SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets

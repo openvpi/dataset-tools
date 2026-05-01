@@ -11,8 +11,6 @@
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QKeyEvent>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
@@ -20,21 +18,12 @@
 #include <QMimeData>
 #include <QTreeWidget>
 
+#include <MinLabelService.h>
+#include <dstools/AudioFileResolver.h>
 #include <dstools/ShortcutManager.h>
 #include <dsfw/Theme.h>
 
 namespace Minlabel {
-
-    QString MinLabelPage::removeTone(const QString &labContent) {
-        if (labContent.isEmpty() || !labContent.contains(" "))
-            return "";
-        static const QRegularExpression nonLowerAlpha("[^a-z]");
-        QStringList inputList = labContent.split(" ");
-        for (QString &item : inputList) {
-            item.remove(nonLowerAlpha);
-        }
-        return inputList.join(" ");
-    }
 
     MinLabelPage::MinLabelPage(QWidget *parent) : QWidget(parent), m_settings("MinLabel") {
         playing = false;
@@ -81,19 +70,9 @@ namespace Minlabel {
 
         auto *delegate = new dstools::widgets::FileStatusDelegate(treeView);
         delegate->setStatusChecker([](const QString &filePath) -> bool {
-            const QFileInfo fileInfo(filePath);
-            const QString jsonFilePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + ".json";
-            if (!QFile::exists(jsonFilePath) || !fileInfo.isFile())
-                return false;
-            QFile jsonFile(jsonFilePath);
-            if (!jsonFile.open(QIODevice::ReadOnly))
-                return false;
-            const QByteArray jsonData = jsonFile.readAll();
-            jsonFile.close();
-            const QJsonDocument jsonDoc(QJsonDocument::fromJson(jsonData));
-            if (!jsonDoc.isObject())
-                return false;
-            return jsonDoc.object().value("isCheck").toBool(false);
+            auto result = MinLabelService::loadLabel(
+                dstools::AudioFileResolver::audioToDataFile(filePath, "json"));
+            return result && result.value().isCheck;
         });
         treeView->setItemDelegate(delegate);
 
@@ -361,24 +340,22 @@ namespace Minlabel {
     }
 
     void MinLabelPage::openFile(const QString &filename) const {
-        QString labContent, txtContent;
-
         const QString jsonFilePath = audioToOtherSuffix(filename, "json");
-        if (nlohmann::json readData; readJsonFile(jsonFilePath, readData)) {
-            txtContent = QString::fromStdString(readData.value("raw_text", std::string{}));
-            labContent = QString::fromStdString(readData.value("lab", std::string{}));
+        auto result = MinLabelService::loadLabel(jsonFilePath);
+        if (result) {
+            textWidget->contentText->setPlainText(result.value().lab);
+            textWidget->wordsText->setText(result.value().rawText);
+        } else {
+            textWidget->contentText->clear();
+            textWidget->wordsText->clear();
         }
-        textWidget->contentText->setPlainText(labContent);
-        textWidget->wordsText->setText(txtContent);
 
         playerWidget->openFile(filename);
     }
 
     bool MinLabelPage::saveFile(const QString &filename) {
         const QString txtContent = textWidget->wordsText->text();
-        QString labContent = textWidget->contentText->toPlainText();
-        QString withoutTone = removeTone(labContent);
-
+        const QString labContent = textWidget->contentText->toPlainText();
 
         const QString jsonFilePath = audioToOtherSuffix(filename, "json");
 
@@ -386,36 +363,19 @@ namespace Minlabel {
             return true;
         }
 
-        static QRegularExpression rm_s("\\s+");
-
-        nlohmann::json writeData;
-        writeData["lab"] = labContent.replace(rm_s, " ").toStdString();
-        writeData["raw_text"] = txtContent.toStdString();
-        writeData["lab_without_tone"] = withoutTone.replace(rm_s, " ").toStdString();
-        writeData["isCheck"] = true;
-
-        if (!writeJsonFile(jsonFilePath, writeData)) {
-            QMessageBox::critical(this, QApplication::applicationName(),
-                                  QString("Failed to write to file %1").arg(jsonFilePath));
-            return false;
-        }
+        LabelData data;
+        data.lab = labContent;
+        data.rawText = txtContent;
+        data.isCheck = true;
 
         const QString labFilePath = audioToOtherSuffix(filename, "lab");
-
-        if (labContent.isEmpty() && !QFile::exists(labFilePath)) {
-            return true;
-        }
-
-        QFile labFile(labFilePath);
-        if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        auto result = MinLabelService::saveLabel(jsonFilePath, labFilePath, data);
+        if (!result) {
             QMessageBox::critical(this, QApplication::applicationName(),
-                                  QString("Failed to write to file %1").arg(labFilePath));
+                                  QString("Failed to write to file: %1").arg(QString::fromStdString(result.error())));
             return false;
         }
 
-        QTextStream labIn(&labFile);
-        labIn << labContent;
-        labFile.close();
         m_isDirty = false;
         return true;
     }
@@ -488,7 +448,6 @@ namespace Minlabel {
     }
 
     void MinLabelPage::_q_helpMenuTriggered(const QAction *action) {
-        // This is now handled by MainWindow directly
         Q_UNUSED(action)
     }
 
@@ -534,50 +493,38 @@ namespace Minlabel {
     }
 
     void MinLabelPage::labToJson(const QString &dirName) {
-        const QDir directory(dirName);
+        auto result = MinLabelService::convertLabToJson(dirName);
+        if (!result) {
+            QMessageBox::critical(this, QApplication::applicationName(),
+                                  QString("Conversion failed: %1").arg(QString::fromStdString(result.error())));
+            return;
+        }
+
+        const auto &convResult = result.value();
+
+        QString currentFilePath = fsModel->fileInfo(treeView->currentIndex()).absoluteFilePath();
+        QString currentLabPath = audioToOtherSuffix(currentFilePath, "lab");
+
+        QDir directory(dirName);
         QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
-
-        int count = 0;
         for (const QFileInfo &fileInfo : fileInfoList) {
-            QString currentFilePath = fsModel->fileInfo(treeView->currentIndex()).absoluteFilePath();
+            if (fileInfo.suffix().toLower() != "lab")
+                continue;
             QString labFilePath = fileInfo.absoluteFilePath();
-            QString suffix = fileInfo.suffix().toLower();
-            QString name = fileInfo.fileName();
-            if (QString jsonFilePath =
-                    fileInfo.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) + ".json";
-                fileInfo.suffix() == "lab" && !QFile::exists(jsonFilePath)) {
-                if (QFile file(labFilePath); file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                    QString labContent;
-                    labContent = QString::fromUtf8(file.readAll());
-                    const QString txtContent = labContent;
-
-                    if (audioToOtherSuffix(currentFilePath, "lab") == labFilePath) {
-                        textWidget->contentText->setPlainText(labContent);
-                        textWidget->wordsText->setText(labContent);
-                    } else {
-                        QString withoutTone = removeTone(labContent);
-
-                        nlohmann::json writeData;
-                        static const QRegularExpression multiSpace("\\s+");
-                    writeData["lab"] = labContent.replace(multiSpace, " ").toStdString();
-                    writeData["raw_text"] = txtContent.toStdString();
-                    writeData["lab_without_tone"] = withoutTone.replace(multiSpace, " ").toStdString();
-
-                        if (!writeJsonFile(jsonFilePath, writeData)) {
-                            QMessageBox::critical(this, QApplication::applicationName(),
-                                                  QString("Failed to write to file %1").arg(jsonFilePath));
-                            continue;
-                        }
-                    }
-                    count++;
-                } else {
-                    qWarning() << "MinLabel: Failed to open lab file for reading:" << labFilePath;
+            if (currentLabPath == labFilePath) {
+                auto labelResult = MinLabelService::loadLabel(
+                    audioToOtherSuffix(currentFilePath, "json"));
+                if (labelResult) {
+                    textWidget->contentText->setPlainText(labelResult.value().lab);
+                    textWidget->wordsText->setText(labelResult.value().rawText);
                 }
+                break;
             }
         }
+
         _q_updateProgress();
         QMessageBox::information(this, QApplication::applicationName(),
-                                 QString("Convert %1 lab files to current project file.").arg(count));
+                                 QString("Convert %1 lab files to current project file.").arg(convResult.count));
     }
 
 } // namespace Minlabel
