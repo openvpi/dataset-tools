@@ -1,6 +1,4 @@
-#ifndef LYRICDATA_H
-#define LYRICDATA_H
-
+#pragma once
 /// @file LyricData.h
 /// @brief Data structure for parsed lyric content.
 
@@ -17,5 +15,3 @@ namespace LyricFA {
     };
 
 } // namespace LyricFA
-
-#endif // LYRICDATA_H

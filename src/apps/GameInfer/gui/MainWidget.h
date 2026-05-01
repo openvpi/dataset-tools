@@ -1,9 +1,7 @@
 /// @file MainWidget.h
 /// @brief GameInfer main control panel with model loading, parameter tuning, and task execution.
 
-#ifndef MAINWIDGET_H
-#define MAINWIDGET_H
-
+#pragma once
 #include <QComboBox>
 #include <QLabel>
 #include <QMessageBox>
@@ -107,5 +105,3 @@ private:
 
     QFuture<void> m_runningTask; ///< Currently running async task future.
 };
-
-#endif // MAINWIDGET_H

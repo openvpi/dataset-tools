@@ -1,9 +1,7 @@
 /// @file Hfa.h
 /// @brief HuBERT-FA forced alignment engine.
 
-#ifndef HFA_H
-#define HFA_H
-
+#pragma once
 #include <hubert-infer/HubertInferGlobal.h>
 #include <hubert-infer/HfaModel.h>
 
@@ -70,5 +68,3 @@ namespace HFA {
         int hfa_input_sample_rate = 44100; ///< Expected input sample rate in Hz.
     };
 } // namespace HFA
-
-#endif // HFA_H

@@ -1,9 +1,7 @@
 /// @file Rmvpe.h
 /// @brief RMVPE pitch (F0) extraction engine.
 
-#ifndef RMVPE_H
-#define RMVPE_H
-
+#pragma once
 #include <filesystem>
 #include <functional>
 
@@ -65,5 +63,3 @@ namespace Rmvpe
         std::unique_ptr<RmvpeModel> m_rmvpe; ///< ONNX model instance.
     };
 } // namespace Rmvpe
-
-#endif // RMVPE_H

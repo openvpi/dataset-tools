@@ -1,9 +1,7 @@
 /// @file HfaModel.h
 /// @brief ONNX Runtime model for HuBERT-FA inference.
 
-#ifndef HFAMODEL_H
-#define HFAMODEL_H
-
+#pragma once
 #include <hubert-infer/HubertInferGlobal.h>
 
 #include <filesystem>
@@ -48,5 +46,3 @@ namespace HFA {
     };
 
 } // Hfa
-
-#endif // HFAMODEL_H

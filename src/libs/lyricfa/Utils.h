@@ -1,6 +1,4 @@
-#ifndef LFA_UTIL_H
-#define LFA_UTIL_H
-
+#pragma once
 /// @file Utils.h
 /// @brief Character classification and string splitting utilities for lyric processing.
 
@@ -50,5 +48,3 @@ namespace LyricFA {
     QVector<QString> splitString(const QString &input);
 
 }
-
-#endif // LFA_UTIL_H

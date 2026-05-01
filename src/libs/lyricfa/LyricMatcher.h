@@ -1,6 +1,4 @@
-#ifndef LYRICMATCHER_H
-#define LYRICMATCHER_H
-
+#pragma once
 /// @file LyricMatcher.h
 /// @brief Lyric-to-ASR alignment and matching engine.
 
@@ -59,5 +57,3 @@ namespace LyricFA {
     };
 
 } // namespace LyricFA
-
-#endif // LYRICMATCHER_H

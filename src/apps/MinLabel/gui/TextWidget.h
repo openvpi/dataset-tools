@@ -1,9 +1,7 @@
 /// @file TextWidget.h
 /// @brief G2P text conversion widget for MinLabel.
 
-#ifndef TEXTWIDGET_H
-#define TEXTWIDGET_H
-
+#pragma once
 #include <QCheckBox>
 #include <QComboBox>
 #include <QPlainTextEdit>
@@ -62,5 +60,3 @@ namespace Minlabel {
         void _q_onLanguageComboIndexChanged();
     };
 }
-
-#endif // TEXTWIDGET_H

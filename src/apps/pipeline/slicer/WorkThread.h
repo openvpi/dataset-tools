@@ -1,9 +1,7 @@
 /// @file WorkThread.h
 /// @brief Async task wrapper for audio slicing operations.
 
-#ifndef AUDIO_SLICER_WORKTHREAD_H
-#define AUDIO_SLICER_WORKTHREAD_H
-
+#pragma once
 #include <dsfw/AsyncTask.h>
 
 #include <QString>
@@ -39,5 +37,3 @@ signals:
     /// @brief Emitted with error messages during slicing.
     void oneError(const QString &errmsg);
 };
-
-#endif //AUDIO_SLICER_WORKTHREAD_H

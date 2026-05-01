@@ -1,6 +1,4 @@
-#ifndef ASRTHREAD_H
-#define ASRTHREAD_H
-
+#pragma once
 /// @file AsrTask.h
 /// @brief Async task wrapper for ASR recognition with G2P post-processing.
 
@@ -39,5 +37,3 @@ namespace LyricFA {
         QSharedPointer<Pinyin::Pinyin> m_g2p = nullptr; ///< Pinyin G2P converter.
     };
 }
-
-#endif // ASRTHREAD_H

@@ -1,6 +1,4 @@
-#ifndef AUDIO_SLICER_CONSTANTS_H
-#define AUDIO_SLICER_CONSTANTS_H
-
+#pragma once
 /// @file Enumerations.h
 /// @brief Audio slicer enumeration types.
 
@@ -23,5 +21,3 @@ enum class SlicingMode {
     AudioAndMarkers       ///< Output both sliced audio and markers
 };
 Q_DECLARE_METATYPE(SlicingMode)
-
-#endif // AUDIO_SLICER_CONSTANTS_H

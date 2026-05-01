@@ -1,6 +1,4 @@
-#ifndef MATCHLYRIC_H
-#define MATCHLYRIC_H
-
+#pragma once
 /// @file MatchLyric.h
 /// @brief Batch lyric matching controller.
 
@@ -41,4 +39,3 @@ namespace LyricFA {
         int m_diffThreshold = 1;                     ///< Maximum allowed difference count for a valid match.
     };
 }
-#endif // MATCHLYRIC_H

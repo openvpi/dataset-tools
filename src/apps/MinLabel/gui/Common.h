@@ -1,9 +1,7 @@
 /// @file Common.h
 /// @brief Common utilities and data types for the MinLabel application.
 
-#ifndef DATASET_TOOLS_COMMON_H
-#define DATASET_TOOLS_COMMON_H
-
+#pragma once
 #include <QFileInfo>
 #include <QString>
 #include <utility>
@@ -89,4 +87,3 @@ namespace Minlabel {
     /// @return True on success.
     bool writeJsonFile(const QString &fileName, const nlohmann::json &jsonData);
 }
-#endif // DATASET_TOOLS_COMMON_H

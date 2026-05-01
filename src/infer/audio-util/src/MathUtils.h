@@ -1,9 +1,7 @@
 /// @file MathUtils.h
 /// @brief Integer division with rounding utility.
 
-#ifndef MATHUTILS_H
-#define MATHUTILS_H
-
+#pragma once
 /// @brief Integer division rounding to the closest integer without float conversion.
 /// @tparam T Integer type (int, int64_t, etc.).
 /// @param n Numerator.
@@ -18,5 +16,3 @@ inline T divIntRound(T n, T d) {
                                ((n - (d / 2)) / d) : \
                                ((n + (d / 2)) / d);
 }
-
-#endif // MATHUTILS_H

@@ -1,6 +1,4 @@
-#ifndef SEQUENCEALIGNER_H
-#define SEQUENCEALIGNER_H
-
+#pragma once
 /// @file SequenceAligner.h
 /// @brief Edit-distance based sequence alignment for phonetic matching.
 
@@ -83,5 +81,3 @@ namespace LyricFA {
     int calculate_difference_count(const QVector<QString> &seq1, const QVector<QString> &seq2);
 
 } // namespace LyricFA
-
-#endif // SEQUENCEALIGNER_H

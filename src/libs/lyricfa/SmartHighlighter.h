@@ -1,6 +1,4 @@
-#ifndef SMARTHIGHLIGHTER_H
-#define SMARTHIGHLIGHTER_H
-
+#pragma once
 /// @file SmartHighlighter.h
 /// @brief Alignment difference highlighter for visual diff display.
 
@@ -32,5 +30,3 @@ namespace LyricFA {
     };
 
 } // namespace LyricFA
-
-#endif // SMARTHIGHLIGHTER_H

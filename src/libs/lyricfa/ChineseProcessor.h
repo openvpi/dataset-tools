@@ -1,6 +1,4 @@
-#ifndef CHINESEPROCESSOR_H
-#define CHINESEPROCESSOR_H
-
+#pragma once
 /// @file ChineseProcessor.h
 /// @brief Chinese text processing with Pinyin conversion.
 
@@ -35,5 +33,3 @@ namespace LyricFA {
     };
 
 } // namespace LyricFA
-
-#endif // CHINESEPROCESSOR_H

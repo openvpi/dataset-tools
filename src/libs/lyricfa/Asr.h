@@ -1,6 +1,4 @@
-#ifndef ASR_H
-#define ASR_H
-
+#pragma once
 /// @file Asr.h
 /// @brief FunASR speech recognition engine wrapper.
 
@@ -43,4 +41,3 @@ namespace LyricFA {
         mutable std::mutex m_mutex;                  ///< Mutex for thread-safe recognition.
     };
 } // LyricFA
-#endif // ASR_H

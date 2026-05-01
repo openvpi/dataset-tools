@@ -1,9 +1,7 @@
 /// @file NoteUtils.h
 /// @brief MIDI note number to string conversion utility.
 
-#ifndef GAME_INFER_NOTEUTILS_H
-#define GAME_INFER_NOTEUTILS_H
-
+#pragma once
 #include <array>
 #include <cmath>
 #include <string>
@@ -46,5 +44,3 @@ namespace game_infer {
     }
 
 } // namespace game_infer
-
-#endif // GAME_INFER_NOTEUTILS_H

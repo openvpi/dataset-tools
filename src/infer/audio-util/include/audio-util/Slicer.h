@@ -1,9 +1,7 @@
 /// @file Slicer.h
 /// @brief RMS-based audio slicer for silence-boundary detection.
 
-#ifndef AUDIOSLICER_H
-#define AUDIOSLICER_H
-
+#pragma once
 #include <audio-util/AudioUtilGlobal.h>
 #include <cstdint>
 #include <string>
@@ -78,4 +76,3 @@ namespace AudioUtil
         static std::vector<double> get_rms(const std::vector<float> &samples, int frame_length, int hop_length);
     };
 } // namespace AudioUtil
-#endif // AUDIOSLICER_H

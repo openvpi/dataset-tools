@@ -1,10 +1,7 @@
 /// @file ExportDialog.h
 /// @brief MinLabel dataset export dialog.
 
-#ifndef DATASET_TOOLS_EXPORTDIALOG_H
-#define DATASET_TOOLS_EXPORTDIALOG_H
-
-
+#pragma once
 #include <QCheckBox>
 #include <QDialog>
 #include <QLineEdit>
@@ -34,4 +31,3 @@ namespace Minlabel {
         QCheckBox *removeTone;           ///< Option to remove tone markers.
     };
 }
-#endif // DATASET_TOOLS_EXPORTDIALOG_H

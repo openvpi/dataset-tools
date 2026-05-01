@@ -1,6 +1,4 @@
-#ifndef HFATHREAD_H
-#define HFATHREAD_H
-
+#pragma once
 /// @file HfaTask.h
 /// @brief Async task wrapper for HuBERT forced alignment operations.
 
@@ -37,5 +35,3 @@ namespace HFA {
         std::vector<std::string> m_non_speech_ph;  ///< Non-speech phoneme labels
     };
 }
-
-#endif // HFATHREAD_H

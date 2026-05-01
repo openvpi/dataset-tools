@@ -1,9 +1,7 @@
 /// @file SndfileVio.h
 /// @brief Virtual I/O adapter for libsndfile using in-memory byte arrays.
 
-#ifndef SNDFILEVIO_H
-#define SNDFILEVIO_H
-
+#pragma once
 #include <sndfile.hh>
 #include <vector>
 
@@ -72,5 +70,3 @@ namespace AudioUtil
         const char *constData() const { return data.byteArray.data(); }
     };
 } // namespace AudioUtil
-
-#endif // SNDFILEVIO_H

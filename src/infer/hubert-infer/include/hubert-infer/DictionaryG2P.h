@@ -1,9 +1,7 @@
 /// @file DictionaryG2P.h
 /// @brief Dictionary-based grapheme-to-phoneme converter for HuBERT-FA.
 
-#ifndef DICTIONARY_G2P_H
-#define DICTIONARY_G2P_H
-
+#pragma once
 #include <hubert-infer/HubertInferGlobal.h>
 
 #include <string>
@@ -35,4 +33,3 @@ namespace HFA {
     };
 
 } // namespace HFA
-#endif // DICTIONARY_G2P_H

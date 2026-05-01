@@ -1,9 +1,7 @@
 /// @file RmvpeModel.h
 /// @brief ONNX Runtime model for RMVPE pitch inference.
 
-#ifndef RMVPEMODEL_H
-#define RMVPEMODEL_H
-
+#pragma once
 #include <filesystem>
 #include <memory>
 #include <onnxruntime_cxx_api.h>
@@ -49,4 +47,3 @@ namespace Rmvpe
     };
 
 } // namespace Rmvpe
-#endif // RMVPEMODEL_H

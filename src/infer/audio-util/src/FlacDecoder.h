@@ -1,9 +1,7 @@
 /// @file FlacDecoder.h
 /// @brief FLAC to WAV decoder writing to in-memory VIO.
 
-#ifndef FLACDECODER_H
-#define FLACDECODER_H
-
+#pragma once
 #include <audio-util/Util.h>
 #include <filesystem>
 #include <sndfile.h>
@@ -15,5 +13,3 @@ namespace AudioUtil
     /// @param sf_vio Output VIO buffer to receive the decoded audio.
     void write_flac_to_vio(const std::filesystem::path &filepath, SF_VIO &sf_vio);
 } // namespace AudioUtil
-
-#endif // FLACDECODER_H

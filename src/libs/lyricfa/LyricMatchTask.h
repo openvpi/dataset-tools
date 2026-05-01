@@ -1,6 +1,4 @@
-#ifndef LYRICMATCHTASK_H
-#define LYRICMATCHTASK_H
-
+#pragma once
 /// @file LyricMatchTask.h
 /// @brief Async task wrapper for lyric matching operations.
 
@@ -34,5 +32,3 @@ namespace LyricFA {
     };
 
 } // LyricFA
-
-#endif // LYRICMATCHTASK_H
