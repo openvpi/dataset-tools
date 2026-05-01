@@ -5,7 +5,8 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-#include <dsfw/ServiceLocator.h>
+#include <dsfw/TaskProcessorRegistry.h>
+#include <dstools/ModelManager.h>
 #include <QComboBox>
 #include <QLineEdit>
 
@@ -34,28 +35,30 @@ void GameAlignPage::onRunAlignment() {
         return;
     }
 
-    auto *service = dstools::ServiceLocator::get<dstools::IAlignmentService>();
-    if (!service) {
-        QMessageBox::warning(this, tr("Error"), tr("No alignment service registered."));
+    auto processor = dstools::TaskProcessorRegistry::instance().create(
+        QStringLiteral("midi_transcription"), QStringLiteral("game"));
+    if (!processor) {
+        QMessageBox::warning(this, tr("Error"), tr("No GAME processor registered."));
         return;
     }
 
     const int gpuIndex = m_gpuSelector->currentData().toInt();
-    auto loadResult = service->loadModel(m_modelPath->text(), gpuIndex);
-    if (!loadResult) {
+    dstools::ModelManager mm;
+    dstools::ProcessorConfig config;
+    config["path"] = m_modelPath->text().toStdString();
+    config["deviceId"] = gpuIndex;
+    auto initResult = processor->initialize(mm, config);
+    if (!initResult) {
         QMessageBox::warning(this, tr("Error"),
-                             tr("Failed to load model: %1").arg(QString::fromStdString(loadResult.error())));
+                             tr("Failed to load model: %1").arg(QString::fromStdString(initResult.error())));
         return;
     }
 
-    dstools::AlignCsvOptions opts;
-    auto alignResult = service->alignCSV(
-        m_modelPath->text(), "",
-        opts,
-        [](int progress) { (void)progress; });
-
-    if (!alignResult) {
+    dstools::BatchInput batchInput;
+    batchInput.workingDir = m_modelPath->text();
+    auto batchResult = processor->processBatch(batchInput);
+    if (!batchResult) {
         QMessageBox::warning(this, tr("MIDI Alignment Failed"),
-                             QString::fromStdString(alignResult.error()));
+                             QString::fromStdString(batchResult.error()));
     }
 }
