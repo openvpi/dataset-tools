@@ -20,6 +20,10 @@
 namespace dstools {
 namespace phonemelabeler {
 
+namespace {
+    constexpr int kDefaultBufferSize = 4096;
+} // namespace
+
 WaveformWidget::WaveformWidget(ViewportController *viewport, QWidget *parent)
     : QWidget(parent),
     m_viewport(viewport)
@@ -59,7 +63,7 @@ void WaveformWidget::loadAudio(const QString &path) {
 
     // Read all samples
     std::vector<float> allSamples;
-    const int bufferSize = 4096;
+    const int bufferSize = kDefaultBufferSize;
     std::vector<float> buffer(bufferSize);
 
     while (true) {

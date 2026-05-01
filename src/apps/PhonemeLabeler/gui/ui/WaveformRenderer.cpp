@@ -6,6 +6,10 @@
 namespace dstools {
 namespace phonemelabeler {
 
+namespace {
+    constexpr int kDefaultBufferSize = 4096;
+} // namespace
+
 WaveformRenderer::WaveformRenderer(QObject *parent)
     : QObject(parent) {
 }
@@ -26,7 +30,7 @@ bool WaveformRenderer::loadAudio(const QString &path) {
     int channels = fmt.channels();
 
     std::vector<float> allSamples;
-    const int bufferSize = 4096;
+    const int bufferSize = kDefaultBufferSize;
     std::vector<float> buffer(bufferSize);
     while (true) {
         int read = decoder.read(buffer.data(), 0, bufferSize);
