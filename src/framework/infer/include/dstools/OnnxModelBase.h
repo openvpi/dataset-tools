@@ -1,4 +1,6 @@
 #pragma once
+/// @file OnnxModelBase.h
+/// @brief Base classes for ONNX Runtime model wrappers.
 
 #include <dstools/ExecutionProvider.h>
 #include <dstools/OnnxEnv.h>
@@ -14,6 +16,7 @@
 
 namespace dstools::infer {
 
+    /// @brief Base class for ONNX Runtime model wrappers.
     class OnnxModelBase {
     protected:
         std::unique_ptr<Ort::Session> m_session;
@@ -39,15 +42,19 @@ namespace dstools::infer {
     public:
         virtual ~OnnxModelBase() = default;
 
+        /// @brief Check whether a model session is loaded.
+        /// @return True if a session is active.
         bool isOpen() const {
             return m_session != nullptr;
         }
 
+        /// @brief Close the current model session and free resources.
         void closeSession() {
             m_session.reset();
         }
     };
 
+    /// @brief ONNX model base with support for cancelling running inference.
     class CancellableOnnxModel : public OnnxModelBase {
     protected:
         mutable std::mutex m_runMutex;
@@ -58,6 +65,7 @@ namespace dstools::infer {
             : OnnxModelBase(provider, deviceId) {}
 
     public:
+        /// @brief Request termination of a running inference operation.
         void terminate();
     };
 

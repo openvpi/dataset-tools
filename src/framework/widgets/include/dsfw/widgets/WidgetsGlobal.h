@@ -1,4 +1,6 @@
 #pragma once
+/// @file WidgetsGlobal.h
+/// @brief Shared export/import macro for the dsfw-widgets library.
 
 #include <QtGlobal>
 

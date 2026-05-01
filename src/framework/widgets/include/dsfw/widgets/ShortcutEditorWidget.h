@@ -1,4 +1,6 @@
 #pragma once
+/// @file ShortcutEditorWidget.h
+/// @brief Tree-based widget for editing keyboard shortcuts with conflict detection.
 
 #include <dsfw/widgets/WidgetsGlobal.h>
 
@@ -20,26 +22,37 @@ struct SettingsKey;
 
 namespace dsfw::widgets {
 
+/// @brief Describes a single shortcut entry for the editor.
 struct DSFW_WIDGETS_API ShortcutEntry {
-    QString displayName;
-    QString category;
-    const char *settingsKeyPath;
-    QString defaultSequence;
+    QString displayName;       ///< @brief Human-readable shortcut name.
+    QString category;          ///< @brief Category for grouping in the tree.
+    const char *settingsKeyPath; ///< @brief Settings key path for persistence.
+    QString defaultSequence;   ///< @brief Default key sequence string.
 };
 
+/// @brief Tree-based keyboard shortcut editor with conflict detection.
 class DSFW_WIDGETS_API ShortcutEditorWidget : public QWidget {
     Q_OBJECT
 
 public:
+    /// @brief Construct a shortcut editor widget.
+    /// @param settings Application settings instance.
+    /// @param entries List of shortcut entries to edit.
+    /// @param parent Parent widget.
     explicit ShortcutEditorWidget(dstools::AppSettings *settings,
                                   const std::vector<ShortcutEntry> &entries,
                                   QWidget *parent = nullptr);
     ~ShortcutEditorWidget() override;
 
+    /// @brief Show the shortcut editor as a modal dialog.
+    /// @param settings Application settings instance.
+    /// @param entries List of shortcut entries to edit.
+    /// @param parent Parent widget for the dialog.
     static void showDialog(dstools::AppSettings *settings,
                            const std::vector<ShortcutEntry> &entries,
                            QWidget *parent);
 
+    /// @brief Commit any in-progress key sequence edit.
     void commitPendingEdit();
 
 private:
