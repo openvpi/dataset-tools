@@ -7,6 +7,8 @@ set(DSFW_VERSION "${DSFW_VERSION_MAJOR}.${DSFW_VERSION_MINOR}.${DSFW_VERSION_PAT
 add_subdirectory(base)
 add_subdirectory(core)
 add_subdirectory(ui-core)
+add_subdirectory(audio)
+add_subdirectory(infer)
 
 # === dsfw package export/install ===
 include(GNUInstallDirs)

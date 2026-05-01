@@ -1,5 +1,3 @@
-add_subdirectory(common)
-
 add_subdirectory(audio-util)
 add_subdirectory(FunAsr)
 add_subdirectory(rmvpe-infer)

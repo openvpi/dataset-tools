@@ -10,7 +10,8 @@
     "wolf-midi",
     "libsndfile",
     "qbreakpad",
-    "nlohmann-json"
+    "nlohmann-json",
+    "qwindowkit"
   ],
   "vcpkg-configuration": {
     "overlay-ports": [

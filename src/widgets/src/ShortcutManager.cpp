@@ -24,7 +24,7 @@ void ShortcutManager::applyAll() {
 void ShortcutManager::saveAll() {
     for (const auto &b : m_bindings) {
         SettingsKey<QString> key(b.keyPath, b.defaultValue);
-        m_settings->setShortcut(key, b.action->shortcut());
+        m_settings->setShortcut(key, b.action->shortcut().toString());
     }
 }
 
