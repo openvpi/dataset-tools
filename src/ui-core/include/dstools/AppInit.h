@@ -19,7 +19,7 @@ struct AppInit {
     static void registerPostInitHook(InitHook hook);
 
     /// @param app              QApplication instance
-    /// @param initCrashHandler Whether to initialize QBreakpad (only effective in Release builds)
+    /// @param initCrashHandler Whether to initialize CrashHandler (only effective in Release builds)
     /// @return false if the application should exit (e.g. running as root without --allow-root)
     static bool init(QApplication &app, bool initCrashHandler = false);
 

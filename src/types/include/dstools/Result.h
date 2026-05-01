@@ -8,7 +8,8 @@ namespace dstools {
 template <typename T>
 class Result {
 public:
-    Result(T value) : m_value(std::move(value)), m_ok(true) {}
+    // Non-explicit by design: allows `return value;` syntax for ergonomic Result construction.
+    Result(T value) : m_value(std::move(value)), m_ok(true) {} // NOLINT(google-explicit-constructor)
 
     static Result Ok(T value) { return Result(std::move(value)); }
 

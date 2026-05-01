@@ -1,6 +1,4 @@
-#ifndef DSFW_ASYNCTASK_H
-#define DSFW_ASYNCTASK_H
-
+#pragma once
 /// @file AsyncTask.h
 /// @brief QRunnable+QObject base class for thread-pool async tasks with signal-based completion.
 
@@ -27,7 +25,7 @@ namespace dstools {
         ~AsyncTask() override = default;
 
         /// @brief Entry point called by QThreadPool. Calls execute() internally.
-        void run() override final;
+        void run() final;
 
         /// @brief Return the task's identifier.
         /// @return Task identifier string.
@@ -54,5 +52,3 @@ namespace dstools {
     };
 
 } // namespace dstools
-
-#endif // DSFW_ASYNCTASK_H
