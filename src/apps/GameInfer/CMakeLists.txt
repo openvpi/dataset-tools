@@ -9,7 +9,6 @@ add_executable(${PROJECT_NAME} ${_src})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     dstools-widgets
-    labeler-interfaces
     game-infer::game-infer
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets

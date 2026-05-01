@@ -21,7 +21,6 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Concurrent REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     dstools-widgets
-    labeler-interfaces
     minlabel-page
     phonemelabeler-page
     pitchlabeler-page

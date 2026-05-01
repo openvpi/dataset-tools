@@ -18,7 +18,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-widgets
-    labeler-interfaces
     hubertfa-lib
     hubert-infer
     dsfw-core

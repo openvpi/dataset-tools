@@ -20,7 +20,6 @@ find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dstools-widgets
-    labeler-interfaces
     lyricfa-lib
     dsfw-core
     cpp-pinyin::cpp-pinyin

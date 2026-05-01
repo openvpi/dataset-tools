@@ -30,7 +30,6 @@ find_package(SndFile CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
         dstools-widgets
-        labeler-interfaces
         slicer-lib
         audio-util
         SndFile::sndfile
