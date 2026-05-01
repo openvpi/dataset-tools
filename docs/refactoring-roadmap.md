@@ -129,7 +129,7 @@ Doxyfile 已配置，32 个框架头文件已有 Doxygen 注释。`.github/workf
 > - **H.4 CrashHandler**：已在 `dsfw-core`，修复后由 `AppInit` 统一激活。通用能力。
 > - **H.5 AppPaths**：归 `dsfw-core`，集中管理跨平台数据路径。通用能力。
 
-### H.1 PitchLabeler 撤销重做补全 — P1.5, M (4-8h)
+### H.1 PitchLabeler 撤销重做补全 — P1.5, M (4-8h) — ✅ 已完成
 
 > **不纳入框架**。`QUndoStack` 是 Qt 成熟的撤销/重做机制，PhonemeLabeler 和 PitchLabeler 均已直接使用。旧 `dsfw::UndoStack` 包装层在 G.1 中已删除（零消费者）。`QUndoCommand` 子类是纯领域逻辑（音符删除、滑音切换等），不存在可复用的框架抽象。
 
@@ -153,15 +153,15 @@ Doxyfile 已配置，32 个框架头文件已有 Doxygen 注释。`.github/workf
 - 所有 Command 的 `redo()`/`undo()` 末尾需调用 `markModified()` + 通知 PianoRollView 刷新
 
 **验收标准**:
-- [ ] 5+ 个操作均通过 `m_undoStack->push(new XxxCommand(...))` 执行
-- [ ] 每个操作可 Ctrl+Z 撤销、Ctrl+Shift+Z 重做
-- [ ] 撤销/重做后 PianoRoll 显示正确、文件脏标记正确
-- [ ] PitchLabelerPage::connectSignals() 中的 5 个 lambda 替换为 push Command
-- [ ] PianoRollInputHandler 中的直接 markModified() 调用已审计并补全
+- [x] 5+ 个操作均通过 `m_undoStack->push(new XxxCommand(...))` 执行
+- [x] 每个操作可 Ctrl+Z 撤销、Ctrl+Shift+Z 重做
+- [x] 撤销/重做后 PianoRoll 显示正确、文件脏标记正确
+- [x] PitchLabelerPage::connectSignals() 中的 5 个 lambda 替换为 push Command
+- [x] PianoRollInputHandler 中的直接 markModified() 调用已审计并补全
 
 ---
 
-### H.2 全局文件日志 Sink — P1.5, S (2-4h) — `dsfw-core` 框架模块
+### H.2 全局文件日志 Sink — P1.5, S (2-4h) — ✅ 已完成 — `dsfw-core` 框架模块
 
 > **纳入框架**。`FileLogSink` 是 `Logger` 的配套设施，与 `Log.h` 同属 `dsfw-core`。所有应用通过 `AppInit` 自动注册，无需各 app 重复代码。
 
@@ -177,14 +177,14 @@ Doxyfile 已配置，32 个框架头文件已有 Doxygen 注释。`.github/workf
 | 4 | 崩溃 callback 中将最后 N 条日志附加到 dump 目录 | `AppInit.cpp` CrashHandler 回调 |
 
 **验收标准**:
-- [ ] 任意应用启动后 logs 目录下生成日志文件
-- [ ] 日志包含时间戳、级别、分类、消息
-- [ ] 超过 7 天的日志文件在启动时自动删除
+- [x] 任意应用启动后 logs 目录下生成日志文件
+- [x] 日志包含时间戳、级别、分类、消息
+- [x] 超过 7 天的日志文件在启动时自动删除
 - [ ] 崩溃时 dump 目录下有对应的日志副本
 
 ---
 
-### H.3 批量处理 Checkpoint — P1.5, M (4-8h) — `dsfw-core` 框架模块
+### H.3 批量处理 Checkpoint — P1.5, M (4-8h) — ✅ 已完成 — `dsfw-core` 框架模块
 
 > **纳入框架**。`BatchCheckpoint` 操作 `TaskTypes.h` 中的 `BatchOutput`/`BatchInput`，与 `ITaskProcessor` 同层。`processBatch()` 默认实现自动接入 checkpoint，各处理器无需额外代码。
 
@@ -212,11 +212,11 @@ Doxyfile 已配置，32 个框架头文件已有 Doxygen 注释。`.github/workf
 ```
 
 **验收标准**:
-- [ ] 批量处理中每完成一个文件，checkpoint 文件实时更新
-- [ ] 中断后重启，检测到 checkpoint 时弹出"继续/重新开始"选择
-- [ ] 选择"继续"后跳过已处理文件，从断点继续
-- [ ] 全部处理完成后 checkpoint 文件自动清理
-- [ ] `failedFiles` 包含失败原因，用户可查看
+- [x] 批量处理中每完成一个文件，checkpoint 文件实时更新
+- [x] 中断后重启，检测到 checkpoint 时弹出"继续/重新开始"选择
+- [x] 选择"继续"后跳过已处理文件，从断点继续
+- [x] 全部处理完成后 checkpoint 文件自动清理
+- [x] `failedFiles` 包含失败原因，用户可查看
 
 ---
 
@@ -339,9 +339,9 @@ P1 — 架构演进（核心价值）— ✅ 全部完成
 P1.5 — 用户体验与可靠性
   H.5  数据路径迁移 QStandardPaths (S) — ✅
   H.4  统一 CrashHandler (M)           — ✅
-  H.2  全局文件日志 Sink (S)           — 📋 待执行（前置 H.5 已完成）
-  H.1  PitchLabeler 撤销重做补全 (M)   — 📋 待执行（独立）
-  H.3  批量处理 Checkpoint (M)         — 📋 待执行（独立）
+  H.2  全局文件日志 Sink (S)           — ✅
+  H.1  PitchLabeler 撤销重做补全 (M)   — ✅
+  H.3  批量处理 Checkpoint (M)         — ✅
 
 P2 — 有实际价值 — ✅ 全部完成
   B.1  补齐领域测试 (L)           — ✅
@@ -396,9 +396,9 @@ P3 — 按需拾取
 | TD-12 | ~~DsProjectDefaults 硬编码 4 个模型路径字段~~ | ✅ 已演进为 TaskModelConfig |
 | TD-13 | ~~GameInfer UI 通过 dynamic_cast 绕过接口调用 5 个 setter~~ | ✅ 已消除 |
 | TD-14 | ~~LyricFAPage / SlicerPage 绕过服务层直接创建引擎~~ | ✅ 已切换到 TaskProcessorRegistry |
-| TD-15 | PitchLabeler 5+ 个编辑操作绕过 QUndoStack 不可撤销 | 中 |
-| TD-16 | 所有应用无持久化日志文件（仅有 minidump） | 中 |
-| TD-17 | 批量处理无 checkpoint，中断后须从头重来 | 中 |
+| TD-15 | ~~PitchLabeler 5+ 个编辑操作绕过 QUndoStack 不可撤销~~ | ✅ 已补全 5+ Command |
+| TD-16 | ~~所有应用无持久化日志文件（仅有 minidump）~~ | ✅ FileLogSink 已接入 |
+| TD-17 | ~~批量处理无 checkpoint，中断后须从头重来~~ | ✅ BatchCheckpoint 已实现 |
 | TD-18 | ~~config/logs/dumps 路径基于 applicationDirPath()，macOS/Linux 安装场景可能只读~~ | ✅ 已迁移至 AppPaths |
 | TD-19 | ~~dsfw::CrashHandler 是死代码且有 4 个 bug（未调用 callback、Unix 无 dump、缺 include、与 QBreakpad 并存）~~ | ✅ 已重写 |
 
@@ -449,9 +449,9 @@ P3 — 按需拾取
 |---|------|--------|---------|------|------|------|------|------|
 | 25 | **H.5** 数据路径迁移 QStandardPaths | S (2-4h) | `dsfw-core`: `AppPaths.h/.cpp`; `AppSettings.cpp`, `CrashHandler.cpp`, `AppInit.cpp` | 框架 | ✅ | — | TD-18 | ✅ |
 | 26 | **H.4** 统一 CrashHandler（替换 QBreakpad） | M (4-8h) | `dsfw-core`: `CrashHandler.cpp`; `ui-core`: `AppInit.cpp`, `CMakeLists.txt` | 框架 | ✅ | — | TD-19 | ✅ |
-| 27 | **H.2** 全局文件日志 Sink + 日志轮转 | S (2-4h) | `dsfw-core`: `Log.h/.cpp` 或新建 `FileLogSink.h/.cpp`; `ui-core`: `AppInit.cpp` | 框架 | — | H.5 | TD-16 | 📋 |
-| 28 | **H.1** PitchLabeler 撤销重做补全（5+ 个操作） | M (4-8h) | `src/apps/PitchLabeler/gui/ui/commands/`, `PitchLabelerPage.cpp` | 应用 | ✅ | — | TD-15 | 📋 |
-| 29 | **H.3** 批量处理 Checkpoint（断点续处理） | M (4-8h) | `dsfw-core`: `TaskTypes.h`, 新建 `BatchCheckpoint.h/.cpp`, `ITaskProcessor.cpp`; 应用: TaskWindow 页面 | 框架+应用 | ✅ | — | TD-17 | 📋 |
+| 27 | **H.2** 全局文件日志 Sink + 日志轮转 | S (2-4h) | `dsfw-core`: `Log.h/.cpp` 或新建 `FileLogSink.h/.cpp`; `ui-core`: `AppInit.cpp` | 框架 | ✅ | H.5 | TD-16 | ✅ |
+| 28 | **H.1** PitchLabeler 撤销重做补全（5+ 个操作） | M (4-8h) | `src/apps/PitchLabeler/gui/ui/commands/`, `PitchLabelerPage.cpp` | 应用 | ✅ | — | TD-15 | ✅ |
+| 29 | **H.3** 批量处理 Checkpoint（断点续处理） | M (4-8h) | `dsfw-core`: `TaskTypes.h`, 新建 `BatchCheckpoint.h/.cpp`, `ITaskProcessor.cpp`; 应用: TaskWindow 页面 | 框架+应用 | ✅ | — | TD-17 | ✅ |
 
 ### 批次 7 — 小修小补
 
