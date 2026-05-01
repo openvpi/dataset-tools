@@ -49,7 +49,7 @@ Required for GameInfer. Place the model directory (containing `config.json`, `en
 | Component | Requirement |             Detailed             |
 |:---------:|:-----------:|:--------------------------------:|
 |    Qt     |  \>=6.8.0   | Core, Gui, Widgets, Svg, Network |
-| Compiler  |  \>=C++17   |      MSVC 2022, GCC, Clang       |
+| Compiler  |  \>=C++20   |      MSVC 2022, GCC, Clang       |
 |   CMake   |   \>=3.17   |      >=3.20 is recommended       |
 
 > Tested with Qt 6.8.3 and Qt 6.9.3. CI builds use Qt 6.9.3.
@@ -139,7 +139,7 @@ cmake --build build --target install
 
 ## Framework (dsfw)
 
-The project includes a reusable C++17/Qt6 desktop application framework (`dsfw`) that can be consumed independently via `find_package(dsfw)`. The framework provides:
+The project includes a reusable C++20/Qt6 desktop application framework (`dsfw`) that can be consumed independently via `find_package(dsfw)`. The framework provides:
 
 - **dsfw-core** — Type-safe settings, JSON utilities, service locator, document/model/G2P/export interfaces, file I/O, async tasks
 - **dsfw-ui-core** — AppShell unified window shell (single/multi-page modes), theme system, frameless window helper, icon navigation bar, page lifecycle interfaces
