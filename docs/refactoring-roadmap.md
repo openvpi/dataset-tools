@@ -524,13 +524,15 @@ public:
 
 > ✅ 已完成 — PluginManager 已实现于 dsfw-ui-core，基于 QPluginLoader 动态加载 IStepPlugin，支持模板化查询 plugins<T>()，集成 dsfw::Log 诊断输出。
 
-### T-4.2 崩溃收集 [G2]
+### T-4.2 崩溃收集 [G2] ✅ 已完成
 
 - Windows: `SetUnhandledExceptionFilter` + minidump
 - macOS/Linux: signal handler + stack trace
 - 可选: 自动上传到 crash 收集服务
 
 **工作量**: M (2-8h)
+
+> ✅ 已完成 — CrashHandler 已实现于 dsfw-core，Windows 使用 SetUnhandledExceptionFilter + MiniDumpWriteDump (dbghelp)，Linux/macOS 使用 signal handler，支持自定义 dump 目录和回调。
 
 ### T-4.3 自动更新检查 [G2] ✅ 已完成
 
@@ -610,7 +612,7 @@ Phase 3 (Week 9-12) — 增强
       │
       ▼
 Phase 4 (Week 13+) — 完善
-  T-4.1 插件系统 (✅)    T-4.2 崩溃收集    T-4.3 更新检查 (✅)
+  T-4.1 插件系统 (✅)    T-4.2 崩溃收集 (✅)    T-4.3 更新检查 (✅)
   T-4.4 MRU 列表 (✅)  T-4.5 新增控件  T-4.6 控件画廊
   T-4.7 DI 强化
 ```
