@@ -4,6 +4,7 @@ set(CMAKE_AUTOMOC ON)
 
 set(LYRICFA_SOURCES
     Asr.cpp
+    AsrService.cpp
     AsrTask.cpp
     ChineseProcessor.cpp
     FunAsrAdapter.cpp
@@ -17,6 +18,7 @@ set(LYRICFA_SOURCES
 
 set(LYRICFA_HEADERS
     Asr.h
+    AsrService.h
     AsrTask.h
     ChineseProcessor.h
     FunAsrAdapter.h
