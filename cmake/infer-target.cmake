@@ -1,7 +1,7 @@
 # cmake/infer-target.cmake
-# Common macro for inference library targets.
-# Encapsulates: output dirs, MSVC flags, static/shared build, ORT linking,
-# install/export boilerplate.
+# Common function for inference library targets.
+# Wraps dstools_add_library with inference-specific boilerplate:
+# shared/static toggle, ORT linking, install/export, winrc, tests.
 #
 # Usage:
 #   dstools_add_infer_library(<target>
@@ -14,12 +14,10 @@
 #       [RC_COPYRIGHT <copyright>]
 #   )
 
-macro(dstools_add_infer_library _target)
+function(dstools_add_infer_library _target)
     cmake_parse_arguments(_INF ""
         "STATIC_OPTION;TESTS_OPTION;INSTALL_OPTION;LIBRARY_DEFINE;STATIC_DEFINE;RC_DESCRIPTION;RC_COPYRIGHT"
         "" ${ARGN})
-
-    set(CMAKE_CXX_STANDARD 17)
 
     # Build options
     if(_INF_STATIC_OPTION)
@@ -35,56 +33,40 @@ macro(dstools_add_infer_library _target)
         option(${_INF_INSTALL_OPTION} "Install library" ON)
     endif()
 
-    # Output directory defaults
-    if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    endif()
-    if(NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY)
-        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    endif()
-    if(NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    endif()
-
-    # MSVC flags
-    if(MSVC)
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /manifest:no")
-        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /manifest:no")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /manifest:no")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
-        if(NOT DEFINED CMAKE_DEBUG_POSTFIX)
-            set(CMAKE_DEBUG_POSTFIX "d")
-        endif()
-    endif()
-
-    if(${_INF_INSTALL_OPTION})
-        include(GNUInstallDirs)
-        include(CMakePackageConfigHelpers)
-    endif()
-
-    # Gather sources
-    include_directories(include)
-    file(GLOB_RECURSE _infer_src include/*.h src/*.h src/*.cpp src/*/*.h src/*/*.cpp)
-
-    # Create library
+    # Determine library type
     if(_INF_STATIC_OPTION AND ${_INF_STATIC_OPTION})
-        add_library(${_target} STATIC)
-        if(_INF_STATIC_DEFINE)
-            target_compile_definitions(${_target} PUBLIC ${_INF_STATIC_DEFINE})
-        endif()
+        set(_lib_type STATIC)
     else()
-        add_library(${_target} SHARED)
+        set(_lib_type SHARED)
     endif()
 
+    # Compute export set name (only when installing)
+    if(${_INF_INSTALL_OPTION})
+        set(_export_arg EXPORT_SET ${_target}Targets)
+    else()
+        set(_export_arg "")
+    endif()
+
+    # Create library via dstools_add_library
+    dstools_add_library(${_target}
+        ${_lib_type}
+        CXX_STANDARD 17
+        NAMESPACE ${_target}::${_target}
+        ${_export_arg}
+    )
+
+    # Static define
+    if(_lib_type STREQUAL "STATIC" AND _INF_STATIC_DEFINE)
+        target_compile_definitions(${_target} PUBLIC ${_INF_STATIC_DEFINE})
+    endif()
+
+    # Library export define
     if(_INF_LIBRARY_DEFINE)
         target_compile_definitions(${_target} PRIVATE ${_INF_LIBRARY_DEFINE})
     endif()
 
-    target_sources(${_target} PRIVATE ${_infer_src})
-    add_library(${_target}::${_target} ALIAS ${_target})
-
     # ORT path (kept for legacy references in some libs)
-    set(ONNX_RUNTIME_PATH ${PROJECT_DIR}/src/infer/onnxruntime)
+    set(ONNX_RUNTIME_PATH ${PROJECT_DIR}/src/infer/onnxruntime PARENT_SCOPE)
 
     # Windows RC
     if(WIN32 AND _INF_RC_DESCRIPTION)
@@ -95,39 +77,19 @@ macro(dstools_add_infer_library _target)
         include("cmake/winrc.cmake")
     endif()
 
-    # Include directories
-    target_include_directories(${_target} PRIVATE include src)
-    target_include_directories(${_target} PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    )
-
     # Tests
-    if(_INF_TESTS_OPTION)
-        if(${_INF_TESTS_OPTION})
-            if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
-                set(CMAKE_FOLDER "Tests")
-                add_subdirectory(tests)
-                set(CMAKE_FOLDER "Libraries/Infer")
-            endif()
+    if(_INF_TESTS_OPTION AND ${_INF_TESTS_OPTION})
+        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
+            set(CMAKE_FOLDER "Tests")
+            add_subdirectory(tests)
+            set(CMAKE_FOLDER "Libraries/Infer")
         endif()
     endif()
 
-    # Install / Export
+    # Install / Export (beyond what dstools_add_library already does)
     if(${_INF_INSTALL_OPTION})
-        target_include_directories(${_target} PUBLIC
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        )
-
-        install(TARGETS ${_target}
-            EXPORT ${_target}Targets
-            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" OPTIONAL
-            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" OPTIONAL
-            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" OPTIONAL
-        )
-
-        install(DIRECTORY include/${_target}
-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-        )
+        include(GNUInstallDirs)
+        include(CMakePackageConfigHelpers)
 
         write_basic_package_version_file(
             "${CMAKE_CURRENT_BINARY_DIR}/${_target}ConfigVersion.cmake"
@@ -154,4 +116,4 @@ macro(dstools_add_infer_library _target)
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${_target}"
         )
     endif()
-endmacro()
+endfunction()
