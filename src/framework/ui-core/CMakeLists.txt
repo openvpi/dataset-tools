@@ -18,19 +18,16 @@ set(DSFW_UI_CORE_SOURCES
     src/FramelessHelper.cpp
     src/IconNavBar.cpp
     src/AppShell.cpp
-    src/PluginManager.cpp
 )
 
 set(DSFW_UI_CORE_HEADERS
     include/dsfw/Theme.h
     include/dsfw/FramelessHelper.h
-    include/dsfw/IStepPlugin.h
     include/dsfw/IPageActions.h
     include/dsfw/IPageLifecycle.h
     include/dsfw/IPageProgress.h
     include/dsfw/IconNavBar.h
     include/dsfw/AppShell.h
-    include/dsfw/PluginManager.h
 )
 
 set(DSFW_UI_CORE_RESOURCES
