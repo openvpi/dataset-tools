@@ -18,6 +18,7 @@ set(DSFW_CORE_SOURCES
     src/JsonHelper.cpp
     src/ServiceLocator.cpp
     src/LocalFileIOProvider.cpp
+    src/Log.cpp
 )
 
 set(DSFW_CORE_HEADERS
@@ -40,6 +41,7 @@ set(DSFW_CORE_HEADERS
     include/dsfw/IPitchService.h
     include/dsfw/ITranscriptionService.h
     include/dsfw/CommonKeys.h
+    include/dsfw/Log.h
 )
 
 add_library(${PROJECT_NAME} STATIC ${DSFW_CORE_SOURCES} ${DSFW_CORE_HEADERS})
