@@ -5,6 +5,7 @@
 
 #include <dsfw/IFileIOProvider.h>
 
+#include <any>
 #include <typeindex>
 #include <unordered_map>
 
@@ -28,16 +29,19 @@ public:
     /// @param instance Pointer to the service (caller retains ownership).
     template<typename T>
     static void set(T *instance) {
-        services()[std::type_index(typeid(T))] = static_cast<void *>(instance);
+        services()[std::type_index(typeid(T))] = instance;
     }
 
     /// @brief Retrieve a registered service by type.
     /// @tparam T Service interface type.
-    /// @return Pointer to the service, or nullptr if not registered.
+    /// @return Pointer to the service, or nullptr if not registered or type mismatch.
     template<typename T>
     static T *get() {
         auto it = services().find(std::type_index(typeid(T)));
-        return it != services().end() ? static_cast<T *>(it->second) : nullptr;
+        if (it == services().end())
+            return nullptr;
+        auto *p = std::any_cast<T *>(&it->second);
+        return p ? *p : nullptr;
     }
 
     /// @brief Remove a service registration by type.
@@ -60,7 +64,7 @@ public:
     static void resetFileIO();
 
 private:
-    static std::unordered_map<std::type_index, void *> &services();
+    static std::unordered_map<std::type_index, std::any> &services();
 };
 
 }

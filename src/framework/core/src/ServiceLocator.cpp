@@ -3,8 +3,8 @@
 
 namespace dstools {
 
-std::unordered_map<std::type_index, void *> &ServiceLocator::services() {
-    static std::unordered_map<std::type_index, void *> s;
+std::unordered_map<std::type_index, std::any> &ServiceLocator::services() {
+    static std::unordered_map<std::type_index, std::any> s;
     return s;
 }
 
