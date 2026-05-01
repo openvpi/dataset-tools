@@ -7,6 +7,7 @@
 #include <dsfw/IModelManager.h>
 #include <dsfw/Log.h>
 #include <dsfw/ServiceLocator.h>
+#include <dsfw/TranslationManager.h>
 
 #include <QApplication>
 #include <QDir>
@@ -107,7 +108,10 @@ bool AppInit::init(QApplication &app, bool initCrashHandler) {
         ServiceLocator::set<IModelManager>(modelMgr);
     }
 
-    // 6. Call registered post-init hooks
+    // 6. Load translations (follows system locale; apps can customize via CommonKeys::Language)
+    dsfw::TranslationManager::install();
+
+    // 7. Call registered post-init hooks
     for (const auto &hook : hooks()) {
         hook(app);
     }

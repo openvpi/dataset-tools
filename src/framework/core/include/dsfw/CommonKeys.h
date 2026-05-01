@@ -16,4 +16,5 @@ namespace dsfw::CommonKeys {
 
     inline const dstools::SettingsKey<QString> WindowGeometry("General/windowGeometry", "");    ///< Base64-encoded window geometry.
     inline const dstools::SettingsKey<QString> WindowState("General/windowState", "");          ///< Base64-encoded window state.
+    inline const dstools::SettingsKey<QString> Language("General/language", "");                ///< UI language ("" = system, "zh_CN", "en").
 }
