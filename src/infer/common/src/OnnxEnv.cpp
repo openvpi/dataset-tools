@@ -84,7 +84,7 @@ namespace dstools::infer {
     }
 
     std::unique_ptr<Ort::Session> OnnxEnv::createSession(const std::wstring &modelPath, ExecutionProvider provider,
-                                                         int deviceId, QString *errorMsg) {
+                                                         int deviceId, std::string *errorMsg) {
 
         try {
             auto options = createSessionOptions(provider, deviceId);
