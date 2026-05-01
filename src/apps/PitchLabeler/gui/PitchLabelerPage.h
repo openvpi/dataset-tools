@@ -167,6 +167,7 @@ private:
     // File operations
     void onFileLoaded(const QString &path, std::shared_ptr<DSFile> file);
     void onFileSaved(const QString &path);
+    void loadFile(const QString &path);
     bool saveFile();
     bool saveAllFiles();
 

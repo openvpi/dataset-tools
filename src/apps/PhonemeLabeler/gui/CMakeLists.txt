@@ -28,6 +28,8 @@ set(PAGE_SOURCES
     ui/TimeRulerWidget.h
     ui/WaveformWidget.cpp
     ui/WaveformWidget.h
+    ui/WaveformRenderer.cpp
+    ui/WaveformRenderer.h
     ui/commands/InsertBoundaryCommand.cpp
     ui/commands/InsertBoundaryCommand.h
     ui/commands/LinkedMoveBoundaryCommand.cpp

@@ -6,6 +6,7 @@ find_package(syscmdline REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     dsfw-core
+    dstools-domain
     slicer-lib
     lyricfa-lib
     hubertfa-lib

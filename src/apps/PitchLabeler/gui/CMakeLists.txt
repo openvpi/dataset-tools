@@ -5,6 +5,8 @@ set(CMAKE_AUTOMOC ON)
 set(PAGE_SOURCES
     PitchLabelerPage.cpp
     PitchLabelerPage.h
+    PitchFileService.cpp
+    PitchFileService.h
     DSFile.cpp
     DSFile.h
     ui/FileListPanel.cpp

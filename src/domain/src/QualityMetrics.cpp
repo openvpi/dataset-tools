@@ -5,6 +5,8 @@
 
 namespace dstools {
 
+    const char *QualityMetrics::metricsName() const { return "Phoneme Duration Metrics"; }
+
     Result<ItemQualityReport> QualityMetrics::evaluate(const std::filesystem::path &sourceFile,
                                                         const std::filesystem::path &workingDir) {
         ItemQualityReport report;

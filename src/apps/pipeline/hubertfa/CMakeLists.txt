@@ -19,6 +19,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dsfw-ui-core
     dstools-widgets
+    dstools-domain
     hubertfa-lib
     hubert-infer
     dsfw-core

@@ -6,6 +6,9 @@
 
 namespace dstools {
 
+    const char *HtsLabelExportFormat::formatName() const { return "HTS Labels"; }
+    const char *HtsLabelExportFormat::formatExtension() const { return ".lab"; }
+
     Result<void> HtsLabelExportFormat::exportItem(const std::filesystem::path &sourceFile,
                                                    const std::filesystem::path &workingDir,
                                                    const std::filesystem::path &outputPath) {
@@ -84,6 +87,9 @@ namespace dstools {
         }
         return Ok();
     }
+
+    const char *SinsyXmlExportFormat::formatName() const { return "Sinsy XML"; }
+    const char *SinsyXmlExportFormat::formatExtension() const { return ".xml"; }
 
     Result<void> SinsyXmlExportFormat::exportAll(const std::filesystem::path &workingDir,
                                                     const std::filesystem::path &outputDir) {
