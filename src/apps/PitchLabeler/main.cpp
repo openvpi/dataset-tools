@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     app.setOrganizationName("DiffSinger");
     app.setApplicationVersion("0.1.0");
 
-    if (!dstools::AppInit::init(app))
+    if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
     dsfw::Theme::instance().init(app);
 

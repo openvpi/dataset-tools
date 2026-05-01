@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("TestShell");
 
-    if (!dstools::AppInit::init(app))
+    if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
     dsfw::Theme::instance().init(app);
 

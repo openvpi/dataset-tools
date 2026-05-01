@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     app.setOrganizationName("Team OpenVPI");
 
     dstools::AppInit::registerPostInitHook(&initPinyin);
-    if (!dstools::AppInit::init(app))
+    if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
     dsfw::Theme::instance().init(app);
 

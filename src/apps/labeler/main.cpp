@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion("0.1.0");
     app.setOrganizationName("Team OpenVPI");
 
-    if (!dstools::AppInit::init(app))
+    if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
     dsfw::Theme::instance().init(app);
 
