@@ -17,8 +17,6 @@ public:
     Result<void> save() override;
     Result<void> saveAs(const std::filesystem::path &path) override;
 
-    IDocumentFormat *format() const override;
-
 private:
     DsDocument &m_doc;
 };

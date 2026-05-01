@@ -1,4 +1,3 @@
-#include <dsfw/IDocumentFormat.h>
 #include <dstools/DsDocumentAdapter.h>
 #include <dstools/DsItemManager.h>
 
@@ -29,10 +28,6 @@ namespace dstools {
     Result<void> DsDocumentAdapter::saveAs(const std::filesystem::path &path) {
         QString qpath = QString::fromStdWString(path.wstring());
         return m_doc.saveFile(qpath);
-    }
-
-    IDocumentFormat *DsDocumentAdapter::format() const {
-        return nullptr;
     }
 
 } // namespace dstools

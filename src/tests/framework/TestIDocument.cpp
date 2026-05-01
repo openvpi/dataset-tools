@@ -3,8 +3,6 @@
 
 using namespace dstools;
 
-static const auto MockFormat = DocumentFormatId(42);
-
 class MockDocument : public IDocument {
 public:
     std::filesystem::path m_filePath;
@@ -38,8 +36,6 @@ public:
         m_modified = false;
         return Ok();
     }
-
-    IDocumentFormat *format() const override { return nullptr; }
 };
 
 class TestIDocument : public QObject {
