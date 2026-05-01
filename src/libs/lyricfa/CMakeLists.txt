@@ -6,6 +6,7 @@ set(LYRICFA_SOURCES
     Asr.cpp
     AsrTask.cpp
     ChineseProcessor.cpp
+    FunAsrAdapter.cpp
     LyricMatcher.cpp
     LyricMatchTask.cpp
     MatchLyric.cpp
@@ -18,6 +19,7 @@ set(LYRICFA_HEADERS
     Asr.h
     AsrTask.h
     ChineseProcessor.h
+    FunAsrAdapter.h
     LyricData.h
     LyricMatcher.h
     LyricMatchTask.h
@@ -39,6 +41,7 @@ find_package(cpp-pinyin CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     dsfw-core
+    dstools-infer-common
     audio-util
     FunAsr
     cpp-pinyin::cpp-pinyin
