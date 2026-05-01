@@ -23,8 +23,6 @@ public:
     using QObject::QObject;
     ~IModelManager() override = default;
 
-    /// @brief Register a model provider for the given type.
-    virtual void registerProvider(ModelTypeId type, std::unique_ptr<IModelProvider> provider) = 0;
     /// @brief Get the provider for a model type, or nullptr if not registered.
     virtual IModelProvider *provider(ModelTypeId type) const = 0;
 
@@ -34,18 +32,6 @@ public:
     virtual void unload(ModelTypeId type) = 0;
     /// @brief Unload all models.
     virtual void unloadAll() = 0;
-
-    /// @brief Set the maximum total memory usage in bytes (0 = unlimited).
-    virtual void setMemoryLimit(int64_t bytes) = 0;
-    /// @brief Return the configured memory limit.
-    virtual int64_t memoryLimit() const = 0;
-    /// @brief Return the total estimated memory usage of all loaded models.
-    virtual int64_t currentMemoryUsage() const = 0;
-
-    /// @brief Return the status of a specific model type.
-    virtual ModelStatus status(ModelTypeId type) const = 0;
-    /// @brief Return the list of currently loaded model types.
-    virtual QList<ModelTypeId> loadedModels() const = 0;
 
 signals:
     /// @brief Emitted when a model's status changes.

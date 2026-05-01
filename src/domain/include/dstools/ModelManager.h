@@ -25,19 +25,19 @@ public:
     explicit ModelManager(QObject *parent = nullptr);
     ~ModelManager() override;
 
-    void registerProvider(ModelTypeId type, std::unique_ptr<IModelProvider> provider) override;
+    void registerProvider(ModelTypeId type, std::unique_ptr<IModelProvider> provider);
     IModelProvider *provider(ModelTypeId type) const override;
 
     Result<void> ensureLoaded(ModelTypeId type, const QString &modelPath, int gpuIndex) override;
     void unload(ModelTypeId type) override;
     void unloadAll() override;
 
-    void setMemoryLimit(int64_t bytes) override;
-    int64_t memoryLimit() const override;
-    int64_t currentMemoryUsage() const override;
+    void setMemoryLimit(int64_t bytes);
+    int64_t memoryLimit() const;
+    int64_t currentMemoryUsage() const;
 
-    ModelStatus status(ModelTypeId type) const override;
-    QList<ModelTypeId> loadedModels() const override;
+    ModelStatus status(ModelTypeId type) const;
+    QList<ModelTypeId> loadedModels() const;
 
 private:
     struct Entry {
