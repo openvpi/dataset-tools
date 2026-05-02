@@ -13,6 +13,7 @@ set(DSFW_TESTS
     TestIDocument
     TestIFileIOProviderMock
     TestTaskProcessorRegistry
+    TestPipelineContext
 )
 
 foreach(test_name ${DSFW_TESTS})
