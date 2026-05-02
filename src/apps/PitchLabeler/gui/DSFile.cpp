@@ -100,10 +100,13 @@ void DSFile::writeBackToJson(nlohmann::json &obj) const {
 }
 
 std::pair<std::shared_ptr<DSFile>, QString> DSFile::load(const QString &path) {
-    QString error;
-    auto doc = DsDocument::load(path, error);
+    auto docResult = DsDocument::loadFile(path);
+    if (!docResult) {
+        return {nullptr, QString::fromStdString(docResult.error())};
+    }
+    auto doc = std::move(*docResult);
     if (doc.isEmpty()) {
-        return {nullptr, error};
+        return {nullptr, QStringLiteral("Empty document")};
     }
 
     auto ds = std::make_shared<DSFile>();
@@ -118,9 +121,9 @@ std::pair<std::shared_ptr<DSFile>, QString> DSFile::load(const QString &path) {
 std::pair<bool, QString> DSFile::save(const QString &path) {
     writeBackToJson(m_doc.sentence(0));
 
-    QString error;
-    if (!m_doc.save(path, error)) {
-        return {false, error};
+    auto saveResult = m_doc.saveFile(path);
+    if (!saveResult) {
+        return {false, QString::fromStdString(saveResult.error())};
     }
 
     modified = false;

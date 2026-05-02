@@ -32,7 +32,7 @@ qint64 decimalFormatToSamples(const QStringView &decimalFormat, int sampleRate, 
         return 0;
     }
     static const QRegularExpression re(R"(^\s*(\d+):(\d+)\.(\d+)\s*$)");
-    auto match = re.match(decimalFormat);
+    auto match = re.matchView(decimalFormat);
     if (!match.hasMatch()) {
         if (ok)
             *ok = false;
@@ -141,7 +141,7 @@ MarkerList loadCSVMarkers(const QString &inFileName, int sampleRate, MarkerError
         }
         auto timeFormat = split[3];
         static const QRegularExpression regexSample(R"(^\s*(\d+)\s*Hz\s*$)");
-        auto regexSampleMatch = regexSample.match(timeFormat);
+        auto regexSampleMatch = regexSample.matchView(timeFormat);
         if (regexSampleMatch.hasMatch()) {
             bool hasParseError = false;
             bool parseOk;

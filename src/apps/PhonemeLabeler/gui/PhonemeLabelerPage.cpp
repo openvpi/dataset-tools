@@ -33,8 +33,8 @@ namespace phonemelabeler {
 
 PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     : QWidget(parent),
-      m_playWidget(new dstools::widgets::PlayWidget()),
       m_document(new TextGridDocument(this)),
+      m_playWidget(new dstools::widgets::PlayWidget()),
       m_undoStack(new QUndoStack(this)),
       m_viewport(new ViewportController(this)),
       m_bindingManager(new BoundaryBindingManager(m_document, this)),

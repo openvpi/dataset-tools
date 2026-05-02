@@ -255,9 +255,9 @@ namespace Minlabel {
         dsfw::Theme::instance().populateThemeMenu(viewMenu);
 
         auto *helpMenu = bar->addMenu(tr("Help(&H)"));
-        auto *aboutAppAction = helpMenu->addAction(
+        helpMenu->addAction(
             tr("About %1").arg(QApplication::applicationName()));
-        auto *aboutQtAction = helpMenu->addAction(tr("About Qt"));
+        helpMenu->addAction(tr("About Qt"));
 
         connect(helpMenu, &QMenu::triggered, this, [this](const QAction *action) {
             if (action->text().startsWith("About Qt")) {

@@ -409,7 +409,7 @@ void MainWidget::onExportMidiTask() {
     const QString modelPathText = m_modelPath->path();
     const int gpuIndex = m_deviceCombo->selectedDeviceId();
 
-    m_runningTask = QtConcurrent::run([this, wavPath, outputMidiPath, tempo, maxAudioSegLength,
+    m_runningTask = QtConcurrent::run([this, wavPath, outputMidiPath, tempo,
                                        segRadiusFrame, segThreshold, estThreshold, d3pmNSteps, languageId,
                                        modelPathText, gpuIndex] {
         if (!QFile::exists(wavPath)) {

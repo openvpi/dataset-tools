@@ -369,6 +369,7 @@ void PowerWidget::mouseReleaseEvent(QMouseEvent *event) {
         if (m_boundaryDragging) {
             TimePos finalTime = secToUs(xToTime(event->pos().x()));
             endBoundaryDrag(finalTime);
+        }
         m_dragging = false;
     }
     QWidget::mouseReleaseEvent(event);

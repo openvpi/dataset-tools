@@ -84,7 +84,10 @@ bool DsDocument::save(QString &error) const {
 
 Result<DsDocument> DsDocument::loadFile(const QString &path) {
     QString error;
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_DEPRECATED
     auto doc = load(path, error);
+QT_WARNING_POP
     if (!error.isEmpty())
         return Result<DsDocument>::Error(error.toStdString());
     return doc;
@@ -92,7 +95,10 @@ Result<DsDocument> DsDocument::loadFile(const QString &path) {
 
 Result<void> DsDocument::saveFile(const QString &path) const {
     QString error;
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_DEPRECATED
     if (!save(path.isEmpty() ? QString() : path, error))
+QT_WARNING_POP
         return Result<void>::Error(error.toStdString());
     return Result<void>::Ok();
 }

@@ -8,9 +8,7 @@ namespace Rmvpe
 {
     RmvpeModel::RmvpeModel(const std::filesystem::path &modelPath, const ExecutionProvider provider,
                            const int device_id)
-        : CancellableOnnxModel(provider, device_id),
-          m_waveform_input_name("waveform"), m_threshold_input_name("threshold"),
-          m_f0_output_name("f0"), m_uv_output_name("uv") {
+        : CancellableOnnxModel(provider, device_id) {
 #if defined(_M_IX86) || defined(__i386__)
         m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 #endif

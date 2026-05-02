@@ -40,10 +40,6 @@ namespace Rmvpe
 
     private:
         Ort::AllocatorWithDefaultOptions m_allocator;  ///< ONNX Runtime memory allocator.
-        const char *m_waveform_input_name;             ///< Waveform input tensor name.
-        const char *m_threshold_input_name;            ///< Threshold input tensor name.
-        const char *m_f0_output_name;                  ///< F0 output tensor name.
-        const char *m_uv_output_name;                  ///< Voicing output tensor name.
     };
 
 } // namespace Rmvpe

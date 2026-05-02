@@ -235,8 +235,11 @@ bool CsvToDsConverter::convertFromMemory(const std::vector<TranscriptionRow> &ro
         // Write via DsDocument
         DsDocument doc;
         doc.sentences().push_back(std::move(sentence));
-        if (!doc.save(dsPath, error))
+        auto saveResult = doc.saveFile(dsPath);
+        if (!saveResult) {
+            error = QString::fromStdString(saveResult.error());
             return false;
+        }
     }
 
     return true;
@@ -264,7 +267,12 @@ bool CsvToDsConverter::dsToCsv(const QString &dsDir,
         if (!QFile::exists(wavPath))
             continue;
 
-        DsDocument doc = DsDocument::load(entry.absoluteFilePath(), error);
+        auto docResult = DsDocument::loadFile(entry.absoluteFilePath());
+        if (!docResult) {
+            error = QString::fromStdString(docResult.error());
+            return false;
+        }
+        DsDocument doc = std::move(*docResult);
         if (doc.isEmpty())
             return false;
 
@@ -294,7 +302,12 @@ bool CsvToDsConverter::dsToCsv(const QString &dsDir,
         if (QFile::exists(wavPath))
             continue; // already processed in Pass 1
 
-        DsDocument doc = DsDocument::load(entry.absoluteFilePath(), error);
+        auto docResult = DsDocument::loadFile(entry.absoluteFilePath());
+        if (!docResult) {
+            error = QString::fromStdString(docResult.error());
+            return false;
+        }
+        DsDocument doc = std::move(*docResult);
         if (doc.isEmpty())
             return false;
 

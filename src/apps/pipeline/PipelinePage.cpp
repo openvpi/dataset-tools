@@ -52,7 +52,7 @@ QMenuBar *PipelinePage::createMenuBar(QWidget *parent) {
     });
 
     fileMenu->addSeparator();
-    fileMenu->addAction(tr("Quit"), qApp, &QApplication::quit, QKeySequence::Quit);
+    fileMenu->addAction(tr("Quit"), QKeySequence::Quit, qApp, &QApplication::quit);
 
     auto *viewMenu = menuBar->addMenu(tr("View(&V)"));
     dsfw::Theme::instance().populateThemeMenu(viewMenu);

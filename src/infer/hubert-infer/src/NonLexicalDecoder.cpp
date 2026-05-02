@@ -48,7 +48,7 @@ namespace HFA {
             if (!adjusted_logits.empty() && !adjusted_logits[0].empty()) {
                 for (auto &batch : adjusted_logits) {
                     for (auto &cls : batch) {
-                        if (cls.size() > num_frames)
+                        if (static_cast<int>(cls.size()) > num_frames)
                             cls.resize(num_frames);
                     }
                 }
@@ -84,7 +84,7 @@ namespace HFA {
                 const int index = static_cast<int>(std::distance(non_lexical_phs_.begin(), it));
 
                 // 获取该音素的概率曲线
-                if (index < cvnt_probs_.size()) {
+                if (index < static_cast<int>(cvnt_probs_.size())) {
                     WordList words;
                     auto tag_words = non_lexical_words(cvnt_probs_[index], 0.5f, 5, 10, ph);
                     result.push_back(tag_words);
