@@ -1,510 +1,1064 @@
-# 任务处理器架构设计 v2
+# 任务处理器架构设计 v3
 
-> 基于 ds-format 规范、实际代码审计和 OSS 项目参考的多模型可插拔流水线架构
+> 层路由流水线 + MakeDiffSinger 兼容 + 切片丢弃 + 撤销重做
 
 ---
 
 ## 1 问题陈述
 
-### 1.1 核心矛盾
+### 1.1 v2 遗留问题
 
-1. **规范可扩展 vs 代码硬编码**：ds-format 的 `tasks[]` 允许声明任意任务及其 I/O 绑定，但代码用 5 个固定接口 (IAlignmentService, IAsrService, ...) 和 `DsProjectDefaults` 的 4 个硬编码路径字段实现。
+1. **CSV 是数据主干**：TranscriptionRow（CSV 行）贯穿 Step 6→7→8，字段逐步累积。
+2. **processBatch 语义不一致**：4 个处理器中 2 个覆盖了 processBatch。
+3. **步骤间数据路由僵硬**：每步只能消费上一步的直接输出。
+4. **缺少预处理环节**：降噪、响度匹配无处安放。
+5. **切片命名不可控**：缺乏按原始音频内顺序统一命名的机制。
 
-2. **基础设施闲置**：`ModelManager` / `IModelProvider` / `InferenceModelProvider<Engine>` 完整实现了 LRU 淘汰和类型安全注册，但所有服务都绕过它，各自用 `unique_ptr<Engine>` + `mutex` 管理模型。
+### 1.2 新增需求
 
-3. **双数据模型并存**：交互式 UI 使用 `.dstext` 的 `LayerData` (boundaries)，批处理流水线使用 `TranscriptionRow` (CSV 行)。两者间无转换桥梁。
+6. **MakeDiffSinger 兼容**：每步支持导入/导出 MakeDiffSinger 项目的文件格式（.lab、transcriptions.csv、TextGrid、.ds）。
+7. **切片丢弃**：任意步骤可标记切片为"丢弃"，后续步骤自动跳过。
+8. **撤销重做**：在合理复杂度下，每步支持撤销重做。
+9. **崩溃日志**：所有步骤的崩溃/错误自动记录。
 
-### 1.2 实际代码现状（审计结论）
+### 1.3 设计目标
 
-| 服务 | 实现 | 关键发现 |
+- 每个处理器/页面有**固定的 m 层输入 → n 层输出**，模型可替换但 I/O 契约不变
+- 步骤间通过 **PipelineContext（层字典）** 路由
+- CSV/TextGrid/DS/.lab 等格式退化为**导入/导出适配器**
+- 兼容 MakeDiffSinger 的目录结构和文件格式
+
+---
+
+## 2 MakeDiffSinger 兼容性分析
+
+### 2.1 MakeDiffSinger 文件格式汇总
+
+| 格式 | 用途 | 精确规格 |
 |------|------|---------|
-| AlignmentService (HuBERT) | `src/libs/hubertfa/` | `alignCSV()` 返回 "not supported"（死方法）；有非接口方法 `setLanguage()`、`setNonSpeechPhonemes()` |
-| GameTranscriptionService | `src/libs/gameinfer/` | 同时实现 ITranscriptionService + IAlignmentService 两个接口；`exportMidi()` 直接写 MIDI 文件 |
-| GameInferService (app) | `src/apps/GameInfer/` | 额外 5 个配置方法 (segThreshold, segRadius, estThreshold, d3pmTimesteps, language)，UI 通过 `dynamic_cast` 调用 |
-| RmvpePitchService | `src/libs/rmvpepitch/` | 两个方法返回不同数据形状：`extractPitch()` 返回扁平 f0，`extractPitchWithProgress()` 返回分块 f0 + 输出参数 |
-| AsrService (FunASR) | `src/libs/lyricfa/` | `AsrResult.segments` 从未填充，只返回 text |
-| SlicerService | `src/libs/slicer/` | 纯算法，无状态，无模型 |
+| `.lab` | 标注文件（音节级歌词） | 单行文本，空格分隔音节。如 `gan shou ting zai wo fa duan de zhi jian` |
+| `transcriptions.csv` | 数据集核心文件 | CSV，UTF-8 + BOM 可选，RFC 4180。列名和累积顺序见下表。 |
+| TextGrid | MFA 强制对齐输出 | Praat TextGrid 格式。2-tier 模式：`words`（词级）+ `phones`（音素级）。3-tier 模式：`sentences`（句级）+ `words` + `phones`。sentences tier 用于手动切片精修（combine_tg / slice_tg 工作流），mark 为空的 sentence 区间表示丢弃该段。 |
+| `.ds` | DiffSinger 训练文件 | JSON 数组，每元素一个句子。键见下表。 |
+| 词典 `.txt` | G2P 词典 | `音节\t音素1 [音素2]`，tab 分隔。1 音素 = 元音，2 音素 = 辅音+元音 |
 
-**UI 耦合现状**：
+### 2.2 transcriptions.csv 列定义（累积式）
 
-| 消费者 | 使用方式 | 问题 |
-|--------|---------|------|
-| GameAlignPage | `ServiceLocator::get<IAlignmentService>()` → `alignCSV()` | 正常 |
-| HubertFAPage | `ServiceLocator::get<IAlignmentService>()` → `loadModel()`, `align()`, `vocabInfo()` | `vocabInfo()` 用于动态构建 UI |
-| GameInfer/MainWidget | `dynamic_cast<GameInferService*>` 调用 5 个非接口 setter | 类型系统被绕过 |
-| LyricFAPage | **绕过 IAsrService**，直接创建 `LyricFA::Asr` 引擎 | 服务层未接入 |
-| SlicerPage | **绕过 ISlicerService**，直接用 WorkThread/SliceJob | 服务层未接入 |
-| BuildCsvPage, BuildDsPage | 直接调用 domain 类，无服务层 | 这些步骤无模型，不需要服务抽象 |
-| CLI | 全部通过 ServiceLocator，但只注册了 SlicerService | 4/5 命令运行时失败 |
+列按流水线步骤逐步累积，不同阶段的 CSV 文件包含不同列子集：
 
----
+| 列名 | 类型 | 产生步骤 | 说明 |
+|------|------|---------|------|
+| `name` | string | build_dataset | 文件名词干（无扩展名），对应 `wavs/{name}.wav` |
+| `ph_seq` | space-sep string | build_dataset | 音素序列，含 `SP`/`AP` |
+| `ph_dur` | space-sep float | build_dataset | 音素时长（秒），6位小数 |
+| `ph_num` | space-sep int | add_ph_num | 每个词的音素个数 |
+| `note_seq` | space-sep string | estimate_midi / SOME | 音符名（如 `C4`、`D#3`、`rest`） |
+| `note_dur` | space-sep float | estimate_midi / SOME | 音符时长（秒） |
+| `note_slur` | space-sep int (0/1) | convert_ds csv2ds | 连音标记（ds2csv 时**不**导出此列） |
+| `note_glide` | space-sep string | 手动/工具 | 滑音类型（可选列，`none` 为无滑音） |
 
-## 2 OSS 参考架构
+### 2.3 .ds 文件 JSON 结构
 
-| 项目 | 语言 | 关键模式 | 取用点 |
-|------|------|---------|--------|
-| **Essentia** | C++ | Algorithm 基类 + 命名 I/O 端口 + `Configurable` 参数系统 + 单例工厂自注册 | I/O 端口模型、参数与计算分离 |
-| **ESPnet** | Python | `ClassChoices` 注册表 + `Abs*` 抽象基类 + config 驱动选择 | 后端选择绑定配置文件 |
-| **DiffSinger** | Python | `filter_kwargs` 适配异构构造参数 + 双层可插拔 (算法×骨干) | 处理异构引擎配置 |
-| **SOFA** | Python | 模板方法：基类 `__call__` 校验不变量，子类实现 `_impl` | I/O 契约校验 |
-| **MFA** | Python | Mixin 组合能力 + `MfaModel.get_pretrained_path()` 模型发现 | 模型生命周期管理 |
-
-**核心经验**：分离三个关注点 — **注册**（如何发现后端）、**选择**（配置如何指定后端）、**I/O 契约**（阶段间如何连接）。
-
----
-
-## 3 修订设计
-
-### 3.1 放弃纯 LayerData I/O — 引入双模式处理
-
-v1 设计假设所有处理器都是 `LayerData → LayerData` 变换。实际代码表明这不成立：
-
-- `alignCSV()` 和 `exportMidi()` 是**文件到文件**操作
-- `TranscriptionPipeline` 操作 `TranscriptionRow`，不是 `LayerData`
-- F0 提取的输出是浮点数组，不是 boundary 序列（需等 `curve` 层类型支持）
-- GAME 的 `alignCSV()` 直接由引擎处理 CSV → CSV
-
-**修正方案**：处理器支持两种调用模式 — **单条处理** (process) 和**批量处理** (processBatch)。单条模式用于交互式 UI，批量模式用于流水线。
-
-### 3.2 核心类型
-
-```cpp
-/// 处理器的引擎特定配置（替代 dynamic_cast + 非接口 setter）
-/// 参考 Essentia 的 Configurable + DiffSinger 的 filter_kwargs
-using ProcessorConfig = nlohmann::json;
-
-/// 单条处理的输入（交互式模式）
-struct TaskInput {
-    QString audioPath;
-    std::map<QString, LayerData> layers;   // slot → layer data
-    ProcessorConfig config;                // 引擎特定参数
-};
-
-/// 单条处理的输出
-struct TaskOutput {
-    std::map<QString, LayerData> layers;   // slot → layer data
-};
-
-/// 批量处理的输入（流水线模式）
-struct BatchInput {
-    QString workingDir;                    // 工程根目录
-    ProcessorConfig config;                // 引擎特定参数
-    // 批量模式下，处理器自行读取所需文件
-};
-
-/// 批量处理的输出
-struct BatchOutput {
-    int processedCount = 0;
-    int failedCount = 0;
-    QString outputPath;                    // 产出文件路径
-};
-
-/// 进度回调（参考 SOFA 的 tqdm 模式）
-using ProgressCallback = std::function<void(int current, int total, const QString &item)>;
+```json
+[
+    {
+        "offset": 0.0,                        // 句子在音频中的起始偏移（秒）
+        "text": "SP gan shou ting zai ...",    // 音素序列（= ph_seq）
+        "ph_seq": "SP g an sh ou ...",         // 音素序列
+        "ph_dur": "0.1 0.08 0.52 ...",         // 音素时长（空格分隔浮点数）
+        "ph_num": "1 2 2 ...",                 // 词音素数
+        "note_seq": "rest C4 D4 ...",          // 音符序列
+        "note_dur": "0.1 0.6 0.6 ...",         // 音符时长
+        "note_slur": "0 0 1 ...",              // 连音标记
+        "note_glide": "none none up ...",       // 滑音类型（可选）
+        "f0_seq": "0.0 261.6 293.7 ...",       // F0 序列（Hz，空格分隔，1位小数）
+        "f0_timestep": "0.011609977..."         // F0 采样间隔（= hop_size / sample_rate）
+    }
+]
 ```
 
-### 3.3 ITaskProcessor — 修订版
+### 2.4 MakeDiffSinger 目录结构
+
+```
+dataset/
+    raw/                                ← 用户原始数据（切片前）
+        wavs/
+            recording1.wav
+        transcriptions.csv              ← 构建后的最终 CSV
+    wavs/                               ← 切片后的音频 + .lab 标注
+        segment_001.wav
+        segment_001.lab
+        segment_001.TextGrid            ← MFA 对齐结果
+        segment_001.ds                  ← DS 训练文件
+    transcriptions.csv                  ← 最终数据集 CSV
+```
+
+### 2.5 兼容策略
+
+每个步骤支持**导入**和**导出**两个方向的格式适配：
+
+| 步骤 | 导入格式 | 导出格式 | 说明 |
+|------|---------|---------|------|
+| Step 1 切片 | 3-tier TextGrid (sentences tier) | wavs/*.wav | 可导入 MDS combine_tg 输出的 3-tier TextGrid，按 sentences tier 切片（空 mark = 丢弃） |
+| Step 3 歌词标注 | `.lab` 文件 | `.lab` 文件 | 空格分隔音节。可从 MDS 导入已有标注 |
+| Step 4 音素对齐 | 2-tier TextGrid (words+phones) | 2-tier TextGrid (words+phones) | 兼容 MFA / HuBERT-FA 输出 |
+| Step 5 音素修正 | 2-tier TextGrid | 2-tier TextGrid | 精修后可导出给 MDS 后续步骤 |
+| Step 6 AddPhNum | CSV (ph_seq) | CSV (+ ph_num) | 兼容 add_ph_num.py |
+| Step 7 MIDI | CSV (ph_seq+ph_dur+ph_num) | CSV (+ note_seq+note_dur) | 兼容 estimate_midi.py |
+| Step 10 导出 | — | transcriptions.csv, .ds, 3-tier TextGrid | 完全兼容 MDS 目录结构。3-tier 导出支持精修工作流回传 |
+
+---
+
+## 3 完整流水线定义
+
+### 3.0 全景图
+
+```
+原始音频 ─┬─ Step 0: 音频预处理（降噪/响度匹配，可选）
+          │
+          ▼
+     预处理音频 ─── Step 1: AudioSlicer 自动切片
+          │         ├─ 自动切片（RMS 静音检测）
+          │         ├─ 参数不满意 → 调参重切（全部重生成）
+          │         └─ 个别片段过长 → 波形图界面手动切片
+          │
+          ▼
+     切片音频 ────── Step 2: LyricFA 歌词识别（可选）
+     + 原歌词 txt     ├─ 以整首歌为单位 ASR
+                      └─ 输出每句歌词，算法匹配原歌词最大可能项
+          │
+          ▼
+     识别歌词 ────── Step 3: MinLabel 歌词核对 + G2P（人工）
+          │           ├─ 人工核对/修正歌词
+          │           ├─ G2P 转换为发音序列（如拼音）
+          │           └─ 可导入/导出 .lab 文件
+          │
+          ▼
+     发音序列 ────── Step 4: Alignment 音素对齐（模型可替换）
+          │           ├─ 发音经模型自带词典 → 音素列表
+          │           ├─ 对齐音频时间 → 音素时间序列
+          │           └─ 可导入/导出 TextGrid 文件
+          │
+          ▼
+     音素时间 ────── Step 5: PhonemeLabeler 音素修正（可选，人工）
+          │
+          ▼
+     音素时间 ────── Step 6: AddPhNum 计算 ph_num（纯算法）
+          │
+          ▼
+  音素+ph_num ────── Step 7: MIDI 提取（模型可替换）
+          │
+          ▼
+     MIDI 数据 ───── Step 8: 音高提取（模型可替换）
+          │
+          ▼
+    F0 曲线 ──────── Step 9: PitchLabeler 音高修正（人工）
+          │
+          ▼
+                      Step 10: 导出（CSV / DS / 自定义格式）
+
+    ※ 任意步骤可标记切片为"丢弃"，后续步骤自动跳过
+```
+
+### 3.1 各步骤 I/O 契约
+
+| Step | 名称 | 类型 | 输入层 (category) | 输出层 (category) | 模型可替换 |
+|------|------|------|-------------------|-------------------|-----------|
+| 0 | AudioPreprocess | 自动 | — | — | 是 |
+| 1 | AudioSlicer | 自动+人工 | — | `slices` | 是 |
+| 2 | LyricFA | 自动 | — | `sentence` | 是 |
+| 3 | MinLabel | 人工 | `sentence` | `grapheme` | 否 |
+| 4 | Alignment | 自动 | `grapheme` | `phoneme` | 是 |
+| 5 | PhonemeLabeler | 人工 | `phoneme` | `phoneme` | 否 |
+| 6 | AddPhNum | 自动 | `phoneme`, `grapheme` | `ph_num` | 否 |
+| 7 | MidiTranscription | 自动 | `phoneme`, `ph_num` | `midi` | 是 |
+| 8 | PitchExtraction | 自动 | — | `pitch` | 是 |
+| 9 | PitchLabeler | 人工 | `pitch`, `midi` | `pitch` | 否 |
+| 10 | Export | 自动 | (all) | (files) | — |
+
+### 3.2 层 category 定义
+
+> **时间精度**：所有时间值以 `int64` 微秒存储。详见 [ds-format.md §1](ds-format.md)。
+
+| category | JSON 形状 | MDS 对应列 | 说明 |
+|----------|----------|-----------|------|
+| `sentence` | `[{text, pos}]` | — | 整句歌词。`pos` = 微秒。 |
+| `grapheme` | `[{text, pos}]` | `.lab` 内容 | 音节序列（如拼音）。`pos` = 微秒。 |
+| `phoneme` | `[{phone, start, end}]` | `ph_seq` + `ph_dur` | 音素时间序列。`start`/`end` = 微秒。 |
+| `ph_num` | `[int]` | `ph_num` | 每词音素个数 |
+| `midi` | `[{note, duration, slur, glide}]` | `note_seq` + `note_dur` + `note_slur` + `note_glide` | MIDI 序列。`duration` = 微秒。 |
+| `pitch` | `{f0: [int], timestep: int}` | `f0_seq` + `f0_timestep` | F0 曲线。`f0` = 毫赫兹(mHz)，`timestep` = 微秒。 |
+| `slices` | `[{id, start, end, audioPath}]` | — | 切片边界。`start`/`end` = 微秒。 |
+
+---
+
+## 4 切片丢弃机制
+
+### 4.1 需求
+
+在任意步骤中，用户或自动检测可能发现某些切片不合适：
+- 切片太短（< 0.5s）或太长（> 30s）
+- ASR 识别失败或置信度低
+- 音素对齐质量差
+- 音高提取异常
+- 用户主观判断不适合训练
+
+### 4.2 设计
+
+在 `PipelineContext` 中引入 `status` 字段：
 
 ```cpp
-/// 参考 Essentia Algorithm + SOFA BaseG2P 的模板方法
+struct PipelineContext {
+    // ... 现有字段 ...
+
+    /// 切片状态
+    enum class Status {
+        Active,     ///< 正常参与流水线
+        Discarded,  ///< 已丢弃，后续步骤跳过
+        Error       ///< 处理出错（可恢复）
+    };
+
+    Status status = Status::Active;
+    QString discardReason;              ///< 丢弃原因（人工备注或自动检测信息）
+    QString discardedAtStep;            ///< 在哪一步被丢弃
+};
+```
+
+### 4.3 行为规则
+
+1. **丢弃传播**：一旦切片被标记为 `Discarded`，PipelineRunner 在后续所有步骤跳过该 item。
+2. **可恢复**：用户可在任意步骤的 UI 中将 `Discarded` 改回 `Active`（如果前序步骤数据完整）。
+3. **导出过滤**：Step 10 导出时默认排除 `Discarded` 切片（可选包含）。
+4. **持久化**：status/reason 随 context JSON 持久化到 `dstemp/contexts/{itemId}.json`。
+5. **UI 展示**：丢弃的切片在列表中灰显 + 删除线，可展开查看丢弃原因。
+
+### 4.4 自动丢弃检测
+
+PipelineRunner 在每步完成后可选执行验证回调：
+
+```cpp
+/// 验证单个 item 的处理结果，返回建议的 status。
+using ValidationCallback = std::function<
+    PipelineContext::Status(const PipelineContext &ctx, const TaskSpec &spec, QString &reason)>;
+```
+
+内置验证器示例：
+- `SliceLengthValidator`：丢弃 < 0.3s 或 > maxLength 的切片
+- `AlignmentQualityValidator`：丢弃对齐置信度低于阈值的切片
+- `PitchCoverageValidator`：丢弃 F0 有效帧率 < 阈值的切片
+
+---
+
+## 5 撤销重做设计
+
+### 5.1 原则
+
+- 自动步骤（模型推理）：**不需要撤销重做**。重跑即可恢复，成本低。
+- 人工步骤（MinLabel/PhonemeLabeler/PitchLabeler）：**必须撤销重做**。已有 QUndoStack 基础设施。
+- 切片丢弃/恢复操作：**需要撤销重做**。
+
+### 5.2 各步骤撤销重做支持
+
+| Step | 是否需要 | 机制 | 说明 |
+|------|---------|------|------|
+| 0 预处理 | 否 | 重跑 | 可恢复原始音频 |
+| 1 切片 | 部分 | QUndoStack | 手动切片点的添加/删除/移动可撤销。自动切片参数变更 → 全部重生成。 |
+| 2 LyricFA | 否 | 重跑 | ASR 结果可重新运行 |
+| 3 MinLabel | 是 | QUndoStack | 歌词编辑、G2P 修正 |
+| 4 对齐 | 否 | 重跑 | 模型推理结果 |
+| 5 PhonemeLabeler | 是 | QUndoStack | 音素边界拖动（已有 7 个 QUndoCommand） |
+| 6 AddPhNum | 否 | 重跑 | 纯算法 |
+| 7 MIDI | 否 | 重跑 | 模型推理 |
+| 8 音高 | 否 | 重跑 | 模型推理 |
+| 9 PitchLabeler | 是 | QUndoStack | F0 曲线编辑（已有 7 个 QUndoCommand） |
+| 丢弃/恢复 | 是 | QUndoCommand | `DiscardSliceCommand` / `RestoreSliceCommand` |
+
+### 5.3 切片丢弃撤销命令
+
+```cpp
+class DiscardSliceCommand : public QUndoCommand {
+public:
+    DiscardSliceCommand(PipelineContext &ctx, const QString &reason, const QString &step)
+        : m_ctx(ctx), m_reason(reason), m_step(step) {
+        setText(QObject::tr("Discard slice %1").arg(ctx.itemId));
+    }
+
+    void redo() override {
+        m_ctx.status = PipelineContext::Status::Discarded;
+        m_ctx.discardReason = m_reason;
+        m_ctx.discardedAtStep = m_step;
+    }
+
+    void undo() override {
+        m_ctx.status = PipelineContext::Status::Active;
+        m_ctx.discardReason.clear();
+        m_ctx.discardedAtStep.clear();
+    }
+
+private:
+    PipelineContext &m_ctx;
+    QString m_reason, m_step;
+};
+```
+
+### 5.4 自动步骤的"重跑"替代撤销
+
+自动步骤不做细粒度撤销。改为：
+- PipelineRunner 在执行自动步骤前**快照**该步骤的输入状态
+- "撤销"自动步骤 = 恢复快照 + 清除该步骤产出的层
+- 实现方式：每步完成后将 context 序列化为 JSON，存入 `dstemp/snapshots/{itemId}_step{N}.json`
+
+---
+
+## 6 崩溃日志与错误恢复
+
+### 6.1 已有基础设施
+
+项目已有：
+- `dsfw::CrashHandler`：跨平台 minidump
+- `dsfw::FileLogSink`：7 天自动轮转文件日志
+- `dsfw::AppPaths`：统一的 config/logs/dumps 路径
+- `dsfw::BatchCheckpoint`：断点续处理
+
+### 6.2 流水线级错误记录
+
+每个步骤的执行结果记入 PipelineContext：
+
+```cpp
+struct StepRecord {
+    QString stepName;
+    QString processorId;
+    QDateTime startTime;
+    QDateTime endTime;
+    bool success = false;
+    QString errorMessage;
+    ProcessorConfig usedConfig;         ///< 实际使用的参数（含模型路径）
+};
+
+struct PipelineContext {
+    // ... 现有字段 ...
+    std::vector<StepRecord> stepHistory;  ///< 完整的步骤执行历史
+};
+```
+
+### 6.3 崩溃恢复
+
+1. 每步执行前序列化 context → `dstemp/contexts/{itemId}.json`
+2. 崩溃后重启，从 contexts/ 加载所有 item 的最新状态
+3. 根据 `completedSteps` 和 `stepHistory` 判断从哪步恢复
+4. CrashHandler 的 minidump 关联到当前正在处理的 itemId
+
+---
+
+## 7 核心类型修订
+
+### 7.1 PipelineContext
+
+```cpp
+struct PipelineContext {
+    QString audioPath;                          ///< 当前 item 的音频路径
+    QString itemId;                             ///< item 标识（如 "guangnian_003"）
+    std::map<QString, nlohmann::json> layers;   ///< category → layer data
+    ProcessorConfig globalConfig;               ///< hopSize, sampleRate 等
+
+    // ── 状态管理 ──
+    enum class Status { Active, Discarded, Error };
+    Status status = Status::Active;
+    QString discardReason;
+    QString discardedAtStep;
+
+    // ── 步骤追踪 ──
+    QStringList completedSteps;                 ///< 已完成步骤列表
+    std::vector<StepRecord> stepHistory;        ///< 完整执行历史
+
+    // ── 方法 ──
+    Result<TaskInput> buildTaskInput(const TaskSpec &spec) const;
+    void applyTaskOutput(const TaskSpec &spec, const TaskOutput &output);
+
+    /// 序列化/反序列化
+    nlohmann::json toJson() const;
+    static Result<PipelineContext> fromJson(const nlohmann::json &j);
+};
+```
+
+### 7.2 ITaskProcessor（不变）
+
+```cpp
 class ITaskProcessor {
 public:
     virtual ~ITaskProcessor() = default;
 
-    // ── 元数据 ──────────────────────────────────────────────
-
-    /// 处理器唯一标识（如 "hubert-fa", "sofa", "rmvpe"）
     virtual QString processorId() const = 0;
-
-    /// 人类可读名称
     virtual QString displayName() const = 0;
-
-    /// I/O 规格声明（与 .dsproj tasks[] 对应）
     virtual TaskSpec taskSpec() const = 0;
-
-    /// 处理器能力声明
-    /// 返回 JSON 描述：支持的参数及其类型/范围/默认值
-    /// UI 据此动态生成配置控件（替代 vocabInfo() 等专用查询方法）
     virtual ProcessorConfig capabilities() const { return {}; }
 
-    // ── 模型生命周期 ────────────────────────────────────────
-
-    /// 初始化：通过 ModelManager 注册并加载模型
     virtual Result<void> initialize(IModelManager &mm,
                                     const ProcessorConfig &modelConfig) = 0;
-
-    /// 释放处理器内部状态（模型由 ModelManager 统一管理卸载）
     virtual void release() = 0;
-
-    // ── 处理 ────────────────────────────────────────────────
-
-    /// 单条处理（交互式模式）
-    /// 输入输出为 LayerData（对应 .dstext 的层结构）
     virtual Result<TaskOutput> process(const TaskInput &input) = 0;
 
-    /// 批量处理（流水线模式）
-    /// 默认实现：逐条调用 process()。引擎可覆盖以使用原生批量接口。
-    /// 例如 GAME 的 alignCSV() 直接操作 CSV 文件，比逐条处理高效。
-    virtual Result<BatchOutput> processBatch(const BatchInput &input,
-                                             ProgressCallback progress = nullptr);
+    // processBatch 已移除 — 批量迭代由 PipelineRunner 统一控制。
 };
 ```
 
-`capabilities()` 解决了 `vocabInfo()` 和 `dynamic_cast` 问题 — 处理器声明自己支持的参数，UI 据此动态构建控件：
+### 7.3 IAudioPreprocessor
+
+```cpp
+class IAudioPreprocessor {
+public:
+    virtual ~IAudioPreprocessor() = default;
+    virtual QString preprocessorId() const = 0;
+    virtual QString displayName() const = 0;
+    virtual Result<void> process(const QString &inputPath,
+                                 const QString &outputPath,
+                                 const ProcessorConfig &config) = 0;
+};
+```
+
+### 7.4 IFormatAdapter
+
+```cpp
+class IFormatAdapter {
+public:
+    virtual ~IFormatAdapter() = default;
+    virtual QString formatId() const = 0;
+    virtual QString displayName() const = 0;
+
+    virtual bool canImport() const { return false; }
+    virtual bool canExport() const { return false; }
+
+    /// 从外部文件导入层数据
+    virtual Result<void> importToLayers(
+        const QString &filePath,
+        std::map<QString, nlohmann::json> &layers,
+        const ProcessorConfig &config) = 0;
+
+    /// 从层数据导出到外部文件
+    virtual Result<void> exportFromLayers(
+        const std::map<QString, nlohmann::json> &layers,
+        const QString &outputPath,
+        const ProcessorConfig &config) = 0;
+};
+```
+
+---
+
+## 8 格式适配器详细设计
+
+### 8.1 LabAdapter — .lab 文件
+
+```
+格式ID: "lab"
+方向: 双向
+
+导入: 读取 .lab 文件 → 填充 grapheme 层
+  文件格式: 单行文本，空格分隔音节
+  解析: split(" ") → [{text: syllable, position: 0.0}]（无时间信息）
+
+导出: grapheme 层 → 写 .lab 文件
+  格式: 所有音节用空格连接为单行
+```
+
+### 8.2 TextGridAdapter — TextGrid 文件
+
+```
+格式ID: "textgrid"
+方向: 双向
+
+TextGrid 有两种布局：
+  2-tier: [words, phones]          ← 切片级（每个切片一个 TextGrid）
+  3-tier: [sentences, words, phones] ← 整首歌级（combine_tg 合并后）
+
+导入（2-tier → 层数据）:
+  "phones" tier → phoneme 层
+    每个 interval → {phone: text, start: secToUs(minTime), end: secToUs(maxTime)}
+    空标记替换为 "SP"
+  "words" tier → grapheme 层（可选）
+    每个 interval → {text: mark, pos: secToUs(minTime)}
+
+导入（3-tier → 切片 + 层数据）:
+  "sentences" tier → 切片边界
+    每个 interval → {id: mark 或序号, start: secToUs(minTime), end: secToUs(maxTime)}
+    mark 为空的 interval → 标记为 discarded（用户在 Praat/vLabeler 中删除句子的方式）
+  对每个非空 sentence 区间：
+    截取该时间段内的 words/phones interval → 生成对应切片的 grapheme/phoneme 层
+    时间归零：pos -= sentenceStart
+
+导出（层数据 → 2-tier）:
+  phoneme 层 → "phones" tier
+  grapheme 层 → "words" tier
+  时间转换：usToSec(pos) → interval minTime/maxTime
+
+导出（层数据 → 3-tier，用于精修工作流）:
+  切片列表 → "sentences" tier（每个切片一个 sentence interval，mark = itemId）
+  所有切片的 grapheme → 拼接成连续的 "words" tier
+  所有切片的 phoneme → 拼接成连续的 "phones" tier
+  discarded 切片 → mark 为空的 sentence interval
+```
+
+### 8.3 CsvAdapter — transcriptions.csv
+
+```
+格式ID: "csv"
+方向: 双向
+
+导入: 读取 CSV → 按列名填充各层
+  name → itemId
+  ph_seq + ph_dur → phoneme 层
+  ph_num → ph_num 层
+  note_seq + note_dur + note_slur + note_glide → midi 层
+
+导出: 各层 → 写 CSV
+  phoneme → ph_seq, ph_dur
+  ph_num → ph_num
+  midi → note_seq, note_dur, note_slur, note_glide
+  仅写入有数据的列
+
+内部使用 TranscriptionRow 做转换（保持现有 TranscriptionCsv 代码不变）
+```
+
+### 8.4 DsFileAdapter — .ds 文件
+
+```
+格式ID: "ds"
+方向: 双向
+
+导入: 读取 .ds JSON → 填充各层
+  ph_seq + ph_dur → phoneme
+  ph_num → ph_num
+  note_seq + note_dur + note_slur + note_glide → midi
+  f0_seq + f0_timestep → pitch
+  offset → 记入 context metadata
+
+导出: 各层 → 写 .ds JSON
+  合成完整 .ds 结构（含 offset, text, f0_seq, f0_timestep）
+  与 convert_ds.py csv2ds 输出格式完全一致
+```
+
+---
+
+## 9 切片系统设计
+
+### 9.1 命名规则
+
+```
+{原始音频前缀}_{序号}.wav
+
+示例：
+guangnian_001.wav   ← 第 1 段（按 startSample 排序）
+guangnian_002.wav
+guangnian_003.wav
+```
+
+序号从 001 起始，三位数零填充。MakeDiffSinger 兼容：其 `slice_tg.py` 输出 `item_000`, `item_001`... 同为前缀+序号模式。
+
+### 9.2 切片流程
+
+```
+1. RMS 自动切片 → 切片边界列表
+2. 验证：超过 maxLength 的片段
+   ├─ 全部/大量超长 → 提示调参，重新自动切片
+   └─ 个别超长 → 进入手动切片界面
+3. 手动切片界面：
+   ├─ 波形图 + 音频播放
+   ├─ 在波形上点击标记切割点
+   ├─ 切割点可拖动/删除（QUndoStack）
+   └─ 仅处理标记为"过长"的片段
+4. 写出切片音频 + 创建 PipelineContext
+```
+
+---
+
+## 10 LyricFA 设计
+
+### 10.1 以整首歌为单位
+
+LyricFA 以**整首歌**为单位运行（`granularity: whole_audio`）。
+
+1. ASR 识别整首歌音频 → 带时间戳的识别文本段
+2. 按切片边界分割识别结果 → 每个切片分配一段
+3. 如果提供原歌词 txt（按歌曲前缀匹配），与原歌词做最大相似度匹配
+4. 输出每个切片的 `sentence` 层
+
+### 10.2 原歌词目录
+
+```
+lyrics/
+    guangnian.txt      ← 歌曲前缀对应的歌词文件
+    wangqing.txt
+```
+
+每行一句歌词。匹配算法：编辑距离 / 最长公共子序列。
+
+---
+
+## 11 PipelineRunner 修订
+
+### 11.1 StepConfig
+
+```cpp
+struct StepConfig {
+    QString taskName;                ///< TaskProcessorRegistry 中的 taskName
+    QString processorId;             ///< processorId（可替换后端）
+    ProcessorConfig config;          ///< 步骤参数
+
+    bool optional = false;           ///< 可选步骤
+    bool manual = false;             ///< 人工步骤（暂停流水线）
+
+    QString importFormat;            ///< 步骤前导入外部文件（可选）
+    QString importPath;
+    QString exportFormat;            ///< 步骤后导出（可选）
+    QString exportPath;
+
+    ValidationCallback validator;    ///< 步骤完成后的验证回调（可选）
+};
+```
+
+### 11.2 执行流程伪代码
+
+```cpp
+Result<void> PipelineRunner::run(const Options &opts, ProgressCallback progress) {
+    // Phase 0: 音频预处理
+    for (auto &pre : opts.preprocessors)
+        pre->process(audioPath, audioPath, opts.globalConfig);
+
+    // Phase 1: 切片
+    auto slices = runSlicerStep(opts);
+    
+    // Phase 2: 创建 PipelineContext per slice
+    std::vector<PipelineContext> contexts = createContexts(slices);
+
+    // Phase 3: 整首歌步骤（如 LyricFA）
+    for (auto &step : opts.steps | filter(wholeAudio)) {
+        runWholeAudioStep(step, originalAudioPath, contexts);
+    }
+
+    // Phase 4: 逐切片步骤
+    for (auto &step : opts.steps | filter(perSlice)) {
+        auto processor = registry.create(step.taskName, step.processorId);
+        processor->initialize(mm, step.config);
+
+        for (auto &ctx : contexts) {
+            // 跳过已丢弃的切片
+            if (ctx.status == PipelineContext::Status::Discarded)
+                continue;
+
+            // 人工步骤：暂停等待
+            if (step.manual) {
+                emit manualStepRequired(step, ctx);
+                waitForManualCompletion();
+                continue;
+            }
+
+            // 快照（用于自动步骤的"撤销"）
+            saveSnapshot(ctx, step.taskName);
+
+            // 导入
+            if (!step.importFormat.isEmpty())
+                formatAdapter(step.importFormat)->importToLayers(
+                    step.importPath, ctx.layers, step.config);
+
+            // 执行处理器
+            auto inputResult = ctx.buildTaskInput(processor->taskSpec());
+            if (!inputResult) {
+                ctx.status = PipelineContext::Status::Error;
+                logError(ctx, step, inputResult.error());
+                continue;
+            }
+            auto output = processor->process(inputResult.value());
+            if (!output) {
+                ctx.status = PipelineContext::Status::Error;
+                logError(ctx, step, output.error());
+                continue;
+            }
+            ctx.applyTaskOutput(processor->taskSpec(), output.value());
+
+            // 验证
+            if (step.validator) {
+                QString reason;
+                auto newStatus = step.validator(ctx, processor->taskSpec(), reason);
+                if (newStatus == PipelineContext::Status::Discarded) {
+                    ctx.status = newStatus;
+                    ctx.discardReason = reason;
+                    ctx.discardedAtStep = step.taskName;
+                }
+            }
+
+            // 记录步骤历史
+            ctx.completedSteps.append(step.taskName);
+            ctx.stepHistory.push_back({step.taskName, step.processorId, ...});
+
+            // 导出
+            if (!step.exportFormat.isEmpty())
+                formatAdapter(step.exportFormat)->exportFromLayers(
+                    ctx.layers, step.exportPath, step.config);
+
+            // 持久化 context
+            saveContext(ctx);
+        }
+    }
+}
+```
+
+### 11.3 整首歌步骤 vs 逐切片步骤
+
+| 粒度 | 步骤 |
+|------|------|
+| `whole_audio` | Step 0 (预处理), Step 1 (切片), Step 2 (LyricFA) |
+| `per_slice` | Step 3-10 |
+
+---
+
+## 12 .dsproj 规范修订
+
+### 12.1 tasks 声明
 
 ```json
-// HubertAlignmentProcessor::capabilities() 返回：
 {
-    "language": {"type": "enum", "values": ["zh", "ja", "en"], "default": "zh"},
-    "nonSpeechPhonemes": {"type": "stringList", "default": ["AP", "SP"]}
-}
-
-// GameMidiProcessor::capabilities() 返回：
-{
-    "segThreshold": {"type": "float", "min": 0.0, "max": 1.0, "default": 0.3},
-    "segRadiusFrames": {"type": "float", "min": 0, "max": 50, "default": 3.0},
-    "estThreshold": {"type": "float", "min": 0.0, "max": 1.0, "default": 0.5},
-    "d3pmTimesteps": {"type": "int", "min": 1, "max": 1000, "default": 100},
-    "language": {"type": "enum", "values": ["auto"], "dynamic": true}
-}
-```
-
-参数通过 `TaskInput.config` / `BatchInput.config` 传入，处理器在 `process()` / `processBatch()` 中读取。
-
-### 3.4 TaskProcessorRegistry — 自注册工厂
-
-参考 Essentia 的 `EssentiaFactory::Registrar` 模式：
-
-```cpp
-using ProcessorFactory = std::function<std::unique_ptr<ITaskProcessor>()>;
-
-class TaskProcessorRegistry {
-public:
-    void registerProcessor(const QString &taskName,
-                           const QString &processorId,
-                           ProcessorFactory factory);
-
-    std::unique_ptr<ITaskProcessor> create(const QString &taskName,
-                                            const QString &processorId) const;
-
-    QStringList availableProcessors(const QString &taskName) const;
-
-    static TaskProcessorRegistry &instance();
-
-    /// 自注册辅助（参考 Essentia Registrar）
-    /// 用法：在 .cpp 文件中放置静态实例即可自动注册
-    template <typename ProcessorType>
-    struct Registrar {
-        Registrar(const QString &taskName, const QString &processorId) {
-            TaskProcessorRegistry::instance().registerProcessor(
-                taskName, processorId,
-                []{ return std::make_unique<ProcessorType>(); });
+    "tasks": [
+        {
+            "name": "audio_preprocess",
+            "inputs": [],
+            "outputs": [],
+            "granularity": "whole_audio",
+            "optional": true
+        },
+        {
+            "name": "audio_slice",
+            "inputs": [],
+            "outputs": [{"slot": "slices", "category": "slices"}],
+            "granularity": "whole_audio"
+        },
+        {
+            "name": "asr",
+            "inputs": [],
+            "outputs": [{"slot": "sentence", "category": "sentence"}],
+            "granularity": "whole_audio",
+            "optional": true
+        },
+        {
+            "name": "label_review",
+            "inputs": [{"slot": "sentence", "category": "sentence"}],
+            "outputs": [{"slot": "grapheme", "category": "grapheme"}],
+            "granularity": "per_slice",
+            "manual": true,
+            "importFormats": ["lab"],
+            "exportFormats": ["lab"]
+        },
+        {
+            "name": "phoneme_alignment",
+            "inputs": [{"slot": "grapheme", "category": "grapheme"}],
+            "outputs": [{"slot": "phoneme", "category": "phoneme"}],
+            "granularity": "per_slice",
+            "importFormats": ["textgrid"],
+            "exportFormats": ["textgrid"]
+        },
+        {
+            "name": "phoneme_review",
+            "inputs": [{"slot": "phoneme", "category": "phoneme"}],
+            "outputs": [{"slot": "phoneme", "category": "phoneme"}],
+            "granularity": "per_slice",
+            "manual": true,
+            "optional": true,
+            "importFormats": ["textgrid"],
+            "exportFormats": ["textgrid"]
+        },
+        {
+            "name": "add_ph_num",
+            "inputs": [
+                {"slot": "phoneme", "category": "phoneme"},
+                {"slot": "grapheme", "category": "grapheme"}
+            ],
+            "outputs": [{"slot": "ph_num", "category": "ph_num"}],
+            "granularity": "per_slice"
+        },
+        {
+            "name": "midi_transcription",
+            "inputs": [
+                {"slot": "phoneme", "category": "phoneme"},
+                {"slot": "ph_num", "category": "ph_num"}
+            ],
+            "outputs": [{"slot": "midi", "category": "midi"}],
+            "granularity": "per_slice"
+        },
+        {
+            "name": "pitch_extraction",
+            "inputs": [],
+            "outputs": [{"slot": "pitch", "category": "pitch"}],
+            "granularity": "per_slice"
+        },
+        {
+            "name": "pitch_review",
+            "inputs": [
+                {"slot": "pitch", "category": "pitch"},
+                {"slot": "midi", "category": "midi"}
+            ],
+            "outputs": [{"slot": "pitch", "category": "pitch"}],
+            "granularity": "per_slice",
+            "manual": true,
+            "importFormats": ["ds"],
+            "exportFormats": ["ds"]
+        },
+        {
+            "name": "export",
+            "inputs": [
+                {"slot": "phoneme", "category": "phoneme"},
+                {"slot": "ph_num", "category": "ph_num"},
+                {"slot": "midi", "category": "midi"},
+                {"slot": "pitch", "category": "pitch"}
+            ],
+            "outputs": [],
+            "granularity": "per_slice",
+            "exportFormats": ["csv", "ds"]
         }
-    };
-
-private:
-    std::map<QString, std::map<QString, ProcessorFactory>> m_registry;
-};
-
-// 用法 — 在 HubertAlignmentProcessor.cpp 末尾：
-static TaskProcessorRegistry::Registrar<HubertAlignmentProcessor>
-    s_reg("phoneme_alignment", "hubert-fa");
+    ]
+}
 ```
 
-### 3.5 DsProjectDefaults 演进
+新增字段：
+- `granularity`: `"whole_audio"` | `"per_slice"`
+- `optional`: 可选步骤
+- `manual`: 人工步骤
+- `importFormats` / `exportFormats`: 该步骤支持的导入/导出格式列表
 
-```cpp
-struct TaskModelConfig {
-    QString processorId;        // "hubert-fa", "rmvpe", "game", "funasr"
-    QString modelPath;
-    QString provider = "cpu";   // cpu / dml / cuda
-    int deviceId = 0;
-    ProcessorConfig extra;      // 引擎特定参数
-};
-
-struct DsProjectDefaults {
-    std::map<QString, TaskModelConfig> taskModels;  // key = task name
-    int hopSize = 512;
-    int sampleRate = 44100;
-};
-```
-
-.dsproj JSON 格式：
+### 12.2 defaults 扩展
 
 ```json
 {
     "defaults": {
+        "preprocessors": [
+            {"id": "loudness_norm", "targetLufs": -23.0},
+            {"id": "denoise", "model": "models/denoise/model.onnx"}
+        ],
+        "slicer": {
+            "threshold": -40.0,
+            "minLength": 5000,
+            "minInterval": 300,
+            "hopSize": 10,
+            "maxSilKept": 500,
+            "maxSliceLength": 15000,
+            "namingPrefix": "auto"
+        },
+        "validation": {
+            "minSliceLength": 0.3,
+            "maxSliceLength": 30.0,
+            "minPitchCoverage": 0.5
+        },
         "models": {
+            "asr": {
+                "processor": "funasr",
+                "path": "models/asr/funasr_cn.onnx",
+                "provider": "dml"
+            },
             "phoneme_alignment": {
                 "processor": "hubert-fa",
-                "path": "models/hubert_fa.onnx",
-                "provider": "dml",
-                "deviceId": 0,
-                "language": "zh",
-                "nonSpeechPhonemes": ["AP", "SP"]
+                "path": "models/alignment/hubert_fa.onnx",
+                "provider": "dml"
             },
             "midi_transcription": {
                 "processor": "game",
                 "path": "models/game/",
-                "segThreshold": 0.3,
-                "d3pmTimesteps": 100
+                "provider": "dml"
+            },
+            "pitch_extraction": {
+                "processor": "rmvpe",
+                "path": "models/rmvpe/rmvpe.onnx",
+                "provider": "cpu"
             }
+        },
+        "export": {
+            "formats": ["csv", "ds"],
+            "csvColumns": ["name", "ph_seq", "ph_dur", "ph_num", "note_seq", "note_dur", "note_glide"],
+            "dsHopSize": 512,
+            "dsSampleRate": 44100,
+            "includeDiscarded": false
         }
     }
 }
 ```
 
-**向后兼容**：解析时旧 key (`asr`/`alignment`/`midi`/`build_ds`) 自动映射到新 task name，`processor` 缺省时按旧引擎名推断。
+### 12.3 items 扩展
 
-### 3.6 处理器实现修订
-
-#### RmvpePitchProcessor
-
-```cpp
-class RmvpePitchProcessor : public ITaskProcessor {
-    ModelTypeId m_typeId;
-    IModelManager *m_mm = nullptr;
-
-public:
-    QString processorId() const override { return "rmvpe"; }
-    QString displayName() const override { return "RMVPE F0 Extraction"; }
-
-    TaskSpec taskSpec() const override {
-        // F0 输出暂用 pitch category，待 curve 层类型实现后切换
-        return {"pitch_analysis", {}, {{"pitch", "pitch"}}};
-    }
-
-    Result<void> initialize(IModelManager &mm, const ProcessorConfig &config) override {
-        m_mm = &mm;
-        m_typeId = registerModelType("rmvpe");
-
-        if (!mm.provider(m_typeId)) {
-            mm.registerProvider(m_typeId,
-                std::make_unique<InferenceModelProvider<Rmvpe::Rmvpe>>(
-                    m_typeId, "RMVPE"));
+```json
+{
+    "items": [
+        {
+            "id": "a54c548a",
+            "name": "GuangNianZhiWai",
+            "speaker": "32e9",
+            "language": "fe67",
+            "audioSource": "audio/a54c548a.wav",
+            "slices": [
+                {
+                    "id": "001",
+                    "in": 1.14,
+                    "out": 5.14,
+                    "status": "active",
+                    "discardReason": null
+                },
+                {
+                    "id": "002",
+                    "in": 8.17,
+                    "out": 19.26,
+                    "status": "active"
+                },
+                {
+                    "id": "003",
+                    "in": 22.50,
+                    "out": 23.10,
+                    "status": "discarded",
+                    "discardReason": "Too short (0.6s)",
+                    "discardedAtStep": "audio_slice"
+                }
+            ]
         }
-
-        QString path = QString::fromStdString(config.value("path", ""));
-        int gpu = config.value("deviceId", -1);
-        if (config.value("provider", "cpu") == "cpu") gpu = -1;
-        return mm.ensureLoaded(m_typeId, path, gpu);
-    }
-
-    Result<TaskOutput> process(const TaskInput &input) override {
-        auto *prov = dynamic_cast<InferenceModelProvider<Rmvpe::Rmvpe>*>(
-            m_mm->provider(m_typeId));
-        if (!prov || !prov->isReady())
-            return Err<TaskOutput>("RMVPE model not loaded");
-
-        // 调用引擎
-        std::vector<Rmvpe::RmvpeRes> res;
-        auto r = prov->engine().get_f0(
-            input.audioPath.toStdWString(), 0.03f, res, nullptr);
-        if (!r) return Err<TaskOutput>(r.error());
-
-        // 将 f0 转为 pitch layer（临时方案：每帧一个 boundary）
-        TaskOutput out;
-        LayerData layer;
-        layer.category = "pitch";
-        // ... F0 → boundary 转换逻辑
-        out.layers["pitch"] = std::move(layer);
-        return Ok(std::move(out));
-    }
-
-    /// 批量模式：逐文件提取 F0，写入 dstemp/f0/
-    Result<BatchOutput> processBatch(const BatchInput &input,
-                                     ProgressCallback progress) override {
-        // 遍历 wavsDir，逐文件调用引擎，写入 f0 缓存
-        // 返回处理计数
-    }
-
-    void release() override {}
-};
+    ]
+}
 ```
 
-#### GameMidiProcessor — 关键修订
-
-GAME 引擎用 `shared_ptr<Game::Game>` 封装，**不**拆成 4 个独立 ModelTypeId — 因为 `Game::Game` 内部管理子模型的加载/协调，外部拆分会破坏其内部不变量。
-
-```cpp
-class GameMidiProcessor : public ITaskProcessor {
-    ModelTypeId m_typeId;
-    IModelManager *m_mm = nullptr;
-
-public:
-    QString processorId() const override { return "game"; }
-    QString displayName() const override { return "GAME Audio-to-MIDI"; }
-
-    TaskSpec taskSpec() const override {
-        return {"midi_transcription",
-                {{"grapheme", "grapheme"}},
-                {{"pitch", "pitch"}}};
-    }
-
-    ProcessorConfig capabilities() const override {
-        return {
-            {"segThreshold",   {{"type", "float"}, {"min", 0}, {"max", 1}, {"default", 0.3}}},
-            {"segRadiusFrames",{{"type", "float"}, {"min", 0}, {"max", 50}, {"default", 3}}},
-            {"estThreshold",   {{"type", "float"}, {"min", 0}, {"max", 1}, {"default", 0.5}}},
-            {"d3pmTimesteps",  {{"type", "int"}, {"min", 1}, {"max", 1000}, {"default", 100}}},
-            {"language",       {{"type", "int"}, {"default", 0}}}
-        };
-    }
-
-    Result<void> initialize(IModelManager &mm, const ProcessorConfig &config) override {
-        // 注册为单个 ModelTypeId
-        // Game::Game 内部管理多个子模型，不需要外部拆分
-        m_typeId = registerModelType("game");
-        // ... 注册 InferenceModelProvider 或自定义 GameModelProvider
-    }
-
-    Result<TaskOutput> process(const TaskInput &input) override {
-        // 1. 从 config 读取引擎参数（替代 dynamic_cast setter）
-        // 2. 从 input.layers["grapheme"] 读取音节/音素序列
-        // 3. 调用 Game::Game::align() 或 get_notes()
-        // 4. 转换为 pitch layer 输出
-    }
-
-    /// 批量模式：直接使用 Game::alignCSV()（原生批量接口）
-    Result<BatchOutput> processBatch(const BatchInput &input,
-                                     ProgressCallback progress) override {
-        // 直接调用 m_game->alignCSV() — 比逐条 process() 高效
-        // Game 引擎原生支持 CSV 批量处理
-    }
-};
-```
-
-#### HubertAlignmentProcessor — 带 capabilities
-
-```cpp
-class HubertAlignmentProcessor : public ITaskProcessor {
-    ModelTypeId m_typeId;
-    IModelManager *m_mm = nullptr;
-    std::string m_language = "zh";
-    std::vector<std::string> m_nonSpeechPh = {"AP", "SP"};
-
-public:
-    QString processorId() const override { return "hubert-fa"; }
-
-    ProcessorConfig capabilities() const override {
-        // 替代 vocabInfo() — UI 据此生成语言选择器和音素复选框
-        return {
-            {"language", {{"type", "enum"}, {"values", {"zh", "ja", "en"}}, {"default", "zh"}}},
-            {"nonSpeechPhonemes", {{"type", "stringList"}, {"default", {"AP", "SP"}}}}
-        };
-    }
-
-    Result<void> initialize(IModelManager &mm, const ProcessorConfig &config) override {
-        // 从 config 读取 language 和 nonSpeechPhonemes
-        if (config.contains("language"))
-            m_language = config["language"].get<std::string>();
-        if (config.contains("nonSpeechPhonemes"))
-            for (auto &ph : config["nonSpeechPhonemes"])
-                m_nonSpeechPh.push_back(ph.get<std::string>());
-        // ... 注册模型并加载
-    }
-
-    Result<TaskOutput> process(const TaskInput &input) override {
-        // 从 input.layers["grapheme"] 提取音素序列
-        // 调用 HFA::HFA::recognize() with m_language, m_nonSpeechPh
-        // 输出 phoneme layer (带时间戳的音素序列)
-    }
-
-    /// HuBERT 无原生批量接口 — 用默认逐条实现
-    // processBatch() 不覆盖，使用基类默认
-};
-```
-
-### 3.7 TranscriptionPipeline 集成
-
-现有的 `TranscriptionPipeline` 操作 `TranscriptionRow`，这是批量模式的内部表示。与 `ITaskProcessor` 的关系：
-
-```
-PipelineRunner (新)
-  │
-  ├─ 切片步骤: ISlicerService (保留独立)
-  ├─ ASR 步骤:  ITaskProcessor("asr").processBatch()
-  ├─ 对齐步骤:  ITaskProcessor("phoneme_alignment").processBatch()
-  ├─ CSV 步骤:  TranscriptionPipeline::extractTextGrids() (domain 工具，不需要处理器)
-  ├─ MIDI 步骤: ITaskProcessor("midi_transcription").processBatch()
-  ├─ DS 步骤:   CsvToDsConverter (domain 工具)
-  └─ F0 步骤:   ITaskProcessor("pitch_analysis").processBatch()
-```
-
-**`TranscriptionRow` 不需要替换为 `LayerData`** — 它是 CSV 中间格式，而 `LayerData` 是 `.dstext` 的结构化标注。两者服务不同场景：
-
-- `LayerData`: 交互式编辑（PhonemeLabeler, PitchLabeler），持久化到 `.dstext`
-- `TranscriptionRow`: 批量流水线的内存表示，持久化到 CSV
-
-处理器的 `processBatch()` 内部可以自由选择使用 `TranscriptionRow`、直接操作 CSV、或逐条调用 `process()`。
+新增 slice 字段：
+- `status`: `"active"` | `"discarded"` | `"error"`
+- `discardReason`: 丢弃原因
+- `discardedAtStep`: 在哪步被丢弃
 
 ---
 
-## 4 现有接口处置（修订版）
+## 13 数据持久化
 
-### 保留
+### 13.1 dstemp/ 目录结构
 
-| 接口 | 理由 | 调整 |
+```
+dstemp/
+    preprocess/                        ← Step 0: 预处理后的音频
+        guangnian.wav
+    slices/                            ← Step 1: 切片音频
+        guangnian_001.wav
+        guangnian_002.wav
+    contexts/                          ← 每个切片的 PipelineContext
+        guangnian_001.json
+        guangnian_002.json
+    snapshots/                         ← 自动步骤快照（用于"撤销"自动步骤）
+        guangnian_001_phoneme_alignment.json
+        guangnian_001_pitch_extraction.json
+    export/                            ← Step 10: 导出结果
+        wavs/                          ← MakeDiffSinger 兼容目录结构
+            guangnian_001.wav
+            guangnian_001.ds
+        transcriptions.csv
+```
+
+### 13.2 Context JSON 格式
+
+```json
+{
+    "itemId": "guangnian_001",
+    "audioPath": "dstemp/slices/guangnian_001.wav",
+    "status": "active",
+    "discardReason": null,
+    "discardedAtStep": null,
+    "completedSteps": ["audio_slice", "asr", "label_review", "phoneme_alignment"],
+    "stepHistory": [
+        {
+            "stepName": "phoneme_alignment",
+            "processorId": "hubert-fa",
+            "startTime": "2026-05-02T10:30:00",
+            "endTime": "2026-05-02T10:30:05",
+            "success": true,
+            "errorMessage": null,
+            "usedConfig": {"path": "models/hubert_fa.onnx", "provider": "dml"}
+        }
+    ],
+    "layers": {
+        "sentence": [{"text": "感受停在", "position": 0.0}],
+        "grapheme": [{"text": "gan", "position": 0.0}, {"text": "shou", "position": 0.6}],
+        "phoneme": [
+            {"phone": "g", "start": 0.0, "end": 0.08},
+            {"phone": "an", "start": 0.08, "end": 0.52}
+        ],
+        "ph_num": [2, 2, 1],
+        "midi": [
+            {"note": "C4", "duration": 0.6, "slur": 0, "glide": "none"},
+            {"note": "D4", "duration": 0.6, "slur": 0, "glide": "none"}
+        ],
+        "pitch": {
+            "f0": [0.0, 261.6, 293.7],
+            "timestep": 0.011609977
+        }
+    }
+}
+```
+
+---
+
+## 14 模型可替换性
+
+同一 taskName 下所有处理器必须声明相同的 inputs/outputs category：
+
+```
+phoneme_alignment:
+    hubert-fa → in: [grapheme], out: [phoneme]
+    sofa      → in: [grapheme], out: [phoneme]
+    mfa       → in: [grapheme], out: [phoneme]
+
+midi_transcription:
+    game      → in: [phoneme, ph_num], out: [midi]
+    some      → in: [phoneme, ph_num], out: [midi]
+
+pitch_extraction:
+    rmvpe     → in: [], out: [pitch]
+    fcpe      → in: [], out: [pitch]
+    crepe     → in: [], out: [pitch]
+
+asr:
+    funasr    → in: [], out: [sentence]
+    whisper   → in: [], out: [sentence]
+```
+
+Registry 注册时验证一致性，不一致拒绝注册。
+
+---
+
+## 15 迁移计划
+
+| 阶段 | 内容 | 影响 |
 |------|------|------|
-| `ModelManager` / `IModelManager` | 统一模型生命周期 | 瘦身：降级 6 个仅内部使用的虚方法 |
-| `IModelProvider` / `ModelTypeId` | 可扩展模型注册 | 不变 |
-| `InferenceModelProvider<Engine>` | 引擎→Provider 适配器 | 不变 |
-| `IInferenceEngine` | ONNX 引擎抽象 | 不变 |
-| `IG2PProvider` | 对齐处理器的注入依赖 | 处理器工厂注入，不通过 TaskInput |
-| `IExportFormat` | 后处理导出 | 保留，接线到 DiffSingerLabeler |
-| `IQualityMetrics` | 输出校验 | 保留，接线到 PipelineRunner |
-| `IModelDownloader` | 模型下载 | 保留，接线到 initialize() |
-| `ISlicerService` | 纯算法无模型 | 保留独立 |
-| `IFileIOProvider` | 文件 I/O mock | 不变 |
-| `IDocument` | 文档模型 | 删除 `format()` 方法和 `IDocumentFormat` |
-| `IPageActions` | 页面行为 | 删除 4 个死方法 |
-| `IPageLifecycle` | 页面生命周期 | 激活 `onShutdown`/`onWorkingDirectoryChanged` |
-
-### 删除
-
-| 接口 | 理由 |
-|------|------|
-| `IAlignmentService` | 被 ITaskProcessor 替代 |
-| `IAsrService` | 被 ITaskProcessor 替代 |
-| `IPitchService` | 被 ITaskProcessor 替代 |
-| `ITranscriptionService` | 被 ITaskProcessor 替代 |
-| `IDocumentFormat` | 零实现 |
-| `EventBus` | 零消费者 |
-| `PluginManager` / `IStepPlugin` | 被 TaskProcessorRegistry 替代 |
-| `UpdateChecker` | 零消费者 |
-| `RecentFiles` | 零消费者 |
-| `dsfw::UndoStack` / `dsfw::ICommand` | app 用 QUndoStack |
-| `IPageProgress` | AppShell 从未 query |
+| M1 | PipelineContext, IAudioPreprocessor, IFormatAdapter | 纯新增 |
+| M2 | PipelineRunner + StepConfig + ValidationCallback | 纯新增 |
+| M3 | 4 个 IFormatAdapter（Lab/TextGrid/CSV/DS） | 新增，内部包装现有代码 |
+| M4 | ITaskProcessor 移除 processBatch | 4 个处理器适配 |
+| M5 | SlicerProcessor, AddPhNumProcessor | 包装现有代码 |
+| M6 | DiscardSliceCommand + 切片 status 持久化 | 新增 |
+| M7 | DiffSingerLabeler 页面切换到 PipelineRunner | 应用层 |
+| M8 | TranscriptionPipeline deprecated | 渐进 |
 
 ---
 
-## 5 与 ds-format 规范的映射
-
-```
-.dsproj schema[]                      ←→  LayerData 的类型/关系元数据
-.dsproj tasks[]                       ←→  TaskSpec (ITaskProcessor::taskSpec())
-.dsproj defaults.models{}.processor   ←→  TaskProcessorRegistry 的 processorId
-.dsproj defaults.models{}.path/etc    ←→  ProcessorConfig (传入 initialize)
-.dsproj defaults.models{}.{extra}     ←→  ProcessorConfig (传入 process/processBatch)
-.dstext layers[]                      ←→  TaskInput/TaskOutput 中的 LayerData
-dstemp/{step}/                        ←→  processBatch() 的 I/O 目录
-dstemp/{step}/*.dsitem                ←→  PipelineRunner 记录 processor + model + timestamp
-```
-
----
-
-## 6 设计决策记录
+## 16 设计决策记录
 
 | ADR | 决策 | 理由 |
 |-----|------|------|
-| ADR-10 | ITaskProcessor 替代 4 个 per-domain 服务接口 | tasks[] 已定义 I/O 契约，per-domain 接口冗余 |
-| ADR-11 | 所有模型通过 ModelManager 管理 | 统一 LRU 淘汰，消除并行的模型生命周期 |
-| ADR-12 | ITaskProcessor 支持 process() + processBatch() 双模式 | 交互式 UI 需要单条处理，流水线需要批量文件处理；部分引擎有原生批量接口 (GAME alignCSV) |
-| ADR-13 | capabilities() 替代 vocabInfo() 和 dynamic_cast setter | 统一的参数声明机制，UI 动态生成控件，参数通过 config JSON 传入 |
-| ADR-14 | GAME 引擎注册为单个 ModelTypeId | Game::Game 内部管理子模型协调，外部拆分破坏内部不变量 |
-| ADR-15 | ISlicerService 保持独立 | 纯算法无模型无 layer I/O |
-| ADR-16 | TranscriptionRow 与 LayerData 并存 | 两者服务不同场景（CSV 批量 vs dstext 交互式），强行统一增加不必要的转换层 |
-| ADR-17 | DsProjectDefaults 用 map 替代硬编码字段 | 新增 task/processor 无需改 C++ 结构体 |
-| ADR-18 | 自注册工厂 (Essentia Registrar 模式) | 新增处理器只需在 .cpp 放一行静态注册，无需修改中心注册表 |
-| ADR-19 | G2P 是处理器依赖而非 task | G2P 不产出 layer，是对齐处理器的内部实现细节 |
-| ADR-20 | 并存迁移 | 每个处理器独立迁移，旧服务接口直到所有消费者迁移完毕才删除 |
+| ADR-30 | 层数据保持 nlohmann::json | 离线处理，JSON 开销可忽略。避免类型耦合。 |
+| ADR-31 | PipelineContext 用 category 做扁平键 | 与 .dsproj tasks 的 category 绑定一致。 |
+| ADR-32 | 移除 processBatch | 处理器只关心单项。批量迭代、丢弃跳过、错误记录归 Runner。 |
+| ADR-33 | TranscriptionRow 降级为适配器内部 | 最小迁移爆炸半径。 |
+| ADR-34 | 切片命名 {prefix}_{NNN}.wav | 按时间顺序，兼容 MDS 的 item_NNN 模式。 |
+| ADR-35 | LyricFA 以整首歌为粒度 | ASR 需要完整上下文。 |
+| ADR-36 | 同 taskName 处理器 I/O 必须一致 | 模型可替换的前提。Registry 注册时验证。 |
+| ADR-37 | Context JSON 替代 .dsitem + BatchCheckpoint | 统一一个文件。 |
+| ADR-38 | 音频预处理独立接口 | 操作音频文件，不产出层数据。 |
+| ADR-39 | 切片丢弃通过 status 字段 + 传播 | 简单可靠，不需要额外的排除列表。丢弃操作可撤销（QUndoCommand）。 |
+| ADR-40 | 自动步骤用快照替代细粒度撤销 | 自动步骤（模型推理）没有中间态，重跑 = 撤销。快照保证一致性。 |
+| ADR-41 | 导入/导出格式声明在 task 定义中 | .dsproj 的 tasks[] 包含 importFormats/exportFormats，运行时 PipelineRunner 据此查找适配器。 |
+| ADR-42 | MDS 兼容通过格式适配器实现 | 不在核心流水线中引入 MDS 的目录约定。导出时由 CsvAdapter/DsFileAdapter 生成兼容布局。 |
+
+---
+
+## 关联文档
+
+- [ds-format.md](ds-format.md) — .dsproj / .dstext 格式规范
+- [architecture-defects-and-tech-debt.md](architecture-defects-and-tech-debt.md)
+- [improvement-directions.md](improvement-directions.md)
+- [refactoring-roadmap.md](refactoring-roadmap.md)
+
+> 更新时间：2026-05-02
