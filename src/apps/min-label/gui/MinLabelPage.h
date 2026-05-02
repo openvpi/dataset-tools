@@ -13,7 +13,7 @@
 #include <QWidget>
 
 #include "Common.h"
-#include "MinLabelEditor.h"
+#include <MinLabelEditor.h>
 
 #include <MinLabelService.h>
 #include <dsfw/AppSettings.h>

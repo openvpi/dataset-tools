@@ -1,3 +1,4 @@
+add_subdirectory(shared)
 add_subdirectory(pipeline)
 add_subdirectory(min-label)
 add_subdirectory(game-infer-app)
