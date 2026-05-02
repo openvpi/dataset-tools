@@ -133,9 +133,9 @@ const textgrid::PointTier *TextGridDocument::pointTier(int index) const {
     return tier ? tier.get() : nullptr;
 }
 
-double TextGridDocument::totalDuration() const {
-    if (tierCount() == 0) return 0.0;
-    return m_textGrid.GetMaxTime();
+TimePos TextGridDocument::totalDuration() const {
+    if (tierCount() == 0) return 0;
+    return secToUs(m_textGrid.GetMaxTime());
 }
 
 QString TextGridDocument::tierName(int index) const {
@@ -148,7 +148,7 @@ bool TextGridDocument::isIntervalTier(int index) const {
     return std::dynamic_pointer_cast<textgrid::IntervalTier>(m_textGrid.GetTier(index)) != nullptr;
 }
 
-void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, double newTime) {
+void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) {
     if (tierIndex < 0 || tierIndex >= tierCount()) return;
 
     auto tier = m_textGrid.GetTierAs<textgrid::IntervalTier>(tierIndex);
@@ -157,16 +157,13 @@ void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, double new
     const int count = static_cast<int>(tier->GetNumberOfIntervals());
     if (boundaryIndex < 0 || boundaryIndex > count) return;
 
-    // Clamp to valid range: prev/next refer to the neighbouring boundaries, not the current one.
-    // Boundary i sits at interval[i].min_time == interval[i-1].max_time.
-    // The previous boundary is interval[i-1].min_time; the next is interval[i].max_time.
+    double newTimeSec = usToSec(newTime);
     const double prevBoundary = (boundaryIndex > 0) ? tier->GetInterval(boundaryIndex - 1).min_time : tier->GetMinTime();
     const double nextBoundary = (boundaryIndex < count) ? tier->GetInterval(boundaryIndex).max_time : tier->GetMaxTime();
 
-    constexpr double kMinInterval = 0.001; // 1ms minimum interval
-    const double clamped = std::clamp(newTime, prevBoundary + kMinInterval, nextBoundary - kMinInterval);
+    constexpr double kMinInterval = 0.001;
+    const double clamped = std::clamp(newTimeSec, prevBoundary + kMinInterval, nextBoundary - kMinInterval);
 
-    // Apply the move - update the affected intervals
     if (boundaryIndex > 0) {
         textgrid::Interval prev = tier->GetInterval(boundaryIndex - 1);
         prev.max_time = clamped;
@@ -179,7 +176,7 @@ void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, double new
     }
 
     m_modified = true;
-    emit boundaryMoved(tierIndex, boundaryIndex, clamped);
+    emit boundaryMoved(tierIndex, boundaryIndex, secToUs(clamped));
     emit documentChanged();
     emit modifiedChanged(true);
 }
@@ -201,19 +198,19 @@ void TextGridDocument::setIntervalText(int tierIndex, int intervalIndex, const Q
     emit modifiedChanged(true);
 }
 
-void TextGridDocument::insertBoundary(int tierIndex, double time) {
+void TextGridDocument::insertBoundary(int tierIndex, TimePos time) {
     if (tierIndex < 0 || tierIndex >= tierCount()) return;
 
     auto tier = m_textGrid.GetTierAs<textgrid::IntervalTier>(tierIndex);
     if (!tier) return;
 
+    double timeSec = usToSec(time);
     const size_t count = tier->GetNumberOfIntervals();
     for (size_t i = 0; i < count; ++i) {
         const auto &interval = tier->GetInterval(i);
-        if (time > interval.min_time && time < interval.max_time) {
-            // Split this interval
-            textgrid::Interval left(interval.min_time, time, interval.text);
-            textgrid::Interval right(time, interval.max_time, "");
+        if (timeSec > interval.min_time && timeSec < interval.max_time) {
+            textgrid::Interval left(interval.min_time, timeSec, interval.text);
+            textgrid::Interval right(timeSec, interval.max_time, "");
 
             tier->SetInterval(i, left);
             tier->InsertInterval(i + 1, right);
@@ -249,14 +246,14 @@ void TextGridDocument::removeBoundary(int tierIndex, int boundaryIndex) {
     emit modifiedChanged(true);
 }
 
-double TextGridDocument::boundaryTime(int tierIndex, int boundaryIndex) const {
-    if (tierIndex < 0 || tierIndex >= tierCount()) return 0.0;
+TimePos TextGridDocument::boundaryTime(int tierIndex, int boundaryIndex) const {
+    if (tierIndex < 0 || tierIndex >= tierCount()) return 0;
 
     const auto *tier = intervalTier(tierIndex);
-    if (!tier) return 0.0;
+    if (!tier) return 0;
 
     const int count = intervalCount(tierIndex);
-    if (boundaryIndex < 0 || boundaryIndex > count) return 0.0;
+    if (boundaryIndex < 0 || boundaryIndex > count) return 0;
 
     if (boundaryIndex == count) {
         return intervalEnd(tierIndex, boundaryIndex - 1);
@@ -283,20 +280,20 @@ QString TextGridDocument::intervalText(int tierIndex, int intervalIndex) const {
     return QString::fromStdString(tier->GetInterval(intervalIndex).text);
 }
 
-double TextGridDocument::intervalStart(int tierIndex, int intervalIndex) const {
-    if (tierIndex < 0 || tierIndex >= tierCount()) return 0.0;
+TimePos TextGridDocument::intervalStart(int tierIndex, int intervalIndex) const {
+    if (tierIndex < 0 || tierIndex >= tierCount()) return 0;
     const auto *tier = intervalTier(tierIndex);
-    if (!tier) return 0.0;
-    if (intervalIndex < 0 || intervalIndex >= intervalCount(tierIndex)) return 0.0;
-    return tier->GetInterval(intervalIndex).min_time;
+    if (!tier) return 0;
+    if (intervalIndex < 0 || intervalIndex >= intervalCount(tierIndex)) return 0;
+    return secToUs(tier->GetInterval(intervalIndex).min_time);
 }
 
-double TextGridDocument::intervalEnd(int tierIndex, int intervalIndex) const {
-    if (tierIndex < 0 || tierIndex >= tierCount()) return 0.0;
+TimePos TextGridDocument::intervalEnd(int tierIndex, int intervalIndex) const {
+    if (tierIndex < 0 || tierIndex >= tierCount()) return 0;
     const auto *tier = intervalTier(tierIndex);
-    if (!tier) return 0.0;
-    if (intervalIndex < 0 || intervalIndex >= intervalCount(tierIndex)) return 0.0;
-    return tier->GetInterval(intervalIndex).max_time;
+    if (!tier) return 0;
+    if (intervalIndex < 0 || intervalIndex >= intervalCount(tierIndex)) return 0;
+    return secToUs(tier->GetInterval(intervalIndex).max_time);
 }
 
 void TextGridDocument::setModified(bool modified) {
