@@ -55,13 +55,13 @@ namespace Game
         }
 
         // Load parameters from config.json
-        timestep = config.value("timestep", 0.01f);
+        m_configTimestep = config.value("timestep", 0.01f);
         sampleRate = config.value("samplerate", 44100);
         embeddingDim = config.value("embedding_dim", 256);
         m_target_sample_rate = config.value("samplerate", 44100);
 
         // Set initial parameter values from config or defaults
-        m_timestep = timestep;
+        m_timestep = m_configTimestep;
         m_d3pm_ts = generateD3pmTs(0.0f, 8); // Default D3PM settings
 
         // Load language if available

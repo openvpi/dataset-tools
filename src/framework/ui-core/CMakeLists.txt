@@ -20,6 +20,8 @@ dstools_add_library(${PROJECT_NAME}
     RESOURCES res/ui-core.qrc
     DEPENDS
         PUBLIC dsfw-core Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Widgets QWindowKit::Widgets
+    INCLUDE_DIRS
+        PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../widgets/include>
 )
 
 # Install resource files

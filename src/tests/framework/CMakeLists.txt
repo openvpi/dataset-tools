@@ -47,6 +47,7 @@ foreach(test_name ${DSFW_INTEGRATION_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
     target_link_libraries(${test_name} PRIVATE
         dsfw-ui-core
+        dsfw-widgets
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Test
     )

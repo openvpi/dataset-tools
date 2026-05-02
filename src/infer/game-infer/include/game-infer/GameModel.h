@@ -124,7 +124,7 @@ namespace Game
         std::unique_ptr<Ort::Session> sessDur2bd;
 
         std::filesystem::path modelDir;
-        float timestep;
+        float m_configTimestep;
         int sampleRate;
         int embeddingDim;
 

@@ -8,6 +8,8 @@
 #else
 #define HUBERT_INFER_DECL_EXPORT __attribute__((visibility("default")))
 #define HUBERT_INFER_DECL_IMPORT __attribute__((visibility("default")))
+#endif
+
 #ifndef HUBERT_INFER_EXPORT
 #ifdef HUBERT_INFER_STATIC
 #define HUBERT_INFER_EXPORT
@@ -16,3 +18,6 @@
 #define HUBERT_INFER_EXPORT HUBERT_INFER_DECL_EXPORT
 #else
 #define HUBERT_INFER_EXPORT HUBERT_INFER_DECL_IMPORT
+#endif
+#endif
+#endif

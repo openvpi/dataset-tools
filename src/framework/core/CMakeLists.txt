@@ -5,8 +5,8 @@ if(NOT TARGET dstools-types::dstools-types)
 endif()
 
 if(NOT TARGET Qt6::Core)
-    find_package(QT NAMES Qt6 COMPONENTS Core Network REQUIRED)
-    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network REQUIRED)
+    find_package(QT NAMES Qt6 COMPONENTS Core Network Widgets REQUIRED)
+    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network Widgets REQUIRED)
 endif()
 
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -24,7 +24,7 @@ dstools_add_library(${PROJECT_NAME}
     EXPORT_SET dsfwTargets
     DEPENDS
         PUBLIC dsfw-base dstools-types::dstools-types Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
-        PRIVATE $<$<PLATFORM_ID:Windows>:dbghelp>
+        PRIVATE $<$<PLATFORM_ID:Windows>:dbghelp> Qt${QT_VERSION_MAJOR}::Widgets
     INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
 )

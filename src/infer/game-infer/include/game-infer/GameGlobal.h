@@ -8,6 +8,8 @@
 #else
 #define GAME_INFER_DECL_EXPORT __attribute__((visibility("default")))
 #define GAME_INFER_DECL_IMPORT __attribute__((visibility("default")))
+#endif
+
 #ifndef GAME_INFER_EXPORT
 #ifdef GAME_INFER_STATIC
 #define GAME_INFER_EXPORT
@@ -16,3 +18,6 @@
 #define GAME_INFER_EXPORT GAME_INFER_DECL_EXPORT
 #else
 #define GAME_INFER_EXPORT GAME_INFER_DECL_IMPORT
+#endif
+#endif
+#endif

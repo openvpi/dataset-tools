@@ -8,6 +8,8 @@
 #else
 #  define AUDIO_UTIL_DECL_EXPORT __attribute__((visibility("default")))
 #  define AUDIO_UTIL_DECL_IMPORT __attribute__((visibility("default")))
+#endif
+
 #ifndef AUDIO_UTIL_EXPORT
 #  ifdef AUDIO_UTIL_STATIC
 #    define AUDIO_UTIL_EXPORT
@@ -18,3 +20,4 @@
 #      define AUDIO_UTIL_EXPORT AUDIO_UTIL_DECL_IMPORT
 #    endif
 #  endif
+#endif

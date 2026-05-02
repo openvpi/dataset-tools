@@ -38,7 +38,7 @@ namespace FunAsr {
                 vocab.push_back(line);
             }
         } else {
-            std::cerr << "Warning: Failed to open vocab file: " << filename << std::endl;
+            std::cerr << "Warning: Failed to open vocab file (wchar_t path)" << std::endl;
         }
     }
 #endif
