@@ -78,13 +78,6 @@ int main(int argc, char *argv[]) {
     phonemePage->setDataSource(dataSource);
     shell.addPage(phonemePage, "phoneme", {}, QStringLiteral("音素"));
 
-    // Show PhonemeLabeler toolbar only on its own page
-    QToolBar *phonemeToolbar = phonemePage->toolbar();
-    if (phonemeToolbar) {
-        shell.addToolBar(phonemeToolbar);
-        phonemeToolbar->setVisible(false);
-    }
-
     // Page 4: 音高 (PitchLabeler)
     auto *pitchPage = new dstools::DsPitchLabelerPage(&shell);
     pitchPage->setDataSource(dataSource);
@@ -94,15 +87,6 @@ int main(int argc, char *argv[]) {
     auto *exportPage = new dstools::ExportPage(&shell);
     exportPage->setDataSource(dataSource);
     shell.addPage(exportPage, "export", {}, QStringLiteral("导出"));
-
-    static constexpr int kPagePhoneme = 3;
-
-    // Toggle toolbar per page
-    QObject::connect(&shell, &dsfw::AppShell::currentPageChanged,
-                     &shell, [&](int index) {
-        if (phonemeToolbar)
-            phonemeToolbar->setVisible(index == kPagePhoneme);
-    });
 
     // ── Project lifecycle ────────────────────────────────────────────────
 
