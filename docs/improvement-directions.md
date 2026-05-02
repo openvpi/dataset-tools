@@ -38,10 +38,12 @@
 | 跨平台包分发 (release.yml) | D.3 | P3 |
 | 大文件拆分 (PitchLabelerPage/PhonemeLabelerPage → Setup 文件) | C.1 | P3 |
 | 魔法数字常量化 (kDefaultBufferSize) | C.2 | P3 |
+| Game/Slicer 命名统一 (snake_case → camelCase/m_camelCase) | K.4 | P2 |
+| file.open() 缺 else 分支补全 (BatchCheckpoint, CrashHandler) | TD-04 | P3 |
+| 示例项目 (minimal-appshell GUI 示例) | F.1 | P3 |
 
 ## 待办 — 按需拾取 (P3)
 
 | 方向 | 路线图 | 说明 |
 |------|--------|------|
-| 示例项目 | F.1 | 有外部用户需求时做 |
-| K.4 随修随改 | K.4 | Game snake_case、Slicer 成员变量等，触及时修复 |
+| paraformer_onnx.h 命名空间注释 | K.4 | vendor 代码，ADR-7 不修改 |

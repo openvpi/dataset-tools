@@ -6,15 +6,19 @@
 
 ## 开放 Issue
 
-| Issue # | 标题 | 优先级 | 状态 | 路线图 |
-|---------|------|--------|------|--------|
-| — | K.4 随修随改 | P2 | 📋 触及时修复 | K.4 |
+无。
 
 ---
 
 ## 已关闭 Issue
 
 **全部关闭**: #11 (领域测试), #15 (框架独立编译), #16 (API 文档 CI), #18 (DLL 导出审查), #19 (labeler-interfaces), #21 (CI 矩阵), #27 (clang-tidy), #28 (TranscriptionPipeline 可测试性), #37 (Slicer), #38 (MinLabel)
+
+| Issue # | 标题 | 完成摘要 |
+|---------|------|---------|
+| — | K.4 随修随改 | Game snake_case→camelCase，Slicer 成员变量→m_camelCase，FunAsr 裸指针已包装 |
+| — | TD-04 file.open() else 分支 | BatchCheckpoint + CrashHandler (Unix) 补全 |
+| — | F.1 示例项目 | minimal-appshell GUI 示例 (AppShell + IPageLifecycle) |
 
 | Issue # | 标题 | 完成摘要 |
 |---------|------|---------|

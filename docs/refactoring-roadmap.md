@@ -27,7 +27,8 @@
 | H | 用户体验与可靠性 | AppPaths (QStandardPaths)，CrashHandler 统一 (替换 QBreakpad)，FileLogSink (7 天轮转)，PitchLabeler 撤销重做补全 (7 个 Command)，BatchCheckpoint (断点续处理) |
 | I | CMake 现代化 | DstoolsHelpers.cmake (dstools_add_library/dstools_add_executable)，40+ CMakeLists.txt 迁移 (1045→237 行)，cmake 3.21，qt_standard_project_setup，infer-target.cmake macro→function 重构 |
 | J | 框架功能补全 | 窗口状态持久化 (AppShell)，SingleInstanceGuard，RecentFilesManager，ToastNotification，TranslationManager (i18n) |
-| K | 代码规范化 | 35 个头文件 #pragma once 统一，24 个框架头文件 Doxygen 补全，AsyncTask/AppInit/Result 杂项修复 |
+| K | 代码规范化 | 35 个头文件 #pragma once 统一，24 个框架头文件 Doxygen 补全，AsyncTask/AppInit/Result 杂项修复，Game/Slicer 命名统一 (K.4) |
+| F.1 | 示例项目 | minimal-appshell GUI 示例 (AppShell + IPageLifecycle 演示) |
 
 ---
 
@@ -54,28 +55,18 @@
 
 ## 待办 — 随修随改项 (不列入计划，触及时修复)
 
-| 项目 | 说明 |
-|------|------|
-| Game 类 snake_case/camelCase 混用 | `load_model()`/`get_midi()` 等，修改时统一为 camelCase |
-| Slicer 成员变量 snake_case | `sample_rate`/`hop_size` 等，修改时加 `m_` 前缀 |
-| FunAsr `create_model()` 返回裸指针 | ADR-7 禁止直接修改 vendor 代码，在调用处用 `std::unique_ptr` 包装 |
-| paraformer_onnx.h 命名空间注释 | `} // namespace paraformer` — vendor 代码，不修改 (ADR-7) |
-
----
-
-## 待办 — 按需改进 (P3, 有需求时再做)
-
-### F.1 示例项目 — P3, M (2-8h)
-
-在 `examples/` 创建最小非 DiffSinger 应用，演示 dsfw 框架独立使用。当有外部用户需要参考时再做。
+| 项目 | 说明 | 状态 |
+|------|------|------|
+| ~~Game 类 snake_case/camelCase 混用~~ | ~~`load_model()`/`get_midi()` 等，修改时统一为 camelCase~~ | ✅ 已完成 |
+| ~~Slicer 成员变量 snake_case~~ | ~~`sample_rate`/`hop_size` 等，修改时加 `m_` 前缀~~ | ✅ 已完成 |
+| ~~FunAsr `create_model()` 返回裸指针~~ | ~~调用处已用 `std::unique_ptr` 包装~~ | ✅ 已完成 |
+| paraformer_onnx.h 命名空间注释 | `} // namespace paraformer` — vendor 代码，不修改 (ADR-7) | ⏭ 跳过 |
 
 ---
 
 ## 剩余技术债
 
-| 编号 | 描述 | 严重性 |
-|------|------|--------|
-| TD-04 | 少数 UI 便捷路径的 file.open() 缺 else 分支 | 低 |
+无。
 
 > 更新时间：2026-05-02
 
@@ -85,4 +76,4 @@
 
 所有计划内 Issue 已关闭。
 
-已关闭: #11 (领域测试), #15 (框架独立编译), #16 (API 文档 CI), #18 (DLL 导出), #19 (labeler-interfaces), #21 (CI 矩阵), #27 (clang-tidy), #28 (TranscriptionPipeline), #37 (Slicer), #38 (MinLabel), #39 (大文件拆分), #40 (魔法数字), CMake 现代化 (I.1-I.5), 框架功能补全 (J.1-J.5), 代码规范化 (K.1-K.3)
+已关闭: #11 (领域测试), #15 (框架独立编译), #16 (API 文档 CI), #18 (DLL 导出), #19 (labeler-interfaces), #21 (CI 矩阵), #27 (clang-tidy), #28 (TranscriptionPipeline), #37 (Slicer), #38 (MinLabel), #39 (大文件拆分), #40 (魔法数字), CMake 现代化 (I.1-I.5), 框架功能补全 (J.1-J.5), 代码规范化 (K.1-K.4), TD-04, F.1
