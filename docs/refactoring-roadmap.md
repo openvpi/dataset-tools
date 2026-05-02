@@ -213,12 +213,12 @@
 | M.3.2 | DsLabeler exe + main.cpp | CMakeLists.txt + AppShell 6 页面注册 | 低 | 依赖 M.1 | ✅ |
 | M.3.3 | WelcomePage | 新建工程向导（4 步模态对话框）、打开工程、最近工程列表（RecentFilesManager）、切片流程 | 中：向导步骤多，需处理取消/回退 | 可独立 UI 先行 | ✅ |
 | M.3.4 | SettingsPage | 横向 TabWidget（7 个 tab），读写 DsProject.defaults。PropertyEditor 复用 | 低 | 可与 M.3.3 并行 | ✅ |
-| M.3.5 | DsMinLabelPage | ProjectDataSource + MinLabelEditor + ASR/LyricFA 按钮 + 批处理菜单 | 中：ASR 按钮需对接 FunASR 推理 + 后台线程 | 依赖 M.1.1, M.3.1 | 待做 |
-| M.3.6 | DsPhonemeLabelerPage | ProjectDataSource + PhonemeEditor + 自动 FA 逻辑 + 批处理菜单 + 预加载 | 中：预加载需后台线程池 + UI 取消同步 | 依赖 M.1.2, M.3.1 | 待做 |
-| M.3.7 | DsPitchLabelerPage | ProjectDataSource + PitchEditor + 自动 add_ph_num/F0/MIDI + 批处理 + 预加载 | 中：3 个自动步骤串联，错误处理复杂 | 依赖 M.1.3, M.3.1 | 待做 |
-| M.3.8 | ExportPage | 导出页面 UI + 自动补全逻辑 + CSV/DS/WAV 输出 + 重采样 + 进度 | 中：补全逻辑需调用多个处理器，重采样需 soxr 跨平台验证 | 依赖 M.3.1, L.9 | 待做 |
+| M.3.5 | DsMinLabelPage | ProjectDataSource + MinLabelEditor + ASR/LyricFA 按钮 + 批处理菜单 | 中：ASR 按钮需对接 FunASR 推理 + 后台线程 | 依赖 M.1.1, M.3.1 | ✅ |
+| M.3.6 | DsPhonemeLabelerPage | ProjectDataSource + PhonemeEditor + 自动 FA 逻辑 + 批处理菜单 + 预加载 | 中：预加载需后台线程池 + UI 取消同步 | 依赖 M.1.2, M.3.1 | ✅ |
+| M.3.7 | DsPitchLabelerPage | ProjectDataSource + PitchEditor + 自动 add_ph_num/F0/MIDI + 批处理 + 预加载 | 中：3 个自动步骤串联，错误处理复杂 | 依赖 M.1.3, M.3.1 | ✅ |
+| M.3.8 | ExportPage | 导出页面 UI + 自动补全逻辑 + CSV/DS/WAV 输出 + 重采样 + 进度 | 中：补全逻辑需调用多个处理器，重采样需 soxr 跨平台验证 | 依赖 M.3.1, L.9 | ✅ |
 | M.3.9 | 导出前置校验 | grapheme 层缺失检测，per-slice editedSteps 检查，按钮禁用/提示 | 低 | 依赖 M.3.8 | 待做 |
-| M.3.10 | 层依赖失效引擎 | 实现 `LayerDependencyGraph`：保存时检测修改的层 → 传递标记下游层 dirty → 持久化到 context JSON | 中：需仔细定义"层是否实际变化"的比较逻辑（避免误触发） | 依赖 M.3.1 | 待做 |
+| M.3.10 | 层依赖失效引擎 | 实现 `LayerDependencyGraph`：保存时检测修改的层 → 传递标记下游层 dirty → 持久化到 context JSON | 中：需仔细定义"层是否实际变化"的比较逻辑（避免误触发） | 依赖 M.3.1 | ✅ |
 | M.3.11 | dirty 自动重算 + Toast | 页面 `onActivated()` 中检测当前切片的 dirty 列表 → 后台重算 → Toast 通知 → 刷新 UI。Toast 3 秒消失，不阻塞编辑 | 中：重算期间用户可能切换切片，需取消正在进行的重算 | 依赖 M.3.10 | 待做 |
 | M.3.12 | DsLabeler 端到端测试 | 手动验证：完整流程 + 回退场景（音素修改后回到 PitchLabeler 验证 dirty 重算） | — | 依赖全部 M.3 | 待做 |
 
@@ -288,11 +288,11 @@ L.10 (遗留清理)          L.11 (.dsproj v3, 可与 L.9 并行)
 | L.10 | 4 | 1 天 | ✅ |
 | L.11 | 4 | 2 天 | ✅ |
 | M.1 | 4 | 5 天 | ✅ |
-| M.2 | 6 | 3 天 | 进行中 |
+| M.2 | 6 | 3 天 | ✅ |
 | M.3 | 12 | 10 天 | 进行中 |
 | M.4 | 4 | 1 天 | 待做 |
 | N | 6 | 3 天 | 待做 |
-| **合计** | **63** | **~30 天** | **39 完成** |
+| **合计** | **63** | **~30 天** | **45 完成** |
 
 ---
 
@@ -369,4 +369,4 @@ L.10 (遗留清理)          L.11 (.dsproj v3, 可与 L.9 并行)
 - [framework-architecture.md](framework-architecture.md) — 框架架构
 - [architecture.md](architecture.md) — 项目架构概述
 
-> 更新时间：2026-05-03 (Phase M.1-M.3.4 完成)
+> 更新时间：2026-05-03 (Phase M.3.5-M.3.8, M.3.10 完成)
