@@ -102,6 +102,9 @@ function(dstools_add_library target_name)
         endif()
 
         add_library(${target_name} ${_type} ${_sources})
+
+        # Ensure static libraries can be linked into shared libraries on Linux
+        set_target_properties(${target_name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
     else()
         add_library(${target_name} INTERFACE)
     endif()
