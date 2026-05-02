@@ -1,0 +1,450 @@
+#include "PhonemeEditor.h"
+
+#include "ui/SpectrogramColorPalette.h"
+
+#include <QHBoxLayout>
+#include <QIcon>
+#include <QVBoxLayout>
+
+#include <dstools/AudioDecoder.h>
+#include <dstools/WaveFormat.h>
+
+namespace dstools {
+namespace phonemelabeler {
+
+PhonemeEditor::PhonemeEditor(QWidget *parent)
+    : QWidget(parent),
+      m_document(new TextGridDocument(this)),
+      m_playWidget(new dstools::widgets::PlayWidget()),
+      m_undoStack(new QUndoStack(this)),
+      m_viewport(new ViewportController(this)),
+      m_bindingManager(new BoundaryBindingManager(m_document, this)),
+      m_renderer(new WaveformRenderer(this))
+{
+    buildActions();
+    buildToolbar();
+    buildLayout();
+    connectSignals();
+}
+
+// ---- Configuration ----
+
+void PhonemeEditor::setDocument(TextGridDocument *doc) {
+    Q_UNUSED(doc)
+    // The editor owns its own document. External callers interact via loadAudio
+    // or future IEditorDataSource. This method is reserved for future use.
+}
+
+void PhonemeEditor::loadAudio(const QString &audioPath) {
+    if (audioPath.isEmpty()) return;
+
+    m_waveformWidget->loadAudio(audioPath);
+    m_playWidget->openFile(audioPath);
+
+    if (m_renderer->loadAudio(audioPath)) {
+        m_powerWidget->setAudioData(m_renderer->samples(), m_renderer->sampleRate());
+        m_spectrogramWidget->setAudioData(m_renderer->samples(), m_renderer->sampleRate());
+    }
+
+    m_waveformWidget->setDocument(m_document);
+    m_tierEditWidget->setDocument(m_document);
+    m_powerWidget->setDocument(m_document);
+    m_spectrogramWidget->setDocument(m_document);
+    m_boundaryOverlay->setDocument(m_document);
+    m_entryListPanel->setDocument(m_document);
+
+    double duration = m_document->totalDuration();
+    m_viewport->setTotalDuration(duration);
+    m_viewport->setViewRange(0.0, duration);
+    updateScrollBar();
+
+    emit documentLoaded();
+}
+
+void PhonemeEditor::setBindingEnabled(bool enabled) {
+    m_bindingManager->setEnabled(enabled);
+    m_actToggleBinding->setChecked(enabled);
+    if (m_actBindingToggle) m_actBindingToggle->setChecked(enabled);
+    emit bindingChanged(enabled);
+}
+
+void PhonemeEditor::setBindingToleranceMs(double ms) {
+    m_bindingManager->setToleranceMs(ms);
+}
+
+void PhonemeEditor::setPixelsPerSecond(double pps) {
+    m_viewport->setPixelsPerSecond(pps);
+    emit zoomChanged(pps);
+}
+
+void PhonemeEditor::setPowerVisible(bool visible) {
+    m_powerWidget->setVisible(visible);
+    m_actTogglePower->setChecked(visible);
+}
+
+void PhonemeEditor::setSpectrogramVisible(bool visible) {
+    m_spectrogramWidget->setVisible(visible);
+    m_actToggleSpectrogram->setChecked(visible);
+}
+
+void PhonemeEditor::setSpectrogramColorStyle(const QString &styleName) {
+    m_spectrogramWidget->setColorPalette(SpectrogramColorPalette::fromName(styleName));
+}
+
+QList<QAction *> PhonemeEditor::viewActions() const {
+    return {m_actZoomIn, m_actZoomOut, m_actZoomReset, nullptr,
+            m_actToggleBinding, nullptr,
+            m_actTogglePower, m_actToggleSpectrogram};
+}
+
+// ---- Actions ----
+
+void PhonemeEditor::buildActions() {
+    m_actSave = new QAction(tr("&Save"), this);
+    m_actSaveAs = new QAction(tr("Save &As..."), this);
+
+    m_actUndo = new QAction(tr("&Undo"), this);
+    connect(m_actUndo, &QAction::triggered, this, [this]() {
+        if (m_undoStack->canUndo()) m_undoStack->undo();
+    });
+
+    m_actRedo = new QAction(tr("&Redo"), this);
+    connect(m_actRedo, &QAction::triggered, this, [this]() {
+        if (m_undoStack->canRedo()) m_undoStack->redo();
+    });
+
+    m_actZoomIn = new QAction(tr("Zoom &In"), this);
+    connect(m_actZoomIn, &QAction::triggered, this, &PhonemeEditor::onZoomIn);
+
+    m_actZoomOut = new QAction(tr("Zoom &Out"), this);
+    connect(m_actZoomOut, &QAction::triggered, this, &PhonemeEditor::onZoomOut);
+
+    m_actZoomReset = new QAction(tr("&Reset Zoom"), this);
+    connect(m_actZoomReset, &QAction::triggered, this, &PhonemeEditor::onZoomReset);
+
+    m_actToggleBinding = new QAction(tr("&Boundary Binding"), this);
+    m_actToggleBinding->setCheckable(true);
+    connect(m_actToggleBinding, &QAction::triggered, this, [this]() {
+        bool enabled = !m_bindingManager->isEnabled();
+        setBindingEnabled(enabled);
+    });
+
+    m_actTogglePower = new QAction(tr("Show &Power"), this);
+    m_actTogglePower->setCheckable(true);
+    connect(m_actTogglePower, &QAction::triggered, this, [this]() {
+        setPowerVisible(m_actTogglePower->isChecked());
+    });
+
+    m_actToggleSpectrogram = new QAction(tr("Show &Spectrogram"), this);
+    m_actToggleSpectrogram->setCheckable(true);
+    connect(m_actToggleSpectrogram, &QAction::triggered, this, [this]() {
+        setSpectrogramVisible(m_actToggleSpectrogram->isChecked());
+    });
+
+    // Spectrogram color style submenu
+    m_spectrogramColorMenu = new QMenu(tr("Spectrogram &Color"), this);
+    m_spectrogramColorGroup = new QActionGroup(this);
+    m_spectrogramColorGroup->setExclusive(true);
+    for (const auto &palette : SpectrogramColorPalette::builtinPresets()) {
+        QAction *act = m_spectrogramColorMenu->addAction(palette.name());
+        act->setCheckable(true);
+        m_spectrogramColorGroup->addAction(act);
+        connect(act, &QAction::triggered, this, [this, name = palette.name()]() {
+            setSpectrogramColorStyle(name);
+        });
+    }
+}
+
+void PhonemeEditor::buildToolbar() {
+    m_toolbar = new QToolBar(tr("Main Toolbar"), this);
+    m_toolbar->setMovable(false);
+
+    m_actPlayPause = m_toolbar->addAction(tr("Play"), this, &PhonemeEditor::onPlayPause);
+    m_actPlayPause->setIcon(QIcon(":/icons/play.svg"));
+    m_actStop = m_toolbar->addAction(tr("Stop"), this, &PhonemeEditor::onStop);
+    m_actStop->setIcon(QIcon(":/icons/stop.svg"));
+
+    m_toolbar->addSeparator();
+
+    m_actBindingToggle = m_toolbar->addAction(tr("Binding"), this, [this]() {
+        bool enabled = !m_bindingManager->isEnabled();
+        setBindingEnabled(enabled);
+    });
+    m_actBindingToggle->setCheckable(true);
+
+    m_toolbar->addSeparator();
+    m_toolbar->addWidget(m_playWidget);
+}
+
+void PhonemeEditor::buildLayout() {
+    auto *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+
+    m_mainSplitter = new QSplitter(Qt::Horizontal, this);
+    mainLayout->addWidget(m_mainSplitter);
+
+    // Center: container with time ruler + vertical splitter + horizontal scrollbar
+    auto *centerContainer = new QWidget(this);
+    auto *centerLayout = new QVBoxLayout(centerContainer);
+    centerLayout->setContentsMargins(0, 0, 0, 0);
+    centerLayout->setSpacing(0);
+
+    // Time ruler at top
+    m_timeRulerWidget = new TimeRulerWidget(m_viewport, this);
+    centerLayout->addWidget(m_timeRulerWidget);
+
+    // Vertical splitter with tiers + waveform + power + spectrogram
+    m_rightSplitter = new QSplitter(Qt::Vertical, this);
+    centerLayout->addWidget(m_rightSplitter, 1);
+
+    // Tier editor
+    m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_bindingManager, this);
+    m_rightSplitter->addWidget(m_tierEditWidget);
+
+    // Waveform
+    m_waveformWidget = new WaveformWidget(m_viewport, this);
+    m_waveformWidget->setBindingManager(m_bindingManager);
+    m_waveformWidget->setUndoStack(m_undoStack);
+    m_waveformWidget->setPlayWidget(m_playWidget);
+    m_rightSplitter->addWidget(m_waveformWidget);
+
+    // Power
+    m_powerWidget = new PowerWidget(m_viewport, this);
+    m_powerWidget->setBindingManager(m_bindingManager);
+    m_powerWidget->setUndoStack(m_undoStack);
+    m_rightSplitter->addWidget(m_powerWidget);
+
+    // Spectrogram
+    m_spectrogramWidget = new SpectrogramWidget(m_viewport, this);
+    m_spectrogramWidget->setBindingManager(m_bindingManager);
+    m_spectrogramWidget->setUndoStack(m_undoStack);
+    m_rightSplitter->addWidget(m_spectrogramWidget);
+
+    m_rightSplitter->setStretchFactor(0, 0); // tier: fixed
+    m_rightSplitter->setStretchFactor(1, 1); // waveform: 1/4
+    m_rightSplitter->setStretchFactor(2, 1); // power: 1/4
+    m_rightSplitter->setStretchFactor(3, 2); // spectrogram: 1/2
+    m_rightSplitter->setHandleWidth(1);
+
+    // Boundary overlay
+    m_boundaryOverlay = new BoundaryOverlayWidget(m_viewport, centerContainer);
+    m_boundaryOverlay->trackWidget(m_rightSplitter);
+
+    // Horizontal scrollbar at bottom
+    m_hScrollBar = new QScrollBar(Qt::Horizontal, this);
+    m_hScrollBar->setMinimum(0);
+    m_hScrollBar->setMaximum(0);
+    centerLayout->addWidget(m_hScrollBar);
+
+    m_mainSplitter->addWidget(centerContainer);
+
+    // Right: entry list panel
+    m_entryListPanel = new EntryListPanel(this);
+    m_entryListPanel->setViewportController(m_viewport);
+    m_entryListPanel->setMinimumWidth(160);
+    m_entryListPanel->setMaximumWidth(300);
+    m_mainSplitter->addWidget(m_entryListPanel);
+
+    // Set split ratios
+    m_mainSplitter->setStretchFactor(0, 1); // center: stretch
+    m_mainSplitter->setStretchFactor(1, 0); // entry list: fixed
+}
+
+void PhonemeEditor::connectSignals() {
+    // Document signals
+    connect(m_document, &TextGridDocument::documentChanged, this, [this]() {
+        emit modificationChanged(m_document->isModified());
+    });
+
+    // Undo stack
+    connect(m_undoStack, &QUndoStack::canUndoChanged, m_actUndo, &QAction::setEnabled);
+    connect(m_undoStack, &QUndoStack::canRedoChanged, m_actRedo, &QAction::setEnabled);
+    connect(m_undoStack, &QUndoStack::undoTextChanged, [this](const QString &text) {
+        m_actUndo->setText(tr("&Undo") + (text.isEmpty() ? QString() : (" (" + text + ")")));
+    });
+    connect(m_undoStack, &QUndoStack::redoTextChanged, [this](const QString &text) {
+        m_actRedo->setText(tr("&Redo") + (text.isEmpty() ? QString() : (" (" + text + ")")));
+    });
+
+    // Viewport
+    connect(m_viewport, &ViewportController::viewportChanged, m_waveformWidget, &WaveformWidget::setViewport);
+    connect(m_viewport, &ViewportController::viewportChanged, m_tierEditWidget, &TierEditWidget::setViewport);
+    connect(m_viewport, &ViewportController::viewportChanged, m_powerWidget, &PowerWidget::setViewport);
+    connect(m_viewport, &ViewportController::viewportChanged, m_spectrogramWidget, &SpectrogramWidget::setViewport);
+    connect(m_viewport, &ViewportController::viewportChanged, m_timeRulerWidget, &TimeRulerWidget::setViewport);
+    connect(m_viewport, &ViewportController::viewportChanged, m_boundaryOverlay, &BoundaryOverlayWidget::setViewport);
+
+    // Viewport → scrollbar sync
+    connect(m_viewport, &ViewportController::viewportChanged, this, [this](const ViewportState &) {
+        updateScrollBar();
+    });
+
+    // Scrollbar → viewport
+    connect(m_hScrollBar, &QScrollBar::valueChanged, this, &PhonemeEditor::onScrollBarValueChanged);
+
+    // Active tier → repaint boundary overlays
+    connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int) {
+        updateAllBoundaryOverlays();
+    });
+    connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, TimePos) {
+        updateAllBoundaryOverlays();
+        m_tierEditWidget->update();
+        for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
+            child->update();
+        }
+    });
+    connect(m_document, &TextGridDocument::boundaryInserted, this, [this](int, int) {
+        updateAllBoundaryOverlays();
+    });
+    connect(m_document, &TextGridDocument::boundaryRemoved, this, [this](int, int) {
+        updateAllBoundaryOverlays();
+    });
+
+    // Entry list panel: rebuild when active tier changes or boundaries change
+    connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int) {
+        m_entryListPanel->rebuildEntries();
+    });
+    connect(m_document, &TextGridDocument::boundaryInserted, this, [this](int, int) {
+        m_entryListPanel->rebuildEntries();
+    });
+    connect(m_document, &TextGridDocument::boundaryRemoved, this, [this](int, int) {
+        m_entryListPanel->rebuildEntries();
+    });
+    connect(m_document, &TextGridDocument::intervalTextChanged, this, [this](int, int) {
+        m_entryListPanel->rebuildEntries();
+    });
+
+    // Playback
+    connect(m_playWidget, &dstools::widgets::PlayWidget::playheadChanged,
+            [this](double sec) {
+                m_waveformWidget->setPlayhead(sec);
+                emit positionChanged(sec);
+            });
+
+    // Mouse wheel entry switching
+    auto scrollEntry = [this](int delta) {
+        int current = m_entryListPanel->currentEntryIndex();
+        int newIndex = current + delta;
+        if (newIndex < 0) newIndex = 0;
+        m_entryListPanel->selectEntry(newIndex);
+    };
+    connect(m_waveformWidget, &WaveformWidget::entryScrollRequested, this, scrollEntry);
+    connect(m_powerWidget, &PowerWidget::entryScrollRequested, this, scrollEntry);
+    connect(m_spectrogramWidget, &SpectrogramWidget::entryScrollRequested, this, scrollEntry);
+    connect(m_timeRulerWidget, &TimeRulerWidget::entryScrollRequested, this, scrollEntry);
+
+    // Hover/drag state → boundary overlay
+    connect(m_waveformWidget, &WaveformWidget::hoveredBoundaryChanged,
+            m_boundaryOverlay, &BoundaryOverlayWidget::setHoveredBoundary);
+    connect(m_powerWidget, &PowerWidget::hoveredBoundaryChanged,
+            m_boundaryOverlay, &BoundaryOverlayWidget::setHoveredBoundary);
+    connect(m_spectrogramWidget, &SpectrogramWidget::hoveredBoundaryChanged,
+            m_boundaryOverlay, &BoundaryOverlayWidget::setHoveredBoundary);
+
+    // Drag started
+    auto onDragStarted = [this](int, int boundaryIndex) {
+        m_boundaryOverlay->setDraggedBoundary(boundaryIndex);
+    };
+    connect(m_waveformWidget, &WaveformWidget::boundaryDragStarted, this, onDragStarted);
+    connect(m_powerWidget, &PowerWidget::boundaryDragStarted, this, onDragStarted);
+    connect(m_spectrogramWidget, &SpectrogramWidget::boundaryDragStarted, this, onDragStarted);
+
+    // Drag finished
+    auto onDragFinished = [this](int, int, TimePos) {
+        m_boundaryOverlay->setDraggedBoundary(-1);
+    };
+    connect(m_waveformWidget, &WaveformWidget::boundaryDragFinished, this, onDragFinished);
+    connect(m_powerWidget, &PowerWidget::boundaryDragFinished, this, onDragFinished);
+    connect(m_spectrogramWidget, &SpectrogramWidget::boundaryDragFinished, this, onDragFinished);
+}
+
+void PhonemeEditor::updateAllBoundaryOverlays() {
+    m_waveformWidget->updateBoundaryOverlay();
+    m_powerWidget->updateBoundaryOverlay();
+    m_spectrogramWidget->updateBoundaryOverlay();
+    m_boundaryOverlay->update();
+}
+
+void PhonemeEditor::onZoomIn() {
+    m_viewport->zoomAt(m_viewport->viewCenter(), 1.25);
+    emit zoomChanged(m_viewport->pixelsPerSecond());
+}
+
+void PhonemeEditor::onZoomOut() {
+    m_viewport->zoomAt(m_viewport->viewCenter(), 0.8);
+    emit zoomChanged(m_viewport->pixelsPerSecond());
+}
+
+void PhonemeEditor::onZoomReset() {
+    m_viewport->setPixelsPerSecond(200.0);
+    emit zoomChanged(200.0);
+}
+
+void PhonemeEditor::onPlayPause() {
+    m_playWidget->setPlaying(!m_playWidget->isPlaying());
+}
+
+void PhonemeEditor::onStop() {
+    m_playWidget->setPlaying(false);
+}
+
+void PhonemeEditor::updatePlaybackState() {
+    const bool playing = m_playWidget->isPlaying();
+    if (playing) {
+        m_actPlayPause->setIcon(QIcon(":/icons/pause.svg"));
+        m_actPlayPause->setText(tr("Pause"));
+    } else {
+        m_actPlayPause->setIcon(QIcon(":/icons/play.svg"));
+        m_actPlayPause->setText(tr("Play"));
+    }
+}
+
+void PhonemeEditor::updateScrollBar() {
+    double totalDuration = m_viewport->totalDuration();
+    if (totalDuration <= 0.0) {
+        m_hScrollBar->setRange(0, 0);
+        return;
+    }
+
+    double viewDuration = m_viewport->duration();
+    int totalMs = static_cast<int>(totalDuration * 1000.0);
+    int viewMs = static_cast<int>(viewDuration * 1000.0);
+    int maxVal = qMax(0, totalMs - viewMs);
+
+    QSignalBlocker blocker(m_hScrollBar);
+    m_hScrollBar->setRange(0, maxVal);
+    m_hScrollBar->setPageStep(viewMs);
+    m_hScrollBar->setSingleStep(qMax(1, viewMs / 10));
+    m_hScrollBar->setValue(static_cast<int>(m_viewport->startSec() * 1000.0));
+}
+
+void PhonemeEditor::onScrollBarValueChanged(int value) {
+    double startSec = value / 1000.0;
+    double viewDuration = m_viewport->duration();
+    m_viewport->setViewRange(startSec, startSec + viewDuration);
+}
+
+void PhonemeEditor::playBoundarySegment(double timeSec) {
+    if (!m_document || !m_playWidget) return;
+
+    int activeTier = m_document->activeTierIndex();
+    if (activeTier < 0 || activeTier >= m_document->tierCount()) return;
+
+    double segStart = 0.0;
+    double segEnd = m_document->totalDuration();
+
+    int count = m_document->boundaryCount(activeTier);
+    for (int b = 0; b < count; ++b) {
+        double t = m_document->boundaryTime(activeTier, b);
+        if (t <= timeSec) segStart = t;
+        if (t > timeSec) { segEnd = t; break; }
+    }
+
+    m_playWidget->setPlayRange(segStart, segEnd);
+    m_playWidget->seek(segStart);
+    m_playWidget->setPlaying(true);
+}
+
+} // namespace phonemelabeler
+} // namespace dstools
