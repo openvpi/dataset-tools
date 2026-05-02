@@ -4,8 +4,6 @@
 #include "PitchFileService.h"
 #include "../PitchLabelerKeys.h"
 #include "ui/FileListPanel.h"
-#include "ui/PianoRollView.h"
-#include "ui/PropertyPanel.h"
 
 #include <dstools/TimePos.h>
 
@@ -16,9 +14,15 @@
 #include <QIcon>
 #include <QMessageBox>
 #include <QShortcut>
+#include <QVBoxLayout>
 
 #include <dstools/ShortcutManager.h>
 #include <dstools/AudioFileResolver.h>
+#include <dsfw/Theme.h>
+
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QMenuBar>
 
 #include <functional>
 
@@ -26,18 +30,44 @@ namespace dstools {
     namespace pitchlabeler {
 
         PitchLabelerPage::PitchLabelerPage(QWidget *parent)
-            : QWidget(parent), m_fileService(new PitchFileService(this)),
-              m_playWidget(new dstools::widgets::PlayWidget()),
-              m_undoStack(new QUndoStack(this)) {
+            : QWidget(parent),
+              m_editor(new PitchEditor(this)),
+              m_fileService(new PitchFileService(this))
+        {
+            // Layout: FileList | Editor
+            m_outerSplitter = new QSplitter(Qt::Horizontal);
 
-            m_viewport = new dstools::widgets::ViewportController(this);
-            m_viewport->setPixelsPerSecond(100.0);
+            m_fileListPanel = new ui::FileListPanel();
+            m_fileListPanel->setMinimumWidth(160);
+            m_fileListPanel->setMaximumWidth(280);
+            m_outerSplitter->addWidget(m_fileListPanel);
+            m_outerSplitter->addWidget(m_editor);
+            m_outerSplitter->setSizes({200, 1240});
 
-            buildActions();
-            buildLayout();
-            connectSignals();
+            auto *pageLayout = new QVBoxLayout(this);
+            pageLayout->setContentsMargins(0, 0, 0, 0);
+            pageLayout->setSpacing(0);
+            pageLayout->addWidget(m_outerSplitter);
 
             m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
+
+            // Connect file list
+            connect(m_fileListPanel, &ui::FileListPanel::fileSelected, this, &PitchLabelerPage::loadFile);
+
+            // Connect editor signals
+            connect(m_editor->saveAction(), &QAction::triggered, this, &PitchLabelerPage::saveFile);
+            connect(m_editor->saveAllAction(), &QAction::triggered, this, &PitchLabelerPage::saveAllFiles);
+
+            connect(m_editor, &PitchEditor::fileEdited, this, [this]() {
+                if (m_currentFile) {
+                    m_fileService->markCurrentFileModified();
+                    updateStatusInfo();
+                    m_fileListPanel->setFileModified(m_currentFilePath, true);
+                    emit modificationChanged(true);
+                }
+            });
+
+            connect(m_editor, &PitchEditor::modificationChanged, this, &PitchLabelerPage::modificationChanged);
 
             applyConfig();
         }
@@ -69,11 +99,8 @@ namespace dstools {
             m_currentFilePath.clear();
             m_currentFile.reset();
 
-            // Switch to empty state
-            m_mainStack->setCurrentIndex(0);
+            m_editor->clear();
             m_fileListPanel->clear();
-            m_pianoRoll->clear();
-            m_propertyPanel->clear();
 
             updateStatusInfo();
             emit workingDirectoryChanged(QString());
@@ -112,21 +139,15 @@ namespace dstools {
             if (!m_workingDirectory.isEmpty()) {
                 m_settings.set(PitchLabelerKeys::LastDir, m_workingDirectory);
             }
-            m_pianoRoll->pullConfig(m_settings);
+            m_editor->pullConfig(m_settings);
             m_fileListPanel->saveState();
         }
 
         void PitchLabelerPage::applyConfig() {
-            // Apply saved shortcuts
             m_shortcutManager->applyAll();
-
-            // Window-level shortcuts for tool modes, playback, navigation
             rebuildWindowShortcuts();
+            m_editor->loadConfig(m_settings);
 
-            // Load piano roll display options
-            m_pianoRoll->loadConfig(m_settings);
-
-            // Restore last directory
             if (const QString savedDir = m_settings.get(PitchLabelerKeys::LastDir);
                 !savedDir.isEmpty() && QDir(savedDir).exists()) {
                 m_workingDirectory = savedDir;
@@ -141,34 +162,14 @@ namespace dstools {
             m_currentFile = m_fileService->currentFile();
             m_currentFilePath = m_fileService->currentFilePath();
 
-            m_undoStack->clear();
-            m_mainStack->setCurrentIndex(1);
-            m_pianoRoll->setDSFile(m_currentFile);
-            m_propertyPanel->setDSFile(m_currentFile);
-            m_actSave->setEnabled(true);
+            m_editor->loadDSFile(m_currentFile);
 
             QString audioPath = dstools::AudioFileResolver::findAudioFile(path);
             if (!audioPath.isEmpty()) {
-                m_playWidget->openFile(audioPath);
-            }
-
-            if (m_pianoRoll) {
-                double audioDur = m_playWidget->duration();
-                if (audioDur > 0)
-                    m_pianoRoll->setAudioDuration(audioDur);
+                m_editor->loadAudio(audioPath, m_editor->playWidget()->duration());
             }
 
             m_originalF0 = m_currentFile->f0.values;
-
-            if (m_playbackProgressSlider && m_currentFile) {
-                double total = usToSec(m_currentFile->getTotalDuration());
-                m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
-                m_playbackProgressSlider->setValue(0);
-                m_progressCurrentTime->setText("00:00.000");
-                int totalMin = static_cast<int>(total) / 60;
-                double totalSec = total - totalMin * 60;
-                m_progressTotalTime->setText(QString("%1:%2").arg(totalMin, 2, 10, QChar('0')).arg(totalSec, 6, 'f', 3, QChar('0')));
-            }
 
             updateStatusInfo();
             emit fileLoaded(path);
@@ -193,109 +194,6 @@ namespace dstools {
             return true;
         }
 
-        void PitchLabelerPage::onUndo() {
-            m_undoStack->undo();
-            m_pianoRoll->update();
-            updateUndoRedoState();
-            emit modificationChanged(m_fileService->hasUnsavedChanges());
-        }
-
-        void PitchLabelerPage::onRedo() {
-            m_undoStack->redo();
-            m_pianoRoll->update();
-            updateUndoRedoState();
-            emit modificationChanged(m_fileService->hasUnsavedChanges());
-        }
-
-        void PitchLabelerPage::updateUndoRedoState() {
-            m_actUndo->setEnabled(m_undoStack->canUndo());
-            m_actRedo->setEnabled(m_undoStack->canRedo());
-        }
-
-        void PitchLabelerPage::onZoomIn() {
-            m_pianoRoll->zoomIn();
-            updateZoomStatus();
-        }
-
-        void PitchLabelerPage::onZoomOut() {
-            m_pianoRoll->zoomOut();
-            updateZoomStatus();
-        }
-
-        void PitchLabelerPage::onZoomReset() {
-            m_pianoRoll->resetZoom();
-            updateZoomStatus();
-        }
-
-        void PitchLabelerPage::updateZoomStatus() {
-            int zoom = m_pianoRoll->getZoomPercent();
-            emit zoomChanged(zoom);
-        }
-
-        void PitchLabelerPage::onPlayPause() {
-            m_playWidget->setPlaying(!m_playWidget->isPlaying());
-        }
-
-        void PitchLabelerPage::onStop() {
-            m_playWidget->setPlaying(false);
-        }
-
-        void PitchLabelerPage::updateTimeLabels(double sec) {
-            auto formatTime = [](double s) -> QString {
-                int min = static_cast<int>(s) / 60;
-                double sec = s - min * 60;
-                return QString("%1:%2").arg(min, 2, 10, QChar('0')).arg(sec, 6, 'f', 3, QChar('0'));
-            };
-
-            m_progressCurrentTime->setText(formatTime(sec));
-            if (m_currentFile) {
-                m_progressTotalTime->setText(formatTime(usToSec(m_currentFile->getTotalDuration())));
-            }
-
-            emit positionChanged(sec);
-        }
-
-        void PitchLabelerPage::updatePlayheadPosition(double sec) {
-            m_pianoRoll->setPlayheadTime(sec);
-            updateTimeLabels(sec);
-
-            // Don't fight the user — skip slider update while they're dragging
-            if (m_playbackProgressSlider && m_currentFile &&
-                !m_playbackProgressSlider->isSliderDown()) {
-                double total = usToSec(m_currentFile->getTotalDuration());
-                m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
-                m_playbackProgressSlider->setValue(static_cast<int>(sec * 1000));
-            }
-        }
-
-        void PitchLabelerPage::updatePlaybackState() {
-            const bool playing = m_playWidget->isPlaying();
-            m_actPlayPause->setIcon(QIcon(playing ? ":/icons/pause.svg" : ":/icons/play.svg"));
-            m_actPlayPause->setToolTip(playing ? tr("Pause") : tr("Play"));
-        }
-
-        void PitchLabelerPage::setToolMode(ui::ToolMode mode) {
-            m_pianoRoll->setToolMode(mode);
-            m_btnToolSelect->setChecked(mode == ui::ToolSelect);
-            m_btnToolModulation->setChecked(mode == ui::ToolModulation);
-            m_btnToolDrift->setChecked(mode == ui::ToolDrift);
-            emit toolModeChanged(static_cast<int>(mode));
-        }
-
-        void PitchLabelerPage::onNoteSelected(int noteIndex) {
-            if (!m_currentFile)
-                return;
-
-            if (noteIndex >= 0 && noteIndex < static_cast<int>(m_currentFile->notes.size())) {
-                m_propertyPanel->setSelectedNote(noteIndex);
-            }
-        }
-
-        void PitchLabelerPage::onPositionClicked(double time, double midi) {
-            Q_UNUSED(midi)
-            emit positionChanged(time);
-        }
-
         void PitchLabelerPage::onNextFile() {
             m_fileListPanel->selectNextFile();
         }
@@ -311,24 +209,10 @@ namespace dstools {
                 emit fileStatusChanged(QString());
             }
 
-            if (m_currentFile) {
-                emit noteCountChanged(m_currentFile->getNoteCount());
-            } else {
-                emit noteCountChanged(0);
-            }
-
             emit modificationChanged(hasUnsavedChanges());
         }
 
-        void PitchLabelerPage::reloadCurrentFile() {
-            if (!m_currentFilePath.isEmpty()) {
-                m_fileService->reloadCurrentFile();
-                m_currentFile = m_fileService->currentFile();
-            }
-        }
-
         void PitchLabelerPage::rebuildWindowShortcuts() {
-            // Delete previous shortcuts
             qDeleteAll(m_windowShortcuts);
             m_windowShortcuts.clear();
 
@@ -338,11 +222,11 @@ namespace dstools {
             };
 
             const Entry entries[] = {
-                {PitchLabelerKeys::ToolSelect, [this]() { setToolMode(ui::ToolSelect); }},
-                {PitchLabelerKeys::ToolModulation, [this]() { setToolMode(ui::ToolModulation); }},
-                {PitchLabelerKeys::ToolDrift, [this]() { setToolMode(ui::ToolDrift); }},
-                {PitchLabelerKeys::PlaybackPlayPause, [this]() { onPlayPause(); }},
-                {PitchLabelerKeys::PlaybackStop, [this]() { onStop(); }},
+                {PitchLabelerKeys::ToolSelect, [this]() { m_editor->pianoRoll()->setToolMode(ui::ToolSelect); }},
+                {PitchLabelerKeys::ToolModulation, [this]() { m_editor->pianoRoll()->setToolMode(ui::ToolModulation); }},
+                {PitchLabelerKeys::ToolDrift, [this]() { m_editor->pianoRoll()->setToolMode(ui::ToolDrift); }},
+                {PitchLabelerKeys::PlaybackPlayPause, [this]() { m_editor->playWidget()->setPlaying(!m_editor->playWidget()->isPlaying()); }},
+                {PitchLabelerKeys::PlaybackStop, [this]() { m_editor->playWidget()->setPlaying(false); }},
                 {PitchLabelerKeys::NavigationPrev, [this]() { onPrevFile(); }},
                 {PitchLabelerKeys::NavigationNext, [this]() { onNextFile(); }},
             };
@@ -355,6 +239,140 @@ namespace dstools {
                     m_windowShortcuts.append(sc);
                 }
             }
+        }
+
+        QMenuBar *PitchLabelerPage::createMenuBar(QWidget *parent) {
+            auto *bar = new QMenuBar(parent);
+
+            // ---- 文件 ----
+            auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
+
+            auto *actOpenDir = new QAction(QStringLiteral("打开工作目录(&O)..."), bar);
+            actOpenDir->setStatusTip(QStringLiteral("打开包含 .ds 文件的目录"));
+            fileMenu->addAction(actOpenDir);
+            connect(actOpenDir, &QAction::triggered, this, &PitchLabelerPage::openDirectory);
+
+            auto *actCloseDir = new QAction(QStringLiteral("关闭工作目录(&C)"), bar);
+            actCloseDir->setStatusTip(QStringLiteral("关闭当前工作目录"));
+            fileMenu->addAction(actCloseDir);
+            connect(actCloseDir, &QAction::triggered, this, &PitchLabelerPage::closeDirectory);
+
+            fileMenu->addSeparator();
+            fileMenu->addAction(m_editor->saveAction());
+            fileMenu->addAction(m_editor->saveAllAction());
+            fileMenu->addSeparator();
+
+            auto *actExit = new QAction(QStringLiteral("退出(&X)"), bar);
+            actExit->setStatusTip(QStringLiteral("退出应用程序"));
+            fileMenu->addAction(actExit);
+            connect(actExit, &QAction::triggered, this, [this]() {
+                if (auto *w = window()) w->close();
+            });
+
+            // ---- 编辑 ----
+            auto *editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
+            editMenu->addAction(m_editor->undoAction());
+            editMenu->addAction(m_editor->redoAction());
+
+            // ---- 视图 ----
+            auto *viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
+            viewMenu->addAction(m_editor->zoomInAction());
+            viewMenu->addAction(m_editor->zoomOutAction());
+            viewMenu->addAction(m_editor->zoomResetAction());
+            viewMenu->addSeparator();
+            dsfw::Theme::instance().populateThemeMenu(viewMenu);
+
+            // ---- 工具 ----
+            auto *toolsMenu = bar->addMenu(QStringLiteral("工具(&T)"));
+            toolsMenu->addAction(m_editor->abCompareAction());
+            toolsMenu->addSeparator();
+            {
+                auto *shortcutAction = new QAction(QStringLiteral("快捷键设置(&K)..."), bar);
+                toolsMenu->addAction(shortcutAction);
+                connect(shortcutAction, &QAction::triggered, this, [this]() {
+                    m_shortcutManager->showEditor(this);
+                });
+            }
+
+            // ---- 帮助 ----
+            auto *helpMenu = bar->addMenu(QStringLiteral("帮助(&H)"));
+            auto *actAbout = new QAction(QStringLiteral("关于(&A)"), bar);
+            actAbout->setStatusTip(QStringLiteral("关于 DiffSinger 音高标注器"));
+            helpMenu->addAction(actAbout);
+            connect(actAbout, &QAction::triggered, this, []() {
+                QMessageBox::about(nullptr, QStringLiteral("关于 DiffSinger 音高标注器"),
+                                   QStringLiteral("DiffSinger 音高标注器\n版本 0.1.0\n\n"
+                                   "DiffSinger 数据标注工作流的音高标注编辑器。"));
+            });
+
+            // Bind shortcuts
+            m_shortcutManager->bind(actOpenDir, PitchLabelerKeys::ShortcutOpen, QStringLiteral("Open Directory"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_editor->saveAction(), PitchLabelerKeys::ShortcutSave, QStringLiteral("Save"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_editor->saveAllAction(), PitchLabelerKeys::ShortcutSaveAll, QStringLiteral("Save All"), QStringLiteral("File"));
+            m_shortcutManager->bind(actExit, PitchLabelerKeys::ShortcutExit, QStringLiteral("Exit"), QStringLiteral("File"));
+            m_shortcutManager->bind(m_editor->undoAction(), PitchLabelerKeys::ShortcutUndo, QStringLiteral("Undo"), QStringLiteral("Edit"));
+            m_shortcutManager->bind(m_editor->redoAction(), PitchLabelerKeys::ShortcutRedo, QStringLiteral("Redo"), QStringLiteral("Edit"));
+            m_shortcutManager->bind(m_editor->zoomInAction(), PitchLabelerKeys::ShortcutZoomIn, QStringLiteral("Zoom In"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_editor->zoomOutAction(), PitchLabelerKeys::ShortcutZoomOut, QStringLiteral("Zoom Out"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_editor->zoomResetAction(), PitchLabelerKeys::ShortcutZoomReset, QStringLiteral("Reset Zoom"), QStringLiteral("View"));
+            m_shortcutManager->bind(m_editor->abCompareAction(), PitchLabelerKeys::ShortcutABCompare, QStringLiteral("A/B Compare"), QStringLiteral("Tools"));
+            m_shortcutManager->applyAll();
+
+            return bar;
+        }
+
+        QWidget *PitchLabelerPage::createStatusBarContent(QWidget *parent) {
+            auto *container = new QWidget(parent);
+            auto *layout = new QHBoxLayout(container);
+            layout->setContentsMargins(0, 0, 0, 0);
+
+            auto *statusFile = new QLabel(QStringLiteral("未加载文件"));
+            statusFile->setMinimumWidth(160);
+            layout->addWidget(statusFile);
+
+            auto *statusPosition = new QLabel("00:00.000");
+            statusPosition->setMinimumWidth(100);
+            layout->addWidget(statusPosition);
+
+            auto *statusZoom = new QLabel("100%");
+            statusZoom->setMinimumWidth(60);
+            layout->addWidget(statusZoom);
+
+            auto *statusTool = new QLabel(QStringLiteral("工具: 选择"));
+            statusTool->setMinimumWidth(100);
+            layout->addWidget(statusTool);
+
+            layout->addStretch();
+
+            auto *statusNotes = new QLabel(QStringLiteral("音符数: 0"));
+            statusNotes->setMinimumWidth(80);
+            layout->addWidget(statusNotes);
+
+            connect(this, &PitchLabelerPage::fileStatusChanged, statusFile, [statusFile](const QString &name) {
+                statusFile->setText(name.isEmpty() ? QStringLiteral("未加载文件") : name);
+            });
+            connect(m_editor, &PitchEditor::positionChanged, statusPosition, [statusPosition](double sec) {
+                int minutes = static_cast<int>(sec) / 60;
+                double seconds = sec - minutes * 60;
+                statusPosition->setText(
+                    QString("%1:%2").arg(minutes, 2, 10, QChar('0')).arg(seconds, 6, 'f', 3, QChar('0')));
+            });
+            connect(m_editor, &PitchEditor::zoomChanged, statusZoom, [statusZoom](int percent) {
+                statusZoom->setText(QString::number(percent) + "%");
+            });
+            connect(m_editor, &PitchEditor::noteCountChanged, statusNotes, [statusNotes](int count) {
+                statusNotes->setText(QStringLiteral("音符数: ") + QString::number(count));
+            });
+            connect(m_editor, &PitchEditor::toolModeChanged, statusTool, [statusTool](int mode) {
+                switch (mode) {
+                    case 0: statusTool->setText(QStringLiteral("工具: 选择")); break;
+                    case 1: statusTool->setText(QStringLiteral("工具: 颤音调制")); break;
+                    case 2: statusTool->setText(QStringLiteral("工具: 音高偏移")); break;
+                    default: break;
+                }
+            });
+
+            return container;
         }
 
     } // namespace pitchlabeler
