@@ -12,6 +12,7 @@ set(DOMAIN_TESTS
     TestTranscriptionPipeline
     TestTextGridToCsv
     TestCsvToDsConverter
+    TestCurveTools
 )
 
 foreach(test_name ${DOMAIN_TESTS})
