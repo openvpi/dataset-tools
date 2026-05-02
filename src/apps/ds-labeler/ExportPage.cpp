@@ -1,0 +1,201 @@
+#include "ExportPage.h"
+#include "ProjectDataSource.h"
+
+#include <QApplication>
+
+#include <QFileDialog>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QVBoxLayout>
+
+namespace dstools {
+
+ExportPage::ExportPage(QWidget *parent) : QWidget(parent) {
+    buildUi();
+}
+
+void ExportPage::buildUi() {
+    auto *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(24, 24, 24, 24);
+
+    // Title
+    auto *titleLabel = new QLabel(QStringLiteral("导出 DiffSinger 数据集"), this);
+    auto titleFont = titleLabel->font();
+    titleFont.setPointSize(16);
+    titleFont.setBold(true);
+    titleLabel->setFont(titleFont);
+    mainLayout->addWidget(titleLabel);
+    mainLayout->addSpacing(16);
+
+    // Output directory
+    auto *dirLayout = new QHBoxLayout;
+    auto *dirLabel = new QLabel(QStringLiteral("目标文件夹:"), this);
+    m_outputDir = new QLineEdit(this);
+    m_btnBrowse = new QPushButton(QStringLiteral("浏览"), this);
+    dirLayout->addWidget(dirLabel);
+    dirLayout->addWidget(m_outputDir, 1);
+    dirLayout->addWidget(m_btnBrowse);
+    mainLayout->addLayout(dirLayout);
+    mainLayout->addSpacing(12);
+
+    // Export content
+    auto *contentGroup = new QGroupBox(QStringLiteral("导出内容"), this);
+    auto *contentLayout = new QVBoxLayout(contentGroup);
+    m_chkCsv = new QCheckBox(QStringLiteral("transcriptions.csv"), contentGroup);
+    m_chkCsv->setChecked(true);
+    m_chkDs = new QCheckBox(QStringLiteral("ds/ 文件夹 (.ds 训练文件)"), contentGroup);
+    m_chkDs->setChecked(true);
+    m_chkWavs = new QCheckBox(QStringLiteral("wavs/ 文件夹"), contentGroup);
+    m_chkWavs->setChecked(true);
+    contentLayout->addWidget(m_chkCsv);
+    contentLayout->addWidget(m_chkDs);
+    contentLayout->addWidget(m_chkWavs);
+    mainLayout->addWidget(contentGroup);
+    mainLayout->addSpacing(12);
+
+    // Audio settings
+    auto *audioGroup = new QGroupBox(QStringLiteral("音频设置"), this);
+    auto *audioLayout = new QFormLayout(audioGroup);
+    m_sampleRate = new QSpinBox(audioGroup);
+    m_sampleRate->setRange(8000, 96000);
+    m_sampleRate->setValue(44100);
+    m_sampleRate->setSuffix(QStringLiteral(" Hz"));
+    audioLayout->addRow(QStringLiteral("采样率:"), m_sampleRate);
+    m_chkResample = new QCheckBox(QStringLiteral("需要时重采样（使用 soxr）"), audioGroup);
+    audioLayout->addRow(m_chkResample);
+    mainLayout->addWidget(audioGroup);
+    mainLayout->addSpacing(12);
+
+    // Advanced
+    auto *advGroup = new QGroupBox(QStringLiteral("高级"), this);
+    auto *advLayout = new QFormLayout(advGroup);
+    m_hopSize = new QSpinBox(advGroup);
+    m_hopSize->setRange(64, 2048);
+    m_hopSize->setValue(512);
+    advLayout->addRow(QStringLiteral("hop_size:"), m_hopSize);
+    m_chkIncludeDiscarded = new QCheckBox(QStringLiteral("包含丢弃的切片"), advGroup);
+    advLayout->addRow(m_chkIncludeDiscarded);
+    mainLayout->addWidget(advGroup);
+    mainLayout->addSpacing(20);
+
+    // Export button
+    auto *btnLayout = new QHBoxLayout;
+    btnLayout->addStretch();
+    m_btnExport = new QPushButton(QStringLiteral("开始导出"), this);
+    m_btnExport->setMinimumSize(160, 40);
+    m_btnExport->setEnabled(false);
+    btnLayout->addWidget(m_btnExport);
+    btnLayout->addStretch();
+    mainLayout->addLayout(btnLayout);
+    mainLayout->addSpacing(12);
+
+    // Progress
+    m_progressBar = new QProgressBar(this);
+    m_progressBar->setVisible(false);
+    mainLayout->addWidget(m_progressBar);
+
+    m_statusLabel = new QLabel(this);
+    m_statusLabel->setAlignment(Qt::AlignCenter);
+    m_statusLabel->setStyleSheet(QStringLiteral("color: gray;"));
+    mainLayout->addWidget(m_statusLabel);
+
+    mainLayout->addStretch();
+
+    // Connections
+    connect(m_btnBrowse, &QPushButton::clicked, this, &ExportPage::onBrowseOutput);
+    connect(m_btnExport, &QPushButton::clicked, this, &ExportPage::onExport);
+    connect(m_outputDir, &QLineEdit::textChanged, this, [this]() { updateExportButton(); });
+}
+
+void ExportPage::setDataSource(ProjectDataSource *source) {
+    m_source = source;
+    updateExportButton();
+}
+
+void ExportPage::onBrowseOutput() {
+    const QString dir = QFileDialog::getExistingDirectory(
+        this, QStringLiteral("选择导出目录"));
+    if (!dir.isEmpty()) {
+        m_outputDir->setText(dir);
+        updateExportButton();
+    }
+}
+
+void ExportPage::updateExportButton() {
+    bool ok = m_source && !m_outputDir->text().trimmed().isEmpty();
+    m_btnExport->setEnabled(ok);
+}
+
+void ExportPage::onExport() {
+    if (!m_source) {
+        QMessageBox::warning(this, QStringLiteral("导出"),
+                             QStringLiteral("请先打开工程。"));
+        return;
+    }
+
+    const auto sliceIds = m_source->sliceIds();
+    if (sliceIds.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("导出"),
+                             QStringLiteral("没有可导出的切片。"));
+        return;
+    }
+
+    const QString outputDir = m_outputDir->text().trimmed();
+    QDir().mkpath(outputDir);
+
+    m_progressBar->setVisible(true);
+    m_progressBar->setRange(0, sliceIds.size());
+    m_progressBar->setValue(0);
+
+    m_statusLabel->setText(QStringLiteral("正在导出..."));
+    m_btnExport->setEnabled(false);
+
+    // TODO: Implement actual export logic with auto-completion:
+    // 1. For each active slice, check and auto-complete missing layers
+    // 2. Generate transcriptions.csv via CsvAdapter
+    // 3. Generate ds/ files via DsFileAdapter (only for slices with pitch_review)
+    // 4. Copy/resample wavs/
+
+    int exported = 0;
+    for (const auto &sliceId : sliceIds) {
+        m_statusLabel->setText(QStringLiteral("正在导出: %1").arg(sliceId));
+        m_progressBar->setValue(++exported);
+        QApplication::processEvents();
+    }
+
+    m_progressBar->setVisible(false);
+    m_statusLabel->setText(
+        QStringLiteral("导出完成: %1 个切片 → %2").arg(exported).arg(outputDir));
+    m_btnExport->setEnabled(true);
+
+    QMessageBox::information(this, QStringLiteral("导出完成"),
+                             QStringLiteral("成功导出 %1 个切片到:\n%2")
+                                 .arg(exported)
+                                 .arg(outputDir));
+}
+
+QMenuBar *ExportPage::createMenuBar(QWidget *parent) {
+    auto *bar = new QMenuBar(parent);
+    auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
+    fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
+        if (auto *w = window()) w->close();
+    });
+    return bar;
+}
+
+QString ExportPage::windowTitle() const {
+    return QStringLiteral("DsLabeler — 导出");
+}
+
+void ExportPage::onActivated() {
+    updateExportButton();
+}
+
+} // namespace dstools
