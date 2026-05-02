@@ -1,5 +1,4 @@
 #include <dstools/DsDocumentAdapter.h>
-#include <dstools/DsItemManager.h>
 
 #include <dsfw/JsonHelper.h>
 

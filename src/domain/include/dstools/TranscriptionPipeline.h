@@ -13,9 +13,8 @@
 
 namespace dstools {
 
-/// Step 6→7→8 memory pipeline.
-/// TextGrid directory in → .ds files out. Intermediate CSV optional.
-class TranscriptionPipeline {
+/// @deprecated Use PipelineRunner + FormatAdapters instead. See ADR-33.
+class [[deprecated("Use PipelineRunner + FormatAdapters instead")]] TranscriptionPipeline {
 public:
     struct Options {
         // Input

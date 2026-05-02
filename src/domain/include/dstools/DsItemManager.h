@@ -12,9 +12,8 @@
 
 namespace dstools {
 
-/// @brief Handles loading, saving, and querying processing status of
-///        individual dataset items (.dsitem files).
-class DsItemManager {
+/// @deprecated Use PipelineContext instead. See ADR-37.
+class [[deprecated("Use PipelineContext instead")]] DsItemManager {
 public:
     DsItemManager() = default;
 

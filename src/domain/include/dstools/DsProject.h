@@ -25,14 +25,9 @@ struct TaskModelConfig {
 
 /// Default model paths and inference parameters stored in a .dsproj file.
 struct DsProjectDefaults {
-    QString asrModelPath;
-    QString hubertModelPath;
-    QString gameModelPath;
-    QString rmvpeModelPath;
-    int gpuIndex = -1;  // -1 = CPU
+    std::map<QString, TaskModelConfig> taskModels;  ///< Task name → model config.
     int hopSize = 512;
     int sampleRate = 44100;
-    std::map<QString, TaskModelConfig> taskModels;  ///< Task name → model config.
 };
 
 /// In-memory representation of a .dsproj project file.

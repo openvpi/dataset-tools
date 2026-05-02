@@ -51,14 +51,16 @@ DsProject DsProject::load(const QString &path, QString &error) {
 
         if (def.contains("models") && def["models"].is_object()) {
             const auto &models = def["models"];
-            if (models.contains("asr") && models["asr"].is_string())
-                proj.m_defaults.asrModelPath = fromStd(models["asr"].get<std::string>());
-            if (models.contains("hubert") && models["hubert"].is_string())
-                proj.m_defaults.hubertModelPath = fromStd(models["hubert"].get<std::string>());
-            if (models.contains("game") && models["game"].is_string())
-                proj.m_defaults.gameModelPath = fromStd(models["game"].get<std::string>());
-            if (models.contains("rmvpe") && models["rmvpe"].is_string())
-                proj.m_defaults.rmvpeModelPath = fromStd(models["rmvpe"].get<std::string>());
+
+            // Legacy string-format model paths → migrate to taskModels
+            static const char *legacyKeys[] = {"asr", "hubert", "game", "rmvpe"};
+            for (const char *key : legacyKeys) {
+                if (models.contains(key) && models[key].is_string()) {
+                    TaskModelConfig cfg;
+                    cfg.modelPath = fromStd(models[key].get<std::string>());
+                    proj.m_defaults.taskModels[QString::fromLatin1(key)] = std::move(cfg);
+                }
+            }
 
             // Parse new object-format task model configs
             for (auto it = models.begin(); it != models.end(); ++it) {
@@ -85,10 +87,16 @@ DsProject DsProject::load(const QString &path, QString &error) {
                     proj.m_defaults.taskModels[fromStd(it.key())] = std::move(cfg);
                 }
             }
-        }
 
-        if (def.contains("gpuIndex") && def["gpuIndex"].is_number_integer())
-            proj.m_defaults.gpuIndex = def["gpuIndex"].get<int>();
+            // Legacy gpuIndex → migrate to each task's deviceId
+            if (def.contains("gpuIndex") && def["gpuIndex"].is_number_integer()) {
+                const int gpuIndex = def["gpuIndex"].get<int>();
+                for (auto &[name, cfg] : proj.m_defaults.taskModels) {
+                    if (cfg.deviceId == 0 && cfg.provider == "cpu")
+                        cfg.deviceId = gpuIndex;
+                }
+            }
+        }
         if (def.contains("hopSize") && def["hopSize"].is_number_integer())
             proj.m_defaults.hopSize = def["hopSize"].get<int>();
         if (def.contains("sampleRate") && def["sampleRate"].is_number_integer())
@@ -120,18 +128,7 @@ bool DsProject::save(const QString &path, QString &error) const {
                              ? json["defaults"]
                              : nlohmann::json::object();
 
-    nlohmann::json models = def.contains("models") && def["models"].is_object()
-                                ? def["models"]
-                                : nlohmann::json::object();
-
-    if (!m_defaults.asrModelPath.isEmpty())
-        models["asr"] = qstr(m_defaults.asrModelPath);
-    if (!m_defaults.hubertModelPath.isEmpty())
-        models["hubert"] = qstr(m_defaults.hubertModelPath);
-    if (!m_defaults.gameModelPath.isEmpty())
-        models["game"] = qstr(m_defaults.gameModelPath);
-    if (!m_defaults.rmvpeModelPath.isEmpty())
-        models["rmvpe"] = qstr(m_defaults.rmvpeModelPath);
+    nlohmann::json models = nlohmann::json::object();
 
     // Write new object-format task model configs
     for (const auto &[taskName, cfg] : m_defaults.taskModels) {
@@ -146,7 +143,6 @@ bool DsProject::save(const QString &path, QString &error) const {
     }
 
     def["models"] = models;
-    def["gpuIndex"] = m_defaults.gpuIndex;
     def["hopSize"] = m_defaults.hopSize;
     def["sampleRate"] = m_defaults.sampleRate;
 

@@ -7,8 +7,8 @@
 
 namespace dstools {
 
-/// @brief Tracks processed and failed files for resumable batch operations.
-class BatchCheckpoint {
+/// @deprecated Use PipelineContext JSON persistence instead. See ADR-37.
+class [[deprecated("Use PipelineContext JSON persistence instead")]] BatchCheckpoint {
 public:
     /// @brief Load an existing checkpoint from disk.
     /// @param workingDir Working directory containing the checkpoint file.
