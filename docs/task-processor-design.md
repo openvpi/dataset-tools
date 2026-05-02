@@ -158,6 +158,10 @@ dataset/
                       Step 10: 导出（CSV / DS / 自定义格式）
 
     ※ 任意步骤可标记切片为"丢弃"，后续步骤自动跳过
+    ※ Step 5 (PhonemeLabeler) 和 Step 9 (PitchLabeler) 可跳过，导出时自动补全
+    ※ Step 6 (AddPhNum) 在 PitchLabeler 或导出时自动执行，不再作为独立用户步骤
+    ※ 统一应用 DsLabeler 中，各步骤对应不同页面而非 wizard 步骤
+    ※ 详见 unified-app-design.md
 ```
 
 ### 3.1 各步骤 I/O 契约
@@ -710,217 +714,18 @@ Result<void> PipelineRunner::run(const Options &opts, ProgressCallback progress)
 
 ---
 
-## 12 .dsproj 规范修订
+## 12 .dsproj 规范
 
-### 12.1 tasks 声明
+.dsproj 格式的完整规范见 [ds-format.md](ds-format.md) v3。
 
-```json
-{
-    "tasks": [
-        {
-            "name": "audio_preprocess",
-            "inputs": [],
-            "outputs": [],
-            "granularity": "whole_audio",
-            "optional": true
-        },
-        {
-            "name": "audio_slice",
-            "inputs": [],
-            "outputs": [{"slot": "slices", "category": "slices"}],
-            "granularity": "whole_audio"
-        },
-        {
-            "name": "asr",
-            "inputs": [],
-            "outputs": [{"slot": "sentence", "category": "sentence"}],
-            "granularity": "whole_audio",
-            "optional": true
-        },
-        {
-            "name": "label_review",
-            "inputs": [{"slot": "sentence", "category": "sentence"}],
-            "outputs": [{"slot": "grapheme", "category": "grapheme"}],
-            "granularity": "per_slice",
-            "manual": true,
-            "importFormats": ["lab"],
-            "exportFormats": ["lab"]
-        },
-        {
-            "name": "phoneme_alignment",
-            "inputs": [{"slot": "grapheme", "category": "grapheme"}],
-            "outputs": [{"slot": "phoneme", "category": "phoneme"}],
-            "granularity": "per_slice",
-            "importFormats": ["textgrid"],
-            "exportFormats": ["textgrid"]
-        },
-        {
-            "name": "phoneme_review",
-            "inputs": [{"slot": "phoneme", "category": "phoneme"}],
-            "outputs": [{"slot": "phoneme", "category": "phoneme"}],
-            "granularity": "per_slice",
-            "manual": true,
-            "optional": true,
-            "importFormats": ["textgrid"],
-            "exportFormats": ["textgrid"]
-        },
-        {
-            "name": "add_ph_num",
-            "inputs": [
-                {"slot": "phoneme", "category": "phoneme"},
-                {"slot": "grapheme", "category": "grapheme"}
-            ],
-            "outputs": [{"slot": "ph_num", "category": "ph_num"}],
-            "granularity": "per_slice"
-        },
-        {
-            "name": "midi_transcription",
-            "inputs": [
-                {"slot": "phoneme", "category": "phoneme"},
-                {"slot": "ph_num", "category": "ph_num"}
-            ],
-            "outputs": [{"slot": "midi", "category": "midi"}],
-            "granularity": "per_slice"
-        },
-        {
-            "name": "pitch_extraction",
-            "inputs": [],
-            "outputs": [{"slot": "pitch", "category": "pitch"}],
-            "granularity": "per_slice"
-        },
-        {
-            "name": "pitch_review",
-            "inputs": [
-                {"slot": "pitch", "category": "pitch"},
-                {"slot": "midi", "category": "midi"}
-            ],
-            "outputs": [{"slot": "pitch", "category": "pitch"}],
-            "granularity": "per_slice",
-            "manual": true,
-            "importFormats": ["ds"],
-            "exportFormats": ["ds"]
-        },
-        {
-            "name": "export",
-            "inputs": [
-                {"slot": "phoneme", "category": "phoneme"},
-                {"slot": "ph_num", "category": "ph_num"},
-                {"slot": "midi", "category": "midi"},
-                {"slot": "pitch", "category": "pitch"}
-            ],
-            "outputs": [],
-            "granularity": "per_slice",
-            "exportFormats": ["csv", "ds"]
-        }
-    ]
-}
-```
-
-新增字段：
-- `granularity`: `"whole_audio"` | `"per_slice"`
-- `optional`: 可选步骤
-- `manual`: 人工步骤
-- `importFormats` / `exportFormats`: 该步骤支持的导入/导出格式列表
-
-### 12.2 defaults 扩展
-
-```json
-{
-    "defaults": {
-        "preprocessors": [
-            {"id": "loudness_norm", "targetLufs": -23.0},
-            {"id": "denoise", "model": "models/denoise/model.onnx"}
-        ],
-        "slicer": {
-            "threshold": -40.0,
-            "minLength": 5000,
-            "minInterval": 300,
-            "hopSize": 10,
-            "maxSilKept": 500,
-            "maxSliceLength": 15000,
-            "namingPrefix": "auto"
-        },
-        "validation": {
-            "minSliceLength": 0.3,
-            "maxSliceLength": 30.0,
-            "minPitchCoverage": 0.5
-        },
-        "models": {
-            "asr": {
-                "processor": "funasr",
-                "path": "models/asr/funasr_cn.onnx",
-                "provider": "dml"
-            },
-            "phoneme_alignment": {
-                "processor": "hubert-fa",
-                "path": "models/alignment/hubert_fa.onnx",
-                "provider": "dml"
-            },
-            "midi_transcription": {
-                "processor": "game",
-                "path": "models/game/",
-                "provider": "dml"
-            },
-            "pitch_extraction": {
-                "processor": "rmvpe",
-                "path": "models/rmvpe/rmvpe.onnx",
-                "provider": "cpu"
-            }
-        },
-        "export": {
-            "formats": ["csv", "ds"],
-            "csvColumns": ["name", "ph_seq", "ph_dur", "ph_num", "note_seq", "note_dur", "note_glide"],
-            "dsHopSize": 512,
-            "dsSampleRate": 44100,
-            "includeDiscarded": false
-        }
-    }
-}
-```
-
-### 12.3 items 扩展
-
-```json
-{
-    "items": [
-        {
-            "id": "a54c548a",
-            "name": "GuangNianZhiWai",
-            "speaker": "32e9",
-            "language": "fe67",
-            "audioSource": "audio/a54c548a.wav",
-            "slices": [
-                {
-                    "id": "001",
-                    "in": 1140000,
-                    "out": 5140000,
-                    "status": "active",
-                    "discardReason": null
-                },
-                {
-                    "id": "002",
-                    "in": 8170000,
-                    "out": 19260000,
-                    "status": "active"
-                },
-                {
-                    "id": "003",
-                    "in": 22500000,
-                    "out": 23100000,
-                    "status": "discarded",
-                    "discardReason": "Too short (0.6s)",
-                    "discardedAtStep": "audio_slice"
-                }
-            ]
-        }
-    ]
-}
-```
-
-新增 slice 字段：
-- `status`: `"active"` | `"discarded"` | `"error"`
-- `discardReason`: 丢弃原因
-- `discardedAtStep`: 在哪步被丢弃
+**v3 关键变更**：
+- 移除 `tasks[]` — 流水线步骤在代码中固定定义，.dsproj 仅通过 `defaults.models` 配置每步选用的处理器
+- 新增 `defaults.preload`（预加载配置）
+- 新增 `defaults.export.resampleRate`
+- .dstext 层新增 `type` 字段（自描述）
+- .dstext 新增 `meta.editedSteps`（per-slice 手动编辑记录）
+- PipelineContext 合并 `completedSteps` 和 `stepHistory` 为单一 `stepHistory`
+- 路径统一用 POSIX 正斜杠
 
 ---
 
@@ -1042,6 +847,7 @@ Registry 注册时验证一致性，不一致拒绝注册。
 ## 关联文档
 
 - [ds-format.md](ds-format.md) — .dsproj / .dstext 格式规范
+- [unified-app-design.md](unified-app-design.md) — DsSuite 统一应用设计方案
 - [refactoring-roadmap.md](refactoring-roadmap.md)
 
 > 更新时间：2026-05-02

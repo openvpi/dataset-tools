@@ -16,10 +16,15 @@
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                           应用层 (src/apps/)                             │
-├────────────┬──────────┬────────────┬────────────┬──────────┬────────────┤
-│ Dataset    │ MinLabel │ Phoneme    │ Pitch      │ Game     │ DiffSinger │
-│ Pipeline   │          │ Labeler    │ Labeler    │ Infer    │ Labeler    │
-│            │ dstools-cli │ TestShell │ WidgetGallery                   │
+├──────────────────────────────────────────────────────────────────────────┤
+│ LabelSuite (通用标注工具集)                                               │
+│   MinLabelPage · PhonemeLabelerPage · PitchLabelerPage                  │
+│                                                                          │
+│ DsLabeler (DiffSinger 专用标注器)                                         │
+│   WelcomePage · SettingsPage · DsMinLabelPage                           │
+│   DsPhonemeLabelerPage · DsPitchLabelerPage · ExportPage                │
+│                                                                          │
+│ dstools-cli · TestShell · WidgetGallery                                  │
 └─────┬──────┴────┬─────┴─────┬──────┴─────┬──────┴────┬─────┴─────┬──────┘
       │           │           │            │           │           │
       ▼           ▼           ▼            ▼           ▼           ▼
@@ -133,14 +138,10 @@
 
 | 应用 | 直接链接的库 |
 |------|-------------|
-| DatasetPipeline | dstools-widgets, dstools-domain, audio-util, hubert-infer, FunAsr, textgrid, cpp-pinyin, SndFile, nlohmann_json |
-| MinLabel | dstools-widgets, dstools-domain, cpp-pinyin, cpp-kana |
-| PhonemeLabeler | dstools-widgets, dstools-domain, dstools-audio, textgrid, FFTW3 |
-| PitchLabeler | dstools-widgets, dstools-domain |
-| GameInfer | dstools-widgets, dstools-domain, game-infer |
-| DiffSingerLabeler | dstools-widgets, dstools-domain, dstools-audio, audio-util, hubert-infer, game-infer, rmvpe-infer, FunAsr, cpp-pinyin, cpp-kana, textgrid, FFTW3, SndFile, nlohmann_json, Qt::Concurrent |
+| LabelSuite | dstools-widgets, dstools-domain, dstools-audio, cpp-pinyin, cpp-kana, textgrid, FFTW3, SndFile, nlohmann_json |
+| DsLabeler | dstools-widgets, dstools-domain, dstools-audio, audio-util, hubert-infer, game-infer, rmvpe-infer, FunAsr, cpp-pinyin, cpp-kana, textgrid, FFTW3, SndFile, nlohmann_json, Qt::Concurrent |
 
-> 所有 6 个应用均使用 `dsfw::AppShell` 作为统一窗口壳，通过 `addPage()` 注册页面。DiffSingerLabeler 使用多页面模式，其余 5 个应用使用单页面模式。
+> **LabelSuite** 使用 `dsfw::AppShell` 多页面模式，3 个独立标注页面，各自使用文件系统 I/O。**DsLabeler** 使用多页面模式，6 个页面由 `.dsproj` 工程文件驱动。详见 [unified-app-design.md](unified-app-design.md)。
 
 ## 共享库
 
@@ -252,13 +253,9 @@ dataset-tools/
 │   │   ├── hubert-infer/       # (SHARED)
 │   │   └── FunAsr/             # (STATIC)
 │   ├── apps/
-│   │   ├── pipeline/           # DatasetPipeline
-│   │   ├── MinLabel/
-│   │   ├── PhonemeLabeler/
-│   │   ├── PitchLabeler/
-│   │   ├── GameInfer/
-│   │   ├── labeler/            # DiffSingerLabeler
-│   │   ├── cli/                # dstools-cli
+│   │   ├── LabelSuite/            # 通用标注工具集
+│   │   ├── DsLabeler/             # DiffSinger 专用标注器
+│   │   ├── cli/                   # dstools-cli
 │   │   ├── TestShell/
 │   │   └── WidgetGallery/
 │   └── tests/

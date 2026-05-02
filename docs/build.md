@@ -90,7 +90,7 @@ cmake --build build
 
 | 类型 | 产物 |
 |------|------|
-| 应用 | DatasetPipeline, MinLabel, PhonemeLabeler, PitchLabeler, GameInfer, DiffSingerLabeler |
+| 应用 | LabelSuite, DsLabeler |
 | 工具 | dstools-cli, WidgetGallery, TestShell |
 | 测试 | TestTimePos, TestResult, TestJsonHelper, TestAppSettings, TestServiceLocator, TestAsyncTask, TestLocalFileIOProvider, TestModelManager, TestModelDownloader, TestF0Curve, TestCurveTools 等 |
 | 动态库 | dsfw-widgets, dstools-widgets, audio-util, game-infer, rmvpe-infer, hubert-infer |
@@ -122,7 +122,7 @@ cmake --build build --target install
 - `src/widgets/` — 领域 GUI 组件动态库（dstools-widgets）
 - `src/libs/` — 第三方 header-only 库
 - `src/infer/` — 推理库（各自独立，共享 infer-common）
-- `src/apps/` — 应用可执行文件（6 个主应用 + dstools-cli + WidgetGallery + TestShell）
+- `src/apps/` — 应用可执行文件（LabelSuite 通用标注工具集 + DsLabeler DiffSinger 专用标注器 + dstools-cli + WidgetGallery + TestShell）
 - `src/tests/` — 测试（framework/ 子目录含 dsfw 核心类测试）
 - `scripts/vcpkg-manifest/` — vcpkg 依赖声明
 - `vcpkg/` — 自定义 overlay ports/triplets

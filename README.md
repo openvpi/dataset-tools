@@ -2,16 +2,14 @@
 
 DiffSinger dataset processing tools for singing voice synthesis data preparation, including audio slicing, labeling, forced alignment, and audio-to-MIDI transcription.
 
-## Applications
+## Application
 
 | Application | Description |
 |---|---|
-| **DatasetPipeline** | Unified dataset processing pipeline with 3 tabs: AudioSlicer (RMS-based slicing), LyricFA (FunASR lyric alignment), HubertFA (HuBERT phoneme alignment) |
-| **MinLabel** | Audio labeling tool with G2P conversion (Mandarin/Cantonese/Japanese) |
-| **PhonemeLabeler** | TextGrid phoneme boundary editor with waveform/spectrogram/power visualization, cross-tier boundary binding, undo/redo |
-| **PitchLabeler** | DiffSinger .ds file F0 curve editor with piano roll visualization, multi-tool editing (Select/Modulation/Drift), A/B comparison, undo/redo |
-| **GameInfer** | GAME audio-to-MIDI transcription (4-model ONNX pipeline) |
-| **DiffSingerLabeler** | Unified 9-step dataset labeling wizard integrating Slice, ASR, Label (MinLabel), Align (HubertFA), Phone (PhonemeLabeler), CSV/MIDI/DS build, and Pitch (PitchLabeler) into a single guided workflow |
+| **LabelSuite** | General-purpose audio labeling toolset (AppShell multi-page). Three independent pages: MinLabel (lyric labeling + G2P), PhonemeLabeler (TextGrid phoneme editing), PitchLabeler (F0/MIDI editing). Each page works with its own file format, no project file required. |
+| **DsLabeler** | DiffSinger dataset labeler driven by `.dsproj` project files. Six pages: Welcome (create/open project), Settings (unified configuration), MinLabel (+ ASR/LyricFA), PhonemeLabeler (+ auto FA), PitchLabeler (+ auto F0/MIDI extraction), Export (CSV/DS/WAV output with auto-completion of skipped steps). |
+
+See [unified-app-design.md](docs/unified-app-design.md) for the full design.
 
 ## Supported Platforms
 
@@ -134,7 +132,7 @@ cmake --build build --target install
 
 | Type | Files |
 |---|---|
-| Applications | `DatasetPipeline.exe`, `MinLabel.exe`, `PhonemeLabeler.exe`, `PitchLabeler.exe`, `GameInfer.exe`, `DiffSingerLabeler.exe` |
+| Applications | `LabelSuite.exe`, `DsLabeler.exe` |
 | Tools | `dstools-cli.exe`, `WidgetGallery.exe` |
 | Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestAudioUtil.exe` |
 | Shared libraries | `dsfw-widgets.dll`, `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `rmvpe-infer.dll`, `hubert-infer.dll` |
@@ -158,6 +156,7 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 
 | Document | Description |
 |---|---|
+| [Unified App Design](docs/unified-app-design.md) | DsSuite unified application design (multi-page AppShell) |
 | [Getting Started](docs/framework-getting-started.md) | Quick start guide with hello world examples |
 | [Architecture](docs/framework-architecture.md) | Detailed architecture design and layer descriptions |
 | [Migration Guide](docs/migration-guide.md) | How to migrate from QMainWindow to AppShell |
