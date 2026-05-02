@@ -249,11 +249,7 @@ function(dstools_add_library target_name)
 
     # --- Precompiled headers (PCH) ---------------------------------------------
     if(NOT _type STREQUAL "INTERFACE" AND NOT ARG_NO_PCH)
-        target_precompile_headers(${target_name} PRIVATE
-            <QString>
-            <QStringList>
-            <QObject>
-            <QDebug>
+        set(_pch_headers
             <vector>
             <map>
             <memory>
@@ -261,6 +257,15 @@ function(dstools_add_library target_name)
             <functional>
             <cstdint>
         )
+        if(ARG_AUTOMOC)
+            list(PREPEND _pch_headers
+                <QString>
+                <QStringList>
+                <QObject>
+                <QDebug>
+            )
+        endif()
+        target_precompile_headers(${target_name} PRIVATE ${_pch_headers})
     endif()
 endfunction()
 
@@ -352,11 +357,7 @@ function(dstools_add_executable target_name)
 
     # --- Precompiled headers (PCH) ---------------------------------------------
     if(NOT ARG_NO_PCH)
-        target_precompile_headers(${target_name} PRIVATE
-            <QString>
-            <QStringList>
-            <QObject>
-            <QDebug>
+        set(_pch_headers
             <vector>
             <map>
             <memory>
@@ -364,6 +365,15 @@ function(dstools_add_executable target_name)
             <functional>
             <cstdint>
         )
+        if(ARG_AUTOMOC)
+            list(PREPEND _pch_headers
+                <QString>
+                <QStringList>
+                <QObject>
+                <QDebug>
+            )
+        endif()
+        target_precompile_headers(${target_name} PRIVATE ${_pch_headers})
     endif()
 endfunction()
 
