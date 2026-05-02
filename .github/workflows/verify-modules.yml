@@ -153,20 +153,22 @@ jobs:
         run: |
           cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
 
-      - name: Configure CMake
-        shell: bash
+      - name: Configure CMake (Unix)
+        if: runner.os != 'Windows'
         run: |
-          EXTRA_CMAKE_ARGS=""
-          if [ "$RUNNER_OS" != "Windows" ]; then
-            EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
-          fi
           cmake -B ${{github.workspace}}/build -G Ninja \
             -DBUILD_TESTS:BOOL=ON \
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
             -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
             -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
             -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
-            $EXTRA_CMAKE_ARGS
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }}
 
       - name: Verify framework modules build independently
         run: |
@@ -175,7 +177,6 @@ jobs:
           cmake --build ${{github.workspace}}/build --target dsfw-core
           cmake --build ${{github.workspace}}/build --target dsfw-ui-core
           cmake --build ${{github.workspace}}/build --target dstools-domain
-          cmake --build ${{github.workspace}}/build --target dstools-types
           cmake --build ${{github.workspace}}/build --target slicer-lib
           cmake --build ${{github.workspace}}/build --target minlabel-lib
           cmake --build ${{github.workspace}}/build --target dsfw-audio
@@ -311,13 +312,9 @@ jobs:
         run: |
           cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
 
-      - name: Configure CMake
-        shell: bash
+      - name: Configure CMake (Unix)
+        if: runner.os != 'Windows'
         run: |
-          EXTRA_CMAKE_ARGS=""
-          if [ "$RUNNER_OS" != "Windows" ]; then
-            EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
-          fi
           cmake -B ${{github.workspace}}/build -G Ninja \
             -DBUILD_TESTS:BOOL=ON \
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
@@ -325,7 +322,13 @@ jobs:
             -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
             -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
             -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
-            $EXTRA_CMAKE_ARGS
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --target all
