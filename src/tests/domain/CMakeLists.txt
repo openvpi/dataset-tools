@@ -13,6 +13,7 @@ set(DOMAIN_TESTS
     TestTextGridToCsv
     TestCsvToDsConverter
     TestCurveTools
+    TestDsTextDocument
 )
 
 foreach(test_name ${DOMAIN_TESTS})
