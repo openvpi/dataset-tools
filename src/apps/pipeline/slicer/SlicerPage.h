@@ -10,7 +10,6 @@
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
-#include <dsfw/BatchCheckpoint.h>
 #include <dstools/PathSelector.h>
 
 namespace dstools::widgets {
@@ -69,7 +68,4 @@ private:
     int m_workError = 0;
     QStringList m_failIndex;
     QString m_workingDir;
-    dstools::BatchCheckpoint m_checkpoint;
-
-    void updateResumeCheckbox();
 };

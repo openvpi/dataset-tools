@@ -28,7 +28,6 @@ public:
     void release() override;
 
     Result<TaskOutput> process(const TaskInput &input) override;
-    Result<BatchOutput> processBatch(const BatchInput &input, ProgressCallback progress) override;
 
 private:
     std::unique_ptr<Rmvpe::Rmvpe> m_rmvpe; ///< RMVPE engine instance.

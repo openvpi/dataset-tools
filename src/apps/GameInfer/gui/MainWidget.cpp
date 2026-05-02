@@ -557,15 +557,10 @@ void MainWidget::onAlignCsvTask() {
         config["csvPath"] = csvInputPath.toStdString();
         config["savePath"] = savePath.toStdString();
 
-        dstools::BatchInput batchInput;
-        batchInput.workingDir = csvInputPath;
-        batchInput.config = config;
-        auto result = m_processor->processBatch(batchInput,
-            [this](int current, int total, const QString &) {
-                const int progress = total > 0 ? (current * 100 / total) : 0;
-                QMetaObject::invokeMethod(this, [this, progress] { m_alignRun->setProgress(progress); },
-                                         Qt::QueuedConnection);
-            });
+        dstools::TaskInput taskInput;
+        taskInput.audioPath = csvInputPath;
+        taskInput.config = config;
+        auto result = m_processor->process(taskInput);
 
         if (!result) {
             QMetaObject::invokeMethod(

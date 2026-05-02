@@ -5,9 +5,6 @@
 #include <dsfw/TaskProcessorRegistry.h>
 #include <dstools/ExecutionProvider.h>
 
-#include <QDir>
-#include <QFileInfoList>
-
 #include <nlohmann/json.hpp>
 
 namespace dstools {
@@ -78,59 +75,6 @@ Result<TaskOutput> RmvpePitchProcessor::process(const TaskInput &input) {
 
     TaskOutput output;
     output.layers[QStringLiteral("pitch")] = nlohmann::json(f0All);
-    return Ok(std::move(output));
-}
-
-Result<BatchOutput> RmvpePitchProcessor::processBatch(const BatchInput &input,
-                                                       ProgressCallback progress) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_rmvpe) {
-        return Err<BatchOutput>("RmvpePitchProcessor: model not loaded");
-    }
-
-    QDir dir(input.workingDir);
-    const auto wavFiles =
-        dir.entryInfoList({QStringLiteral("*.wav")}, QDir::Files, QDir::Name);
-    const int total = wavFiles.size();
-
-    BatchOutput output;
-    output.outputPath = input.workingDir;
-
-    for (int i = 0; i < total; ++i) {
-        const auto &fi = wavFiles[i];
-        if (progress) {
-            progress(i, total, fi.fileName());
-        }
-
-        std::vector<Rmvpe::RmvpeRes> res;
-        auto result =
-            m_rmvpe->get_f0(fi.absoluteFilePath().toStdWString(), 0.03f, res, nullptr);
-        if (!result) {
-            ++output.failedCount;
-            continue;
-        }
-
-        std::vector<float> f0All;
-        for (const auto &r : res) {
-            f0All.insert(f0All.end(), r.f0.begin(), r.f0.end());
-        }
-
-        // Write pitch JSON next to the WAV file.
-        const auto outPath =
-            dir.filePath(fi.completeBaseName() + QStringLiteral(".pitch.json"));
-        QFile outFile(outPath);
-        if (outFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-            const auto json = nlohmann::json(f0All).dump();
-            outFile.write(QByteArray::fromStdString(json));
-            ++output.processedCount;
-        } else {
-            ++output.failedCount;
-        }
-    }
-
-    if (progress && total > 0) {
-        progress(total, total, QStringLiteral("Done"));
-    }
     return Ok(std::move(output));
 }
 

@@ -229,7 +229,6 @@ void HubertFAPage::setWorkingDirectory(const QString &dir) {
     m_workingDir = dir;
     if (m_outTgPath)
         m_outTgPath->setPath(dir);
-    updateResumeCheckbox();
 }
 
 QString HubertFAPage::workingDirectory() const {
@@ -238,24 +237,4 @@ QString HubertFAPage::workingDirectory() const {
 
 void HubertFAPage::onWorkingDirectoryChanged(const QString &newDir) {
     setWorkingDirectory(newDir);
-}
-
-void HubertFAPage::updateResumeCheckbox() {
-    if (!m_chkResume) {
-        m_chkResume = new QCheckBox(tr("Continue from last time"), this);
-        m_chkResume->setVisible(false);
-        int stretchIdx = m_rightPanel->count() - 1;
-        m_rightPanel->insertWidget(stretchIdx, m_chkResume);
-    }
-    if (m_workingDir.isEmpty()) {
-        m_chkResume->setVisible(false);
-        return;
-    }
-    m_checkpoint = dstools::BatchCheckpoint::load(m_workingDir, QStringLiteral("phoneme_alignment"));
-    m_chkResume->setVisible(m_checkpoint.exists());
-    if (m_checkpoint.exists()) {
-        m_chkResume->setChecked(true);
-        m_chkResume->setText(tr("Continue from last time (%1 files done)")
-            .arg(m_checkpoint.processedFiles().size()));
-    }
 }

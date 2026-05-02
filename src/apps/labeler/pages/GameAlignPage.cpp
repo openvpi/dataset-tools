@@ -54,11 +54,12 @@ void GameAlignPage::onRunAlignment() {
         return;
     }
 
-    dstools::BatchInput batchInput;
-    batchInput.workingDir = m_modelPath->text();
-    auto batchResult = processor->processBatch(batchInput);
-    if (!batchResult) {
+    dstools::TaskInput taskInput;
+    taskInput.audioPath = m_modelPath->text();
+    taskInput.config = config;
+    auto result = processor->process(taskInput);
+    if (!result) {
         QMessageBox::warning(this, tr("MIDI Alignment Failed"),
-                             QString::fromStdString(batchResult.error()));
+                             QString::fromStdString(result.error()));
     }
 }

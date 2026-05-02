@@ -32,7 +32,6 @@ public:
     void release() override;
 
     Result<TaskOutput> process(const TaskInput &input) override;
-    Result<BatchOutput> processBatch(const BatchInput &input, ProgressCallback progress) override;
 
 private:
     /// @brief Generate D3PM timestep schedule (linspace from 0 to 1).

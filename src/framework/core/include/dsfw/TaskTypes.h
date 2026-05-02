@@ -43,25 +43,4 @@ struct TaskOutput {
     std::map<QString, nlohmann::json> layers;  ///< slot name → layer data (JSON).
 };
 
-/// @brief Batch processing input (pipeline mode).
-struct BatchInput {
-    QString workingDir;      ///< Project root directory.
-    ProcessorConfig config;  ///< Engine-specific parameters.
-};
-
-/// @brief Batch processing output.
-struct BatchOutput {
-    int processedCount = 0;
-    int failedCount = 0;
-    QString outputPath;
-    QStringList processedFiles;
-    QStringList failedFiles;
-};
-
-/// @brief Progress callback for batch operations.
-/// @param current Current item index.
-/// @param total Total number of items.
-/// @param item Description of current item.
-using ProgressCallback = std::function<void(int current, int total, const QString &item)>;
-
 } // namespace dstools

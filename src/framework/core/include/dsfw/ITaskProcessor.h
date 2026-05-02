@@ -15,8 +15,8 @@ class IModelManager;
 /// @brief Unified processor interface replacing per-domain service interfaces.
 ///
 /// Each processor declares its I/O contract via taskSpec(), exposes configurable
-/// parameters via capabilities(), and supports both interactive (process) and
-/// batch (processBatch) execution modes.
+/// parameters via capabilities(), and supports interactive (process) execution.
+/// Batch processing is handled by PipelineRunner, not individual processors.
 ///
 /// @see TaskProcessorRegistry for discovery and instantiation.
 /// @see Essentia Algorithm + SOFA BaseG2P for design inspiration.
@@ -55,13 +55,8 @@ public:
 
     // ── Processing ──
 
-    /// @brief Process a single item (interactive mode).
+    /// @brief Process a single item.
     virtual Result<TaskOutput> process(const TaskInput &input) = 0;
-
-    /// @brief Process a batch of items (pipeline mode).
-    /// Default: iterates process() over items. Override for native batch APIs.
-    virtual Result<BatchOutput> processBatch(const BatchInput &input,
-                                             ProgressCallback progress = nullptr);
 };
 
 } // namespace dstools

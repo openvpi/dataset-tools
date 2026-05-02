@@ -5,8 +5,6 @@
 #include <dsfw/TaskProcessorRegistry.h>
 #include <dstools/ExecutionProvider.h>
 
-#include <QDir>
-
 namespace dstools {
 
 // Self-register with the task processor registry.
@@ -116,6 +114,24 @@ Result<TaskOutput> GameMidiProcessor::process(const TaskInput &input) {
 
     applyConfig(input.config);
 
+    if (input.config.contains("csvPath")) {
+        const auto csvPath = QString::fromStdString(input.config["csvPath"].get<std::string>());
+        const auto savePath = input.config.value("savePath", input.config["csvPath"].get<std::string>());
+        Game::AlignOptions opts;
+        auto result = m_game->alignCSV(csvPath.toStdWString(),
+                                       QString::fromStdString(savePath).toStdWString(),
+                                       "", false, opts, nullptr);
+        if (!result) {
+            return Err<TaskOutput>(result.error());
+        }
+        TaskOutput output;
+        output.layers["alignment"] = nlohmann::json::object({
+            {"csvPath", csvPath.toStdString()},
+            {"savePath", savePath}
+        });
+        return Ok(std::move(output));
+    }
+
     std::vector<Game::GameNote> notes;
     auto result = m_game->getNotes(input.audioPath.toStdWString(), notes, nullptr);
     if (!result) {
@@ -134,38 +150,6 @@ Result<TaskOutput> GameMidiProcessor::process(const TaskInput &input) {
         });
     }
     return Ok(std::move(output));
-}
-
-Result<BatchOutput> GameMidiProcessor::processBatch(const BatchInput &input,
-                                                    ProgressCallback progress) {
-    std::lock_guard lock(m_mutex);
-
-    if (!m_game || !m_game->isOpen()) {
-        return Err<BatchOutput>("Model not loaded");
-    }
-
-    applyConfig(input.config);
-
-    const auto csvPath = QDir(input.workingDir).filePath(QStringLiteral("transcription.csv"));
-    const auto savePath = input.workingDir;
-
-    std::function<void(int)> engineProgress;
-    if (progress) {
-        engineProgress = [&progress](int pct) {
-            progress(pct, 100, {});
-        };
-    }
-
-    Game::AlignOptions opts;
-    auto result = m_game->alignCSV(csvPath.toStdWString(), savePath.toStdWString(),
-                                   "", false, opts, engineProgress);
-    if (!result) {
-        return Err<BatchOutput>(result.error());
-    }
-
-    BatchOutput out;
-    out.outputPath = savePath;
-    return Ok(std::move(out));
 }
 
 } // namespace dstools

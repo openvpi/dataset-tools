@@ -11,7 +11,6 @@
 #include <dsfw/ITaskProcessor.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
-#include <dsfw/BatchCheckpoint.h>
 #include <dstools/PathSelector.h>
 
 namespace dstools::widgets {
@@ -63,7 +62,4 @@ private:
     bool m_modelLoaded = false;
     QTextCharFormat m_errorFormat;
     QString m_workingDir;
-    dstools::BatchCheckpoint m_checkpoint;
-
-    void updateResumeCheckbox();
 };
