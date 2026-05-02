@@ -74,8 +74,8 @@ void IntervalTierView::drawIntervals(QPainter &painter) {
     if (!m_doc) return;
     int count = m_doc->intervalCount(m_tierIndex);
     for (int i = 0; i < count; ++i) {
-        double xmin = m_doc->intervalStart(m_tierIndex, i);
-        double xmax = m_doc->intervalEnd(m_tierIndex, i);
+        double xmin = usToSec(m_doc->intervalStart(m_tierIndex, i));
+        double xmax = usToSec(m_doc->intervalEnd(m_tierIndex, i));
 
         int x1 = timeToX(xmin);
         int x2 = timeToX(xmax);
@@ -96,7 +96,7 @@ void IntervalTierView::drawBoundaries(QPainter &painter) {
     if (!m_doc) return;
     int count = m_doc->boundaryCount(m_tierIndex);
     for (int b = 0; b < count; ++b) {
-        int bx = timeToX(m_doc->boundaryTime(m_tierIndex, b));
+        int bx = timeToX(usToSec(m_doc->boundaryTime(m_tierIndex, b)));
 
         // Choose pen based on state
         if (m_state == State::Dragging && b == m_draggedBoundary) {
@@ -116,8 +116,8 @@ void IntervalTierView::drawLabels(QPainter &painter) {
     painter.setPen(dsfw::Theme::instance().palette().phonemeEditor.labelText);
     int count = m_doc->intervalCount(m_tierIndex);
     for (int i = 0; i < count; ++i) {
-        double xmin = m_doc->intervalStart(m_tierIndex, i);
-        double xmax = m_doc->intervalEnd(m_tierIndex, i);
+        double xmin = usToSec(m_doc->intervalStart(m_tierIndex, i));
+        double xmax = usToSec(m_doc->intervalEnd(m_tierIndex, i));
         int x1 = timeToX(xmin);
         int x2 = timeToX(xmax);
 
@@ -145,7 +145,7 @@ int IntervalTierView::hitTestBoundary(int x) const {
     if (!m_doc) return -1;
     int count = m_doc->boundaryCount(m_tierIndex);
     for (int b = 0; b < count; ++b) {
-        int bx = timeToX(m_doc->boundaryTime(m_tierIndex, b));
+        int bx = timeToX(usToSec(m_doc->boundaryTime(m_tierIndex, b)));
         if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
             return b;
         }
@@ -183,15 +183,15 @@ void IntervalTierView::mousePressEvent(QMouseEvent *event) {
             // Insert boundary before this one
             QAction *insertAction = menu.addAction(tr("Insert Boundary Here"));
             connect(insertAction, &QAction::triggered, [this, boundaryIdx]() {
-                double time = m_doc->boundaryTime(m_tierIndex, boundaryIdx);
+                TimePos time = m_doc->boundaryTime(m_tierIndex, boundaryIdx);
                 if (m_undoStack) {
                     m_undoStack->push(new InsertBoundaryCommand(m_doc, m_tierIndex, time));
                 }
             });
         }
 
-        double clickTime = xToTime(event->pos().x());
-        QAction *insertAtTime = menu.addAction(tr("Insert Boundary at %1s").arg(clickTime, 0, 'f', 3));
+        TimePos clickTime = secToUs(xToTime(event->pos().x()));
+        QAction *insertAtTime = menu.addAction(tr("Insert Boundary at %1s").arg(usToSec(clickTime), 0, 'f', 3));
         connect(insertAtTime, &QAction::triggered, [this, clickTime]() {
             if (m_undoStack) {
                 m_undoStack->push(new InsertBoundaryCommand(m_doc, m_tierIndex, clickTime));
@@ -205,7 +205,7 @@ void IntervalTierView::mousePressEvent(QMouseEvent *event) {
 
 void IntervalTierView::mouseMoveEvent(QMouseEvent *event) {
     if (m_state == State::Dragging) {
-        double currentTime = xToTime(event->pos().x());
+        TimePos currentTime = secToUs(xToTime(event->pos().x()));
         updateDrag(currentTime);
     } else {
         // Hover detection
@@ -230,8 +230,8 @@ void IntervalTierView::mouseDoubleClickEvent(QMouseEvent *event) {
         // Find which interval was clicked
         int count = m_doc->intervalCount(m_tierIndex);
         for (int i = 0; i < count; ++i) {
-            double xmin = m_doc->intervalStart(m_tierIndex, i);
-            double xmax = m_doc->intervalEnd(m_tierIndex, i);
+            double xmin = usToSec(m_doc->intervalStart(m_tierIndex, i));
+            double xmax = usToSec(m_doc->intervalEnd(m_tierIndex, i));
             if (clickTime >= xmin && clickTime < xmax) {
                 // Edit interval text
                 bool ok;
@@ -258,7 +258,7 @@ void IntervalTierView::leaveEvent(QEvent *event) {
     QWidget::leaveEvent(event);
 }
 
-void IntervalTierView::startDrag(int boundaryIndex, double startTime) {
+void IntervalTierView::startDrag(int boundaryIndex, TimePos startTime) {
     m_state = State::Dragging;
     m_draggedBoundary = boundaryIndex;
     m_dragStartTime = startTime;
@@ -278,14 +278,14 @@ void IntervalTierView::startDrag(int boundaryIndex, double startTime) {
     setCursor(Qt::SizeHorCursor);
 }
 
-void IntervalTierView::updateDrag(double currentTime) {
+void IntervalTierView::updateDrag(TimePos currentTime) {
     if (m_state != State::Dragging) return;
 
     // Direct update for visual feedback (not through undo stack during drag)
     m_doc->moveBoundary(m_tierIndex, m_draggedBoundary, currentTime);
 
     // Update aligned boundaries
-    double delta = currentTime - m_dragStartTime;
+    TimePos delta = currentTime - m_dragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
         m_doc->moveBoundary(m_dragAligned[i].tierIndex,
                             m_dragAligned[i].boundaryIndex,
@@ -295,7 +295,7 @@ void IntervalTierView::updateDrag(double currentTime) {
     update();
 }
 
-void IntervalTierView::endDrag(double finalTime) {
+void IntervalTierView::endDrag(TimePos finalTime) {
     if (m_state != State::Dragging) return;
 
     // Restore to start state, then create undo command
@@ -330,7 +330,7 @@ void IntervalTierView::endDrag(double finalTime) {
 
 void IntervalTierView::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton && m_state == State::Dragging) {
-        double finalTime = xToTime(event->pos().x());
+        TimePos finalTime = secToUs(xToTime(event->pos().x()));
         endDrag(finalTime);
     }
     QWidget::mouseReleaseEvent(event);
@@ -340,8 +340,8 @@ int IntervalTierView::hitTestInterval(int x) const {
     if (!m_doc) return -1;
     int count = m_doc->intervalCount(m_tierIndex);
     for (int i = 0; i < count; ++i) {
-        int x1 = timeToX(m_doc->intervalStart(m_tierIndex, i));
-        int x2 = timeToX(m_doc->intervalEnd(m_tierIndex, i));
+        int x1 = timeToX(usToSec(m_doc->intervalStart(m_tierIndex, i)));
+        int x2 = timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, i)));
         if (x >= x1 && x < x2) {
             return i;
         }
@@ -353,8 +353,8 @@ void IntervalTierView::drawSelection(QPainter &painter) {
     if (m_selectedInterval < 0 || !m_doc) return;
     if (m_selectedInterval >= m_doc->intervalCount(m_tierIndex)) return;
 
-    int x1 = timeToX(m_doc->intervalStart(m_tierIndex, m_selectedInterval));
-    int x2 = timeToX(m_doc->intervalEnd(m_tierIndex, m_selectedInterval));
+    int x1 = timeToX(usToSec(m_doc->intervalStart(m_tierIndex, m_selectedInterval)));
+    int x2 = timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, m_selectedInterval)));
 
     painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.selectionBorder, 2));
     painter.drawRect(x1, 0, x2 - x1 - 1, height() - 1);
@@ -371,14 +371,14 @@ void IntervalTierView::keyPressEvent(QKeyEvent *event) {
         return;
     case Qt::Key_Left:
         if (m_selectedInterval >= 0 && m_hoveredBoundary >= 0)
-            adjustSelectedBoundary(-0.001);
+            adjustSelectedBoundary(-1000);
         else
             selectPrevInterval();
         event->accept();
         return;
     case Qt::Key_Right:
         if (m_selectedInterval >= 0 && m_hoveredBoundary >= 0)
-            adjustSelectedBoundary(0.001);
+            adjustSelectedBoundary(1000);
         else
             selectNextInterval();
         event->accept();
@@ -407,11 +407,11 @@ void IntervalTierView::selectPrevInterval() {
     update();
 }
 
-void IntervalTierView::adjustSelectedBoundary(double deltaSec) {
+void IntervalTierView::adjustSelectedBoundary(TimePos deltaUs) {
     if (!m_doc || m_hoveredBoundary < 0) return;
 
-    double oldTime = m_doc->boundaryTime(m_tierIndex, m_hoveredBoundary);
-    double newTime = oldTime + deltaSec;
+    TimePos oldTime = m_doc->boundaryTime(m_tierIndex, m_hoveredBoundary);
+    TimePos newTime = oldTime + deltaUs;
 
     if (m_undoStack) {
         m_undoStack->push(new MoveBoundaryCommand(

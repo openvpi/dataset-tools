@@ -8,6 +8,7 @@
 #include <QVector>
 
 #include <dstools/ViewportController.h>
+#include <dstools/TimePos.h>
 #include "TextGridDocument.h"
 #include "BoundaryBindingManager.h"
 
@@ -61,14 +62,14 @@ public:
 
     /// @brief Adjusts the selected boundary position by a time delta.
     /// @param deltaSec Time adjustment in seconds.
-    void adjustSelectedBoundary(double deltaSec);
+    void adjustSelectedBoundary(TimePos deltaUs);
 
 signals:
     /// @brief Emitted when an interval is clicked.
     /// @param intervalIndex Index of the clicked interval.
     /// @param startTime Start time of the interval.
     /// @param endTime End time of the interval.
-    void intervalClicked(int intervalIndex, double startTime, double endTime);
+    void intervalClicked(int intervalIndex, TimePos startTime, TimePos endTime);
 
     /// @brief Emitted when an interval is double-clicked.
     /// @param intervalIndex Index of the double-clicked interval.
@@ -81,7 +82,7 @@ signals:
     /// @brief Emitted to request playback of an interval.
     /// @param startTime Playback start time.
     /// @param endTime Playback end time.
-    void requestPlayback(double startTime, double endTime);
+    void requestPlayback(TimePos startTime, TimePos endTime);
 
     /// @brief Emitted when this tier is activated by user interaction.
     /// @param tierIndex Index of the activated tier.
@@ -108,9 +109,9 @@ private:
     void drawBindingLines(QPainter &painter);           ///< Draws cross-tier binding indicators.
     void drawSelection(QPainter &painter);              ///< Draws selection highlight.
 
-    void startDrag(int boundaryIndex, double startTime);///< Begins boundary drag.
-    void updateDrag(double currentTime);                ///< Updates drag position.
-    void endDrag(double finalTime);                     ///< Commits boundary drag.
+    void startDrag(int boundaryIndex, TimePos startTime);///< Begins boundary drag.
+    void updateDrag(TimePos currentTime);                ///< Updates drag position.
+    void endDrag(TimePos finalTime);                     ///< Commits boundary drag.
 
     int m_tierIndex;                                    ///< Tier index in the document.
     TextGridDocument *m_doc = nullptr;                  ///< Associated document.
@@ -129,9 +130,9 @@ private:
     int m_draggedBoundary = -1;                         ///< Dragged boundary index, or -1.
     int m_selectedInterval = -1;                        ///< Selected interval for keyboard nav.
 
-    double m_dragStartTime = 0.0;                       ///< Time at drag start.
+    TimePos m_dragStartTime = 0;                         ///< Time at drag start.
     std::vector<AlignedBoundary> m_dragAligned;          ///< Aligned boundaries during drag.
-    std::vector<double> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
+    std::vector<TimePos> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
 
     static constexpr int kBoundaryHitWidth = 6;         ///< Hit-test width in pixels.
     bool m_active = false;                              ///< Whether this tier is active.
