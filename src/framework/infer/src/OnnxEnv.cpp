@@ -2,6 +2,7 @@
 
 #include <onnxruntime_cxx_api.h>
 
+#include <filesystem>
 #include <iostream>
 
 #ifdef ONNXRUNTIME_ENABLE_DML
@@ -15,7 +16,7 @@ namespace dstools::infer {
         return s_env;
     }
 
-    Ort::SessionOptions OnnxEnv::createSessionOptions(ExecutionProvider provider, int deviceId, int interOpThreads) {
+    Ort::SessionOptions OnnxEnv::createSessionOptions(ExecutionProvider provider, [[maybe_unused]] int deviceId, int interOpThreads) {
 
         Ort::SessionOptions options;
         options.SetInterOpNumThreads(interOpThreads);
@@ -88,7 +89,12 @@ namespace dstools::infer {
 
         try {
             auto options = createSessionOptions(provider, deviceId);
+#ifdef _WIN32
             auto session = std::make_unique<Ort::Session>(env(), modelPath.c_str(), options);
+#else
+            auto modelPathStr = std::filesystem::path(modelPath).string();
+            auto session = std::make_unique<Ort::Session>(env(), modelPathStr.c_str(), options);
+#endif
             return session;
         } catch (const Ort::Exception &e) {
             if (errorMsg) {

@@ -6,7 +6,6 @@
 #include <QDir>
 
 #include <algorithm>
-#include <cmath>
 
 namespace dstools {
 
@@ -37,25 +36,6 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
     }
 
     auto version = QString::fromStdString(j.value("version", "2.0.0"));
-
-    // v1 → v2 migration
-    if (version.startsWith("1.")) {
-        if (j.contains("layers")) {
-            for (auto &layer : j["layers"]) {
-                if (layer.contains("boundaries")) {
-                    for (auto &bd : layer["boundaries"]) {
-                        if (bd.contains("position")) {
-                            double pos = bd["position"].get<double>();
-                            bd["pos"] = static_cast<int64_t>(std::llround(pos * 1e6));
-                            bd.erase("position");
-                        }
-                    }
-                }
-            }
-        }
-        version = "2.0.0";
-        j["version"] = "2.0.0";
-    }
 
     DsTextDocument doc;
     doc.version = version;

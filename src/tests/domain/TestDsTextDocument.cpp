@@ -8,7 +8,6 @@ class TestDsTextDocument : public QObject {
     Q_OBJECT
 private slots:
     void load_v2_roundtrip();
-    void load_v1_migration();
     void sort_boundaries();
     void nextId();
     void groups_lookup();
@@ -80,38 +79,6 @@ void TestDsTextDocument::load_v2_roundtrip() {
     }
     QCOMPARE(doc2.curves.size(), doc.curves.size());
     QCOMPARE(doc2.groups.size(), doc.groups.size());
-}
-
-void TestDsTextDocument::load_v1_migration() {
-    const QByteArray json = R"({
-        "version": "1.0.0",
-        "audio": {"path": "old.wav", "in": 0, "out": 0},
-        "layers": [
-            {
-                "name": "words",
-                "boundaries": [
-                    {"id": 1, "position": 0.5, "text": "hello"},
-                    {"id": 2, "position": 1.25, "text": "world"}
-                ]
-            }
-        ]
-    })";
-
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    const QString path = tmp.filePath("v1.dstext");
-    {
-        QFile f(path);
-        QVERIFY(f.open(QIODevice::WriteOnly));
-        f.write(json);
-    }
-
-    auto res = DsTextDocument::load(path);
-    QVERIFY(res.ok());
-    const auto &doc = res.value();
-    QCOMPARE(doc.version, "2.0.0");
-    QCOMPARE(doc.layers[0].boundaries[0].pos, TimePos(500000));
-    QCOMPARE(doc.layers[0].boundaries[1].pos, TimePos(1250000));
 }
 
 void TestDsTextDocument::sort_boundaries() {

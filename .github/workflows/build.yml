@@ -61,7 +61,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev
 
       - name: Setup ccache
         if: runner.os != 'Windows'
@@ -143,7 +143,7 @@ jobs:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
           Qt6_DIR: ${{env.QT_DIR}}
-          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR;VCPKG_BUILD_TYPE'
           VCPKG_BUILD_TYPE: release
 
       - name: Build Vcpkg packages (Windows)
@@ -156,7 +156,7 @@ jobs:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
           Qt6_DIR: ${{env.QT_DIR}}
-          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR;VCPKG_BUILD_TYPE'
           VCPKG_BUILD_TYPE: release
 
       - name: Install OnnxRuntime (Unix)
@@ -316,7 +316,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 clang-tidy autoconf autoconf-archive automake libtool
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 clang-tidy autoconf autoconf-archive automake libtool libltdl-dev
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -389,7 +389,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 autoconf autoconf-archive automake libtool
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 autoconf autoconf-archive automake libtool libltdl-dev
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
