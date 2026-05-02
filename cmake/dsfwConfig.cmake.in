@@ -20,21 +20,23 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
     endforeach()
 
     set(_dsfw_alias_pairs
-        "dsfw::base;dsfw::dsfw-base"
-        "dsfw::core;dsfw::dsfw-core"
-        "dsfw::ui-core;dsfw::dsfw-ui-core"
-        "dsfw::audio;dsfw::dstools-audio"
-        "dsfw::widgets;dsfw::dsfw-widgets"
+        "dsfw::base=dsfw::dsfw-base"
+        "dsfw::core=dsfw::dsfw-core"
+        "dsfw::ui-core=dsfw::dsfw-ui-core"
+        "dsfw::audio=dsfw::dstools-audio"
+        "dsfw::widgets=dsfw::dsfw-widgets"
     )
     foreach(_dsfw_pair IN LISTS _dsfw_alias_pairs)
-        list(GET _dsfw_pair 0 _dsfw_alias)
-        list(GET _dsfw_pair 1 _dsfw_real)
+        string(REPLACE "=" ";" _dsfw_pair_list "${_dsfw_pair}")
+        list(GET _dsfw_pair_list 0 _dsfw_alias)
+        list(GET _dsfw_pair_list 1 _dsfw_real)
         if(NOT TARGET ${_dsfw_alias} AND TARGET ${_dsfw_real})
             add_library(${_dsfw_alias} ALIAS ${_dsfw_real})
         endif()
     endforeach()
     unset(_dsfw_alias_pairs)
     unset(_dsfw_pair)
+    unset(_dsfw_pair_list)
     unset(_dsfw_alias)
     unset(_dsfw_real)
     unset(_dsfw_tgt)
