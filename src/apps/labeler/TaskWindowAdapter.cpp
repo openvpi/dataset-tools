@@ -1,6 +1,9 @@
 #include "TaskWindowAdapter.h"
 
+#include "commands/DiscardSliceCommand.h"
+
 #include <dsfw/PipelineRunner.h>
+#include <QMenu>
 
 namespace dstools::labeler {
 
@@ -11,6 +14,8 @@ TaskWindowAdapter::TaskWindowAdapter(dstools::widgets::TaskWindow *page, QWidget
     layout->setSpacing(0);
     m_page->setParent(this);
     layout->addWidget(m_page);
+
+    setupSliceContextMenu();
 }
 
 TaskWindowAdapter::~TaskWindowAdapter() = default;
@@ -61,6 +66,40 @@ void TaskWindowAdapter::connectPipelineRunner(dstools::PipelineRunner *runner) {
     QObject::connect(runner, &dstools::PipelineRunner::itemDiscarded,
                      this, [this](const QString &itemId, const QString &reason) {
                          m_page->slot_oneFailed(itemId, reason);
+                     });
+}
+
+void TaskWindowAdapter::setupSliceContextMenu() {
+    auto *listWidget = m_page->taskList();
+    listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    QObject::connect(listWidget, &QListWidget::customContextMenuRequested,
+                     this, [this, listWidget](const QPoint &pos) {
+                         QListWidgetItem *item = listWidget->itemAt(pos);
+                         if (!item)
+                             return;
+
+                         auto *menu = new QMenu(this);
+                         const bool isDiscarded = item->data(Qt::UserRole + 2).toBool();
+
+                         if (isDiscarded) {
+                             auto *restoreAction = menu->addAction(tr("Restore"));
+                             QObject::connect(restoreAction, &QAction::triggered, this, [this, listWidget, item]() {
+                                 int row = listWidget->row(item);
+                                 m_undoStack.push(new DiscardSliceCommand(listWidget, row,
+                                     DiscardSliceCommand::State::Restore));
+                             });
+                         } else {
+                             auto *discardAction = menu->addAction(tr("Discard"));
+                             QObject::connect(discardAction, &QAction::triggered, this, [this, listWidget, item]() {
+                                 int row = listWidget->row(item);
+                                 m_undoStack.push(new DiscardSliceCommand(listWidget, row,
+                                     DiscardSliceCommand::State::Discard));
+                             });
+                         }
+
+                         menu->exec(listWidget->mapToGlobal(pos));
+                         menu->deleteLater();
                      });
 }
 

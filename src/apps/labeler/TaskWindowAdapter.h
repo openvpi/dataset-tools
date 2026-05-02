@@ -3,6 +3,7 @@
 #include <dsfw/IPageLifecycle.h>
 #include <dstools/TaskWindow.h>
 #include <QVBoxLayout>
+#include <QUndoStack>
 
 namespace dstools {
 
@@ -34,8 +35,11 @@ public:
     void connectPipelineRunner(dstools::PipelineRunner *runner);
 
 private:
+    void setupSliceContextMenu();
+
     dstools::widgets::TaskWindow *m_page;
     QString m_workingDir;
+    QUndoStack m_undoStack;
 };
 
 }
