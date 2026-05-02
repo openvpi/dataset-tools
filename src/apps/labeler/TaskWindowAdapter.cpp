@@ -17,7 +17,7 @@ dstools::widgets::TaskWindow *TaskWindowAdapter::innerPage() const {
     return m_page;
 }
 
-    bool TaskWindowAdapter::hasUnsavedChanges() const {
+bool TaskWindowAdapter::hasUnsavedChanges() const {
     return false;
 }
 
@@ -40,10 +40,14 @@ void TaskWindowAdapter::onDeactivated() {
 }
 
 void TaskWindowAdapter::onWorkingDirectoryChanged(const QString &newDir) {
-    Q_UNUSED(newDir);
+    m_workingDir = newDir;
 }
 
 void TaskWindowAdapter::onShutdown() {
+}
+
+void TaskWindowAdapter::showItemDiscarded(const QString &itemId, const QString &reason) {
+    m_page->slot_oneFailed(itemId, reason);
 }
 
 }
