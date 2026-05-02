@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dsfw/IPageActions.h>
+#include <dstools/TimePos.h>
 
 #include <QWidget>
 #include <QAction>
@@ -153,7 +154,7 @@ private:
 
     // State
     bool m_abComparisonActive = false;
-    std::vector<double> m_originalF0;
+    std::vector<int32_t> m_originalF0;
     QList<QShortcut *> m_windowShortcuts;
     QUndoStack *m_undoStack = nullptr;
     std::unique_ptr<QProxyStyle> m_jumpClickStyle;

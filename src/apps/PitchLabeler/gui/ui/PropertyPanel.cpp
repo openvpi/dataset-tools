@@ -1,5 +1,6 @@
 #include "PropertyPanel.h"
 #include <dstools/PitchUtils.h>
+#include <dstools/TimePos.h>
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -66,8 +67,8 @@ PropertyPanel::F0Stats PropertyPanel::computeNoteF0Stats(int noteIndex) const {
     if (f0.values.empty() || f0.timestep <= 0) return stats;
 
     // Get F0 samples within the note time range (values are already MIDI)
-    int startIdx = static_cast<int>(note.start / f0.timestep);
-    int endIdx = static_cast<int>(note.end() / f0.timestep);
+    int startIdx = static_cast<int>((note.start - m_dsFile->offset) / f0.timestep);
+    int endIdx = static_cast<int>((note.end() - m_dsFile->offset) / f0.timestep);
     startIdx = std::max(0, startIdx);
     endIdx = std::min(static_cast<int>(f0.values.size()), endIdx);
 
@@ -80,9 +81,11 @@ PropertyPanel::F0Stats PropertyPanel::computeNoteF0Stats(int noteIndex) const {
     // Collect voiced samples
     std::vector<double> midiSamples;
     for (int i = startIdx; i < endIdx; ++i) {
-        double val = f0.values[i];
-        if (val > 0 && !std::isnan(val) && !std::isinf(val)) {
-            midiSamples.push_back(val);
+        int32_t val = f0.values[i];
+        if (val > 0) {
+            double hz = mhzToHz(val);
+            double midi = 12.0 * std::log2(hz / 440.0) + 69.0;
+            midiSamples.push_back(midi);
         }
     }
 
@@ -278,7 +281,7 @@ void PropertyPanel::setSelectedNote(int noteIndex) {
     }
 
     // Duration in ms
-    m_lblDuration->setText(QString::number(note.duration * 1000, 'f', 1) + " ms");
+    m_lblDuration->setText(QString::number(usToMs(note.duration), 'f', 1) + " ms");
 
     // F0 statistics
     auto stats = computeNoteF0Stats(noteIndex);
@@ -372,15 +375,15 @@ void PropertyPanel::updateGlobalFields() {
 
     // Total duration
     if (!m_dsFile->notes.empty()) {
-        double totalDur = m_dsFile->notes.back().end() - m_dsFile->offset;
+        double totalDur = usToSec(m_dsFile->notes.back().end() - m_dsFile->offset);
         m_lblTotalDuration->setText(QString::number(totalDur, 'f', 2) + " s");
     } else {
         m_lblTotalDuration->setText(QString::fromUtf8("—"));
     }
 
     // F0 timestep
-    double ts = m_dsFile->f0.timestep;
-    m_lblF0Timestep->setText(ts > 0 ? QString::number(ts * 1000, 'f', 1) + " ms" : QString::fromUtf8("—"));
+    double ts = usToMs(m_dsFile->f0.timestep);
+    m_lblF0Timestep->setText(ts > 0 ? QString::number(ts, 'f', 1) + " ms" : QString::fromUtf8("—"));
 
     // Average F0 deviation across all non-rest non-slur notes
     double totalAbsDev = 0.0;

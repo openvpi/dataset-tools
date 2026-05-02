@@ -4,6 +4,7 @@
 
 #include <QPainterPath>
 
+#include <dstools/CurveTools.h>
 #include <dstools/PitchUtils.h>
 
 #include <cmath>
@@ -38,7 +39,7 @@ void PianoRollRenderer::drawGrid(QPainter &p, int w, int h, const RenderState &s
     }
 
     double totalDuration = s.audioDuration > 0 ? s.audioDuration
-                         : s.dsFile            ? s.dsFile->getTotalDuration()
+                         : s.dsFile            ? usToSec(s.dsFile->getTotalDuration())
                                                : 10.0;
     QPen penBar(Colors::BarLine, 1);
     p.setPen(penBar);
@@ -154,8 +155,8 @@ void PianoRollRenderer::drawNotes(QPainter &p, int w, int h, const RenderState &
     for (int i = 0; i < static_cast<int>(s.dsFile->notes.size()); ++i) {
         const auto &note = s.dsFile->notes[i];
 
-        double sceneX1 = s.timeToX(note.start);
-        double sceneX2 = s.timeToX(note.end());
+        double sceneX1 = s.timeToX(usToSec(note.start));
+        double sceneX2 = s.timeToX(usToSec(note.end()));
         int wx1 = s.sceneXToWidget(sceneX1);
         int wx2 = s.sceneXToWidget(sceneX2);
 
@@ -240,11 +241,11 @@ void PianoRollRenderer::drawNotes(QPainter &p, int w, int h, const RenderState &
 
         if (s.showPhonemeTexts) {
             for (const auto &phone : s.dsFile->phones) {
-                if (phone.start + phone.duration <= note.start + 0.001) continue;
-                if (phone.start >= note.end() - 0.001) break;
+                if (phone.start + phone.duration <= note.start + 1000) continue;
+                if (phone.start >= note.end() - 1000) break;
 
-                double phSceneX1 = s.timeToX(phone.start);
-                double phSceneX2 = s.timeToX(phone.end());
+                double phSceneX1 = s.timeToX(usToSec(phone.start));
+                double phSceneX2 = s.timeToX(usToSec(phone.end()));
                 int phWx1 = s.sceneXToWidget(phSceneX1);
                 int phWx2 = s.sceneXToWidget(phSceneX2);
                 int phW = qMax(2, phWx2 - phWx1);
@@ -296,19 +297,24 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
 
     const auto &f0 = s.dsFile->f0;
     const auto &values = f0.values;
-    double timestep = f0.timestep;
-    double offset = s.dsFile->offset;
+    double timestepSec = usToSec(f0.timestep);
+    double offsetSec = usToSec(s.dsFile->offset);
+
+    auto mhzToMidi = [](int32_t mhz) -> double {
+        double hz = dstools::mhzToHz(mhz);
+        return (hz > 0.0) ? 12.0 * std::log2(hz / 440.0) + 69.0 : 0.0;
+    };
 
     QPainterPath path;
     bool first = true;
 
     for (size_t i = 0; i < values.size(); ++i) {
-        double val = values[i];
-        if (val <= 0 || std::isnan(val) || std::isinf(val)) { first = true; continue; }
-        double midi = val;
+        int32_t val = values[i];
+        if (val <= 0) { first = true; continue; }
+        double midi = mhzToMidi(val);
         if (std::abs(midi) > 1000) { first = true; continue; }
 
-        double sceneX = s.timeToX(offset + i * timestep);
+        double sceneX = s.timeToX(offsetSec + i * timestepSec);
         double sceneY = s.midiToY(midi);
         int wx = s.sceneXToWidget(sceneX);
         int wy = s.sceneYToWidget(sceneY);
@@ -318,16 +324,15 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
     }
 
     if (!path.isEmpty()) {
-        // A/B comparison original F0
         if (s.abComparisonActive && s.originalF0 && !s.originalF0->empty()) {
             QPainterPath origPath;
             bool origFirst = true;
             for (size_t i = 0; i < s.originalF0->size(); ++i) {
-                double val = (*s.originalF0)[i];
-                if (val <= 0 || std::isnan(val) || std::isinf(val)) { origFirst = true; continue; }
-                double midi = val;
+                int32_t val = (*s.originalF0)[i];
+                if (val <= 0) { origFirst = true; continue; }
+                double midi = mhzToMidi(val);
                 if (std::abs(midi) > 1000) { origFirst = true; continue; }
-                double sceneX = s.timeToX(offset + i * timestep);
+                double sceneX = s.timeToX(offsetSec + i * timestepSec);
                 double sceneY = s.midiToY(midi);
                 int wx = s.sceneXToWidget(sceneX);
                 int wy = s.sceneYToWidget(sceneY);
@@ -342,7 +347,6 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
             }
         }
 
-        // Current F0
         if (s.selectedNotes && !s.selectedNotes->empty() && s.dsFile) {
             p.setPen(QPen(Colors::F0Dimmed, 2));
             p.setBrush(Qt::NoBrush);
@@ -351,20 +355,20 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
             for (int noteIdx : *s.selectedNotes) {
                 if (noteIdx < 0 || noteIdx >= static_cast<int>(s.dsFile->notes.size())) continue;
                 const auto &note = s.dsFile->notes[noteIdx];
-                double noteStart = note.start;
-                double noteEnd = note.end();
+                double noteStartSec = usToSec(note.start);
+                double noteEndSec = usToSec(note.end());
 
                 QPainterPath selPath;
                 bool selFirst = true;
                 for (size_t i = 0; i < values.size(); ++i) {
-                    double t = offset + i * timestep;
-                    if (t < noteStart || t > noteEnd) continue;
-                    double val = values[i];
-                    if (val <= 0 || std::isnan(val) || std::isinf(val) || std::abs(val) > 1000) {
-                        selFirst = true; continue;
-                    }
+                    double t = offsetSec + i * timestepSec;
+                    if (t < noteStartSec || t > noteEndSec) continue;
+                    int32_t val = values[i];
+                    if (val <= 0) { selFirst = true; continue; }
+                    double midi = mhzToMidi(val);
+                    if (std::abs(midi) > 1000) { selFirst = true; continue; }
                     double sx = s.timeToX(t);
-                    double sy = s.midiToY(val);
+                    double sy = s.midiToY(midi);
                     int swx = s.sceneXToWidget(sx);
                     int swy = s.sceneYToWidget(sy);
                     if (selFirst) { selPath.moveTo(swx, swy); selFirst = false; }
@@ -492,8 +496,8 @@ void PianoRollRenderer::drawSnapGuide(QPainter &p, int w, int h, const RenderSta
     double newMidi = origMidi + s.dragAccumulatedCents / 100.0;
     const auto &note = s.dsFile->notes[firstIdx];
 
-    double x1 = s.timeToX(note.start);
-    double x2 = s.timeToX(note.end());
+    double x1 = s.timeToX(usToSec(note.start));
+    double x2 = s.timeToX(usToSec(note.end()));
     int wx1 = s.sceneXToWidget(x1);
     int wx2 = s.sceneXToWidget(x2);
     int origWy = s.sceneYToWidget(s.midiToY(origMidi));

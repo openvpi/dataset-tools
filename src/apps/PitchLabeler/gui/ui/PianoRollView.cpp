@@ -364,7 +364,7 @@ void PianoRollView::setABComparisonActive(bool active) {
     update();
 }
 
-void PianoRollView::storeOriginalF0(const std::vector<double> &original) {
+void PianoRollView::storeOriginalF0(const std::vector<int32_t> &original) {
     m_originalF0 = original;
 }
 
@@ -430,7 +430,7 @@ void PianoRollView::updateScrollBars() {
     int drawH = height() - ScrollBarSize;
 
     double totalDuration = m_audioDuration > 0 ? m_audioDuration
-                         : m_dsFile            ? m_dsFile->getTotalDuration()
+                         : m_dsFile            ? usToSec(m_dsFile->getTotalDuration())
                                                : 10.0;
     double sceneW = timeToX(totalDuration);
     double sceneH = midiToY(MinMidi) + 50;
@@ -456,7 +456,9 @@ int PianoRollView::getNoteAtPosition(int x, int y) const {
 
     for (int i = 0; i < static_cast<int>(m_dsFile->notes.size()); ++i) {
         const auto &note = m_dsFile->notes[i];
-        if (time >= note.start && time < note.end()) {
+        double noteStartSec = usToSec(note.start);
+        double noteEndSec = usToSec(note.end());
+        if (time >= noteStartSec && time < noteEndSec) {
             if (note.isRest()) {
                 double restMidi = PitchProcessor::getRestMidi(*m_dsFile, i);
                 if (std::abs(midi - restMidi) < 1.0) return i;

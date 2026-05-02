@@ -7,6 +7,8 @@
 #include "ui/PianoRollView.h"
 #include "ui/PropertyPanel.h"
 
+#include <dstools/TimePos.h>
+
 #include <QApplication>
 #include <QDir>
 #include <QFileDialog>
@@ -158,7 +160,7 @@ namespace dstools {
             m_originalF0 = m_currentFile->f0.values;
 
             if (m_playbackProgressSlider && m_currentFile) {
-                double total = m_currentFile->getTotalDuration();
+                double total = usToSec(m_currentFile->getTotalDuration());
                 m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
                 m_playbackProgressSlider->setValue(0);
                 m_progressCurrentTime->setText("00:00.000");
@@ -246,7 +248,7 @@ namespace dstools {
 
             m_progressCurrentTime->setText(formatTime(sec));
             if (m_currentFile) {
-                m_progressTotalTime->setText(formatTime(m_currentFile->getTotalDuration()));
+                m_progressTotalTime->setText(formatTime(usToSec(m_currentFile->getTotalDuration())));
             }
 
             emit positionChanged(sec);
@@ -259,7 +261,7 @@ namespace dstools {
             // Don't fight the user — skip slider update while they're dragging
             if (m_playbackProgressSlider && m_currentFile &&
                 !m_playbackProgressSlider->isSliderDown()) {
-                double total = m_currentFile->getTotalDuration();
+                double total = usToSec(m_currentFile->getTotalDuration());
                 m_playbackProgressSlider->setRange(0, static_cast<int>(total * 1000));
                 m_playbackProgressSlider->setValue(static_cast<int>(sec * 1000));
             }

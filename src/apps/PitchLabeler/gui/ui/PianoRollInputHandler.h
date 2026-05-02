@@ -5,7 +5,9 @@
 #include <Qt>
 
 #include <dstools/PitchUtils.h>
+#include <dstools/TimePos.h>
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <set>
@@ -111,7 +113,7 @@ public:
     bool isDriftDragging() const { return m_driftDragging; }
     double modulationDragAmount() const { return m_modulationDragAmount; }
     double driftDragAmount() const { return m_driftDragAmount; }
-    const std::vector<double> &preAdjustF0() const { return m_preAdjustF0; }
+    const std::vector<int32_t> &preAdjustF0() const { return m_preAdjustF0; }
     bool isRubberBandActive() const { return m_rubberBandActive; }
     QRect rubberBandRect() const { return m_rubberBandRect; }
     bool isRulerDragging() const { return m_rulerDragging; }
@@ -147,7 +149,7 @@ private:
     double m_driftDragStartY = 0.0;
     double m_modulationDragAmount = 1.0;
     double m_driftDragAmount = 1.0;
-    std::vector<double> m_preAdjustF0;
+    std::vector<int32_t> m_preAdjustF0;
 
     // Rubber-band selection
     bool m_rubberBandActive = false;

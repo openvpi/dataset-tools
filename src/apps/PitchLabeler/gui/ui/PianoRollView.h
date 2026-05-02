@@ -10,6 +10,7 @@
 #include <QUndoStack>
 
 #include <dstools/PitchUtils.h>
+#include <dstools/TimePos.h>
 #include <dstools/ViewportController.h>
 
 #include "PianoRollRenderer.h"
@@ -72,7 +73,7 @@ public:
     // A/B comparison
     void setABComparisonActive(bool active);
     bool isABComparisonActive() const { return m_abComparisonActive; }
-    void storeOriginalF0(const std::vector<double> &original);
+    void storeOriginalF0(const std::vector<int32_t> &original);
 
     // Config persistence (following SlurCutter F0Widget pattern)
     void loadConfig(dstools::AppSettings &settings);
@@ -136,7 +137,7 @@ private:
 
     // A/B comparison
     bool m_abComparisonActive = false;
-    std::vector<double> m_originalF0;
+    std::vector<int32_t> m_originalF0;
 
     // Display options
     bool m_showPitchTextOverlay = false;

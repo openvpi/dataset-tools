@@ -2,6 +2,7 @@
 
 #include <QUndoCommand>
 #include <QString>
+#include <dstools/TimePos.h>
 #include <vector>
 #include <memory>
 
@@ -25,7 +26,7 @@ private:
     std::vector<int> m_indices;
     struct NoteSnapshot {
         QString name;
-        double duration;
+        TimePos duration;
         int slur;
         QString glide;
     };
@@ -89,7 +90,7 @@ private:
     int m_idx;
     struct NoteSnapshot {
         QString name;
-        double duration;
+        TimePos duration;
         int slur;
         QString glide;
     };

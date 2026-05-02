@@ -2,6 +2,7 @@
 
 #include <QUndoCommand>
 #include <QString>
+#include <cstdint>
 #include <vector>
 #include <memory>
 
@@ -33,8 +34,8 @@ private:
 class ModulationDriftCommand : public QUndoCommand {
 public:
     ModulationDriftCommand(std::shared_ptr<DSFile> dsFile,
-                           std::vector<double> oldF0Values,
-                           std::vector<double> newF0Values,
+                           std::vector<int32_t> oldF0Values,
+                           std::vector<int32_t> newF0Values,
                            QUndoCommand *parent = nullptr);
 
     void undo() override;
@@ -42,8 +43,8 @@ public:
 
 private:
     std::shared_ptr<DSFile> m_dsFile;
-    std::vector<double> m_oldF0;
-    std::vector<double> m_newF0;
+    std::vector<int32_t> m_oldF0;
+    std::vector<int32_t> m_newF0;
 };
 
 } // namespace ui

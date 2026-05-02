@@ -54,8 +54,8 @@ bool PitchMoveCommand::mergeWith(const QUndoCommand *other) {
 // ============================================================================
 
 ModulationDriftCommand::ModulationDriftCommand(std::shared_ptr<DSFile> dsFile,
-                                               std::vector<double> oldF0Values,
-                                               std::vector<double> newF0Values,
+                                               std::vector<int32_t> oldF0Values,
+                                               std::vector<int32_t> newF0Values,
                                                QUndoCommand *parent)
     : QUndoCommand(parent), m_dsFile(std::move(dsFile)),
       m_oldF0(std::move(oldF0Values)), m_newF0(std::move(newF0Values)) {

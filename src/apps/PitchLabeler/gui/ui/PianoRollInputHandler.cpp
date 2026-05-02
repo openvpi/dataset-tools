@@ -12,6 +12,7 @@
 #include "commands/NoteCommands.h"
 
 #include <dstools/PitchUtils.h>
+#include <dstools/TimePos.h>
 
 #include <cmath>
 #include <algorithm>
@@ -327,8 +328,8 @@ void PianoRollInputHandler::handleMouseRelease(
                         if (!pitch.valid) continue;
                         noteMidi = pitch.midiNumber;
                     }
-                    double sceneX1 = m_cb.timeToX(note.start);
-                    double sceneX2 = m_cb.timeToX(note.end());
+                    double sceneX1 = m_cb.timeToX(usToSec(note.start));
+                    double sceneX2 = m_cb.timeToX(usToSec(note.end()));
                     double sceneY = m_cb.midiToY(noteMidi);
                     int wx1 = m_cb.sceneXToWidget(sceneX1);
                     int wx2 = m_cb.sceneXToWidget(sceneX2);

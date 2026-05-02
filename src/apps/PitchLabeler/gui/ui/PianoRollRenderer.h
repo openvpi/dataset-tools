@@ -7,7 +7,9 @@
 #include <QSet>
 
 #include <dstools/PitchUtils.h>
+#include <dstools/TimePos.h>
 
+#include <cstdint>
 #include <memory>
 #include <set>
 #include <map>
@@ -97,7 +99,7 @@ struct RenderState {
 
     // A/B comparison
     bool abComparisonActive = false;
-    const std::vector<double> *originalF0 = nullptr;
+    const std::vector<int32_t> *originalF0 = nullptr;
 
     // Layout constants
     static constexpr int PianoWidth = 52;

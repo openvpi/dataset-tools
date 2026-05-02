@@ -1,31 +1,26 @@
 #pragma once
 
+#include <dstools/TimePos.h>
+
+#include <cstdint>
 #include <vector>
 
 namespace dstools {
 
-/// F0 curve data — equally-spaced fundamental frequency samples.
-/// Values are in Hz or MIDI. 0.0 indicates unvoiced (silence).
 struct F0Curve {
-    double timestep = 0.0;          ///< Seconds between samples
-    std::vector<double> values;      ///< F0 value sequence, 0.0 = unvoiced
+    TimePos timestep = 0;                    ///< Microseconds between samples
+    std::vector<int32_t> values;             ///< F0 in millihertz, 0 = unvoiced
 
-    /// Total duration in seconds.
-    double totalDuration() const;
+    TimePos totalDuration() const;
 
-    /// Sample count.
     int sampleCount() const { return static_cast<int>(values.size()); }
 
-    /// Get F0 value at a given time (linear interpolation).
-    double getValueAtTime(double timeSec) const;
+    int32_t getValueAtTime(TimePos timeUs) const;
 
-    /// Get F0 values in a time range.
-    std::vector<double> getRange(double startTime, double endTime) const;
+    std::vector<int32_t> getRange(TimePos startTimeUs, TimePos endTimeUs) const;
 
-    /// Set F0 values starting at a given time (edit operation).
-    void setRange(double startTime, const std::vector<double> &newValues);
+    void setRange(TimePos startTimeUs, const std::vector<int32_t> &newValues);
 
-    /// Check if empty.
     bool isEmpty() const { return values.empty(); }
 };
 
