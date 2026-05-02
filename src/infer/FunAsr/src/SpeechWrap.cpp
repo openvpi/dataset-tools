@@ -1,5 +1,6 @@
 #include "SpeechWrap.h"
 
+#include <cstring>
 #include <string>
 
 namespace FunAsr {

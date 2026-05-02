@@ -50,7 +50,12 @@ AudioLoadResult AudioFileLoader::load(const QString &filePath) {
         const int channels = fmt.channels();
         const qint64 totalFrames = decoder.length();
 
-        SndfileHandle wf(result.tempFilePath.toStdWString().c_str(), SFM_WRITE,
+#ifdef USE_WIDE_CHAR
+        auto outFileNameStr = result.tempFilePath.toStdWString();
+#else
+        auto outFileNameStr = result.tempFilePath.toStdString();
+#endif
+        SndfileHandle wf(outFileNameStr.c_str(), SFM_WRITE,
                          SF_FORMAT_WAV | SF_FORMAT_FLOAT, channels, sr);
         if (wf.error()) {
             result.success = false;

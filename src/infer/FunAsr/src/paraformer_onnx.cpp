@@ -1,5 +1,6 @@
 #include "paraformer_onnx.h"
 
+#include <cstring>
 #include <numeric>
 
 #include "commonfunc.h"

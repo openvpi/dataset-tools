@@ -5,6 +5,7 @@
 
 #include <QDebug>
 #include <atomic>
+#include <cstring>
 #include <mutex>
 
 namespace dstools::audio {

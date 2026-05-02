@@ -1,6 +1,7 @@
 #include <game-infer/GameModel.h>
 
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

@@ -8,6 +8,7 @@ extern "C" {
 }
 
 #include <QDebug>
+#include <cstring>
 #include <vector>
 
 namespace dstools::audio {
