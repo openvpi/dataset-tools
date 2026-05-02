@@ -181,6 +181,9 @@ void PhonemeEditor::buildLayout() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
+    // Toolbar at the top of the editor (not in QMainWindow toolbar area)
+    mainLayout->addWidget(m_toolbar);
+
     m_mainSplitter = new QSplitter(Qt::Horizontal, this);
     mainLayout->addWidget(m_mainSplitter);
 

@@ -29,83 +29,51 @@
 
 ### 2.1 定位
 
-LabelSuite 是一个多页面 AppShell 应用，将原 MinLabel、PhonemeLabeler、PitchLabeler 组装为独立页面。每个页面直接打开/保存各自的文件格式，互不依赖，无工程概念。
+LabelSuite 与 DiffSingerLabeler 共享相同的 9 个页面和界面布局，唯一的区别是 **不含 .dsproj 工程文件管理**（File 菜单中去除了 Open/Save/Save As Project）。用户通过 File → Set Working Directory 选择工作目录后，各页面基于该目录独立工作。
 
 适用场景：
+- DiffSinger 数据集制作（不需要工程文件管理时）
 - 任何需要标注歌词/音素/音高的音频项目
 - 第三方强制对齐工具（MFA、SOFA）的结果修正
-- 独立使用某个标注功能，不需要完整的 DiffSinger 流水线
+- 独立使用某个标注/处理功能
 
 ### 2.2 页面布局
 
 ```
 LabelSuite (AppShell, 多页面模式)
-├── 🏷 歌词标注 (MinLabel)          ← 打开/保存 .lab 文件，G2P 转换
-├── 📐 音素标注 (PhonemeLabeler)    ← 打开/保存 TextGrid 文件，波形/频谱编辑
-├── 🎵 音高标注 (PitchLabeler)      ← 打开/保存 .ds 文件，F0/MIDI 编辑
+├── Slice        (AudioSlicer)       ← 音频切片
+├── ASR          (LyricFA)           ← ASR 歌词识别
+├── Label        (MinLabel)          ← 歌词标注 + G2P
+├── Align        (HubertFA)          ← HuBERT 强制对齐
+├── Phone        (PhonemeLabeler)    ← TextGrid 音素编辑
+├── CSV          (BuildCsv)          ← 生成 transcriptions.csv
+├── MIDI         (GameAlign)         ← GAME MIDI 转录
+├── DS           (BuildDs)           ← 生成 .ds 文件（含 RMVPE 音高提取）
+├── Pitch        (PitchLabeler)      ← F0/MIDI 编辑
 ```
 
-侧边栏 3 个图标，对应 3 个页面。
+侧边栏 9 个图标，与 DiffSingerLabeler 一致。
 
-### 2.3 各页面功能
+### 2.3 与 DiffSingerLabeler 的关系
 
-各页面**完全继承**原独立应用的功能，无裁剪无新增：
+LabelSuite 与 DiffSingerLabeler 共享所有页面组件代码（TaskWindowAdapter、各 Page 类）。两者的区别仅在 main.cpp 的 File 菜单：
 
-| 页面 | 来源 | 输入格式 | 输出格式 |
-|------|------|---------|---------|
-| MinLabel | `src/apps/MinLabel/` | 音频 + .lab | .lab |
-| PhonemeLabeler | `src/apps/PhonemeLabeler/` | 音频 + TextGrid | TextGrid |
-| PitchLabeler | `src/apps/PitchLabeler/` | .ds | .ds |
+| | LabelSuite | DiffSingerLabeler |
+|---|---|---|
+| 9 个标注/处理页面 | ✅ 相同 | ✅ 相同 |
+| File → Set Working Directory | ✅ | ✅ |
+| File → Clean Working Directory | ✅ | ✅ |
+| File → Open/Save/Save As Project (.dsproj) | ❌ 无 | ✅ 有 |
 
-### 2.4 main.cpp
+### 2.4 File 菜单
 
-```cpp
-#include <QApplication>
-#include <dsfw/AppShell.h>
-#include <dsfw/Theme.h>
-
-#include "MinLabelPage.h"
-#include "PhonemeLabelerPage.h"
-#include "PitchLabelerPage.h"
-
-int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
-    app.setApplicationName("LabelSuite");
-
-    dsfw::Theme::instance().init(app);
-
-    dsfw::AppShell shell;
-    shell.setWindowTitle("LabelSuite");
-
-    shell.addPage(new MinLabelPage(&shell),
-                  "minlabel", QIcon(":/icons/label.svg"), "歌词");
-    shell.addPage(new PhonemeLabelerPage(&shell),
-                  "phoneme", QIcon(":/icons/phoneme.svg"), "音素");
-    shell.addPage(new PitchLabelerPage(&shell),
-                  "pitch", QIcon(":/icons/pitch.svg"), "音高");
-
-    shell.resize(1280, 800);
-    shell.show();
-
-    return app.exec();
-}
 ```
-
-### 2.5 CMake
-
-```cmake
-dstools_add_executable(LabelSuite)
-target_link_libraries(LabelSuite PRIVATE
-    dstools-widgets
-    dstools-domain
-    dstools-audio
-    cpp-pinyin
-    cpp-kana
-    textgrid
-    FFTW3::fftw3
-    SndFile::sndfile
-    nlohmann_json::nlohmann_json
-)
+文件(F)
+├── Set Working Directory...
+├── ─────────────
+├── Clean Working Directory...
+├── ─────────────
+└── Exit
 ```
 
 ---
@@ -426,7 +394,13 @@ target_link_libraries(DsLabeler PRIVATE
 
 ## 4 页面复用架构
 
-LabelSuite 和 DsLabeler 的标注页面共享核心编辑器组件，通过 `IEditorDataSource` 接口解耦：
+### 4.1 LabelSuite ↔ DiffSingerLabeler 页面共享
+
+LabelSuite 直接复用 DiffSingerLabeler 的全部 9 个页面组件，包括 TaskWindowAdapter、各 Page 类、BuildCsvPage/BuildDsPage/GameAlignPage。两者共享同一份源码（通过 CMake 引用 `src/apps/labeler/` 中的文件），仅 main.cpp 不同（LabelSuite 的 File 菜单不含 .dsproj 管理）。
+
+### 4.2 DsLabeler（未来）核心编辑器复用
+
+DsLabeler 的标注页面将通过 `IEditorDataSource` 接口与核心编辑器组件解耦，实现工程文件驱动的数据访问：
 
 ```cpp
 /// 编辑器数据源接口 — 抽象文件系统 vs 工程数据访问
@@ -473,9 +447,8 @@ public:
 | 组件 | 位置 | 说明 |
 |------|------|------|
 | IEditorDataSource | `src/domain/include/dstools/` | 数据源接口 |
-| FileDataSource | `src/apps/LabelSuite/` | 文件系统实现 |
-| ProjectDataSource | `src/apps/DsLabeler/` | 工程 + PipelineContext 实现 |
-| MinLabelEditor | `src/widgets/` 或 `src/apps/shared/` | 核心歌词编辑逻辑，G2P |
+| ProjectDataSource | `src/apps/DsLabeler/` | 工程 + PipelineContext 实现（DsLabeler 专用） |
+| MinLabelEditor | `src/apps/shared/` | 核心歌词编辑逻辑，G2P |
 | PhonemeEditor | 同上 | 核心 TextGrid 编辑逻辑，波形/频谱 |
 | PitchEditor | 同上 | 核心 F0/MIDI 编辑逻辑，钢琴卷帘 |
 

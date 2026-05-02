@@ -23,10 +23,6 @@ int main(int argc, char *argv[]) {
     shell.addPage(page, "phoneme-labeler", {}, "PhonemeLabeler");
     shell.setSettings(&page->settings());
 
-    // Add the page's toolbar to the main window
-    if (auto *tb = page->toolbar())
-        shell.addToolBar(tb);
-
     shell.show();
 
     // Support command-line file path

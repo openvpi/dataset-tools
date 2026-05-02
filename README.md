@@ -6,7 +6,7 @@ DiffSinger dataset processing tools for singing voice synthesis data preparation
 
 | Application | Description |
 |---|---|
-| **LabelSuite** | General-purpose audio labeling toolset (AppShell multi-page). Three independent pages: MinLabel (lyric labeling + G2P), PhonemeLabeler (TextGrid phoneme editing), PitchLabeler (F0/MIDI editing). Each page works with its own file format, no project file required. |
+| **LabelSuite** | All-in-one audio labeling toolset (AppShell multi-page). Same 9 pages as DiffSingerLabeler (Slice, ASR, Label, Align, Phone, CSV, MIDI, DS, Pitch) but without `.dsproj` project file management. Each page works with the working directory, no project file required. |
 | **DsLabeler** | DiffSinger dataset labeler driven by `.dsproj` project files. Six pages: Welcome (create/open project), Settings (unified configuration), MinLabel (+ ASR/LyricFA), PhonemeLabeler (+ auto FA), PitchLabeler (+ auto F0/MIDI extraction), Export (CSV/DS/WAV output with auto-completion of skipped steps). |
 
 See [unified-app-design.md](docs/unified-app-design.md) for the full design.

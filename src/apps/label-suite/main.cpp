@@ -1,34 +1,34 @@
 #include <QApplication>
-#include <QToolBar>
+#include <QDir>
+#include <QDirIterator>
+#include <QFileDialog>
+#include <QMenu>
+#include <QMessageBox>
 
+#include <dstools/AppInit.h>
+#include <dstools/DomainInit.h>
+#include <dstools/ExportFormats.h>
+#include <dstools/QualityMetrics.h>
 #include <dsfw/AppShell.h>
+#include <dsfw/IPageActions.h>
 #include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
-#include <dstools/AppInit.h>
-#include <dstools/PinyinG2PProvider.h>
 
-#include <cpp-pinyin/G2pglobal.h>
+#include "CleanupDialog.h"
+#include "TaskWindowAdapter.h"
 
-#include <MinLabelPage.h>
-#include <PhonemeLabelerPage.h>
-#include <PitchLabelerPage.h>
+// Page includes
+#include "SlicerPage.h"
+#include "LyricFAPage.h"
+#include "HubertFAPage.h"
+#include "MinLabelPage.h"
+#include "PhonemeLabelerPage.h"
+#include "PitchLabelerPage.h"
+#include "pages/BuildCsvPage.h"
+#include "pages/BuildDsPage.h"
+#include "pages/GameAlignPage.h"
 
-#include <filesystem>
-
-static void initPinyin(QApplication &app) {
-    std::filesystem::path dictPath =
-#ifdef Q_OS_MAC
-        std::filesystem::path(app.applicationDirPath().toStdString()) / ".." / "Resources" / "dict";
-#else
-        std::filesystem::path(app.applicationDirPath().toStdWString()) / "dict";
-#endif
-    Pinyin::setDictionaryPath(dictPath.make_preferred().string());
-
-    if (!dstools::ServiceLocator::get<dstools::IG2PProvider>()) {
-        auto *g2p = new dstools::PinyinG2PProvider;
-        dstools::ServiceLocator::set<dstools::IG2PProvider>(g2p);
-    }
-}
+using namespace dstools::labeler;
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -36,86 +36,133 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion("0.1.0");
     app.setOrganizationName("Team OpenVPI");
 
-    dstools::AppInit::registerPostInitHook(&initPinyin);
     if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
+    dstools::registerDomainFormatAdapters();
     dsfw::Theme::instance().init(app);
+
+    static constexpr int kDefaultWidth = 1400;
+    static constexpr int kDefaultHeight = 900;
+
+    // Register export formats and quality metrics
+    static dstools::HtsLabelExportFormat htsExport;
+    static dstools::QualityMetrics qualityMetrics;
+    dstools::ServiceLocator::set<dstools::IExportFormat>(&htsExport);
+    dstools::ServiceLocator::set<dstools::IQualityMetrics>(&qualityMetrics);
 
     dsfw::AppShell shell;
     shell.setWindowTitle(QStringLiteral("LabelSuite"));
-
-    static constexpr int kPageMinLabel = 0;
-    static constexpr int kPagePhoneme = 1;
-    static constexpr int kPagePitch = 2;
-
-    // Page 1: 歌词标注 (MinLabel) — same as standalone MinLabel exe
-    auto *minLabelPage = new Minlabel::MinLabelPage(&shell);
-    shell.addPage(minLabelPage, "minlabel", {}, QStringLiteral("歌词"));
-
-    // Page 2: 音素标注 (PhonemeLabeler) — same as standalone PhonemeLabeler exe
-    auto *phonemePage = new dstools::phonemelabeler::PhonemeLabelerPage(&shell);
-    shell.addPage(phonemePage, "phoneme", {}, QStringLiteral("音素"));
-    shell.setSettings(&phonemePage->settings());
-
-    // Add PhonemeLabeler toolbar to shell (same as standalone), but hide when not active
-    QToolBar *phonemeToolbar = phonemePage->toolbar();
-    if (phonemeToolbar) {
-        shell.addToolBar(phonemeToolbar);
-        phonemeToolbar->setVisible(false); // hidden initially (MinLabel is first)
-    }
-
-    // Page 3: 音高标注 (PitchLabeler) — same as standalone PitchLabeler exe
-    auto *pitchPage = new dstools::pitchlabeler::PitchLabelerPage(&shell);
-    shell.addPage(pitchPage, "pitch", {}, QStringLiteral("音高"));
-
-    // Toggle toolbar visibility and title on page switch
-    QObject::connect(&shell, &dsfw::AppShell::currentPageChanged,
-                     &shell, [&](int index) {
-        // PhonemeLabeler toolbar: only visible on phoneme page
-        if (phonemeToolbar)
-            phonemeToolbar->setVisible(index == kPagePhoneme);
-
-        // Update window title to match active page
-        switch (index) {
-            case kPageMinLabel:
-                shell.setWindowTitle(minLabelPage->windowTitle());
-                break;
-            case kPagePhoneme:
-                shell.setWindowTitle(phonemePage->windowTitle());
-                break;
-            case kPagePitch:
-                shell.setWindowTitle(pitchPage->windowTitle());
-                break;
-        }
-    });
-
-    // Sync title changes from PitchLabeler (file load/save/modify)
-    auto updatePitchTitle = [&]() {
-        if (shell.currentPageIndex() == kPagePitch)
-            shell.setWindowTitle(pitchPage->windowTitle());
-    };
-    QObject::connect(pitchPage, &dstools::pitchlabeler::PitchLabelerPage::modificationChanged,
-                     &shell, [&](bool) { updatePitchTitle(); });
-    QObject::connect(pitchPage, &dstools::pitchlabeler::PitchLabelerPage::fileLoaded,
-                     &shell, [&](const QString &) { updatePitchTitle(); });
-    QObject::connect(pitchPage, &dstools::pitchlabeler::PitchLabelerPage::fileSaved,
-                     &shell, [&](const QString &) { updatePitchTitle(); });
-
-    // Sync title changes from MinLabel (directory change)
-    QObject::connect(minLabelPage, &Minlabel::MinLabelPage::workingDirectoryChanged,
-                     &shell, [&](const QString &) {
-        if (shell.currentPageIndex() == kPageMinLabel)
-            shell.setWindowTitle(minLabelPage->windowTitle());
-    });
-
-    // Save config on shutdown
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
-        pitchPage->saveConfig();
-    });
-
-    constexpr int kDefaultWidth = 1280;
-    constexpr int kDefaultHeight = 800;
     shell.resize(kDefaultWidth, kDefaultHeight);
+
+    // ── Create and register all 9 pages ──────────────────────────────────
+
+    // Step 0: Slice
+    auto *slicerAdapter = new TaskWindowAdapter(new SlicerPage(&shell), &shell);
+    shell.addPage(slicerAdapter, "slice", {}, QObject::tr("Slice"));
+
+    // Step 1: ASR
+    auto *asrAdapter = new TaskWindowAdapter(new LyricFAPage(&shell), &shell);
+    shell.addPage(asrAdapter, "asr", {}, QObject::tr("ASR"));
+
+    // Step 2: Label (MinLabel)
+    auto *labelPage = new Minlabel::MinLabelPage(&shell);
+    shell.addPage(labelPage, "label", {}, QObject::tr("Label"));
+
+    // Step 3: Align (HubertFA)
+    auto *alignAdapter = new TaskWindowAdapter(new HubertFAPage(&shell), &shell);
+    shell.addPage(alignAdapter, "align", {}, QObject::tr("Align"));
+
+    // Step 4: Phone (PhonemeLabeler)
+    auto *phonePage = new dstools::phonemelabeler::PhonemeLabelerPage(&shell);
+    shell.addPage(phonePage, "phone", {}, QObject::tr("Phone"));
+
+    // Step 5: CSV
+    auto *csvPage = new BuildCsvPage(&shell);
+    shell.addPage(csvPage, "csv", {}, QObject::tr("CSV"));
+
+    // Step 6: MIDI
+    auto *midiPage = new GameAlignPage(&shell);
+    shell.addPage(midiPage, "midi", {}, QObject::tr("MIDI"));
+
+    // Step 7: DS
+    auto *dsPage = new BuildDsPage(&shell);
+    shell.addPage(dsPage, "ds", {}, QObject::tr("DS"));
+
+    // Step 8: Pitch (PitchLabeler)
+    auto *pitchPage = new dstools::pitchlabeler::PitchLabelerPage(&shell);
+    shell.addPage(pitchPage, "pitch", {}, QObject::tr("Pitch"));
+
+    // ── Global menu actions (File menu — no .dsproj project management) ──
+
+    auto *fileMenu = new QMenu(QObject::tr("&File"), &shell);
+
+    auto *setDirAction = fileMenu->addAction(QObject::tr("Set Working Directory..."));
+    QObject::connect(setDirAction, &QAction::triggered, &shell, [&]() {
+        auto dir = QFileDialog::getExistingDirectory(
+            &shell, QObject::tr("Select Working Directory"), shell.workingDirectory());
+        if (!dir.isEmpty())
+            shell.setWorkingDirectory(dir);
+    });
+
+    fileMenu->addSeparator();
+
+    auto *cleanupAction = fileMenu->addAction(QObject::tr("Clean Working Directory..."));
+    QObject::connect(cleanupAction, &QAction::triggered, &shell, [&]() {
+        auto workingDir = shell.workingDirectory();
+        if (workingDir.isEmpty()) {
+            QMessageBox::warning(&shell, QObject::tr("No Working Directory"),
+                                 QObject::tr("Please set a working directory first."));
+            return;
+        }
+
+        CleanupDialog dlg(workingDir, &shell);
+        if (dlg.exec() != QDialog::Accepted)
+            return;
+
+        auto steps = dlg.selectedSteps();
+        if (steps.isEmpty())
+            return;
+
+        static const char *stepDirs[] = {
+            "slicer",    "asr",      "asr_review",  "alignment", "alignment_review",
+            "build_csv", "midi",     "build_ds",    "pitch_review",
+        };
+
+        int totalFiles = 0;
+        qint64 totalSize = 0;
+        QDir base(workingDir + QStringLiteral("/dstemp"));
+
+        for (int idx : steps) {
+            QDir stepDir(base.filePath(stepDirs[idx]));
+            if (!stepDir.exists())
+                continue;
+            QDirIterator it(stepDir.absolutePath(), QDir::Files,
+                            QDirIterator::Subdirectories);
+            while (it.hasNext()) {
+                it.next();
+                totalSize += it.fileInfo().size();
+                if (QFile::remove(it.filePath()))
+                    ++totalFiles;
+            }
+        }
+
+        QMessageBox::information(
+            &shell, QObject::tr("Cleanup Complete"),
+            QObject::tr("Deleted %1 files (%2 MB)")
+                .arg(totalFiles)
+                .arg(totalSize / (1024 * 1024)));
+    });
+
+    fileMenu->addSeparator();
+
+    auto *exitAction = fileMenu->addAction(QObject::tr("Exit"));
+    exitAction->setShortcut(QKeySequence::Quit);
+    QObject::connect(exitAction, &QAction::triggered, &shell, &QWidget::close);
+
+    shell.addGlobalMenuActions({fileMenu->menuAction()});
+
+    // ── Show ─────────────────────────────────────────────────────────────
+
     shell.show();
 
     return app.exec();

@@ -192,14 +192,13 @@
 
 ### M.2 — LabelSuite
 
+LabelSuite 与 DiffSingerLabeler 共享全部 9 个页面，仅去除 File 菜单中的 .dsproj 工程管理功能。页面组件代码通过 CMake 直接引用 `src/apps/labeler/` 中的源文件。
+
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| M.2.1 | FileDataSource 实现 | IEditorDataSource 的文件系统实现（单文件 = 单切片） | 低 | 依赖 M.1.0 | ✅ |
-| M.2.2 | LabelSuite exe + main.cpp | CMakeLists.txt + AppShell 3 页面注册 | 低 | 依赖 M.1 | ✅ |
-| M.2.3 | MinLabelPage (LabelSuite) | FileDataSource + MinLabelEditor 包装 | 低 | 依赖 M.1.1, M.2.1 | ✅ |
-| M.2.4 | PhonemeLabelerPage (LabelSuite) | FileDataSource + PhonemeEditor 包装 | 低 | 依赖 M.1.2, M.2.1 | ✅ |
-| M.2.5 | PitchLabelerPage (LabelSuite) | FileDataSource + PitchEditor 包装 | 低 | 依赖 M.1.3, M.2.1 | ✅ |
-| M.2.6 | LabelSuite 功能验证 | 手动测试：打开/编辑/保存各格式文件 | — | 依赖 M.2.3-5 | 待做 |
+| M.2.1 | LabelSuite exe + main.cpp | CMakeLists.txt + AppShell 9 页面注册（复用 DiffSingerLabeler 全部页面），File 菜单仅保留 Set Working Directory / Clean / Exit | 低 | 依赖 M.1 | ✅ |
+| M.2.2 | PhonemeEditor 播放条修复 | PhonemeEditor 工具栏（含 PlayWidget 播放条）内嵌于编辑器自身布局，不使用 QMainWindow::addToolBar() | 低 | 可独立 | ✅ |
+| M.2.3 | LabelSuite 功能验证 | 手动测试：全部 9 页面功能，打开/编辑/保存各格式文件 | — | 依赖 M.2.1-2 | 待做 |
 
 **跨平台注意**：
 - 文件对话框使用 `QFileDialog::getOpenFileName()`，macOS 上不支持 native dialog 的某些 filter 语法
@@ -288,11 +287,11 @@ L.10 (遗留清理)          L.11 (.dsproj v3, 可与 L.9 并行)
 | L.10 | 4 | 1 天 | ✅ |
 | L.11 | 4 | 2 天 | ✅ |
 | M.1 | 4 | 5 天 | ✅ |
-| M.2 | 6 | 3 天 | ✅ |
+| M.2 | 3 | 1 天 | ✅ |
 | M.3 | 12 | 10 天 | 进行中 |
 | M.4 | 4 | 1 天 | 待做 |
 | N | 6 | 3 天 | 待做 |
-| **合计** | **63** | **~30 天** | **45 完成** |
+| **合计** | **60** | **~28 天** | **45 完成** |
 
 ---
 
