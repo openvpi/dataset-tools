@@ -17,6 +17,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPlainTextEdit>
 #include <QTreeWidget>
 
 #include <MinLabelService.h>
@@ -51,16 +52,8 @@ namespace Minlabel {
         m_shortcutManager->bind(m_playAction, MinLabelKeys::PlaybackPlay, QStringLiteral("Play/Stop"), QStringLiteral("Playback"));
         m_shortcutManager->applyAll();
 
-        m_fileProgress = new dstools::widgets::FileProgressTracker(
-            dstools::widgets::FileProgressTracker::ProgressBarStyle, this);
-
-        // Init widgets
-        playerWidget = new dstools::widgets::PlayWidget();
-        playerWidget->setObjectName("play-widget");
-        playerWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-
-        textWidget = new TextWidget();
-        textWidget->setObjectName("text-widget");
+        // Init editor widget
+        m_editor = new MinLabelEditor();
 
         fsModel = new QFileSystemModel();
         fsModel->setParent(this);
@@ -87,18 +80,10 @@ namespace Minlabel {
             }
         }
 
-        rightLayout = new QVBoxLayout();
-        rightLayout->addWidget(playerWidget);
-        rightLayout->addWidget(textWidget);
-        rightLayout->addWidget(m_fileProgress);
-
-        rightWidget = new QWidget();
-        rightWidget->setLayout(rightLayout);
-
         mainSplitter = new QSplitter();
         mainSplitter->setObjectName("central-widget");
         mainSplitter->addWidget(treeView);
-        mainSplitter->addWidget(rightWidget);
+        mainSplitter->addWidget(m_editor);
 
         // Set mainSplitter as the layout of this widget
         auto *pageLayout = new QVBoxLayout(this);
@@ -133,10 +118,7 @@ namespace Minlabel {
         connect(treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this,
                 &MinLabelPage::_q_updateProgress);
 
-        connect(textWidget->contentText, &QPlainTextEdit::textChanged, this, [this]() {
-            m_isDirty = true;
-        });
-        connect(textWidget->wordsText, &QLineEdit::textChanged, this, [this]() {
+        connect(m_editor, &MinLabelEditor::dataChanged, this, [this]() {
             m_isDirty = true;
         });
 
@@ -284,7 +266,7 @@ namespace Minlabel {
         return dirname.isEmpty()
                    ? QApplication::applicationName()
                    : QString("%1 - %2").arg(QApplication::applicationName(),
-                                            QDir::toNativeSeparators(QFileInfo(dirname).baseName()));
+                                             QDir::toNativeSeparators(QFileInfo(dirname).baseName()));
     }
 
     bool MinLabelPage::supportsDragDrop() const {
@@ -345,19 +327,17 @@ namespace Minlabel {
         const QString jsonFilePath = audioToOtherSuffix(filename, "json");
         auto result = MinLabelService::loadLabel(jsonFilePath);
         if (result) {
-            textWidget->contentText->setPlainText(result.value().lab);
-            textWidget->wordsText->setText(result.value().rawText);
+            m_editor->loadData(result.value().lab, result.value().rawText);
         } else {
-            textWidget->contentText->clear();
-            textWidget->wordsText->clear();
+            m_editor->loadData(QString(), QString());
         }
 
-        playerWidget->openFile(filename);
+        m_editor->setAudioFile(filename);
     }
 
     bool MinLabelPage::saveFile(const QString &filename) {
-        const QString txtContent = textWidget->wordsText->text();
-        const QString labContent = textWidget->contentText->toPlainText();
+        const QString txtContent = m_editor->rawText();
+        const QString labContent = m_editor->labContent();
 
         const QString jsonFilePath = audioToOtherSuffix(filename, "json");
 
@@ -397,7 +377,7 @@ namespace Minlabel {
 
     void MinLabelPage::_q_fileMenuTriggered(const QAction *action) {
         if (action == m_browseAction) {
-            playerWidget->setPlaying(false);
+            m_editor->playWidget()->setPlaying(false);
 
             const QString path =
                 QFileDialog::getExistingDirectory(this, "Open Folder", QFileInfo(dirname).absolutePath());
@@ -410,7 +390,7 @@ namespace Minlabel {
             m_settings.set(MinLabelKeys::LastDir, dirname);
             _q_updateProgress();
         } else if (action == m_convertAction) {
-            playerWidget->setPlaying(false);
+            m_editor->playWidget()->setPlaying(false);
             const int choice = QMessageBox::question(this, "Convert lab to project file.",
                                                      "Do you want to convert lab to project file in target folder?",
                                                      QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
@@ -423,7 +403,7 @@ namespace Minlabel {
                 labToJson(path);
             }
         } else if (action == m_exportAction) {
-            playerWidget->setPlaying(false);
+            m_editor->playWidget()->setPlaying(false);
             ExportDialog dialog(this);
 
             if (dialog.exec() == QDialog::Accepted) {
@@ -445,7 +425,7 @@ namespace Minlabel {
 
     void MinLabelPage::_q_playMenuTriggered(const QAction *action) const {
         if (action == m_playAction) {
-            playerWidget->setPlaying(!playerWidget->isPlaying());
+            m_editor->playWidget()->setPlaying(!m_editor->playWidget()->isPlaying());
         }
     }
 
@@ -457,7 +437,7 @@ namespace Minlabel {
         const int count = jsonCount(dirname);
         const int total = static_cast<int>(fsModel->rootDirectory().entryList(
             QStringList{"*.wav", "*.mp3", "*.m4a", "*.flac"}, QDir::Files).count());
-        m_fileProgress->setProgress(count, total);
+        m_editor->setProgress(count, total);
     }
 
     void MinLabelPage::_q_treeCurrentChanged(const QModelIndex &current) {
@@ -467,7 +447,7 @@ namespace Minlabel {
                 saveFile(lastFile);
             }
             lastFile = info.absoluteFilePath();
-            textWidget->wordsText->clear();
+            m_editor->loadData(QString(), QString());
             openFile(lastFile);
         }
     }
@@ -517,8 +497,7 @@ namespace Minlabel {
                 auto labelResult = MinLabelService::loadLabel(
                     audioToOtherSuffix(currentFilePath, "json"));
                 if (labelResult) {
-                    textWidget->contentText->setPlainText(labelResult.value().lab);
-                    textWidget->wordsText->setText(labelResult.value().rawText);
+                    m_editor->loadData(labelResult.value().lab, labelResult.value().rawText);
                 }
                 break;
             }

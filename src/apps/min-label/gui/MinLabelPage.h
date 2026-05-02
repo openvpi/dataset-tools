@@ -13,13 +13,11 @@
 #include <QWidget>
 
 #include "Common.h"
-#include "TextWidget.h"
+#include "MinLabelEditor.h"
 
 #include <MinLabelService.h>
 #include <dsfw/AppSettings.h>
-#include <dstools/FileProgressTracker.h>
 #include <dstools/FileStatusDelegate.h>
-#include <dstools/PlayWidget.h>
 #include <dstools/ShortcutManager.h>
 
 namespace Minlabel {
@@ -80,14 +78,10 @@ namespace Minlabel {
         QAction *m_playAction = nullptr;
 
         // Widgets
-        dstools::widgets::PlayWidget *playerWidget = nullptr;
-        TextWidget *textWidget = nullptr;
+        MinLabelEditor *m_editor = nullptr;
         QTreeView *treeView = nullptr;
         QFileSystemModel *fsModel = nullptr;
-        dstools::widgets::FileProgressTracker *m_fileProgress = nullptr;
         QSplitter *mainSplitter = nullptr;
-        QWidget *rightWidget = nullptr;
-        QVBoxLayout *rightLayout = nullptr;
 
         // State
         QString dirname;
