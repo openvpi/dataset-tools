@@ -241,7 +241,7 @@ jobs:
 
           mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib" "$APPDIR/usr/share/applications"
 
-          for exe in DatasetPipeline MinLabel PhonemeLabeler PitchLabeler GameInfer DiffSingerLabeler; do
+          for exe in LabelSuite DsLabeler dstools-cli; do
             if [ -f "$DEPLOY/$exe" ]; then
               cp "$DEPLOY/$exe" "$APPDIR/usr/bin/"
             fi
@@ -260,7 +260,7 @@ jobs:
           Type=Application
           Name=Dataset Tools
           Comment=Dataset processing tools for singing voice synthesis
-          Exec=DatasetPipeline
+          Exec=LabelSuite
           Icon=dataset-tools
           Categories=AudioVideo;Audio;
           Terminal=false
@@ -280,7 +280,7 @@ jobs:
               exec "${HERE}/usr/bin/$CALLED_AS" "$@"
           fi
 
-          exec "${HERE}/usr/bin/DatasetPipeline" "$@"
+          exec "${HERE}/usr/bin/LabelSuite" "$@"
           LAUNCHER
           chmod +x "$APPDIR/AppRun"
 
