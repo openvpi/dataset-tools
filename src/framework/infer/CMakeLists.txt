@@ -36,6 +36,15 @@ install(FILES
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
 )
 
+if(MSVC)
+    # C4275: non dll-interface class used as base for dll-interface class.
+    # This is expected because dstools-infer-common is a static library whose
+    # classes are inherited by DLL-exported classes in consumer libraries
+    # (hubert-infer, game-infer, rmvpe-infer).  The static lib is linked
+    # directly into each DLL, so the warning is benign.
+    target_compile_options(${PROJECT_NAME} PUBLIC /wd4275)
+endif()
+
 if(ONNXRUNTIME_ENABLE_DML)
     target_compile_definitions(${PROJECT_NAME} PUBLIC ONNXRUNTIME_ENABLE_DML)
 endif()

@@ -152,6 +152,7 @@ jobs:
         shell: cmd
         working-directory: ${{github.workspace}}/vcpkg
         run: |
+          set VCPKG_BUILD_TYPE=release
           vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --overlay-triplets=../scripts/vcpkg/triplets --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
