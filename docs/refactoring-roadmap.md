@@ -32,6 +32,7 @@
 | L.0-L.8 | 层路由流水线 | TimePos, CurveTools, Boundary/Layer, PipelineContext, PipelineRunner, FormatAdapters, F0/PhonemeLabeler 迁移 |
 | L.12 | 编译速度优化 | PCH, ccache, MSVC /MP |
 | O | 命名规范化 + CMake 整理 | 目录 kebab-case 统一，deploy.cmake 提取，代码清理 |
+| M.1 | 核心编辑器提取 | IEditorDataSource 接口，MinLabelEditor/PhonemeEditor/PitchEditor 提取到 shared/ |
 
 ---
 
@@ -182,10 +183,10 @@
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| M.1.0 | IEditorDataSource 接口 | 在 dstools-domain 中定义数据源抽象接口（sliceIds, loadSlice, saveSlice, audioPath） | 低 | 可独立 | 待做 |
-| M.1.1 | MinLabelEditor 提取 | 从 `src/apps/MinLabel/gui/` 提取核心编辑 widget 到 `src/apps/shared/`（或 `src/widgets/editors/`），依赖 IEditorDataSource | 高：MinLabel GUI 代码耦合紧密，需仔细分离 I/O 逻辑 | 可与 M.1.2 并行 | 待做 |
-| M.1.2 | PhonemeEditor 提取 | 从 `src/apps/PhonemeLabeler/gui/` 提取。波形/频谱/功率渲染 + 边界拖动 + Undo/Redo 是核心 | 高：同上，且渲染逻辑复杂 | 可与 M.1.1 并行 | 待做 |
-| M.1.3 | PitchEditor 提取 | 从 `src/apps/PitchLabeler/gui/` 提取。F0 曲线 + 钢琴卷帘 + 多工具编辑 | 高：同上 | 可与 M.1.1 并行 | 待做 |
+| M.1.0 | IEditorDataSource 接口 | 在 dstools-domain 中定义数据源抽象接口（sliceIds, loadSlice, saveSlice, audioPath） | 低 | 可独立 | ✅ |
+| M.1.1 | MinLabelEditor 提取 | 从 `src/apps/MinLabel/gui/` 提取核心编辑 widget 到 `src/apps/shared/`（或 `src/widgets/editors/`），依赖 IEditorDataSource | 高：MinLabel GUI 代码耦合紧密，需仔细分离 I/O 逻辑 | 可与 M.1.2 并行 | ✅ |
+| M.1.2 | PhonemeEditor 提取 | 从 `src/apps/PhonemeLabeler/gui/` 提取。波形/频谱/功率渲染 + 边界拖动 + Undo/Redo 是核心 | 高：同上，且渲染逻辑复杂 | 可与 M.1.1 并行 | ✅ |
+| M.1.3 | PitchEditor 提取 | 从 `src/apps/PitchLabeler/gui/` 提取。F0 曲线 + 钢琴卷帘 + 多工具编辑 | 高：同上 | 可与 M.1.1 并行 | ✅ |
 
 **风险缓解**：先在现有 exe 中重构为 Editor + Page 分离（Editor 不依赖文件 I/O），验证功能等价后再迁移到 shared/。
 
@@ -193,11 +194,11 @@
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| M.2.1 | FileDataSource 实现 | IEditorDataSource 的文件系统实现（单文件 = 单切片） | 低 | 依赖 M.1.0 | 待做 |
-| M.2.2 | LabelSuite exe + main.cpp | CMakeLists.txt + AppShell 3 页面注册 | 低 | 依赖 M.1 | 待做 |
-| M.2.3 | MinLabelPage (LabelSuite) | FileDataSource + MinLabelEditor 包装 | 低 | 依赖 M.1.1, M.2.1 | 待做 |
-| M.2.4 | PhonemeLabelerPage (LabelSuite) | FileDataSource + PhonemeEditor 包装 | 低 | 依赖 M.1.2, M.2.1 | 待做 |
-| M.2.5 | PitchLabelerPage (LabelSuite) | FileDataSource + PitchEditor 包装 | 低 | 依赖 M.1.3, M.2.1 | 待做 |
+| M.2.1 | FileDataSource 实现 | IEditorDataSource 的文件系统实现（单文件 = 单切片） | 低 | 依赖 M.1.0 | ✅ |
+| M.2.2 | LabelSuite exe + main.cpp | CMakeLists.txt + AppShell 3 页面注册 | 低 | 依赖 M.1 | ✅ |
+| M.2.3 | MinLabelPage (LabelSuite) | FileDataSource + MinLabelEditor 包装 | 低 | 依赖 M.1.1, M.2.1 | ✅ |
+| M.2.4 | PhonemeLabelerPage (LabelSuite) | FileDataSource + PhonemeEditor 包装 | 低 | 依赖 M.1.2, M.2.1 | ✅ |
+| M.2.5 | PitchLabelerPage (LabelSuite) | FileDataSource + PitchEditor 包装 | 低 | 依赖 M.1.3, M.2.1 | ✅ |
 | M.2.6 | LabelSuite 功能验证 | 手动测试：打开/编辑/保存各格式文件 | — | 依赖 M.2.3-5 | 待做 |
 
 **跨平台注意**：
@@ -208,10 +209,10 @@
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| M.3.1 | ProjectDataSource 实现 | IEditorDataSource 的工程实现（读写 .dstext + PipelineContext） | 中：需处理 PipelineContext ↔ DsTextDocument 转换 | 依赖 M.1.0, L.11 | 待做 |
-| M.3.2 | DsLabeler exe + main.cpp | CMakeLists.txt + AppShell 6 页面注册 | 低 | 依赖 M.1 | 待做 |
-| M.3.3 | WelcomePage | 新建工程向导（4 步模态对话框）、打开工程、最近工程列表（RecentFilesManager）、切片流程 | 中：向导步骤多，需处理取消/回退 | 可独立 UI 先行 | 待做 |
-| M.3.4 | SettingsPage | 横向 TabWidget（7 个 tab），读写 DsProject.defaults。PropertyEditor 复用 | 低 | 可与 M.3.3 并行 | 待做 |
+| M.3.1 | ProjectDataSource 实现 | IEditorDataSource 的工程实现（读写 .dstext + PipelineContext） | 中：需处理 PipelineContext ↔ DsTextDocument 转换 | 依赖 M.1.0, L.11 | ✅ |
+| M.3.2 | DsLabeler exe + main.cpp | CMakeLists.txt + AppShell 6 页面注册 | 低 | 依赖 M.1 | ✅ |
+| M.3.3 | WelcomePage | 新建工程向导（4 步模态对话框）、打开工程、最近工程列表（RecentFilesManager）、切片流程 | 中：向导步骤多，需处理取消/回退 | 可独立 UI 先行 | ✅ |
+| M.3.4 | SettingsPage | 横向 TabWidget（7 个 tab），读写 DsProject.defaults。PropertyEditor 复用 | 低 | 可与 M.3.3 并行 | ✅ |
 | M.3.5 | DsMinLabelPage | ProjectDataSource + MinLabelEditor + ASR/LyricFA 按钮 + 批处理菜单 | 中：ASR 按钮需对接 FunASR 推理 + 后台线程 | 依赖 M.1.1, M.3.1 | 待做 |
 | M.3.6 | DsPhonemeLabelerPage | ProjectDataSource + PhonemeEditor + 自动 FA 逻辑 + 批处理菜单 + 预加载 | 中：预加载需后台线程池 + UI 取消同步 | 依赖 M.1.2, M.3.1 | 待做 |
 | M.3.7 | DsPitchLabelerPage | ProjectDataSource + PitchEditor + 自动 add_ph_num/F0/MIDI + 批处理 + 预加载 | 中：3 个自动步骤串联，错误处理复杂 | 依赖 M.1.3, M.3.1 | 待做 |
@@ -286,12 +287,12 @@ L.10 (遗留清理)          L.11 (.dsproj v3, 可与 L.9 并行)
 | L.9 | 5 | 3 天 | ✅ |
 | L.10 | 4 | 1 天 | ✅ |
 | L.11 | 4 | 2 天 | ✅ |
-| M.1 | 4 | 5 天 | 待做 |
-| M.2 | 6 | 3 天 | 待做 |
-| M.3 | 12 | 10 天 | 待做 |
+| M.1 | 4 | 5 天 | ✅ |
+| M.2 | 6 | 3 天 | 进行中 |
+| M.3 | 12 | 10 天 | 进行中 |
 | M.4 | 4 | 1 天 | 待做 |
 | N | 6 | 3 天 | 待做 |
-| **合计** | **63** | **~30 天** | **31 完成** |
+| **合计** | **63** | **~30 天** | **39 完成** |
 
 ---
 
@@ -368,4 +369,4 @@ L.10 (遗留清理)          L.11 (.dsproj v3, 可与 L.9 并行)
 - [framework-architecture.md](framework-architecture.md) — 框架架构
 - [architecture.md](architecture.md) — 项目架构概述
 
-> 更新时间：2026-05-02 (Phase O 命名规范化 + CMake 整理加入)
+> 更新时间：2026-05-03 (Phase M.1-M.3.4 完成)
