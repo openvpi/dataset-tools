@@ -1,6 +1,8 @@
 ﻿#include "BoundaryOverlayWidget.h"
 #include "TextGridDocument.h"
 
+#include <dstools/TimePos.h>
+
 #include <QPainter>
 #include <QPen>
 #include <QEvent>
@@ -71,7 +73,7 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
     int w = width();
 
     for (int b = 0; b < count; ++b) {
-        double t = m_document->boundaryTime(activeTier, b);
+        double t = usToSec(m_document->boundaryTime(activeTier, b));
         int x = timeToX(t);
         if (x < 0 || x > w) continue;
 

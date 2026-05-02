@@ -9,6 +9,7 @@
 #include <QPoint>
 
 #include <dstools/ViewportController.h>
+#include <dstools/TimePos.h>
 #include "BoundaryBindingManager.h"
 #include "SpectrogramColorPalette.h"
 
@@ -65,8 +66,8 @@ public:
 
 signals:
     void boundaryDragStarted(int tierIndex, int boundaryIndex);  ///< Boundary drag began.
-    void boundaryDragging(int tierIndex, int boundaryIndex, double newTime); ///< Boundary being dragged.
-    void boundaryDragFinished(int tierIndex, int boundaryIndex, double newTime); ///< Boundary drag ended.
+    void boundaryDragging(int tierIndex, int boundaryIndex, TimePos newTime); ///< Boundary being dragged.
+    void boundaryDragFinished(int tierIndex, int boundaryIndex, TimePos newTime); ///< Boundary drag ended.
     void hoveredBoundaryChanged(int boundaryIndex); ///< Hovered boundary changed.
     void entryScrollRequested(int delta);           ///< Scroll request from wheel event.
 
@@ -87,9 +88,9 @@ private:
     void drawBoundaryOverlay(QPainter &painter);        ///< Draws boundary lines.
 
     [[nodiscard]] int hitTestBoundary(int x) const;     ///< Returns boundary index at x, or -1.
-    void startBoundaryDrag(int boundaryIndex, double time);   ///< Begins boundary drag.
-    void updateBoundaryDrag(double currentTime);              ///< Updates drag position.
-    void endBoundaryDrag(double finalTime);                   ///< Commits boundary drag.
+    void startBoundaryDrag(int boundaryIndex, TimePos time);   ///< Begins boundary drag.
+    void updateBoundaryDrag(TimePos currentTime);              ///< Updates drag position.
+    void endBoundaryDrag(TimePos finalTime);                   ///< Commits boundary drag.
 
     [[nodiscard]] double xToTime(int x) const;          ///< Converts pixel x to time.
     [[nodiscard]] int timeToX(double time) const;       ///< Converts time to pixel x.
@@ -132,9 +133,9 @@ private:
     bool m_boundaryDragging = false;                    ///< Whether a boundary is being dragged.
     int m_draggedBoundary = -1;                         ///< Index of dragged boundary.
     int m_draggedTier = -1;                             ///< Tier of dragged boundary.
-    double m_boundaryDragStartTime = 0.0;               ///< Original time of dragged boundary.
+    TimePos m_boundaryDragStartTime = 0;               ///< Original time of dragged boundary.
     std::vector<AlignedBoundary> m_dragAligned;          ///< Aligned boundaries during drag.
-    std::vector<double> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
+    std::vector<TimePos> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
 
     static constexpr int kBoundaryHitWidth = 8;         ///< Hit-test width in pixels.
     int m_hoveredBoundary = -1;                         ///< Hovered boundary index, or -1.

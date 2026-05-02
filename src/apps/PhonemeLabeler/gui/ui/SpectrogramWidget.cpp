@@ -279,7 +279,7 @@ void SpectrogramWidget::drawBoundaryOverlay(QPainter &painter) {
 
     int count = m_document->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        double t = m_document->boundaryTime(activeTier, b);
+        double t = usToSec(m_document->boundaryTime(activeTier, b));
         int x = timeToX(t);
         if (x < 0 || x > width()) continue;
 
@@ -305,7 +305,7 @@ int SpectrogramWidget::hitTestBoundary(int x) const {
 
     int count = m_document->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        int bx = timeToX(m_document->boundaryTime(activeTier, b));
+        int bx = timeToX(usToSec(m_document->boundaryTime(activeTier, b)));
         if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
             return b;
         }
@@ -313,7 +313,7 @@ int SpectrogramWidget::hitTestBoundary(int x) const {
     return -1;
 }
 
-void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, double time) {
+void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
     if (!m_document) return;
     m_boundaryDragging = true;
     m_draggedBoundary = boundaryIndex;
@@ -335,12 +335,12 @@ void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, double time) {
     emit boundaryDragStarted(m_draggedTier, boundaryIndex);
 }
 
-void SpectrogramWidget::updateBoundaryDrag(double currentTime) {
+void SpectrogramWidget::updateBoundaryDrag(TimePos currentTime) {
     if (!m_boundaryDragging || !m_document) return;
 
     m_document->moveBoundary(m_draggedTier, m_draggedBoundary, currentTime);
 
-    double delta = currentTime - m_boundaryDragStartTime;
+    TimePos delta = currentTime - m_boundaryDragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
         m_document->moveBoundary(m_dragAligned[i].tierIndex,
                                  m_dragAligned[i].boundaryIndex,
@@ -350,7 +350,7 @@ void SpectrogramWidget::updateBoundaryDrag(double currentTime) {
     emit boundaryDragging(m_draggedTier, m_draggedBoundary, currentTime);
 }
 
-void SpectrogramWidget::endBoundaryDrag(double finalTime) {
+void SpectrogramWidget::endBoundaryDrag(TimePos finalTime) {
     if (!m_boundaryDragging || !m_document) return;
 
     int draggedTier = m_draggedTier;
@@ -390,7 +390,7 @@ void SpectrogramWidget::mousePressEvent(QMouseEvent *event) {
         int boundaryIdx = hitTestBoundary(event->pos().x());
         if (boundaryIdx >= 0 && m_document) {
             int tier = m_document->activeTierIndex();
-            double t = m_document->boundaryTime(tier, boundaryIdx);
+            TimePos t = m_document->boundaryTime(tier, boundaryIdx);
             startBoundaryDrag(boundaryIdx, t);
         } else {
             m_dragging = true;
@@ -403,7 +403,7 @@ void SpectrogramWidget::mousePressEvent(QMouseEvent *event) {
 
 void SpectrogramWidget::mouseMoveEvent(QMouseEvent *event) {
     if (m_boundaryDragging) {
-        double currentTime = xToTime(event->pos().x());
+        TimePos currentTime = secToUs(xToTime(event->pos().x()));
         updateBoundaryDrag(currentTime);
     } else if (m_dragging) {
         double deltaSec = xToTime(event->pos().x()) - m_dragStartTime;
@@ -425,7 +425,7 @@ void SpectrogramWidget::mouseMoveEvent(QMouseEvent *event) {
 void SpectrogramWidget::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (m_boundaryDragging) {
-            double finalTime = xToTime(event->pos().x());
+            TimePos finalTime = secToUs(xToTime(event->pos().x()));
             endBoundaryDrag(finalTime);
         }
         m_dragging = false;

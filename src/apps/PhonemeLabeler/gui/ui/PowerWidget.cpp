@@ -221,7 +221,7 @@ void PowerWidget::drawBoundaryOverlay(QPainter &painter) {
 
     int count = m_document->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        double t = m_document->boundaryTime(activeTier, b);
+        double t = usToSec(m_document->boundaryTime(activeTier, b));
         int x = timeToX(t);
         if (x < 0 || x > width()) continue;
 
@@ -247,7 +247,7 @@ int PowerWidget::hitTestBoundary(int x) const {
 
     int count = m_document->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        int bx = timeToX(m_document->boundaryTime(activeTier, b));
+        int bx = timeToX(usToSec(m_document->boundaryTime(activeTier, b)));
         if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
             return b;
         }
@@ -255,7 +255,7 @@ int PowerWidget::hitTestBoundary(int x) const {
     return -1;
 }
 
-void PowerWidget::startBoundaryDrag(int boundaryIndex, double time) {
+void PowerWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
     if (!m_document) return;
     m_boundaryDragging = true;
     m_draggedBoundary = boundaryIndex;
@@ -277,12 +277,12 @@ void PowerWidget::startBoundaryDrag(int boundaryIndex, double time) {
     emit boundaryDragStarted(m_draggedTier, boundaryIndex);
 }
 
-void PowerWidget::updateBoundaryDrag(double currentTime) {
+void PowerWidget::updateBoundaryDrag(TimePos currentTime) {
     if (!m_boundaryDragging || !m_document) return;
 
     m_document->moveBoundary(m_draggedTier, m_draggedBoundary, currentTime);
 
-    double delta = currentTime - m_boundaryDragStartTime;
+    TimePos delta = currentTime - m_boundaryDragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
         m_document->moveBoundary(m_dragAligned[i].tierIndex,
                                  m_dragAligned[i].boundaryIndex,
@@ -292,7 +292,7 @@ void PowerWidget::updateBoundaryDrag(double currentTime) {
     emit boundaryDragging(m_draggedTier, m_draggedBoundary, currentTime);
 }
 
-void PowerWidget::endBoundaryDrag(double finalTime) {
+void PowerWidget::endBoundaryDrag(TimePos finalTime) {
     if (!m_boundaryDragging || !m_document) return;
 
     int draggedTier = m_draggedTier;
@@ -332,7 +332,7 @@ void PowerWidget::mousePressEvent(QMouseEvent *event) {
         int boundaryIdx = hitTestBoundary(event->pos().x());
         if (boundaryIdx >= 0 && m_document) {
             int tier = m_document->activeTierIndex();
-            double t = m_document->boundaryTime(tier, boundaryIdx);
+            TimePos t = m_document->boundaryTime(tier, boundaryIdx);
             startBoundaryDrag(boundaryIdx, t);
         } else {
             m_dragging = true;
@@ -345,7 +345,7 @@ void PowerWidget::mousePressEvent(QMouseEvent *event) {
 
 void PowerWidget::mouseMoveEvent(QMouseEvent *event) {
     if (m_boundaryDragging) {
-        double currentTime = xToTime(event->pos().x());
+        TimePos currentTime = secToUs(xToTime(event->pos().x()));
         updateBoundaryDrag(currentTime);
     } else if (m_dragging) {
         double deltaSec = xToTime(event->pos().x()) - m_dragStartTime;
@@ -367,9 +367,8 @@ void PowerWidget::mouseMoveEvent(QMouseEvent *event) {
 void PowerWidget::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         if (m_boundaryDragging) {
-            double finalTime = xToTime(event->pos().x());
+            TimePos finalTime = secToUs(xToTime(event->pos().x()));
             endBoundaryDrag(finalTime);
-        }
         m_dragging = false;
     }
     QWidget::mouseReleaseEvent(event);
