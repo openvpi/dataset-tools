@@ -1,6 +1,7 @@
 #include "FeatureQueue.h"
 
 #include <ComDefine.h>
+#include <cstring>
 
 namespace FunAsr {
     FeatureQueue::FeatureQueue()

@@ -1,6 +1,7 @@
 #ifndef TENSOR_H
 #define TENSOR_H
 
+#include <cstring>
 #include <iostream>
 
 #include "alignedmem.h"
