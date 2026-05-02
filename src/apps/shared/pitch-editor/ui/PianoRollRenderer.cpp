@@ -1,6 +1,6 @@
 #include "PianoRollRenderer.h"
 #include "PitchProcessor.h"
-#include "gui/DSFile.h"
+#include "DSFile.h"
 
 #include <QPainterPath>
 

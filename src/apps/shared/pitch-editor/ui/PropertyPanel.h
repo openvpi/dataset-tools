@@ -4,7 +4,7 @@
 #include <QLabel>
 #include <QToolButton>
 
-#include "gui/DSFile.h"
+#include "DSFile.h"
 
 namespace dstools {
 namespace pitchlabeler {

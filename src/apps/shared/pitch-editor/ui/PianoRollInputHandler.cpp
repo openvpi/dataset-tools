@@ -1,6 +1,6 @@
 #include "PianoRollInputHandler.h"
 #include "PitchProcessor.h"
-#include "gui/DSFile.h"
+#include "DSFile.h"
 
 #include <QMouseEvent>
 #include <QWheelEvent>

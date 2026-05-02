@@ -1,8 +1,8 @@
 #include "PianoRollView.h"
-#include "gui/DSFile.h"
+#include "DSFile.h"
 #include "commands/PitchCommands.h"
 
-#include "../../PitchLabelerKeys.h"
+#include "PitchLabelerKeys.h"
 
 #include <QPaintEvent>
 #include <QPainter>
