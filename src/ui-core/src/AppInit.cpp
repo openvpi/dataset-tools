@@ -17,6 +17,8 @@
 #ifdef Q_OS_WIN
 #include <ShlObj.h>
 #include <Windows.h>
+#else
+#include <unistd.h>
 #endif
 
 namespace dstools {
@@ -59,7 +61,7 @@ bool AppInit::init(QApplication &app, bool initCrashHandler) {
         QString msg = QString("You're trying to start %1 as root, which may cause "
                               "security problem and isn't recommended.")
                           .arg(app.applicationName());
-        QMessageBox::warning(nullptr, title, msg, QApplication::tr("Confirm"));
+        QMessageBox::warning(nullptr, title, msg, QMessageBox::Ok);
         return false;
     }
 #endif

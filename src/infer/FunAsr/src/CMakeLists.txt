@@ -20,7 +20,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-find_package(fftw3 CONFIG REQUIRED)
+find_package(FFTW3 CONFIG REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${FFTW3_INCLUDE_DIRS})
 target_link_directories(${PROJECT_NAME} PUBLIC ${FFTW3_LIBRARY_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE fftw3 fftw3f)
