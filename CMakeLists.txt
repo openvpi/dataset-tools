@@ -2,6 +2,26 @@ cmake_minimum_required(VERSION 3.21)
 
 project(dataset-tools)
 
+# --- Compiler cache (ccache / sccache) ----------------------------------------
+find_program(SCCACHE_PROGRAM sccache)
+find_program(CCACHE_PROGRAM ccache)
+if(SCCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
+    message(STATUS "Compiler cache: sccache (${SCCACHE_PROGRAM})")
+elseif(CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    message(STATUS "Compiler cache: ccache (${CCACHE_PROGRAM})")
+    if(MSVC)
+        # ccache does not support MSVC /Zi (pdb file lock), use /Z7 instead
+        foreach(_config DEBUG RELWITHDEBINFO)
+            string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_${_config} "${CMAKE_C_FLAGS_${_config}}")
+            string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_${_config} "${CMAKE_CXX_FLAGS_${_config}}")
+        endforeach()
+    endif()
+endif()
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if (WIN32)

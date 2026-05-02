@@ -45,7 +45,7 @@
 #  dstools_add_library
 # --------------------------------------------------------------------------- #
 function(dstools_add_library target_name)
-    set(_options STATIC SHARED INTERFACE AUTOMOC AUTORCC AUTOUIC)
+    set(_options STATIC SHARED INTERFACE AUTOMOC AUTORCC AUTOUIC NO_PCH)
     set(_one_value NAMESPACE EXPORT_SET CXX_STANDARD)
     set(_multi_value DEPENDS DEFINITIONS INCLUDE_DIRS RESOURCES)
     cmake_parse_arguments(ARG "${_options}" "${_one_value}" "${_multi_value}" ${ARGN})
@@ -125,7 +125,7 @@ function(dstools_add_library target_name)
     # --- Compiler warnings (non-INTERFACE) -------------------------------------
     if(NOT _type STREQUAL "INTERFACE")
         if(MSVC)
-            target_compile_options(${target_name} PRIVATE /utf-8 /W4 /wd4251)
+            target_compile_options(${target_name} PRIVATE /utf-8 /W4 /wd4251 /MP)
         else()
             target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic)
         endif()
@@ -246,13 +246,29 @@ function(dstools_add_library target_name)
             )
         endif()
     endif()
+
+    # --- Precompiled headers (PCH) ---------------------------------------------
+    if(NOT _type STREQUAL "INTERFACE" AND NOT ARG_NO_PCH)
+        target_precompile_headers(${target_name} PRIVATE
+            <QString>
+            <QStringList>
+            <QObject>
+            <QDebug>
+            <vector>
+            <map>
+            <memory>
+            <string>
+            <functional>
+            <cstdint>
+        )
+    endif()
 endfunction()
 
 # --------------------------------------------------------------------------- #
 #  dstools_add_executable
 # --------------------------------------------------------------------------- #
 function(dstools_add_executable target_name)
-    set(_options DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC AUTOMOC AUTORCC AUTOUIC)
+    set(_options DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC AUTOMOC AUTORCC AUTOUIC NO_PCH)
     set(_one_value VERSION)
     set(_multi_value DEPENDS SOURCES)
     cmake_parse_arguments(ARG "${_options}" "${_one_value}" "${_multi_value}" ${ARGN})
@@ -282,7 +298,7 @@ function(dstools_add_executable target_name)
 
     # --- Compiler warnings -----------------------------------------------------
     if(MSVC)
-        target_compile_options(${target_name} PRIVATE /utf-8 /W4 /wd4251)
+        target_compile_options(${target_name} PRIVATE /utf-8 /W4 /wd4251 /MP)
     else()
         target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic)
     endif()
@@ -332,6 +348,22 @@ function(dstools_add_executable target_name)
     # --- Deploy ----------------------------------------------------------------
     if(ARG_DEPLOY)
         set_property(TARGET DeployedTargets APPEND PROPERTY TARGETS ${target_name})
+    endif()
+
+    # --- Precompiled headers (PCH) ---------------------------------------------
+    if(NOT ARG_NO_PCH)
+        target_precompile_headers(${target_name} PRIVATE
+            <QString>
+            <QStringList>
+            <QObject>
+            <QDebug>
+            <vector>
+            <map>
+            <memory>
+            <string>
+            <functional>
+            <cstdint>
+        )
     endif()
 endfunction()
 
