@@ -219,6 +219,7 @@ dataset-tools/
 ├── CMakeLists.txt              # 根配置: C++20, 输出目录, 编译器选项
 ├── cmake/
 │   ├── DstoolsHelpers.cmake    # dstools_add_library() / dstools_add_executable() 宏
+│   ├── deploy.cmake            # windeployqt/macdeployqt/Linux 部署逻辑
 │   ├── infer-target.cmake      # dstools_add_infer_library() 宏
 │   ├── setup-onnxruntime.cmake # ORT 下载脚本 (cpu/dml/gpu)
 │   ├── dsfwConfig.cmake.in     # dsfw CMake 包配置模板
@@ -243,7 +244,13 @@ dataset-tools/
 │   │   ├── include/dstools/    # DsDocument, DsProject, CsvToDsConverter, ...
 │   │   └── src/
 │   ├── widgets/                # dstools-widgets (SHARED)
-│   ├── libs/textgrid/          # header-only
+│   ├── libs/
+│   │   ├── textgrid/          # header-only
+│   │   ├── hubert-fa/         # HuBERT 强制对齐处理器
+│   │   ├── lyric-fa/          # 歌词对齐处理器
+│   │   ├── game-infer-lib/    # GAME MIDI 处理器
+│   │   ├── rmvpe-pitch/       # RMVPE F0 处理器
+│   │   └── min-label-lib/     # MinLabel 服务 + AddPhNum 处理器
 │   ├── infer/
 │   │   ├── common/             # dstools-infer-common (STATIC)
 │   │   ├── onnxruntime/        # 预下载 ORT 二进制
@@ -255,9 +262,15 @@ dataset-tools/
 │   ├── apps/
 │   │   ├── LabelSuite/            # 通用标注工具集
 │   │   ├── DsLabeler/             # DiffSinger 专用标注器
+│   │   ├── min-label/             # MinLabel 独立标注应用
+│   │   ├── game-infer-app/        # GameInfer 独立应用
+│   │   ├── pitch-labeler/         # PitchLabeler 独立标注应用
+│   │   ├── phoneme-labeler/       # PhonemeLabeler 独立标注应用
+│   │   ├── labeler/               # DiffSingerLabeler (旧名 DatasetPipeline)
+│   │   ├── pipeline/              # 切片/预处理工具
 │   │   ├── cli/                   # dstools-cli
-│   │   ├── TestShell/
-│   │   └── WidgetGallery/
+│   │   ├── test-shell/            # TestShell
+│   │   └── widget-gallery/        # WidgetGallery
 │   └── tests/
 │       ├── framework/          # dsfw 核心类单元测试
 │       └── CMakeLists.txt      # 推理库测试注册
