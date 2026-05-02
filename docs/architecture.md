@@ -260,17 +260,12 @@ dataset-tools/
 │   │   ├── hubert-infer/       # (SHARED)
 │   │   └── FunAsr/             # (STATIC)
 │   ├── apps/
-│   │   ├── LabelSuite/            # 通用标注工具集
-│   │   ├── DsLabeler/             # DiffSinger 专用标注器
-│   │   ├── min-label/             # MinLabel 独立标注应用
-│   │   ├── game-infer-app/        # GameInfer 独立应用
-│   │   ├── pitch-labeler/         # PitchLabeler 独立标注应用
-│   │   ├── phoneme-labeler/       # PhonemeLabeler 独立标注应用
-│   │   ├── labeler/               # DiffSingerLabeler (旧名 DatasetPipeline)
-│   │   ├── pipeline/              # 切片/预处理工具
-│   │   ├── cli/                   # dstools-cli
-│   │   ├── test-shell/            # TestShell
-│   │   └── widget-gallery/        # WidgetGallery
+│   │   ├── label-suite/            # LabelSuite — 通用标注工具集
+│   │   ├── ds-labeler/             # DsLabeler — DiffSinger 专用标注器
+│   │   ├── shared/                 # 共享编辑器组件 (MinLabelEditor, PhonemeEditor, PitchEditor)
+│   │   ├── cli/                    # dstools-cli
+│   │   ├── test-shell/             # TestShell
+│   │   └── widget-gallery/         # WidgetGallery
 │   └── tests/
 │       ├── framework/          # dsfw 核心类单元测试
 │       └── CMakeLists.txt      # 推理库测试注册
