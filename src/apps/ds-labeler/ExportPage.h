@@ -55,10 +55,18 @@ private:
     QProgressBar *m_progressBar = nullptr;
     QLabel *m_statusLabel = nullptr;
 
+    // Validation
+    QLabel *m_validationLabel = nullptr;
+    int m_readyForCsv = 0;   ///< Slices with grapheme layer
+    int m_readyForDs = 0;    ///< Slices with pitch_review in editedSteps
+    int m_dirtyCount = 0;    ///< Slices with dirty layers
+    int m_totalSlices = 0;
+
     void buildUi();
     void onBrowseOutput();
     void onExport();
     void updateExportButton();
+    void runValidation();
 };
 
 } // namespace dstools

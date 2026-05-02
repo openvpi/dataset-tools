@@ -1,6 +1,8 @@
 #include "ExportPage.h"
 #include "ProjectDataSource.h"
 
+#include <dsfw/PipelineContext.h>
+
 #include <QApplication>
 
 #include <QFileDialog>
@@ -83,7 +85,15 @@ void ExportPage::buildUi() {
     m_chkIncludeDiscarded = new QCheckBox(QStringLiteral("包含丢弃的切片"), advGroup);
     advLayout->addRow(m_chkIncludeDiscarded);
     mainLayout->addWidget(advGroup);
-    mainLayout->addSpacing(20);
+    mainLayout->addSpacing(12);
+
+    // Validation summary
+    m_validationLabel = new QLabel(this);
+    m_validationLabel->setWordWrap(true);
+    m_validationLabel->setStyleSheet(
+        QStringLiteral("QLabel { padding: 8px; border-radius: 4px; }"));
+    mainLayout->addWidget(m_validationLabel);
+    mainLayout->addSpacing(12);
 
     // Export button
     auto *btnLayout = new QHBoxLayout;
@@ -129,8 +139,21 @@ void ExportPage::onBrowseOutput() {
 }
 
 void ExportPage::updateExportButton() {
-    bool ok = m_source && !m_outputDir->text().trimmed().isEmpty();
+    bool hasOutput = !m_outputDir->text().trimmed().isEmpty();
+    bool hasSource = m_source != nullptr;
+    bool hasReadySlices = m_readyForCsv > 0;
+
+    bool ok = hasSource && hasOutput && hasReadySlices;
     m_btnExport->setEnabled(ok);
+
+    if (!hasSource)
+        m_btnExport->setToolTip(QStringLiteral("请先打开工程"));
+    else if (!hasOutput)
+        m_btnExport->setToolTip(QStringLiteral("请选择目标文件夹"));
+    else if (!hasReadySlices)
+        m_btnExport->setToolTip(QStringLiteral("没有切片包含 grapheme 层，无法导出"));
+    else
+        m_btnExport->setToolTip({});
 }
 
 void ExportPage::onExport() {
@@ -195,7 +218,84 @@ QString ExportPage::windowTitle() const {
 }
 
 void ExportPage::onActivated() {
+    runValidation();
     updateExportButton();
+}
+
+void ExportPage::runValidation() {
+    m_readyForCsv = 0;
+    m_readyForDs = 0;
+    m_dirtyCount = 0;
+    m_totalSlices = 0;
+
+    if (!m_source) {
+        m_validationLabel->setText(QStringLiteral("请先打开工程。"));
+        m_validationLabel->setStyleSheet(
+            QStringLiteral("QLabel { padding: 8px; border-radius: 4px; color: gray; }"));
+        return;
+    }
+
+    const auto ids = m_source->sliceIds();
+    m_totalSlices = ids.size();
+
+    if (m_totalSlices == 0) {
+        m_validationLabel->setText(QStringLiteral("没有活动切片。"));
+        m_validationLabel->setStyleSheet(
+            QStringLiteral("QLabel { padding: 8px; border-radius: 4px; color: gray; }"));
+        return;
+    }
+
+    for (const auto &id : ids) {
+        auto result = m_source->loadSlice(id);
+        if (!result)
+            continue;
+
+        const auto &doc = result.value();
+
+        // Check grapheme layer existence
+        bool hasGrapheme = false;
+        for (const auto &layer : doc.layers) {
+            if (layer.name == QStringLiteral("grapheme")) {
+                hasGrapheme = true;
+                break;
+            }
+        }
+        if (hasGrapheme)
+            ++m_readyForCsv;
+
+        // Check editedSteps for pitch_review (ADR-50: required for .ds export)
+        if (doc.meta.editedSteps.contains(QStringLiteral("pitch_review")))
+            ++m_readyForDs;
+
+        // Check dirty layers from PipelineContext
+        auto *ctx = m_source->context(id);
+        if (ctx && !ctx->dirty.isEmpty())
+            ++m_dirtyCount;
+    }
+
+    // Build summary
+    QStringList lines;
+    lines.append(QStringLiteral("共 %1 个活动切片").arg(m_totalSlices));
+    lines.append(QStringLiteral("  • CSV 就绪（含 grapheme 层）: %1/%2")
+                     .arg(m_readyForCsv).arg(m_totalSlices));
+    lines.append(QStringLiteral("  • .ds 就绪（含 pitch_review）: %1/%2")
+                     .arg(m_readyForDs).arg(m_totalSlices));
+
+    if (m_dirtyCount > 0)
+        lines.append(QStringLiteral("  ⚠ %1 个切片存在脏层（上游修改未重算）")
+                         .arg(m_dirtyCount));
+
+    QString color;
+    if (m_readyForCsv == 0)
+        color = QStringLiteral("color: #cc3333;"); // red — nothing exportable
+    else if (m_readyForCsv < m_totalSlices || m_dirtyCount > 0)
+        color = QStringLiteral("color: #cc8800;"); // orange — partial
+    else
+        color = QStringLiteral("color: #338833;"); // green — all good
+
+    m_validationLabel->setText(lines.join(QStringLiteral("\n")));
+    m_validationLabel->setStyleSheet(
+        QStringLiteral("QLabel { padding: 8px; border-radius: 4px; %1 }").arg(color));
 }
 
 } // namespace dstools
