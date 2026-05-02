@@ -11,7 +11,7 @@
 #include <dstools/ShortcutManager.h>
 
 #include "../PhonemeLabelerKeys.h"
-#include "PhonemeEditor.h"
+#include <PhonemeEditor.h>
 #include "ui/FileListPanel.h"
 
 namespace dstools {
