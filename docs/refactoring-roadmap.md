@@ -35,6 +35,8 @@
 | L.1 | Boundary/Layer 领域模型 | DsTextTypes.h（Boundary/IntervalLayer/CurveLayer/DsTextDocument）、.dstext JSON I/O、v1→v2 迁移 + 6 个测试 |
 | L.2 | 流水线核心接口 | PipelineContext（状态/层数据/序列化）、IAudioPreprocessor、IFormatAdapter、FormatAdapterRegistry + 5 个测试 |
 | L.3 | 格式适配器 | LabAdapter、TextGridAdapter、CsvAdapter、DsFileAdapter + 3 个测试 |
+| L.4 | 流水线执行器 | PipelineRunner（多步骤执行/验证/丢弃传播/格式导入导出）+ 4 个测试 |
+| L.5 | 处理器包装 | SlicerProcessor（包装 SlicerService）、AddPhNumProcessor（包装 PhNumCalculator）+ 2 个测试 |
 
 ---
 
@@ -143,7 +145,7 @@
 
 ---
 
-### L.4 — PipelineRunner
+### L.4 — PipelineRunner ✅
 
 **目标**：流水线执行器，替代 TranscriptionPipeline 的角色。
 
@@ -158,7 +160,7 @@
 
 ---
 
-### L.5 — 新增处理器包装
+### L.5 — 新增处理器包装 ✅
 
 **目标**：将现有纯算法包装为 ITaskProcessor。
 
