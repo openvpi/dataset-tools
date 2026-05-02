@@ -34,6 +34,7 @@
 | L.12 | 编译速度优化 | PCH（AUTOMOC 感知）、ccache/sccache 自动检测、MSVC /MP、测试分层（unit/integration/infer） |
 | L.1 | Boundary/Layer 领域模型 | DsTextTypes.h（Boundary/IntervalLayer/CurveLayer/DsTextDocument）、.dstext JSON I/O、v1→v2 迁移 + 6 个测试 |
 | L.2 | 流水线核心接口 | PipelineContext（状态/层数据/序列化）、IAudioPreprocessor、IFormatAdapter、FormatAdapterRegistry + 5 个测试 |
+| L.3 | 格式适配器 | LabAdapter、TextGridAdapter、CsvAdapter、DsFileAdapter + 3 个测试 |
 
 ---
 
@@ -126,7 +127,7 @@
 
 ---
 
-### L.3 — 4 个格式适配器
+### L.3 — 4 个格式适配器 ✅
 
 **目标**：实现 MDS 兼容的导入/导出。
 
