@@ -87,39 +87,39 @@ namespace AudioUtil
 
     Slicer::Slicer(int sampleRate, float threshold, int hopSize, int winSize, int minLength, int minInterval,
                    int maxSilKept) :
-        sample_rate(sampleRate), threshold(threshold), hop_size(hopSize), win_size(winSize), min_length(minLength),
-        min_interval(minInterval), max_sil_kept(maxSilKept), error_code_(SlicerError::Ok) {}
+        m_sampleRate(sampleRate), m_threshold(threshold), m_hopSize(hopSize), m_winSize(winSize), m_minLength(minLength),
+        m_minInterval(minInterval), m_maxSilKept(maxSilKept), m_errorCode(SlicerError::Ok) {}
 
     Slicer Slicer::fromMilliseconds(int sampleRate, const SlicerParams &params) {
         Slicer s(sampleRate, 0.0f, 0, 0, 0, 0, 0);
-        s.error_code_ = SlicerError::Ok;
+        s.m_errorCode = SlicerError::Ok;
 
         if (!((params.minLength >= params.minInterval) && (params.minInterval >= params.hopSize)) ||
             (params.maxSilKept < params.hopSize)) {
-            s.error_code_ = SlicerError::InvalidArgument;
-            s.error_msg_ = "ValueError: The following conditions must be satisfied: "
-                           "(min_length >= min_interval >= hop_size) and (max_sil_kept >= hop_size).";
+            s.m_errorCode = SlicerError::InvalidArgument;
+            s.m_errorMsg = "ValueError: The following conditions must be satisfied: "
+                           "(m_minLength >= m_minInterval >= m_hopSize) and (m_maxSilKept >= m_hopSize).";
             return s;
         }
 
         if (sampleRate <= 0) {
-            s.error_code_ = SlicerError::AudioError;
-            s.error_msg_ = "Invalid sample rate!";
+            s.m_errorCode = SlicerError::AudioError;
+            s.m_errorMsg = "Invalid sample rate!";
             return s;
         }
 
-        s.sample_rate = sampleRate;
-        s.threshold = std::pow(10, params.threshold / 20.0);
-        s.hop_size = divIntRound<int64_t>(static_cast<int64_t>(params.hopSize) * sampleRate, 1000LL);
-        s.win_size = static_cast<int>(std::min(
+        s.m_sampleRate = sampleRate;
+        s.m_threshold = std::pow(10, params.threshold / 20.0);
+        s.m_hopSize = divIntRound<int64_t>(static_cast<int64_t>(params.hopSize) * sampleRate, 1000LL);
+        s.m_winSize = static_cast<int>(std::min(
             divIntRound<int64_t>(static_cast<int64_t>(params.minInterval) * sampleRate, 1000LL),
-            static_cast<int64_t>(4) * s.hop_size));
-        s.min_length = static_cast<int>(divIntRound<int64_t>(
-            static_cast<int64_t>(params.minLength) * sampleRate, 1000LL * s.hop_size));
-        s.min_interval = static_cast<int>(divIntRound<int64_t>(
-            static_cast<int64_t>(params.minInterval) * sampleRate, 1000LL * s.hop_size));
-        s.max_sil_kept = static_cast<int>(divIntRound<int64_t>(
-            static_cast<int64_t>(params.maxSilKept) * sampleRate, 1000LL * s.hop_size));
+            static_cast<int64_t>(4) * s.m_hopSize));
+        s.m_minLength = static_cast<int>(divIntRound<int64_t>(
+            static_cast<int64_t>(params.minLength) * sampleRate, 1000LL * s.m_hopSize));
+        s.m_minInterval = static_cast<int>(divIntRound<int64_t>(
+            static_cast<int64_t>(params.minInterval) * sampleRate, 1000LL * s.m_hopSize));
+        s.m_maxSilKept = static_cast<int>(divIntRound<int64_t>(
+            static_cast<int64_t>(params.maxSilKept) * sampleRate, 1000LL * s.m_hopSize));
 
         return s;
     }
@@ -134,15 +134,15 @@ namespace AudioUtil
     }
 
     MarkerList Slicer::slice(const std::vector<float> &samples) const {
-        if (error_code_ != SlicerError::Ok) {
+        if (m_errorCode != SlicerError::Ok) {
             return {};
         }
 
-        if ((samples.size() + hop_size - 1) / hop_size <= static_cast<size_t>(min_length)) {
+        if ((samples.size() + m_hopSize - 1) / m_hopSize <= static_cast<size_t>(m_minLength)) {
             return {{0, static_cast<int64_t>(samples.size())}};
         }
 
-        auto rms_list = get_rms(samples, win_size, hop_size);
+        auto rms_list = get_rms(samples, m_winSize, m_hopSize);
         MarkerList sil_tags;
         int64_t silence_start = -1;
         int64_t clip_start = 0;
@@ -150,7 +150,7 @@ namespace AudioUtil
         for (int64_t i = 0; i < static_cast<int64_t>(rms_list.size()); ++i) {
             const double rms = rms_list[i];
 
-            if (rms < threshold) {
+            if (rms < m_threshold) {
                 if (silence_start < 0) {
                     silence_start = i;
                 }
@@ -161,30 +161,30 @@ namespace AudioUtil
                 continue;
             }
 
-            bool is_leading_silence = silence_start == 0 && i > max_sil_kept;
-            bool need_slice_middle = i - silence_start >= min_interval && i - clip_start >= min_length;
+            bool is_leading_silence = silence_start == 0 && i > m_maxSilKept;
+            bool need_slice_middle = i - silence_start >= m_minInterval && i - clip_start >= m_minLength;
 
             if (!is_leading_silence && !need_slice_middle) {
                 silence_start = -1;
                 continue;
             }
 
-            if (i - silence_start <= max_sil_kept) {
+            if (i - silence_start <= m_maxSilKept) {
                 int64_t pos = argmin(rms_list.begin() + silence_start, rms_list.begin() + i + 1);
                 pos += silence_start;
                 sil_tags.emplace_back((silence_start == 0 ? 0 : pos), pos);
                 clip_start = pos;
-            } else if (i - silence_start <= max_sil_kept * 2) {
-                int64_t overlap_start = std::max(silence_start, i - max_sil_kept);
+            } else if (i - silence_start <= m_maxSilKept * 2) {
+                int64_t overlap_start = std::max(silence_start, i - m_maxSilKept);
                 int64_t pos = argmin(rms_list.begin() + overlap_start,
                                      rms_list.begin() + std::min(static_cast<int64_t>(rms_list.size()),
-                                                                  silence_start + max_sil_kept + 1));
+                                                                  silence_start + m_maxSilKept + 1));
                 pos += overlap_start;
                 int64_t pos_l =
-                    argmin(rms_list.begin() + silence_start, rms_list.begin() + silence_start + max_sil_kept + 1);
-                int64_t pos_r = argmin(rms_list.begin() + i - max_sil_kept, rms_list.begin() + i + 1);
+                    argmin(rms_list.begin() + silence_start, rms_list.begin() + silence_start + m_maxSilKept + 1);
+                int64_t pos_r = argmin(rms_list.begin() + i - m_maxSilKept, rms_list.begin() + i + 1);
                 pos_l += silence_start;
-                pos_r += i - max_sil_kept;
+                pos_r += i - m_maxSilKept;
 
                 if (silence_start == 0) {
                     clip_start = pos_r;
@@ -195,10 +195,10 @@ namespace AudioUtil
                 }
             } else {
                 int64_t pos_l =
-                    argmin(rms_list.begin() + silence_start, rms_list.begin() + silence_start + max_sil_kept + 1);
-                int64_t pos_r = argmin(rms_list.begin() + i - max_sil_kept, rms_list.begin() + i + 1);
+                    argmin(rms_list.begin() + silence_start, rms_list.begin() + silence_start + m_maxSilKept + 1);
+                int64_t pos_r = argmin(rms_list.begin() + i - m_maxSilKept, rms_list.begin() + i + 1);
                 pos_l += silence_start;
-                pos_r += i - max_sil_kept;
+                pos_r += i - m_maxSilKept;
 
                 if (silence_start == 0) {
                     sil_tags.emplace_back(0, pos_r);
@@ -212,9 +212,9 @@ namespace AudioUtil
             silence_start = -1;
         }
 
-        if (silence_start >= 0 && static_cast<int64_t>(rms_list.size()) - silence_start >= min_interval) {
+        if (silence_start >= 0 && static_cast<int64_t>(rms_list.size()) - silence_start >= m_minInterval) {
             const int64_t silence_end =
-                (std::min)(static_cast<int64_t>(rms_list.size() - 1), silence_start + max_sil_kept);
+                (std::min)(static_cast<int64_t>(rms_list.size() - 1), silence_start + m_maxSilKept);
             int64_t pos = argmin(rms_list.begin() + silence_start, rms_list.begin() + silence_end + 1);
             pos += silence_start;
             sil_tags.emplace_back(pos, rms_list.size() + 1);
@@ -226,21 +226,21 @@ namespace AudioUtil
             MarkerList chunks;
 
             if (sil_tags[0].first > 0) {
-                chunks.emplace_back(0, sil_tags[0].first * hop_size);
+                chunks.emplace_back(0, sil_tags[0].first * m_hopSize);
             }
 
             for (size_t i = 0; i < sil_tags.size() - 1; ++i) {
-                chunks.emplace_back(sil_tags[i].second * hop_size, sil_tags[i + 1].first * hop_size);
+                chunks.emplace_back(sil_tags[i].second * m_hopSize, sil_tags[i + 1].first * m_hopSize);
             }
 
             if (sil_tags.back().second < static_cast<int64_t>(rms_list.size())) {
-                chunks.emplace_back(sil_tags.back().second * hop_size, static_cast<int64_t>(rms_list.size()) * hop_size);
+                chunks.emplace_back(sil_tags.back().second * m_hopSize, static_cast<int64_t>(rms_list.size()) * m_hopSize);
             }
             return chunks;
         }
     }
 
-    SlicerError Slicer::errorCode() const { return error_code_; }
+    SlicerError Slicer::errorCode() const { return m_errorCode; }
 
-    std::string Slicer::errorMessage() const { return error_msg_; }
+    std::string Slicer::errorMessage() const { return m_errorMsg; }
 } // namespace AudioUtil

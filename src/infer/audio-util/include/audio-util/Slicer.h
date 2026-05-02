@@ -62,15 +62,15 @@ namespace AudioUtil
         std::string errorMessage() const;
 
     private:
-        int sample_rate;
-        double threshold;
-        int hop_size;
-        int win_size;
-        int min_length;
-        int min_interval;
-        int max_sil_kept;
-        SlicerError error_code_;
-        std::string error_msg_;
+        int m_sampleRate;
+        double m_threshold;
+        int m_hopSize;
+        int m_winSize;
+        int m_minLength;
+        int m_minInterval;
+        int m_maxSilKept;
+        SlicerError m_errorCode;
+        std::string m_errorMsg;
 
         /// @brief Compute RMS energy for each frame.
         static std::vector<double> get_rms(const std::vector<float> &samples, int frame_length, int hop_length);
