@@ -8,7 +8,7 @@ A practical guide to building desktop applications with the **dsfw** framework â
 |-----------|----------------|-------|
 | **Qt** | 6.8+ | Modules: Core, Gui, Widgets, Svg, Network |
 | **C++ compiler** | C++20 | MSVC 2022, GCC, Clang |
-| **CMake** | 3.17+ | 3.20+ recommended |
+| **CMake** | 3.21+ | |
 | **vcpkg deps** | â€” | `nlohmann_json`, `QWindowKit` |
 
 ## 2. Installation
@@ -45,10 +45,10 @@ After installation, the following CMake package is available:
 ### CMakeLists.txt
 
 ```cmake
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.21)
 project(MyApp LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_AUTOMOC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)

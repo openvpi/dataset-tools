@@ -17,7 +17,7 @@ namespace Minlabel {
         pasteButton = new QPushButton();
         pasteButton->setProperty("type", "user");
         pasteButton->setObjectName("paste-button");
-        pasteButton->setIcon(QIcon(":/res/clipboard.svg"));
+        pasteButton->setIcon(QIcon(":/icons/clipboard.svg"));
 
         lineLayout = new QHBoxLayout();
         lineLayout->addWidget(wordsText);

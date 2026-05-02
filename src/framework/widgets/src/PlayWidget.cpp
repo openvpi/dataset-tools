@@ -8,12 +8,12 @@
 #include <QApplication>
 #include <QFileInfo>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSlider>
-#include <QStyle>
 #include <QTime>
 #include <QTimerEvent>
 #include <QVBoxLayout>
@@ -35,10 +35,13 @@ PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
 
     m_playBtn = new QPushButton();
     m_playBtn->setObjectName("play-button");
+    m_playBtn->setIcon(QIcon(":/icons/play.svg"));
     m_stopBtn = new QPushButton();
     m_stopBtn->setObjectName("stop-button");
+    m_stopBtn->setIcon(QIcon(":/icons/stop.svg"));
     m_devBtn = new QPushButton();
     m_devBtn->setObjectName("dev-button");
+    m_devBtn->setIcon(QIcon(":/icons/audio.svg"));
 
     auto *buttonsLayout = new QHBoxLayout();
     buttonsLayout->addWidget(m_playBtn);
@@ -86,10 +89,13 @@ PlayWidget::PlayWidget(dstools::audio::IAudioPlayer *player, QWidget *parent) : 
 
     m_playBtn = new QPushButton();
     m_playBtn->setObjectName("play-button");
+    m_playBtn->setIcon(QIcon(":/icons/play.svg"));
     m_stopBtn = new QPushButton();
     m_stopBtn->setObjectName("stop-button");
+    m_stopBtn->setIcon(QIcon(":/icons/stop.svg"));
     m_devBtn = new QPushButton();
     m_devBtn->setObjectName("dev-button");
+    m_devBtn->setIcon(QIcon(":/icons/audio.svg"));
 
     auto *buttonsLayout = new QHBoxLayout();
     buttonsLayout->addWidget(m_playBtn);
@@ -294,9 +300,7 @@ void PlayWidget::reloadDevices() {
 
 void PlayWidget::reloadButtonStatus() {
     bool playing = isPlaying();
-    m_playBtn->setIcon(style()->standardIcon(
-        playing ? QStyle::SP_MediaPause : QStyle::SP_MediaPlay));
-    m_stopBtn->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
+    m_playBtn->setIcon(QIcon(playing ? ":/icons/pause.svg" : ":/icons/play.svg"));
 }
 
 void PlayWidget::reloadSliderStatus() {

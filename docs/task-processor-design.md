@@ -892,21 +892,21 @@ Result<void> PipelineRunner::run(const Options &opts, ProgressCallback progress)
             "slices": [
                 {
                     "id": "001",
-                    "in": 1.14,
-                    "out": 5.14,
+                    "in": 1140000,
+                    "out": 5140000,
                     "status": "active",
                     "discardReason": null
                 },
                 {
                     "id": "002",
-                    "in": 8.17,
-                    "out": 19.26,
+                    "in": 8170000,
+                    "out": 19260000,
                     "status": "active"
                 },
                 {
                     "id": "003",
-                    "in": 22.50,
-                    "out": 23.10,
+                    "in": 22500000,
+                    "out": 23100000,
                     "status": "discarded",
                     "discardReason": "Too short (0.6s)",
                     "discardedAtStep": "audio_slice"
@@ -970,20 +970,20 @@ dstemp/
         }
     ],
     "layers": {
-        "sentence": [{"text": "感受停在", "position": 0.0}],
-        "grapheme": [{"text": "gan", "position": 0.0}, {"text": "shou", "position": 0.6}],
+        "sentence": [{"text": "感受停在", "pos": 0}],
+        "grapheme": [{"text": "gan", "pos": 0}, {"text": "shou", "pos": 600000}],
         "phoneme": [
-            {"phone": "g", "start": 0.0, "end": 0.08},
-            {"phone": "an", "start": 0.08, "end": 0.52}
+            {"phone": "g", "start": 0, "end": 80000},
+            {"phone": "an", "start": 80000, "end": 520000}
         ],
         "ph_num": [2, 2, 1],
         "midi": [
-            {"note": "C4", "duration": 0.6, "slur": 0, "glide": "none"},
-            {"note": "D4", "duration": 0.6, "slur": 0, "glide": "none"}
+            {"note": "C4", "duration": 600000, "slur": 0, "glide": "none"},
+            {"note": "D4", "duration": 600000, "slur": 0, "glide": "none"}
         ],
         "pitch": {
-            "f0": [0.0, 261.6, 293.7],
-            "timestep": 0.011609977
+            "f0": [0, 261600, 293700],
+            "timestep": 11610
         }
     }
 }

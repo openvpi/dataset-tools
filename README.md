@@ -50,7 +50,7 @@ Required for GameInfer. Place the model directory (containing `config.json`, `en
 |:---------:|:-----------:|:--------------------------------:|
 |    Qt     |  \>=6.8.0   | Core, Gui, Widgets, Svg, Network |
 | Compiler  |  \>=C++20   |      MSVC 2022, GCC, Clang       |
-|   CMake   |   \>=3.17   |      >=3.20 is recommended       |
+|   CMake   |  \>=3.21    |                                  |
 
 > Tested with Qt 6.8.3 and Qt 6.9.3. CI builds use Qt 6.9.3.
 
@@ -135,15 +135,17 @@ cmake --build build --target install
 | Type | Files |
 |---|---|
 | Applications | `DatasetPipeline.exe`, `MinLabel.exe`, `PhonemeLabeler.exe`, `PitchLabeler.exe`, `GameInfer.exe`, `DiffSingerLabeler.exe` |
+| Tools | `dstools-cli.exe`, `WidgetGallery.exe` |
 | Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestAudioUtil.exe` |
-| Shared libraries | `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `rmvpe-infer.dll`, `hubert-infer.dll` |
+| Shared libraries | `dsfw-widgets.dll`, `dstools-widgets.dll`, `audio-util.dll`, `game-infer.dll`, `rmvpe-infer.dll`, `hubert-infer.dll` |
 
 ## Framework (dsfw)
 
 The project includes a reusable C++20/Qt6 desktop application framework (`dsfw`) that can be consumed independently via `find_package(dsfw)`. The framework provides:
 
-- **dsfw-core** — Type-safe settings, JSON utilities, service locator, document/model/G2P/export interfaces, file I/O, async tasks
+- **dsfw-core** — Type-safe settings, JSON utilities, service locator, document/model/G2P/export interfaces, file I/O, async tasks, pipeline context and runner
 - **dsfw-ui-core** — AppShell unified window shell (single/multi-page modes), theme system, frameless window helper, icon navigation bar, page lifecycle interfaces
+- **dsfw-widgets** — Reusable GUI components (PlayWidget, ProgressDialog, PropertyEditor, etc.) as a shared library
 
 After building and installing the project, external projects can use:
 

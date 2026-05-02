@@ -7,7 +7,7 @@
 | 语言 | C++20 |
 | GUI | Qt 6.8+ (Core, Widgets, Svg, Network, Concurrent) |
 | 推理 | ONNX Runtime (DirectML / CUDA / CPU) |
-| 构建 | CMake ≥ 3.17 + vcpkg |
+| 构建 | CMake ≥ 3.21 + vcpkg |
 | 音频 | FFmpeg (解码) + SDL2 (播放) + SndFile + mpg123 + soxr (重采样) |
 | 平台 | Windows 10/11 (主), macOS 11+, Linux |
 
@@ -19,13 +19,19 @@
 ├────────────┬──────────┬────────────┬────────────┬──────────┬────────────┤
 │ Dataset    │ MinLabel │ Phoneme    │ Pitch      │ Game     │ DiffSinger │
 │ Pipeline   │          │ Labeler    │ Labeler    │ Infer    │ Labeler    │
+│            │ dstools-cli │ TestShell │ WidgetGallery                   │
 └─────┬──────┴────┬─────┴─────┬──────┴─────┬──────┴────┬─────┴─────┬──────┘
       │           │           │            │           │           │
       ▼           ▼           ▼            ▼           ▼           ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                      dstools-widgets (SHARED DLL)                        │
-│  PlayWidget · TaskWindow · GpuSelector · ShortcutManager                │
-│  FileProgressTracker · BaseFileListPanel · ModelLoadPanel · ...          │
+│  GpuSelector · ShortcutManager · 领域 UI 组件                           │
+└────────────────────────────┬─────────────────────────────────────────────┘
+                             │ PUBLIC
+┌────────────────────────────┴─────────────────────────────────────────────┐
+│                      dsfw-widgets (SHARED DLL)                           │
+│  PlayWidget · FileProgressTracker · ProgressDialog · PropertyEditor     │
+│  SettingsDialog · LogViewer · RunProgressRow · PathSelector · ...        │
 └────────────────────────────┬─────────────────────────────────────────────┘
                              │ PUBLIC
                 ┌────────────┼────────────┐
@@ -64,6 +70,9 @@
 │ IPitchService     │                    │
 │ ITranscription-   │                    │
 │   Service         │                    │
+│ PipelineContext   │                    │
+│ PipelineRunner    │                    │
+│ ITaskProcessor    │                    │
 └───────┬───────────┘                    │
         │ PUBLIC                         │
 ┌───────┴───────────┐                    │
@@ -96,6 +105,7 @@
 │  (HEADER-ONLY)    │◄┘
 │  Result<T>        │
 │  ExecutionProvider│
+│  TimePos          │
 └───────────────────┘
 
 ┌────────────────────────────────────────┐
@@ -164,11 +174,17 @@ AudioDecoder (FFmpeg)、AudioPlayback (SDL2)、AudioPlayer、WaveFormat。
 
 依赖：Qt Core, FFmpeg, SDL2
 
+### dsfw-widgets (动态库)
+
+通用 GUI 组件。PlayWidget、FileProgressTracker、ProgressDialog、PropertyEditor、SettingsDialog、LogViewer 等。
+
+依赖：dsfw-core (PUBLIC), dsfw-ui-core + dstools-audio (PRIVATE)
+
 ### dstools-widgets (动态库)
 
-通用 GUI 组件。所有应用的公共 UI 基础设施。
+DiffSinger 领域 UI 组件。所有应用的公共 UI 基础设施。
 
-依赖：dsfw-ui-core + dsfw-core + dstools-audio (PUBLIC)
+依赖：dsfw-widgets (PUBLIC)
 
 ### 推理库
 
@@ -201,29 +217,30 @@ types → base → core → ui-core → audio → widgets → domain → libs �
 dataset-tools/
 ├── CMakeLists.txt              # 根配置: C++20, 输出目录, 编译器选项
 ├── cmake/
+│   ├── DstoolsHelpers.cmake    # dstools_add_library() / dstools_add_executable() 宏
 │   ├── infer-target.cmake      # dstools_add_infer_library() 宏
 │   ├── setup-onnxruntime.cmake # ORT 下载脚本 (cpu/dml/gpu)
 │   ├── dsfwConfig.cmake.in     # dsfw CMake 包配置模板
 │   ├── dstools-typesConfig.cmake.in
-│   ├── winrc.cmake             # Windows 版本资源
-│   └── utils.cmake
+│   └── winrc.cmake             # Windows 版本资源
 ├── src/
 │   ├── types/                  # dstools-types (HEADER-ONLY)
-│   │   └── include/dstools/    # Result<T>, ExecutionProvider
+│   │   └── include/dstools/    # Result<T>, ExecutionProvider, TimePos
 │   ├── framework/
 │   │   ├── base/                # dsfw-base (STATIC, Qt-free)
 │   │   │   └── include/dsfw/   # JsonHelper
 │   │   ├── core/               # dsfw-core (STATIC)
 │   │   │   ├── include/dsfw/   # AppSettings, ServiceLocator, Logger, ...
 │   │   │   └── src/
-│   │   └── ui-core/            # dsfw-ui-core (STATIC)
-│   │       ├── include/dsfw/   # AppShell, Theme, FramelessHelper, IPageActions, ...
-│   │       ├── src/
-│   │       └── res/            # 主题 QSS, 资源文件
+│   │   ├── ui-core/            # dsfw-ui-core (STATIC)
+│   │   │   ├── include/dsfw/   # AppShell, Theme, FramelessHelper, IPageActions, ...
+│   │   │   ├── src/
+│   │   │   └── res/            # 主题 QSS, 资源文件
+│   │   ├── audio/              # dstools-audio (STATIC)
+│   │   └── widgets/            # dsfw-widgets (SHARED)
 │   ├── domain/                 # dstools-domain (STATIC)
 │   │   ├── include/dstools/    # DsDocument, DsProject, CsvToDsConverter, ...
 │   │   └── src/
-│   ├── audio/                  # dstools-audio (STATIC)
 │   ├── widgets/                # dstools-widgets (SHARED)
 │   ├── libs/textgrid/          # header-only
 │   ├── infer/
@@ -240,7 +257,10 @@ dataset-tools/
 │   │   ├── PhonemeLabeler/
 │   │   ├── PitchLabeler/
 │   │   ├── GameInfer/
-│   │   └── labeler/            # DiffSingerLabeler
+│   │   ├── labeler/            # DiffSingerLabeler
+│   │   ├── cli/                # dstools-cli
+│   │   ├── TestShell/
+│   │   └── WidgetGallery/
 │   └── tests/
 │       ├── framework/          # dsfw 核心类单元测试
 │       └── CMakeLists.txt      # 推理库测试注册

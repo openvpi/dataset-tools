@@ -16,6 +16,7 @@
 #include <QScrollBar>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QToolBar>
 
 namespace dstools {
@@ -98,7 +99,9 @@ void PhonemeLabelerPage::buildToolbar() {
     m_toolbar->setMovable(false);
 
     m_actPlayPause = m_toolbar->addAction(tr("Play"), this, &PhonemeLabelerPage::onPlayPause);
+    m_actPlayPause->setIcon(QIcon(":/icons/play.svg"));
     m_actStop = m_toolbar->addAction(tr("Stop"), this, &PhonemeLabelerPage::onStop);
+    m_actStop->setIcon(QIcon(":/icons/stop.svg"));
 
     m_toolbar->addSeparator();
 

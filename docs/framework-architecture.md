@@ -44,7 +44,9 @@ Layer 3 ─ dsfw-ui-core     AppShell, IconNavBar, Theme, FramelessHelper, IPage
 Layer 2 ─ dsfw-audio       AudioDecoder (FFmpeg), AudioPlayback (SDL2)
 Layer 1 ─ dsfw-core        AppSettings, ServiceLocator, AsyncTask, JsonHelper, 接口集
                            Logger, FileLogSink, CrashHandler, AppPaths, BatchCheckpoint
-Layer 0 ─ dsfw-types       Result<T>, ExecutionProvider (header-only)
+                           PipelineContext, PipelineRunner, ITaskProcessor
+Layer 0.5─ dsfw-base       JsonHelper (Qt-free 静态库)
+Layer 0 ─ dsfw-types       Result<T>, ExecutionProvider, TimePos (header-only)
 ```
 
 ### 依赖关系
@@ -112,18 +114,21 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 
 ## 5. 命名规范
 
-| 模块 | CMake target | namespace |
-|------|-------------|-----------|
-| dsfw-types | dsfw::types | dsfw |
-| dsfw-core | dsfw::core | dsfw |
-| dsfw-audio | dsfw::audio | dsfw |
-| dsfw-ui-core | dsfw::ui-core | dsfw |
-| dsfw-widgets | dsfw::widgets | dsfw |
-| dsfw-infer | dsfw::infer | dsfw::infer |
-| dstools-domain | — | dstools |
+| 模块 | CMake target | namespace | include 前缀 |
+|------|-------------|-----------|-------------|
+| dsfw-types | dsfw::types | dstools | `<dstools/Result.h>` |
+| dsfw-base | dsfw::base | dstools | `<dsfw/JsonHelper.h>` |
+| dsfw-core | dsfw::core | dstools | `<dsfw/AppSettings.h>` |
+| dsfw-audio | dsfw::audio | dstools::audio | `<dstools/AudioDecoder.h>` |
+| dsfw-ui-core | dsfw::ui-core | dsfw (AppShell/Theme), dstools::labeler (IPageActions/IPageLifecycle) | `<dsfw/AppShell.h>` |
+| dsfw-widgets | dsfw::widgets | dsfw::widgets | `<dsfw/widgets/PlayWidget.h>` |
+| dsfw-infer | dsfw::infer | dsfw::infer | — |
+| dstools-domain | — | dstools | `<dstools/DsDocument.h>` |
 
 ```
-框架: #include <dsfw/AppSettings.h>    namespace dsfw
+框架: #include <dsfw/AppSettings.h>    namespace dstools
+框架: #include <dsfw/AppShell.h>       namespace dsfw
+框架: #include <dsfw/widgets/...>      namespace dsfw::widgets
 应用: #include <dstools/DsDocument.h>   namespace dstools
 ```
 
