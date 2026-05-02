@@ -39,12 +39,16 @@ struct PipelineContext {
     QString discardedAtStep;
 
     // Progress
-    QStringList completedSteps;
     std::vector<StepRecord> stepHistory;
+    QStringList editedSteps;
+    QStringList dirty;
 
     // Core methods
     Result<TaskInput> buildTaskInput(const TaskSpec &spec) const;
     void applyTaskOutput(const TaskSpec &spec, const TaskOutput &output);
+
+    // Convenience: derive completed steps from stepHistory
+    QStringList completedSteps() const;
 
     // Serialization
     nlohmann::json toJson() const;

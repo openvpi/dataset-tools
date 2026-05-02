@@ -51,6 +51,7 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
         for (const auto &jl : j["layers"]) {
             IntervalLayer layer;
             layer.name = QString::fromStdString(jl.value("name", ""));
+            layer.type = QString::fromStdString(jl.value("type", ""));
             if (jl.contains("boundaries")) {
                 for (const auto &jb : jl["boundaries"]) {
                     Boundary b;
@@ -69,6 +70,7 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
         for (const auto &jc : j["curves"]) {
             CurveLayer curve;
             curve.name = QString::fromStdString(jc.value("name", ""));
+            curve.type = QString::fromStdString(jc.value("type", "curve"));
             curve.timestep = jc.value("timestep", int64_t(0));
             if (jc.contains("values")) {
                 curve.values = jc["values"].get<std::vector<int32_t>>();
@@ -80,6 +82,15 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
     if (j.contains("groups")) {
         for (const auto &jg : j["groups"]) {
             doc.groups.push_back(jg.get<std::vector<int>>());
+        }
+    }
+
+    if (j.contains("meta") && j["meta"].is_object()) {
+        const auto &m = j["meta"];
+        if (m.contains("editedSteps") && m["editedSteps"].is_array()) {
+            for (const auto &s : m["editedSteps"])
+                if (s.is_string())
+                    doc.meta.editedSteps.append(QString::fromStdString(s.get<std::string>()));
         }
     }
 
@@ -100,6 +111,8 @@ Result<void> DsTextDocument::save(const QString &path) const {
     for (const auto &layer : layers) {
         nlohmann::json jl;
         jl["name"] = layer.name.toStdString();
+        if (!layer.type.isEmpty())
+            jl["type"] = layer.type.toStdString();
         jl["boundaries"] = nlohmann::json::array();
         for (const auto &b : layer.boundaries) {
             jl["boundaries"].push_back({
@@ -113,16 +126,24 @@ Result<void> DsTextDocument::save(const QString &path) const {
 
     j["curves"] = nlohmann::json::array();
     for (const auto &curve : curves) {
-        j["curves"].push_back({
-            {"name",     curve.name.toStdString()},
-            {"timestep", curve.timestep},
-            {"values",   curve.values}
-        });
+        nlohmann::json jc;
+        jc["name"] = curve.name.toStdString();
+        jc["type"] = curve.type.toStdString();
+        jc["timestep"] = curve.timestep;
+        jc["values"] = curve.values;
+        j["curves"].push_back(jc);
     }
 
     j["groups"] = nlohmann::json::array();
     for (const auto &g : groups) {
         j["groups"].push_back(g);
+    }
+
+    if (!meta.editedSteps.isEmpty()) {
+        nlohmann::json editedArr = nlohmann::json::array();
+        for (const auto &s : meta.editedSteps)
+            editedArr.push_back(s.toStdString());
+        j["meta"]["editedSteps"] = editedArr;
     }
 
     // Ensure parent directory exists

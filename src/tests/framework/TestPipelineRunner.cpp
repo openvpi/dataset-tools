@@ -61,7 +61,7 @@ void TestPipelineRunner::single_step() {
     QVERIFY(res.ok());
     QVERIFY(ctxs[0].layers.count(QStringLiteral("output_cat")));
     QVERIFY(ctxs[1].layers.count(QStringLiteral("output_cat")));
-    QCOMPARE(ctxs[0].completedSteps.size(), 1);
+    QCOMPARE(ctxs[0].completedSteps().size(), 1);
 }
 
 // Test: discarded items are skipped

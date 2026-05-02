@@ -56,12 +56,6 @@ nlohmann::json PipelineContext::toJson() const {
         jLayers[key.toStdString()] = val;
     j["layers"] = jLayers;
 
-    // Completed steps
-    nlohmann::json jSteps = nlohmann::json::array();
-    for (const auto &s : completedSteps)
-        jSteps.push_back(s.toStdString());
-    j["completedSteps"] = jSteps;
-
     // Step history
     nlohmann::json jHistory = nlohmann::json::array();
     for (const auto &rec : stepHistory) {
@@ -76,6 +70,22 @@ nlohmann::json PipelineContext::toJson() const {
         jHistory.push_back(r);
     }
     j["stepHistory"] = jHistory;
+
+    // Edited steps
+    if (!editedSteps.isEmpty()) {
+        nlohmann::json jEdited = nlohmann::json::array();
+        for (const auto &s : editedSteps)
+            jEdited.push_back(s.toStdString());
+        j["editedSteps"] = jEdited;
+    }
+
+    // Dirty layers
+    if (!dirty.isEmpty()) {
+        nlohmann::json jDirty = nlohmann::json::array();
+        for (const auto &d : dirty)
+            jDirty.push_back(d.toStdString());
+        j["dirty"] = jDirty;
+    }
 
     return j;
 }
@@ -107,10 +117,8 @@ Result<PipelineContext> PipelineContext::fromJson(const nlohmann::json &j) {
             ctx.layers[QString::fromStdString(key)] = val;
     }
 
-    if (j.contains("completedSteps")) {
-        for (const auto &s : j.at("completedSteps"))
-            ctx.completedSteps.append(QString::fromStdString(s.get<std::string>()));
-    }
+    // Legacy completedSteps → ignore (derived from stepHistory now)
+    // Kept for backward compatibility during loading
 
     if (j.contains("stepHistory")) {
         for (const auto &r : j.at("stepHistory")) {
@@ -128,7 +136,26 @@ Result<PipelineContext> PipelineContext::fromJson(const nlohmann::json &j) {
         }
     }
 
+    if (j.contains("editedSteps")) {
+        for (const auto &s : j.at("editedSteps"))
+            ctx.editedSteps.append(QString::fromStdString(s.get<std::string>()));
+    }
+
+    if (j.contains("dirty")) {
+        for (const auto &d : j.at("dirty"))
+            ctx.dirty.append(QString::fromStdString(d.get<std::string>()));
+    }
+
     return Result<PipelineContext>::Ok(std::move(ctx));
+}
+
+QStringList PipelineContext::completedSteps() const {
+    QStringList result;
+    for (const auto &rec : stepHistory) {
+        if (rec.success)
+            result.append(rec.stepName);
+    }
+    return result;
 }
 
 } // namespace dstools

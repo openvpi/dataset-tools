@@ -100,7 +100,7 @@ Result<void> CsvAdapter::exportFromLayers(const std::map<QString, nlohmann::json
 
 Result<void> CsvAdapter::batchExport(const std::vector<PipelineContext> &contexts,
                                       const QString &outputPath,
-                                      const ProcessorConfig &config) {
+                                      const ProcessorConfig & /*config*/) {
     std::vector<TranscriptionRow> rows;
 
     for (const auto &ctx : contexts) {

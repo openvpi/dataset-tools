@@ -82,7 +82,6 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
 
             // Apply output
             ctx.applyTaskOutput(spec, outputRes.value());
-            ctx.completedSteps.append(step.taskName);
 
             // Record step
             StepRecord rec;

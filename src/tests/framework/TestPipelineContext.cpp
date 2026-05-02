@@ -66,7 +66,8 @@ void TestPipelineContext::json_roundtrip() {
     ctx.itemId = QStringLiteral("item_001");
     ctx.globalConfig = {{"key", "value"}};
     ctx.layers[QStringLiteral("grapheme")] = {{"text", "hello"}};
-    ctx.completedSteps = {QStringLiteral("step1"), QStringLiteral("step2")};
+    ctx.editedSteps = {QStringLiteral("step1")};
+    ctx.dirty = {QStringLiteral("phoneme")};
     ctx.status = PipelineContext::Status::Active;
 
     StepRecord rec;
@@ -86,7 +87,7 @@ void TestPipelineContext::json_roundtrip() {
     QCOMPARE(restored.audioPath, ctx.audioPath);
     QCOMPARE(restored.itemId, ctx.itemId);
     QVERIFY(restored.globalConfig == ctx.globalConfig);
-    QCOMPARE(restored.completedSteps, ctx.completedSteps);
+    QCOMPARE(restored.completedSteps(), ctx.completedSteps());
     QCOMPARE(restored.status, PipelineContext::Status::Active);
     QCOMPARE(restored.stepHistory.size(), ctx.stepHistory.size());
     QCOMPARE(restored.stepHistory[0].stepName, QStringLiteral("step1"));
