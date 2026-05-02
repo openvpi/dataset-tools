@@ -12,6 +12,9 @@
     "wolf-midi",
     "libsndfile",
     "nlohmann-json",
-    "qwindowkit"
+    {
+      "name": "qwindowkit",
+      "features": ["widgets"]
+    }
   ]
 }

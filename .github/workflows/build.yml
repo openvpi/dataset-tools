@@ -61,7 +61,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool
 
       - name: Setup ccache
         if: runner.os != 'Windows'
@@ -123,9 +123,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/vcpkg/installed
-          key: vcpkg-installed-${{ matrix.triplet }}-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          key: vcpkg-installed-${{ matrix.triplet }}-rel-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
           restore-keys: |
-            vcpkg-installed-${{ matrix.triplet }}-
+            vcpkg-installed-${{ matrix.triplet }}-rel-
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
@@ -137,24 +137,27 @@ jobs:
           ./vcpkg install \
             --x-manifest-root=../scripts/vcpkg-manifest \
             --x-install-root=./installed \
+            --overlay-triplets=../scripts/vcpkg/triplets \
             --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
           Qt6_DIR: ${{env.QT_DIR}}
           VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+          VCPKG_BUILD_TYPE: release
 
       - name: Build Vcpkg packages (Windows)
         if: runner.os == 'Windows'
         shell: cmd
         working-directory: ${{github.workspace}}/vcpkg
         run: |
-          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --triplet=${{ matrix.triplet }}
+          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --overlay-triplets=../scripts/vcpkg/triplets --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
           Qt6_DIR: ${{env.QT_DIR}}
           VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+          VCPKG_BUILD_TYPE: release
 
       - name: Install OnnxRuntime (Unix)
         if: runner.os != 'Windows'
@@ -169,24 +172,26 @@ jobs:
         run: |
           cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
 
-      - name: Configure CMake
-        shell: bash
+      - name: Configure CMake (Unix)
+        if: runner.os != 'Windows'
         run: |
-          EXTRA_CMAKE_ARGS=""
-          if [ "$RUNNER_OS" != "Windows" ]; then
-            EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
-          fi
-          cmake -B ${{github.workspace}}/build -G Ninja \
+          cmake -B "${{github.workspace}}/build" -G Ninja \
             -DBUILD_TESTS:BOOL=ON \
             -DGAME_INFER_BUILD_TESTS:BOOL=ON \
             -DRMVPE_INFER_BUILD_TESTS:BOOL=ON \
             -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON \
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
-            -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deploy \
-            -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
-            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" \
+            -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" \
+            -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
             -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
-            $EXTRA_CMAKE_ARGS
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DGAME_INFER_BUILD_TESTS:BOOL=ON -DRMVPE_INFER_BUILD_TESTS:BOOL=ON -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --target all
@@ -311,7 +316,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 clang-tidy
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 clang-tidy autoconf autoconf-archive automake libtool
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -329,9 +334,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/vcpkg/installed
-          key: vcpkg-installed-x64-linux-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          key: vcpkg-installed-x64-linux-rel-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
           restore-keys: |
-            vcpkg-installed-x64-linux-
+            vcpkg-installed-x64-linux-rel-
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
@@ -342,12 +347,14 @@ jobs:
           ./vcpkg install \
             --x-manifest-root=../scripts/vcpkg-manifest \
             --x-install-root=./installed \
+            --overlay-triplets=../scripts/vcpkg/triplets \
             --triplet=x64-linux
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
           QT_DIR: ${{env.QT_ROOT_DIR}}
           Qt6_DIR: ${{env.QT_ROOT_DIR}}
           VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+          VCPKG_BUILD_TYPE: release
 
       - name: Install OnnxRuntime
         working-directory: ${{github.workspace}}/src/infer
@@ -382,7 +389,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 autoconf autoconf-archive automake libtool
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -400,9 +407,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/vcpkg/installed
-          key: vcpkg-installed-x64-linux-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          key: vcpkg-installed-x64-linux-rel-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
           restore-keys: |
-            vcpkg-installed-x64-linux-
+            vcpkg-installed-x64-linux-rel-
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
@@ -413,12 +420,14 @@ jobs:
           ./vcpkg install \
             --x-manifest-root=../scripts/vcpkg-manifest \
             --x-install-root=./installed \
+            --overlay-triplets=../scripts/vcpkg/triplets \
             --triplet=x64-linux
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
           QT_DIR: ${{env.QT_ROOT_DIR}}
           Qt6_DIR: ${{env.QT_ROOT_DIR}}
           VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+          VCPKG_BUILD_TYPE: release
 
       - name: Install OnnxRuntime
         working-directory: ${{github.workspace}}/src/infer
