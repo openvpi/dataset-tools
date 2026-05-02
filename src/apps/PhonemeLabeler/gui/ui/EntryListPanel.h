@@ -4,6 +4,7 @@
 #include <QListWidget>
 
 #include <dstools/ViewportController.h>
+#include <dstools/TimePos.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -36,7 +37,7 @@ public:
 
 signals:
     /// Emitted when the user selects an entry (by click or scroll).
-    void entrySelected(int tierIndex, int intervalIndex, double startTime, double endTime);
+    void entrySelected(int tierIndex, int intervalIndex, TimePos startTime, TimePos endTime);
 
 protected:
     void wheelEvent(QWheelEvent *event) override;

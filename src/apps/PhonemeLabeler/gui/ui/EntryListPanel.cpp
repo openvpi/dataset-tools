@@ -1,5 +1,6 @@
 #include "EntryListPanel.h"
 #include "TextGridDocument.h"
+#include <dstools/TimePos.h>
 #include <dstools/ViewportController.h>
 
 #include <QVBoxLayout>
@@ -67,27 +68,27 @@ void EntryListPanel::rebuildEntries() {
     int count = m_document->intervalCount(tier);
     for (int i = 0; i < count; ++i) {
         QString text = m_document->intervalText(tier, i);
-        double start = m_document->intervalStart(tier, i);
-        double end = m_document->intervalEnd(tier, i);
+        TimePos start = m_document->intervalStart(tier, i);
+        TimePos end = m_document->intervalEnd(tier, i);
 
         QString display;
         if (text.isEmpty()) {
             display = QString("[%1] (%2s - %3s)")
                 .arg(i)
-                .arg(start, 0, 'f', 3)
-                .arg(end, 0, 'f', 3);
+                .arg(usToSec(start), 0, 'f', 3)
+                .arg(usToSec(end), 0, 'f', 3);
         } else {
             display = QString("[%1] %2  (%3s - %4s)")
                 .arg(i)
                 .arg(text)
-                .arg(start, 0, 'f', 3)
-                .arg(end, 0, 'f', 3);
+                .arg(usToSec(start), 0, 'f', 3)
+                .arg(usToSec(end), 0, 'f', 3);
         }
 
         auto *item = new QListWidgetItem(display, m_listWidget);
         item->setData(IntervalIndexRole, i);     // interval index
-        item->setData(IntervalStartRole, start); // start time
-        item->setData(IntervalEndRole, end);     // end time
+        item->setData(IntervalStartRole, static_cast<qlonglong>(start)); // start time
+        item->setData(IntervalEndRole, static_cast<qlonglong>(end));     // end time
     }
 
     // Restore previous selection, or default to first entry
@@ -146,8 +147,8 @@ void EntryListPanel::onCurrentRowChanged(int row) {
     if (!item) return;
 
     int intervalIndex = item->data(IntervalIndexRole).toInt();
-    double start = item->data(IntervalStartRole).toDouble();
-    double end = item->data(IntervalEndRole).toDouble();
+    TimePos start = item->data(IntervalStartRole).toLongLong();
+    TimePos end = item->data(IntervalEndRole).toLongLong();
     int tier = m_document->activeTierIndex();
 
     centerEntryInViewport(intervalIndex);
@@ -165,8 +166,8 @@ void EntryListPanel::centerEntryInViewport(int intervalIndex) {
     if (tier < 0 || intervalIndex < 0 || intervalIndex >= m_document->intervalCount(tier))
         return;
 
-    double start = m_document->intervalStart(tier, intervalIndex);
-    double end = m_document->intervalEnd(tier, intervalIndex);
+    double start = usToSec(m_document->intervalStart(tier, intervalIndex));
+    double end = usToSec(m_document->intervalEnd(tier, intervalIndex));
     double entryCenter = (start + end) / 2.0;
 
     // Center the viewport on the entry

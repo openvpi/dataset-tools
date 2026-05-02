@@ -238,7 +238,7 @@ void PhonemeLabelerPage::connectSignals() {
         updateAllBoundaryOverlays();
     });
     // Also repaint overlays when boundaries move (real-time during drag)
-    connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, double) {
+    connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, TimePos) {
         updateAllBoundaryOverlays();
         m_tierEditWidget->update();
         for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
@@ -305,7 +305,7 @@ void PhonemeLabelerPage::connectSignals() {
     connect(m_spectrogramWidget, &SpectrogramWidget::boundaryDragStarted, this, onDragStarted);
 
     // Drag finished → clear drag highlight
-    auto onDragFinished = [this](int, int, double) {
+    auto onDragFinished = [this](int, int, TimePos) {
         m_boundaryOverlay->setDraggedBoundary(-1);
     };
     connect(m_waveformWidget, &WaveformWidget::boundaryDragFinished, this, onDragFinished);
