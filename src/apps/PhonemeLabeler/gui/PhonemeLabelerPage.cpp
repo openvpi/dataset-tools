@@ -108,7 +108,7 @@ void PhonemeLabelerPage::updateAllBoundaryOverlays() {
 
 void PhonemeLabelerPage::applyConfig() {
     m_bindingManager->setEnabled(m_settings.get(PhonemeLabelerKeys::BoundaryBindingEnabled));
-    m_bindingManager->setTolerance(m_settings.get(PhonemeLabelerKeys::BoundaryBindingTolerance));
+    m_bindingManager->setToleranceMs(m_settings.get(PhonemeLabelerKeys::BoundaryBindingTolerance));
     m_viewport->setPixelsPerSecond(m_settings.get(PhonemeLabelerKeys::ZoomLevel));
 
     bool powerEnabled = m_settings.get(PhonemeLabelerKeys::PowerEnabled);
