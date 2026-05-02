@@ -43,6 +43,8 @@ set(PROJECT_CMAKE_MODULES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(cmake/DstoolsHelpers.cmake)
 
+enable_testing()
+
 add_subdirectory(src)
 
 option(BUILD_EXAMPLES "Build example applications" OFF)
