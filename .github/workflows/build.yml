@@ -24,6 +24,7 @@ concurrency:
 
 env:
   BUILD_TYPE: Release
+  VCPKG_COMMIT: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
 
 jobs:
   build:
@@ -55,8 +56,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install system dependencies
         if: runner.os == 'Linux'
@@ -104,10 +103,21 @@ jobs:
           echo "QT_DIR: $QT6_DIR"
           ls -l "$QT6_DIR/lib/cmake/Qt6"
 
-      - name: Install vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+      - name: Setup vcpkg
+        shell: bash
+        run: |
+          if [ -d "vcpkg/.git" ]; then
+            cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          else
+            rm -rf vcpkg
+            git clone https://github.com/microsoft/vcpkg.git
+            cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          else
+            vcpkg/bootstrap-vcpkg.sh -disableMetrics
+          fi
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
@@ -297,8 +307,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install system dependencies
         run: |
@@ -310,10 +318,12 @@ jobs:
         with:
           version: '6.9.3'
 
-      - name: Install vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+      - name: Setup vcpkg
+        run: |
+          rm -rf vcpkg
+          git clone https://github.com/microsoft/vcpkg.git
+          cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }}
+          ./bootstrap-vcpkg.sh -disableMetrics
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
@@ -368,8 +378,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install system dependencies
         run: |
@@ -381,10 +389,12 @@ jobs:
         with:
           version: '6.9.3'
 
-      - name: Install vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+      - name: Setup vcpkg
+        run: |
+          rm -rf vcpkg
+          git clone https://github.com/microsoft/vcpkg.git
+          cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }}
+          ./bootstrap-vcpkg.sh -disableMetrics
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
