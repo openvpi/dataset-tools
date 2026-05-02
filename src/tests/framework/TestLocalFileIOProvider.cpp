@@ -1,5 +1,6 @@
 #include <QTest>
 #include <QTemporaryDir>
+#include <QTemporaryFile>
 #include <dsfw/LocalFileIOProvider.h>
 
 using namespace dstools;
@@ -139,7 +140,16 @@ void TestLocalFileIOProvider::testReadTextMissingFile() {
 
 void TestLocalFileIOProvider::testWriteToInvalidPath() {
     LocalFileIOProvider io;
+#ifdef Q_OS_WIN
     QString invalidPath = QStringLiteral("Z:\\nonexistent_root_dir\\sub\\file.bin");
+#else
+    // Create a temporary regular file, then attempt to write under it as if
+    // it were a directory.  mkpath() must fail because the parent component
+    // is a file, not a directory — this works regardless of user privileges.
+    QTemporaryFile barrier;
+    QVERIFY(barrier.open());
+    QString invalidPath = barrier.fileName() + "/sub/file.bin";
+#endif
     auto r = io.writeFile(invalidPath, QByteArray("data"));
     QVERIFY(!r.ok());
     QVERIFY(!r.error().empty());

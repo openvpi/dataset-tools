@@ -24,6 +24,9 @@ foreach(test_name ${DOMAIN_TESTS})
         Qt${QT_VERSION_MAJOR}::Test
     )
     add_test(NAME ${test_name} COMMAND ${test_name})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    )
 endforeach()
 
 # PitchProcessor test (links pitchlabeler-page instead of dstools-domain)
@@ -33,3 +36,6 @@ target_link_libraries(TestPitchProcessor PRIVATE
     Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestPitchProcessor COMMAND TestPitchProcessor)
+set_tests_properties(TestPitchProcessor PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
