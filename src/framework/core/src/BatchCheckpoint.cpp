@@ -85,6 +85,8 @@ void BatchCheckpoint::save() {
     if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         file.write(QJsonDocument(obj).toJson(QJsonDocument::Compact));
         file.close();
+    } else {
+        qWarning() << "BatchCheckpoint: failed to save checkpoint:" << path << file.errorString();
     }
 }
 

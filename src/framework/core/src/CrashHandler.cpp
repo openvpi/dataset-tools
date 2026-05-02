@@ -74,6 +74,9 @@ static void unixSignalHandler(int sig) {
         stream << "Signal: " << sig << "\n";
         stream << "Time: " << QDateTime::currentDateTime().toString(Qt::ISODate) << "\n";
         file.close();
+    } else {
+        const char msg[] = "CrashHandler: failed to write crash log\n";
+        write(STDERR_FILENO, msg, sizeof(msg) - 1);
     }
 
     handler.invokeCrashCallback(crashFile);
