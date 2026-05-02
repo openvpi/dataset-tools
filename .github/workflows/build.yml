@@ -226,6 +226,8 @@ jobs:
           for app in DatasetPipeline MinLabel PhonemeLabeler PitchLabeler GameInfer DiffSingerLabeler; do
             if [ "$RUNNER_OS" = "Windows" ]; then
               EXE="${{github.workspace}}/build/bin/${app}.exe"
+            elif [ "$RUNNER_OS" = "macOS" ]; then
+              EXE="${{github.workspace}}/build/bin/${app}.app/Contents/MacOS/${app}"
             else
               EXE="${{github.workspace}}/build/bin/${app}"
             fi

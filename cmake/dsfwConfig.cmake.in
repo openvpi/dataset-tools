@@ -10,4 +10,35 @@ find_dependency(dstools-infer-common CONFIG)
 
 include("${CMAKE_CURRENT_LIST_DIR}/dsfwTargets.cmake")
 
+# Provide short-name aliases matching the build-tree ALIAS targets
+# so that consumers can use dsfw::core instead of dsfw::dsfw-core, etc.
+# Requires CMake >= 3.18 for ALIAS of IMPORTED targets.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+    foreach(_dsfw_tgt dsfw-base dsfw-core dsfw-ui-core dstools-audio dsfw-widgets)
+        if(TARGET dsfw::${_dsfw_tgt})
+            set_target_properties(dsfw::${_dsfw_tgt} PROPERTIES IMPORTED_GLOBAL TRUE)
+        endif()
+    endforeach()
+
+    set(_dsfw_alias_pairs
+        "dsfw::base;dsfw::dsfw-base"
+        "dsfw::core;dsfw::dsfw-core"
+        "dsfw::ui-core;dsfw::dsfw-ui-core"
+        "dsfw::audio;dsfw::dstools-audio"
+        "dsfw::widgets;dsfw::dsfw-widgets"
+    )
+    foreach(_dsfw_pair IN LISTS _dsfw_alias_pairs)
+        list(GET _dsfw_pair 0 _dsfw_alias)
+        list(GET _dsfw_pair 1 _dsfw_real)
+        if(NOT TARGET ${_dsfw_alias} AND TARGET ${_dsfw_real})
+            add_library(${_dsfw_alias} ALIAS ${_dsfw_real})
+        endif()
+    endforeach()
+    unset(_dsfw_alias_pairs)
+    unset(_dsfw_pair)
+    unset(_dsfw_alias)
+    unset(_dsfw_real)
+    unset(_dsfw_tgt)
+endif()
+
 check_required_components(dsfw)
