@@ -1,6 +1,6 @@
 #include "PitchFileService.h"
 
-#include "DSFile.h"
+#include <DSFile.h>
 
 namespace dstools {
 namespace pitchlabeler {

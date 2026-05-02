@@ -8,7 +8,7 @@
 #include <dsfw/AppSettings.h>
 #include <dstools/ShortcutManager.h>
 
-#include "PitchEditor.h"
+#include <PitchEditor.h>
 
 #include <memory>
 #include <vector>

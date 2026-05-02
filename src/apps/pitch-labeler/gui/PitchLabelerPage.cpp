@@ -1,6 +1,6 @@
 #include "PitchLabelerPage.h"
 
-#include "DSFile.h"
+#include <DSFile.h>
 #include "PitchFileService.h"
 #include "../PitchLabelerKeys.h"
 #include "ui/FileListPanel.h"
