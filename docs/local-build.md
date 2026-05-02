@@ -143,7 +143,7 @@ ctest --output-on-failure
 |------|------|
 | 应用 (6) | DatasetPipeline.exe, MinLabel.exe, PhonemeLabeler.exe, PitchLabeler.exe, GameInfer.exe, DiffSingerLabeler.exe |
 | 工具 (2) | dstools-cli.exe, WidgetGallery.exe |
-| 测试 (13+) | TestGame.exe, TestRmvpe.exe, TestAudioUtil.exe, TestResult.exe, TestJsonHelper.exe, TestAppSettings.exe, TestServiceLocator.exe, TestAsyncTask.exe, TestLocalFileIOProvider.exe, TestModelManager.exe, TestModelDownloader.exe, TestAppShellIntegration.exe, TestIDocument.exe, TestIFileIOProviderMock.exe, TestStringUtils.exe, TestMinLabelService.exe, dsfw-widgets-test.exe |
+| 测试 (21+) | TestTimePos.exe, TestResult.exe, TestJsonHelper.exe, TestAppSettings.exe, TestServiceLocator.exe, TestAsyncTask.exe, TestLocalFileIOProvider.exe, TestModelManager.exe, TestModelDownloader.exe, TestIDocument.exe, TestIFileIOProviderMock.exe, TestTaskProcessorRegistry.exe, TestF0Curve.exe, TestPitchUtils.exe, TestDsDocument.exe, TestCurveTools.exe, TestStringUtils.exe, TestMinLabelService.exe, TestPitchProcessor.exe 等 |
 | 动态库 (6) | dsfw-widgets.dll, dstools-widgets.dll, audio-util.dll, game-infer.dll, rmvpe-infer.dll, hubert-infer.dll |
 | Shell (1) | TestShell.exe |
 
@@ -157,10 +157,11 @@ ctest --output-on-failure
 |------|--------|------|
 | `ONNXRUNTIME_ENABLE_DML` | ON (Windows) | DirectML GPU 加速 |
 | `ONNXRUNTIME_ENABLE_CUDA` | OFF | CUDA GPU 加速 |
-| `BUILD_TESTS` | ON | 构建测试目标 |
-| `AUDIO_UTIL_BUILD_TESTS` | ON | TestAudioUtil |
-| `GAME_INFER_BUILD_TESTS` | ON | TestGame |
-| `RMVPE_INFER_BUILD_TESTS` | ON | TestRmvpe |
+| `BUILD_TESTS` | ON | 构建单元测试目标 |
+| `BUILD_INTEGRATION_TESTS` | OFF | 构建集成/UI 测试 |
+| `AUDIO_UTIL_BUILD_TESTS` | OFF | TestAudioUtil |
+| `GAME_INFER_BUILD_TESTS` | OFF | TestGame（需要 GAME 模型） |
+| `RMVPE_INFER_BUILD_TESTS` | OFF | TestRmvpe（需要 RMVPE 模型） |
 
 ---
 

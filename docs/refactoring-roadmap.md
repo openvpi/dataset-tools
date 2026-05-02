@@ -29,6 +29,9 @@
 | J | 框架功能补全 | 窗口状态持久化，SingleInstanceGuard，RecentFilesManager，ToastNotification，TranslationManager (i18n) |
 | K | 代码规范化 | #pragma once 统一，Doxygen 补全，命名统一 |
 | F.1 | 示例项目 | minimal-appshell GUI 示例 |
+| L.0 | 时间类型基础设施 | `TimePos = int64_t` 微秒类型 + `secToUs`/`usToSec`/`hzToMhz`/`mhzToHz` 转换 + 9 个精度测试 |
+| L.0b | 曲线工具库 | `CurveTools`：重采样/无声插值/平滑/批量转换/对齐/crossfade + 23 个测试 |
+| L.12 | 编译速度优化 | PCH（AUTOMOC 感知）、ccache/sccache 自动检测、MSVC /MP、测试分层（unit/integration/infer） |
 
 ---
 
@@ -61,7 +64,7 @@
 
 ---
 
-### L.0 — 时间类型基础设施 + 精度回归测试
+### L.0 — 时间类型基础设施 + 精度回归测试 ✅
 
 **目标**：引入 `TimePos` 类型和转换工具，在迁移前建立回归测试基线。
 
@@ -75,7 +78,7 @@
 
 ---
 
-### L.0b — 曲线插值工具库 (CurveTools)
+### L.0b — 曲线插值工具库 (CurveTools) ✅
 
 **目标**：通用曲线重采样/插值/平滑工具，解决不同 F0 模型 hop_size/sample_rate 差异问题。
 
@@ -266,7 +269,7 @@
 
 ---
 
-### L.12 — 编译速度优化
+### L.12 — 编译速度优化 ✅
 
 **目标**：在不牺牲稳定性的前提下，显著缩短全量/增量编译时间。
 
@@ -546,4 +549,4 @@ L.12 (编译速度优化) ── 完全独立，可与所有阶段并行
 - [framework-architecture.md](framework-architecture.md) — 框架架构
 - [architecture.md](architecture.md) — 项目架构概述
 
-> 更新时间：2026-05-02
+> 更新时间：2026-05-03

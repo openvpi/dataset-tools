@@ -122,10 +122,11 @@ cmake --build build --target install
 
 | Option | Default | Description |
 |---|---|---|
-| `BUILD_TESTS` | `ON` | Build `src/tests/` subdirectory |
-| `AUDIO_UTIL_BUILD_TESTS` | `ON` | Build TestAudioUtil |
-| `GAME_INFER_BUILD_TESTS` | `ON` | Build TestGame |
-| `RMVPE_INFER_BUILD_TESTS` | `ON` | Build TestRmvpe |
+| `BUILD_TESTS` | `ON` | Build unit tests |
+| `BUILD_INTEGRATION_TESTS` | `OFF` | Build integration/UI tests (require GUI) |
+| `AUDIO_UTIL_BUILD_TESTS` | `OFF` | Build TestAudioUtil |
+| `GAME_INFER_BUILD_TESTS` | `OFF` | Build TestGame (requires GAME model) |
+| `RMVPE_INFER_BUILD_TESTS` | `OFF` | Build TestRmvpe (requires RMVPE model) |
 | `ONNXRUNTIME_ENABLE_DML` | `ON` (Windows) | Enable DirectML GPU acceleration |
 | `ONNXRUNTIME_ENABLE_CUDA` | `OFF` | Enable CUDA GPU acceleration |
 

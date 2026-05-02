@@ -60,12 +60,21 @@ cmake -Dep=gpu -P ../../cmake/setup-onnxruntime.cmake
 
 | 选项 | 默认值 | 说明 |
 |------|--------|------|
-| `BUILD_TESTS` | ON | 构建测试目标 |
-| `AUDIO_UTIL_BUILD_TESTS` | ON | TestAudioUtil |
-| `GAME_INFER_BUILD_TESTS` | ON | TestGame |
-| `RMVPE_INFER_BUILD_TESTS` | ON | TestRmvpe |
+| `BUILD_TESTS` | ON | 构建单元测试目标 |
+| `BUILD_INTEGRATION_TESTS` | OFF | 构建集成/UI 测试（TestAppShellIntegration, dsfw-widgets-test） |
+| `AUDIO_UTIL_BUILD_TESTS` | OFF | TestAudioUtil |
+| `GAME_INFER_BUILD_TESTS` | OFF | TestGame（需要 GAME 模型） |
+| `RMVPE_INFER_BUILD_TESTS` | OFF | TestRmvpe（需要 RMVPE 模型） |
 | `ONNXRUNTIME_ENABLE_DML` | ON (Windows) | DirectML 加速 |
 | `ONNXRUNTIME_ENABLE_CUDA` | OFF | CUDA 加速 |
+
+### 测试层级
+
+| 层级 | 控制选项 | 包含测试 | 说明 |
+|------|---------|---------|------|
+| Unit | `BUILD_TESTS` (ON) | TestTimePos, TestResult, TestJsonHelper, TestAppSettings 等 21 个 | 纯逻辑测试，无外部依赖 |
+| Integration | `BUILD_INTEGRATION_TESTS` (OFF) | TestAppShellIntegration, dsfw-widgets-test | 需要 QApplication / GUI |
+| Infer | `*_BUILD_TESTS` (OFF) | TestGame, TestRmvpe, TestAudioUtil | 需要 ONNX 模型文件 |
 
 ## 构建命令
 
@@ -83,7 +92,7 @@ cmake --build build
 | 类型 | 产物 |
 |------|------|
 | 应用 | DatasetPipeline, MinLabel, PhonemeLabeler, PitchLabeler, GameInfer, DiffSingerLabeler |
-| 测试 | TestGame, TestRmvpe, TestAudioUtil, TestResult, TestJsonHelper, TestAppSettings, TestServiceLocator, TestAsyncTask, TestLocalFileIOProvider, TestModelManager, TestModelDownloader, TestAppShellIntegration |
+| 测试 | TestTimePos, TestResult, TestJsonHelper, TestAppSettings, TestServiceLocator, TestAsyncTask, TestLocalFileIOProvider, TestModelManager, TestModelDownloader, TestF0Curve, TestCurveTools 等 |
 | 动态库 | dstools-widgets, audio-util, game-infer, rmvpe-infer, hubert-infer |
 
 所有二进制输出到 `build/bin/`，库文件输出到 `build/lib/`。
