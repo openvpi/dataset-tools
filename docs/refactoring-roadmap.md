@@ -32,6 +32,7 @@
 | L.0 | 时间类型基础设施 | `TimePos = int64_t` 微秒类型 + `secToUs`/`usToSec`/`hzToMhz`/`mhzToHz` 转换 + 9 个精度测试 |
 | L.0b | 曲线工具库 | `CurveTools`：重采样/无声插值/平滑/批量转换/对齐/crossfade + 23 个测试 |
 | L.12 | 编译速度优化 | PCH（AUTOMOC 感知）、ccache/sccache 自动检测、MSVC /MP、测试分层（unit/integration/infer） |
+| L.1 | Boundary/Layer 领域模型 | DsTextTypes.h（Boundary/IntervalLayer/CurveLayer/DsTextDocument）、.dstext JSON I/O、v1→v2 迁移 + 6 个测试 |
 
 ---
 
@@ -92,7 +93,7 @@
 
 ---
 
-### L.1 — Boundary / Layer 领域模型 + .dstext I/O
+### L.1 — Boundary / Layer 领域模型 + .dstext I/O ✅
 
 **目标**：创建 ds-format.md §4 定义的数据模型和文件读写器。
 
