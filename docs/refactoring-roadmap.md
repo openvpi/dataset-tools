@@ -33,6 +33,7 @@
 | L.0b | 曲线工具库 | `CurveTools`：重采样/无声插值/平滑/批量转换/对齐/crossfade + 23 个测试 |
 | L.12 | 编译速度优化 | PCH（AUTOMOC 感知）、ccache/sccache 自动检测、MSVC /MP、测试分层（unit/integration/infer） |
 | L.1 | Boundary/Layer 领域模型 | DsTextTypes.h（Boundary/IntervalLayer/CurveLayer/DsTextDocument）、.dstext JSON I/O、v1→v2 迁移 + 6 个测试 |
+| L.2 | 流水线核心接口 | PipelineContext（状态/层数据/序列化）、IAudioPreprocessor、IFormatAdapter、FormatAdapterRegistry + 5 个测试 |
 
 ---
 
@@ -109,7 +110,7 @@
 
 ---
 
-### L.2 — PipelineContext + IAudioPreprocessor + IFormatAdapter
+### L.2 — PipelineContext + IAudioPreprocessor + IFormatAdapter ✅
 
 **目标**：创建 v3 流水线的核心新类型。
 
