@@ -10,6 +10,7 @@
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QHeaderView>
+#include <QIcon>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
@@ -40,6 +41,7 @@ namespace Minlabel {
         m_prevAction = new QAction("Previous file", this);
 
         m_playAction = new QAction("Play/Stop", this);
+        m_playAction->setIcon(QIcon(":/icons/play.svg"));
 
         m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
         m_shortcutManager->bind(m_browseAction, MinLabelKeys::ShortcutOpen, QStringLiteral("Open Folder"), QStringLiteral("File"));

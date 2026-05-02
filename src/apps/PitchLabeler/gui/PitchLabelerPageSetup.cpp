@@ -17,6 +17,8 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
+#include <QIcon>
+
 #include <dstools/ShortcutManager.h>
 #include <dsfw/Theme.h>
 
@@ -160,11 +162,13 @@ namespace dstools {
             toolbar->addWidget(toolbarSpacer);
 
             // ---- Playback controls (RIGHT side) ----
-            m_actPlayPause = new QAction(QStringLiteral("▶"), this);
+            m_actPlayPause = new QAction(this);
+            m_actPlayPause->setIcon(QIcon(":/icons/play.svg"));
             m_actPlayPause->setStatusTip(QStringLiteral("播放/暂停 (Space)"));
             toolbar->addAction(m_actPlayPause);
 
-            m_actStop = new QAction(QStringLiteral("⏹"), this);
+            m_actStop = new QAction(this);
+            m_actStop->setIcon(QIcon(":/icons/stop.svg"));
             m_actStop->setStatusTip(QStringLiteral("停止 (Escape)"));
             toolbar->addAction(m_actStop);
 
@@ -172,7 +176,7 @@ namespace dstools {
 
             // ---- Waveform display toggle ----
             m_btnWaveformToggle = new QToolButton();
-            m_btnWaveformToggle->setText(QStringLiteral("🔊"));
+            m_btnWaveformToggle->setIcon(QIcon(":/icons/audio.svg"));
             m_btnWaveformToggle->setToolTip(QStringLiteral("切换波形显示"));
             m_btnWaveformToggle->setCheckable(true);
             m_btnWaveformToggle->setChecked(true);

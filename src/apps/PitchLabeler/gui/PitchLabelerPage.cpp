@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QIcon>
 #include <QMessageBox>
 #include <QShortcut>
 
@@ -269,7 +270,7 @@ namespace dstools {
 
         void PitchLabelerPage::updatePlaybackState() {
             const bool playing = m_playWidget->isPlaying();
-            m_actPlayPause->setText(playing ? QStringLiteral("⏸") : QStringLiteral("▶"));
+            m_actPlayPause->setIcon(QIcon(playing ? ":/icons/pause.svg" : ":/icons/play.svg"));
             m_actPlayPause->setToolTip(playing ? tr("Pause") : tr("Play"));
         }
 
