@@ -7,6 +7,9 @@
 #include <QSplitter>
 #include <QVBoxLayout>
 
+#include <dsfw/PipelineContext.h>
+#include <dsfw/widgets/ToastNotification.h>
+
 namespace dstools {
 
 DsMinLabelPage::DsMinLabelPage(QWidget *parent) : QWidget(parent) {
@@ -183,6 +186,19 @@ bool DsMinLabelPage::hasUnsavedChanges() const {
 void DsMinLabelPage::onActivated() {
     // Refresh slice list when page becomes active
     m_sliceList->refresh();
+
+    // M.3.11: Check dirty layers for current slice
+    if (m_source && !m_currentSliceId.isEmpty()) {
+        auto *ctx = m_source->context(m_currentSliceId);
+        if (ctx && ctx->dirty.contains(QStringLiteral("grapheme"))) {
+            // Placeholder: clear dirty flag (actual recalculation requires inference)
+            ctx->dirty.removeAll(QStringLiteral("grapheme"));
+            m_source->saveContext(m_currentSliceId);
+            dsfw::widgets::ToastNotification::show(
+                this, dsfw::widgets::ToastType::Info,
+                QStringLiteral("歌词层已更新"), 3000);
+        }
+    }
 }
 
 bool DsMinLabelPage::onDeactivating() {

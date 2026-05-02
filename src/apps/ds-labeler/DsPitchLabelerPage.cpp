@@ -11,7 +11,9 @@
 #include <QSplitter>
 #include <QVBoxLayout>
 
+#include <dsfw/PipelineContext.h>
 #include <dsfw/Theme.h>
+#include <dsfw/widgets/ToastNotification.h>
 
 namespace dstools {
 
@@ -260,6 +262,33 @@ bool DsPitchLabelerPage::hasUnsavedChanges() const {
 
 void DsPitchLabelerPage::onActivated() {
     m_sliceList->refresh();
+
+    // M.3.11: Check dirty layers for current slice
+    if (m_source && !m_currentSliceId.isEmpty()) {
+        auto *ctx = m_source->context(m_currentSliceId);
+        if (ctx) {
+            // pitch is independent (ADR-57), but ph_num/midi may be dirty
+            bool hasDirty = ctx->dirty.contains(QStringLiteral("pitch"))
+                         || ctx->dirty.contains(QStringLiteral("ph_num"))
+                         || ctx->dirty.contains(QStringLiteral("midi"));
+            if (hasDirty) {
+                QStringList affected;
+                for (const auto &layer : {QStringLiteral("pitch"),
+                                           QStringLiteral("ph_num"),
+                                           QStringLiteral("midi")}) {
+                    if (ctx->dirty.contains(layer)) {
+                        affected << layer;
+                        ctx->dirty.removeAll(layer);
+                    }
+                }
+                m_source->saveContext(m_currentSliceId);
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Warning,
+                    QStringLiteral("以下层数据已过期: %1").arg(affected.join(QStringLiteral(", "))),
+                    3000);
+            }
+        }
+    }
 }
 
 bool DsPitchLabelerPage::onDeactivating() {

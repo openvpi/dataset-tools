@@ -9,7 +9,9 @@
 #include <QSplitter>
 #include <QVBoxLayout>
 
+#include <dsfw/PipelineContext.h>
 #include <dsfw/Theme.h>
+#include <dsfw/widgets/ToastNotification.h>
 #include <ui/TextGridDocument.h>
 
 namespace dstools {
@@ -172,6 +174,20 @@ bool DsPhonemeLabelerPage::hasUnsavedChanges() const {
 
 void DsPhonemeLabelerPage::onActivated() {
     m_sliceList->refresh();
+
+    // M.3.11: Check dirty layers for current slice
+    if (m_source && !m_currentSliceId.isEmpty()) {
+        auto *ctx = m_source->context(m_currentSliceId);
+        if (ctx && ctx->dirty.contains(QStringLiteral("phoneme"))) {
+            dsfw::widgets::ToastNotification::show(
+                this, dsfw::widgets::ToastType::Warning,
+                QStringLiteral("音素层数据已过期（上游歌词已修改），建议重新对齐"),
+                3000);
+            // Placeholder: clear dirty flag (actual re-alignment requires inference)
+            ctx->dirty.removeAll(QStringLiteral("phoneme"));
+            m_source->saveContext(m_currentSliceId);
+        }
+    }
 }
 
 bool DsPhonemeLabelerPage::onDeactivating() {
