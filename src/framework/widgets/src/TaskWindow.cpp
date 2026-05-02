@@ -183,6 +183,16 @@ QThreadPool *TaskWindow::threadPool() const {
     return m_threadPool;
 }
 
+void TaskWindow::setProgressValue(int value) {
+    if (m_progressBar)
+        m_progressBar->setValue(value);
+}
+
+void TaskWindow::appendLog(const QString &message) {
+    if (m_logOutput)
+        m_logOutput->appendPlainText(message);
+}
+
 void TaskWindow::addFiles() {
     if (m_isRunning) return;
     QStringList files = QFileDialog::getOpenFileNames(

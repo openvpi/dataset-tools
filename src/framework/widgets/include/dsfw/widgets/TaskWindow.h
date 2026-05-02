@@ -50,6 +50,14 @@ public:
     /// @return Pointer to the thread pool.
     QThreadPool *threadPool() const;
 
+    /// @brief Set the progress bar value (0-100).
+    /// @param value Progress percentage.
+    void setProgressValue(int value);
+
+    /// @brief Append a message to the log output.
+    /// @param message Message text.
+    void appendLog(const QString &message);
+
 public slots:
     /// @brief Open a file dialog and add selected files to the list.
     void addFiles();

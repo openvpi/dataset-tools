@@ -4,6 +4,12 @@
 #include <dstools/TaskWindow.h>
 #include <QVBoxLayout>
 
+namespace dstools {
+
+class PipelineRunner;
+
+}
+
 namespace dstools::labeler {
 
 class TaskWindowAdapter : public QWidget, public IPageActions, public IPageLifecycle {
@@ -25,7 +31,7 @@ public:
     void onWorkingDirectoryChanged(const QString &newDir) override;
     void onShutdown() override;
 
-    void showItemDiscarded(const QString &itemId, const QString &reason);
+    void connectPipelineRunner(dstools::PipelineRunner *runner);
 
 private:
     dstools::widgets::TaskWindow *m_page;

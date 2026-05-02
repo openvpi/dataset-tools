@@ -109,9 +109,9 @@
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| L.9.1 | BuildCsvPage → PipelineRunner | 不再直接操作 TextGrid + TranscriptionCsv，改为 PipelineRunner + TextGridAdapter + CsvAdapter | 低：适配器已测试 | 可与 L.9.2 并行 | 待做 |
-| L.9.2 | GameAlignPage → PipelineRunner | 使用 PipelineRunner 调度 GameMidiProcessor | 低 | 可与 L.9.1 并行 | 待做 |
-| L.9.3 | BuildDsPage → PipelineRunner | 使用 PipelineRunner 调度 RmvpePitchProcessor + DsFileAdapter | 低 | 依赖 L.9.1 | 待做 |
+| L.9.1 | BuildCsvPage → PipelineRunner | 不再直接操作 TextGrid + TranscriptionCsv，改为 PipelineRunner + TextGridAdapter + CsvAdapter | 低：适配器已测试 | 可与 L.9.2 并行 | ✅ |
+| L.9.2 | GameAlignPage → PipelineRunner | 使用 PipelineRunner 调度 GameMidiProcessor | 低 | 可与 L.9.1 并行 | ✅ |
+| L.9.3 | BuildDsPage → PipelineRunner | 使用 PipelineRunner 调度 RmvpePitchProcessor + DsFileAdapter | 低 | 依赖 L.9.1 | ✅ |
 | L.9.4 | TaskWindowAdapter 适配 | 适配 PipelineRunner 的 progress/manual-step 信号 | 中：信号契约需与 UI 线程安全对接 | 依赖 L.9.1-3 | 待做 |
 | L.9.5 | 切片丢弃 UI | 列表灰显 + 右键丢弃/恢复 + DiscardSliceCommand | 低 | 可独立 | 待做 |
 
@@ -121,10 +121,10 @@
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| L.10.1 | TranscriptionPipeline deprecated | `[[deprecated]]` 标注 | 低 | 全部可并行 | 待做 |
-| L.10.2 | DsItemManager deprecated | PipelineContext 替代 | 低 | | 待做 |
-| L.10.3 | BatchCheckpoint 收缩 | 移除 processBatch 引用 | 低 | | 待做 |
-| L.10.4 | DsProjectDefaults 遗留字段删除 | 移除 asrModelPath 等，统一到 taskModels map | 中：需确认所有消费者已迁移 | | 待做 |
+| L.10.1 | TranscriptionPipeline deprecated | `[[deprecated]]` 标注 | 低 | 全部可并行 | ✅ |
+| L.10.2 | DsItemManager deprecated | PipelineContext 替代 | 低 | | ✅ |
+| L.10.3 | BatchCheckpoint 收缩 | 移除 processBatch 引用 | 低 | | ✅ |
+| L.10.4 | DsProjectDefaults 遗留字段删除 | 移除 asrModelPath 等，统一到 taskModels map | 中：需确认所有消费者已迁移 | | ✅ |
 
 **依赖**：L.9
 
