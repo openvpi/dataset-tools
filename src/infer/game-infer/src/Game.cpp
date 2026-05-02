@@ -17,25 +17,25 @@ namespace Game
 
     Game::~Game() = default;
 
-    dstools::Result<void> Game::load_model(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int device_id) const {
+    dstools::Result<void> Game::loadModel(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int device_id) const {
         std::string msg;
-        m_gameModel->load_model(modelPath, provider, device_id, msg);
-        if (!m_gameModel->is_open())
+        m_gameModel->loadModel(modelPath, provider, device_id, msg);
+        if (!m_gameModel->isOpen())
             return dstools::Err(msg);
         return dstools::Ok();
     }
 
-    bool Game::is_open() const { return m_gameModel && m_gameModel->is_open(); }
+    bool Game::isOpen() const { return m_gameModel && m_gameModel->isOpen(); }
 
-    int Game::get_target_sample_rate() const { return m_gameModel ? m_gameModel->get_target_sample_rate() : 0; }
+    int Game::targetSampleRate() const { return m_gameModel ? m_gameModel->targetSampleRate() : 0; }
 
-    float Game::get_timestep() const { return m_gameModel ? m_gameModel->get_timestep() : 0.0f; }
+    float Game::timestep() const { return m_gameModel ? m_gameModel->timestep() : 0.0f; }
 
-    bool Game::has_dur2bd() const { return m_gameModel && m_gameModel->has_dur2bd(); }
+    bool Game::hasDur2bd() const { return m_gameModel && m_gameModel->hasDur2bd(); }
 
-    const std::map<std::string, int> &Game::get_language_map() const {
+    const std::map<std::string, int> &Game::languageMap() const {
         static const std::map<std::string, int> empty;
-        return m_gameModel ? m_gameModel->get_language_map() : empty;
+        return m_gameModel ? m_gameModel->languageMap() : empty;
     }
 
     std::vector<double> cumulativeSum(const std::vector<float> &durations) {
@@ -104,13 +104,13 @@ namespace Game
         return sum;
     }
 
-    dstools::Result<void> Game::get_midi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, const float tempo,
+    dstools::Result<void> Game::getMidi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, const float tempo,
                                           const std::function<void(int)> &progressChanged, int max_audio_length) const {
         if (!m_gameModel) {
             return dstools::Err("Model not loaded");
         }
 
-        const auto tar_sr = m_gameModel->get_target_sample_rate();
+        const auto tar_sr = m_gameModel->targetSampleRate();
         std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, tar_sr);
 
@@ -184,13 +184,13 @@ namespace Game
         return dstools::Ok();
     }
 
-    dstools::Result<void> Game::get_notes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
+    dstools::Result<void> Game::getNotes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
                                            const std::function<void(int)> &progressChanged, const int max_audio_length) const {
         if (!m_gameModel) {
             return dstools::Err("Model not loaded");
         }
 
-        const auto tar_sr = m_gameModel->get_target_sample_rate();
+        const auto tar_sr = m_gameModel->targetSampleRate();
         std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, tar_sr);
 
@@ -295,12 +295,10 @@ namespace Game
         return dstools::Ok();
     }
 
-    bool Game::isOpen() const { return is_open(); }
-
     const char *Game::engineName() const { return "GAME"; }
 
     dstools::Result<void> Game::load(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int deviceId) {
-        return load_model(modelPath, provider, deviceId);
+        return loadModel(modelPath, provider, deviceId);
     }
 
     void Game::unload() {
@@ -308,14 +306,14 @@ namespace Game
     }
 
     int64_t Game::estimatedMemoryBytes() const {
-        return is_open() ? 500 * 1024 * 1024LL : 0;
+        return isOpen() ? 500 * 1024 * 1024LL : 0;
     }
 
     dstools::Result<void> Game::align(const AlignInput &input, const AlignOptions &options, std::vector<AlignedNote> &output) const {
         if (!m_gameModel) {
             return dstools::Err("Model not loaded");
         }
-        if (!m_gameModel->has_dur2bd()) {
+        if (!m_gameModel->hasDur2bd()) {
             return dstools::Err("dur2bd.onnx not loaded. Align mode requires dur2bd.onnx in model directory.");
         }
 
@@ -337,7 +335,7 @@ namespace Game
 
         const auto knownDurations = wordDurations(words);
 
-        const auto tarSr = m_gameModel->get_target_sample_rate();
+        const auto tarSr = m_gameModel->targetSampleRate();
         std::string audioMsg;
         auto sfVio = AudioUtil::resample_to_vio(input.wavPath, audioMsg, 1, tarSr);
         if (!audioMsg.empty() && sfVio.data.byteArray.empty()) {
@@ -468,38 +466,38 @@ namespace Game
         return dstools::Ok();
     }
 
-    void Game::set_seg_threshold(const float threshold) const {
+    void Game::setSegThreshold(const float threshold) const {
         if (m_gameModel) {
-            m_gameModel->set_seg_threshold(threshold);
+            m_gameModel->setSegThreshold(threshold);
         }
     }
 
-    void Game::set_seg_radius_seconds(const float radius) const {
+    void Game::setSegRadiusSeconds(const float radius) const {
         if (m_gameModel) {
-            m_gameModel->set_seg_radius_seconds(radius);
+            m_gameModel->setSegRadiusSeconds(radius);
         }
     }
-    void Game::set_seg_radius_frames(const float radiusFrames) const {
+    void Game::setSegRadiusFrames(const float radiusFrames) const {
         if (m_gameModel) {
-            m_gameModel->set_seg_radius_frames(radiusFrames);
-        }
-    }
-
-    void Game::set_est_threshold(const float threshold) const {
-        if (m_gameModel) {
-            m_gameModel->set_est_threshold(threshold);
+            m_gameModel->setSegRadiusFrames(radiusFrames);
         }
     }
 
-    void Game::set_d3pm_ts(const std::vector<float> &ts) const {
+    void Game::setEstThreshold(const float threshold) const {
         if (m_gameModel) {
-            m_gameModel->set_d3pm_ts(ts);
+            m_gameModel->setEstThreshold(threshold);
         }
     }
 
-    void Game::set_language(const int language) const {
+    void Game::setD3pmTs(const std::vector<float> &ts) const {
         if (m_gameModel) {
-            m_gameModel->set_language(language);
+            m_gameModel->setD3pmTs(ts);
+        }
+    }
+
+    void Game::setLanguage(const int language) const {
+        if (m_gameModel) {
+            m_gameModel->setLanguage(language);
         }
     }
 } // namespace Game

@@ -56,7 +56,7 @@ Result<void> GameMidiProcessor::initialize(IModelManager & /*mm*/,
                                  : Game::ExecutionProvider::CPU;
 #endif
 
-    auto result = m_game->load_model(std::filesystem::path(path), provider, deviceId);
+    auto result = m_game->loadModel(std::filesystem::path(path), provider, deviceId);
     if (!result) {
         m_game.reset();
         return Err(result.error());
@@ -75,22 +75,22 @@ void GameMidiProcessor::applyConfig(const ProcessorConfig &config) const {
         return;
 
     if (config.contains("segThreshold")) {
-        m_game->set_seg_threshold(config["segThreshold"].get<float>());
+        m_game->setSegThreshold(config["segThreshold"].get<float>());
     }
     if (config.contains("segRadiusFrames")) {
-        m_game->set_seg_radius_frames(config["segRadiusFrames"].get<float>());
+        m_game->setSegRadiusFrames(config["segRadiusFrames"].get<float>());
     }
     if (config.contains("estThreshold")) {
-        m_game->set_est_threshold(config["estThreshold"].get<float>());
+        m_game->setEstThreshold(config["estThreshold"].get<float>());
     }
     if (config.contains("d3pmTimesteps")) {
         const auto nSteps = config["d3pmTimesteps"].get<int>();
         if (nSteps > 0) {
-            m_game->set_d3pm_ts(generateD3pmTimesteps(nSteps));
+            m_game->setD3pmTs(generateD3pmTimesteps(nSteps));
         }
     }
     if (config.contains("language")) {
-        m_game->set_language(config["language"].get<int>());
+        m_game->setLanguage(config["language"].get<int>());
     }
 }
 
@@ -110,14 +110,14 @@ std::vector<float> GameMidiProcessor::generateD3pmTimesteps(int nSteps) {
 Result<TaskOutput> GameMidiProcessor::process(const TaskInput &input) {
     std::lock_guard lock(m_mutex);
 
-    if (!m_game || !m_game->is_open()) {
+    if (!m_game || !m_game->isOpen()) {
         return Err<TaskOutput>("Model not loaded");
     }
 
     applyConfig(input.config);
 
     std::vector<Game::GameNote> notes;
-    auto result = m_game->get_notes(input.audioPath.toStdWString(), notes, nullptr);
+    auto result = m_game->getNotes(input.audioPath.toStdWString(), notes, nullptr);
     if (!result) {
         return Err<TaskOutput>(result.error());
     }
@@ -140,7 +140,7 @@ Result<BatchOutput> GameMidiProcessor::processBatch(const BatchInput &input,
                                                     ProgressCallback progress) {
     std::lock_guard lock(m_mutex);
 
-    if (!m_game || !m_game->is_open()) {
+    if (!m_game || !m_game->isOpen()) {
         return Err<BatchOutput>("Model not loaded");
     }
 

@@ -45,19 +45,19 @@ namespace Game
 
         /// @brief Get the model's target sample rate.
         /// @return Sample rate in Hz.
-        int get_target_sample_rate() const;
+        int targetSampleRate() const;
 
         /// @brief Get the model's time step.
         /// @return Time step in seconds.
-        float get_timestep() const;
+        float timestep() const;
 
         /// @brief Check whether the model includes a dur2bd sub-model.
         /// @return True if dur2bd is available.
-        bool has_dur2bd() const;
+        bool hasDur2bd() const;
 
         /// @brief Get the supported language map.
         /// @return Map of language name to language ID.
-        const std::map<std::string, int> &get_language_map() const;
+        const std::map<std::string, int> &languageMap() const;
 
         /// @brief Load the ONNX model files from a directory.
         /// @param modelPath Path to the model directory.
@@ -65,12 +65,12 @@ namespace Game
         /// @param device_id Device index for GPU providers.
         /// @param msg Output error message on failure.
         /// @return True on success.
-        bool load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
+        bool loadModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
                         std::string &msg);
 
         /// @brief Check whether a model is loaded.
         /// @return True if a model is currently loaded.
-        bool is_open() const;
+        bool isOpen() const;
 
         /// @brief Run full inference on waveform data.
         /// @param waveform_data Input audio samples.
@@ -101,20 +101,20 @@ namespace Game
         /// @param t0 Initial timestep value.
         /// @param n_steps Number of steps.
         /// @return Vector of timestep values.
-        static std::vector<float> generate_d3pm_ts(float t0, int n_steps);
+        static std::vector<float> generateD3pmTs(float t0, int n_steps);
 
         /// @brief Set segmenter threshold.
-        void set_seg_threshold(float threshold);
+        void setSegThreshold(float threshold);
         /// @brief Set segmenter radius in seconds.
-        void set_seg_radius_seconds(float radius);
+        void setSegRadiusSeconds(float radius);
         /// @brief Set segmenter radius in frames.
-        void set_seg_radius_frames(float radiusFrames);
+        void setSegRadiusFrames(float radiusFrames);
         /// @brief Set estimator threshold.
-        void set_est_threshold(float threshold);
+        void setEstThreshold(float threshold);
         /// @brief Set D3PM timestep schedule.
-        void set_d3pm_ts(const std::vector<float> &ts);
+        void setD3pmTs(const std::vector<float> &ts);
         /// @brief Set the inference language.
-        void set_language(int language);
+        void setLanguage(int language);
 
     private:
         std::unique_ptr<Ort::Session> sessEncoder;

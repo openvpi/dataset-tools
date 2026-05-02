@@ -23,15 +23,15 @@ namespace Game
 
     GameModel::~GameModel() = default;
 
-    int GameModel::get_target_sample_rate() const { return m_target_sample_rate; }
+    int GameModel::targetSampleRate() const { return m_target_sample_rate; }
 
-    float GameModel::get_timestep() const { return m_timestep; }
+    float GameModel::timestep() const { return m_timestep; }
 
-    bool GameModel::has_dur2bd() const { return sessDur2bd != nullptr; }
+    bool GameModel::hasDur2bd() const { return sessDur2bd != nullptr; }
 
-    const std::map<std::string, int> &GameModel::get_language_map() const { return m_language_map; }
+    const std::map<std::string, int> &GameModel::languageMap() const { return m_language_map; }
 
-    bool GameModel::load_model(const std::filesystem::path &modelPath, const ExecutionProvider provider,
+    bool GameModel::loadModel(const std::filesystem::path &modelPath, const ExecutionProvider provider,
                                const int device_id, std::string &msg) {
         modelDir = modelPath;
         std::ifstream configFile((modelPath / "config.json").wstring());
@@ -62,7 +62,7 @@ namespace Game
 
         // Set initial parameter values from config or defaults
         m_timestep = timestep;
-        m_d3pm_ts = generate_d3pm_ts(0.0f, 8); // Default D3PM settings
+        m_d3pm_ts = generateD3pmTs(0.0f, 8); // Default D3PM settings
 
         // Load language if available
         if (config.contains("languages") && !config["languages"].is_null()) {
@@ -128,7 +128,7 @@ namespace Game
         return true;
     }
 
-    bool GameModel::is_open() const { return sessBd2dur && sessEncoder && sessEstimator && sessSegmenter; }
+    bool GameModel::isOpen() const { return sessBd2dur && sessEncoder && sessEstimator && sessSegmenter; }
 
     bool GameModel::forward(const std::vector<float> &waveform_data, std::vector<bool> &boundaries,
                             std::vector<float> &durations, std::vector<float> &presence, std::vector<float> &scores,
@@ -241,7 +241,7 @@ namespace Game
         }
     }
 
-    std::vector<float> GameModel::generate_d3pm_ts(const float t0, const int n_steps) {
+    std::vector<float> GameModel::generateD3pmTs(const float t0, const int n_steps) {
         std::vector<float> ts;
         if (n_steps <= 0)
             return ts;
@@ -253,18 +253,18 @@ namespace Game
     }
 
     // Parameter setter methods implementation
-    void GameModel::set_seg_threshold(const float threshold) { m_seg_threshold = threshold; }
+    void GameModel::setSegThreshold(const float threshold) { m_seg_threshold = threshold; }
 
-    void GameModel::set_seg_radius_seconds(const float radius) { m_seg_radius_seconds = radius; }
-    void GameModel::set_seg_radius_frames(const float radiusFrames) {
+    void GameModel::setSegRadiusSeconds(const float radius) { m_seg_radius_seconds = radius; }
+    void GameModel::setSegRadiusFrames(const float radiusFrames) {
         m_seg_radius_seconds = radiusFrames * m_timestep;
     }
 
-    void GameModel::set_est_threshold(const float threshold) { m_est_threshold = threshold; }
+    void GameModel::setEstThreshold(const float threshold) { m_est_threshold = threshold; }
 
-    void GameModel::set_d3pm_ts(const std::vector<float> &ts) { m_d3pm_ts = ts; }
+    void GameModel::setD3pmTs(const std::vector<float> &ts) { m_d3pm_ts = ts; }
 
-    void GameModel::set_language(const int language) { m_language = language; }
+    void GameModel::setLanguage(const int language) { m_language = language; }
 
     std::tuple<Ort::Value, Ort::Value, Ort::Value>
     GameModel::runEncoder(const std::vector<float> &waveform, const float duration, const int language) const {

@@ -94,8 +94,8 @@ static void test_e2e(Game::Game &game, const std::filesystem::path &audioPath,
 
     std::vector<Game::GameMidi> midis;
 
-    auto midiResult = game.get_midi(audioPath, midis, tempo, progressChanged, 60);
-    TEST_ASSERT(midiResult, "get_midi failed: " + midiResult.error());
+    auto midiResult = game.getMidi(audioPath, midis, tempo, progressChanged, 60);
+    TEST_ASSERT(midiResult, "getMidi failed: " + midiResult.error());
 
     std::cout << "    Notes: " << midis.size() << std::endl;
 
@@ -289,9 +289,9 @@ int main(int argc, char *argv[]) {
     std::cout << "Using provider: " << provider << ", device ID: " << deviceId << std::endl;
 
     Game::Game game;
-    auto loadResult = game.load_model(modelDir, gameProvider, deviceId);
+    auto loadResult = game.loadModel(modelDir, gameProvider, deviceId);
 
-    if (!loadResult || !game.is_open()) {
+    if (!loadResult || !game.isOpen()) {
         std::cerr << "Cannot load GAME Model from " << modelDir << std::endl;
         if (!loadResult)
             std::cerr << "  Error: " << loadResult.error() << std::endl;
@@ -301,9 +301,9 @@ int main(int argc, char *argv[]) {
     std::cout << "GAME model loaded successfully" << std::endl;
 
     // Apply parameters
-    game.set_seg_threshold(segThreshold);
-    game.set_seg_radius_seconds(segRadius);
-    game.set_est_threshold(estThreshold);
+    game.setSegThreshold(segThreshold);
+    game.setSegRadiusSeconds(segRadius);
+    game.setEstThreshold(estThreshold);
 
     std::vector<float> d3pmTs;
     if (!segD3PMTsStr.empty()) {
@@ -314,13 +314,13 @@ int main(int argc, char *argv[]) {
     } else {
         d3pmTs = t0_n_step_to_ts(segD3PMT0, segD3PMNSteps);
     }
-    game.set_d3pm_ts(d3pmTs);
+    game.setD3pmTs(d3pmTs);
 
     if (!language.empty()) {
-        const auto &langMap = game.get_language_map();
+        const auto &langMap = game.languageMap();
         auto it = langMap.find(language);
         if (it != langMap.end()) {
-            game.set_language(it->second);
+            game.setLanguage(it->second);
         } else {
             std::cerr << "Unknown language: " << language << ". Available:";
             for (const auto &[name, id] : langMap)

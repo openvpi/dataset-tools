@@ -67,12 +67,10 @@ namespace Game
         /// @param provider Execution provider (CPU, DirectML, etc.).
         /// @param device_id Device index for GPU providers.
         /// @return Result indicating success or failure.
-        dstools::Result<void> load_model(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) const;
+        dstools::Result<void> loadModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id) const;
 
         /// @brief Check whether a model is loaded.
         /// @return True if a model is currently loaded.
-        bool is_open() const;
-
         bool isOpen() const override;
         const char *engineName() const override;
         dstools::Result<void> load(const std::filesystem::path &modelPath, ExecutionProvider provider, int deviceId) override;
@@ -81,19 +79,19 @@ namespace Game
 
         /// @brief Get the model's target sample rate.
         /// @return Sample rate in Hz.
-        int get_target_sample_rate() const;
+        int targetSampleRate() const;
 
         /// @brief Get the model's time step.
         /// @return Time step in seconds.
-        float get_timestep() const;
+        float timestep() const;
 
         /// @brief Check whether the model includes a dur2bd sub-model.
         /// @return True if dur2bd is available.
-        bool has_dur2bd() const;
+        bool hasDur2bd() const;
 
         /// @brief Get the supported language map.
         /// @return Map of language name to language ID.
-        const std::map<std::string, int> &get_language_map() const;
+        const std::map<std::string, int> &languageMap() const;
 
         /// @brief Transcribe audio to quantized MIDI notes.
         /// @param filepath Path to the input audio file.
@@ -102,7 +100,7 @@ namespace Game
         /// @param progressChanged Progress callback receiving percentage (0–100).
         /// @param max_audio_length Maximum audio length in seconds.
         /// @return Result indicating success or failure.
-        dstools::Result<void> get_midi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, float tempo,
+        dstools::Result<void> getMidi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, float tempo,
                                        const std::function<void(int)> &progressChanged,
                                        int max_audio_length = 600) const;
 
@@ -112,7 +110,7 @@ namespace Game
         /// @param progressChanged Progress callback receiving percentage (0–100).
         /// @param max_audio_length Maximum audio length in seconds.
         /// @return Result indicating success or failure.
-        dstools::Result<void> get_notes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
+        dstools::Result<void> getNotes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
                                         const std::function<void(int)> &progressChanged, int max_audio_length = 600) const;
 
         /// @brief Align phonemes to detected notes.
@@ -136,27 +134,27 @@ namespace Game
 
         /// @brief Set segmenter threshold.
         /// @param threshold Segmentation threshold value.
-        void set_seg_threshold(float threshold) const;
+        void setSegThreshold(float threshold) const;
 
         /// @brief Set segmenter radius in seconds.
         /// @param radius Radius in seconds.
-        void set_seg_radius_seconds(float radius) const;
+        void setSegRadiusSeconds(float radius) const;
 
         /// @brief Set segmenter radius in frames.
         /// @param radiusFrames Radius in frames.
-        void set_seg_radius_frames(float radiusFrames) const;
+        void setSegRadiusFrames(float radiusFrames) const;
 
         /// @brief Set estimator threshold.
         /// @param threshold Estimation threshold value.
-        void set_est_threshold(float threshold) const;
+        void setEstThreshold(float threshold) const;
 
         /// @brief Set D3PM timestep schedule.
         /// @param ts Vector of timestep values.
-        void set_d3pm_ts(const std::vector<float> &ts) const;
+        void setD3pmTs(const std::vector<float> &ts) const;
 
         /// @brief Set the inference language.
         /// @param language Language ID from the language map.
-        void set_language(int language) const;
+        void setLanguage(int language) const;
 
     private:
         std::unique_ptr<GameModel> m_gameModel;
