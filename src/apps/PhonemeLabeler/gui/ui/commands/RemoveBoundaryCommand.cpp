@@ -10,7 +10,7 @@ RemoveBoundaryCommand::RemoveBoundaryCommand(TextGridDocument *doc, int tierInde
     , m_doc(doc)
     , m_tierIndex(tierIndex)
     , m_boundaryIndex(boundaryIndex)
-    , m_savedTime(0.0)
+    , m_savedTime(0)
 {
     setText(QString("Remove boundary T%1:B%2").arg(tierIndex).arg(boundaryIndex));
 }

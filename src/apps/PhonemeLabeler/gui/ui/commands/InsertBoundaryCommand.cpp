@@ -7,14 +7,14 @@ namespace dstools {
 namespace phonemelabeler {
 
 InsertBoundaryCommand::InsertBoundaryCommand(TextGridDocument *doc, int tierIndex,
-                                            double time, QUndoCommand *parent)
+                                            TimePos time, QUndoCommand *parent)
     : QUndoCommand(parent)
     , m_doc(doc)
     , m_tierIndex(tierIndex)
     , m_time(time)
     , m_insertedBoundaryIndex(-1)
 {
-    setText(QString("Insert boundary T%1 at %2s").arg(tierIndex).arg(time, 0, 'f', 3));
+    setText(QString("Insert boundary T%1 at %2ms").arg(tierIndex).arg(usToMs(time), 0, 'f', 1));
 }
 
 void InsertBoundaryCommand::redo() {
@@ -25,12 +25,10 @@ void InsertBoundaryCommand::redo() {
 
 void InsertBoundaryCommand::undo() {
     if (m_doc) {
-        // Remove the boundary we just inserted
-        // The boundary index after insertion is the index for time
         int count = m_doc->boundaryCount(m_tierIndex);
-        // Find the boundary closest to m_time
+        constexpr TimePos kTolerance = 1000; // 1ms
         for (int i = 0; i < count; ++i) {
-            if (std::abs(m_doc->boundaryTime(m_tierIndex, i) - m_time) < 0.001) {
+            if (std::abs(m_doc->boundaryTime(m_tierIndex, i) - m_time) < kTolerance) {
                 m_doc->removeBoundary(m_tierIndex, i);
                 break;
             }

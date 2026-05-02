@@ -7,7 +7,7 @@ namespace dstools {
 namespace phonemelabeler {
 
 MoveBoundaryCommand::MoveBoundaryCommand(TextGridDocument *doc, int tierIndex,
-                                       int boundaryIndex, double oldTime, double newTime,
+                                       int boundaryIndex, TimePos oldTime, TimePos newTime,
                                        QUndoCommand *parent)
     : QUndoCommand(parent)
     , m_doc(doc)
