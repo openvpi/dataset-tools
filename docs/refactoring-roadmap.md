@@ -31,6 +31,7 @@
 | F.1 | 示例项目 | minimal-appshell GUI 示例 |
 | L.0-L.8 | 层路由流水线 | TimePos, CurveTools, Boundary/Layer, PipelineContext, PipelineRunner, FormatAdapters, F0/PhonemeLabeler 迁移 |
 | L.12 | 编译速度优化 | PCH, ccache, MSVC /MP |
+| O | 命名规范化 + CMake 整理 | 目录 kebab-case 统一，deploy.cmake 提取，代码清理 |
 
 ---
 
@@ -54,13 +55,13 @@
 
 | ID | 任务 | 当前 → 目标 | 风险 | 并行 | 状态 |
 |----|------|-------------|------|------|------|
-| O.1.1 | MinLabel → min-label | `src/apps/MinLabel/` → `src/apps/min-label/` + 更新 CMakeLists | 低：git mv + sed | 全部可并行 | 待做 |
-| O.1.2 | GameInfer → game-infer-app | `src/apps/GameInfer/` → `src/apps/game-infer-app/`（避免与 `src/infer/game-infer` 冲突） | 低 | | 待做 |
-| O.1.3 | PitchLabeler → pitch-labeler | `src/apps/PitchLabeler/` → `src/apps/pitch-labeler/` | 低 | | 待做 |
-| O.1.4 | PhonemeLabeler → phoneme-labeler | `src/apps/PhonemeLabeler/` → `src/apps/phoneme-labeler/` | 低 | | 待做 |
-| O.1.5 | TestShell → test-shell | `src/apps/TestShell/` → `src/apps/test-shell/` | 低 | | 待做 |
-| O.1.6 | WidgetGallery → widget-gallery | `src/apps/WidgetGallery/` → `src/apps/widget-gallery/` | 低 | | 待做 |
-| O.1.7 | 更新 apps/CMakeLists.txt | `add_subdirectory()` 路径全部更新 | 低 | 依赖 O.1.1-6 | 待做 |
+| O.1.1 | MinLabel → min-label | `src/apps/MinLabel/` → `src/apps/min-label/` + 更新 CMakeLists | 低：git mv + sed | 全部可并行 | ✅ |
+| O.1.2 | GameInfer → game-infer-app | `src/apps/GameInfer/` → `src/apps/game-infer-app/`（避免与 `src/infer/game-infer` 冲突） | 低 | | ✅ |
+| O.1.3 | PitchLabeler → pitch-labeler | `src/apps/PitchLabeler/` → `src/apps/pitch-labeler/` | 低 | | ✅ |
+| O.1.4 | PhonemeLabeler → phoneme-labeler | `src/apps/PhonemeLabeler/` → `src/apps/phoneme-labeler/` | 低 | | ✅ |
+| O.1.5 | TestShell → test-shell | `src/apps/TestShell/` → `src/apps/test-shell/` | 低 | | ✅ |
+| O.1.6 | WidgetGallery → widget-gallery | `src/apps/WidgetGallery/` → `src/apps/widget-gallery/` | 低 | | ✅ |
+| O.1.7 | 更新 apps/CMakeLists.txt | `add_subdirectory()` 路径全部更新 | 低 | 依赖 O.1.1-6 | ✅ |
 
 **注意**：CMake target 名（如 `GameInfer`、`PitchLabeler`）是可执行文件名，保持 PascalCase 不变（用户可见的二进制名），只改目录名。
 
@@ -76,27 +77,27 @@
 
 | ID | 任务 | 当前 → 目标 | 风险 | 并行 | 状态 |
 |----|------|-------------|------|------|------|
-| O.3.1 | gameinfer → game-infer-lib | `src/libs/gameinfer/` → `src/libs/game-infer-lib/` | 低 | 全部可并行 | 待做 |
-| O.3.2 | hubertfa → hubert-fa | `src/libs/hubertfa/` → `src/libs/hubert-fa/` | 低 | | 待做 |
-| O.3.3 | lyricfa → lyric-fa | `src/libs/lyricfa/` → `src/libs/lyric-fa/` | 低 | | 待做 |
-| O.3.4 | rmvpepitch → rmvpe-pitch | `src/libs/rmvpepitch/` → `src/libs/rmvpe-pitch/` | 低 | | 待做 |
-| O.3.5 | minlabel → min-label-lib | `src/libs/minlabel/` → `src/libs/min-label-lib/` | 低 | | 待做 |
-| O.3.6 | 更新 libs/CMakeLists.txt | 所有 `add_subdirectory()` 更新 | 低 | 依赖 O.3.1-5 | 待做 |
+| O.3.1 | gameinfer → game-infer-lib | `src/libs/gameinfer/` → `src/libs/game-infer-lib/` | 低 | 全部可并行 | ✅ |
+| O.3.2 | hubertfa → hubert-fa | `src/libs/hubertfa/` → `src/libs/hubert-fa/` | 低 | | ✅ |
+| O.3.3 | lyricfa → lyric-fa | `src/libs/lyricfa/` → `src/libs/lyric-fa/` | 低 | | ✅ |
+| O.3.4 | rmvpepitch → rmvpe-pitch | `src/libs/rmvpepitch/` → `src/libs/rmvpe-pitch/` | 低 | | ✅ |
+| O.3.5 | minlabel → min-label-lib | `src/libs/minlabel/` → `src/libs/min-label-lib/` | 低 | | ✅ |
+| O.3.6 | 更新 libs/CMakeLists.txt | 所有 `add_subdirectory()` 更新 | 低 | 依赖 O.3.1-5 | ✅ |
 
 ### O.4 — CMake 部署逻辑提取
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| O.4.1 | 提取部署脚本 | `src/CMakeLists.txt` 第 60~246 行 (windeployqt/macdeployqt/Linux 部署) 提取到 `cmake/deploy.cmake`，主文件 `include(cmake/deploy.cmake)` | 低：纯提取，不改逻辑 | 可独立 | 待做 |
-| O.4.2 | 验证三平台部署 | 确认 Windows/macOS/Linux install 行为不变 | 低：CI 验证 | 依赖 O.4.1 | 待做 |
+| O.4.1 | 提取部署脚本 | `src/CMakeLists.txt` 第 60~246 行 (windeployqt/macdeployqt/Linux 部署) 提取到 `cmake/deploy.cmake`，主文件 `include(cmake/deploy.cmake)` | 低：纯提取，不改逻辑 | 可独立 | ✅ |
+| O.4.2 | 验证三平台部署 | 确认 Windows/macOS/Linux install 行为不变 | 低：CI 验证 | 依赖 O.4.1 | ✅ |
 
 ### O.5 — 代码清理
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| O.5.1 | architecture.md 目录结构同步 | 更新 docs/architecture.md 中的目录树使之与重命名后一致 | 低 | 依赖 O.1-3 | 待做 |
-| O.5.2 | CI 路径更新 | 检查 .github/workflows/ 中硬编码的旧目录名 | 低 | 依赖 O.1-3 | 待做 |
-| O.5.3 | 移除 setup-vcpkg-temp.bat | 根目录临时脚本，功能已被 README 说明替代 | 低 | 可独立 | 待做 |
+| O.5.1 | architecture.md 目录结构同步 | 更新 docs/architecture.md 中的目录树使之与重命名后一致 | 低 | 依赖 O.1-3 | ✅ |
+| O.5.2 | CI 路径更新 | 检查 .github/workflows/ 中硬编码的旧目录名 | 低 | 依赖 O.1-3 | ✅ |
+| O.5.3 | 移除 setup-vcpkg-temp.bat | 根目录临时脚本，功能已被 README 说明替代 | 低 | 可独立 | ✅ |
 
 **依赖**：无前置依赖。应在 L.9 之前完成（否则 L.9 的代码改动会引用旧路径，增加后续重命名冲突）。
 
