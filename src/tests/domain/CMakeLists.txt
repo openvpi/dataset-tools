@@ -6,6 +6,7 @@ set(DOMAIN_TESTS
     TestF0Curve
     TestPitchUtils
     TestDsDocument
+    TestDsProject
     TestPhNumCalculator
     TestTranscriptionCsv
     TestStringUtils

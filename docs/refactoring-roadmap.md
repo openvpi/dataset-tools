@@ -132,9 +132,9 @@
 
 | ID | 任务 | 方案 | 风险 | 并行 | 状态 |
 |----|------|------|------|------|------|
-| L.11.1 | DsProject 扩展 | 移除 tasks[]，新增 defaults.preload/export.resampleRate，slice 新增 name/discardedAt。路径 POSIX 化 | 中：破坏性变更，需同步更新所有读写代码 | 可与 L.9 并行 | 待做 |
-| L.11.2 | DsTextDocument v3 | 层定义新增 type 字段，新增 meta.editedSteps | 低：v2→v3 迁移简单（添加默认值） | 可与 L.11.1 并行 | 待做 |
-| L.11.3 | PipelineContext 精简 | 合并 completedSteps + stepHistory 为单一 stepHistory，新增 editedSteps | 低 | 可与 L.11.1 并行 | 待做 |
+| L.11.1 | DsProject 扩展 | 移除 tasks[]，新增 defaults.preload/export.resampleRate，slice 新增 name/discardedAt。路径 POSIX 化 | 中：新增字段多 | 可独立 | ✅ |
+| L.11.2 | DsTextDocument v3 | 层定义新增 type 字段，meta 新增 editedSteps | 低 | 可独立 | ✅ |
+| L.11.3 | PipelineContext 精简 | 合并 completedSteps + stepHistory 为单一 stepHistory，新增 editedSteps + dirty | 低 | 可独立 | ✅ |
 | L.11.4 | DsProject 测试 | 读写往返、字段校验 | 低 | 依赖 L.11.1 | 待做 |
 
 **依赖**：L.1 ✅。可与 L.9 **并行**。
