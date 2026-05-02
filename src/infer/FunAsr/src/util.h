@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include "Tensor.h"
+#include <cstdint>
 #include <string>
 
 namespace FunAsr {
