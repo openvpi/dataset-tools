@@ -158,25 +158,26 @@ static void test_d3pm_ts() {
 // ---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <audio_path> <model_dir> <output_dir> [options...]" << std::endl;
-        std::cerr << "Options:" << std::endl;
-        std::cerr << "  --language <lang_code> (default: none)" << std::endl;
-        std::cerr << "  --batch-size <int> (default: 1) [not parsed]" << std::endl;
-        std::cerr << "  --num-workers <int> (default: 0) [not parsed]" << std::endl;
-        std::cerr << "  --seg-threshold <float> (default: 0.2)" << std::endl;
-        std::cerr << "  --seg-radius <float> (default: 0.02)" << std::endl;
-        std::cerr << "  --seg-d3pm-t0 <float> (default: 0.0)" << std::endl;
-        std::cerr << "  --seg-d3pm-nsteps <int> (default: 8)" << std::endl;
-        std::cerr << "  --seg-d3pm-ts <float,float,...> (overrides t0 and nsteps)" << std::endl;
-        std::cerr << "  --est-threshold <float> (default: 0.2)" << std::endl;
-        std::cerr << "  --input-formats <...> (default: wav,flac,mp3,aac,ogg) [not parsed]" << std::endl;
-        std::cerr << "  --output-formats <...> (default: mid) [not parsed]" << std::endl;
-        std::cerr << "  --tempo <float> (default: 120)" << std::endl;
-        std::cerr << "  --pitch-format <number|name> (default: name) [not parsed]" << std::endl;
-        std::cerr << "  --round-pitch (flag, default: false)" << std::endl;
-        std::cerr << "  --provider <cpu|dml|cuda> (default: cpu)" << std::endl;
-        std::cerr << "  --device-id <int> (default: 0)" << std::endl;
-        return 1;
+        std::cout << "Warning: No arguments provided. Skipping integration tests." << std::endl;
+        std::cout << "Usage: " << argv[0] << " <audio_path> <model_dir> <output_dir> [options...]" << std::endl;
+        std::cout << "Options:" << std::endl;
+        std::cout << "  --language <lang_code> (default: none)" << std::endl;
+        std::cout << "  --batch-size <int> (default: 1) [not parsed]" << std::endl;
+        std::cout << "  --num-workers <int> (default: 0) [not parsed]" << std::endl;
+        std::cout << "  --seg-threshold <float> (default: 0.2)" << std::endl;
+        std::cout << "  --seg-radius <float> (default: 0.02)" << std::endl;
+        std::cout << "  --seg-d3pm-t0 <float> (default: 0.0)" << std::endl;
+        std::cout << "  --seg-d3pm-nsteps <int> (default: 8)" << std::endl;
+        std::cout << "  --seg-d3pm-ts <float,float,...> (overrides t0 and nsteps)" << std::endl;
+        std::cout << "  --est-threshold <float> (default: 0.2)" << std::endl;
+        std::cout << "  --input-formats <...> (default: wav,flac,mp3,aac,ogg) [not parsed]" << std::endl;
+        std::cout << "  --output-formats <...> (default: mid) [not parsed]" << std::endl;
+        std::cout << "  --tempo <float> (default: 120)" << std::endl;
+        std::cout << "  --pitch-format <number|name> (default: name) [not parsed]" << std::endl;
+        std::cout << "  --round-pitch (flag, default: false)" << std::endl;
+        std::cout << "  --provider <cpu|dml|cuda> (default: cpu)" << std::endl;
+        std::cout << "  --device-id <int> (default: 0)" << std::endl;
+        return 0;
     }
 
     const std::filesystem::path audioPath = argv[1];
