@@ -1,28 +1,36 @@
-/// @file GameAlignPage.h
-/// @brief GAME alignment page for the labeler wizard.
-
 #pragma once
+
+#include <dsfw/IPageActions.h>
 
 #include <QWidget>
 
+#include <dstools/RunProgressRow.h>
+
 class QLineEdit;
 class QComboBox;
-class ProgressWidget;
+class QTextEdit;
 
-/// @brief Page for running GAME-based note alignment on audio files.
-class GameAlignPage : public QWidget {
+namespace dstools::labeler {
+
+class GameAlignPage : public QWidget, public IPageActions {
     Q_OBJECT
+    Q_INTERFACES(dstools::labeler::IPageActions)
+
 public:
-    /// @brief Constructs the GAME alignment page.
-    /// @param parent Optional parent widget.
     explicit GameAlignPage(QWidget *parent = nullptr);
 
-private slots:
-    void onRunAlignment();  ///< Starts the alignment process.
+    void setWorkingDirectory(const QString &dir) override;
+    QString workingDirectory() const override;
 
 private:
-    QLineEdit *m_modelPath;       ///< GAME model directory path.
-    QComboBox *m_gpuSelector;     ///< GPU device selector.
-    ProgressWidget *m_runProgress; ///< Progress indicator widget.
-    QWidget *m_log;               ///< Log output area.
+    void buildUi();
+
+    QLineEdit *m_modelPath = nullptr;
+    QComboBox *m_gpuSelector = nullptr;
+    dstools::widgets::RunProgressRow *m_runProgress = nullptr;
+    QTextEdit *m_log = nullptr;
+
+    QString m_workingDir;
 };
+
+} // namespace dstools::labeler
