@@ -1019,22 +1019,7 @@ Registry 注册时验证一致性，不一致拒绝注册。
 
 ---
 
-## 15 迁移计划
-
-| 阶段 | 内容 | 影响 |
-|------|------|------|
-| M1 | PipelineContext, IAudioPreprocessor, IFormatAdapter | 纯新增 |
-| M2 | PipelineRunner + StepConfig + ValidationCallback | 纯新增 |
-| M3 | 4 个 IFormatAdapter（Lab/TextGrid/CSV/DS） | 新增，内部包装现有代码 |
-| M4 | ITaskProcessor 移除 processBatch | 4 个处理器适配 |
-| M5 | SlicerProcessor, AddPhNumProcessor | 包装现有代码 |
-| M6 | DiscardSliceCommand + 切片 status 持久化 | 新增 |
-| M7 | DiffSingerLabeler 页面切换到 PipelineRunner | 应用层 |
-| M8 | TranscriptionPipeline deprecated | 渐进 |
-
----
-
-## 16 设计决策记录
+## 15 设计决策记录 (ADR)
 
 | ADR | 决策 | 理由 |
 |-----|------|------|
@@ -1057,8 +1042,6 @@ Registry 注册时验证一致性，不一致拒绝注册。
 ## 关联文档
 
 - [ds-format.md](ds-format.md) — .dsproj / .dstext 格式规范
-- [architecture-defects-and-tech-debt.md](architecture-defects-and-tech-debt.md)
-- [improvement-directions.md](improvement-directions.md)
 - [refactoring-roadmap.md](refactoring-roadmap.md)
 
 > 更新时间：2026-05-02

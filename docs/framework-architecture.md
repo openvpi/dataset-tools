@@ -133,8 +133,8 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 
 | 阶段 | 状态 |
 |------|------|
-| 接口泛化 (DocumentFormat/ModelType 枚举) | ⏳ 待做 |
-| 独立仓库 | ⏳ 待做 |
+| 接口泛化 (DocumentFormat/ModelType 枚举) | ✅ 已完成 (Phase 1) |
+| 独立仓库 | ⏳ 待定（当前单仓库模式，ADR-8） |
 
 ---
 
