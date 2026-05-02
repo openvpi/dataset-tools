@@ -1,6 +1,9 @@
 #pragma once
 
 #include <dsfw/IFormatAdapter.h>
+#include <dsfw/PipelineContext.h>
+
+#include <vector>
 
 namespace dstools {
 
@@ -18,6 +21,10 @@ public:
     Result<void> exportFromLayers(const std::map<QString, nlohmann::json> &layers,
                                   const QString &outputPath,
                                   const ProcessorConfig &config) override;
+
+    static Result<void> batchExport(const std::vector<PipelineContext> &contexts,
+                                    const QString &outputPath,
+                                    const ProcessorConfig &config = {});
 };
 
 } // namespace dstools

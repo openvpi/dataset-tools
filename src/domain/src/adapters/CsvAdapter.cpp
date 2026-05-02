@@ -98,4 +98,54 @@ Result<void> CsvAdapter::exportFromLayers(const std::map<QString, nlohmann::json
     return Result<void>::Ok();
 }
 
+Result<void> CsvAdapter::batchExport(const std::vector<PipelineContext> &contexts,
+                                      const QString &outputPath,
+                                      const ProcessorConfig &config) {
+    std::vector<TranscriptionRow> rows;
+
+    for (const auto &ctx : contexts) {
+        if (ctx.status != PipelineContext::Status::Active)
+            continue;
+
+        auto it = ctx.layers.find(QStringLiteral("phoneme"));
+        if (it == ctx.layers.end())
+            continue;
+
+        const auto &boundaries = it->second["boundaries"];
+
+        QStringList phones;
+        QStringList durs;
+        for (size_t i = 0; i + 1 < boundaries.size(); ++i) {
+            phones.append(QString::fromStdString(boundaries[i].value("text", "")));
+            const TimePos posA = boundaries[i].value("pos", int64_t(0));
+            const TimePos posB = boundaries[i + 1].value("pos", int64_t(0));
+            durs.append(QString::number(usToSec(posB - posA), 'f', 6));
+        }
+
+        TranscriptionRow row;
+        row.name = ctx.itemId;
+        row.phSeq = phones.join(' ');
+        row.phDur = durs.join(' ');
+
+        auto pnIt = ctx.layers.find(QStringLiteral("ph_num"));
+        if (pnIt != ctx.layers.end() && pnIt->second.is_array()) {
+            QStringList nums;
+            for (const auto &v : pnIt->second)
+                nums.append(QString::number(v.get<int>()));
+            row.phNum = nums.join(' ');
+        }
+
+        rows.push_back(std::move(row));
+    }
+
+    if (rows.empty())
+        return Result<void>::Error("No valid items to export");
+
+    QString error;
+    if (!TranscriptionCsv::write(outputPath, rows, error))
+        return Result<void>::Error(error.toStdString());
+
+    return Result<void>::Ok();
+}
+
 } // namespace dstools

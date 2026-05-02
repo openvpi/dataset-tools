@@ -1,15 +1,15 @@
 #include "BuildCsvPage.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QMessageBox>
 #include <QVBoxLayout>
-#include <QtConcurrent>
 
-#include <dstools/TranscriptionCsv.h>
-#include <textgrid.hpp>
+#include <dsfw/PipelineContext.h>
+#include <dsfw/PipelineRunner.h>
 
-#include <fstream>
+#include <dstools/DomainInit.h>
 
 namespace dstools::labeler {
 
@@ -20,7 +20,6 @@ BuildCsvPage::BuildCsvPage(QWidget *parent) : QWidget(parent) {
 void BuildCsvPage::buildUi() {
     auto *vLayout = new QVBoxLayout(this);
 
-    // Parameter panel
     auto *form = new QFormLayout;
 
     m_dictPath = new dstools::widgets::PathSelector(dstools::widgets::PathSelector::OpenFile, "",
@@ -34,16 +33,13 @@ void BuildCsvPage::buildUi() {
 
     vLayout->addLayout(form);
 
-    // Run progress row
     m_runProgress = new dstools::widgets::RunProgressRow(tr("Run"));
     vLayout->addWidget(m_runProgress);
 
-    // Log area
     m_log = new QTextEdit;
     m_log->setReadOnly(true);
     vLayout->addWidget(m_log, 1);
 
-    // Run action
     m_runAction = new QAction(tr("Run Build CSV"), this);
     m_runAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
     auto runSlot = [this]() {
@@ -62,7 +58,6 @@ void BuildCsvPage::buildUi() {
         m_log->append(tr("TextGrid dir: %1").arg(tgDir));
         m_log->append(tr("Output: %1").arg(csvPath));
 
-        // Scan for .TextGrid files
         QDir dir(tgDir);
         const QStringList tgFiles = dir.entryList({QStringLiteral("*.TextGrid")}, QDir::Files);
 
@@ -75,82 +70,76 @@ void BuildCsvPage::buildUi() {
 
         m_log->append(tr("Found %1 TextGrid file(s).").arg(tgFiles.size()));
 
-        std::vector<dstools::TranscriptionRow> rows;
-        int processed = 0;
-
+        std::vector<dstools::PipelineContext> contexts;
         for (const QString &fileName : tgFiles) {
             const QString filePath = tgDir + QStringLiteral("/") + fileName;
             const QString stem = QFileInfo(fileName).completeBaseName();
 
-            std::ifstream ifs(filePath.toStdString());
-            if (!ifs.is_open()) {
-                m_log->append(tr("  [SKIP] Cannot open: %1").arg(fileName));
-                continue;
-            }
+            dstools::PipelineContext ctx;
+            ctx.itemId = stem;
+            ctx.audioPath = filePath;
+            contexts.push_back(std::move(ctx));
+        }
 
-            try {
-                textgrid::Parser parser(ifs);
-                textgrid::TextGrid tg = parser.Parse();
+        dstools::PipelineOptions opts;
+        dstools::StepConfig step;
+        step.taskName = QStringLiteral("build_csv");
+        step.processorId = QStringLiteral("passthrough");
+        step.importFormat = QStringLiteral("textgrid");
+        step.config = dstools::ProcessorConfig::object();
+        if (m_chkPhNum->isChecked())
+            step.config["computePhNum"] = true;
+        opts.steps.push_back(step);
+        opts.workingDir = m_workingDir;
 
-                // Find the "phones" interval tier
-                auto phonesTier = tg.GetTierAs<textgrid::IntervalTier>("phones");
-                if (!phonesTier) {
-                    // Fallback: try first interval tier
-                    for (size_t i = 0; i < tg.GetNumberOfTiers(); ++i) {
-                        phonesTier = tg.GetTierAs<textgrid::IntervalTier>(i);
-                        if (phonesTier)
-                            break;
-                    }
-                }
+        dstools::PipelineRunner runner;
+        QObject::connect(&runner, &dstools::PipelineRunner::progress,
+                         this, [this](int, int item, int total, const QString &) {
+                             if (total > 0)
+                                 m_runProgress->setProgress(item * 100 / total);
+                         });
 
-                if (!phonesTier) {
-                    m_log->append(tr("  [SKIP] No interval tier in: %1").arg(fileName));
-                    continue;
-                }
+        auto result = runner.run(opts, contexts);
+        if (!result.ok()) {
+            m_log->append(tr("<b>Error:</b> %1").arg(QString::fromStdString(result.error())));
+            QMessageBox::warning(this, tr("Build CSV Failed"),
+                                 QString::fromStdString(result.error()));
+            return;
+        }
 
-                // Extract ph_seq and ph_dur
-                QStringList phSeqList;
-                QStringList phDurList;
-                const auto &intervals = phonesTier->GetAllIntervals();
-
-                for (const auto &interval : intervals) {
-                    QString text = QString::fromStdString(interval.text).trimmed();
-                    if (text.isEmpty())
-                        text = QStringLiteral("SP");
-                    double dur = interval.max_time - interval.min_time;
-                    phSeqList.append(text);
-                    phDurList.append(QString::number(dur, 'f', 6));
-                }
-
-                dstools::TranscriptionRow row;
-                row.name = stem;
-                row.phSeq = phSeqList.join(QStringLiteral(" "));
-                row.phDur = phDurList.join(QStringLiteral(" "));
-                rows.push_back(std::move(row));
-
+        int processed = 0;
+        int skipped = 0;
+        for (const auto &ctx : contexts) {
+            if (ctx.status == dstools::PipelineContext::Status::Active) {
+                m_log->append(tr("  [OK] %1").arg(ctx.itemId));
                 ++processed;
-                m_log->append(tr("  [OK] %1 (%2 phones)").arg(stem).arg(phSeqList.size()));
-
-            } catch (const textgrid::Exception &e) {
-                m_log->append(
-                    tr("  [ERR] %1: %2").arg(fileName, QString::fromStdString(e.what())));
+            } else {
+                m_log->append(tr("  [SKIP] %1: %2")
+                                  .arg(ctx.itemId,
+                                       ctx.discardReason.isEmpty()
+                                           ? tr("unknown error")
+                                           : ctx.discardReason));
+                ++skipped;
             }
         }
 
-        if (rows.empty()) {
+        if (processed == 0) {
             m_log->append(tr("<b>Error:</b> No valid transcriptions extracted."));
             QMessageBox::warning(this, tr("Build CSV Failed"),
                                  tr("No valid transcriptions could be extracted."));
             return;
         }
 
-        // Write CSV
-        QString error;
-        if (!dstools::TranscriptionCsv::write(csvPath, rows, error)) {
-            m_log->append(tr("<b>Error:</b> %1").arg(error));
-            QMessageBox::warning(this, tr("Build CSV Failed"), error);
+        auto exportResult = dstools::exportContextsToCsv(contexts, csvPath);
+        if (!exportResult.ok()) {
+            m_log->append(tr("<b>Error:</b> %1").arg(QString::fromStdString(exportResult.error())));
+            QMessageBox::warning(this, tr("Build CSV Failed"),
+                                 QString::fromStdString(exportResult.error()));
         } else {
+            m_runProgress->setProgress(100);
             m_log->append(tr("<b>Done.</b> %1 file(s) written to %2").arg(processed).arg(csvPath));
+            if (skipped > 0)
+                m_log->append(tr("  %1 file(s) skipped.").arg(skipped));
         }
     };
     connect(m_runProgress, &dstools::widgets::RunProgressRow::runClicked, this, runSlot);

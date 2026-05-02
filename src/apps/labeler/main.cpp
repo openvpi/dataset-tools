@@ -1,4 +1,4 @@
-﻿#include <QApplication>
+#include <QApplication>
 #include <QCloseEvent>
 #include <QDir>
 #include <QDirIterator>
@@ -8,6 +8,7 @@
 #include <QMessageBox>
 
 #include <dstools/AppInit.h>
+#include <dstools/DomainInit.h>
 #include <dstools/DsProject.h>
 #include <dstools/ExportFormats.h>
 #include <dstools/QualityMetrics.h>
@@ -40,6 +41,7 @@ int main(int argc, char *argv[]) {
 
     if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
+    dstools::registerDomainFormatAdapters();
     dsfw::Theme::instance().init(app);
 
     static constexpr int kDefaultWidth = 1400;
