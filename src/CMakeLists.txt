@@ -68,18 +68,18 @@ if (NOT EXISTS "${QT_QMAKE_EXECUTABLE}")
 endif ()
 
 cmake_path(GET QT_QMAKE_EXECUTABLE PARENT_PATH __qt_bin_dir)
-find_program(QT_DEPLOY_EXECUTABLE NAMES windeployqt macdeployqt HINTS "${__qt_bin_dir}")
-
-if (NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
-    message(WARNING "deploy_qt_runtime: Can't locate the deployqt tool.")
-    return()
-endif ()
 
 if (NOT CMAKE_INSTALL_PREFIX)
     return()
 endif ()
 
 if (WIN32)
+    find_program(QT_DEPLOY_EXECUTABLE NAMES windeployqt HINTS "${__qt_bin_dir}")
+    if (NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
+        message(WARNING "deploy_qt_runtime: Can't locate windeployqt.")
+        return()
+    endif ()
+
     string(REPLACE "\\" "/" _install_dir ${CMAKE_INSTALL_PREFIX})
 
     get_target_property(_deploy_targets DeployedTargets TARGETS)
@@ -118,6 +118,12 @@ if (WIN32)
         ")
     endforeach ()
 elseif (APPLE)
+    find_program(QT_DEPLOY_EXECUTABLE NAMES macdeployqt HINTS "${__qt_bin_dir}")
+    if (NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
+        message(WARNING "deploy_qt_runtime: Can't locate macdeployqt.")
+        return()
+    endif ()
+
     set(_install_dir ${CMAKE_INSTALL_PREFIX})
 
     get_target_property(_targets DeployedTargets TARGETS)
@@ -155,18 +161,86 @@ elseif (APPLE)
 elseif (UNIX)
     set(_install_dir ${CMAKE_INSTALL_PREFIX})
 
+    # --- Copy project shared libraries (.so) ---
     install(CODE "
         file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.so*\")
         foreach(_file \${_files})
-            file(COPY \${_file} DESTINATION \"${_install_dir}\")
+            file(COPY \${_file} DESTINATION \"${_install_dir}/lib\")
+        endforeach()
+    ")
+    install(CODE "
+        file(GLOB _lib_files \"${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/*.so*\")
+        foreach(_file \${_lib_files})
+            file(COPY \${_file} DESTINATION \"${_install_dir}/lib\")
         endforeach()
     ")
 
+    # --- Copy deployed executables ---
     get_target_property(_targets DeployedTargets TARGETS)
 
     foreach (_target ${_targets})
         install(CODE "
-            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}\")
+            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}/bin\")
+        ")
+    endforeach ()
+
+    # --- Deploy Qt shared libraries and plugins ---
+    cmake_path(GET __qt_bin_dir PARENT_PATH __qt_root_dir)
+    set(__qt_lib_dir "${__qt_root_dir}/lib")
+    set(__qt_plugins_dir "${__qt_root_dir}/plugins")
+
+    # Qt shared libraries
+    install(CODE "
+        set(_qt_lib_dir \"${__qt_lib_dir}\")
+        set(_install_dir \"${_install_dir}\")
+        foreach(_lib Core Gui Widgets Svg Network DBus OpenGL XcbQpa WaylandClient WaylandEglClientHwIntegration)
+            file(GLOB _matches \"\${_qt_lib_dir}/libQt6\${_lib}.so*\")
+            foreach(_f \${_matches})
+                file(COPY \${_f} DESTINATION \"\${_install_dir}/lib\")
+            endforeach()
+        endforeach()
+
+        # Copy ICU libraries if present (Qt dependency)
+        file(GLOB _icu_libs \"\${_qt_lib_dir}/libicu*.so*\")
+        foreach(_f \${_icu_libs})
+            file(COPY \${_f} DESTINATION \"\${_install_dir}/lib\")
+        endforeach()
+    ")
+
+    # Qt plugins
+    install(CODE "
+        set(_qt_plugins_dir \"${__qt_plugins_dir}\")
+        set(_install_dir \"${_install_dir}\")
+        foreach(_plugin_dir platforms platforminputcontexts platformthemes imageformats iconengines xcbglintegrations wayland-decoration-client wayland-graphics-integration-client wayland-shell-integration networkinformation tls)
+            if(IS_DIRECTORY \"\${_qt_plugins_dir}/\${_plugin_dir}\")
+                file(COPY \"\${_qt_plugins_dir}/\${_plugin_dir}\" DESTINATION \"\${_install_dir}/plugins\")
+            endif()
+        endforeach()
+    ")
+
+    # qt.conf — tells Qt where to find plugins and libraries relative to the binary
+    install(CODE "
+        set(_install_dir \"${_install_dir}\")
+        file(WRITE \"\${_install_dir}/bin/qt.conf\"
+\"[Paths]
+Prefix = ..
+Libraries = lib
+Plugins = plugins
+\")
+    ")
+
+    # Generate launcher scripts that set LD_LIBRARY_PATH
+    foreach (_target ${_targets})
+        install(CODE "
+            set(_install_dir \"${_install_dir}\")
+            set(_name \"$<TARGET_FILE_NAME:${_target}>\")
+            file(WRITE \"\${_install_dir}/\${_name}.sh\"
+\"#!/bin/bash
+DIR=\\\"\\$( cd \\\"\\$( dirname \\\"\\$\\{BASH_SOURCE[0]\\}\\\" )\\\" && pwd )\\\"
+export LD_LIBRARY_PATH=\\\"\\\$DIR/lib:\\\$LD_LIBRARY_PATH\\\"
+exec \\\"\\\$DIR/bin/\${_name}\\\" \\\"\\$@\\\"
+\")
+            execute_process(COMMAND chmod +x \"\${_install_dir}/\${_name}.sh\")
         ")
     endforeach ()
 endif ()

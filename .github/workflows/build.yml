@@ -133,13 +133,18 @@ jobs:
 
       - name: Build Vcpkg packages (Unix)
         if: runner.os != 'Windows'
-        working-directory: ${{github.workspace}}/vcpkg
-        run: |
-          ./vcpkg install \
-            --x-manifest-root=../scripts/vcpkg-manifest \
-            --x-install-root=./installed \
-            --overlay-triplets=../scripts/vcpkg/triplets \
-            --triplet=${{ matrix.triplet }}
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            cd ${{github.workspace}}/vcpkg
+            ./vcpkg install \
+              --x-manifest-root=../scripts/vcpkg-manifest \
+              --x-install-root=./installed \
+              --overlay-triplets=../scripts/vcpkg/triplets \
+              --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
@@ -149,11 +154,16 @@ jobs:
 
       - name: Build Vcpkg packages (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
-        working-directory: ${{github.workspace}}/vcpkg
-        run: |
-          set VCPKG_BUILD_TYPE=release
-          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --overlay-triplets=../scripts/vcpkg/triplets --triplet=${{ matrix.triplet }}
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          shell: cmd
+          command: |
+            cd /D ${{github.workspace}}\vcpkg
+            set VCPKG_BUILD_TYPE=release
+            vcpkg.exe install --x-manifest-root=..\scripts\vcpkg-manifest --x-install-root=.\installed --overlay-triplets=..\scripts\vcpkg\triplets --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
@@ -353,13 +363,18 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@v4
 
       - name: Build Vcpkg packages
-        working-directory: ${{github.workspace}}/vcpkg
-        run: |
-          ./vcpkg install \
-            --x-manifest-root=../scripts/vcpkg-manifest \
-            --x-install-root=./installed \
-            --overlay-triplets=../scripts/vcpkg/triplets \
-            --triplet=x64-linux
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            cd ${{github.workspace}}/vcpkg
+            ./vcpkg install \
+              --x-manifest-root=../scripts/vcpkg-manifest \
+              --x-install-root=./installed \
+              --overlay-triplets=../scripts/vcpkg/triplets \
+              --triplet=x64-linux
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
           QT_DIR: ${{env.QT_ROOT_DIR}}
@@ -426,13 +441,18 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@v4
 
       - name: Build Vcpkg packages
-        working-directory: ${{github.workspace}}/vcpkg
-        run: |
-          ./vcpkg install \
-            --x-manifest-root=../scripts/vcpkg-manifest \
-            --x-install-root=./installed \
-            --overlay-triplets=../scripts/vcpkg/triplets \
-            --triplet=x64-linux
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            cd ${{github.workspace}}/vcpkg
+            ./vcpkg install \
+              --x-manifest-root=../scripts/vcpkg-manifest \
+              --x-install-root=./installed \
+              --overlay-triplets=../scripts/vcpkg/triplets \
+              --triplet=x64-linux
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
           QT_DIR: ${{env.QT_ROOT_DIR}}
