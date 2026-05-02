@@ -135,7 +135,7 @@
 | L.11.1 | DsProject 扩展 | 移除 tasks[]，新增 defaults.preload/export.resampleRate，slice 新增 name/discardedAt。路径 POSIX 化 | 中：新增字段多 | 可独立 | ✅ |
 | L.11.2 | DsTextDocument v3 | 层定义新增 type 字段，meta 新增 editedSteps | 低 | 可独立 | ✅ |
 | L.11.3 | PipelineContext 精简 | 合并 completedSteps + stepHistory 为单一 stepHistory，新增 editedSteps + dirty | 低 | 可独立 | ✅ |
-| L.11.4 | DsProject 测试 | 读写往返、字段校验 | 低 | 依赖 L.11.1 | 待做 |
+| L.11.4 | DsProject 测试 | 读写往返、字段校验 | 低 | 依赖 L.11.1 | ✅ |
 
 **依赖**：L.1 ✅。可与 L.9 **并行**。
 
