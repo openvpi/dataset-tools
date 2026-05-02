@@ -180,7 +180,7 @@ jobs:
           cmake --build ${{github.workspace}}/build --target dstools-domain
           cmake --build ${{github.workspace}}/build --target slicer-lib
           cmake --build ${{github.workspace}}/build --target minlabel-lib
-          cmake --build ${{github.workspace}}/build --target dsfw-audio
+          cmake --build ${{github.workspace}}/build --target dstools-audio
           cmake --build ${{github.workspace}}/build --target dsfw-widgets
           echo "=== All framework modules built successfully ==="
 
