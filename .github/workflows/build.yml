@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: read
-  checks: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -75,12 +74,23 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.9.3'
+          cache: true
 
       - name: Initialize MSVC environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: amd64
+
+      - name: Setup sccache (Windows)
+        if: runner.os == 'Windows'
+        uses: mozilla-actions/sccache-action@v0.0.7
+
+      - name: Configure sccache (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $env:GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $env:GITHUB_ENV
 
       - name: Configure Qt6 path (Unix)
         if: runner.os != 'Windows'
@@ -104,6 +114,14 @@ jobs:
           echo "QT_DIR: $QT6_DIR"
           ls -l "$QT6_DIR/lib/cmake/Qt6"
 
+      - name: Cache vcpkg bootstrap
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{github.workspace}}/vcpkg
+            !${{github.workspace}}/vcpkg/installed
+          key: vcpkg-bootstrap-${{ runner.os }}-${{ env.VCPKG_COMMIT }}
+
       - name: Setup vcpkg
         shell: bash
         run: |
@@ -124,9 +142,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/vcpkg/installed
-          key: vcpkg-installed-${{ matrix.triplet }}-rel-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          key: vcpkg-installed-${{ matrix.triplet }}-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
           restore-keys: |
-            vcpkg-installed-${{ matrix.triplet }}-rel-
+            vcpkg-installed-${{ matrix.triplet }}-
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
@@ -203,31 +221,14 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DGAME_INFER_BUILD_TESTS:BOOL=ON -DRMVPE_INFER_BUILD_TESTS:BOOL=ON -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }}
+          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DGAME_INFER_BUILD_TESTS:BOOL=ON -DRMVPE_INFER_BUILD_TESTS:BOOL=ON -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --target all
 
       - name: Run tests
         working-directory: ${{github.workspace}}/build
-        run: ctest --output-on-failure --output-junit test-results.xml -C ${{env.BUILD_TYPE}} --timeout 120
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.artifact_name }}
-          path: ${{github.workspace}}/build/test-results.xml
-          if-no-files-found: ignore
-
-      - name: Test Report
-        if: always() && github.event_name == 'push'
-        uses: dorny/test-reporter@v1
-        with:
-          name: Test Results (${{ matrix.artifact_name }})
-          path: ${{github.workspace}}/build/test-results.xml
-          reporter: java-junit
-          fail-on-empty: 'false'
+        run: ctest --output-on-failure -C ${{env.BUILD_TYPE}} --timeout 120
 
       - name: Verify build outputs
         shell: bash
@@ -343,21 +344,34 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.9.3'
+          cache: true
+
+      - name: Cache vcpkg bootstrap
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{github.workspace}}/vcpkg
+            !${{github.workspace}}/vcpkg/installed
+          key: vcpkg-bootstrap-${{ runner.os }}-${{ env.VCPKG_COMMIT }}
 
       - name: Setup vcpkg
         run: |
-          rm -rf vcpkg
-          git clone https://github.com/microsoft/vcpkg.git
-          cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }}
-          ./bootstrap-vcpkg.sh -disableMetrics
+          if [ -d "vcpkg/.git" ]; then
+            cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          else
+            rm -rf vcpkg
+            git clone https://github.com/microsoft/vcpkg.git
+            cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          fi
+          vcpkg/bootstrap-vcpkg.sh -disableMetrics
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/vcpkg/installed
-          key: vcpkg-installed-x64-linux-rel-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
+          key: vcpkg-installed-x64-linux-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
           restore-keys: |
-            vcpkg-installed-x64-linux-rel-
+            vcpkg-installed-x64-linux-
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
@@ -379,7 +393,7 @@ jobs:
           CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
           QT_DIR: ${{env.QT_ROOT_DIR}}
           Qt6_DIR: ${{env.QT_ROOT_DIR}}
-          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
+          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR;VCPKG_BUILD_TYPE'
           VCPKG_BUILD_TYPE: release
 
       - name: Install OnnxRuntime
@@ -403,84 +417,3 @@ jobs:
           if grep -qE "(warning|error):" clang-tidy-results.txt; then
             echo "::warning::clang-tidy found issues, see clang-tidy-results.txt"
           fi
-
-  module-standalone:
-    runs-on: ubuntu-24.04
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 autoconf autoconf-archive automake libtool libltdl-dev libx11-dev libxft-dev libxext-dev libwayland-dev libegl1-mesa-dev libibus-1.0-dev
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.9.3'
-
-      - name: Setup vcpkg
-        run: |
-          rm -rf vcpkg
-          git clone https://github.com/microsoft/vcpkg.git
-          cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }}
-          ./bootstrap-vcpkg.sh -disableMetrics
-
-      - name: Cache vcpkg installed packages
-        uses: actions/cache@v4
-        with:
-          path: ${{github.workspace}}/vcpkg/installed
-          key: vcpkg-installed-x64-linux-rel-${{ hashFiles('scripts/vcpkg-manifest/vcpkg.json') }}
-          restore-keys: |
-            vcpkg-installed-x64-linux-rel-
-
-      - name: Install Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v4
-
-      - name: Build Vcpkg packages
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 30
-          max_attempts: 3
-          retry_wait_seconds: 30
-          command: |
-            cd ${{github.workspace}}/vcpkg
-            ./vcpkg install \
-              --x-manifest-root=../scripts/vcpkg-manifest \
-              --x-install-root=./installed \
-              --overlay-triplets=../scripts/vcpkg/triplets \
-              --triplet=x64-linux
-        env:
-          CMAKE_PREFIX_PATH: ${{env.QT_ROOT_DIR}}
-          QT_DIR: ${{env.QT_ROOT_DIR}}
-          Qt6_DIR: ${{env.QT_ROOT_DIR}}
-          VCPKG_KEEP_ENV_VARS: 'CMAKE_PREFIX_PATH;QT_DIR;Qt6_DIR'
-          VCPKG_BUILD_TYPE: release
-
-      - name: Install OnnxRuntime
-        working-directory: ${{github.workspace}}/src/infer
-        run: cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
-
-      - name: Configure CMake
-        run: |
-          cmake -B ${{github.workspace}}/build -G Ninja \
-            -DBUILD_TESTS:BOOL=ON \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=${{env.QT_ROOT_DIR}}/lib/cmake/Qt6/ \
-            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DONNXRUNTIME_ENABLE_DML=OFF
-
-      - name: Verify framework modules build independently
-        run: |
-          echo "=== Verifying framework modules build independently ==="
-          cmake --build build --target dsfw-base
-          cmake --build build --target dsfw-core
-          cmake --build build --target dstools-domain
-          cmake --build build --target slicer-lib
-          cmake --build build --target minlabel-lib
-          cmake --build build --target dsfw-audio
-          cmake --build build --target dsfw-widgets
-          echo "=== All framework modules built successfully ==="
