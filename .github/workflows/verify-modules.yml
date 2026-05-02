@@ -21,6 +21,7 @@ concurrency:
 
 env:
   BUILD_TYPE: Release
+  VCPKG_COMMIT: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
 
 jobs:
   module-standalone:
@@ -46,14 +47,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install system dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev
 
       - name: Setup ccache
         if: runner.os != 'Windows'
@@ -88,10 +87,21 @@ jobs:
           echo "QT6_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
           echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
 
-      - name: Install vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+      - name: Setup vcpkg
+        shell: bash
+        run: |
+          if [ -d "vcpkg/.git" ]; then
+            cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          else
+            rm -rf vcpkg
+            git clone https://github.com/microsoft/vcpkg.git
+            cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          else
+            vcpkg/bootstrap-vcpkg.sh -disableMetrics
+          fi
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
@@ -195,14 +205,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install system dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev
 
       - name: Setup ccache
         if: runner.os != 'Windows'
@@ -237,10 +245,21 @@ jobs:
           echo "QT6_DIR=$QT_ROOT_DIR" | sed 's/\\/\//g' >> $GITHUB_ENV
           echo "GH_WORKSPACE=${{github.workspace}}" | sed 's/\\/\//g' >> $GITHUB_ENV
 
-      - name: Install vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 14bb451131ccf6be50a63a8d9dfe7980e46b5958
+      - name: Setup vcpkg
+        shell: bash
+        run: |
+          if [ -d "vcpkg/.git" ]; then
+            cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          else
+            rm -rf vcpkg
+            git clone https://github.com/microsoft/vcpkg.git
+            cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+          fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          else
+            vcpkg/bootstrap-vcpkg.sh -disableMetrics
+          fi
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
