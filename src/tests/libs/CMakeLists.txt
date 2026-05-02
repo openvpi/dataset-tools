@@ -14,3 +14,10 @@ foreach(test_name ${LIBS_TESTS})
     )
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
+
+add_executable(TestSlicerProcessor TestSlicerProcessor.cpp)
+target_link_libraries(TestSlicerProcessor PRIVATE
+    slicer-lib
+    Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestSlicerProcessor COMMAND TestSlicerProcessor)
