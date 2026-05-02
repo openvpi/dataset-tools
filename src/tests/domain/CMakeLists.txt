@@ -14,6 +14,7 @@ set(DOMAIN_TESTS
     TestCsvToDsConverter
     TestCurveTools
     TestDsTextDocument
+    TestFormatAdapters
 )
 
 foreach(test_name ${DOMAIN_TESTS})
