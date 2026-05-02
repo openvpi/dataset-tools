@@ -2,6 +2,7 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Test REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 
+# ── Unit tests (pure logic, no QApplication needed) ──────────────────────────
 set(DSFW_TESTS
     TestResult
     TestJsonHelper
@@ -38,18 +39,20 @@ foreach(test_name ${DOMAIN_TESTS})
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
 
-# Integration tests (require QApplication / UI components)
-set(DSFW_INTEGRATION_TESTS
-    TestAppShellIntegration
-)
-
-foreach(test_name ${DSFW_INTEGRATION_TESTS})
-    add_executable(${test_name} ${test_name}.cpp)
-    target_link_libraries(${test_name} PRIVATE
-        dsfw-ui-core
-        dsfw-widgets
-        Qt${QT_VERSION_MAJOR}::Widgets
-        Qt${QT_VERSION_MAJOR}::Test
+# ── Integration tests (require QApplication / UI components) ─────────────────
+if(BUILD_INTEGRATION_TESTS)
+    set(DSFW_INTEGRATION_TESTS
+        TestAppShellIntegration
     )
-    add_test(NAME ${test_name} COMMAND ${test_name})
-endforeach()
+
+    foreach(test_name ${DSFW_INTEGRATION_TESTS})
+        add_executable(${test_name} ${test_name}.cpp)
+        target_link_libraries(${test_name} PRIVATE
+            dsfw-ui-core
+            dsfw-widgets
+            Qt${QT_VERSION_MAJOR}::Widgets
+            Qt${QT_VERSION_MAJOR}::Test
+        )
+        add_test(NAME ${test_name} COMMAND ${test_name})
+    endforeach()
+endif()

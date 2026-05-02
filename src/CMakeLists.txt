@@ -1,10 +1,26 @@
-option(BUILD_TESTS "Build all test targets" ON)
+option(BUILD_TESTS "Build unit test targets" ON)
 
+# Infer tests require ONNX models and audio files — off by default
 if (NOT BUILD_TESTS)
     set(GAME_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(SOME_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(RMVPE_INFER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(AUDIO_UTIL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+else()
+    # Default infer tests to OFF even when BUILD_TESTS=ON
+    # Enable individually: -DGAME_INFER_BUILD_TESTS=ON etc.
+    if(NOT DEFINED CACHE{GAME_INFER_BUILD_TESTS})
+        set(GAME_INFER_BUILD_TESTS OFF CACHE BOOL "Build TestGame (requires GAME model)" FORCE)
+    endif()
+    if(NOT DEFINED CACHE{SOME_INFER_BUILD_TESTS})
+        set(SOME_INFER_BUILD_TESTS OFF CACHE BOOL "Build TestSome (requires SOME model)" FORCE)
+    endif()
+    if(NOT DEFINED CACHE{RMVPE_INFER_BUILD_TESTS})
+        set(RMVPE_INFER_BUILD_TESTS OFF CACHE BOOL "Build TestRmvpe (requires RMVPE model)" FORCE)
+    endif()
+    if(NOT DEFINED CACHE{AUDIO_UTIL_BUILD_TESTS})
+        set(AUDIO_UTIL_BUILD_TESTS OFF CACHE BOOL "Build TestAudioUtil" FORCE)
+    endif()
 endif ()
 
 find_package(QT NAMES Qt6 COMPONENTS Core Gui Widgets Svg Network REQUIRED)
