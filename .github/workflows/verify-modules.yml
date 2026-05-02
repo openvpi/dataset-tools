@@ -52,7 +52,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev \
+            libx11-dev libxft-dev libxext-dev libwayland-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev
 
       - name: Setup ccache
         if: runner.os != 'Windows'
@@ -211,7 +212,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 ccache autoconf autoconf-archive automake libtool libltdl-dev \
+            libx11-dev libxft-dev libxext-dev libwayland-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev
 
       - name: Setup ccache
         if: runner.os != 'Windows'
