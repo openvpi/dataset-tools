@@ -279,31 +279,31 @@ jobs:
           name: dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}
           path: ${{github.workspace}}/deploy
 
-      - name: Compress release archive (Linux)
-        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux'
-        working-directory: ${{github.workspace}}/deploy
-        run: |
-          tar czf dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.tar.gz .
+      # - name: Compress release archive (Linux)
+      #   if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux'
+      #   working-directory: ${{github.workspace}}/deploy
+      #   run: |
+      #     tar czf dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.tar.gz .
 
-      - name: Compress release archive (macOS)
-        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'macOS'
-        working-directory: ${{github.workspace}}/deploy
-        run: |
-          zip -r dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip .
+      # - name: Compress release archive (macOS)
+      #   if: startsWith(github.ref, 'refs/tags/') && runner.os == 'macOS'
+      #   working-directory: ${{github.workspace}}/deploy
+      #   run: |
+      #     zip -r dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip .
 
-      - name: Compress release archive (Windows)
-        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Windows'
-        shell: bash
-        working-directory: ${{github.workspace}}/deploy
-        run: |
-          7z a dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip ./*
+      # - name: Compress release archive (Windows)
+      #   if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Windows'
+      #   shell: bash
+      #   working-directory: ${{github.workspace}}/deploy
+      #   run: |
+      #     7z a dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip ./*
 
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{github.workspace}}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION }}.${{ matrix.archive_ext }}
+      # - name: Release
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     files: |
+      #       ${{github.workspace}}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION }}.${{ matrix.archive_ext }}
 
   clang-tidy:
     runs-on: ubuntu-24.04

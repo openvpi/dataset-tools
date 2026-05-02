@@ -283,8 +283,8 @@ jobs:
 
           echo "PACKAGE_PATH=$OUTPUT" >> $GITHUB_ENV
 
-      # ── Upload to GitHub Release ───────────────────────────────────
-      - name: Upload Release Assets
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.PACKAGE_PATH }}
+#      # ── Upload to GitHub Release ───────────────────────────────────
+#      - name: Upload Release Assets
+#        uses: softprops/action-gh-release@v2
+#        with:
+#          files: ${{ env.PACKAGE_PATH }}
