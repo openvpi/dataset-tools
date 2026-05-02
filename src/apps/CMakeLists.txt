@@ -1,4 +1,8 @@
 add_subdirectory(shared)
+add_subdirectory(pipeline)
+add_subdirectory(min-label)
+add_subdirectory(pitch-labeler)
+add_subdirectory(phoneme-labeler)
 add_subdirectory(label-suite)
 add_subdirectory(ds-labeler)
 add_subdirectory(test-shell)
