@@ -8,70 +8,36 @@
 
 | Issue # | 标题 | 优先级 | 状态 | 路线图 |
 |---------|------|--------|------|--------|
-| — | PitchLabeler 撤销重做补全 | P1.5 | 📋 待执行 | H.1 |
-| — | 全局文件日志 Sink | P1.5 | 📋 待执行 | H.2 |
-| — | 批量处理 Checkpoint | P1.5 | 📋 待执行 | H.3 |
-| #39 | 大文件拆分 | P3 | 📋 按需 | C.1 |
-| #40 | 魔法数字 | P3 | 📋 按需 | C.2 |
-
-**已关闭**: #11 (领域测试 — 24 个测试模块已覆盖), #15 (框架独立编译 — CI 已验证), #16 (API 文档 CI — docs.yml 已配置), #18 (DLL 导出审查), #19 (labeler-interfaces), #21 (CI 矩阵), #27 (clang-tidy), #28 (TranscriptionPipeline 可测试性 — Deps 注入+测试已完成), #37 (Slicer), #38 (MinLabel)
+| — | K.4 随修随改 | P2 | 📋 触及时修复 | K.4 |
 
 ---
 
-### H.1: PitchLabeler 撤销重做补全
+## 已关闭 Issue
 
-已有 2 个 QUndoCommand：`PitchMoveCommand`（音高拖动）、`ModulationDriftCommand`（颤音/偏移 F0）。以下 5 个编辑操作仍直接修改 DSFile 绕过 QUndoStack：
+**全部关闭**: #11 (领域测试), #15 (框架独立编译), #16 (API 文档 CI), #18 (DLL 导出审查), #19 (labeler-interfaces), #21 (CI 矩阵), #27 (clang-tidy), #28 (TranscriptionPipeline 可测试性), #37 (Slicer), #38 (MinLabel)
 
-| 操作 | 信号来源 | 需要新建的 Command |
-|------|---------|-------------------|
-| 删除音符 | `noteDeleteRequested` | `DeleteNotesCommand` |
-| 修改滑音类型 | `noteGlideChanged` | `SetNoteGlideCommand` |
-| 切换连音标记 | `noteSlurToggled` | `ToggleNoteSlurCommand` |
-| 切换休止符 | `noteRestToggled` | `ToggleNoteRestCommand` |
-| 合并到左邻音符 | `noteMergeLeft` | `MergeNoteLeftCommand` |
-
-`PianoRollInputHandler.cpp:305` 和 `:385` 也有直接 `markModified()` 调用待审计。详见 refactoring-roadmap.md Phase H.1。
-
-### H.2: 全局文件日志 Sink
-
-Logger 有 pluggable sink 但未注册文件 sink。需在 dsfw-core 新增 `FileLogSink`，由 AppInit 注册，写入 `AppPaths::logDir()`，支持 7 天自动轮转。详见 refactoring-roadmap.md Phase H.2。
-
-### H.3: 批量处理 Checkpoint
-
-BatchOutput 仅记录计数，无具体文件列表。需新增 BatchCheckpoint 工具类，支持断点续处理。详见 refactoring-roadmap.md Phase H.3。
-
-### #39: 大文件拆分
-
-PitchLabelerPage (755行)、PhonemeLabelerPage (600行) 有维护痛点时拆分。
-
-### #40: 魔法数字
-
-`4096` buffer size 3 处重复（WaveformRenderer.cpp:29, WaveformWidget.cpp:62, AudioFileLoader.cpp:61），优先提取。其余按需。
-
----
-
-## 已完成 Issue 详情
-
-### #11: 领域模块单元测试 — ✅ 已完成
-
-24 个测试模块（domain 10 + framework 12 + libs 1 + widgets 1），80+ 用例。原待测的 CsvToDsConverter、TextGridToCsv、PitchProcessor、TranscriptionPipeline 均已补齐。
-
-### #15: 框架模块独立编译 — ✅ 已完成
-
-dsfw-core / dsfw-ui-core 有 `find_package` guards，`.github/workflows/verify-modules.yml` CI 已创建。
-
-### #16: API 文档 CI — ✅ 已完成
-
-32 个框架头文件（core + ui-core + base）已有 Doxygen 注释（仅 AppPaths.h 待补）。`.github/workflows/docs.yml` 已配置。
-
-### #28: TranscriptionPipeline 可测试性 — ✅ 已完成
-
-Deps 注入、步骤拆分、StringUtils 提取均已完成。`TestTranscriptionPipeline.cpp` 已编写。
-
-### H.4: 统一 CrashHandler — ✅ 已完成
-
-QBreakpad 已移除。CrashHandler 已重写，使用 `AppPaths::dumpDir()`。注意：`AppInit.h:22` 仍有 QBreakpad 注释残留待清理。
-
-### H.5: 数据路径迁移 QStandardPaths — ✅ 已完成
-
-`AppPaths` 工具类已创建，使用 `QStandardPaths::AppDataLocation`。config/logs/dumps 路径已迁移，支持 `migrateFromLegacyPaths()` 旧路径自动迁移。`applicationDirPath()` 仅剩用于 model/dict 等捆绑资源路径（合理）。
+| Issue # | 标题 | 完成摘要 |
+|---------|------|---------|
+| — | CMake 现代化 (I.1-I.5) | DstoolsHelpers.cmake helper 函数，40+ CMakeLists.txt 迁移 (1045→237 行)，cmake 3.21，qt_standard_project_setup |
+| — | 窗口状态持久化 (J.1) | AppShell 自动 saveGeometry/restoreGeometry via AppSettings，移除 PhonemeLabeler 手动代码 |
+| — | 单实例守卫 (J.2) | SingleInstanceGuard (QLockFile + QLocalServer)，server name 含用户名 |
+| — | 最近文件管理 (J.3) | RecentFilesManager + QMenu 集成，pipe-delimited 持久化，可配上限 |
+| — | Toast 通知 (J.4) | ToastNotification 非模态浮层控件，slide-in/fade-out 动画，三种样式，堆叠显示 |
+| — | 本地化基础 i18n (J.5) | TranslationManager + CommonKeys::Language，AppInit 自动加载系统 locale |
+| — | 代码规范化 (K.1-K.3) | 35 个头文件 #pragma once，24 个头文件 Doxygen，AsyncTask/AppInit/Result 杂项修复 |
+| #39 | 大文件拆分 (C.1) | PitchLabelerPage (870→358+529)，PhonemeLabelerPage (715→422+317) |
+| #40 | 魔法数字 (C.2) | WaveformRenderer/WaveformWidget kDefaultBufferSize 常量化 |
+| #11 | 领域模块单元测试 | 24 个测试模块 (domain 10 + framework 12 + libs 1 + widgets 1)，80+ 用例 |
+| #15 | 框架模块独立编译 | find_package guards + verify-modules.yml CI |
+| #16 | API 文档 CI | 32 个框架头文件 Doxygen 注释 + docs.yml CI |
+| #28 | TranscriptionPipeline 可测试性 | Deps 注入 + TestTranscriptionPipeline.cpp |
+| — | 任务处理器架构 (G.1-G.4) | ITaskProcessor + Registry，4 处理器迁移，旧服务接口删除 |
+| — | CrashHandler 统一 (H.4) | QBreakpad 移除，CrashHandler 重写，AppPaths::dumpDir() |
+| — | 数据路径迁移 (H.5) | AppPaths + QStandardPaths + migrateFromLegacyPaths |
+| — | 全局文件日志 (H.2) | FileLogSink + 7 天自动轮转 |
+| — | 撤销重做补全 (H.1) | 7 个 QUndoCommand (PitchMove, ModulationDrift, DeleteNotes, SetNoteGlide, ToggleNoteSlur, ToggleNoteRest, MergeNoteLeft) |
+| — | 批量 Checkpoint (H.3) | BatchCheckpoint 工具类 + processBatch 集成 |
+| — | TODO/FIXME 清理 (B.2) | 应用代码 TODO 全部清理 |
+| — | 文件操作错误处理 (B.3) | file.open() else 分支补全 |
+| — | Doxygen CI (D.2) | docs.yml 已配置 |
+| — | 跨平台包分发 (D.3) | release.yml (ZIP/DMG/AppImage) |
