@@ -98,19 +98,21 @@ Result<void> LocalFileIOProvider::copyFile(const QString &src, const QString &ds
     return Result<void>::Ok();
 }
 
-static std::unique_ptr<IFileIOProvider> s_provider =
+static std::unique_ptr<IFileIOProvider> s_ownedProvider =
     std::make_unique<LocalFileIOProvider>();
+static IFileIOProvider *s_activeProvider = s_ownedProvider.get();
 
 IFileIOProvider *fileIOProvider() {
-    return s_provider.get();
+    return s_activeProvider;
 }
 
 void setFileIOProvider(IFileIOProvider *provider) {
-    s_provider.reset(provider);
+    s_activeProvider = provider;
 }
 
 void resetFileIOProvider() {
-    s_provider = std::make_unique<LocalFileIOProvider>();
+    s_ownedProvider = std::make_unique<LocalFileIOProvider>();
+    s_activeProvider = s_ownedProvider.get();
 }
 
 }

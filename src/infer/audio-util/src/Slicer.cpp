@@ -30,7 +30,7 @@ namespace AudioUtil
         output.reserve(output_size);
 
         for (size_t i = 0; i < output_size; ++i) {
-            const bool is_underflow = i * hop_length < frame_length / 2;
+            const bool is_underflow = static_cast<int>(i * hop_length) < frame_length / 2;
             const size_t start = is_underflow ? 0 : (i * hop_length - frame_length / 2);
             const size_t end = (std::min)(samples.size(), i * hop_length - frame_length / 2 + frame_length);
 
@@ -72,7 +72,7 @@ namespace AudioUtil
         output.reserve(output_size);
 
         for (size_t i = 0; i < output_size; ++i) {
-            const bool is_underflow = i * hop_length < frame_length / 2;
+            const bool is_underflow = static_cast<int>(i * hop_length) < frame_length / 2;
             const size_t start = is_underflow ? 0 : (i * hop_length - frame_length / 2);
             const size_t end = (std::min)(samples.size(), i * hop_length - frame_length / 2 + frame_length);
 

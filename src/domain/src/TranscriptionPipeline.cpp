@@ -241,8 +241,8 @@ bool TranscriptionPipeline::gameAlign(const Options &opts,
                                        ProgressCallback progress,
                                        QString &error) {
     if (!gameAlignCb) {
-        error = "GAME align callback is null";
-        return false;
+        // No callback — skip alignment, leave rows unchanged
+        return true;
     }
 
     const int total = static_cast<int>(rows.size());

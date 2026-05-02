@@ -247,6 +247,10 @@ bool CsvToDsConverter::dsToCsv(const QString &dsDir,
                                 const QString &csvPath,
                                 QString &error) {
     QDir dir(dsDir);
+    if (!dir.exists()) {
+        error = QStringLiteral("Directory does not exist: ") + dsDir;
+        return false;
+    }
     const QFileInfoList entries = dir.entryInfoList(
         {QStringLiteral("*.ds")}, QDir::Files, QDir::Name);
 

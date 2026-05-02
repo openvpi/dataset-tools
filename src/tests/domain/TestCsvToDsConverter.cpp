@@ -222,9 +222,10 @@ void TestCsvToDsConverter::testConvertFromMemory_dsContentVerification() {
     QString error;
     QVERIFY(CsvToDsConverter::convertFromMemory(rows, opts, mockF0, nullptr, error));
 
-    DsDocument doc;
     QString dsPath = tmpOut.path() + "/song1.ds";
-    QVERIFY(doc.loadFile(dsPath).ok());
+    auto loadResult = DsDocument::loadFile(dsPath);
+    QVERIFY(loadResult.ok());
+    DsDocument doc = std::move(loadResult.value());
     QVERIFY(!doc.sentences().empty());
 
     auto &s = doc.sentences()[0];
