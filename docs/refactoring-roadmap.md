@@ -118,16 +118,13 @@ LabelSuite (AppShell, 10 页面)
 - [x] Pitch 页进入时自动 add_ph_num + RMVPE + GAME（缺失或 dirty 时）
 - [x] Toast 通知行为与 DsLabeler 统一
 
-#### P.B.6 旧代码清理
+#### P.B.6 旧代码清理 ✅
 
-- [ ] 删除 `src/apps/pipeline/slicer/`（→ 共享版）
-- [ ] 删除 `src/apps/pipeline/hubertfa/`（→ dstext 版）
-- [ ] 删除 `src/apps/pipeline/lyricfa/`（→ dstext 版）
-- [ ] 删除 `src/apps/min-label/`（→ 共享版）
-- [ ] 删除 `src/apps/phoneme-labeler/`（→ 共享版）
-- [ ] 删除 `src/apps/pitch-labeler/`（→ 共享版）
-- [ ] 删除 `src/apps/label-suite/TaskWindowAdapter`
-- [ ] 更新 CMakeLists.txt
+- [x] 删除 DsMinLabelPage/DsPhonemeLabelerPage/DsPitchLabelerPage（已被共享页面替代）
+- [x] 删除旧 SliceListPanel（已移至 shared/data-sources）
+- [x] data-sources 依赖精简（编辑器组件替代旧页面模块）
+- [x] LabelSuite 移除对旧 minlabel-page/phonemelabeler-page/pitchlabeler-page 的直接依赖
+- [x] 修复编译警告
 
 #### P.B.7 集成测试
 
