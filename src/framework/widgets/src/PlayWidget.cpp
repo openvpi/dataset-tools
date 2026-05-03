@@ -198,7 +198,12 @@ void PlayWidget::setPlaying(bool playing) {
     if (!m_valid) return;
     if (playing && !isPlaying()) {
         m_player->play();
-        m_lastObtainedTimeMs = 0;
+        // Initialize time tracking from current player position (respects seek/range)
+        if (m_player->isOpen()) {
+            m_lastObtainedTimeMs = static_cast<uint64_t>(m_player->position() * 1000);
+        } else {
+            m_lastObtainedTimeMs = 0;
+        }
         m_lastObtainedTimePoint = std::chrono::steady_clock::now();
         if (m_notifyTimerId == 0)
             m_notifyTimerId = startTimer(16);
@@ -248,7 +253,7 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
             reloadSliderStatus();
             double posSec = static_cast<double>(estimatedTimeMs()) / 1000.0;
             if (m_hasRange) {
-                emit playheadChanged(posSec - m_rangeStart);
+                emit playheadChanged(posSec);
                 if (posSec >= m_rangeEnd) {
                     m_player->stop();
                     reloadButtonStatus();
