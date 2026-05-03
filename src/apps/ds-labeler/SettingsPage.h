@@ -85,6 +85,13 @@ private:
     // ── General tab widgets ──
     QComboBox *m_languageCombo = nullptr;
 
+    // ── Dict/G2P tab widgets ──
+    QComboBox *m_g2pEngineCombo = nullptr;
+    QLineEdit *m_dictPath = nullptr;
+    QLineEdit *m_g2pTestInput = nullptr;
+    QPushButton *m_g2pTestBtn = nullptr;
+    QLabel *m_g2pTestResult = nullptr;
+
     QWidget *createDeviceTab();
     QWidget *createGeneralTab();
     QWidget *createAsrTab();

@@ -16,6 +16,8 @@
 #include <QVBoxLayout>
 
 #include <dsfw/TranslationManager.h>
+#include <dstools/PinyinG2PProvider.h>
+#include <hubert-infer/DictionaryG2P.h>
 
 #ifdef Q_OS_WIN
 #    include <dxgi.h>
@@ -426,13 +428,116 @@ QWidget *SettingsPage::createAsrTab() {
 QWidget *SettingsPage::createDictTab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
-    auto *placeholder = new QLabel(
-        QStringLiteral("词典配置将在后续版本实现。\n"
-                       "当前使用内置 cpp-pinyin / cpp-kana 词典。"),
-        w);
-    placeholder->setAlignment(Qt::AlignCenter);
-    placeholder->setStyleSheet(QStringLiteral("color: gray;"));
-    layout->addWidget(placeholder);
+
+    // G2P engine selection
+    auto *engineGroup = new QGroupBox(QStringLiteral("G2P 引擎"), w);
+    auto *engineLayout = new QFormLayout(engineGroup);
+
+    m_g2pEngineCombo = new QComboBox(engineGroup);
+    m_g2pEngineCombo->addItem(QStringLiteral("内置 Pinyin (cpp-pinyin)"), QStringLiteral("pinyin"));
+    m_g2pEngineCombo->addItem(QStringLiteral("词典 G2P (DictionaryG2P)"), QStringLiteral("dictionary"));
+    engineLayout->addRow(QStringLiteral("G2P 引擎:"), m_g2pEngineCombo);
+
+    layout->addWidget(engineGroup);
+
+    // Dictionary path (for DictionaryG2P)
+    auto *dictGroup = new QGroupBox(QStringLiteral("词典路径"), w);
+    auto *dictLayout = new QVBoxLayout(dictGroup);
+
+    auto *pathLayout = new QHBoxLayout;
+    m_dictPath = new QLineEdit(dictGroup);
+    m_dictPath->setPlaceholderText(QStringLiteral("选择词典文件 (.txt)"));
+    auto *browseBtn = new QPushButton(QStringLiteral("浏览..."), dictGroup);
+    pathLayout->addWidget(m_dictPath, 1);
+    pathLayout->addWidget(browseBtn);
+    dictLayout->addLayout(pathLayout);
+
+    connect(browseBtn, &QPushButton::clicked, this, [this]() {
+        const QString path =
+            QFileDialog::getOpenFileName(this, QStringLiteral("选择词典文件"), {},
+                                         QStringLiteral("词典文件 (*.txt);;所有文件 (*)"));
+        if (!path.isEmpty())
+            m_dictPath->setText(path);
+    });
+
+    auto *dictNote = new QLabel(
+        QStringLiteral("词典格式: 每行一条，格式为「字 音」或「词 音1 音2 ...」。\n"
+                       "留空则使用内置词典。"),
+        dictGroup);
+    dictNote->setWordWrap(true);
+    dictNote->setStyleSheet(QStringLiteral("color: gray; font-style: italic;"));
+    dictLayout->addWidget(dictNote);
+
+    layout->addWidget(dictGroup);
+
+    // G2P test area
+    auto *testGroup = new QGroupBox(QStringLiteral("G2P 测试"), w);
+    auto *testLayout = new QVBoxLayout(testGroup);
+
+    auto *inputLayout = new QHBoxLayout;
+    m_g2pTestInput = new QLineEdit(testGroup);
+    m_g2pTestInput->setPlaceholderText(QStringLiteral("输入文本进行 G2P 转换测试"));
+    m_g2pTestBtn = new QPushButton(QStringLiteral("转换"), testGroup);
+    inputLayout->addWidget(m_g2pTestInput, 1);
+    inputLayout->addWidget(m_g2pTestBtn);
+    testLayout->addLayout(inputLayout);
+
+    m_g2pTestResult = new QLabel(QStringLiteral("结果将显示在这里"), testGroup);
+    m_g2pTestResult->setWordWrap(true);
+    m_g2pTestResult->setStyleSheet(QStringLiteral("padding: 4px; background: #2a2a2a; border-radius: 3px;"));
+    testLayout->addWidget(m_g2pTestResult);
+
+    connect(m_g2pTestBtn, &QPushButton::clicked, this, [this]() {
+        QString input = m_g2pTestInput->text().trimmed();
+        if (input.isEmpty()) {
+            m_g2pTestResult->setText(QStringLiteral("(请输入文本)"));
+            return;
+        }
+
+        QString engine = m_g2pEngineCombo->currentData().toString();
+        if (engine == QStringLiteral("pinyin")) {
+            dstools::PinyinG2PProvider g2p;
+            auto result = g2p.convert(input.toStdString(), "zh");
+            if (result) {
+                QStringList phonemes;
+                for (const auto &r : result.value())
+                    phonemes << QString::fromStdString(r.phoneme);
+                m_g2pTestResult->setText(phonemes.join(QStringLiteral(" ")));
+            } else {
+                m_g2pTestResult->setText(QStringLiteral("错误: ") + QString::fromStdString(result.error()));
+            }
+        } else if (engine == QStringLiteral("dictionary")) {
+            QString dictPath = m_dictPath->text().trimmed();
+            if (dictPath.isEmpty()) {
+                m_g2pTestResult->setText(QStringLiteral("(请先设置词典路径)"));
+                return;
+            }
+            try {
+                HFA::DictionaryG2P g2p(dictPath.toStdString(), "zh");
+                auto [phSeq, wordSeq, ph2word] = g2p.convert(input.toStdString(), "zh");
+                QStringList phonemes;
+                for (const auto &ph : phSeq)
+                    phonemes << QString::fromStdString(ph);
+                m_g2pTestResult->setText(phonemes.join(QStringLiteral(" ")));
+            } catch (const std::exception &e) {
+                m_g2pTestResult->setText(QStringLiteral("错误: ") + QString::fromLocal8Bit(e.what()));
+            }
+        }
+    });
+
+    layout->addWidget(testGroup);
+
+    // Enable/disable dict path based on engine selection
+    connect(m_g2pEngineCombo, &QComboBox::currentTextChanged, this, [this]() {
+        bool isDict = m_g2pEngineCombo->currentData().toString() == QStringLiteral("dictionary");
+        m_dictPath->setEnabled(isDict);
+        markDirty();
+    });
+    m_dictPath->setEnabled(m_g2pEngineCombo->currentData().toString() == QStringLiteral("dictionary"));
+
+    connect(m_dictPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
+
+    layout->addStretch();
     return w;
 }
 
