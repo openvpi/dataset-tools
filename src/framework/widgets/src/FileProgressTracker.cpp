@@ -52,12 +52,13 @@ void FileProgressTracker::buildLayout() {
         auto *l = new QHBoxLayout(this);
         l->setContentsMargins(0, 0, 0, 0);
 
-        m_label = new QLabel(QStringLiteral("progress:"), this);
+        m_label = new QLabel(this);
         l->addWidget(m_label);
 
         m_progressBar = new QProgressBar(this);
-        m_progressBar->setRange(0, 100);
+        m_progressBar->setRange(0, 1);
         m_progressBar->setValue(0);
+        m_progressBar->setTextVisible(false); // text shown in label instead
         l->addWidget(m_progressBar);
     }
 }
@@ -87,7 +88,9 @@ void FileProgressTracker::updateDisplay() {
     if (m_style == LabelOnly) {
         m_label->setText(m_format.arg(m_completed).arg(m_total).arg(percent));
     } else {
-        m_progressBar->setValue(percent);
+        m_progressBar->setRange(0, m_total);
+        m_progressBar->setValue(m_completed);
+        m_label->setText(m_format.arg(m_completed).arg(m_total).arg(percent));
     }
 }
 
