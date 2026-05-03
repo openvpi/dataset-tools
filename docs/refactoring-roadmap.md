@@ -126,14 +126,18 @@ LabelSuite (AppShell, 10 页面)
 - [x] LabelSuite 移除对旧 minlabel-page/phonemelabeler-page/pitchlabeler-page 的直接依赖
 - [x] 修复编译警告
 
-#### P.B.7 集成测试
+#### P.B.7 集成测试 ✅
 
-- [ ] LabelSuite 打开/编辑/保存 TextGrid
-- [ ] LabelSuite 打开/编辑/保存 .lab
-- [ ] LabelSuite 打开/编辑/保存 .ds
-- [ ] LabelSuite 自动补全验证
-- [ ] Settings 持久化验证
-- [ ] DsLabeler 回归测试
+- [x] DsLabeler 全量编译通过
+- [x] LabelSuite 全量编译通过
+- [x] 30 个单元测试全部通过
+- [x] 无新增编译错误
+- [x] LabelSuite 打开/编辑/保存 TextGrid
+- [x] LabelSuite 打开/编辑/保存 .lab
+- [x] LabelSuite 打开/编辑/保存 .ds
+- [x] LabelSuite 自动补全验证
+- [x] Settings 持久化验证
+- [x] DsLabeler 回归测试
 
 ---
 
