@@ -523,6 +523,11 @@ void SpectrogramWidget::resizeEvent(QResizeEvent *event) {
 
 void SpectrogramWidget::contextMenuEvent(QContextMenuEvent *event) {
     // ADR-62: Right-click = direct play segment (no context menu)
+    if (m_samples.empty() || !m_playWidget) {
+        event->accept();
+        return;
+    }
+
     double clickTime = xToTime(event->pos().x());
 
     double segStart, segEnd;

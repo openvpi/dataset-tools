@@ -48,6 +48,13 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
         m_waveformWidget->setAudioData(samples, sampleRate);
         m_powerWidget->setAudioData(samples, sampleRate);
         m_spectrogramWidget->setAudioData(samples, sampleRate);
+
+        // Set viewport duration from audio length (not document, which may be empty)
+        double audioDuration = sampleRate > 0 ? static_cast<double>(samples.size()) / sampleRate : 0.0;
+        if (audioDuration > 0.0) {
+            m_viewport->setTotalDuration(audioDuration);
+            m_viewport->setViewRange(0.0, audioDuration);
+        }
     }
 
     m_playWidget->openFile(audioPath);
@@ -59,9 +66,13 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
     m_boundaryOverlay->setDocument(m_document);
     m_entryListPanel->setDocument(m_document);
 
-    double duration = usToSec(m_document->totalDuration());
-    m_viewport->setTotalDuration(duration);
-    m_viewport->setViewRange(0.0, duration);
+    // If document has duration info, prefer it (it may include padding)
+    double docDuration = usToSec(m_document->totalDuration());
+    if (docDuration > 0.0) {
+        m_viewport->setTotalDuration(docDuration);
+        m_viewport->setViewRange(0.0, docDuration);
+    }
+
     updateScrollBar();
 
     emit documentLoaded();
