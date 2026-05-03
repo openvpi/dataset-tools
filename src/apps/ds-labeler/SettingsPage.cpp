@@ -16,7 +16,6 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent) {
     m_tabWidget = new QTabWidget(this);
     m_tabWidget->setTabPosition(QTabWidget::North);
 
-    m_tabWidget->addTab(createSlicerTab(), QStringLiteral("切片"));
     m_tabWidget->addTab(createAsrTab(), QStringLiteral("ASR"));
     m_tabWidget->addTab(createDictTab(), QStringLiteral("词典/G2P"));
     m_tabWidget->addTab(createFATab(), QStringLiteral("强制对齐"));
@@ -42,14 +41,6 @@ void SettingsPage::applyToProject() {
         return;
 
     auto defaults = m_project->defaults();
-
-    // Slicer — stored in extra JSON on a pseudo task model entry
-    {
-        auto &cfg = defaults.taskModels[QStringLiteral("slicer")];
-        cfg.extra["threshold"] = m_slicerThreshold->value();
-        cfg.extra["minLength"] = m_slicerMinLength->value();
-        cfg.extra["minInterval"] = m_slicerMinInterval->value();
-    }
 
     // ASR
     {
@@ -115,19 +106,6 @@ void SettingsPage::loadFromProject() {
 
     const auto defaults = m_project->defaults();
 
-    // Slicer
-    {
-        auto it = defaults.taskModels.find(QStringLiteral("slicer"));
-        if (it != defaults.taskModels.end()) {
-            if (it->second.extra.contains("threshold"))
-                m_slicerThreshold->setValue(it->second.extra["threshold"].get<double>());
-            if (it->second.extra.contains("minLength"))
-                m_slicerMinLength->setValue(it->second.extra["minLength"].get<int>());
-            if (it->second.extra.contains("minInterval"))
-                m_slicerMinInterval->setValue(it->second.extra["minInterval"].get<int>());
-        }
-    }
-
     // ASR
     {
         auto it = defaults.taskModels.find(QStringLiteral("asr"));
@@ -183,31 +161,6 @@ void SettingsPage::loadFromProject() {
 }
 
 // ── Tab creation ────────────────────────────────────────────────────────────
-
-QWidget *SettingsPage::createSlicerTab() {
-    auto *w = new QWidget(this);
-    auto *layout = new QFormLayout(w);
-
-    m_slicerThreshold = new QDoubleSpinBox(w);
-    m_slicerThreshold->setRange(-60.0, 0.0);
-    m_slicerThreshold->setValue(-30.0);
-    m_slicerThreshold->setSuffix(QStringLiteral(" dB"));
-    layout->addRow(QStringLiteral("静音阈值:"), m_slicerThreshold);
-
-    m_slicerMinLength = new QSpinBox(w);
-    m_slicerMinLength->setRange(500, 60000);
-    m_slicerMinLength->setValue(5000);
-    m_slicerMinLength->setSuffix(QStringLiteral(" ms"));
-    layout->addRow(QStringLiteral("最小片段长度:"), m_slicerMinLength);
-
-    m_slicerMinInterval = new QSpinBox(w);
-    m_slicerMinInterval->setRange(100, 5000);
-    m_slicerMinInterval->setValue(300);
-    m_slicerMinInterval->setSuffix(QStringLiteral(" ms"));
-    layout->addRow(QStringLiteral("最小静音间隔:"), m_slicerMinInterval);
-
-    return w;
-}
 
 QWidget *SettingsPage::createModelConfigRow(QLineEdit *&pathEdit,
                                              QComboBox *&providerCombo,
@@ -413,11 +366,6 @@ void SettingsPage::markDirty() {
 }
 
 void SettingsPage::connectDirtySignals() {
-    // Slicer
-    connect(m_slicerThreshold, &QDoubleSpinBox::valueChanged, this, &SettingsPage::markDirty);
-    connect(m_slicerMinLength, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
-    connect(m_slicerMinInterval, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
-
     // ASR
     connect(m_asrModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
     connect(m_asrProvider, &QComboBox::currentTextChanged, this, &SettingsPage::markDirty);

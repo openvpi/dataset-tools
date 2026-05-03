@@ -9,7 +9,6 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QDoubleSpinBox>
 #include <QLineEdit>
 #include <QSpinBox>
 #include <QTabWidget>
@@ -54,11 +53,6 @@ private:
     QTabWidget *m_tabWidget = nullptr;
     bool m_dirty = false;
 
-    // ── Slicer tab widgets ──
-    QDoubleSpinBox *m_slicerThreshold = nullptr;
-    QSpinBox *m_slicerMinLength = nullptr;
-    QSpinBox *m_slicerMinInterval = nullptr;
-
     // ── ASR tab widgets ──
     QLineEdit *m_asrModelPath = nullptr;
     QComboBox *m_asrProvider = nullptr;
@@ -85,7 +79,6 @@ private:
     QSpinBox *m_exportResampleRate = nullptr;
     QCheckBox *m_exportIncludeDiscarded = nullptr;
 
-    QWidget *createSlicerTab();
     QWidget *createAsrTab();
     QWidget *createDictTab();
     QWidget *createFATab();

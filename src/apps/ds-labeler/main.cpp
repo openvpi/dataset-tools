@@ -13,6 +13,7 @@
 #include "DsMinLabelPage.h"
 #include "DsPhonemeLabelerPage.h"
 #include "DsPitchLabelerPage.h"
+#include "DsSlicerPage.h"
 #include "ExportPage.h"
 #include "ProjectDataSource.h"
 #include "SettingsPage.h"
@@ -58,15 +59,16 @@ int main(int argc, char *argv[]) {
     auto *dataSource = new dstools::ProjectDataSource(&shell);
     dstools::DsProject *project = nullptr;
 
-    // ── Register all 6 pages ─────────────────────────────────────────────
+    // ── Register all 7 pages ─────────────────────────────────────────────
 
     // Page 0: 工程 (Welcome)
     auto *welcomePage = new dstools::WelcomePage(&shell);
     shell.addPage(welcomePage, "welcome", {}, QStringLiteral("工程"));
 
-    // Page 1: 设置 (Settings)
-    auto *settingsPage = new dstools::SettingsPage(&shell);
-    shell.addPage(settingsPage, "settings", {}, QStringLiteral("设置"));
+    // Page 1: 切片 (Slicer)
+    auto *slicerPage = new dstools::DsSlicerPage(&shell);
+    slicerPage->setDataSource(dataSource);
+    shell.addPage(slicerPage, "slicer", {}, QStringLiteral("切片"));
 
     // Page 2: 歌词 (MinLabel)
     auto *minLabelPage = new dstools::DsMinLabelPage(&shell);
@@ -88,6 +90,10 @@ int main(int argc, char *argv[]) {
     exportPage->setDataSource(dataSource);
     shell.addPage(exportPage, "export", {}, QStringLiteral("导出"));
 
+    // Page 6: 设置 (Settings) — moved to last per ADR-64
+    auto *settingsPage = new dstools::SettingsPage(&shell);
+    shell.addPage(settingsPage, "settings", {}, QStringLiteral("设置"));
+
     // ── Project lifecycle ────────────────────────────────────────────────
 
     auto loadProject = [&](dstools::DsProject *proj, const QString &path) {
@@ -104,7 +110,7 @@ int main(int argc, char *argv[]) {
         shell.setWindowTitle(
             QStringLiteral("DsLabeler — %1").arg(QFileInfo(path).fileName()));
 
-        // Switch to settings page
+        // Switch to slicer page
         shell.setCurrentPage(1);
     };
 
