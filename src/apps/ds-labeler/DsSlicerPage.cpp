@@ -100,65 +100,71 @@ namespace dstools {
 
         mainLayout->addWidget(m_toolbar);
 
-        // ── Slice params panel ────────────────────────────────────────────────
-        auto *paramsGroup = new QGroupBox(QStringLiteral("切片参数"), contentWidget);
-        auto *paramsLayout = new QHBoxLayout(paramsGroup);
+        // ── Slice params panel (compact single row) ──────────────────────────
+        auto *paramsWidget = new QWidget(contentWidget);
+        auto *paramsLayout = new QHBoxLayout(paramsWidget);
+        paramsLayout->setContentsMargins(4, 2, 4, 2);
+        paramsLayout->setSpacing(6);
 
-        auto *formLayout = new QFormLayout;
+        auto addParam = [&](const QString &label, QWidget *spin) {
+            auto *lbl = new QLabel(label, paramsWidget);
+            lbl->setStyleSheet(QStringLiteral("color: #aaa; font-size: 11px;"));
+            paramsLayout->addWidget(lbl);
+            paramsLayout->addWidget(spin);
+        };
 
-        m_thresholdSpin = new QDoubleSpinBox(contentWidget);
+        m_thresholdSpin = new QDoubleSpinBox(paramsWidget);
         m_thresholdSpin->setRange(-60.0, 0.0);
         m_thresholdSpin->setValue(-40.0);
         m_thresholdSpin->setSuffix(QStringLiteral(" dB"));
-        formLayout->addRow(QStringLiteral("阈值:"), m_thresholdSpin);
+        m_thresholdSpin->setFixedWidth(90);
+        addParam(QStringLiteral("阈值"), m_thresholdSpin);
 
-        m_minLengthSpin = new QSpinBox(contentWidget);
+        m_minLengthSpin = new QSpinBox(paramsWidget);
         m_minLengthSpin->setRange(500, 60000);
         m_minLengthSpin->setValue(5000);
         m_minLengthSpin->setSuffix(QStringLiteral(" ms"));
-        formLayout->addRow(QStringLiteral("最小长度:"), m_minLengthSpin);
+        m_minLengthSpin->setFixedWidth(90);
+        addParam(QStringLiteral("长度"), m_minLengthSpin);
 
-        m_minIntervalSpin = new QSpinBox(contentWidget);
+        m_minIntervalSpin = new QSpinBox(paramsWidget);
         m_minIntervalSpin->setRange(100, 5000);
         m_minIntervalSpin->setValue(300);
         m_minIntervalSpin->setSuffix(QStringLiteral(" ms"));
-        formLayout->addRow(QStringLiteral("最小间隔:"), m_minIntervalSpin);
+        m_minIntervalSpin->setFixedWidth(80);
+        addParam(QStringLiteral("间隔"), m_minIntervalSpin);
 
-        auto *formLayout2 = new QFormLayout;
-
-        m_hopSizeSpin = new QSpinBox(contentWidget);
+        m_hopSizeSpin = new QSpinBox(paramsWidget);
         m_hopSizeSpin->setRange(1, 100);
         m_hopSizeSpin->setValue(10);
         m_hopSizeSpin->setSuffix(QStringLiteral(" ms"));
-        formLayout2->addRow(QStringLiteral("Hop:"), m_hopSizeSpin);
+        m_hopSizeSpin->setFixedWidth(70);
+        addParam(QStringLiteral("Hop"), m_hopSizeSpin);
 
-        m_maxSilenceSpin = new QSpinBox(contentWidget);
+        m_maxSilenceSpin = new QSpinBox(paramsWidget);
         m_maxSilenceSpin->setRange(100, 10000);
         m_maxSilenceSpin->setValue(500);
         m_maxSilenceSpin->setSuffix(QStringLiteral(" ms"));
-        formLayout2->addRow(QStringLiteral("最大静音:"), m_maxSilenceSpin);
+        m_maxSilenceSpin->setFixedWidth(80);
+        addParam(QStringLiteral("静音"), m_maxSilenceSpin);
 
-        paramsLayout->addLayout(formLayout);
-        paramsLayout->addLayout(formLayout2);
+        paramsLayout->addSpacing(8);
 
-        // Buttons
-        auto *btnLayout = new QVBoxLayout;
-        m_btnImportMarkers = new QPushButton(QStringLiteral("导入切点..."), contentWidget);
-        m_btnAutoSlice = new QPushButton(QStringLiteral("自动切片"), contentWidget);
-        m_btnReSlice = new QPushButton(QStringLiteral("重新切片"), contentWidget);
-        m_btnSaveMarkers = new QPushButton(QStringLiteral("保存切点..."), contentWidget);
-        m_btnExportAudio = new QPushButton(QStringLiteral("导出音频..."), contentWidget);
+        // Buttons inline
+        m_btnImportMarkers = new QPushButton(QStringLiteral("导入"), paramsWidget);
+        m_btnAutoSlice = new QPushButton(QStringLiteral("切片"), paramsWidget);
+        m_btnReSlice = new QPushButton(QStringLiteral("重切"), paramsWidget);
+        m_btnSaveMarkers = new QPushButton(QStringLiteral("保存"), paramsWidget);
+        m_btnExportAudio = new QPushButton(QStringLiteral("导出..."), paramsWidget);
 
-        btnLayout->addWidget(m_btnImportMarkers);
-        btnLayout->addWidget(m_btnAutoSlice);
-        btnLayout->addWidget(m_btnReSlice);
-        btnLayout->addWidget(m_btnSaveMarkers);
-        btnLayout->addWidget(m_btnExportAudio);
-
-        paramsLayout->addLayout(btnLayout);
+        paramsLayout->addWidget(m_btnImportMarkers);
+        paramsLayout->addWidget(m_btnAutoSlice);
+        paramsLayout->addWidget(m_btnReSlice);
+        paramsLayout->addWidget(m_btnSaveMarkers);
+        paramsLayout->addWidget(m_btnExportAudio);
         paramsLayout->addStretch();
 
-        mainLayout->addWidget(paramsGroup);
+        mainLayout->addWidget(paramsWidget);
 
         // ── Main content splitter (vertical) ──────────────────────────────────
         auto *splitter = new QSplitter(Qt::Vertical, contentWidget);
@@ -235,9 +241,9 @@ namespace dstools {
             updateFileProgress();
         });
 
-        // Update progress when files are added or removed
-        connect(m_audioFileList, &AudioFileListPanel::filesAdded, this, [this]() {
-            updateFileProgress();
+        // Update progress and auto-slice when files are added
+        connect(m_audioFileList, &AudioFileListPanel::filesAdded, this, [this](const QStringList &paths) {
+            autoSliceFiles(paths);
         });
         connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() {
             updateFileProgress();
@@ -686,6 +692,81 @@ namespace dstools {
                 ++completed;
         }
         m_audioFileList->progressTracker()->setProgress(completed, total);
+    }
+
+    void DsSlicerPage::autoSliceFiles(const QStringList &filePaths) {
+        AudioUtil::SlicerParams params;
+        params.threshold = m_thresholdSpin->value();
+        params.minLength = m_minLengthSpin->value();
+        params.minInterval = m_minIntervalSpin->value();
+        params.hopSize = m_hopSizeSpin->value();
+        params.maxSilKept = m_maxSilenceSpin->value();
+
+        for (const QString &filePath : filePaths) {
+            // Skip files that already have slice points
+            if (m_fileSlicePoints.count(filePath) && !m_fileSlicePoints[filePath].empty())
+                continue;
+
+            // Load audio
+            dstools::audio::AudioDecoder decoder;
+            if (!decoder.open(filePath))
+                continue;
+
+            auto fmt = decoder.format();
+            int sr = fmt.sampleRate();
+            int channels = fmt.channels();
+
+            std::vector<float> allSamples;
+            constexpr int kBufSize = 4096;
+            std::vector<float> buffer(kBufSize);
+            while (true) {
+                int read = decoder.read(buffer.data(), 0, kBufSize);
+                if (read <= 0) break;
+                allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
+            }
+            decoder.close();
+
+            // Mix to mono
+            size_t numFrames = allSamples.size() / channels;
+            std::vector<float> mono(numFrames);
+            if (channels > 1) {
+                for (size_t i = 0; i < numFrames; ++i) {
+                    float sum = 0.0f;
+                    for (int c = 0; c < channels; ++c)
+                        sum += allSamples[i * channels + c];
+                    mono[i] = sum / static_cast<float>(channels);
+                }
+            } else {
+                mono.assign(allSamples.begin(), allSamples.end());
+            }
+
+            if (mono.empty())
+                continue;
+
+            // Run slicer
+            auto slicer = AudioUtil::Slicer::fromMilliseconds(sr, params);
+            auto markers = slicer.slice(mono);
+
+            std::vector<double> newPoints;
+            for (size_t i = 0; i + 1 < markers.size(); ++i) {
+                int64_t boundary = markers[i].second;
+                if (markers[i + 1].first > boundary)
+                    boundary = (boundary + markers[i + 1].first) / 2;
+                double cutTime = static_cast<double>(boundary) / sr;
+                newPoints.push_back(cutTime);
+            }
+
+            m_fileSlicePoints[filePath] = std::move(newPoints);
+        }
+
+        // If current file was just sliced, refresh display
+        if (!m_currentAudioPath.isEmpty() && m_fileSlicePoints.count(m_currentAudioPath)) {
+            loadSlicePointsForFile(m_currentAudioPath);
+            refreshBoundaries();
+            updateSlicerListPanel();
+        }
+
+        updateFileProgress();
     }
 
     void DsSlicerPage::onBatchExportAll() {
