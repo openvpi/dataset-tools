@@ -71,13 +71,7 @@ private:
     QCheckBox *m_pitchPreloadEnabled = nullptr;
     QSpinBox *m_pitchPreloadCount = nullptr;
 
-    // ── Export tab widgets ──
-    QCheckBox *m_exportCsv = nullptr;
-    QCheckBox *m_exportDs = nullptr;
-    QSpinBox *m_exportHopSize = nullptr;
-    QSpinBox *m_exportSampleRate = nullptr;
-    QSpinBox *m_exportResampleRate = nullptr;
-    QCheckBox *m_exportIncludeDiscarded = nullptr;
+
 
     // ── General tab widgets ──
     QComboBox *m_languageCombo = nullptr;
@@ -87,7 +81,7 @@ private:
     QWidget *createDictTab();
     QWidget *createFATab();
     QWidget *createPitchTab();
-    QWidget *createExportTab();
+
     QWidget *createPreprocessTab();
 
     QWidget *createModelConfigRow(QLineEdit *&pathEdit, QComboBox *&providerCombo,

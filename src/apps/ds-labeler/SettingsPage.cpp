@@ -23,7 +23,6 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent) {
     m_tabWidget->addTab(createDictTab(), QStringLiteral("词典/G2P"));
     m_tabWidget->addTab(createFATab(), QStringLiteral("强制对齐"));
     m_tabWidget->addTab(createPitchTab(), QStringLiteral("音高/MIDI"));
-    m_tabWidget->addTab(createExportTab(), QStringLiteral("导出"));
     m_tabWidget->addTab(createPreprocessTab(), QStringLiteral("预处理"));
     m_tabWidget->addTab(createGeneralTab(), QStringLiteral("通用"));
 
@@ -85,20 +84,6 @@ void SettingsPage::applyToProject() {
         pre.count = m_pitchPreloadCount->value();
     }
 
-    // Export
-    {
-        QStringList formats;
-        if (m_exportCsv->isChecked())
-            formats << QStringLiteral("csv");
-        if (m_exportDs->isChecked())
-            formats << QStringLiteral("ds");
-        defaults.exportConfig.formats = formats;
-        defaults.exportConfig.hopSize = m_exportHopSize->value();
-        defaults.exportConfig.sampleRate = m_exportSampleRate->value();
-        defaults.exportConfig.resampleRate = m_exportResampleRate->value();
-        defaults.exportConfig.includeDiscarded = m_exportIncludeDiscarded->isChecked();
-    }
-
     m_project->setDefaults(defaults);
     m_dirty = false;
     emit settingsChanged();
@@ -152,16 +137,6 @@ void SettingsPage::loadFromProject() {
         }
     }
 
-    // Export
-    {
-        const auto &ec = defaults.exportConfig;
-        m_exportCsv->setChecked(ec.formats.contains(QStringLiteral("csv")));
-        m_exportDs->setChecked(ec.formats.contains(QStringLiteral("ds")));
-        m_exportHopSize->setValue(ec.hopSize);
-        m_exportSampleRate->setValue(ec.sampleRate);
-        m_exportResampleRate->setValue(ec.resampleRate);
-        m_exportIncludeDiscarded->setChecked(ec.includeDiscarded);
-    }
 }
 
 // ── Tab creation ────────────────────────────────────────────────────────────
@@ -305,43 +280,6 @@ QWidget *SettingsPage::createPitchTab() {
     return w;
 }
 
-QWidget *SettingsPage::createExportTab() {
-    auto *w = new QWidget(this);
-    auto *layout = new QFormLayout(w);
-
-    auto *fmtGroup = new QGroupBox(QStringLiteral("导出格式"), w);
-    auto *fmtLayout = new QVBoxLayout(fmtGroup);
-    m_exportCsv = new QCheckBox(QStringLiteral("transcriptions.csv"), fmtGroup);
-    m_exportCsv->setChecked(true);
-    m_exportDs = new QCheckBox(QStringLiteral("ds/ 文件夹 (.ds 训练文件)"), fmtGroup);
-    m_exportDs->setChecked(true);
-    fmtLayout->addWidget(m_exportCsv);
-    fmtLayout->addWidget(m_exportDs);
-    layout->addRow(fmtGroup);
-
-    m_exportHopSize = new QSpinBox(w);
-    m_exportHopSize->setRange(64, 2048);
-    m_exportHopSize->setValue(512);
-    layout->addRow(QStringLiteral("hop_size:"), m_exportHopSize);
-
-    m_exportSampleRate = new QSpinBox(w);
-    m_exportSampleRate->setRange(8000, 96000);
-    m_exportSampleRate->setValue(44100);
-    m_exportSampleRate->setSuffix(QStringLiteral(" Hz"));
-    layout->addRow(QStringLiteral("采样率:"), m_exportSampleRate);
-
-    m_exportResampleRate = new QSpinBox(w);
-    m_exportResampleRate->setRange(8000, 96000);
-    m_exportResampleRate->setValue(44100);
-    m_exportResampleRate->setSuffix(QStringLiteral(" Hz"));
-    layout->addRow(QStringLiteral("重采样率:"), m_exportResampleRate);
-
-    m_exportIncludeDiscarded = new QCheckBox(QStringLiteral("包含丢弃的切片"), w);
-    layout->addRow(m_exportIncludeDiscarded);
-
-    return w;
-}
-
 QWidget *SettingsPage::createPreprocessTab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
@@ -426,13 +364,6 @@ void SettingsPage::connectDirtySignals() {
     connect(m_pitchPreloadEnabled, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_pitchPreloadCount, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
 
-    // Export
-    connect(m_exportCsv, &QCheckBox::toggled, this, &SettingsPage::markDirty);
-    connect(m_exportDs, &QCheckBox::toggled, this, &SettingsPage::markDirty);
-    connect(m_exportHopSize, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
-    connect(m_exportSampleRate, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
-    connect(m_exportResampleRate, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
-    connect(m_exportIncludeDiscarded, &QCheckBox::toggled, this, &SettingsPage::markDirty);
 }
 
 } // namespace dstools
