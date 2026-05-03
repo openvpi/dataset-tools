@@ -4,6 +4,7 @@
 #include "SliceListPanel.h"
 
 #include <QLabel>
+#include <QIcon>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
@@ -56,6 +57,7 @@ DsMinLabelPage::DsMinLabelPage(QWidget *parent)
     m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
     m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
     m_playAction = new QAction(QStringLiteral("播放/停止"), this);
+    m_playAction->setIcon(QIcon(QStringLiteral(":/icons/play.svg")));
 
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
     m_shortcutManager->bind(m_prevAction, DsLabelerKeys::NavigationPrev,
