@@ -21,6 +21,8 @@
 #include <dstools/AudioDecoder.h>
 #include <dstools/WaveFormat.h>
 
+#include <audio-util/Slicer.h>
+
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFile>
@@ -287,71 +289,34 @@ namespace dstools {
     }
 
     void DsSlicerPage::onAutoSlice() {
-        // RMS-based silence detection on mono samples
         const auto &samples = m_waveformPanel->monoSamples();
         if (samples.empty())
             return;
 
         int sr = m_waveformPanel->sampleRate();
-        double thresholdDb = m_thresholdSpin->value();
-        int minLengthMs = m_minLengthSpin->value();
-        int minIntervalMs = m_minIntervalSpin->value();
-        int hopMs = m_hopSizeSpin->value();
-        int maxSilenceMs = m_maxSilenceSpin->value();
 
-        double threshold = std::pow(10.0, thresholdDb / 20.0);
-        int hopSamples = sr * hopMs / 1000;
-        int minLengthSamples = sr * minLengthMs / 1000;
-        int minIntervalSamples = sr * minIntervalMs / 1000;
-        int maxSilenceSamples = sr * maxSilenceMs / 1000;
+        // Build slicer params from UI
+        AudioUtil::SlicerParams params;
+        params.threshold = m_thresholdSpin->value();
+        params.minLength = m_minLengthSpin->value();
+        params.minInterval = m_minIntervalSpin->value();
+        params.hopSize = m_hopSizeSpin->value();
+        params.maxSilKept = m_maxSilenceSpin->value();
 
-        if (hopSamples <= 0)
-            hopSamples = 1;
+        auto slicer = AudioUtil::Slicer::fromMilliseconds(sr, params);
+        auto markers = slicer.slice(samples);
 
-        // Compute RMS per hop
-        int numHops = static_cast<int>(samples.size()) / hopSamples;
-        std::vector<bool> isSilent(numHops, false);
-        for (int i = 0; i < numHops; ++i) {
-            int start = i * hopSamples;
-            int end = std::min(start + hopSamples, static_cast<int>(samples.size()));
-            double sum = 0.0;
-            for (int s = start; s < end; ++s)
-                sum += static_cast<double>(samples[s]) * samples[s];
-            double rms = std::sqrt(sum / (end - start));
-            isSilent[i] = (rms < threshold);
-        }
-
-        // Find silence regions and place cut points
+        // Convert marker boundaries to slice points (seconds)
+        // markers are (startSample, endSample) pairs; slice points are between segments
         std::vector<double> newPoints;
-        int silenceStart = -1;
-        int lastCutSample = 0;
-
-        for (int i = 0; i < numHops; ++i) {
-            int samplePos = i * hopSamples;
-            if (isSilent[i]) {
-                if (silenceStart < 0)
-                    silenceStart = samplePos;
-            } else {
-                if (silenceStart >= 0) {
-                    int silenceEnd = samplePos;
-                    int silenceLen = silenceEnd - silenceStart;
-                    int segLen = silenceStart - lastCutSample;
-
-                    if (silenceLen >= minIntervalSamples && segLen >= minLengthSamples) {
-                        // Cut at the middle of the silence
-                        int cutSample = silenceStart + silenceLen / 2;
-                        double cutTime = static_cast<double>(cutSample) / sr;
-                        newPoints.push_back(cutTime);
-                        lastCutSample = cutSample;
-                    } else if (silenceLen >= maxSilenceSamples) {
-                        int cutSample = silenceStart + silenceLen / 2;
-                        double cutTime = static_cast<double>(cutSample) / sr;
-                        newPoints.push_back(cutTime);
-                        lastCutSample = cutSample;
-                    }
-                    silenceStart = -1;
-                }
-            }
+        for (size_t i = 0; i + 1 < markers.size(); ++i) {
+            // Boundary between segment i and i+1: end of segment i
+            int64_t boundary = markers[i].second;
+            // Average with start of next segment for smoother cut point
+            if (markers[i + 1].first > boundary)
+                boundary = (boundary + markers[i + 1].first) / 2;
+            double cutTime = static_cast<double>(boundary) / sr;
+            newPoints.push_back(cutTime);
         }
 
         // Replace current points

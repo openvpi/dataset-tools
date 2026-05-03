@@ -12,14 +12,7 @@ namespace AudioUtil
     /// List of sample-range pairs (start, end).
     using MarkerList = std::vector<std::pair<int64_t, int64_t>>;
 
-    /// @brief Error codes returned by the Slicer.
-    enum class AUDIO_UTIL_EXPORT SlicerError {
-        Ok = 0,            ///< No error.
-        InvalidArgument,   ///< Invalid parameter value.
-        AudioError         ///< Audio processing failure.
-    };
-
-    /// @brief Configuration parameters for the audio slicer.
+    /// @brief Configuration parameters for the audio slicer (millisecond-based).
     struct AUDIO_UTIL_EXPORT SlicerParams {
         double threshold = -40.0;  ///< RMS threshold in dB.
         int minLength = 5000;      ///< Minimum slice length in milliseconds.
@@ -33,12 +26,12 @@ namespace AudioUtil
     public:
         /// @brief Construct a Slicer with sample-level parameters.
         /// @param sampleRate Audio sample rate in Hz.
-        /// @param threshold RMS threshold in dB.
+        /// @param threshold Linear amplitude threshold (NOT dB).
         /// @param hopSize Hop size in samples.
         /// @param winSize Window size in samples.
-        /// @param minLength Minimum slice length in samples.
-        /// @param minInterval Minimum silence interval in samples.
-        /// @param maxSilKept Maximum silence kept at boundaries in samples.
+        /// @param minLength Minimum slice length in hop-frames.
+        /// @param minInterval Minimum silence interval in hop-frames.
+        /// @param maxSilKept Maximum silence kept at boundaries in hop-frames.
         Slicer(int sampleRate, float threshold, int hopSize, int winSize, int minLength, int minInterval,
                int maxSilKept);
 
@@ -49,28 +42,18 @@ namespace AudioUtil
         static Slicer fromMilliseconds(int sampleRate, const SlicerParams &params);
 
         /// @brief Slice audio samples into non-silent regions.
-        /// @param samples Input audio samples.
+        /// @param samples Input audio samples (mono).
         /// @return List of (start, end) sample-range pairs.
         MarkerList slice(const std::vector<float> &samples) const;
 
-        /// @brief Get the current error code.
-        /// @return SlicerError code.
-        SlicerError errorCode() const;
-
-        /// @brief Get the current error message.
-        /// @return Error description string.
-        std::string errorMessage() const;
-
     private:
         int m_sampleRate;
-        double m_threshold;
+        float m_threshold;
         int m_hopSize;
         int m_winSize;
         int m_minLength;
         int m_minInterval;
         int m_maxSilKept;
-        SlicerError m_errorCode;
-        std::string m_errorMsg;
 
         /// @brief Compute RMS energy for each frame.
         static std::vector<double> get_rms(const std::vector<float> &samples, int frame_length, int hop_length);
