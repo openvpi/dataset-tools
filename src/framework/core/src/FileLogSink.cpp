@@ -8,7 +8,14 @@
 #include <QMutex>
 #include <QMutexLocker>
 
+#include <memory>
+
 namespace dsfw {
+
+struct FileLogState {
+    std::unique_ptr<QFile> file;
+    QMutex mutex;
+};
 
 dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName) {
     QDir dir(logDir);
@@ -18,17 +25,16 @@ dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName
     QString fileName = logDir + QStringLiteral("/") + appName + QStringLiteral("_")
         + QDate::currentDate().toString(QStringLiteral("yyyyMMdd")) + QStringLiteral(".log");
 
-    auto *file = new QFile(fileName);
-    if (!file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-        delete file;
+    auto state = std::make_shared<FileLogState>();
+    state->file = std::make_unique<QFile>(fileName);
+    if (!state->file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        state->file.reset();
         return [](const dstools::LogEntry &) {};
     }
 
-    auto *mutex = new QMutex();
-
-    return [file, mutex](const dstools::LogEntry &entry) {
-        QMutexLocker locker(mutex);
-        if (!file->isOpen()) return;
+    return [state](const dstools::LogEntry &entry) {
+        QMutexLocker locker(&state->mutex);
+        if (!state->file || !state->file->isOpen()) return;
 
         const char *levelStr = "TRACE";
         switch (entry.level) {
@@ -41,7 +47,7 @@ dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName
         }
 
         QDateTime dt = QDateTime::fromMSecsSinceEpoch(entry.timestampMs);
-        QTextStream stream(file);
+        QTextStream stream(state->file.get());
         stream << dt.toString(QStringLiteral("yyyy-MM-dd HH:mm:ss.zzz"))
                << QStringLiteral(" [") << levelStr << QStringLiteral("] ")
                << QString::fromStdString(entry.category)
