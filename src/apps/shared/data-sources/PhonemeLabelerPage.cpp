@@ -382,9 +382,8 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     m_faRunning = true;
     auto *hfa = m_hfa.get();
-    auto *source = m_source;
 
-    (void) QtConcurrent::run([hfa, audioPath, graphemeTexts, sliceId, source, this]() {
+    (void) QtConcurrent::run([hfa, audioPath, graphemeTexts, sliceId, this]() {
         HFA::WordList words;
         for (const auto &text : graphemeTexts) {
             HFA::Word word;
