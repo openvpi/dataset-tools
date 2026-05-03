@@ -8,11 +8,15 @@
 
 #include <QDoubleSpinBox>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QSpinBox>
 #include <QToolBar>
 #include <QToolButton>
 #include <QUndoStack>
 #include <QWidget>
+
+#include <dstools/ViewportController.h>
+#include <ui/SliceBoundaryModel.h>
 
 #include <map>
 
@@ -21,25 +25,19 @@ namespace dstools {
     class ProjectDataSource;
     class AudioFileListPanel;
 
-    namespace waveform {
-        class WaveformPanel;
-        class MelSpectrogramWidget;
-    } // namespace waveform
+    namespace phonemelabeler {
+        class WaveformWidget;
+        class SpectrogramWidget;
+        class TimeRulerWidget;
+    } // namespace phonemelabeler
 
     class SliceNumberLayer;
     class SlicerListPanel;
 
-    /// @brief Slicer page for DsLabeler (ADR-61, ADR-64).
+    /// @brief Slicer page for DsLabeler.
     ///
-    /// Provides auto-slice, manual slice editing (add/move/delete cut lines),
-    /// and slice audio export. Slice parameters are embedded directly in this
-    /// page (not in Settings). Layout:
-    ///   - Left sidebar: AudioFileListPanel (drag-drop audio files)
-    ///   - Slice params panel + action buttons
-    ///   - WaveformPanel (TimeRuler + Waveform + scrollbar)
-    ///   - MelSpectrogramWidget (collapsible)
-    ///   - SliceNumberLayer (numeric labels for each segment)
-    ///   - SlicerListPanel (bottom panel with slice list)
+    /// Uses phoneme-editor's WaveformWidget, SpectrogramWidget, and TimeRulerWidget
+    /// for visualization, driven by a SliceBoundaryModel.
     class DsSlicerPage : public QWidget, public labeler::IPageActions, public labeler::IPageLifecycle {
         Q_OBJECT
         Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
@@ -61,12 +59,24 @@ namespace dstools {
         ProjectDataSource *m_dataSource = nullptr;
         QUndoStack *m_undoStack = nullptr;
 
+        // Viewport
+        dstools::widgets::ViewportController *m_viewport = nullptr;
+        QScrollBar *m_hScrollBar = nullptr;
+
+        // Boundary model
+        phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;
+
         // UI components
         AudioFileListPanel *m_audioFileList = nullptr;  // left sidebar
-        waveform::WaveformPanel *m_waveformPanel = nullptr;
-        waveform::MelSpectrogramWidget *m_melSpectrogram = nullptr;
+        phonemelabeler::TimeRulerWidget *m_timeRuler = nullptr;
+        phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
+        phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
         SliceNumberLayer *m_sliceNumberLayer = nullptr;
         SlicerListPanel *m_sliceListPanel = nullptr;  // bottom panel
+
+        // Audio data
+        std::vector<float> m_samples;
+        int m_sampleRate = 44100;
 
         // Slice params
         class QDoubleSpinBox *m_thresholdSpin = nullptr;
@@ -86,6 +96,10 @@ namespace dstools {
         QToolBar *m_toolbar = nullptr;
         QToolButton *m_btnPointer = nullptr;
         QToolButton *m_btnKnife = nullptr;
+
+        // Tool mode
+        enum class ToolMode { Pointer, Knife };
+        ToolMode m_toolMode = ToolMode::Pointer;
 
         // Slice boundary times (seconds)
         std::vector<double> m_slicePoints;
@@ -112,6 +126,8 @@ namespace dstools {
         void autoSliceFiles(const QStringList &filePaths);
         void promptSliceUpdateIfNeeded();
         void saveSlicerParamsToProject();
+        void loadAudioFile(const QString &filePath);
+        void updateScrollBar();
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

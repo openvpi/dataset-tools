@@ -12,10 +12,11 @@
 #include <dstools/DsItemManager.h>
 #include <dstools/DsItemRecord.h>
 
-#include <MelSpectrogramWidget.h>
-#include <PlaybackController.h>
+#include <ui/WaveformWidget.h>
+#include <ui/SpectrogramWidget.h>
+#include <ui/TimeRulerWidget.h>
+#include <ui/SliceBoundaryModel.h>
 #include <QCheckBox>
-#include <WaveformPanel.h>
 
 #include <dsfw/widgets/FileProgressTracker.h>
 
@@ -39,6 +40,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QToolBar>
 #include <QToolButton>
 
@@ -54,6 +56,8 @@ namespace dstools {
 
     DsSlicerPage::DsSlicerPage(QWidget *parent) : QWidget(parent) {
         m_undoStack = new QUndoStack(this);
+        m_viewport = new dstools::widgets::ViewportController(this);
+        m_boundaryModel = new phonemelabeler::SliceBoundaryModel();
         buildLayout();
         connectSignals();
     }
@@ -171,17 +175,33 @@ namespace dstools {
         // ── Main content splitter (vertical) ──────────────────────────────────
         auto *splitter = new QSplitter(Qt::Vertical, contentWidget);
 
-        // Waveform panel
-        m_waveformPanel = new waveform::WaveformPanel(contentWidget);
-        splitter->addWidget(m_waveformPanel);
+        // Time ruler + Waveform + Scrollbar container
+        auto *waveformContainer = new QWidget(contentWidget);
+        auto *waveformLayout = new QVBoxLayout(waveformContainer);
+        waveformLayout->setContentsMargins(0, 0, 0, 0);
+        waveformLayout->setSpacing(0);
 
-        // Mel spectrogram (collapsible)
-        m_melSpectrogram = new waveform::MelSpectrogramWidget(m_waveformPanel->viewport(), contentWidget);
-        m_melSpectrogram->setVisible(true); // Show mel spectrogram below waveform
-        splitter->addWidget(m_melSpectrogram);
+        m_timeRuler = new phonemelabeler::TimeRulerWidget(m_viewport, waveformContainer);
+        waveformLayout->addWidget(m_timeRuler);
+
+        m_waveformWidget = new phonemelabeler::WaveformWidget(m_viewport, waveformContainer);
+        m_waveformWidget->setBoundaryModel(m_boundaryModel);
+        // No undo stack — slicer handles undo externally via SliceCommands
+        waveformLayout->addWidget(m_waveformWidget, 1);
+
+        m_hScrollBar = new QScrollBar(Qt::Horizontal, waveformContainer);
+        waveformLayout->addWidget(m_hScrollBar);
+
+        splitter->addWidget(waveformContainer);
+
+        // Spectrogram (collapsible)
+        m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_viewport, contentWidget);
+        m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
+        m_spectrogramWidget->setVisible(true);
+        splitter->addWidget(m_spectrogramWidget);
 
         // Slice number layer
-        m_sliceNumberLayer = new SliceNumberLayer(m_waveformPanel->viewport(), contentWidget);
+        m_sliceNumberLayer = new SliceNumberLayer(m_viewport, contentWidget);
         splitter->addWidget(m_sliceNumberLayer);
 
         splitter->setStretchFactor(0, 4); // waveform
@@ -218,29 +238,42 @@ namespace dstools {
         connect(m_btnPointer, &QToolButton::clicked, this, [this]() {
             m_btnPointer->setChecked(true);
             m_btnKnife->setChecked(false);
-            m_waveformPanel->setToolMode(waveform::ToolMode::Pointer);
+            m_toolMode = ToolMode::Pointer;
         });
         connect(m_btnKnife, &QToolButton::clicked, this, [this]() {
             m_btnKnife->setChecked(true);
             m_btnPointer->setChecked(false);
-            m_waveformPanel->setToolMode(waveform::ToolMode::Knife);
+            m_toolMode = ToolMode::Knife;
+        });
+
+        // Viewport → sync ruler and scrollbar
+        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+                m_timeRuler, &phonemelabeler::TimeRulerWidget::setViewport);
+        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+                m_waveformWidget, &phonemelabeler::WaveformWidget::setViewport);
+        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+                m_spectrogramWidget, &phonemelabeler::SpectrogramWidget::setViewport);
+        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+                m_sliceNumberLayer, &SliceNumberLayer::setViewport);
+        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+                this, [this](const dstools::widgets::ViewportState &) { updateScrollBar(); });
+
+        // Scrollbar
+        connect(m_hScrollBar, &QScrollBar::valueChanged, this, [this](int value) {
+            double totalDuration = m_viewport->totalDuration();
+            if (totalDuration <= 0.0) return;
+            double startSec = value / 1000.0;
+            double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
+            m_viewport->setViewRange(startSec, startSec + viewDuration);
         });
 
         // Left sidebar: audio file selection → load audio for slicing
         connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
-            // Save current file's slice points before switching
             saveCurrentSlicePoints();
-
-            m_waveformPanel->loadAudio(filePath);
+            loadAudioFile(filePath);
             m_currentAudioPath = filePath;
             m_undoStack->clear();
-
-            // Update mel spectrogram with the loaded audio data
-            m_melSpectrogram->setAudioData(m_waveformPanel->monoSamples(), m_waveformPanel->sampleRate());
-
-            // Restore saved slice points for this file, or start fresh
             loadSlicePointsForFile(filePath);
-
             refreshBoundaries();
             updateSlicerListPanel();
             updateFileProgress();
@@ -252,48 +285,35 @@ namespace dstools {
         connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); });
 
         // Knife mode: left-click on waveform → add slice point
-        connect(m_waveformPanel, &waveform::WaveformPanel::positionClicked, this, [this](double sec) {
-            auto refreshFn = [this]() {
-                refreshBoundaries();
-                updateSlicerListPanel();
-            };
-            m_undoStack->push(new AddSlicePointCommand(m_slicePoints, sec, refreshFn));
-        });
-
-        // Pointer mode: boundary click → select
-        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryClicked, this, [this](int index) {
-            m_selectedBoundary = index;
-            m_waveformPanel->setSelectedBoundary(index);
-        });
-
-        // Pointer mode: boundary drag → move
-        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryMoved, this,
-                [this](int index, double oldTime, double newTime) {
-                    if (index >= 0 && index < static_cast<int>(m_slicePoints.size())) {
-                        auto refreshFn = [this]() {
-                            refreshBoundaries();
-                            updateSlicerListPanel();
-                        };
-                        m_undoStack->push(new MoveSlicePointCommand(m_slicePoints, index, oldTime, newTime, refreshFn));
-                    }
-                });
-
-        // Pointer mode: right-click boundary → delete
-        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryRightClicked, this, [this](int index) {
-            if (index >= 0 && index < static_cast<int>(m_slicePoints.size())) {
+        connect(m_waveformWidget, &phonemelabeler::WaveformWidget::positionClicked, this, [this](double sec) {
+            if (m_toolMode == ToolMode::Knife) {
                 auto refreshFn = [this]() {
                     refreshBoundaries();
                     updateSlicerListPanel();
                 };
-                m_undoStack->push(new RemoveSlicePointCommand(m_slicePoints, index, refreshFn));
-                m_selectedBoundary = -1;
-                m_waveformPanel->setSelectedBoundary(-1);
+                m_undoStack->push(new AddSlicePointCommand(m_slicePoints, sec, refreshFn));
+            }
+        });
+
+        // Boundary drag finished → create undo command for the move
+        connect(m_waveformWidget, &phonemelabeler::WaveformWidget::boundaryDragFinished,
+                this, [this](int /*tierIndex*/, int boundaryIndex, dstools::TimePos newTime) {
+            if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
+                // The model was already updated by the widget (no-undo-stack path).
+                // Sync m_slicePoints from model.
+                m_slicePoints = m_boundaryModel->slicePointsSec();
+                refreshBoundaries();
+                updateSlicerListPanel();
             }
         });
 
         // SlicerListPanel context menu: add/delete slice points
         connect(m_sliceListPanel, &SlicerListPanel::sliceDoubleClicked, this,
-                [this](int /*index*/, double startSec, double /*endSec*/) { m_waveformPanel->scrollToTime(startSec); });
+                [this](int /*index*/, double startSec, double /*endSec*/) {
+                    // Scroll viewport to show this time
+                    double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
+                    m_viewport->setViewRange(startSec, startSec + viewDuration);
+                });
 
         connect(m_sliceListPanel, &SlicerListPanel::addSlicePointRequested, this, [this](double timeSec) {
             auto refreshFn = [this]() {
@@ -315,11 +335,10 @@ namespace dstools {
     }
 
     void DsSlicerPage::onAutoSlice() {
-        const auto &samples = m_waveformPanel->monoSamples();
-        if (samples.empty())
+        if (m_samples.empty())
             return;
 
-        int sr = m_waveformPanel->sampleRate();
+        int sr = m_sampleRate;
 
         // Build slicer params from UI
         AudioUtil::SlicerParams params;
@@ -330,7 +349,7 @@ namespace dstools {
         params.maxSilKept = m_maxSilenceSpin->value();
 
         auto slicer = AudioUtil::Slicer::fromMilliseconds(sr, params);
-        auto markers = slicer.slice(samples);
+        auto markers = slicer.slice(m_samples);
 
         // Convert marker boundaries to slice points (seconds)
         // markers are (startSample, endSample) pairs; slice points are between segments
@@ -407,7 +426,7 @@ namespace dstools {
     }
 
     void DsSlicerPage::onExportAudio() {
-        if (m_slicePoints.empty() || m_waveformPanel->monoSamples().empty()) {
+        if (m_slicePoints.empty() || m_samples.empty()) {
             QMessageBox::information(this, tr("Export"), tr("No slices to export. Run auto-slice first."));
             return;
         }
@@ -430,8 +449,8 @@ namespace dstools {
         if (!dir.exists())
             dir.mkpath(outputDir);
 
-        const auto &samples = m_waveformPanel->monoSamples();
-        int sr = m_waveformPanel->sampleRate();
+        const auto &samples = m_samples;
+        int sr = m_sampleRate;
         QString prefix = dlg.prefix();
         int digits = dlg.numDigits();
 
@@ -572,11 +591,9 @@ namespace dstools {
     }
 
     void DsSlicerPage::refreshBoundaries() {
-        std::vector<waveform::BoundaryInfo> boundaries;
-        boundaries.reserve(m_slicePoints.size());
-        for (double t : m_slicePoints)
-            boundaries.push_back({t});
-        m_waveformPanel->setBoundaries(boundaries);
+        m_boundaryModel->setSlicePoints(m_slicePoints);
+        m_waveformWidget->updateBoundaryOverlay();
+        m_spectrogramWidget->updateBoundaryOverlay();
         m_sliceNumberLayer->setSlicePoints(m_slicePoints);
     }
 
@@ -633,7 +650,7 @@ namespace dstools {
             if (QDir::isRelativePath(audioPath))
                 audioPath = QDir(project->workingDirectory()).absoluteFilePath(audioPath);
             if (QFile::exists(audioPath)) {
-                m_waveformPanel->loadAudio(audioPath);
+                loadAudioFile(audioPath);
                 m_slicePoints.clear();
                 refreshBoundaries();
                 updateSlicerListPanel();
@@ -657,10 +674,8 @@ namespace dstools {
 
     void DsSlicerPage::updateSlicerListPanel() {
         double totalDuration = 0.0;
-        const auto &samples = m_waveformPanel->monoSamples();
-        int sr = m_waveformPanel->sampleRate();
-        if (sr > 0 && !samples.empty())
-            totalDuration = static_cast<double>(samples.size()) / sr;
+        if (m_sampleRate > 0 && !m_samples.empty())
+            totalDuration = static_cast<double>(m_samples.size()) / m_sampleRate;
 
         QString prefix = QStringLiteral("slice");
         if (m_audioFileList && !m_audioFileList->currentFilePath().isEmpty())
@@ -682,8 +697,7 @@ namespace dstools {
             return;
         }
         if (event->key() == Qt::Key_Escape) {
-            // Stop playback
-            m_waveformPanel->playback()->stop();
+            // Stop playback (no-op if no playback controller)
             event->accept();
             return;
         }
@@ -1027,6 +1041,64 @@ namespace dstools {
 
         QString saveError;
         m_dataSource->project()->save(saveError);
+    }
+
+    void DsSlicerPage::loadAudioFile(const QString &filePath) {
+        dstools::audio::AudioDecoder decoder;
+        if (!decoder.open(filePath))
+            return;
+
+        auto fmt = decoder.format();
+        m_sampleRate = fmt.sampleRate();
+        int channels = fmt.channels();
+
+        std::vector<float> allSamples;
+        constexpr int kBufSize = 4096;
+        std::vector<float> buffer(kBufSize);
+        while (true) {
+            int read = decoder.read(buffer.data(), 0, kBufSize);
+            if (read <= 0) break;
+            allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
+        }
+        decoder.close();
+
+        // Mix to mono
+        if (channels > 1) {
+            size_t numFrames = allSamples.size() / channels;
+            m_samples.resize(numFrames);
+            for (size_t i = 0; i < numFrames; ++i) {
+                float sum = 0.0f;
+                for (int c = 0; c < channels; ++c)
+                    sum += allSamples[i * channels + c];
+                m_samples[i] = sum / static_cast<float>(channels);
+            }
+        } else {
+            m_samples = std::move(allSamples);
+        }
+
+        // Feed to visualization widgets
+        m_waveformWidget->setAudioData(m_samples, m_sampleRate);
+        m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
+
+        // Update boundary model duration
+        double duration = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
+        m_boundaryModel->setDuration(duration);
+        m_viewport->setTotalDuration(duration);
+        m_viewport->setViewRange(0.0, duration);
+        updateScrollBar();
+    }
+
+    void DsSlicerPage::updateScrollBar() {
+        double totalDuration = m_viewport->totalDuration();
+        if (totalDuration <= 0.0) {
+            m_hScrollBar->setRange(0, 0);
+            return;
+        }
+        double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
+        int maxVal = static_cast<int>((totalDuration - viewDuration) * 1000.0);
+        m_hScrollBar->setRange(0, qMax(0, maxVal));
+        m_hScrollBar->setValue(static_cast<int>(m_viewport->state().startSec * 1000.0));
+        m_hScrollBar->setPageStep(static_cast<int>(viewDuration * 1000.0));
     }
 
 } // namespace dstools
