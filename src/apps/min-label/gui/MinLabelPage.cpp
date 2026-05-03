@@ -345,13 +345,13 @@ namespace Minlabel {
             return true;
         }
 
-        LabelData data;
-        data.lab = labContent;
-        data.rawText = txtContent;
-        data.isCheck = true;
+        LabelData labelData;
+        labelData.lab = labContent;
+        labelData.rawText = txtContent;
+        labelData.isCheck = true;
 
         const QString labFilePath = audioToOtherSuffix(filename, "lab");
-        auto result = MinLabelService::saveLabel(jsonFilePath, labFilePath, data);
+        auto result = MinLabelService::saveLabel(jsonFilePath, labFilePath, labelData);
         if (!result) {
             QMessageBox::critical(this, QApplication::applicationName(),
                                   QString("Failed to write to file: %1").arg(QString::fromStdString(result.error())));

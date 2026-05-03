@@ -1,4 +1,4 @@
-﻿#include "ExportDialog.h"
+#include "ExportDialog.h"
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -48,7 +48,7 @@ namespace Minlabel {
         connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-        connect(this, &QDialog::accepted, this, [=] {
+        connect(this, &QDialog::accepted, this, [this] {
             exportInfo.outputDir = m_outputDir->path();
             exportInfo.folderName = folderNameEdit->text();
             exportInfo.exportAudio = expAudio->isChecked();

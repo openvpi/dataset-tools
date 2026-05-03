@@ -68,7 +68,7 @@ bool AppInit::init(QApplication &app, bool initCrashHandler) {
 
     // 2. Font setup
 #ifdef Q_OS_WIN
-    NONCLIENTMETRICSW metrics = {sizeof(NONCLIENTMETRICSW)};
+    NONCLIENTMETRICSW metrics = {sizeof(NONCLIENTMETRICSW), {0}};
     if (SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICSW), &metrics, 0)) {
         QString fontFace = QString::fromWCharArray(metrics.lfMessageFont.lfFaceName);
         qreal fontPointSize = 0.0;

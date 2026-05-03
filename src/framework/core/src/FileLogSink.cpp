@@ -19,7 +19,10 @@ dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName
         + QDate::currentDate().toString(QStringLiteral("yyyyMMdd")) + QStringLiteral(".log");
 
     auto *file = new QFile(fileName);
-    file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
+    if (!file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        delete file;
+        return [](const dstools::LogEntry &) {};
+    }
 
     auto *mutex = new QMutex();
 

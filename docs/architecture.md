@@ -17,12 +17,12 @@
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                           应用层 (src/apps/)                             │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ LabelSuite (通用标注工具集)                                               │
-│   MinLabelPage · PhonemeLabelerPage · PitchLabelerPage                  │
+│ LabelSuite (通用标注工具集, 9 页面)                                        │
+│   Slice · ASR · Label · Align · Phone · CSV · MIDI · DS · Pitch        │
 │                                                                          │
-│ DsLabeler (DiffSinger 专用标注器)                                         │
-│   WelcomePage · SettingsPage · DsMinLabelPage                           │
-│   DsPhonemeLabelerPage · DsPitchLabelerPage · ExportPage                │
+│ DsLabeler (DiffSinger 专用标注器, 7 页面)                                  │
+│   WelcomePage · DsSlicerPage · DsMinLabelPage                           │
+│   DsPhonemeLabelerPage · DsPitchLabelerPage · ExportPage · SettingsPage │
 │                                                                          │
 │ dstools-cli · TestShell · WidgetGallery                                  │
 └─────┬──────┴────┬─────┴─────┬──────┴─────┬──────┴────┬─────┴─────┬──────┘
@@ -93,12 +93,9 @@
 │                   │ │
 │ DsDocument        │ │
 │ DsProject         │ │
-│ DsItemManager     │ │
 │ ModelManager      │ │
 │ CsvToDsConverter  │ │
 │ TextGridToCsv     │ │
-│ TranscriptionCsv  │ │
-│ TranscriptionPipe │ │
 │ PitchUtils/F0Curve│ │
 │ PinyinG2PProvider │ │
 │ ExportFormats     │ │
@@ -141,7 +138,7 @@
 | LabelSuite | dstools-widgets, dstools-domain, dstools-audio, cpp-pinyin, cpp-kana, textgrid, FFTW3, SndFile, nlohmann_json |
 | DsLabeler | dstools-widgets, dstools-domain, dstools-audio, audio-util, hubert-infer, game-infer, rmvpe-infer, FunAsr, cpp-pinyin, cpp-kana, textgrid, FFTW3, SndFile, nlohmann_json, Qt::Concurrent |
 
-> **LabelSuite** 使用 `dsfw::AppShell` 多页面模式，3 个独立标注页面，各自使用文件系统 I/O。**DsLabeler** 使用多页面模式，6 个页面由 `.dsproj` 工程文件驱动。详见 [unified-app-design.md](unified-app-design.md)。
+> **LabelSuite** 使用 `dsfw::AppShell` 多页面模式，9 个标注页面（Slice, ASR, Label, Align, Phone, CSV, MIDI, DS, Pitch），各自使用文件系统 I/O。**DsLabeler** 使用多页面模式，7 个页面（Welcome, Slicer, MinLabel, PhonemeLabeler, PitchLabeler, Export, Settings）由 `.dsproj` 工程文件驱动。详见 [unified-app-design.md](unified-app-design.md)。
 
 ## 共享库
 

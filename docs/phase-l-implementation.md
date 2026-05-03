@@ -157,11 +157,11 @@ class DsProject {
 | L.6 | ✓ 编译修复 | 所有现有 24 测试 + 更新后测试全绿 | GameInfer/HubertFA/CLI 功能等价 | ✅ |
 | L.7 | ✓ 编译修复 | TestF0Curve 适配后全绿 | PitchLabeler 功能等价 | ✅ |
 | L.8 | ✓ 编译修复 | 手动验证 PhonemeLabeler 边界拖动/绑定 | 拖动/绑定行为不变 | ✅ |
-| L.9 | ✓ 编译修复 | 手动验证 DiffSingerLabeler 全流程 | 9 步 wizard 功能等价 | 待做 |
-| L.10 | ✓ deprecated 警告 | 所有测试全绿 | 无功能退化 | 待做 |
-| L.11 | ✓ 编译修复 | TestDsProject 全绿 | .dsproj 读写兼容 | 待做 |
+| L.9 | ✓ 编译修复 | 手动验证 DiffSingerLabeler 全流程 | 9 步 wizard 功能等价 | ✅ |
+| L.10 | ✓ deprecated 警告 | 所有测试全绿 | 无功能退化 | ✅ |
+| L.11 | ✓ 编译修复 | TestDsProject 全绿 | .dsproj 读写兼容 | ✅ |
 | L.12 | ✓ 编译修复 | 所有现有测试全绿 | 编译产物二进制一致（除调试信息格式） | ✅ |
 
 ---
 
-> 更新时间：2026-05-02
+> 更新时间：2026-05-03

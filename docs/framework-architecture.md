@@ -25,7 +25,7 @@
 │  DsDocument, DsProject, PinyinG2PProvider, ExportFormats│
 │  TranscriptionPipeline, CsvToDsConverter, TextGridToCsv │
 │  game-infer, hubert-infer, rmvpe-infer, FunAsr          │
-│  各领域 Page 实现, 6个可执行程序                           │
+│  各领域 Page 实现, LabelSuite + DsLabeler + CLI + TestShell + WidgetGallery│
 ├─────────────────────────────────────────────────────────┤
 │               dsfw (通用框架)                             │
 │  types / core / audio / ui-core / widgets / infer-common│
