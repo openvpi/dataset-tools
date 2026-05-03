@@ -2,6 +2,7 @@
 
 #include <rmvpe-infer/Rmvpe.h>
 #include <game-infer/Game.h>
+#include <dstools/TimePos.h>
 
 namespace dstools {
 
@@ -53,7 +54,7 @@ void PitchExtractionService::applyPitchToDocument(DsTextDocument &doc, const std
         pitchCurve->name = QStringLiteral("pitch");
     }
     pitchCurve->values = f0Mhz;
-    pitchCurve->timestep = timestep;
+    pitchCurve->timestep = dstools::secToUs(static_cast<double>(timestep));
 }
 
 void PitchExtractionService::applyMidiToDocument(DsTextDocument &doc,

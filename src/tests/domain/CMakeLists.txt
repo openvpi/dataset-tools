@@ -16,6 +16,7 @@ set(DOMAIN_TESTS
     TestCurveTools
     TestDsTextDocument
     TestFormatAdapters
+    TestProjectPaths
 )
 
 foreach(test_name ${DOMAIN_TESTS})
@@ -39,5 +40,15 @@ target_link_libraries(TestPitchProcessor PRIVATE
 )
 add_test(NAME TestPitchProcessor COMMAND TestPitchProcessor)
 set_tests_properties(TestPitchProcessor PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_executable(TestPitchExtractionService TestPitchExtractionService.cpp)
+target_link_libraries(TestPitchExtractionService PRIVATE
+    data-sources
+    Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestPitchExtractionService COMMAND TestPitchExtractionService)
+set_tests_properties(TestPitchExtractionService PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
