@@ -44,12 +44,13 @@ protected:
         if (viewDuration <= 0.0)
             return;
 
-        // Choose tick interval (~80px apart)
-        double secPerTick = 80.0 / m_pixelsPerSecond;
-        static const double niceSteps[] = {0.001, 0.002, 0.005, 0.01,  0.02, 0.05,
-                                           0.1,   0.2,   0.5,   1.0,   2.0,  5.0,
-                                           10.0,  20.0,  30.0,  60.0};
-        double majorInterval = 1.0;
+        // Choose tick interval (~150px apart)
+        double secPerTick = 150.0 / m_pixelsPerSecond;
+        static const double niceSteps[] = {0.001, 0.002, 0.005, 0.01,  0.02,  0.05,
+                                           0.1,   0.2,   0.5,   1.0,   2.0,   5.0,
+                                           10.0,  20.0,  30.0,  60.0,  120.0, 300.0,
+                                           600.0, 1800.0, 3600.0};
+        double majorInterval = niceSteps[std::size(niceSteps) - 1]; // fallback to largest
         for (double step : niceSteps) {
             if (step >= secPerTick) {
                 majorInterval = step;
