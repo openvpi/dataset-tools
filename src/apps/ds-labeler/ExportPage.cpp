@@ -2,9 +2,14 @@
 #include "ProjectDataSource.h"
 
 #include <dsfw/PipelineContext.h>
+#include <dstools/DsDocument.h>
+#include <dstools/DsProject.h>
+#include <dstools/DsTextTypes.h>
+#include <dstools/TranscriptionCsv.h>
 
 #include <QApplication>
-
+#include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -180,17 +185,104 @@ void ExportPage::onExport() {
     m_statusLabel->setText(QStringLiteral("正在导出..."));
     m_btnExport->setEnabled(false);
 
-    // TODO: Implement actual export logic with auto-completion:
-    // 1. For each active slice, check and auto-complete missing layers
-    // 2. Generate transcriptions.csv via CsvAdapter
-    // 3. Generate ds/ files via DsFileAdapter (only for slices with pitch_review)
-    // 4. Copy/resample wavs/
+    const QString wavsDir = outputDir + QStringLiteral("/wavs");
+    const QString dsDir = outputDir + QStringLiteral("/ds");
+    if (m_chkWavs->isChecked())
+        QDir().mkpath(wavsDir);
+    if (m_chkDs->isChecked())
+        QDir().mkpath(dsDir);
 
+    std::vector<TranscriptionRow> csvRows;
     int exported = 0;
+    int errors = 0;
     for (const auto &sliceId : sliceIds) {
         m_statusLabel->setText(QStringLiteral("正在导出: %1").arg(sliceId));
         m_progressBar->setValue(++exported);
         QApplication::processEvents();
+
+        auto result = m_source->loadSlice(sliceId);
+        if (!result) {
+            ++errors;
+            continue;
+        }
+
+        const DsTextDocument &doc = result.value();
+        auto *ctx = m_source->context(sliceId);
+
+        if (m_chkWavs->isChecked()) {
+            QString srcAudio = m_source->audioPath(sliceId);
+            if (QFile::exists(srcAudio)) {
+                QString dstName = sliceId + QStringLiteral(".wav");
+                QString dstPath = wavsDir + QStringLiteral("/") + dstName;
+                if (!QFile::copy(srcAudio, dstPath)) {
+                    if (!QFile::remove(dstPath) || !QFile::copy(srcAudio, dstPath))
+                        ++errors;
+                }
+            }
+        }
+
+        if (m_chkDs->isChecked() && ctx) {
+            if (ctx->editedSteps.contains(QStringLiteral("pitch_review"))) {
+                DsDocument dsDoc;
+                nlohmann::json sentence;
+                sentence["name"] = sliceId.toStdString();
+                for (const auto &layer : doc.layers) {
+                    std::vector<double> positions;
+                    std::vector<std::string> texts;
+                    for (const auto &b : layer.boundaries) {
+                        positions.push_back(b.pos);
+                        texts.push_back(b.text.toStdString());
+                    }
+                    if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
+                        sentence["ph_seq"] = texts;
+                        std::vector<double> durs;
+                        for (size_t i = 1; i < positions.size(); ++i)
+                            durs.push_back(positions[i] - positions[i - 1]);
+                        sentence["ph_dur"] = durs;
+                    } else if (layer.name.contains(QStringLiteral("note"), Qt::CaseInsensitive)) {
+                        sentence["note_seq"] = texts;
+                    }
+                }
+                dsDoc.sentences().push_back(sentence);
+                auto saveResult = dsDoc.saveFile(dsDir + QStringLiteral("/") + sliceId + QStringLiteral(".ds"));
+                if (!saveResult)
+                    ++errors;
+            }
+        }
+
+        if (m_chkCsv->isChecked()) {
+            TranscriptionRow row;
+            row.name = sliceId;
+            for (const auto &layer : doc.layers) {
+                if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
+                    QStringList phs, durs;
+                    for (size_t i = 0; i < layer.boundaries.size(); ++i) {
+                        phs << layer.boundaries[i].text;
+                        if (i + 1 < layer.boundaries.size()) {
+                            double dur = layer.boundaries[i + 1].pos - layer.boundaries[i].pos;
+                            durs << QString::number(dur, 'f', 5);
+                        }
+                    }
+                    row.phSeq = phs.join(' ');
+                    row.phDur = durs.join(' ');
+                }
+                if (layer.name.contains(QStringLiteral("note"), Qt::CaseInsensitive)) {
+                    QStringList notes;
+                    for (const auto &b : layer.boundaries)
+                        notes << b.text;
+                    row.noteSeq = notes.join(' ');
+                }
+            }
+            if (!row.phSeq.isEmpty())
+                csvRows.push_back(std::move(row));
+        }
+    }
+
+    if (m_chkCsv->isChecked() && !csvRows.empty()) {
+        QString csvError;
+        if (!TranscriptionCsv::write(outputDir + QStringLiteral("/transcriptions.csv"),
+                                     csvRows, csvError))
+            ++errors;
     }
 
     m_progressBar->setVisible(false);
@@ -198,10 +290,17 @@ void ExportPage::onExport() {
         QStringLiteral("导出完成: %1 个切片 → %2").arg(exported).arg(outputDir));
     m_btnExport->setEnabled(true);
 
-    QMessageBox::information(this, QStringLiteral("导出完成"),
-                             QStringLiteral("成功导出 %1 个切片到:\n%2")
-                                 .arg(exported)
+    if (errors > 0) {
+        QMessageBox::warning(this, QStringLiteral("导出完成"),
+                             QStringLiteral("导出完成，但有 %1 个错误。\n输出目录:\n%2")
+                                 .arg(errors)
                                  .arg(outputDir));
+    } else {
+        QMessageBox::information(this, QStringLiteral("导出完成"),
+                                 QStringLiteral("成功导出 %1 个切片到:\n%2")
+                                     .arg(exported)
+                                     .arg(outputDir));
+    }
 }
 
 QMenuBar *ExportPage::createMenuBar(QWidget *parent) {

@@ -12,6 +12,7 @@
 #include <dsfw/PipelineContext.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
+#include <dstools/DsTextTypes.h>
 #include <ui/TextGridDocument.h>
 
 namespace dstools {
@@ -77,15 +78,59 @@ bool DsPhonemeLabelerPage::saveCurrentSlice() {
     if (!m_editor->document()->isModified())
         return true;
 
-    // Save the TextGrid data back to dstext phoneme layer
-    // TODO: Convert TextGridDocument back to dstext IntervalLayers
-    // For now, save using the editor's built-in save
-    if (!m_editor->document()->save(
-            m_source->audioPath(m_currentSliceId).replace(
-                QStringLiteral(".wav"), QStringLiteral(".TextGrid")))) {
-        QMessageBox::warning(this, QStringLiteral("保存失败"),
-                             QStringLiteral("无法保存 TextGrid 文件。"));
-        return false;
+    auto *doc = m_editor->document();
+    auto result = m_source->loadSlice(m_currentSliceId);
+    DsTextDocument dstext;
+    if (result)
+        dstext = std::move(result.value());
+
+    bool foundPhonemeLayer = false;
+    for (int t = 0; t < doc->tierCount(); ++t) {
+        QString tierName = doc->tierName(t);
+        if (tierName.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive) ||
+            tierName.contains(QStringLiteral("phone"), Qt::CaseInsensitive)) {
+            IntervalLayer layer;
+            layer.name = tierName;
+            layer.type = QStringLiteral("text");
+            for (int i = 0; i < doc->intervalCount(t); ++i) {
+                Boundary b;
+                b.pos = doc->intervalStart(t, i);
+                b.text = doc->intervalText(t, i);
+                b.id = i;
+                layer.boundaries.push_back(std::move(b));
+            }
+            layer.sortBoundaries();
+
+            bool replaced = false;
+            for (auto &existing : dstext.layers) {
+                if (existing.name == layer.name) {
+                    existing = std::move(layer);
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced)
+                dstext.layers.push_back(std::move(layer));
+            foundPhonemeLayer = true;
+            break;
+        }
+    }
+
+    if (foundPhonemeLayer) {
+        auto saveResult = m_source->saveSlice(m_currentSliceId, dstext);
+        if (!saveResult) {
+            QMessageBox::warning(this, QStringLiteral("保存失败"),
+                                 QString::fromStdString(saveResult.error()));
+            return false;
+        }
+    } else {
+        if (!doc->save(
+                m_source->audioPath(m_currentSliceId).replace(
+                    QStringLiteral(".wav"), QStringLiteral(".TextGrid")))) {
+            QMessageBox::warning(this, QStringLiteral("保存失败"),
+                                 QStringLiteral("无法保存 TextGrid 文件。"));
+            return false;
+        }
     }
 
     return true;

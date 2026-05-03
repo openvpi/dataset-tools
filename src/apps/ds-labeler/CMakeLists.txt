@@ -2,6 +2,7 @@ project(DsLabeler VERSION 0.1.0.0)
 
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Concurrent REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
+find_package(SndFile CONFIG REQUIRED)
 
 dstools_add_executable(${PROJECT_NAME}
     VERSION ${PROJECT_VERSION}
@@ -10,6 +11,7 @@ dstools_add_executable(${PROJECT_NAME}
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets dstools-domain
                 min-label-editor phoneme-editor pitch-editor waveform-panel
+                SndFile::sndfile
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 

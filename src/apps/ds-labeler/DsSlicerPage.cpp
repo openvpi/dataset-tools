@@ -30,6 +30,8 @@
 #include <QSplitter>
 #include <QVBoxLayout>
 
+#include <sndfile.hh>
+
 #include <algorithm>
 #include <cmath>
 
@@ -364,7 +366,16 @@ namespace dstools {
             segments.emplace_back(startSamp, endSamp);
         }
 
-        // Write WAV files (16-bit PCM for now — full bit depth support in future)
+        // Write WAV files using libsndfile
+        int sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        switch (dlg.bitDepth()) {
+            case SliceExportDialog::BitDepth::PCM16:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16; break;
+            case SliceExportDialog::BitDepth::PCM24:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_24; break;
+            case SliceExportDialog::BitDepth::PCM32:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_32; break;
+            case SliceExportDialog::BitDepth::Float32: sndFormat = SF_FORMAT_WAV | SF_FORMAT_FLOAT; break;
+        }
+        int channels = (dlg.channelMode() == SliceExportDialog::ChannelExportMode::Mono) ? 1 : 1;
+
         int exported = 0;
         for (int i = 0; i < numSegments; ++i) {
             auto [start, end] = segments[i];
@@ -374,14 +385,26 @@ namespace dstools {
             QString filename = QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
             QString filepath = dir.filePath(filename);
 
-            // TODO: Use sndfile or dstools-audio to write WAV with proper bit depth.
-            // For now, create empty placeholder files.
-            QFile f(filepath);
-            if (f.open(QIODevice::WriteOnly)) {
-                // Placeholder — actual WAV writing needs libsndfile integration
-                f.close();
-                ++exported;
+#ifdef _WIN32
+            auto pathStr = filepath.toStdWString();
+#else
+            auto pathStr = filepath.toStdString();
+#endif
+            SndfileHandle wf(pathStr.c_str(), SFM_WRITE, sndFormat, channels, sr);
+            if (!wf) {
+                QMessageBox::warning(this, tr("Export Error"),
+                                     tr("Failed to open file for writing: %1").arg(filepath));
+                continue;
             }
+
+            sf_count_t frameCount = end - start;
+            sf_count_t written = wf.write(samples.data() + start, frameCount);
+            if (written != frameCount) {
+                QMessageBox::warning(this, tr("Export Error"),
+                                     tr("Failed to write all samples to: %1").arg(filepath));
+                continue;
+            }
+            ++exported;
         }
 
         // Create PipelineContext JSONs and register slices as project items
@@ -478,7 +501,26 @@ namespace dstools {
     }
 
     void DsSlicerPage::onActivated() {
-        // TODO: Load audio from project's source file and refresh UI
+        if (!m_dataSource || !m_dataSource->project())
+            return;
+
+        auto *project = m_dataSource->project();
+        const auto &items = project->items();
+        if (items.empty())
+            return;
+
+        const auto &firstItem = items[0];
+        if (!firstItem.audioSource.isEmpty()) {
+            QString audioPath = DsProject::fromPosixPath(firstItem.audioSource);
+            if (QDir::isRelativePath(audioPath))
+                audioPath = QDir(project->workingDirectory()).absoluteFilePath(audioPath);
+            if (QFile::exists(audioPath)) {
+                m_waveformPanel->loadAudio(audioPath);
+                m_slicePoints.clear();
+                refreshBoundaries();
+                updateSlicerListPanel();
+            }
+        }
     }
 
     void DsSlicerPage::onOpenAudioFiles() {
