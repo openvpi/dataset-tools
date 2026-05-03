@@ -13,6 +13,7 @@
 #include <QMessageBox>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <QPointer>
 #include <QtConcurrent>
 
 #include <rmvpe-infer/Rmvpe.h>
@@ -516,14 +517,20 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
 
     m_inferRunning = true;
     auto *rmvpe = m_rmvpe.get();
+    QPointer<PitchLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([rmvpe, audioPath, sliceId, this]() {
+    (void) QtConcurrent::run([rmvpe, audioPath, sliceId, guard]() {
         std::vector<Rmvpe::RmvpeRes> results;
         auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
 
-        QMetaObject::invokeMethod(this, [this, sliceId, result = std::move(result),
+        if (!guard)
+            return;
+
+        QMetaObject::invokeMethod(guard.data(), [guard, sliceId, result = std::move(result),
                                           results = std::move(results)]() {
-            m_inferRunning = false;
+            if (!guard)
+                return;
+            guard->m_inferRunning = false;
             if (result && !results.empty()) {
                 const auto &res = results[0];
                 std::vector<int32_t> f0Mhz(res.f0.size());
@@ -533,12 +540,12 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
                 float timestep = res.f0.size() > 1 && res.offset >= 0
                                      ? (1.0f / 16000.0f)
                                      : 0.005f;
-                applyPitchResult(sliceId, f0Mhz, timestep);
+                guard->applyPitchResult(sliceId, f0Mhz, timestep);
                 dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Info,
+                    guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("音高提取完成"), 3000);
             } else {
-                QMessageBox::warning(this, QStringLiteral("提取音高"),
+                QMessageBox::warning(guard.data(), QStringLiteral("提取音高"),
                                      QStringLiteral("音高提取失败。"));
             }
         }, Qt::QueuedConnection);
@@ -558,21 +565,27 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
 
     m_inferRunning = true;
     auto *game = m_game.get();
+    QPointer<PitchLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([game, audioPath, sliceId, this]() {
+    (void) QtConcurrent::run([game, audioPath, sliceId, guard]() {
         std::vector<Game::GameNote> notes;
         auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
 
-        QMetaObject::invokeMethod(this, [this, sliceId, result = std::move(result),
+        if (!guard)
+            return;
+
+        QMetaObject::invokeMethod(guard.data(), [guard, sliceId, result = std::move(result),
                                           notes = std::move(notes)]() {
-            m_inferRunning = false;
+            if (!guard)
+                return;
+            guard->m_inferRunning = false;
             if (result) {
-                applyMidiResult(sliceId, notes);
+                guard->applyMidiResult(sliceId, notes);
                 dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Info,
+                    guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("MIDI 转录完成"), 3000);
             } else {
-                QMessageBox::warning(this, QStringLiteral("提取 MIDI"),
+                QMessageBox::warning(guard.data(), QStringLiteral("提取 MIDI"),
                                      QStringLiteral("MIDI 转录失败。"));
             }
         }, Qt::QueuedConnection);
@@ -779,8 +792,9 @@ void PitchLabelerPage::onBatchExtract() {
     auto *rmvpe = m_rmvpe.get();
     auto *game = m_game.get();
     auto *source = m_source;
+    QPointer<PitchLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([rmvpe, game, hasRmvpe, hasGame, source, ids, this]() {
+    (void) QtConcurrent::run([rmvpe, game, hasRmvpe, hasGame, source, ids, guard]() {
         int processed = 0;
         for (const auto &sliceId : ids) {
             QString audioPath = source->audioPath(sliceId);
@@ -797,8 +811,9 @@ void PitchLabelerPage::onBatchExtract() {
                         f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
                     }
                     float timestep = 0.005f;
-                    QMetaObject::invokeMethod(this, [this, sliceId, f0Mhz, timestep]() {
-                        applyPitchResult(sliceId, f0Mhz, timestep);
+                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, f0Mhz, timestep]() {
+                        if (guard)
+                            guard->applyPitchResult(sliceId, f0Mhz, timestep);
                     }, Qt::QueuedConnection);
                 }
             }
@@ -807,18 +822,21 @@ void PitchLabelerPage::onBatchExtract() {
                 std::vector<Game::GameNote> notes;
                 auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
                 if (result) {
-                    QMetaObject::invokeMethod(this, [this, sliceId, notes = std::move(notes)]() {
-                        applyMidiResult(sliceId, notes);
+                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, notes = std::move(notes)]() {
+                        if (guard)
+                            guard->applyMidiResult(sliceId, notes);
                     }, Qt::QueuedConnection);
                 }
             }
 
             ++processed;
         }
-        QMetaObject::invokeMethod(this, [this, processed]() {
-            m_inferRunning = false;
+        QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+            if (!guard)
+                return;
+            guard->m_inferRunning = false;
             dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Info,
+                guard.data(), dsfw::widgets::ToastType::Info,
                 QStringLiteral("批量提取完成: %1 个切片").arg(processed), 3000);
         }, Qt::QueuedConnection);
     });

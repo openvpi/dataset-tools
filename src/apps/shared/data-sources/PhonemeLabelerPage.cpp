@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <QPointer>
 #include <QtConcurrent>
 
 #include <hubert-infer/Hfa.h>
@@ -382,8 +383,9 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     m_faRunning = true;
     auto *hfa = m_hfa.get();
+    QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, audioPath, graphemeTexts, sliceId, this]() {
+    (void) QtConcurrent::run([hfa, audioPath, graphemeTexts, sliceId, guard]() {
         HFA::WordList words;
         for (const auto &text : graphemeTexts) {
             HFA::Word word;
@@ -397,8 +399,13 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
         std::vector<std::string> nonSpeechPh = {"AP", "SP"};
         auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, words);
 
-        QMetaObject::invokeMethod(this, [this, sliceId, words = std::move(words), result = std::move(result)]() {
-            m_faRunning = false;
+        if (!guard)
+            return;
+
+        QMetaObject::invokeMethod(guard.data(), [guard, sliceId, words = std::move(words), result = std::move(result)]() {
+            if (!guard)
+                return;
+            guard->m_faRunning = false;
             if (result) {
                 QList<IntervalLayer> layers;
 
@@ -424,12 +431,12 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 }
                 layers.push_back(std::move(phonemeLayer));
 
-                applyFaResult(sliceId, layers);
+                guard->applyFaResult(sliceId, layers);
                 dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Info,
+                    guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("强制对齐完成"), 3000);
             } else {
-                QMessageBox::warning(this, QStringLiteral("强制对齐"),
+                QMessageBox::warning(guard.data(), QStringLiteral("强制对齐"),
                                      QStringLiteral("强制对齐失败: %1")
                                          .arg(QString::fromStdString(result.error())));
             }
@@ -508,8 +515,9 @@ void PhonemeLabelerPage::onBatchFA() {
     m_faRunning = true;
     auto *hfa = m_hfa.get();
     auto *source = m_source;
+    QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, source, ids, this]() {
+    (void) QtConcurrent::run([hfa, source, ids, guard]() {
         int processed = 0;
         for (const auto &sliceId : ids) {
             QString audioPath = source->audioPath(sliceId);
@@ -569,16 +577,19 @@ void PhonemeLabelerPage::onBatchFA() {
                 }
                 layers.push_back(std::move(phonemeLayer));
 
-                QMetaObject::invokeMethod(this, [this, sliceId, layers]() {
-                    applyFaResult(sliceId, layers);
+                QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers]() {
+                    if (guard)
+                        guard->applyFaResult(sliceId, layers);
                 }, Qt::QueuedConnection);
             }
             ++processed;
         }
-        QMetaObject::invokeMethod(this, [this, processed]() {
-            m_faRunning = false;
+        QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+            if (!guard)
+                return;
+            guard->m_faRunning = false;
             dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Info,
+                guard.data(), dsfw::widgets::ToastType::Info,
                 QStringLiteral("批量强制对齐完成: %1 个切片").arg(processed), 3000);
         }, Qt::QueuedConnection);
     });

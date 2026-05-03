@@ -12,6 +12,7 @@
 #include <QMimeData>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <QPointer>
 #include <QtConcurrent>
 
 #include "Asr.h"
@@ -414,23 +415,29 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
 
     m_asrRunning = true;
     auto *engine = m_asrEngine.get();
+    QPointer<MinLabelPage> guard(this);
 
-    (void) QtConcurrent::run([engine, audioPath, sliceId, this]() {
+    (void) QtConcurrent::run([engine, audioPath, sliceId, guard]() {
         std::string msg;
         bool ok = engine->recognize(audioPath.toStdWString(), msg);
         QString text;
         if (ok)
             text = QString::fromUtf8(msg);
 
-        QMetaObject::invokeMethod(this, [this, sliceId, text, ok]() {
-            m_asrRunning = false;
+        if (!guard)
+            return;
+
+        QMetaObject::invokeMethod(guard.data(), [guard, sliceId, text, ok]() {
+            if (!guard)
+                return;
+            guard->m_asrRunning = false;
             if (ok) {
-                setAsrResult(sliceId, text);
+                guard->setAsrResult(sliceId, text);
                 dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Info,
+                    guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("ASR 识别完成"), 3000);
             } else {
-                QMessageBox::warning(this, QStringLiteral("ASR"),
+                QMessageBox::warning(guard.data(), QStringLiteral("ASR"),
                                      QStringLiteral("ASR 识别失败。"));
             }
         }, Qt::QueuedConnection);
@@ -467,8 +474,9 @@ void MinLabelPage::onBatchAsr() {
     m_asrRunning = true;
     auto *engine = m_asrEngine.get();
     auto *source = m_source;
+    QPointer<MinLabelPage> guard(this);
 
-    (void) QtConcurrent::run([engine, source, ids, this]() {
+    (void) QtConcurrent::run([engine, source, ids, guard]() {
         int processed = 0;
         for (const auto &sliceId : ids) {
             QString audioPath = source->audioPath(sliceId);
@@ -479,16 +487,19 @@ void MinLabelPage::onBatchAsr() {
             bool ok = engine->recognize(audioPath.toStdWString(), msg);
             if (ok) {
                 QString text = QString::fromUtf8(msg);
-                QMetaObject::invokeMethod(this, [this, sliceId, text]() {
-                    setAsrResult(sliceId, text);
+                QMetaObject::invokeMethod(guard.data(), [guard, sliceId, text]() {
+                    if (guard)
+                        guard->setAsrResult(sliceId, text);
                 }, Qt::QueuedConnection);
             }
             ++processed;
         }
-        QMetaObject::invokeMethod(this, [this, processed]() {
-            m_asrRunning = false;
+        QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+            if (!guard)
+                return;
+            guard->m_asrRunning = false;
             dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Info,
+                guard.data(), dsfw::widgets::ToastType::Info,
                 QStringLiteral("批量 ASR 完成: %1 个切片").arg(processed), 3000);
         }, Qt::QueuedConnection);
     });
