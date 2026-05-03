@@ -73,13 +73,13 @@ LabelSuite (AppShell, 10 页面)
 - [x] 提取 DsLabeler 的 `SettingsPage` 到 `src/apps/shared/settings/`
 - [x] LabelSuite 注册 Settings 页
 
-#### P.B.2 FileDataSource 改造为 dstext 内核
+#### P.B.2 FileDataSource 改造为 dstext 内核 ✅
 
-- [ ] `FileDataSource` 内部使用 `DsTextDocument`
-- [ ] 导入：根据文件扩展名选择 FormatAdapter → 转为 dstext
-- [ ] 导出：dstext → FormatAdapter → 写回原格式
-- [ ] 支持格式：TextGrid、.lab、.ds、CSV、Audacity 标记
-- [ ] 移动到 `src/apps/shared/data-sources/`
+- [x] `FileDataSource` 内部使用 `DsTextDocument`
+- [x] 导入：根据文件扩展名选择 FormatAdapter → 转为 dstext
+- [x] 导出：dstext → FormatAdapter → 写回原格式
+- [x] 支持格式：TextGrid、.lab、.ds、CSV
+- [x] 移动到 `src/apps/shared/data-sources/`
 
 #### P.B.3 核心页面统一
 
