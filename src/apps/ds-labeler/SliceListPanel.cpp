@@ -34,6 +34,9 @@ void SliceListPanel::setDataSource(ProjectDataSource *source) {
 }
 
 void SliceListPanel::refresh() {
+    // Remember current selection
+    QString previousId = currentSliceId();
+
     m_listWidget->blockSignals(true);
     m_listWidget->clear();
 
@@ -46,6 +49,16 @@ void SliceListPanel::refresh() {
     }
 
     m_listWidget->blockSignals(false);
+
+    // Restore previous selection, or select first item
+    if (!previousId.isEmpty()) {
+        for (int i = 0; i < m_listWidget->count(); ++i) {
+            if (m_listWidget->item(i)->data(Qt::UserRole).toString() == previousId) {
+                m_listWidget->setCurrentRow(i);
+                return;
+            }
+        }
+    }
 
     if (m_listWidget->count() > 0)
         m_listWidget->setCurrentRow(0);
