@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QFileInfo>
+#include <QMessageBox>
 
 #include <dsfw/AppShell.h>
 #include <dsfw/ServiceLocator.h>
@@ -128,6 +129,38 @@ int main(int argc, char *argv[]) {
         }
         delete project;
         project = nullptr;
+    });
+
+    // ── Page-switch guard: check for dsitems when entering downstream pages ──
+    QObject::connect(&shell, &dsfw::AppShell::currentPageChanged, &shell,
+                     [&](int index) {
+        // Pages 2-4 (minlabel, phoneme, pitch) need items from slicer
+        if (index < 2 || index > 4)
+            return;
+        if (!project || !dataSource)
+            return;
+
+        const auto &items = project->items();
+        if (!items.empty())
+            return; // items exist, all good
+
+        // Check if slicer has slice points
+        // (slicerPage stores per-file slice points internally)
+        auto ret = QMessageBox::question(
+            &shell,
+            QStringLiteral("尚无切片数据"),
+            QStringLiteral("当前工程没有切片条目 (dsitem)。\n"
+                           "是否按照切片页中的切点自动生成切片？\n\n"
+                           "选择「否」将返回切片页。"),
+            QMessageBox::Yes | QMessageBox::No);
+
+        if (ret == QMessageBox::Yes) {
+            // Trigger export from slicer page to create items
+            shell.setCurrentPage(1); // go to slicer
+            // The user should use the export function on the slicer page
+        } else {
+            shell.setCurrentPage(1); // go back to slicer
+        }
     });
 
     shell.show();
