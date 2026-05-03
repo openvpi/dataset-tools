@@ -1,10 +1,16 @@
 #include <dsfw/FormatAdapterRegistry.h>
+#include <dsfw/ServiceLocator.h>
 
 namespace dstools {
 
 FormatAdapterRegistry &FormatAdapterRegistry::instance() {
-    static FormatAdapterRegistry reg;
-    return reg;
+    auto *registry = ServiceLocator::formatAdapterRegistry();
+    if (!registry) {
+        static FormatAdapterRegistry defaultRegistry;
+        ServiceLocator::setFormatAdapterRegistry(&defaultRegistry);
+        return defaultRegistry;
+    }
+    return *registry;
 }
 
 void FormatAdapterRegistry::registerAdapter(std::unique_ptr<IFormatAdapter> adapter) {

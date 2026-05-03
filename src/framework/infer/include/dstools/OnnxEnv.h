@@ -18,6 +18,13 @@ namespace dstools::infer {
         /// @return Reference to the global environment.
         static Ort::Env &env();
 
+        /// @brief Override the default Ort::Env instance (for testing).
+        /// @param env Pointer to a custom Ort::Env (caller retains ownership).
+        static void setEnv(Ort::Env *env);
+
+        /// @brief Reset to the default Ort::Env instance.
+        static void resetEnv();
+
         /// @brief Create configured session options for a given provider.
         /// @param provider Execution provider (CPU, DML, CUDA).
         /// @param deviceId Device index for GPU providers.

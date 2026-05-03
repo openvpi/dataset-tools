@@ -4,6 +4,7 @@
 /// @brief Type-safe global service registry for dependency injection.
 
 #include <dsfw/IFileIOProvider.h>
+#include <dsfw/FormatAdapterRegistry.h>
 
 #include <any>
 #include <typeindex>
@@ -62,6 +63,15 @@ public:
     static void setFileIO(IFileIOProvider *provider);
     /// @brief Convenience: remove the IFileIOProvider registration.
     static void resetFileIO();
+
+    /// @brief Convenience: get the registered FormatAdapterRegistry.
+    /// @return Pointer to the registry, or nullptr.
+    static FormatAdapterRegistry *formatAdapterRegistry();
+    /// @brief Convenience: register a FormatAdapterRegistry.
+    /// @param registry Pointer to the registry (caller retains ownership).
+    static void setFormatAdapterRegistry(FormatAdapterRegistry *registry);
+    /// @brief Convenience: remove the FormatAdapterRegistry registration.
+    static void resetFormatAdapterRegistry();
 
 private:
     static std::unordered_map<std::type_index, std::any> &services();

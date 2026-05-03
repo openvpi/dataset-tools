@@ -12,9 +12,21 @@
 
 namespace dstools::infer {
 
+    static Ort::Env *s_customEnv = nullptr;
+
     Ort::Env &OnnxEnv::env() {
+        if (s_customEnv)
+            return *s_customEnv;
         static Ort::Env s_env(ORT_LOGGING_LEVEL_WARNING, "dstools");
         return s_env;
+    }
+
+    void OnnxEnv::setEnv(Ort::Env *env) {
+        s_customEnv = env;
+    }
+
+    void OnnxEnv::resetEnv() {
+        s_customEnv = nullptr;
     }
 
     Ort::SessionOptions OnnxEnv::createSessionOptions(ExecutionProvider provider, [[maybe_unused]] int deviceId, int interOpThreads) {

@@ -25,4 +25,16 @@ void ServiceLocator::resetFileIO() {
     resetFileIOProvider();
 }
 
+FormatAdapterRegistry *ServiceLocator::formatAdapterRegistry() {
+    return get<FormatAdapterRegistry>();
+}
+
+void ServiceLocator::setFormatAdapterRegistry(FormatAdapterRegistry *registry) {
+    set<FormatAdapterRegistry>(registry);
+}
+
+void ServiceLocator::resetFormatAdapterRegistry() {
+    reset<FormatAdapterRegistry>();
+}
+
 }
