@@ -24,6 +24,7 @@
 #include <audio-util/Slicer.h>
 
 #include <QDir>
+#include <QDialog>
 #include <QDoubleSpinBox>
 #include <QFile>
 #include <QFileDialog>
@@ -351,6 +352,7 @@ namespace dstools {
         updateSlicerListPanel();
         saveCurrentSlicePoints();
         updateFileProgress();
+        promptSliceUpdateIfNeeded();
     }
 
     void DsSlicerPage::onImportMarkers() {
@@ -379,6 +381,7 @@ namespace dstools {
         updateSlicerListPanel();
         saveCurrentSlicePoints();
         updateFileProgress();
+        promptSliceUpdateIfNeeded();
     }
 
     void DsSlicerPage::onSaveMarkers() {
@@ -875,6 +878,99 @@ namespace dstools {
 
         QMessageBox::information(this, tr("Batch Export Complete"),
             tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));
+    }
+
+    void DsSlicerPage::promptSliceUpdateIfNeeded() {
+        if (!m_dataSource || !m_dataSource->project())
+            return;
+
+        const auto &items = m_dataSource->project()->items();
+        if (items.empty())
+            return; // No exported items yet, nothing to update
+
+        // Find audio files that have changed slice points and have existing items
+        QStringList affectedFiles;
+        for (const auto &[filePath, points] : m_fileSlicePoints) {
+            QString baseName = QFileInfo(filePath).completeBaseName();
+            // Check if any project items came from this audio file
+            for (const auto &item : items) {
+                if (item.id.startsWith(baseName)) {
+                    affectedFiles.append(filePath);
+                    break;
+                }
+            }
+        }
+
+        if (affectedFiles.isEmpty())
+            return;
+
+        // Build dialog with checkboxes
+        QDialog dlg(this);
+        dlg.setWindowTitle(QStringLiteral("切点已更新"));
+        auto *dlgLayout = new QVBoxLayout(&dlg);
+
+        auto *warnLabel = new QLabel(
+            QStringLiteral("⚠ 以下音频文件的切点已更改，但已有导出的切片和标注数据。\n"
+                           "重新切片将移除旧的切片和 dsitem，<b>已标注的歌词、音素、音高数据将丢失</b>。\n\n"
+                           "选择需要重新切片的音频："),
+            &dlg);
+        warnLabel->setWordWrap(true);
+        dlgLayout->addWidget(warnLabel);
+
+        QList<QCheckBox *> checkboxes;
+        for (const QString &file : affectedFiles) {
+            auto *cb = new QCheckBox(QFileInfo(file).fileName(), &dlg);
+            cb->setChecked(false);
+            cb->setProperty("filePath", file);
+            checkboxes.append(cb);
+            dlgLayout->addWidget(cb);
+        }
+
+        auto *btnLayout = new QHBoxLayout;
+        auto *btnSkip = new QPushButton(QStringLiteral("跳过"), &dlg);
+        auto *btnApply = new QPushButton(QStringLiteral("重新切片选中"), &dlg);
+        btnLayout->addStretch();
+        btnLayout->addWidget(btnSkip);
+        btnLayout->addWidget(btnApply);
+        dlgLayout->addLayout(btnLayout);
+
+        connect(btnSkip, &QPushButton::clicked, &dlg, &QDialog::reject);
+        connect(btnApply, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+        if (dlg.exec() != QDialog::Accepted)
+            return;
+
+        // Remove old items for selected files and notify
+        auto *project = m_dataSource->project();
+        auto currentItems = project->items();
+
+        for (auto *cb : checkboxes) {
+            if (!cb->isChecked())
+                continue;
+
+            QString filePath = cb->property("filePath").toString();
+            QString baseName = QFileInfo(filePath).completeBaseName();
+
+            // Remove items matching this base name
+            currentItems.erase(
+                std::remove_if(currentItems.begin(), currentItems.end(),
+                               [&](const Item &item) { return item.id.startsWith(baseName); }),
+                currentItems.end());
+
+            // Remove dsitem files
+            if (m_dataSource) {
+                QString dsitemDir = m_dataSource->workingDir() + QStringLiteral("/dstemp/dsitems");
+                QDir dir(dsitemDir);
+                QStringList dsitemFiles = dir.entryList({baseName + QStringLiteral("*.dsitem")}, QDir::Files);
+                for (const QString &f : dsitemFiles)
+                    QFile::remove(dir.absoluteFilePath(f));
+            }
+        }
+
+        project->setItems(std::move(currentItems));
+        QString saveError;
+        project->save(saveError);
+        emit m_dataSource->sliceListChanged();
     }
 
 } // namespace dstools
