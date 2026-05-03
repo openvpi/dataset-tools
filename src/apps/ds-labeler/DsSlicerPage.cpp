@@ -11,6 +11,7 @@
 
 #include <dstools/DsItemManager.h>
 #include <dstools/DsItemRecord.h>
+#include <dstools/ProjectPaths.h>
 
 #include <ui/WaveformWidget.h>
 #include <ui/SpectrogramWidget.h>
@@ -565,7 +566,7 @@ namespace dstools {
 
                 // Create .dsitem record file for pipeline tracking
                 {
-                    QString dsitemDir = m_dataSource->workingDir() + QStringLiteral("/dstemp/dsitems");
+                    QString dsitemDir = ProjectPaths::dsItemsDir(m_dataSource->workingDir());
                     QDir().mkpath(dsitemDir);
 
                     DsItemRecord record;
@@ -1022,7 +1023,7 @@ namespace dstools {
 
             // Remove dsitem files
             if (m_dataSource) {
-                QString dsitemDir = m_dataSource->workingDir() + QStringLiteral("/dstemp/dsitems");
+                QString dsitemDir = ProjectPaths::dsItemsDir(m_dataSource->workingDir());
                 QDir dir(dsitemDir);
                 QStringList dsitemFiles = dir.entryList({baseName + QStringLiteral("*.dsitem")}, QDir::Files);
                 for (const QString &f : dsitemFiles)

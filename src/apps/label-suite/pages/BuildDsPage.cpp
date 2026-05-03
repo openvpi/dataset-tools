@@ -1,4 +1,4 @@
-﻿#include "BuildDsPage.h"
+#include "BuildDsPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -9,6 +9,7 @@
 #include <dsfw/PipelineContext.h>
 #include <dsfw/PipelineRunner.h>
 #include <dstools/TranscriptionCsv.h>
+#include <dstools/ProjectPaths.h>
 #include <dstools/RunProgressRow.h>
 
 namespace dstools::labeler {
@@ -64,8 +65,8 @@ void BuildDsPage::buildUi() {
             return;
         }
 
-        const QString csvPath = m_workingDir + QStringLiteral("/dstemp/build_csv/transcriptions.csv");
-        const QString outputDir = m_workingDir + QStringLiteral("/dstemp/build_ds");
+        const QString csvPath = ProjectPaths::transcriptionsCsvPath(m_workingDir);
+        const QString outputDir = ProjectPaths::buildDsDir(m_workingDir);
         QDir().mkpath(outputDir);
 
         m_log->clear();
@@ -90,7 +91,7 @@ void BuildDsPage::buildUi() {
 
         std::vector<PipelineContext> contexts;
         for (const auto &row : rows) {
-            const QString wavPath = m_workingDir + QStringLiteral("/dstemp/slicer_output/") + row.name + QStringLiteral(".wav");
+            const QString wavPath = ProjectPaths::slicerOutputAudioPath(m_workingDir, row.name);
             if (!QFile::exists(wavPath)) {
                 m_log->append(tr("  [SKIP] %1: WAV not found").arg(row.name));
                 continue;

@@ -1,4 +1,4 @@
-﻿#include "BuildCsvPage.h"
+#include "BuildCsvPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -10,6 +10,7 @@
 #include <dsfw/PipelineRunner.h>
 
 #include <dstools/DomainInit.h>
+#include <dstools/ProjectPaths.h>
 
 namespace dstools::labeler {
 
@@ -48,10 +49,10 @@ void BuildCsvPage::buildUi() {
             return;
         }
 
-        const QString tgDir = m_workingDir + QStringLiteral("/dstemp/alignment_review");
-        const QString csvPath = m_workingDir + QStringLiteral("/dstemp/build_csv/transcriptions.csv");
+        const QString tgDir = ProjectPaths::alignmentReviewDir(m_workingDir);
+        const QString csvPath = ProjectPaths::transcriptionsCsvPath(m_workingDir);
 
-        QDir().mkpath(m_workingDir + QStringLiteral("/dstemp/build_csv"));
+        QDir().mkpath(ProjectPaths::buildCsvDir(m_workingDir));
 
         m_log->clear();
         m_log->append(tr("Building CSV from TextGrid files..."));

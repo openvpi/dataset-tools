@@ -6,6 +6,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <dstools/ProjectPaths.h>
+
 namespace dstools {
 
 ProjectDataSource::ProjectDataSource(QObject *parent) : IEditorDataSource(parent) {}
@@ -133,13 +135,11 @@ Result<void> ProjectDataSource::saveContext(const QString &sliceId) {
 }
 
 QString ProjectDataSource::contextPath(const QString &sliceId) const {
-    return m_workingDir + QStringLiteral("/dstemp/contexts/") + sliceId +
-           QStringLiteral(".json");
+    return ProjectPaths::sliceContextPath(m_workingDir, sliceId);
 }
 
 QString ProjectDataSource::dstextPath(const QString &sliceId) const {
-    return m_workingDir + QStringLiteral("/dstemp/dstext/") + sliceId +
-           QStringLiteral(".dstext");
+    return ProjectPaths::sliceDstextPath(m_workingDir, sliceId);
 }
 
 QString ProjectDataSource::sliceAudioPath(const QString &sliceId) const {
@@ -158,8 +158,7 @@ QString ProjectDataSource::sliceAudioPath(const QString &sliceId) const {
         }
     }
     // Fallback: conventional path
-    return m_workingDir + QStringLiteral("/dstemp/slices/") + sliceId +
-           QStringLiteral(".wav");
+    return ProjectPaths::sliceAudioPath(m_workingDir, sliceId);
 }
 
 const Slice *ProjectDataSource::findSlice(const QString &sliceId) const {

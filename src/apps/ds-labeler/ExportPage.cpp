@@ -7,6 +7,7 @@
 #include <dstools/DsTextTypes.h>
 #include <dstools/TranscriptionCsv.h>
 #include <dstools/PhNumCalculator.h>
+#include <dstools/ProjectPaths.h>
 #include <dstools/ExecutionProvider.h>
 
 #include <hubert-infer/Hfa.h>
@@ -473,8 +474,8 @@ void ExportPage::onExport() {
     m_statusLabel->setText(QStringLiteral("正在导出..."));
     m_btnExport->setEnabled(false);
 
-    const QString wavsDir = outputDir + QStringLiteral("/wavs");
-    const QString dsDir = outputDir + QStringLiteral("/ds");
+    const QString wavsDir = ProjectPaths::wavsDir(outputDir);
+    const QString dsDir = ProjectPaths::dsDir(outputDir);
     if (m_chkWavs->isChecked())
         QDir().mkpath(wavsDir);
     if (m_chkDs->isChecked())
