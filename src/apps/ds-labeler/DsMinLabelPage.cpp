@@ -157,8 +157,7 @@ QMenuBar *DsMinLabelPage::createMenuBar(QWidget *parent) {
     auto *bar = new QMenuBar(parent);
 
     auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
-    fileMenu->addAction(QStringLiteral("保存"), this, [this]() { saveCurrentSlice(); },
-                        QKeySequence::Save);
+    fileMenu->addAction(QStringLiteral("保存"), QKeySequence::Save, this, [this]() { saveCurrentSlice(); });
     fileMenu->addSeparator();
     fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
         if (auto *w = window()) w->close();

@@ -23,8 +23,8 @@ namespace waveform {
 
 class WaveformPanel::TimeRuler : public QWidget {
 public:
-    explicit TimeRuler(ViewportController *viewport, QWidget *parent = nullptr)
-        : QWidget(parent), m_viewport(viewport) {
+    explicit TimeRuler(ViewportController * /*viewport*/, QWidget *parent = nullptr)
+        : QWidget(parent) {
         setFixedHeight(24);
     }
 
@@ -116,7 +116,6 @@ private:
         return static_cast<int>((time - m_viewStart) / viewDuration * width());
     }
 
-    ViewportController *m_viewport = nullptr;
     double m_viewStart = 0.0;
     double m_viewEnd = 10.0;
     double m_pixelsPerSecond = 200.0;
