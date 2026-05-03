@@ -5,6 +5,8 @@
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
+#include <dsfw/AppSettings.h>
+#include <dstools/ShortcutManager.h>
 
 #include <QWidget>
 
@@ -31,12 +33,19 @@ public:
 
     // IPageActions
     QMenuBar *createMenuBar(QWidget *parent) override;
+    QWidget *createStatusBarContent(QWidget *parent) override;
     QString windowTitle() const override;
     bool hasUnsavedChanges() const override;
+    bool supportsDragDrop() const override;
+    void handleDragEnter(QDragEnterEvent *event) override;
+    void handleDrop(QDropEvent *event) override;
 
     // IPageLifecycle
     void onActivated() override;
     bool onDeactivating() override;
+    void onShutdown() override;
+
+    dstools::widgets::ShortcutManager *shortcutManager() const;
 
 signals:
     void sliceChanged(const QString &sliceId);
@@ -52,6 +61,13 @@ private:
     bool m_dirty = false;
     bool m_asrRunning = false;
 
+    dstools::AppSettings m_settings;
+    dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
+
+    QAction *m_prevAction = nullptr;
+    QAction *m_nextAction = nullptr;
+    QAction *m_playAction = nullptr;
+
     void onSliceSelected(const QString &sliceId);
     bool saveCurrentSlice();
     bool maybeSave();
@@ -61,6 +77,7 @@ private:
     void runAsrForSlice(const QString &sliceId);
     void ensureAsrEngine();
     void setAsrResult(const QString &sliceId, const QString &text);
+    void updateProgress();
 };
 
 } // namespace dstools

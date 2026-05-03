@@ -1,9 +1,12 @@
 #include "DsMinLabelPage.h"
+#include "DsLabelerKeys.h"
 #include "ProjectDataSource.h"
 #include "SliceListPanel.h"
 
+#include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QSplitter>
 #include <QVBoxLayout>
 #include <QtConcurrent>
@@ -11,9 +14,11 @@
 #include <Asr.h>
 
 #include <dsfw/PipelineContext.h>
+#include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsProject.h>
 #include <dstools/DsTextTypes.h>
+#include <dstools/FileStatusDelegate.h>
 
 namespace dstools {
 
@@ -31,7 +36,8 @@ struct DsMinLabelPage::AsrEngine {
     }
 };
 
-DsMinLabelPage::DsMinLabelPage(QWidget *parent) : QWidget(parent) {
+DsMinLabelPage::DsMinLabelPage(QWidget *parent)
+    : QWidget(parent), m_settings("DsLabeler/MinLabel") {
     m_editor = new Minlabel::MinLabelEditor(this);
     m_sliceList = new SliceListPanel(this);
     m_sliceList->setMinimumWidth(160);
@@ -47,10 +53,33 @@ DsMinLabelPage::DsMinLabelPage(QWidget *parent) : QWidget(parent) {
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(splitter);
 
+    m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
+    m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
+    m_playAction = new QAction(QStringLiteral("播放/停止"), this);
+
+    m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
+    m_shortcutManager->bind(m_prevAction, DsLabelerKeys::NavigationPrev,
+                            QStringLiteral("上一个切片"), QStringLiteral("导航"));
+    m_shortcutManager->bind(m_nextAction, DsLabelerKeys::NavigationNext,
+                            QStringLiteral("下一个切片"), QStringLiteral("导航"));
+    m_shortcutManager->bind(m_playAction, DsLabelerKeys::PlaybackPlay,
+                            QStringLiteral("播放/停止"), QStringLiteral("播放"));
+    m_shortcutManager->applyAll();
+
     connect(m_sliceList, &SliceListPanel::sliceSelected,
             this, &DsMinLabelPage::onSliceSelected);
     connect(m_editor, &Minlabel::MinLabelEditor::dataChanged,
             this, [this]() { m_dirty = true; });
+    connect(m_prevAction, &QAction::triggered, this, [this]() {
+        m_sliceList->selectPrev();
+    });
+    connect(m_nextAction, &QAction::triggered, this, [this]() {
+        m_sliceList->selectNext();
+    });
+    connect(m_playAction, &QAction::triggered, this, [this]() {
+        if (m_editor->playWidget())
+            m_editor->playWidget()->setPlaying(!m_editor->playWidget()->isPlaying());
+    });
 }
 
 DsMinLabelPage::~DsMinLabelPage() = default;
@@ -178,12 +207,46 @@ QMenuBar *DsMinLabelPage::createMenuBar(QWidget *parent) {
         if (auto *w = window()) w->close();
     });
 
-    auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
+    auto *editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
+    editMenu->addAction(m_prevAction);
+    editMenu->addAction(m_nextAction);
+    editMenu->addSeparator();
+    {
+        auto *shortcutAction = editMenu->addAction(QStringLiteral("快捷键设置..."));
+        connect(shortcutAction, &QAction::triggered, this, [this]() {
+            m_shortcutManager->showEditor(this);
+        });
+    }
+
+    auto *playMenu = bar->addMenu(QStringLiteral("播放(&P)"));
+    playMenu->addAction(m_playAction);
+
+    auto *processMenu = bar->addMenu(QStringLiteral("处理(&R)"));
     processMenu->addAction(QStringLiteral("ASR 识别当前曲目"), this, &DsMinLabelPage::onRunAsr);
     processMenu->addSeparator();
     processMenu->addAction(QStringLiteral("批量 ASR..."), this, &DsMinLabelPage::onBatchAsr);
 
+    auto *viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
+    dsfw::Theme::instance().populateThemeMenu(viewMenu);
+
     return bar;
+}
+
+QWidget *DsMinLabelPage::createStatusBarContent(QWidget *parent) {
+    auto *container = new QWidget(parent);
+    auto *layout = new QHBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    auto *sliceLabel = new QLabel(QStringLiteral("未选择切片"), container);
+    auto *progressLabel = new QLabel(container);
+    layout->addWidget(sliceLabel, 1);
+    layout->addWidget(progressLabel);
+
+    connect(this, &DsMinLabelPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
+        sliceLabel->setText(id.isEmpty() ? QStringLiteral("未选择切片") : id);
+    });
+
+    return container;
 }
 
 QString DsMinLabelPage::windowTitle() const {
@@ -197,8 +260,39 @@ bool DsMinLabelPage::hasUnsavedChanges() const {
     return m_dirty;
 }
 
+bool DsMinLabelPage::supportsDragDrop() const {
+    return true;
+}
+
+void DsMinLabelPage::handleDragEnter(QDragEnterEvent *event) {
+    if (event->mimeData()->hasUrls())
+        event->acceptProposedAction();
+}
+
+void DsMinLabelPage::handleDrop(QDropEvent *event) {
+    const QMimeData *mime = event->mimeData();
+    if (!mime->hasUrls())
+        return;
+
+    auto urls = mime->urls();
+    for (const auto &url : urls) {
+        if (url.isLocalFile()) {
+            QString path = url.toLocalFile();
+            if (path.endsWith(QLatin1String(".dsproj"), Qt::CaseInsensitive)) {
+                event->acceptProposedAction();
+                return;
+            }
+        }
+    }
+}
+
+dstools::widgets::ShortcutManager *DsMinLabelPage::shortcutManager() const {
+    return m_shortcutManager;
+}
+
 void DsMinLabelPage::onActivated() {
     m_sliceList->refresh();
+    updateProgress();
 
     if (m_source && !m_currentSliceId.isEmpty()) {
         auto *ctx = m_source->context(m_currentSliceId);
@@ -214,6 +308,31 @@ void DsMinLabelPage::onActivated() {
 
 bool DsMinLabelPage::onDeactivating() {
     return maybeSave();
+}
+
+void DsMinLabelPage::onShutdown() {
+    m_shortcutManager->saveAll();
+}
+
+void DsMinLabelPage::updateProgress() {
+    if (!m_source)
+        return;
+
+    const auto ids = m_source->sliceIds();
+    int total = ids.size();
+    int completed = 0;
+    for (const auto &id : ids) {
+        auto result = m_source->loadSlice(id);
+        if (result) {
+            for (const auto &layer : result.value().layers) {
+                if (layer.name == QStringLiteral("grapheme") && !layer.boundaries.empty()) {
+                    ++completed;
+                    break;
+                }
+            }
+        }
+    }
+    m_sliceList->setProgress(completed, total);
 }
 
 void DsMinLabelPage::ensureAsrEngine() {
@@ -397,6 +516,8 @@ void DsMinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
         m_editor->loadData(text, {});
         m_dirty = true;
     }
+
+    updateProgress();
 }
 
 } // namespace dstools
