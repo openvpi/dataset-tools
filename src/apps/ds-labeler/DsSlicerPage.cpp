@@ -274,6 +274,12 @@ namespace dstools {
             m_currentAudioPath = filePath;
             m_undoStack->clear();
             loadSlicePointsForFile(filePath);
+
+            // Auto-slice if no existing slice points for this file
+            if (m_slicePoints.empty() && !m_samples.empty()) {
+                onAutoSlice();
+            }
+
             refreshBoundaries();
             updateSlicerListPanel();
             updateFileProgress();
