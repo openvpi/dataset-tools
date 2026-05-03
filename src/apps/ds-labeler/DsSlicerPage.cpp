@@ -1,11 +1,11 @@
 #include "DsSlicerPage.h"
+#include "AudacityMarkerIO.h"
 #include "AudioFileListPanel.h"
 #include "ProjectDataSource.h"
-#include "AudacityMarkerIO.h"
 #include "SliceCommands.h"
 #include "SliceExportDialog.h"
-#include "SlicerListPanel.h"
 #include "SliceNumberLayer.h"
+#include "SlicerListPanel.h"
 
 #include <dstools/DsProject.h>
 
@@ -14,6 +14,7 @@
 
 #include <MelSpectrogramWidget.h>
 #include <PlaybackController.h>
+#include <QCheckBox>
 #include <WaveformPanel.h>
 
 #include <dsfw/widgets/FileProgressTracker.h>
@@ -23,8 +24,8 @@
 
 #include <audio-util/Slicer.h>
 
-#include <QDir>
 #include <QDialog>
+#include <QDir>
 #include <QDoubleSpinBox>
 #include <QFile>
 #include <QFileDialog>
@@ -33,13 +34,13 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QToolBar>
 #include <QToolButton>
-#include <QKeySequence>
 
 #include <QSplitter>
 #include <QVBoxLayout>
@@ -246,62 +247,68 @@ namespace dstools {
         });
 
         // Update progress and auto-slice when files are added
-        connect(m_audioFileList, &AudioFileListPanel::filesAdded, this, [this](const QStringList &paths) {
-            autoSliceFiles(paths);
-        });
-        connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() {
-            updateFileProgress();
-        });
+        connect(m_audioFileList, &AudioFileListPanel::filesAdded, this,
+                [this](const QStringList &paths) { autoSliceFiles(paths); });
+        connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); });
 
         // Knife mode: left-click on waveform → add slice point
         connect(m_waveformPanel, &waveform::WaveformPanel::positionClicked, this, [this](double sec) {
-            auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
+            auto refreshFn = [this]() {
+                refreshBoundaries();
+                updateSlicerListPanel();
+            };
             m_undoStack->push(new AddSlicePointCommand(m_slicePoints, sec, refreshFn));
         });
 
         // Pointer mode: boundary click → select
-        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryClicked, this,
-                [this](int index) {
-                    m_selectedBoundary = index;
-                    m_waveformPanel->setSelectedBoundary(index);
-                });
+        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryClicked, this, [this](int index) {
+            m_selectedBoundary = index;
+            m_waveformPanel->setSelectedBoundary(index);
+        });
 
         // Pointer mode: boundary drag → move
         connect(m_waveformPanel, &waveform::WaveformPanel::boundaryMoved, this,
                 [this](int index, double oldTime, double newTime) {
                     if (index >= 0 && index < static_cast<int>(m_slicePoints.size())) {
-                        auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
+                        auto refreshFn = [this]() {
+                            refreshBoundaries();
+                            updateSlicerListPanel();
+                        };
                         m_undoStack->push(new MoveSlicePointCommand(m_slicePoints, index, oldTime, newTime, refreshFn));
                     }
                 });
 
         // Pointer mode: right-click boundary → delete
-        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryRightClicked, this,
-                [this](int index) {
-                    if (index >= 0 && index < static_cast<int>(m_slicePoints.size())) {
-                        auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
-                        m_undoStack->push(new RemoveSlicePointCommand(m_slicePoints, index, refreshFn));
-                        m_selectedBoundary = -1;
-                        m_waveformPanel->setSelectedBoundary(-1);
-                    }
-                });
+        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryRightClicked, this, [this](int index) {
+            if (index >= 0 && index < static_cast<int>(m_slicePoints.size())) {
+                auto refreshFn = [this]() {
+                    refreshBoundaries();
+                    updateSlicerListPanel();
+                };
+                m_undoStack->push(new RemoveSlicePointCommand(m_slicePoints, index, refreshFn));
+                m_selectedBoundary = -1;
+                m_waveformPanel->setSelectedBoundary(-1);
+            }
+        });
 
         // SlicerListPanel context menu: add/delete slice points
         connect(m_sliceListPanel, &SlicerListPanel::sliceDoubleClicked, this,
-                [this](int /*index*/, double startSec, double /*endSec*/) {
-            m_waveformPanel->scrollToTime(startSec);
-        });
+                [this](int /*index*/, double startSec, double /*endSec*/) { m_waveformPanel->scrollToTime(startSec); });
 
-        connect(m_sliceListPanel, &SlicerListPanel::addSlicePointRequested, this,
-                [this](double timeSec) {
-            auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
+        connect(m_sliceListPanel, &SlicerListPanel::addSlicePointRequested, this, [this](double timeSec) {
+            auto refreshFn = [this]() {
+                refreshBoundaries();
+                updateSlicerListPanel();
+            };
             m_undoStack->push(new AddSlicePointCommand(m_slicePoints, timeSec, refreshFn));
         });
 
-        connect(m_sliceListPanel, &SlicerListPanel::removeSlicePointRequested, this,
-                [this](int pointIndex) {
+        connect(m_sliceListPanel, &SlicerListPanel::removeSlicePointRequested, this, [this](int pointIndex) {
             if (pointIndex >= 0 && pointIndex < static_cast<int>(m_slicePoints.size())) {
-                auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
+                auto refreshFn = [this]() {
+                    refreshBoundaries();
+                    updateSlicerListPanel();
+                };
                 m_undoStack->push(new RemoveSlicePointCommand(m_slicePoints, pointIndex, refreshFn));
             }
         });
@@ -442,10 +449,18 @@ namespace dstools {
         // Write WAV files using libsndfile
         int sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
         switch (dlg.bitDepth()) {
-            case SliceExportDialog::BitDepth::PCM16:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16; break;
-            case SliceExportDialog::BitDepth::PCM24:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_24; break;
-            case SliceExportDialog::BitDepth::PCM32:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_32; break;
-            case SliceExportDialog::BitDepth::Float32: sndFormat = SF_FORMAT_WAV | SF_FORMAT_FLOAT; break;
+            case SliceExportDialog::BitDepth::PCM16:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+                break;
+            case SliceExportDialog::BitDepth::PCM24:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
+                break;
+            case SliceExportDialog::BitDepth::PCM32:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_32;
+                break;
+            case SliceExportDialog::BitDepth::Float32:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+                break;
         }
         int channels = (dlg.channelMode() == SliceExportDialog::ChannelExportMode::Mono) ? 1 : 1;
 
@@ -465,16 +480,14 @@ namespace dstools {
 #endif
             SndfileHandle wf(pathStr.c_str(), SFM_WRITE, sndFormat, channels, sr);
             if (!wf) {
-                QMessageBox::warning(this, tr("Export Error"),
-                                     tr("Failed to open file for writing: %1").arg(filepath));
+                QMessageBox::warning(this, tr("Export Error"), tr("Failed to open file for writing: %1").arg(filepath));
                 continue;
             }
 
             sf_count_t frameCount = end - start;
             sf_count_t written = wf.write(samples.data() + start, frameCount);
             if (written != frameCount) {
-                QMessageBox::warning(this, tr("Export Error"),
-                                     tr("Failed to write all samples to: %1").arg(filepath));
+                QMessageBox::warning(this, tr("Export Error"), tr("Failed to write all samples to: %1").arg(filepath));
                 continue;
             }
             ++exported;
@@ -508,8 +521,8 @@ namespace dstools {
                 Item item;
                 item.id = sliceId;
                 item.name = sliceId;
-                item.audioSource = DsProject::toPosixPath(dir.filePath(
-                    QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'))));
+                item.audioSource = DsProject::toPosixPath(
+                    dir.filePath(QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'))));
                 item.slices.push_back(std::move(slice));
                 items.push_back(std::move(item));
 
@@ -523,24 +536,22 @@ namespace dstools {
 
                 // Create .dsitem record file for pipeline tracking
                 {
-                    QString dsitemDir = m_dataSource->workingDir()
-                                       + QStringLiteral("/dstemp/dsitems");
+                    QString dsitemDir = m_dataSource->workingDir() + QStringLiteral("/dstemp/dsitems");
                     QDir().mkpath(dsitemDir);
 
                     DsItemRecord record;
                     record.status = DsItemRecord::Status::Pending;
                     record.inputFile = currentAudioPath.toStdString();
-                    record.outputFile = dir.filePath(
-                        QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0')))
-                        .toStdString();
+                    record.outputFile =
+                        dir.filePath(QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0')))
+                            .toStdString();
 
                     QT_WARNING_PUSH
                     QT_WARNING_DISABLE_DEPRECATED
                     DsItemManager mgr;
                     QT_WARNING_POP
                     auto dsitemPath = std::filesystem::path(
-                        (dsitemDir + QStringLiteral("/") + sliceId + QStringLiteral(".dsitem"))
-                            .toStdWString());
+                        (dsitemDir + QStringLiteral("/") + sliceId + QStringLiteral(".dsitem")).toStdWString());
                     mgr.save(record, dsitemPath);
                 }
             }
@@ -629,8 +640,7 @@ namespace dstools {
     }
 
     void DsSlicerPage::onOpenAudioDirectory() {
-        const QString dir = QFileDialog::getExistingDirectory(
-            this, QStringLiteral("选择音频目录"));
+        const QString dir = QFileDialog::getExistingDirectory(this, QStringLiteral("选择音频目录"));
         if (!dir.isEmpty())
             m_audioFileList->addDirectory(dir);
     }
@@ -652,7 +662,10 @@ namespace dstools {
     void DsSlicerPage::keyPressEvent(QKeyEvent *event) {
         if (event->key() == Qt::Key_Delete && m_selectedBoundary >= 0 &&
             m_selectedBoundary < static_cast<int>(m_slicePoints.size())) {
-            auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
+            auto refreshFn = [this]() {
+                refreshBoundaries();
+                updateSlicerListPanel();
+            };
             m_undoStack->push(new RemoveSlicePointCommand(m_slicePoints, m_selectedBoundary, refreshFn));
             m_selectedBoundary = -1;
             event->accept();
@@ -727,7 +740,8 @@ namespace dstools {
             std::vector<float> buffer(kBufSize);
             while (true) {
                 int read = decoder.read(buffer.data(), 0, kBufSize);
-                if (read <= 0) break;
+                if (read <= 0)
+                    break;
                 allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
             }
             decoder.close();
@@ -782,11 +796,14 @@ namespace dstools {
         // Check that at least one file has slice points
         bool hasSlices = false;
         for (const auto &[path, points] : m_fileSlicePoints) {
-            if (!points.empty()) { hasSlices = true; break; }
+            if (!points.empty()) {
+                hasSlices = true;
+                break;
+            }
         }
         if (!hasSlices) {
             QMessageBox::information(this, tr("Batch Export"),
-                tr("No files have been sliced. Slice audio files first."));
+                                     tr("No files have been sliced. Slice audio files first."));
             return;
         }
 
@@ -797,17 +814,27 @@ namespace dstools {
             return;
 
         QString outputDir = dlg.outputDir();
-        if (outputDir.isEmpty()) return;
+        if (outputDir.isEmpty())
+            return;
         QDir dir(outputDir);
-        if (!dir.exists()) dir.mkpath(outputDir);
+        if (!dir.exists())
+            dir.mkpath(outputDir);
 
         int digits = dlg.numDigits();
         int sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
         switch (dlg.bitDepth()) {
-            case SliceExportDialog::BitDepth::PCM16:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16; break;
-            case SliceExportDialog::BitDepth::PCM24:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_24; break;
-            case SliceExportDialog::BitDepth::PCM32:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_32; break;
-            case SliceExportDialog::BitDepth::Float32: sndFormat = SF_FORMAT_WAV | SF_FORMAT_FLOAT; break;
+            case SliceExportDialog::BitDepth::PCM16:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+                break;
+            case SliceExportDialog::BitDepth::PCM24:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
+                break;
+            case SliceExportDialog::BitDepth::PCM32:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_32;
+                break;
+            case SliceExportDialog::BitDepth::Float32:
+                sndFormat = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+                break;
         }
 
         int totalExported = 0;
@@ -830,7 +857,8 @@ namespace dstools {
             std::vector<float> buffer(kBufSize);
             while (true) {
                 int read = decoder.read(buffer.data(), 0, kBufSize);
-                if (read <= 0) break;
+                if (read <= 0)
+                    break;
                 allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
             }
             decoder.close();
@@ -854,15 +882,14 @@ namespace dstools {
             int numSegments = static_cast<int>(slicePoints.size()) + 1;
             for (int i = 0; i < numSegments; ++i) {
                 double startSec = (i == 0) ? 0.0 : slicePoints[i - 1];
-                double endSec = (i < static_cast<int>(slicePoints.size()))
-                                    ? slicePoints[i]
-                                    : static_cast<double>(mono.size()) / sr;
+                double endSec =
+                    (i < static_cast<int>(slicePoints.size())) ? slicePoints[i] : static_cast<double>(mono.size()) / sr;
                 int startSamp = static_cast<int>(startSec * sr);
                 int endSamp = std::min(static_cast<int>(endSec * sr), static_cast<int>(mono.size()));
-                if (endSamp <= startSamp) continue;
+                if (endSamp <= startSamp)
+                    continue;
 
-                QString filename = QStringLiteral("%1_%2.wav")
-                    .arg(prefix).arg(i + 1, digits, 10, QChar('0'));
+                QString filename = QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
                 QString filepath = dir.filePath(filename);
 
 #ifdef _WIN32
@@ -871,7 +898,8 @@ namespace dstools {
                 auto pathStr = filepath.toStdString();
 #endif
                 SndfileHandle wf(pathStr.c_str(), SFM_WRITE, sndFormat, 1, sr);
-                if (!wf) continue;
+                if (!wf)
+                    continue;
 
                 sf_count_t frameCount = endSamp - startSamp;
                 wf.write(mono.data() + startSamp, frameCount);
@@ -880,7 +908,7 @@ namespace dstools {
         }
 
         QMessageBox::information(this, tr("Batch Export Complete"),
-            tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));
+                                 tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));
     }
 
     void DsSlicerPage::promptSliceUpdateIfNeeded() {
@@ -912,11 +940,11 @@ namespace dstools {
         dlg.setWindowTitle(QStringLiteral("切点已更新"));
         auto *dlgLayout = new QVBoxLayout(&dlg);
 
-        auto *warnLabel = new QLabel(
-            QStringLiteral("⚠ 以下音频文件的切点已更改，但已有导出的切片和标注数据。\n"
-                           "重新切片将移除旧的切片和 dsitem，<b>已标注的歌词、音素、音高数据将丢失</b>。\n\n"
-                           "选择需要重新切片的音频："),
-            &dlg);
+        auto *warnLabel =
+            new QLabel(QStringLiteral("⚠ 以下音频文件的切点已更改，但已有导出的切片和标注数据。\n"
+                                      "重新切片将移除旧的切片和 dsitem，<b>已标注的歌词、音素、音高数据将丢失</b>。\n\n"
+                                      "选择需要重新切片的音频："),
+                       &dlg);
         warnLabel->setWordWrap(true);
         dlgLayout->addWidget(warnLabel);
 
@@ -955,10 +983,9 @@ namespace dstools {
             QString baseName = QFileInfo(filePath).completeBaseName();
 
             // Remove items matching this base name
-            currentItems.erase(
-                std::remove_if(currentItems.begin(), currentItems.end(),
-                               [&](const Item &item) { return item.id.startsWith(baseName); }),
-                currentItems.end());
+            currentItems.erase(std::remove_if(currentItems.begin(), currentItems.end(),
+                                              [&](const Item &item) { return item.id.startsWith(baseName); }),
+                               currentItems.end());
 
             // Remove dsitem files
             if (m_dataSource) {
