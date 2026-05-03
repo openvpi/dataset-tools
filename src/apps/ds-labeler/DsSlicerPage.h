@@ -1,21 +1,35 @@
 /// @file DsSlicerPage.h
-/// @brief DsLabeler slicer page placeholder — full implementation in M.5.
+/// @brief DsLabeler slicer page — auto-slice + manual slice editing + export.
 
 #pragma once
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
 
+#include <QUndoStack>
 #include <QWidget>
 
 namespace dstools {
 
 class ProjectDataSource;
 
-/// @brief Slicer page for DsLabeler.
+namespace waveform {
+class WaveformPanel;
+class MelSpectrogramWidget;
+} // namespace waveform
+
+class SliceNumberLayer;
+
+/// @brief Slicer page for DsLabeler (ADR-61, ADR-64).
 ///
-/// Provides auto-slice, manual slice editing, and slice export.
-/// Currently a placeholder; full implementation in M.5.
+/// Provides auto-slice, manual slice editing (add/move/delete cut lines),
+/// and slice audio export. Slice parameters are embedded directly in this
+/// page (not in Settings). Layout:
+///   - Slice params panel + action buttons
+///   - WaveformPanel (TimeRuler + Waveform + scrollbar)
+///   - MelSpectrogramWidget (collapsible)
+///   - SliceNumberLayer (numeric labels for each segment)
+///   - SliceListPanel (bottom panel with slice list)
 class DsSlicerPage : public QWidget,
                      public labeler::IPageActions,
                      public labeler::IPageLifecycle {
@@ -24,7 +38,7 @@ class DsSlicerPage : public QWidget,
 
 public:
     explicit DsSlicerPage(QWidget *parent = nullptr);
-    ~DsSlicerPage() override = default;
+    ~DsSlicerPage() override;
 
     void setDataSource(ProjectDataSource *source);
 
@@ -37,6 +51,38 @@ public:
 
 private:
     ProjectDataSource *m_dataSource = nullptr;
+    QUndoStack *m_undoStack = nullptr;
+
+    // UI components
+    waveform::WaveformPanel *m_waveformPanel = nullptr;
+    waveform::MelSpectrogramWidget *m_melSpectrogram = nullptr;
+    SliceNumberLayer *m_sliceNumberLayer = nullptr;
+    class SliceListPanel *m_sliceListPanel = nullptr;
+
+    // Slice params
+    class QDoubleSpinBox *m_thresholdSpin = nullptr;
+    class QSpinBox *m_minLengthSpin = nullptr;
+    class QSpinBox *m_minIntervalSpin = nullptr;
+    class QSpinBox *m_hopSizeSpin = nullptr;
+    class QSpinBox *m_maxSilenceSpin = nullptr;
+
+    // Action buttons
+    class QPushButton *m_btnAutoSlice = nullptr;
+    class QPushButton *m_btnReSlice = nullptr;
+    class QPushButton *m_btnImportMarkers = nullptr;
+    class QPushButton *m_btnSaveMarkers = nullptr;
+    class QPushButton *m_btnExportAudio = nullptr;
+
+    // Slice boundary times (seconds)
+    std::vector<double> m_slicePoints;
+
+    void buildLayout();
+    void connectSignals();
+    void onAutoSlice();
+    void onImportMarkers();
+    void onSaveMarkers();
+    void onExportAudio();
+    void refreshBoundaries();
 };
 
 } // namespace dstools

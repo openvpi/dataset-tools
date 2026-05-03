@@ -9,7 +9,7 @@ dstools_add_executable(${PROJECT_NAME}
     DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets dstools-domain
-                min-label-editor phoneme-editor pitch-editor
+                min-label-editor phoneme-editor pitch-editor waveform-panel
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
