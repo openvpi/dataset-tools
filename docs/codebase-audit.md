@@ -224,11 +224,11 @@ Inference libraries (`game-infer`, `hubert-infer`, `rmvpe-infer`) are direct sha
 
 | # | Task | Priority | Effort |
 |---|---|---|---|
-| 2.1 | Extract `ProjectPaths` utility, replace all hardcoded path strings | Medium | 3h |
-| 2.2 | Replace manual `delete` with `unique_ptr` in DsProject, MinLabelPage, SingleInstanceGuard | Medium | 3h |
-| 2.3 | Enable `WarningsAsErrors` for key clang-tidy checks in CI | Medium | 2h |
-| 2.4 | Migrate `OnnxEnv` and `FormatAdapterRegistry` singletons to ServiceLocator | Low | 4h |
-| 2.5 | Fix heap-allocated QMutex in FileLogSink | Low | 30min |
+| 2.1 | ~~Extract `ProjectPaths` utility, replace all hardcoded path strings~~ ✅ | Medium | 3h |
+| 2.2 | ~~Replace manual `delete` with `unique_ptr` in DsProject, MinLabelPage, SingleInstanceGuard~~ ✅ | Medium | 3h |
+| 2.3 | ~~Enable `WarningsAsErrors` for key clang-tidy checks in CI~~ ✅ | Medium | 2h |
+| 2.4 | ~~Migrate `OnnxEnv` and `FormatAdapterRegistry` singletons to ServiceLocator~~ ✅ | Low | 4h |
+| 2.5 | ~~Fix heap-allocated QMutex in FileLogSink~~ ✅ | Low | 30min |
 
 ### Phase 3: Architecture Refactoring (4-8 weeks)
 
