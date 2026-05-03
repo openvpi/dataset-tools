@@ -24,28 +24,35 @@ DroppableFileListPanel::DroppableFileListPanel(QWidget *parent) : QWidget(parent
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
+    // ── Top button bar ────────────────────────────────────────────────────
+    auto *btnLayout = new QHBoxLayout;
+    btnLayout->setContentsMargins(2, 2, 2, 2);
+    btnLayout->setSpacing(2);
+    m_btnAddDir = new QPushButton(QStringLiteral("📁"), this);
+    m_btnAdd = new QPushButton(QStringLiteral("+"), this);
+    m_btnRemove = new QPushButton(QStringLiteral("−"), this);
+    m_btnDiscard = new QPushButton(QStringLiteral("Discard"), this);
+    m_btnClear = new QPushButton(QStringLiteral("Clear"), this);
+    m_btnAddDir->setToolTip(tr("Add directory"));
+    m_btnAdd->setToolTip(tr("Add files"));
+    m_btnRemove->setToolTip(tr("Remove selected"));
+    m_btnDiscard->setToolTip(tr("Discard selected (mark as skipped)"));
+    m_btnClear->setToolTip(tr("Clear all files"));
+    m_btnAddDir->setFixedWidth(32);
+    m_btnAdd->setFixedWidth(32);
+    m_btnRemove->setFixedWidth(32);
+    btnLayout->addWidget(m_btnAddDir);
+    btnLayout->addWidget(m_btnAdd);
+    btnLayout->addWidget(m_btnRemove);
+    btnLayout->addWidget(m_btnDiscard);
+    btnLayout->addWidget(m_btnClear);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
     m_listWidget = new QListWidget(this);
     m_listWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_listWidget->setAlternatingRowColors(true);
     layout->addWidget(m_listWidget, 1);
-
-    auto *btnLayout = new QHBoxLayout;
-    btnLayout->setContentsMargins(2, 2, 2, 2);
-    btnLayout->setSpacing(2);
-    m_btnAdd = new QPushButton(QStringLiteral("+"), this);
-    m_btnAddDir = new QPushButton(QStringLiteral("📁"), this);
-    m_btnRemove = new QPushButton(QStringLiteral("−"), this);
-    m_btnAdd->setToolTip(tr("Add files"));
-    m_btnAddDir->setToolTip(tr("Add directory"));
-    m_btnRemove->setToolTip(tr("Remove selected"));
-    m_btnAdd->setFixedWidth(32);
-    m_btnAddDir->setFixedWidth(32);
-    m_btnRemove->setFixedWidth(32);
-    btnLayout->addWidget(m_btnAdd);
-    btnLayout->addWidget(m_btnAddDir);
-    btnLayout->addWidget(m_btnRemove);
-    btnLayout->addStretch();
-    layout->addLayout(btnLayout);
 
     m_progressTracker = new FileProgressTracker(FileProgressTracker::LabelOnly, this);
     m_progressTracker->setVisible(false);
@@ -54,6 +61,8 @@ DroppableFileListPanel::DroppableFileListPanel(QWidget *parent) : QWidget(parent
     connect(m_btnAdd, &QPushButton::clicked, this, &DroppableFileListPanel::onAddFiles);
     connect(m_btnAddDir, &QPushButton::clicked, this, &DroppableFileListPanel::onAddDirectory);
     connect(m_btnRemove, &QPushButton::clicked, this, &DroppableFileListPanel::onRemoveSelected);
+    connect(m_btnDiscard, &QPushButton::clicked, this, &DroppableFileListPanel::onDiscardSelected);
+    connect(m_btnClear, &QPushButton::clicked, this, &DroppableFileListPanel::onClearAll);
     connect(m_listWidget, &QListWidget::currentRowChanged, this,
             &DroppableFileListPanel::onCurrentRowChanged);
 }
@@ -178,7 +187,7 @@ QListWidget *DroppableFileListPanel::listWidget() const {
     return m_listWidget;
 }
 
-void DroppableFileListPanel::styleItem(QListWidgetItem *item, const QString &filePath) {
+void DroppableFileListPanel::styleItem(QListWidgetItem * /*item*/, const QString &filePath) {
     Q_UNUSED(filePath)
     // Default: filename only. Subclasses can override for custom styling.
 }
@@ -206,6 +215,22 @@ void DroppableFileListPanel::onAddDirectory() {
 
 void DroppableFileListPanel::onRemoveSelected() {
     qDeleteAll(m_listWidget->selectedItems());
+    emit filesRemoved();
+}
+
+void DroppableFileListPanel::onDiscardSelected() {
+    const auto selected = m_listWidget->selectedItems();
+    for (auto *item : selected) {
+        item->setForeground(Qt::gray);
+        QFont f = item->font();
+        f.setStrikeOut(true);
+        item->setFont(f);
+        item->setData(Qt::UserRole + 1, true); // discarded flag
+    }
+}
+
+void DroppableFileListPanel::onClearAll() {
+    m_listWidget->clear();
     emit filesRemoved();
 }
 

@@ -98,6 +98,8 @@ private:
     QPushButton *m_btnAdd = nullptr;
     QPushButton *m_btnAddDir = nullptr;
     QPushButton *m_btnRemove = nullptr;
+    QPushButton *m_btnDiscard = nullptr;
+    QPushButton *m_btnClear = nullptr;
     FileProgressTracker *m_progressTracker = nullptr;
     QStringList m_filters;
 
@@ -105,6 +107,8 @@ private:
     void onAddFiles();
     void onAddDirectory();
     void onRemoveSelected();
+    void onDiscardSelected();
+    void onClearAll();
     void onCurrentRowChanged(int row);
 };
 
