@@ -204,9 +204,9 @@ namespace dstools {
         m_sliceNumberLayer = new SliceNumberLayer(m_viewport, contentWidget);
         splitter->addWidget(m_sliceNumberLayer);
 
-        splitter->setStretchFactor(0, 4); // waveform
-        splitter->setStretchFactor(1, 2); // mel spectrogram
-        splitter->setStretchFactor(2, 0); // number layer (fixed height)
+        splitter->setStretchFactor(0, 2); // waveform
+        splitter->setStretchFactor(1, 5); // spectrogram
+        splitter->setStretchFactor(2, 3); // number layer
 
         mainLayout->addWidget(splitter, 1);
 
