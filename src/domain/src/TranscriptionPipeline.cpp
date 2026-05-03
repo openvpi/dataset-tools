@@ -1,6 +1,12 @@
 /// @file TranscriptionPipeline.cpp
 /// @brief Step 6→7→8 memory pipeline implementation.
 
+// Suppress C4996 for deprecated TranscriptionPipeline — this file implements the class.
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4996)
+#endif
+
 #include <dstools/TranscriptionPipeline.h>
 #include <dstools/TextGridToCsv.h>
 #include <dstools/PhNumCalculator.h>
@@ -330,3 +336,7 @@ bool TranscriptionPipeline::convertToDs(const Options &opts,
 }
 
 } // namespace dstools
+
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
