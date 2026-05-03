@@ -349,7 +349,7 @@ void WaveformPanel::loadAudio(const QString &path) {
 
     auto fmt = decoder.format();
     m_sampleRate = fmt.sampleRate();
-    int channels = fmt.channels();
+    m_channelCount = fmt.channels();
 
     std::vector<float> allSamples;
     constexpr int kBufSize = 4096;
@@ -362,17 +362,26 @@ void WaveformPanel::loadAudio(const QString &path) {
     }
     decoder.close();
 
-    // Mix to mono
-    if (channels > 1) {
-        m_samples.resize(allSamples.size() / channels);
-        for (size_t i = 0; i < m_samples.size(); ++i) {
+    // Store per-channel data and mix to mono
+    size_t numFrames = allSamples.size() / m_channelCount;
+    m_channelSamples.resize(m_channelCount);
+    for (int c = 0; c < m_channelCount; ++c) {
+        m_channelSamples[c].resize(numFrames);
+        for (size_t i = 0; i < numFrames; ++i)
+            m_channelSamples[c][i] = allSamples[i * m_channelCount + c];
+    }
+
+    // Always create mono mix
+    m_samples.resize(numFrames);
+    if (m_channelCount > 1) {
+        for (size_t i = 0; i < numFrames; ++i) {
             float sum = 0.0f;
-            for (int c = 0; c < channels; ++c)
-                sum += allSamples[i * channels + c];
-            m_samples[i] = sum / static_cast<float>(channels);
+            for (int c = 0; c < m_channelCount; ++c)
+                sum += m_channelSamples[c][i];
+            m_samples[i] = sum / static_cast<float>(m_channelCount);
         }
     } else {
-        m_samples = std::move(allSamples);
+        m_samples = m_channelSamples[0];
     }
 
     m_waveformDisplay->setSamples(&m_samples, m_sampleRate);
@@ -382,6 +391,9 @@ void WaveformPanel::loadAudio(const QString &path) {
     m_viewport->setTotalDuration(duration);
     m_viewport->setViewRange(0.0, duration);
     updateScrollBar();
+
+    if (m_channelCount > 1)
+        emit stereoDetected();
 
     emit audioLoaded();
 }
@@ -402,6 +414,16 @@ void WaveformPanel::setAudioData(const std::vector<float> &samples, int sampleRa
 void WaveformPanel::setBoundaries(const std::vector<BoundaryInfo> &boundaries) {
     m_boundaries = boundaries;
     m_waveformDisplay->setBoundaries(&m_boundaries);
+}
+
+void WaveformPanel::setChannelMode(ChannelMode mode) {
+    if (m_channelMode == mode)
+        return;
+    m_channelMode = mode;
+    // For now, always display mono mix. StereoSplit rendering
+    // will be implemented when WaveformDisplay supports dual-track painting.
+    // The mono data pointer stays the same — downstream always uses monoSamples().
+    emit channelModeChanged(mode);
 }
 
 double WaveformPanel::totalDuration() const {

@@ -21,6 +21,12 @@ class PlaybackController;
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
 
+/// @brief Channel display mode for dual-channel audio.
+enum class ChannelMode {
+    Mono,        ///< Show mixed mono waveform (default).
+    StereoSplit  ///< Show left/right channels stacked vertically.
+};
+
 /// @brief Boundary data for overlay rendering and right-click playback.
 struct BoundaryInfo {
     double timeSec = 0.0; ///< Boundary position in seconds.
@@ -52,11 +58,23 @@ public:
     /// Access the playback controller.
     [[nodiscard]] PlaybackController *playback() const { return m_playback; }
 
-    /// Get current mono samples (for downstream processing).
+    /// Get current mono samples (for downstream processing — always mono).
     [[nodiscard]] const std::vector<float> &monoSamples() const { return m_samples; }
 
     /// Get sample rate.
     [[nodiscard]] int sampleRate() const { return m_sampleRate; }
+
+    /// Get number of channels in the original audio.
+    [[nodiscard]] int channelCount() const { return m_channelCount; }
+
+    /// Set channel display mode.
+    void setChannelMode(ChannelMode mode);
+
+    /// Get current channel display mode.
+    [[nodiscard]] ChannelMode channelMode() const { return m_channelMode; }
+
+    /// @return true if the original audio is multi-channel.
+    [[nodiscard]] bool isStereo() const { return m_channelCount > 1; }
 
     /// Get total duration in seconds.
     [[nodiscard]] double totalDuration() const;
@@ -77,6 +95,12 @@ signals:
     /// Emitted on Ctrl+wheel zoom.
     void zoomChanged(double pixelsPerSecond);
 
+    /// Emitted when channel mode changes.
+    void channelModeChanged(ChannelMode mode);
+
+    /// Emitted when stereo audio is detected (for UI to show toggle).
+    void stereoDetected();
+
 private:
     class WaveformDisplay;
     class TimeRuler;
@@ -88,7 +112,10 @@ private:
     QScrollBar *m_hScrollBar = nullptr;
 
     std::vector<float> m_samples;
+    std::vector<std::vector<float>> m_channelSamples; ///< Per-channel raw data.
     int m_sampleRate = 44100;
+    int m_channelCount = 1;
+    ChannelMode m_channelMode = ChannelMode::Mono;
     std::vector<BoundaryInfo> m_boundaries;
 
     void buildLayout();
