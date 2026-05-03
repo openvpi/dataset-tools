@@ -108,6 +108,7 @@ namespace dstools {
         void updateSlicerListPanel();
         void saveCurrentSlicePoints();
         void loadSlicePointsForFile(const QString &filePath);
+        void updateFileProgress();
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

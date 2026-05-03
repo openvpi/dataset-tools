@@ -232,6 +232,15 @@ namespace dstools {
 
             refreshBoundaries();
             updateSlicerListPanel();
+            updateFileProgress();
+        });
+
+        // Update progress when files are added or removed
+        connect(m_audioFileList, &AudioFileListPanel::filesAdded, this, [this]() {
+            updateFileProgress();
+        });
+        connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() {
+            updateFileProgress();
         });
 
         // Knife mode: left-click on waveform → add slice point
@@ -334,6 +343,8 @@ namespace dstools {
 
         refreshBoundaries();
         updateSlicerListPanel();
+        saveCurrentSlicePoints();
+        updateFileProgress();
     }
 
     void DsSlicerPage::onImportMarkers() {
@@ -360,6 +371,8 @@ namespace dstools {
         m_undoStack->endMacro();
         refreshBoundaries();
         updateSlicerListPanel();
+        saveCurrentSlicePoints();
+        updateFileProgress();
     }
 
     void DsSlicerPage::onSaveMarkers() {
@@ -663,6 +676,16 @@ namespace dstools {
         } else {
             m_slicePoints.clear();
         }
+    }
+
+    void DsSlicerPage::updateFileProgress() {
+        int total = m_audioFileList->fileCount();
+        int completed = 0;
+        for (const auto &[path, points] : m_fileSlicePoints) {
+            if (!points.empty())
+                ++completed;
+        }
+        m_audioFileList->progressTracker()->setProgress(completed, total);
     }
 
     void DsSlicerPage::onBatchExportAll() {
