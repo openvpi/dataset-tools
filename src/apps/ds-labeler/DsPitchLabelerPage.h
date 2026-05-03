@@ -5,6 +5,9 @@
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
+#include <dsfw/AppSettings.h>
+#include <dstools/ShortcutManager.h>
+#include <dstools/PhNumCalculator.h>
 
 #include <QWidget>
 
@@ -12,16 +15,18 @@
 
 #include <memory>
 
+namespace Rmvpe {
+class Rmvpe;
+}
+
+#include <game-infer/Game.h>
+
 namespace dstools {
 
 class ProjectDataSource;
 class SliceListPanel;
 namespace pitchlabeler { class DSFile; }
 
-/// @brief DsLabeler PitchLabeler page — project-backed F0/MIDI editing.
-///
-/// Composes PitchEditor with ProjectDataSource. Adds automatic add_ph_num,
-/// F0 extraction, and MIDI transcription when opening slices.
 class DsPitchLabelerPage : public QWidget,
                            public labeler::IPageActions,
                            public labeler::IPageLifecycle {
@@ -30,7 +35,7 @@ class DsPitchLabelerPage : public QWidget,
 
 public:
     explicit DsPitchLabelerPage(QWidget *parent = nullptr);
-    ~DsPitchLabelerPage() override = default;
+    ~DsPitchLabelerPage() override;
 
     void setDataSource(ProjectDataSource *source);
 
@@ -41,6 +46,9 @@ public:
 
     void onActivated() override;
     bool onDeactivating() override;
+    void onShutdown() override;
+
+    dstools::widgets::ShortcutManager *shortcutManager() const;
 
 signals:
     void sliceChanged(const QString &sliceId);
@@ -52,6 +60,17 @@ private:
     QString m_currentSliceId;
     std::shared_ptr<pitchlabeler::DSFile> m_currentFile;
 
+    dstools::AppSettings m_settings;
+    dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
+
+    QAction *m_prevAction = nullptr;
+    QAction *m_nextAction = nullptr;
+
+    std::unique_ptr<Rmvpe::Rmvpe> m_rmvpe;
+    std::unique_ptr<Game::Game> m_game;
+    PhNumCalculator m_phNumCalc;
+    bool m_inferRunning = false;
+
     void onSliceSelected(const QString &sliceId);
     bool saveCurrentSlice();
     bool maybeSave();
@@ -59,6 +78,15 @@ private:
     void onExtractPitch();
     void onExtractMidi();
     void onBatchExtract();
+    void onAddPhNum();
+
+    void ensureRmvpeEngine();
+    void ensureGameEngine();
+    void runPitchExtraction(const QString &sliceId);
+    void runMidiTranscription(const QString &sliceId);
+    void runAddPhNum(const QString &sliceId);
+    void applyPitchResult(const QString &sliceId, const std::vector<int32_t> &f0, float timestep);
+    void applyMidiResult(const QString &sliceId, const std::vector<Game::GameNote> &notes);
 };
 
 } // namespace dstools
