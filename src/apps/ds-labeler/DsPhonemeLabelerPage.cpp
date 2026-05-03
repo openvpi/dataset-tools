@@ -80,6 +80,7 @@ void DsPhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
         return;
 
     m_currentSliceId = sliceId;
+    m_settings.set(DsLabelerKeys::LastPhonemeSlice, sliceId);
 
     if (!m_source)
         return;
@@ -228,6 +229,16 @@ bool DsPhonemeLabelerPage::hasUnsavedChanges() const {
 
 void DsPhonemeLabelerPage::onActivated() {
     m_sliceList->refresh();
+
+    // Restore last selected slice from settings, or select first
+    if (m_currentSliceId.isEmpty()) {
+        QString lastSlice = m_settings.get(DsLabelerKeys::LastPhonemeSlice);
+        if (!lastSlice.isEmpty()) {
+            m_sliceList->setCurrentSlice(lastSlice);
+        } else if (m_sliceList->sliceCount() > 0) {
+            m_sliceList->setCurrentSlice(m_sliceList->currentSliceId());
+        }
+    }
 
     if (m_source && !m_currentSliceId.isEmpty()) {
         auto *ctx = m_source->context(m_currentSliceId);

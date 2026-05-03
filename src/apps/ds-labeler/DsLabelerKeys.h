@@ -23,4 +23,10 @@ namespace DsLabelerKeys {
     inline const dstools::SettingsKey<QString> ShortcutExtractPitch("Shortcuts/extractPitch", "Ctrl+R");
     inline const dstools::SettingsKey<QString> ShortcutExtractMidi("Shortcuts/extractMidi", "Ctrl+Shift+R");
     inline const dstools::SettingsKey<QString> ShortcutExit("Shortcuts/exit", "Alt+F4");
+
+    // Last selected items (persisted across sessions)
+    inline const dstools::SettingsKey<QString> LastMinLabelSlice("State/lastMinLabelSlice", "");
+    inline const dstools::SettingsKey<QString> LastPhonemeSlice("State/lastPhonemeSlice", "");
+    inline const dstools::SettingsKey<QString> LastPitchSlice("State/lastPitchSlice", "");
+    inline const dstools::SettingsKey<QString> LastSlicerFile("State/lastSlicerFile", "");
 }
