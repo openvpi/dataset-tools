@@ -5,20 +5,24 @@
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
+#include <dsfw/AppSettings.h>
+#include <dstools/ShortcutManager.h>
 
 #include <QWidget>
 
 #include <PhonemeEditor.h>
+
+#include <memory>
+
+namespace HFA {
+class HFA;
+}
 
 namespace dstools {
 
 class ProjectDataSource;
 class SliceListPanel;
 
-/// @brief DsLabeler PhonemeLabeler page — project-backed phoneme editing.
-///
-/// Composes PhonemeEditor with ProjectDataSource. Adds automatic FA execution
-/// when opening a slice without phoneme data, batch FA, and preloading.
 class DsPhonemeLabelerPage : public QWidget,
                              public labeler::IPageActions,
                              public labeler::IPageLifecycle {
@@ -27,7 +31,7 @@ class DsPhonemeLabelerPage : public QWidget,
 
 public:
     explicit DsPhonemeLabelerPage(QWidget *parent = nullptr);
-    ~DsPhonemeLabelerPage() override = default;
+    ~DsPhonemeLabelerPage() override;
 
     void setDataSource(ProjectDataSource *source);
 
@@ -38,8 +42,10 @@ public:
 
     void onActivated() override;
     bool onDeactivating() override;
+    void onShutdown() override;
 
     [[nodiscard]] QToolBar *toolbar() const { return m_editor->toolbar(); }
+    dstools::widgets::ShortcutManager *shortcutManager() const;
 
 signals:
     void sliceChanged(const QString &sliceId);
@@ -50,12 +56,24 @@ private:
     ProjectDataSource *m_source = nullptr;
     QString m_currentSliceId;
 
+    dstools::AppSettings m_settings;
+    dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
+
+    QAction *m_prevAction = nullptr;
+    QAction *m_nextAction = nullptr;
+
+    std::unique_ptr<HFA::HFA> m_hfa;
+    bool m_faRunning = false;
+
     void onSliceSelected(const QString &sliceId);
     bool saveCurrentSlice();
     bool maybeSave();
 
     void onRunFA();
     void onBatchFA();
+    void ensureHfaEngine();
+    void runFaForSlice(const QString &sliceId);
+    void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers);
 };
 
 } // namespace dstools
