@@ -12,7 +12,6 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
-#include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -52,21 +51,11 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
     m_editSpeaker->setPlaceholderText(QStringLiteral("说话人名称 (可选)"));
     infoLayout->addRow(QStringLiteral("说话人:"), m_editSpeaker);
 
-    // --- Audio files ---
-    auto *audioGroup = new QGroupBox(QStringLiteral("音频文件"), this);
-    auto *audioLayout = new QVBoxLayout(audioGroup);
-
-    m_audioList = new QListWidget(this);
-    m_audioList->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    audioLayout->addWidget(m_audioList);
-
-    auto *audioBtnLayout = new QHBoxLayout;
-    m_btnAddAudio = new QPushButton(QStringLiteral("添加..."), this);
-    m_btnRemoveAudio = new QPushButton(QStringLiteral("移除"), this);
-    audioBtnLayout->addWidget(m_btnAddAudio);
-    audioBtnLayout->addWidget(m_btnRemoveAudio);
-    audioBtnLayout->addStretch();
-    audioLayout->addLayout(audioBtnLayout);
+    // --- Info note ---
+    auto *noteLabel = new QLabel(
+        QStringLiteral("提示: 音频文件在切片页面中打开和处理，创建工程时无需添加。"), this);
+    noteLabel->setWordWrap(true);
+    noteLabel->setStyleSheet(QStringLiteral("color: gray; font-style: italic;"));
 
     // --- Buttons ---
     m_buttonBox = new QDialogButtonBox(
@@ -77,13 +66,11 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
     // --- Main layout ---
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(infoGroup);
-    mainLayout->addWidget(audioGroup);
+    mainLayout->addWidget(noteLabel);
     mainLayout->addWidget(m_buttonBox);
 
     // --- Connections ---
     connect(m_btnBrowseDir, &QPushButton::clicked, this, &NewProjectDialog::onBrowseDir);
-    connect(m_btnAddAudio, &QPushButton::clicked, this, &NewProjectDialog::onAddAudio);
-    connect(m_btnRemoveAudio, &QPushButton::clicked, this, &NewProjectDialog::onRemoveAudio);
     connect(m_buttonBox, &QDialogButtonBox::accepted, this, &NewProjectDialog::onAccepted);
     connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(m_editName, &QLineEdit::textChanged, this, [this]() { updateOkButton(); });
@@ -100,36 +87,8 @@ void NewProjectDialog::onBrowseDir() {
     updateOkButton();
 }
 
-void NewProjectDialog::onAddAudio() {
-    const QStringList files = QFileDialog::getOpenFileNames(
-        this, QStringLiteral("选择音频文件"), {},
-        QStringLiteral("音频文件 (*.wav *.mp3 *.flac *.m4a *.ogg);;所有文件 (*)"));
-    for (const auto &f : files) {
-        // Avoid duplicates
-        bool found = false;
-        for (int i = 0; i < m_audioList->count(); ++i) {
-            if (m_audioList->item(i)->data(Qt::UserRole).toString() == f) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            auto *item = new QListWidgetItem(QFileInfo(f).fileName());
-            item->setData(Qt::UserRole, f);
-            m_audioList->addItem(item);
-        }
-    }
-    updateOkButton();
-}
-
-void NewProjectDialog::onRemoveAudio() {
-    qDeleteAll(m_audioList->selectedItems());
-    updateOkButton();
-}
-
 void NewProjectDialog::updateOkButton() {
-    bool ok = !m_editName->text().trimmed().isEmpty() && !m_saveDir.isEmpty() &&
-              m_audioList->count() > 0;
+    bool ok = !m_editName->text().trimmed().isEmpty() && !m_saveDir.isEmpty();
     m_buttonBox->button(QDialogButtonBox::Ok)->setEnabled(ok);
 }
 
@@ -145,29 +104,9 @@ void NewProjectDialog::onAccepted() {
         return;
     }
 
-    // Parse language code from combo text
-    const QString langText = m_comboLanguage->currentText();
-    const QString langCode = langText.section(' ', 0, 0); // "zh", "ja", "en"
-
-    // Build items from audio files
-    std::vector<Item> items;
-    for (int i = 0; i < m_audioList->count(); ++i) {
-        const QString audioPath = m_audioList->item(i)->data(Qt::UserRole).toString();
-        const QFileInfo fi(audioPath);
-
-        Item item;
-        item.id = fi.completeBaseName();
-        item.name = fi.completeBaseName();
-        item.language = langCode;
-        item.speaker = m_editSpeaker->text().trimmed();
-        item.audioSource = DsProject::toPosixPath(audioPath);
-        items.push_back(std::move(item));
-    }
-
-    // Create and save project
+    // Create empty project (no items — slices will be created from slicer page)
     DsProject project;
     project.setWorkingDirectory(projectDir);
-    project.setItems(std::move(items));
 
     const QString filePath = projectDir + QStringLiteral("/") + name +
                              QStringLiteral(".dsproj");

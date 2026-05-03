@@ -9,7 +9,6 @@ class QComboBox;
 class QDialogButtonBox;
 class QLabel;
 class QLineEdit;
-class QListWidget;
 class QPushButton;
 
 namespace dstools {
@@ -32,9 +31,6 @@ private:
     QLineEdit *m_editName = nullptr;
     QLabel *m_labelDir = nullptr;
     QPushButton *m_btnBrowseDir = nullptr;
-    QListWidget *m_audioList = nullptr;
-    QPushButton *m_btnAddAudio = nullptr;
-    QPushButton *m_btnRemoveAudio = nullptr;
     QComboBox *m_comboLanguage = nullptr;
     QLineEdit *m_editSpeaker = nullptr;
     QDialogButtonBox *m_buttonBox = nullptr;
@@ -43,8 +39,6 @@ private:
     QString m_projectFilePath;
 
     void onBrowseDir();
-    void onAddAudio();
-    void onRemoveAudio();
     void onAccepted();
     void updateOkButton();
 };
