@@ -1,4 +1,4 @@
-﻿/// @file LyricFAPage.h
+/// @file LyricFAPage.h
 /// @brief LyricFA ASR and lyric matching pipeline page.
 
 #pragma once
@@ -10,6 +10,8 @@
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
 #include <dstools/PathSelector.h>
+
+#include <memory>
 
 namespace dstools::widgets {
 
@@ -69,9 +71,9 @@ private:
 
     dstools::widgets::ModelLoadPanel *m_modelPanel; ///< Model loading panel.
 
-    LyricFA::Asr *m_asr = nullptr;                ///< ASR engine instance.
+    std::unique_ptr<LyricFA::Asr> m_asr;                ///< ASR engine instance.
     QSharedPointer<Pinyin::Pinyin> m_mandarin;    ///< Mandarin pinyin converter.
-    LyricFA::MatchLyric *m_match = nullptr;       ///< Lyric matching engine.
+    std::unique_ptr<LyricFA::MatchLyric> m_match;       ///< Lyric matching engine.
 
     /// @brief Operating mode of the page.
     enum Mode { Mode_Asr, Mode_MatchLyric };

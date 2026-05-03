@@ -12,6 +12,8 @@
 #include <QSettings>
 #include <QVBoxLayout>
 
+#include <memory>
+
 #include "NewProjectDialog.h"
 
 namespace dstools {
@@ -140,16 +142,15 @@ void WelcomePage::onOpenProject() {
 
 void WelcomePage::loadProject(const QString &path) {
     QString error;
-    auto *project = new DsProject(DsProject::load(path, error));
+    auto project = std::make_unique<DsProject>(DsProject::load(path, error));
     if (!error.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("打开工程"),
                              QStringLiteral("加载工程失败:\n%1").arg(error));
-        delete project;
         return;
     }
 
     addToRecent(path);
-    emit projectLoaded(project, path);
+    emit projectLoaded(project.release(), path);
 }
 
 void WelcomePage::addToRecent(const QString &path) {

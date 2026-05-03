@@ -23,6 +23,7 @@
 #include <SettingsPage.h>
 
 #include <filesystem>
+#include <memory>
 
 static void initPinyin(QApplication &app) {
     std::filesystem::path dictPath =
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]) {
     // Shared data source (lifetime = app)
     auto *dataSource = new dstools::ProjectDataSource(&shell);
     auto *settingsBackend = new dstools::ProjectSettingsBackend(&shell);
-    dstools::DsProject *project = nullptr;
+    std::unique_ptr<dstools::DsProject> project;
 
     // ── Register all 7 pages ─────────────────────────────────────────────
 
@@ -100,16 +101,15 @@ int main(int argc, char *argv[]) {
 
     // ── Project lifecycle ────────────────────────────────────────────────
 
-    auto loadProject = [&](dstools::DsProject *proj, const QString &path) {
-        delete project;
-        project = proj;
+    auto loadProject = [&](std::unique_ptr<dstools::DsProject> proj, const QString &path) {
+        project = std::move(proj);
 
         const QString workDir = project->workingDirectory().isEmpty()
                                     ? QFileInfo(path).absolutePath()
                                     : project->workingDirectory();
 
-        dataSource->setProject(project, workDir);
-        settingsBackend->setProject(project);
+        dataSource->setProject(project.get(), workDir);
+        settingsBackend->setProject(project.get());
 
         shell.setWindowTitle(
             QStringLiteral("DsLabeler — %1").arg(QFileInfo(path).fileName()));
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
 
     QObject::connect(welcomePage, &dstools::WelcomePage::projectLoaded,
                      &shell, [&](dstools::DsProject *proj, const QString &path) {
-        loadProject(proj, path);
+        loadProject(std::unique_ptr<dstools::DsProject>(proj), path);
     });
 
     // Save on quit
@@ -130,8 +130,7 @@ int main(int argc, char *argv[]) {
             QString error;
             project->save(error);
         }
-        delete project;
-        project = nullptr;
+        project.reset();
     });
 
     // ── Page-switch guard: check for dsitems when entering downstream pages ──
@@ -173,11 +172,9 @@ int main(int argc, char *argv[]) {
         QString arg = QString::fromLocal8Bit(argv[1]);
         if (arg.endsWith(QLatin1String(".dsproj"), Qt::CaseInsensitive)) {
             QString error;
-            auto *proj = new dstools::DsProject(dstools::DsProject::load(arg, error));
+            auto proj = std::make_unique<dstools::DsProject>(dstools::DsProject::load(arg, error));
             if (error.isEmpty()) {
-                loadProject(proj, arg);
-            } else {
-                delete proj;
+                loadProject(std::move(proj), arg);
             }
         }
     }

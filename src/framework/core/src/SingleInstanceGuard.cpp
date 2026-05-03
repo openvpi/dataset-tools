@@ -17,17 +17,14 @@ SingleInstanceGuard::SingleInstanceGuard(const QString &appId, QObject *parent) 
     m_serverName = appId + QStringLiteral("-") + user;
 }
 
-SingleInstanceGuard::~SingleInstanceGuard() {
-    delete m_lockFile;
-    delete m_server;
-}
+SingleInstanceGuard::~SingleInstanceGuard() = default;
 
 bool SingleInstanceGuard::tryLock() {
     const QString lockPath =
         QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
             .filePath(m_serverName + QStringLiteral(".lock"));
 
-    m_lockFile = new QLockFile(lockPath);
+    m_lockFile = std::make_unique<QLockFile>(lockPath);
     m_lockFile->setStaleLockTime(0); // let QLockFile detect stale locks automatically
     return m_lockFile->tryLock(100);
 }

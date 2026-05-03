@@ -7,6 +7,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <memory>
+
 class QLockFile;
 class QLocalServer;
 
@@ -61,7 +63,7 @@ private:
     void onNewConnection();
 
     QString m_serverName;
-    QLockFile *m_lockFile = nullptr;
+    std::unique_ptr<QLockFile> m_lockFile;
     QLocalServer *m_server = nullptr;
 };
 

@@ -1,4 +1,4 @@
-﻿#include "LyricFAPage.h"
+#include "LyricFAPage.h"
 
 #include <QApplication>
 #include <QHBoxLayout>
@@ -23,16 +23,13 @@ using dstools::widgets::PathSelector;
 
 LyricFAPage::LyricFAPage(QWidget *parent) : TaskWindow(PipelineStyle, parent) {
     m_mandarin = QSharedPointer<Pinyin::Pinyin>(new Pinyin::Pinyin());
-    m_match = new LyricFA::MatchLyric();
+    m_match = std::make_unique<LyricFA::MatchLyric>();
     setRunButtonText("Run ASR");
     setProgressBarVisible(true);
     LyricFAPage::init();
 }
 
-LyricFAPage::~LyricFAPage() {
-    delete m_asr;
-    delete m_match;
-}
+LyricFAPage::~LyricFAPage() = default;
 
 void LyricFAPage::init() {
     m_labPath = new PathSelector(PathSelector::Directory, "Lab Out Path:", {}, this);
@@ -110,7 +107,7 @@ void LyricFAPage::runTask() {
         const QString filePath = item->data(Qt::UserRole + 1).toString();
         const QString labFilePath = labOutPath + QDir::separator() + QFileInfo(filename).completeBaseName() + ".lab";
 
-        auto *asrTask = new LyricFA::AsrThread(m_asr, filename, filePath, labFilePath,
+        auto *asrTask = new LyricFA::AsrThread(m_asr.get(), filename, filePath, labFilePath,
                                                QSharedPointer<Pinyin::Pinyin>(toPinyin ? m_mandarin : nullptr));
         connect(asrTask, &dstools::AsyncTask::failed, this, &TaskWindow::slot_oneFailed);
         connect(asrTask, &dstools::AsyncTask::succeeded, this, &TaskWindow::slot_oneFinished);
@@ -182,7 +179,7 @@ void LyricFAPage::slot_matchLyric() {
     for (const QString &labPath : labPaths) {
         QString labName = QFileInfo(labPath).completeBaseName();
         const QString jsonPath = jsonFolder + QDir::separator() + labName + ".json";
-        auto *task = new LyricFA::LyricMatchTask(m_match, labName, labPath, jsonPath);
+        auto *task = new LyricFA::LyricMatchTask(m_match.get(), labName, labPath, jsonPath);
         connect(task, &dstools::AsyncTask::failed, this, &TaskWindow::slot_oneFailed);
         connect(task, &dstools::AsyncTask::succeeded, this, &TaskWindow::slot_oneFinished);
         threadPool()->start(task);
@@ -211,17 +208,15 @@ void LyricFAPage::slot_loadModel() {
     }
 
     if (m_asr) {
-        delete m_asr;
-        m_asr = nullptr;
+        m_asr.reset();
     }
-    m_asr = new LyricFA::Asr(modelFolder);
+    m_asr = std::make_unique<LyricFA::Asr>(modelFolder);
     if (m_asr->initialized()) {
         m_modelPanel->setStatus("Model loaded successfully.", true);
         m_runBtn->setEnabled(true);
     } else {
         m_modelPanel->setStatus("Failed to load model.", false);
-        delete m_asr;
-        m_asr = nullptr;
+        m_asr.reset();
         m_runBtn->setEnabled(false);
     }
 }
