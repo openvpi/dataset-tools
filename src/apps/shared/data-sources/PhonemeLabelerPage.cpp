@@ -1,7 +1,9 @@
-#include "DsPhonemeLabelerPage.h"
-#include "DsLabelerKeys.h"
-#include "ProjectDataSource.h"
+#include "PhonemeLabelerPage.h"
 #include "SliceListPanel.h"
+#include "ModelConfigHelper.h"
+#include "ISettingsBackend.h"
+
+#include <dstools/IEditorDataSource.h>
 
 #include <QHBoxLayout>
 #include <QLabel>
@@ -13,18 +15,16 @@
 
 #include <hubert-infer/Hfa.h>
 
-#include <dsfw/PipelineContext.h>
+#include <dsfw/CommonKeys.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
-#include <dstools/DsProject.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/ExecutionProvider.h>
-#include <ui/TextGridDocument.h>
 
 namespace dstools {
 
-DsPhonemeLabelerPage::DsPhonemeLabelerPage(QWidget *parent)
-    : QWidget(parent), m_settings("DsLabeler/PhonemeLabeler") {
+PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
+    : QWidget(parent), m_settings("PhonemeLabeler") {
     m_editor = new phonemelabeler::PhonemeEditor(this);
     m_sliceList = new SliceListPanel(this);
     m_sliceList->setMinimumWidth(160);
@@ -43,21 +43,26 @@ DsPhonemeLabelerPage::DsPhonemeLabelerPage(QWidget *parent)
     m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
     m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
 
+    static const dstools::SettingsKey<QString> kShortcutSave("Shortcuts/save", "Ctrl+S");
+    static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
+    static const dstools::SettingsKey<QString> kShortcutRedo("Shortcuts/redo", "Ctrl+Y");
+    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
+
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
-    m_shortcutManager->bind(m_prevAction, DsLabelerKeys::NavigationPrev,
+    m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
                             QStringLiteral("上一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_nextAction, DsLabelerKeys::NavigationNext,
+    m_shortcutManager->bind(m_nextAction, dsfw::CommonKeys::NavigationNext,
                             QStringLiteral("下一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_editor->saveAction(), DsLabelerKeys::ShortcutSave,
+    m_shortcutManager->bind(m_editor->saveAction(), kShortcutSave,
                             QStringLiteral("保存"), QStringLiteral("文件"));
-    m_shortcutManager->bind(m_editor->undoAction(), DsLabelerKeys::ShortcutUndo,
+    m_shortcutManager->bind(m_editor->undoAction(), kShortcutUndo,
                             QStringLiteral("撤销"), QStringLiteral("编辑"));
-    m_shortcutManager->bind(m_editor->redoAction(), DsLabelerKeys::ShortcutRedo,
+    m_shortcutManager->bind(m_editor->redoAction(), kShortcutRedo,
                             QStringLiteral("重做"), QStringLiteral("编辑"));
     m_shortcutManager->applyAll();
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
-            this, &DsPhonemeLabelerPage::onSliceSelected);
+            this, &PhonemeLabelerPage::onSliceSelected);
     connect(m_editor->saveAction(), &QAction::triggered,
             this, [this]() { saveCurrentSlice(); });
     connect(m_prevAction, &QAction::triggered, this, [this]() {
@@ -68,19 +73,22 @@ DsPhonemeLabelerPage::DsPhonemeLabelerPage(QWidget *parent)
     });
 }
 
-DsPhonemeLabelerPage::~DsPhonemeLabelerPage() = default;
+PhonemeLabelerPage::~PhonemeLabelerPage() = default;
 
-void DsPhonemeLabelerPage::setDataSource(ProjectDataSource *source) {
+void PhonemeLabelerPage::setDataSource(IEditorDataSource *source,
+                                        ISettingsBackend *settingsBackend) {
     m_source = source;
+    m_settingsBackend = settingsBackend;
     m_sliceList->setDataSource(source);
 }
 
-void DsPhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
+void PhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
     if (!maybeSave())
         return;
 
     m_currentSliceId = sliceId;
-    m_settings.set(DsLabelerKeys::LastPhonemeSlice, sliceId);
+    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
+    m_settings.set(kLastSlice, sliceId);
 
     if (!m_source)
         return;
@@ -107,7 +115,7 @@ void DsPhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
     emit sliceChanged(sliceId);
 }
 
-bool DsPhonemeLabelerPage::saveCurrentSlice() {
+bool PhonemeLabelerPage::saveCurrentSlice() {
     if (m_currentSliceId.isEmpty() || !m_source)
         return true;
 
@@ -136,7 +144,7 @@ bool DsPhonemeLabelerPage::saveCurrentSlice() {
     return true;
 }
 
-bool DsPhonemeLabelerPage::maybeSave() {
+bool PhonemeLabelerPage::maybeSave() {
     if (!m_editor->document() || !m_editor->document()->isModified())
         return true;
 
@@ -152,7 +160,7 @@ bool DsPhonemeLabelerPage::maybeSave() {
     return false;
 }
 
-QMenuBar *DsPhonemeLabelerPage::createMenuBar(QWidget *parent) {
+QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
     auto *bar = new QMenuBar(parent);
 
     auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
@@ -177,9 +185,9 @@ QMenuBar *DsPhonemeLabelerPage::createMenuBar(QWidget *parent) {
     }
 
     auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
-    processMenu->addAction(QStringLiteral("强制对齐当前切片"), this, &DsPhonemeLabelerPage::onRunFA);
+    processMenu->addAction(QStringLiteral("强制对齐当前切片"), this, &PhonemeLabelerPage::onRunFA);
     processMenu->addSeparator();
-    processMenu->addAction(QStringLiteral("批量强制对齐..."), this, &DsPhonemeLabelerPage::onBatchFA);
+    processMenu->addAction(QStringLiteral("批量强制对齐..."), this, &PhonemeLabelerPage::onBatchFA);
 
     auto *viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
     for (auto *act : m_editor->viewActions()) {
@@ -195,7 +203,7 @@ QMenuBar *DsPhonemeLabelerPage::createMenuBar(QWidget *parent) {
     return bar;
 }
 
-QWidget *DsPhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
+QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
     auto *container = new QWidget(parent);
     auto *layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -205,7 +213,7 @@ QWidget *DsPhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
     layout->addWidget(sliceLabel, 1);
     layout->addWidget(posLabel);
 
-    connect(this, &DsPhonemeLabelerPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
+    connect(this, &PhonemeLabelerPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
         sliceLabel->setText(id.isEmpty() ? QStringLiteral("未选择切片") : id);
     });
     connect(m_editor, &phonemelabeler::PhonemeEditor::positionChanged,
@@ -216,23 +224,23 @@ QWidget *DsPhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
     return container;
 }
 
-QString DsPhonemeLabelerPage::windowTitle() const {
-    QString title = QStringLiteral("DsLabeler — 音素标注");
+QString PhonemeLabelerPage::windowTitle() const {
+    QString title = QStringLiteral("音素标注");
     if (!m_currentSliceId.isEmpty())
         title += QStringLiteral(" — ") + m_currentSliceId;
     return title;
 }
 
-bool DsPhonemeLabelerPage::hasUnsavedChanges() const {
+bool PhonemeLabelerPage::hasUnsavedChanges() const {
     return m_editor->document() && m_editor->document()->isModified();
 }
 
-void DsPhonemeLabelerPage::onActivated() {
+void PhonemeLabelerPage::onActivated() {
     m_sliceList->refresh();
 
-    // Restore last selected slice from settings, or select first
+    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
     if (m_currentSliceId.isEmpty()) {
-        QString lastSlice = m_settings.get(DsLabelerKeys::LastPhonemeSlice);
+        QString lastSlice = m_settings.get(kLastSlice);
         if (!lastSlice.isEmpty()) {
             m_sliceList->setCurrentSlice(lastSlice);
         } else if (m_sliceList->sliceCount() > 0) {
@@ -241,42 +249,34 @@ void DsPhonemeLabelerPage::onActivated() {
     }
 
     if (m_source && !m_currentSliceId.isEmpty()) {
-        auto *ctx = m_source->context(m_currentSliceId);
-        if (ctx && ctx->dirty.contains(QStringLiteral("phoneme"))) {
+        auto dirty = m_source->dirtyLayers(m_currentSliceId);
+        if (dirty.contains(QStringLiteral("phoneme"))) {
             dsfw::widgets::ToastNotification::show(
                 this, dsfw::widgets::ToastType::Warning,
                 QStringLiteral("音素层数据已过期（上游歌词已修改），建议重新对齐"),
                 3000);
-            ctx->dirty.removeAll(QStringLiteral("phoneme"));
-            m_source->saveContext(m_currentSliceId);
+            m_source->clearDirtyLayers(m_currentSliceId, {QStringLiteral("phoneme")});
         }
     }
 }
 
-bool DsPhonemeLabelerPage::onDeactivating() {
+bool PhonemeLabelerPage::onDeactivating() {
     return maybeSave();
 }
 
-void DsPhonemeLabelerPage::onShutdown() {
+void PhonemeLabelerPage::onShutdown() {
     m_shortcutManager->saveAll();
 }
 
-dstools::widgets::ShortcutManager *DsPhonemeLabelerPage::shortcutManager() const {
+dstools::widgets::ShortcutManager *PhonemeLabelerPage::shortcutManager() const {
     return m_shortcutManager;
 }
 
-void DsPhonemeLabelerPage::ensureHfaEngine() {
+void PhonemeLabelerPage::ensureHfaEngine() {
     if (m_hfa && m_hfa->isOpen())
         return;
 
-    if (!m_source || !m_source->project())
-        return;
-
-    auto it = m_source->project()->defaults().taskModels.find(QStringLiteral("phoneme_alignment"));
-    if (it == m_source->project()->defaults().taskModels.end())
-        return;
-
-    const auto &config = it->second;
+    auto config = readModelConfig(m_settingsBackend, QStringLiteral("phoneme_alignment"));
     if (config.modelPath.isEmpty())
         return;
 
@@ -293,7 +293,7 @@ void DsPhonemeLabelerPage::ensureHfaEngine() {
     }
 }
 
-void DsPhonemeLabelerPage::onRunFA() {
+void PhonemeLabelerPage::onRunFA() {
     if (m_currentSliceId.isEmpty()) {
         QMessageBox::information(this, QStringLiteral("强制对齐"),
                                  QStringLiteral("请先选择一个切片。"));
@@ -316,7 +316,7 @@ void DsPhonemeLabelerPage::onRunFA() {
     runFaForSlice(m_currentSliceId);
 }
 
-void DsPhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
+void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     if (!m_source)
         return;
 
@@ -410,8 +410,8 @@ void DsPhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     });
 }
 
-void DsPhonemeLabelerPage::applyFaResult(const QString &sliceId,
-                                          const QList<IntervalLayer> &layers) {
+void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
+                                        const QList<IntervalLayer> &layers) {
     if (!m_source)
         return;
 
@@ -451,7 +451,7 @@ void DsPhonemeLabelerPage::applyFaResult(const QString &sliceId,
     }
 }
 
-void DsPhonemeLabelerPage::onBatchFA() {
+void PhonemeLabelerPage::onBatchFA() {
     if (!m_source) {
         QMessageBox::warning(this, QStringLiteral("批量强制对齐"),
                              QStringLiteral("请先打开工程。"));

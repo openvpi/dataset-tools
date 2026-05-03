@@ -1,6 +1,6 @@
 #include "SliceListPanel.h"
-#include "ProjectDataSource.h"
 
+#include <dstools/IEditorDataSource.h>
 #include <dsfw/widgets/FileProgressTracker.h>
 
 namespace dstools {
@@ -24,17 +24,16 @@ SliceListPanel::SliceListPanel(QWidget *parent) : QWidget(parent) {
             this, &SliceListPanel::onCurrentRowChanged);
 }
 
-void SliceListPanel::setDataSource(ProjectDataSource *source) {
+void SliceListPanel::setDataSource(IEditorDataSource *source) {
     m_source = source;
     if (m_source) {
-        connect(m_source, &ProjectDataSource::sliceListChanged,
+        connect(m_source, &IEditorDataSource::sliceListChanged,
                 this, &SliceListPanel::refresh, Qt::UniqueConnection);
     }
     refresh();
 }
 
 void SliceListPanel::refresh() {
-    // Remember current selection
     QString previousId = currentSliceId();
 
     m_listWidget->blockSignals(true);
@@ -50,7 +49,6 @@ void SliceListPanel::refresh() {
 
     m_listWidget->blockSignals(false);
 
-    // Restore previous selection, or select first item
     if (!previousId.isEmpty()) {
         for (int i = 0; i < m_listWidget->count(); ++i) {
             if (m_listWidget->item(i)->data(Qt::UserRole).toString() == previousId) {

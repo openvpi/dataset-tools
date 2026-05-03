@@ -1,7 +1,9 @@
-#include "DsMinLabelPage.h"
-#include "DsLabelerKeys.h"
-#include "ProjectDataSource.h"
+#include "MinLabelPage.h"
 #include "SliceListPanel.h"
+#include "ModelConfigHelper.h"
+#include "ISettingsBackend.h"
+
+#include <dstools/IEditorDataSource.h>
 
 #include <QLabel>
 #include <QIcon>
@@ -12,24 +14,28 @@
 #include <QVBoxLayout>
 #include <QtConcurrent>
 
-#include <Asr.h>
+#include "Asr.h"
 
-#include <dsfw/PipelineContext.h>
+#include <dsfw/CommonKeys.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
-#include <dstools/DsProject.h>
 #include <dstools/DsTextTypes.h>
-#include <dstools/FileStatusDelegate.h>
+#include <dstools/ExecutionProvider.h>
 
 namespace dstools {
 
-struct DsMinLabelPage::AsrEngine {
+struct MinLabelPage::AsrEngine {
     std::unique_ptr<LyricFA::Asr> engine;
 
     bool initialized() const { return engine && engine->initialized(); }
 
-    void create(const QString &modelPath, FunAsr::ExecutionProvider provider, int deviceId) {
-        engine = std::make_unique<LyricFA::Asr>(modelPath, provider, deviceId);
+    void create(const QString &modelPath, dstools::infer::ExecutionProvider provider, int deviceId) {
+        auto ep = FunAsr::ExecutionProvider::CPU;
+#ifdef ONNXRUNTIME_ENABLE_DML
+        if (provider == dstools::infer::ExecutionProvider::DML)
+            ep = FunAsr::ExecutionProvider::DML;
+#endif
+        engine = std::make_unique<LyricFA::Asr>(modelPath, ep, deviceId);
     }
 
     bool recognize(const std::filesystem::path &filepath, std::string &msg) const {
@@ -37,8 +43,8 @@ struct DsMinLabelPage::AsrEngine {
     }
 };
 
-DsMinLabelPage::DsMinLabelPage(QWidget *parent)
-    : QWidget(parent), m_settings("DsLabeler/MinLabel") {
+MinLabelPage::MinLabelPage(QWidget *parent)
+    : QWidget(parent), m_settings("MinLabel") {
     m_editor = new Minlabel::MinLabelEditor(this);
     m_sliceList = new SliceListPanel(this);
     m_sliceList->setMinimumWidth(160);
@@ -59,17 +65,20 @@ DsMinLabelPage::DsMinLabelPage(QWidget *parent)
     m_playAction = new QAction(QStringLiteral("播放/停止"), this);
     m_playAction->setIcon(QIcon(QStringLiteral(":/icons/play.svg")));
 
+    static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/play", "F5");
+    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
+
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
-    m_shortcutManager->bind(m_prevAction, DsLabelerKeys::NavigationPrev,
+    m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
                             QStringLiteral("上一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_nextAction, DsLabelerKeys::NavigationNext,
+    m_shortcutManager->bind(m_nextAction, dsfw::CommonKeys::NavigationNext,
                             QStringLiteral("下一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_playAction, DsLabelerKeys::PlaybackPlay,
+    m_shortcutManager->bind(m_playAction, kPlaybackPlay,
                             QStringLiteral("播放/停止"), QStringLiteral("播放"));
     m_shortcutManager->applyAll();
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
-            this, &DsMinLabelPage::onSliceSelected);
+            this, &MinLabelPage::onSliceSelected);
     connect(m_editor, &Minlabel::MinLabelEditor::dataChanged,
             this, [this]() { m_dirty = true; });
     connect(m_prevAction, &QAction::triggered, this, [this]() {
@@ -84,19 +93,22 @@ DsMinLabelPage::DsMinLabelPage(QWidget *parent)
     });
 }
 
-DsMinLabelPage::~DsMinLabelPage() = default;
+MinLabelPage::~MinLabelPage() = default;
 
-void DsMinLabelPage::setDataSource(ProjectDataSource *source) {
+void MinLabelPage::setDataSource(IEditorDataSource *source,
+                                  ISettingsBackend *settingsBackend) {
     m_source = source;
+    m_settingsBackend = settingsBackend;
     m_sliceList->setDataSource(source);
 }
 
-void DsMinLabelPage::onSliceSelected(const QString &sliceId) {
+void MinLabelPage::onSliceSelected(const QString &sliceId) {
     if (!maybeSave())
         return;
 
     m_currentSliceId = sliceId;
-    m_settings.set(DsLabelerKeys::LastMinLabelSlice, sliceId);
+    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
+    m_settings.set(kLastSlice, sliceId);
 
     if (!m_source)
         return;
@@ -135,7 +147,7 @@ void DsMinLabelPage::onSliceSelected(const QString &sliceId) {
     emit sliceChanged(sliceId);
 }
 
-bool DsMinLabelPage::saveCurrentSlice() {
+bool MinLabelPage::saveCurrentSlice() {
     if (m_currentSliceId.isEmpty() || !m_source || !m_dirty)
         return true;
 
@@ -182,7 +194,7 @@ bool DsMinLabelPage::saveCurrentSlice() {
     return true;
 }
 
-bool DsMinLabelPage::maybeSave() {
+bool MinLabelPage::maybeSave() {
     if (!m_dirty)
         return true;
 
@@ -200,7 +212,7 @@ bool DsMinLabelPage::maybeSave() {
     return false;
 }
 
-QMenuBar *DsMinLabelPage::createMenuBar(QWidget *parent) {
+QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
     auto *bar = new QMenuBar(parent);
 
     auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
@@ -225,9 +237,9 @@ QMenuBar *DsMinLabelPage::createMenuBar(QWidget *parent) {
     playMenu->addAction(m_playAction);
 
     auto *processMenu = bar->addMenu(QStringLiteral("处理(&R)"));
-    processMenu->addAction(QStringLiteral("ASR 识别当前曲目"), this, &DsMinLabelPage::onRunAsr);
+    processMenu->addAction(QStringLiteral("ASR 识别当前曲目"), this, &MinLabelPage::onRunAsr);
     processMenu->addSeparator();
-    processMenu->addAction(QStringLiteral("批量 ASR..."), this, &DsMinLabelPage::onBatchAsr);
+    processMenu->addAction(QStringLiteral("批量 ASR..."), this, &MinLabelPage::onBatchAsr);
 
     auto *viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
     dsfw::Theme::instance().populateThemeMenu(viewMenu);
@@ -235,7 +247,7 @@ QMenuBar *DsMinLabelPage::createMenuBar(QWidget *parent) {
     return bar;
 }
 
-QWidget *DsMinLabelPage::createStatusBarContent(QWidget *parent) {
+QWidget *MinLabelPage::createStatusBarContent(QWidget *parent) {
     auto *container = new QWidget(parent);
     auto *layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -245,34 +257,34 @@ QWidget *DsMinLabelPage::createStatusBarContent(QWidget *parent) {
     layout->addWidget(sliceLabel, 1);
     layout->addWidget(progressLabel);
 
-    connect(this, &DsMinLabelPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
+    connect(this, &MinLabelPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
         sliceLabel->setText(id.isEmpty() ? QStringLiteral("未选择切片") : id);
     });
 
     return container;
 }
 
-QString DsMinLabelPage::windowTitle() const {
-    QString title = QStringLiteral("DsLabeler — 歌词标注");
+QString MinLabelPage::windowTitle() const {
+    QString title = QStringLiteral("歌词标注");
     if (!m_currentSliceId.isEmpty())
         title += QStringLiteral(" — ") + m_currentSliceId;
     return title;
 }
 
-bool DsMinLabelPage::hasUnsavedChanges() const {
+bool MinLabelPage::hasUnsavedChanges() const {
     return m_dirty;
 }
 
-bool DsMinLabelPage::supportsDragDrop() const {
+bool MinLabelPage::supportsDragDrop() const {
     return true;
 }
 
-void DsMinLabelPage::handleDragEnter(QDragEnterEvent *event) {
+void MinLabelPage::handleDragEnter(QDragEnterEvent *event) {
     if (event->mimeData()->hasUrls())
         event->acceptProposedAction();
 }
 
-void DsMinLabelPage::handleDrop(QDropEvent *event) {
+void MinLabelPage::handleDrop(QDropEvent *event) {
     const QMimeData *mime = event->mimeData();
     if (!mime->hasUrls())
         return;
@@ -289,17 +301,17 @@ void DsMinLabelPage::handleDrop(QDropEvent *event) {
     }
 }
 
-dstools::widgets::ShortcutManager *DsMinLabelPage::shortcutManager() const {
+dstools::widgets::ShortcutManager *MinLabelPage::shortcutManager() const {
     return m_shortcutManager;
 }
 
-void DsMinLabelPage::onActivated() {
+void MinLabelPage::onActivated() {
     m_sliceList->refresh();
     updateProgress();
 
-    // Restore last selected slice from settings, or select first
+    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
     if (m_currentSliceId.isEmpty()) {
-        QString lastSlice = m_settings.get(DsLabelerKeys::LastMinLabelSlice);
+        QString lastSlice = m_settings.get(kLastSlice);
         if (!lastSlice.isEmpty()) {
             m_sliceList->setCurrentSlice(lastSlice);
         } else if (m_sliceList->sliceCount() > 0) {
@@ -308,10 +320,9 @@ void DsMinLabelPage::onActivated() {
     }
 
     if (m_source && !m_currentSliceId.isEmpty()) {
-        auto *ctx = m_source->context(m_currentSliceId);
-        if (ctx && ctx->dirty.contains(QStringLiteral("grapheme"))) {
-            ctx->dirty.removeAll(QStringLiteral("grapheme"));
-            m_source->saveContext(m_currentSliceId);
+        auto dirty = m_source->dirtyLayers(m_currentSliceId);
+        if (dirty.contains(QStringLiteral("grapheme"))) {
+            m_source->clearDirtyLayers(m_currentSliceId, {QStringLiteral("grapheme")});
             dsfw::widgets::ToastNotification::show(
                 this, dsfw::widgets::ToastType::Info,
                 QStringLiteral("歌词层已更新"), 3000);
@@ -319,15 +330,15 @@ void DsMinLabelPage::onActivated() {
     }
 }
 
-bool DsMinLabelPage::onDeactivating() {
+bool MinLabelPage::onDeactivating() {
     return maybeSave();
 }
 
-void DsMinLabelPage::onShutdown() {
+void MinLabelPage::onShutdown() {
     m_shortcutManager->saveAll();
 }
 
-void DsMinLabelPage::updateProgress() {
+void MinLabelPage::updateProgress() {
     if (!m_source)
         return;
 
@@ -348,25 +359,18 @@ void DsMinLabelPage::updateProgress() {
     m_sliceList->setProgress(completed, total);
 }
 
-void DsMinLabelPage::ensureAsrEngine() {
+void MinLabelPage::ensureAsrEngine() {
     if (m_asrEngine && m_asrEngine->initialized())
         return;
 
-    if (!m_source || !m_source->project())
-        return;
-
-    auto it = m_source->project()->defaults().taskModels.find(QStringLiteral("asr"));
-    if (it == m_source->project()->defaults().taskModels.end())
-        return;
-
-    const auto &config = it->second;
+    auto config = readModelConfig(m_settingsBackend, QStringLiteral("asr"));
     if (config.modelPath.isEmpty())
         return;
 
-    auto provider = FunAsr::ExecutionProvider::CPU;
+    auto provider = dstools::infer::ExecutionProvider::CPU;
 #ifdef ONNXRUNTIME_ENABLE_DML
     if (config.provider == QStringLiteral("dml"))
-        provider = FunAsr::ExecutionProvider::DML;
+        provider = dstools::infer::ExecutionProvider::DML;
 #endif
 
     if (!m_asrEngine)
@@ -374,7 +378,7 @@ void DsMinLabelPage::ensureAsrEngine() {
     m_asrEngine->create(config.modelPath, provider, config.deviceId);
 }
 
-void DsMinLabelPage::onRunAsr() {
+void MinLabelPage::onRunAsr() {
     if (m_currentSliceId.isEmpty()) {
         QMessageBox::information(this, QStringLiteral("ASR"),
                                  QStringLiteral("请先选择一个切片。"));
@@ -384,7 +388,7 @@ void DsMinLabelPage::onRunAsr() {
     ensureAsrEngine();
     if (!m_asrEngine || !m_asrEngine->initialized()) {
         QMessageBox::warning(this, QStringLiteral("ASR"),
-                             QStringLiteral("ASR 模型未加载。请在工程设置中配置 ASR 模型路径。"));
+                             QStringLiteral("ASR 模型未加载。请在设置中配置 ASR 模型路径。"));
         return;
     }
 
@@ -397,7 +401,7 @@ void DsMinLabelPage::onRunAsr() {
     runAsrForSlice(m_currentSliceId);
 }
 
-void DsMinLabelPage::runAsrForSlice(const QString &sliceId) {
+void MinLabelPage::runAsrForSlice(const QString &sliceId) {
     if (!m_source)
         return;
 
@@ -433,7 +437,7 @@ void DsMinLabelPage::runAsrForSlice(const QString &sliceId) {
     });
 }
 
-void DsMinLabelPage::onBatchAsr() {
+void MinLabelPage::onBatchAsr() {
     if (!m_source) {
         QMessageBox::warning(this, QStringLiteral("批量 ASR"),
                              QStringLiteral("请先打开工程。"));
@@ -443,7 +447,7 @@ void DsMinLabelPage::onBatchAsr() {
     ensureAsrEngine();
     if (!m_asrEngine || !m_asrEngine->initialized()) {
         QMessageBox::warning(this, QStringLiteral("批量 ASR"),
-                             QStringLiteral("ASR 模型未加载。请在工程设置中配置 ASR 模型路径。"));
+                             QStringLiteral("ASR 模型未加载。请在设置中配置 ASR 模型路径。"));
         return;
     }
 
@@ -490,7 +494,7 @@ void DsMinLabelPage::onBatchAsr() {
     });
 }
 
-void DsMinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
+void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
     if (!m_source)
         return;
 

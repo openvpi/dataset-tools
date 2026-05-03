@@ -43,6 +43,20 @@ public:
     /// Resolve the audio file path associated with a slice.
     [[nodiscard]] virtual QString audioPath(const QString &sliceId) const = 0;
 
+    /// Return dirty layer names for the given slice (pipeline dependency tracking).
+    /// Default implementation returns an empty list (no dirty layers).
+    [[nodiscard]] virtual QStringList dirtyLayers(const QString &sliceId) const {
+        Q_UNUSED(sliceId)
+        return {};
+    }
+
+    /// Clear the dirty flag for the specified layers of the given slice.
+    /// Default implementation does nothing.
+    virtual void clearDirtyLayers(const QString &sliceId, const QStringList &layers) {
+        Q_UNUSED(sliceId)
+        Q_UNUSED(layers)
+    }
+
 signals:
     /// Emitted when the underlying slice list changes (e.g. project reload).
     void sliceListChanged();

@@ -1,6 +1,3 @@
-/// @file DsPitchLabelerPage.h
-/// @brief DsLabeler PitchLabeler page with auto F0/MIDI, batch processing, and preload.
-
 #pragma once
 
 #include <dsfw/IPageActions.h>
@@ -23,21 +20,25 @@ class Rmvpe;
 
 namespace dstools {
 
-class ProjectDataSource;
+class IEditorDataSource;
+class ISettingsBackend;
 class SliceListPanel;
-namespace pitchlabeler { class DSFile; }
 
-class DsPitchLabelerPage : public QWidget,
-                           public labeler::IPageActions,
-                           public labeler::IPageLifecycle {
+namespace pitchlabeler {
+class DSFile;
+}
+
+class PitchLabelerPage : public QWidget,
+                         public labeler::IPageActions,
+                         public labeler::IPageLifecycle {
     Q_OBJECT
     Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
 
 public:
-    explicit DsPitchLabelerPage(QWidget *parent = nullptr);
-    ~DsPitchLabelerPage() override;
+    explicit PitchLabelerPage(QWidget *parent = nullptr);
+    ~PitchLabelerPage() override;
 
-    void setDataSource(ProjectDataSource *source);
+    void setDataSource(IEditorDataSource *source, ISettingsBackend *settingsBackend);
 
     QMenuBar *createMenuBar(QWidget *parent) override;
     QWidget *createStatusBarContent(QWidget *parent) override;
@@ -56,7 +57,8 @@ signals:
 private:
     pitchlabeler::PitchEditor *m_editor = nullptr;
     SliceListPanel *m_sliceList = nullptr;
-    ProjectDataSource *m_source = nullptr;
+    IEditorDataSource *m_source = nullptr;
+    ISettingsBackend *m_settingsBackend = nullptr;
     QString m_currentSliceId;
     std::shared_ptr<pitchlabeler::DSFile> m_currentFile;
 

@@ -46,6 +46,8 @@ public:
     [[nodiscard]] Result<void> saveSlice(const QString &sliceId,
                                          const DsTextDocument &doc) override;
     [[nodiscard]] QString audioPath(const QString &sliceId) const override;
+    [[nodiscard]] QStringList dirtyLayers(const QString &sliceId) const override;
+    void clearDirtyLayers(const QString &sliceId, const QStringList &layers) override;
 
 private:
     DsProject *m_project = nullptr;

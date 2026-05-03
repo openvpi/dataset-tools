@@ -1,6 +1,3 @@
-/// @file DsMinLabelPage.h
-/// @brief DsLabeler MinLabel page with project data source, ASR, and batch processing.
-
 #pragma once
 
 #include <dsfw/IPageActions.h>
@@ -10,74 +7,72 @@
 
 #include <QWidget>
 
-#include <MinLabelEditor.h>
+#include <PhonemeEditor.h>
 
 #include <memory>
 
+namespace HFA {
+class HFA;
+}
+
 namespace dstools {
 
-class ProjectDataSource;
+class IEditorDataSource;
+class ISettingsBackend;
 class SliceListPanel;
 
-class DsMinLabelPage : public QWidget,
-                       public labeler::IPageActions,
-                       public labeler::IPageLifecycle {
+class PhonemeLabelerPage : public QWidget,
+                           public labeler::IPageActions,
+                           public labeler::IPageLifecycle {
     Q_OBJECT
     Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
 
 public:
-    explicit DsMinLabelPage(QWidget *parent = nullptr);
-    ~DsMinLabelPage() override;
+    explicit PhonemeLabelerPage(QWidget *parent = nullptr);
+    ~PhonemeLabelerPage() override;
 
-    void setDataSource(ProjectDataSource *source);
+    void setDataSource(IEditorDataSource *source, ISettingsBackend *settingsBackend);
 
-    // IPageActions
     QMenuBar *createMenuBar(QWidget *parent) override;
     QWidget *createStatusBarContent(QWidget *parent) override;
     QString windowTitle() const override;
     bool hasUnsavedChanges() const override;
-    bool supportsDragDrop() const override;
-    void handleDragEnter(QDragEnterEvent *event) override;
-    void handleDrop(QDropEvent *event) override;
 
-    // IPageLifecycle
     void onActivated() override;
     bool onDeactivating() override;
     void onShutdown() override;
 
+    [[nodiscard]] QToolBar *toolbar() const { return m_editor->toolbar(); }
     dstools::widgets::ShortcutManager *shortcutManager() const;
 
 signals:
     void sliceChanged(const QString &sliceId);
 
 private:
-    struct AsrEngine;
-    std::unique_ptr<AsrEngine> m_asrEngine;
-
-    Minlabel::MinLabelEditor *m_editor = nullptr;
+    phonemelabeler::PhonemeEditor *m_editor = nullptr;
     SliceListPanel *m_sliceList = nullptr;
-    ProjectDataSource *m_source = nullptr;
+    IEditorDataSource *m_source = nullptr;
+    ISettingsBackend *m_settingsBackend = nullptr;
     QString m_currentSliceId;
-    bool m_dirty = false;
-    bool m_asrRunning = false;
 
     dstools::AppSettings m_settings;
     dstools::widgets::ShortcutManager *m_shortcutManager = nullptr;
 
     QAction *m_prevAction = nullptr;
     QAction *m_nextAction = nullptr;
-    QAction *m_playAction = nullptr;
+
+    std::unique_ptr<HFA::HFA> m_hfa;
+    bool m_faRunning = false;
 
     void onSliceSelected(const QString &sliceId);
     bool saveCurrentSlice();
     bool maybeSave();
 
-    void onRunAsr();
-    void onBatchAsr();
-    void runAsrForSlice(const QString &sliceId);
-    void ensureAsrEngine();
-    void setAsrResult(const QString &sliceId, const QString &text);
-    void updateProgress();
+    void onRunFA();
+    void onBatchFA();
+    void ensureHfaEngine();
+    void runFaForSlice(const QString &sliceId);
+    void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers);
 };
 
 } // namespace dstools

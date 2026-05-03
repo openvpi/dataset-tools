@@ -11,15 +11,15 @@
 
 #include <cpp-pinyin/G2pglobal.h>
 
-#include "DsMinLabelPage.h"
-#include "DsPhonemeLabelerPage.h"
-#include "DsPitchLabelerPage.h"
 #include "DsSlicerPage.h"
 #include "ExportPage.h"
 #include "ProjectDataSource.h"
 #include "ProjectSettingsBackend.h"
 #include "WelcomePage.h"
 
+#include <MinLabelPage.h>
+#include <PhonemeLabelerPage.h>
+#include <PitchLabelerPage.h>
 #include <SettingsPage.h>
 
 #include <filesystem>
@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
 
     // Shared data source (lifetime = app)
     auto *dataSource = new dstools::ProjectDataSource(&shell);
+    auto *settingsBackend = new dstools::ProjectSettingsBackend(&shell);
     dstools::DsProject *project = nullptr;
 
     // ── Register all 7 pages ─────────────────────────────────────────────
@@ -74,18 +75,18 @@ int main(int argc, char *argv[]) {
     shell.addPage(slicerPage, "slicer", {}, QStringLiteral("切片"));
 
     // Page 2: 歌词 (MinLabel)
-    auto *minLabelPage = new dstools::DsMinLabelPage(&shell);
-    minLabelPage->setDataSource(dataSource);
+    auto *minLabelPage = new dstools::MinLabelPage(&shell);
+    minLabelPage->setDataSource(dataSource, settingsBackend);
     shell.addPage(minLabelPage, "minlabel", {}, QStringLiteral("歌词"));
 
     // Page 3: 音素 (PhonemeLabeler)
-    auto *phonemePage = new dstools::DsPhonemeLabelerPage(&shell);
-    phonemePage->setDataSource(dataSource);
+    auto *phonemePage = new dstools::PhonemeLabelerPage(&shell);
+    phonemePage->setDataSource(dataSource, settingsBackend);
     shell.addPage(phonemePage, "phoneme", {}, QStringLiteral("音素"));
 
     // Page 4: 音高 (PitchLabeler)
-    auto *pitchPage = new dstools::DsPitchLabelerPage(&shell);
-    pitchPage->setDataSource(dataSource);
+    auto *pitchPage = new dstools::PitchLabelerPage(&shell);
+    pitchPage->setDataSource(dataSource, settingsBackend);
     shell.addPage(pitchPage, "pitch", {}, QStringLiteral("音高"));
 
     // Page 5: 导出 (Export)
@@ -94,7 +95,6 @@ int main(int argc, char *argv[]) {
     shell.addPage(exportPage, "export", {}, QStringLiteral("导出"));
 
     // Page 6: 设置 (Settings) — moved to last per ADR-64
-    auto *settingsBackend = new dstools::ProjectSettingsBackend(&shell);
     auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
     shell.addPage(settingsPage, "settings", {}, QStringLiteral("设置"));
 

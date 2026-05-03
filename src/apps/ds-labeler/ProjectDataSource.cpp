@@ -66,6 +66,23 @@ QString ProjectDataSource::audioPath(const QString &sliceId) const {
     return sliceAudioPath(sliceId);
 }
 
+QStringList ProjectDataSource::dirtyLayers(const QString &sliceId) const {
+    auto it = m_contexts.find(sliceId);
+    if (it != m_contexts.end())
+        return it->second.dirty;
+    return {};
+}
+
+void ProjectDataSource::clearDirtyLayers(const QString &sliceId,
+                                          const QStringList &layers) {
+    auto it = m_contexts.find(sliceId);
+    if (it == m_contexts.end())
+        return;
+    for (const auto &layer : layers)
+        it->second.dirty.removeAll(layer);
+    saveContext(sliceId);
+}
+
 PipelineContext *ProjectDataSource::context(const QString &sliceId) {
     auto it = m_contexts.find(sliceId);
     if (it != m_contexts.end())
