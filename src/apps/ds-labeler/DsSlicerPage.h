@@ -111,6 +111,7 @@ namespace dstools {
         void updateFileProgress();
         void autoSliceFiles(const QStringList &filePaths);
         void promptSliceUpdateIfNeeded();
+        void saveSlicerParamsToProject();
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

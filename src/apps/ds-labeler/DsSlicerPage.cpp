@@ -361,6 +361,7 @@ namespace dstools {
         refreshBoundaries();
         updateSlicerListPanel();
         saveCurrentSlicePoints();
+        saveSlicerParamsToProject();
         updateFileProgress();
         promptSliceUpdateIfNeeded();
     }
@@ -613,6 +614,15 @@ namespace dstools {
             return;
 
         auto *project = m_dataSource->project();
+
+        // Load slicer params from project defaults
+        const auto &slicerConfig = project->defaults().slicerConfig;
+        m_thresholdSpin->setValue(slicerConfig.threshold);
+        m_minLengthSpin->setValue(slicerConfig.minLength);
+        m_minIntervalSpin->setValue(slicerConfig.minInterval);
+        m_hopSizeSpin->setValue(slicerConfig.hopSize);
+        m_maxSilenceSpin->setValue(slicerConfig.maxSilence);
+
         const auto &items = project->items();
         if (items.empty())
             return;
@@ -1001,6 +1011,22 @@ namespace dstools {
         QString saveError;
         project->save(saveError);
         emit m_dataSource->sliceListChanged();
+    }
+
+    void DsSlicerPage::saveSlicerParamsToProject() {
+        if (!m_dataSource || !m_dataSource->project())
+            return;
+
+        auto defaults = m_dataSource->project()->defaults();
+        defaults.slicerConfig.threshold = m_thresholdSpin->value();
+        defaults.slicerConfig.minLength = m_minLengthSpin->value();
+        defaults.slicerConfig.minInterval = m_minIntervalSpin->value();
+        defaults.slicerConfig.hopSize = m_hopSizeSpin->value();
+        defaults.slicerConfig.maxSilence = m_maxSilenceSpin->value();
+        m_dataSource->project()->setDefaults(defaults);
+
+        QString saveError;
+        m_dataSource->project()->save(saveError);
     }
 
 } // namespace dstools
