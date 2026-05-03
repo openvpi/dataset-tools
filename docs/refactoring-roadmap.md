@@ -81,22 +81,25 @@ LabelSuite (AppShell, 10 页面)
 - [x] 支持格式：TextGrid、.lab、.ds、CSV
 - [x] 移动到 `src/apps/shared/data-sources/`
 
-#### P.B.3 核心页面统一
+#### P.B.3 核心页面统一 ✅
 
 将 DsLabeler 的页面实现改造为数据源无关，两个应用共享同一页面类：
 
 | 共享页面 | 当前 DsLabeler 实现 | 改造 |
 |----------|-------------------|------|
-| SlicerPage | DsSlicerPage | 提取为共享，注入 IEditorDataSource |
-| MinLabelPage | DsMinLabelPage | 提取为共享 |
-| PhonemeLabelerPage | DsPhonemeLabelerPage | 提取为共享（含自动 FA） |
-| PitchLabelerPage | DsPitchLabelerPage | 提取为共享（含自动 F0/MIDI） |
+| MinLabelPage | DsMinLabelPage | 提取为共享 ✅ |
+| PhonemeLabelerPage | DsPhonemeLabelerPage | 提取为共享（含自动 FA） ✅ |
+| PitchLabelerPage | DsPitchLabelerPage | 提取为共享（含自动 F0/MIDI） ✅ |
 
-- [ ] 每个页面接收 `IEditorDataSource*` + `ISettingsBackend*`
-- [ ] SlicerPage 共享
-- [ ] MinLabelPage 共享
-- [ ] PhonemeLabelerPage 共享
-- [ ] PitchLabelerPage 共享
+- [x] 每个页面接收 `IEditorDataSource*` + `ISettingsBackend*`
+- [x] MinLabelPage 共享
+- [x] PhonemeLabelerPage 共享
+- [x] PitchLabelerPage 共享
+- [x] SliceListPanel 移动到 shared/data-sources，改用 IEditorDataSource
+- [x] IEditorDataSource 扩展 dirtyLayers()/clearDirtyLayers()
+- [x] ModelConfigHelper 从 ISettingsBackend 读取模型配置
+
+注：SlicerPage 暂不共享（DsSlicerPage 功能与 LabelSuite SlicerPage 差异较大）
 
 #### P.B.4 LabelSuite 独有页面保留并升级
 
