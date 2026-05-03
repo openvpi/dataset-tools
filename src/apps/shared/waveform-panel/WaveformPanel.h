@@ -79,6 +79,9 @@ public:
     /// Get total duration in seconds.
     [[nodiscard]] double totalDuration() const;
 
+    /// Scroll the viewport so that the given time is centered.
+    void scrollToTime(double sec);
+
 signals:
     /// Emitted when audio is loaded successfully.
     void audioLoaded();

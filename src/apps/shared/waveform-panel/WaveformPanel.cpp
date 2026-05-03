@@ -432,6 +432,20 @@ double WaveformPanel::totalDuration() const {
     return static_cast<double>(m_samples.size()) / m_sampleRate;
 }
 
+void WaveformPanel::scrollToTime(double sec) {
+    double viewDuration = m_viewport->duration();
+    double halfView = viewDuration / 2.0;
+    double totalDur = m_viewport->totalDuration();
+
+    double newStart = sec - halfView;
+    if (newStart < 0.0)
+        newStart = 0.0;
+    if (newStart + viewDuration > totalDur)
+        newStart = qMax(0.0, totalDur - viewDuration);
+
+    m_viewport->setViewRange(newStart, newStart + viewDuration);
+}
+
 void WaveformPanel::buildLayout() {
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
