@@ -9,10 +9,12 @@
 #include <dstools/TimePos.h>
 #include <dstools/DsTextTypes.h>
 
+#include "IBoundaryModel.h"
+
 namespace dstools {
 namespace phonemelabeler {
 
-class TextGridDocument : public QObject {
+class TextGridDocument : public QObject, public IBoundaryModel {
     Q_OBJECT
 
 public:
@@ -32,31 +34,35 @@ public:
     [[nodiscard]] bool isModified() const { return m_modified; }
     [[nodiscard]] QString filePath() const { return m_filePath; }
 
-    [[nodiscard]] int tierCount() const;
+    [[nodiscard]] int tierCount() const override;
 
     [[nodiscard]] const textgrid::IntervalTier *intervalTier(int index) const;
     [[nodiscard]] const textgrid::PointTier *pointTier(int index) const;
 
-    [[nodiscard]] TimePos totalDuration() const;
+    [[nodiscard]] TimePos totalDuration() const override;
 
     [[nodiscard]] QString tierName(int index) const;
     [[nodiscard]] bool isIntervalTier(int index) const;
 
-    void moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime);
+    void moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) override;
     void setIntervalText(int tierIndex, int intervalIndex, const QString &text);
     void insertBoundary(int tierIndex, TimePos time);
     void removeBoundary(int tierIndex, int boundaryIndex);
 
-    [[nodiscard]] TimePos boundaryTime(int tierIndex, int boundaryIndex) const;
-    [[nodiscard]] int boundaryCount(int tierIndex) const;
+    [[nodiscard]] TimePos boundaryTime(int tierIndex, int boundaryIndex) const override;
+    [[nodiscard]] int boundaryCount(int tierIndex) const override;
     [[nodiscard]] int intervalCount(int tierIndex) const;
 
     [[nodiscard]] QString intervalText(int tierIndex, int intervalIndex) const;
     [[nodiscard]] TimePos intervalStart(int tierIndex, int intervalIndex) const;
     [[nodiscard]] TimePos intervalEnd(int tierIndex, int intervalIndex) const;
 
-    [[nodiscard]] int activeTierIndex() const { return m_activeTierIndex; }
+    [[nodiscard]] int activeTierIndex() const override { return m_activeTierIndex; }
     void setActiveTierIndex(int index);
+
+    // IBoundaryModel
+    [[nodiscard]] bool supportsBinding() const override { return true; }
+    [[nodiscard]] bool supportsInsert() const override { return true; }
 
 signals:
     void documentChanged();

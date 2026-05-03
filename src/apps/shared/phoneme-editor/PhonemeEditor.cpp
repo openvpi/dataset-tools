@@ -52,10 +52,10 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
 
     m_playWidget->openFile(audioPath);
 
-    m_waveformWidget->setDocument(m_document);
+    m_waveformWidget->setBoundaryModel(m_document);
     m_tierEditWidget->setDocument(m_document);
     m_powerWidget->setDocument(m_document);
-    m_spectrogramWidget->setDocument(m_document);
+    m_spectrogramWidget->setBoundaryModel(m_document);
     m_boundaryOverlay->setDocument(m_document);
     m_entryListPanel->setDocument(m_document);
 

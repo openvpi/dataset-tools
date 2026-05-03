@@ -1,5 +1,5 @@
 #include "SpectrogramWidget.h"
-#include "TextGridDocument.h"
+#include "IBoundaryModel.h"
 #include "BoundaryBindingManager.h"
 #include "commands/MoveBoundaryCommand.h"
 
@@ -331,14 +331,14 @@ int SpectrogramWidget::timeToX(double time) const {
 }
 
 void SpectrogramWidget::drawBoundaryOverlay(QPainter &painter) {
-    if (!m_document) return;
+    if (!m_boundaryModel) return;
 
-    int activeTier = m_document->activeTierIndex();
-    if (activeTier < 0 || activeTier >= m_document->tierCount()) return;
+    int activeTier = m_boundaryModel->activeTierIndex();
+    if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return;
 
-    int count = m_document->boundaryCount(activeTier);
+    int count = m_boundaryModel->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        double t = usToSec(m_document->boundaryTime(activeTier, b));
+        double t = usToSec(m_boundaryModel->boundaryTime(activeTier, b));
         int x = timeToX(t);
         if (x < 0 || x > width()) continue;
 
@@ -358,13 +358,13 @@ void SpectrogramWidget::updateBoundaryOverlay() {
 }
 
 int SpectrogramWidget::hitTestBoundary(int x) const {
-    if (!m_document) return -1;
-    int activeTier = m_document->activeTierIndex();
-    if (activeTier < 0 || activeTier >= m_document->tierCount()) return -1;
+    if (!m_boundaryModel) return -1;
+    int activeTier = m_boundaryModel->activeTierIndex();
+    if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return -1;
 
-    int count = m_document->boundaryCount(activeTier);
+    int count = m_boundaryModel->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        int bx = timeToX(usToSec(m_document->boundaryTime(activeTier, b)));
+        int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(activeTier, b)));
         if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
             return b;
         }
@@ -373,10 +373,10 @@ int SpectrogramWidget::hitTestBoundary(int x) const {
 }
 
 void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
-    if (!m_document) return;
+    if (!m_boundaryModel) return;
     m_boundaryDragging = true;
     m_draggedBoundary = boundaryIndex;
-    m_draggedTier = m_document->activeTierIndex();
+    m_draggedTier = m_boundaryModel->activeTierIndex();
     m_boundaryDragStartTime = time;
 
     if (m_bindingMgr && m_bindingMgr->isEnabled()) {
@@ -395,13 +395,13 @@ void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
 }
 
 void SpectrogramWidget::updateBoundaryDrag(TimePos currentTime) {
-    if (!m_boundaryDragging || !m_document) return;
+    if (!m_boundaryDragging || !m_boundaryModel) return;
 
-    m_document->moveBoundary(m_draggedTier, m_draggedBoundary, currentTime);
+    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, currentTime);
 
     TimePos delta = currentTime - m_boundaryDragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
-        m_document->moveBoundary(m_dragAligned[i].tierIndex,
+        m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
                                  m_dragAligned[i].boundaryIndex,
                                  m_dragAlignedStartTimes[i] + delta);
     }
@@ -410,14 +410,14 @@ void SpectrogramWidget::updateBoundaryDrag(TimePos currentTime) {
 }
 
 void SpectrogramWidget::endBoundaryDrag(TimePos finalTime) {
-    if (!m_boundaryDragging || !m_document) return;
+    if (!m_boundaryDragging || !m_boundaryModel) return;
 
     int draggedTier = m_draggedTier;
     int draggedBoundary = m_draggedBoundary;
 
-    m_document->moveBoundary(m_draggedTier, m_draggedBoundary, m_boundaryDragStartTime);
+    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, m_boundaryDragStartTime);
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
-        m_document->moveBoundary(m_dragAligned[i].tierIndex,
+        m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
                                  m_dragAligned[i].boundaryIndex,
                                  m_dragAlignedStartTimes[i]);
     }
@@ -425,12 +425,21 @@ void SpectrogramWidget::endBoundaryDrag(TimePos finalTime) {
     if (m_undoStack) {
         if (!m_dragAligned.empty() && m_bindingMgr) {
             auto *cmd = m_bindingMgr->createLinkedMoveCommand(
-                m_draggedTier, m_draggedBoundary, finalTime, m_document);
+                m_draggedTier, m_draggedBoundary, finalTime, m_boundaryModel);
             m_undoStack->push(cmd);
         } else {
             m_undoStack->push(new MoveBoundaryCommand(
-                m_document, m_draggedTier, m_draggedBoundary,
+                m_boundaryModel, m_draggedTier, m_draggedBoundary,
                 m_boundaryDragStartTime, finalTime));
+        }
+    } else {
+        // No undo stack: apply the move directly
+        m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, finalTime);
+        TimePos delta = finalTime - m_boundaryDragStartTime;
+        for (size_t i = 0; i < m_dragAligned.size(); ++i) {
+            m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
+                                     m_dragAligned[i].boundaryIndex,
+                                     m_dragAlignedStartTimes[i] + delta);
         }
     }
 
@@ -447,9 +456,9 @@ void SpectrogramWidget::endBoundaryDrag(TimePos finalTime) {
 void SpectrogramWidget::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         int boundaryIdx = hitTestBoundary(event->pos().x());
-        if (boundaryIdx >= 0 && m_document) {
-            int tier = m_document->activeTierIndex();
-            TimePos t = m_document->boundaryTime(tier, boundaryIdx);
+        if (boundaryIdx >= 0 && m_boundaryModel) {
+            int tier = m_boundaryModel->activeTierIndex();
+            TimePos t = m_boundaryModel->boundaryTime(tier, boundaryIdx);
             startBoundaryDrag(boundaryIdx, t);
         } else {
             m_dragging = true;
@@ -532,14 +541,14 @@ void SpectrogramWidget::findSurroundingBoundaries(double timeSec, double &outSta
     outStart = 0.0;
     outEnd = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
 
-    if (!m_document) return;
+    if (!m_boundaryModel) return;
 
-    int activeTier = m_document->activeTierIndex();
-    if (activeTier < 0 || activeTier >= m_document->tierCount()) return;
+    int activeTier = m_boundaryModel->activeTierIndex();
+    if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return;
 
-    int count = m_document->boundaryCount(activeTier);
+    int count = m_boundaryModel->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        double t = usToSec(m_document->boundaryTime(activeTier, b));
+        double t = usToSec(m_boundaryModel->boundaryTime(activeTier, b));
         if (t <= timeSec) outStart = t;
         if (t > timeSec) { outEnd = t; break; }
     }

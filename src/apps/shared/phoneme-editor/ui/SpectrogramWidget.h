@@ -11,6 +11,7 @@
 #include <dstools/ViewportController.h>
 #include <dstools/TimePos.h>
 #include <dstools/PlayWidget.h>
+#include "IBoundaryModel.h"
 #include "BoundaryBindingManager.h"
 #include "SpectrogramColorPalette.h"
 
@@ -23,7 +24,6 @@ namespace phonemelabeler {
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
 
-class TextGridDocument;
 
 /// @brief Renders FFT-based spectrogram with configurable color palettes,
 ///        synchronized viewport, and boundary dragging.
@@ -46,8 +46,8 @@ public:
     /// @param state New viewport state.
     void setViewport(const ViewportState &state);
 
-    /// @brief Sets the TextGrid document for boundary display.
-    void setDocument(TextGridDocument *doc) { m_document = doc; }
+    /// @brief Sets the boundary model for boundary display.
+    void setBoundaryModel(IBoundaryModel *model) { m_boundaryModel = model; }
 
     /// @brief Sets the boundary binding manager.
     void setBindingManager(BoundaryBindingManager *mgr) { m_bindingMgr = mgr; }
@@ -106,7 +106,7 @@ private:
     [[nodiscard]] int timeToX(double time) const;       ///< Converts time to pixel x.
 
     ViewportController *m_viewport = nullptr;           ///< Viewport controller.
-    TextGridDocument *m_document = nullptr;             ///< Associated document.
+    IBoundaryModel *m_boundaryModel = nullptr;          ///< Boundary model.
     BoundaryBindingManager *m_bindingMgr = nullptr;     ///< Binding manager.
     QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
     dstools::widgets::PlayWidget *m_playWidget = nullptr; ///< Play widget for right-click playback.

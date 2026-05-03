@@ -1,5 +1,6 @@
 #include "BoundaryBindingManager.h"
 #include "TextGridDocument.h"
+#include "IBoundaryModel.h"
 #include "commands/MoveBoundaryCommand.h"
 
 #include <algorithm>
@@ -65,27 +66,27 @@ std::vector<AlignedBoundary> BoundaryBindingManager::findAlignedBoundaries(
 
 QUndoCommand *BoundaryBindingManager::createLinkedMoveCommand(
     int sourceTierIndex, int sourceBoundaryIndex,
-    TimePos newTime, TextGridDocument *doc)
+    TimePos newTime, IBoundaryModel *model)
 {
-    if (!doc) return nullptr;
+    if (!model) return nullptr;
 
-    TimePos oldTime = doc->boundaryTime(sourceTierIndex, sourceBoundaryIndex);
+    TimePos oldTime = model->boundaryTime(sourceTierIndex, sourceBoundaryIndex);
     auto aligned = findAlignedBoundaries(sourceTierIndex, sourceBoundaryIndex);
 
     if (aligned.empty()) {
-        return new MoveBoundaryCommand(doc, sourceTierIndex, sourceBoundaryIndex,
+        return new MoveBoundaryCommand(model, sourceTierIndex, sourceBoundaryIndex,
                                        oldTime, newTime);
     }
 
     auto *parentCmd = new QUndoCommand("Linked boundary move");
 
-    new MoveBoundaryCommand(doc, sourceTierIndex, sourceBoundaryIndex,
+    new MoveBoundaryCommand(model, sourceTierIndex, sourceBoundaryIndex,
                            oldTime, newTime, parentCmd);
 
     TimePos delta = newTime - oldTime;
     for (const auto &ab : aligned) {
         TimePos newAlignedTime = ab.time + delta;
-        new MoveBoundaryCommand(doc, ab.tierIndex, ab.boundaryIndex,
+        new MoveBoundaryCommand(model, ab.tierIndex, ab.boundaryIndex,
                                ab.time, newAlignedTime, parentCmd);
     }
 

@@ -9,6 +9,7 @@
 
 #include <dstools/ViewportController.h>
 #include <dstools/TimePos.h>
+#include "IBoundaryModel.h"
 #include "BoundaryBindingManager.h"
 
 #include <dstools/PlayWidget.h>
@@ -44,9 +45,9 @@ public:
     /// @param path Path to the audio file.
     void loadAudio(const QString &path);
 
-    /// @brief Sets the TextGrid document for boundary display.
-    /// @param doc TextGrid document.
-    void setDocument(class TextGridDocument *doc);
+    /// @brief Sets the boundary model for boundary display and editing.
+    /// @param model Boundary model (IBoundaryModel implementation).
+    void setBoundaryModel(IBoundaryModel *model);
 
     /// @brief Sets the boundary binding manager.
     void setBindingManager(BoundaryBindingManager *mgr) { m_bindingMgr = mgr; }
@@ -115,7 +116,7 @@ private:
     [[nodiscard]] int timeToX(double time) const;       ///< Converts time to pixel x.
 
     ViewportController *m_viewport = nullptr;           ///< Viewport controller.
-    TextGridDocument *m_document = nullptr;             ///< Associated document.
+    IBoundaryModel *m_boundaryModel = nullptr;          ///< Boundary model.
     BoundaryBindingManager *m_bindingMgr = nullptr;     ///< Binding manager.
     QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
     dstools::widgets::PlayWidget *m_playWidget = nullptr; ///< Play widget for audio playback.

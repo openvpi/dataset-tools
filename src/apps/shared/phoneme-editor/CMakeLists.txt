@@ -9,7 +9,7 @@ dstools_add_library(${PROJECT_NAME}
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/commands>
     DEPENDS
-        PUBLIC dstools-widgets dstools-domain dstools-audio dsfw-ui-core waveform-panel
+        PUBLIC dstools-widgets dstools-domain dstools-audio dsfw-ui-core
                textgrid FFTW3::fftw3
                Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
 )

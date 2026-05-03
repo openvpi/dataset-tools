@@ -9,6 +9,7 @@
 namespace dstools {
 namespace phonemelabeler {
 
+class IBoundaryModel;
 class TextGridDocument;
 
 struct AlignedBoundary {
@@ -34,7 +35,7 @@ public:
 
     [[nodiscard]] QUndoCommand *createLinkedMoveCommand(
         int sourceTierIndex, int sourceBoundaryIndex,
-        TimePos newTime, TextGridDocument *doc);
+        TimePos newTime, IBoundaryModel *model);
 
 signals:
     void bindingChanged();

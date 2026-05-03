@@ -7,11 +7,11 @@
 namespace dstools {
 namespace phonemelabeler {
 
-class TextGridDocument;
+class IBoundaryModel;
 
 class MoveBoundaryCommand : public QUndoCommand {
 public:
-    MoveBoundaryCommand(TextGridDocument *doc, int tierIndex,
+    MoveBoundaryCommand(IBoundaryModel *model, int tierIndex,
                         int boundaryIndex, TimePos oldTime, TimePos newTime,
                         QUndoCommand *parent = nullptr);
 
@@ -22,7 +22,7 @@ public:
     bool mergeWith(const QUndoCommand *other) override;
 
 private:
-    TextGridDocument *m_doc;
+    IBoundaryModel *m_model;
     int m_tierIndex;
     int m_boundaryIndex;
     TimePos m_oldTime;

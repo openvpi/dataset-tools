@@ -1,16 +1,16 @@
 #include "MoveBoundaryCommand.h"
-#include "../TextGridDocument.h"
+#include "../IBoundaryModel.h"
 
 #include <QString>
 
 namespace dstools {
 namespace phonemelabeler {
 
-MoveBoundaryCommand::MoveBoundaryCommand(TextGridDocument *doc, int tierIndex,
+MoveBoundaryCommand::MoveBoundaryCommand(IBoundaryModel *model, int tierIndex,
                                        int boundaryIndex, TimePos oldTime, TimePos newTime,
                                        QUndoCommand *parent)
     : QUndoCommand(parent)
-    , m_doc(doc)
+    , m_model(model)
     , m_tierIndex(tierIndex)
     , m_boundaryIndex(boundaryIndex)
     , m_oldTime(oldTime)
@@ -20,14 +20,14 @@ MoveBoundaryCommand::MoveBoundaryCommand(TextGridDocument *doc, int tierIndex,
 }
 
 void MoveBoundaryCommand::redo() {
-    if (m_doc) {
-        m_doc->moveBoundary(m_tierIndex, m_boundaryIndex, m_newTime);
+    if (m_model) {
+        m_model->moveBoundary(m_tierIndex, m_boundaryIndex, m_newTime);
     }
 }
 
 void MoveBoundaryCommand::undo() {
-    if (m_doc) {
-        m_doc->moveBoundary(m_tierIndex, m_boundaryIndex, m_oldTime);
+    if (m_model) {
+        m_model->moveBoundary(m_tierIndex, m_boundaryIndex, m_oldTime);
     }
 }
 
