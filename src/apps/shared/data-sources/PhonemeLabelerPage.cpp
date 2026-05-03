@@ -250,12 +250,40 @@ void PhonemeLabelerPage::onActivated() {
 
     if (m_source && !m_currentSliceId.isEmpty()) {
         auto dirty = m_source->dirtyLayers(m_currentSliceId);
-        if (dirty.contains(QStringLiteral("phoneme"))) {
-            dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Warning,
-                QStringLiteral("音素层数据已过期（上游歌词已修改），建议重新对齐"),
-                3000);
+
+        bool needAutoFA = dirty.contains(QStringLiteral("phoneme"));
+
+        if (!needAutoFA && !m_currentSliceId.isEmpty()) {
+            auto result = m_source->loadSlice(m_currentSliceId);
+            if (result) {
+                bool hasGrapheme = false;
+                bool hasPhoneme = false;
+                for (const auto &layer : result.value().layers) {
+                    if (layer.name == QStringLiteral("grapheme"))
+                        hasGrapheme = true;
+                    if (layer.name == QStringLiteral("phoneme") && !layer.boundaries.empty())
+                        hasPhoneme = true;
+                }
+                if (hasGrapheme && !hasPhoneme)
+                    needAutoFA = true;
+            }
+        }
+
+        if (needAutoFA) {
             m_source->clearDirtyLayers(m_currentSliceId, {QStringLiteral("phoneme")});
+
+            ensureHfaEngine();
+            if (m_hfa && m_hfa->isOpen() && !m_faRunning) {
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Info,
+                    QStringLiteral("自动运行强制对齐..."), 3000);
+                runFaForSlice(m_currentSliceId);
+            } else {
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Warning,
+                    QStringLiteral("音素层数据已过期，请手动运行强制对齐"),
+                    3000);
+            }
         }
     }
 }

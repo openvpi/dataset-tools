@@ -332,12 +332,64 @@ void PitchLabelerPage::onActivated() {
             if (dirty.contains(layer))
                 affected << layer;
         }
-        if (!affected.isEmpty()) {
+
+        bool needAutoInfer = !affected.isEmpty();
+
+        if (!needAutoInfer) {
+            auto result = m_source->loadSlice(m_currentSliceId);
+            if (result) {
+                bool hasPhoneme = false;
+                bool hasPitch = false;
+                bool hasMidi = false;
+                bool hasPhNum = false;
+                for (const auto &layer : result.value().layers) {
+                    if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive) && !layer.boundaries.empty())
+                        hasPhoneme = true;
+                    if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty())
+                        hasPhNum = true;
+                    if (layer.name == QStringLiteral("midi") && !layer.boundaries.empty())
+                        hasMidi = true;
+                }
+                for (const auto &curve : result.value().curves) {
+                    if (curve.name == QStringLiteral("pitch") && !curve.values.empty())
+                        hasPitch = true;
+                }
+                if (hasPhoneme && (!hasPitch || !hasMidi || !hasPhNum))
+                    needAutoInfer = true;
+            }
+        }
+
+        if (needAutoInfer) {
             m_source->clearDirtyLayers(m_currentSliceId, affected);
-            dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Warning,
-                QStringLiteral("以下层数据已过期: %1").arg(affected.join(QStringLiteral(", "))),
-                3000);
+
+            ensureRmvpeEngine();
+            ensureGameEngine();
+
+            bool hasRmvpe = m_rmvpe && m_rmvpe->is_open();
+            bool hasGame = m_game && m_game->isOpen();
+
+            if ((hasRmvpe || hasGame) && !m_inferRunning) {
+                QStringList tasks;
+                if (hasRmvpe)
+                    tasks << QStringLiteral("音高提取");
+                if (hasGame)
+                    tasks << QStringLiteral("MIDI转录");
+
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Info,
+                    QStringLiteral("自动运行: %1...").arg(tasks.join(QStringLiteral(", "))),
+                    3000);
+
+                if (hasRmvpe)
+                    runPitchExtraction(m_currentSliceId);
+                else if (hasGame)
+                    runMidiTranscription(m_currentSliceId);
+            } else {
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Warning,
+                    QStringLiteral("音高/MIDI 数据缺失或过期，请手动运行提取"),
+                    3000);
+            }
         }
     }
 }
