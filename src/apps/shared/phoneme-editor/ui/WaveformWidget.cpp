@@ -10,7 +10,6 @@
 #include <QResizeEvent>
 #include <QUndoStack>
 #include <QDebug>
-#include <QMenu>
 #include <QContextMenuEvent>
 
 // Audio loading - use dstools-audio (FFmpeg + AudioDecoder)
@@ -407,27 +406,19 @@ void WaveformWidget::findSurroundingBoundaries(double timeSec, double &outStart,
 }
 
 void WaveformWidget::contextMenuEvent(QContextMenuEvent *event) {
+    // ADR-62: Right-click = direct play segment (no context menu)
     double clickTime = xToTime(event->pos().x());
-
-    QMenu menu(this);
 
     double segStart, segEnd;
     findSurroundingBoundaries(clickTime, segStart, segEnd);
 
-    QString label = tr("Play segment (%1s - %2s)")
-        .arg(segStart, 0, 'f', 3)
-        .arg(segEnd, 0, 'f', 3);
+    if (m_playWidget) {
+        m_playWidget->setPlayRange(segStart, segEnd);
+        m_playWidget->seek(segStart);
+        m_playWidget->setPlaying(true);
+    }
 
-    QAction *playAction = menu.addAction(label);
-    connect(playAction, &QAction::triggered, this, [this, segStart, segEnd]() {
-        if (m_playWidget) {
-            m_playWidget->setPlayRange(segStart, segEnd);
-            m_playWidget->seek(segStart);
-            m_playWidget->setPlaying(true);
-        }
-    });
-
-    menu.exec(event->globalPos());
+    event->accept();
 }
 
 void WaveformWidget::wheelEvent(QWheelEvent *event) {

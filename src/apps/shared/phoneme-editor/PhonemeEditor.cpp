@@ -222,6 +222,7 @@ void PhonemeEditor::buildLayout() {
     m_spectrogramWidget = new SpectrogramWidget(m_viewport, this);
     m_spectrogramWidget->setBindingManager(m_bindingManager);
     m_spectrogramWidget->setUndoStack(m_undoStack);
+    m_spectrogramWidget->setPlayWidget(m_playWidget);
     m_rightSplitter->addWidget(m_spectrogramWidget);
 
     m_rightSplitter->setStretchFactor(0, 0); // tier: fixed

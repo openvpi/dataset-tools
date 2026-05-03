@@ -7,6 +7,7 @@
 #include <QPaintEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
+#include <QContextMenuEvent>
 #include <QResizeEvent>
 #include <QUndoStack>
 
@@ -451,6 +452,39 @@ void SpectrogramWidget::wheelEvent(QWheelEvent *event) {
 void SpectrogramWidget::resizeEvent(QResizeEvent *event) {
     rebuildViewImage();
     QWidget::resizeEvent(event);
+}
+
+void SpectrogramWidget::contextMenuEvent(QContextMenuEvent *event) {
+    // ADR-62: Right-click = direct play segment (no context menu)
+    double clickTime = xToTime(event->pos().x());
+
+    double segStart, segEnd;
+    findSurroundingBoundaries(clickTime, segStart, segEnd);
+
+    if (m_playWidget) {
+        m_playWidget->setPlayRange(segStart, segEnd);
+        m_playWidget->seek(segStart);
+        m_playWidget->setPlaying(true);
+    }
+
+    event->accept();
+}
+
+void SpectrogramWidget::findSurroundingBoundaries(double timeSec, double &outStart, double &outEnd) const {
+    outStart = 0.0;
+    outEnd = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
+
+    if (!m_document) return;
+
+    int activeTier = m_document->activeTierIndex();
+    if (activeTier < 0 || activeTier >= m_document->tierCount()) return;
+
+    int count = m_document->boundaryCount(activeTier);
+    for (int b = 0; b < count; ++b) {
+        double t = usToSec(m_document->boundaryTime(activeTier, b));
+        if (t <= timeSec) outStart = t;
+        if (t > timeSec) { outEnd = t; break; }
+    }
 }
 
 } // namespace phonemelabeler
