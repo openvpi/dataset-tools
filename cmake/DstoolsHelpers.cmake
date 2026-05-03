@@ -381,6 +381,56 @@ function(dstools_add_executable target_name)
 endfunction()
 
 # --------------------------------------------------------------------------- #
+#  dstools_add_translations
+# --------------------------------------------------------------------------- #
+#[[
+  Add i18n translation support to a target.
+
+  Usage:
+    dstools_add_translations(dsfw-widgets)
+    dstools_add_translations(LabelSuite LOCALES zh_CN en)
+    dstools_add_translations(dsfw-core TS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/i18n)
+
+  Creates .ts files named <target>_<locale>.ts in the TS_DIR directory
+  (defaults to ${CMAKE_CURRENT_SOURCE_DIR}/translations).
+  Generated .qm files are installed to ${CMAKE_INSTALL_PREFIX}/translations.
+
+  Silently does nothing if Qt6::lupdate is not available.
+]]
+function(dstools_add_translations target_name)
+    if(NOT TARGET Qt6::lupdate)
+        return()
+    endif()
+
+    set(_one_value TS_DIR)
+    set(_multi_value LOCALES)
+    cmake_parse_arguments(ARG "" "${_one_value}" "${_multi_value}" ${ARGN})
+
+    if(NOT ARG_LOCALES)
+        set(ARG_LOCALES zh_CN en)
+    endif()
+    if(NOT ARG_TS_DIR)
+        set(ARG_TS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/translations")
+    endif()
+
+    set(_ts_files "")
+    foreach(_locale IN LISTS ARG_LOCALES)
+        list(APPEND _ts_files "${ARG_TS_DIR}/${target_name}_${_locale}.ts")
+    endforeach()
+
+    qt_add_translations(${target_name}
+        TS_FILES ${_ts_files}
+        LUPDATE_OPTIONS -no-obsolete -locations none
+    )
+
+    include(GNUInstallDirs)
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/"
+        DESTINATION "${CMAKE_INSTALL_PREFIX}/translations"
+        FILES_MATCHING PATTERN "${target_name}_*.qm"
+    )
+endfunction()
+
+# --------------------------------------------------------------------------- #
 #  Internal: Parse "PUBLIC a b PRIVATE c d" into two lists
 # --------------------------------------------------------------------------- #
 function(_dstools_parse_visibility items out_public out_private)

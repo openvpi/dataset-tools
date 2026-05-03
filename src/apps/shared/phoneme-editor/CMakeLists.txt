@@ -12,3 +12,5 @@ dstools_add_library(${PROJECT_NAME}
         PUBLIC dstools-widgets dstools-domain dstools-audio dsfw-ui-core textgrid FFTW3::fftw3
                Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
 )
+
+dstools_add_translations(${PROJECT_NAME})

@@ -11,3 +11,5 @@ dstools_add_library(${PROJECT_NAME}
         PUBLIC dstools-widgets dstools-domain
                Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
 )
+
+dstools_add_translations(${PROJECT_NAME})

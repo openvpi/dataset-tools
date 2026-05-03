@@ -25,6 +25,7 @@ endif ()
 
 find_package(QT NAMES Qt6 COMPONENTS Core Gui Widgets Svg Network REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets Svg Network REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS LinguistTools QUIET)
 qt_standard_project_setup()
 
 add_custom_target(DeployedTargets)

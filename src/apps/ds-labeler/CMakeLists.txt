@@ -13,6 +13,8 @@ dstools_add_executable(${PROJECT_NAME}
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
+dstools_add_translations(${PROJECT_NAME})
+
 # Copy cpp-pinyin dictionary (needed for MinLabel G2P)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

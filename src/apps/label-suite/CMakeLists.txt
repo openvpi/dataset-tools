@@ -32,6 +32,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/pages
 )
 
+dstools_add_translations(${PROJECT_NAME})
+
 # Copy cpp-pinyin dictionary (needed for MinLabel G2P)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

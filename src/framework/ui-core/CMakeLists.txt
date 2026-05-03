@@ -24,6 +24,8 @@ dstools_add_library(${PROJECT_NAME}
         PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../widgets/include>
 )
 
+dstools_add_translations(${PROJECT_NAME})
+
 # Install resource files
 include(GNUInstallDirs)
 install(FILES res/ui-core.qrc

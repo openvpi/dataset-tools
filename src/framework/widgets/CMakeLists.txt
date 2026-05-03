@@ -11,3 +11,5 @@ dstools_add_library(${PROJECT_NAME}
     DEFINITIONS
         PRIVATE DSFW_WIDGETS_BUILD
 )
+
+dstools_add_translations(${PROJECT_NAME})
