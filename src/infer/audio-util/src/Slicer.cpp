@@ -92,6 +92,21 @@ namespace AudioUtil
         m_minInterval(minInterval), m_maxSilKept(maxSilKept) {}
 
     Slicer Slicer::fromMilliseconds(int sampleRate, const SlicerParams &params) {
+        if (sampleRate <= 0) {
+            Slicer s(sampleRate, 0.0f, 1, 1, 1, 1, 1);
+            s.m_errorCode = SlicerError::AudioError;
+            s.m_errorMsg = "Invalid sample rate";
+            return s;
+        }
+
+        if (!(params.minLength >= params.minInterval && params.minInterval >= params.hopSize) ||
+            params.maxSilKept < params.hopSize) {
+            Slicer s(sampleRate, 0.0f, 1, 1, 1, 1, 1);
+            s.m_errorCode = SlicerError::InvalidArgument;
+            s.m_errorMsg = "Conditions required: (minLength >= minInterval >= hopSize) and (maxSilKept >= hopSize)";
+            return s;
+        }
+
         float threshold = static_cast<float>(std::pow(10.0, params.threshold / 20.0));
         int hopSize = static_cast<int>(divIntRound<int64_t>(
             static_cast<int64_t>(params.hopSize) * sampleRate, 1000LL));
@@ -118,6 +133,10 @@ namespace AudioUtil
     }
 
     MarkerList Slicer::slice(const std::vector<float> &samples) const {
+        if (m_errorCode != SlicerError::Ok) {
+            return {};
+        }
+
         if ((samples.size() + m_hopSize - 1) / m_hopSize <= static_cast<size_t>(m_minLength)) {
             return {{0, static_cast<int64_t>(samples.size())}};
         }
