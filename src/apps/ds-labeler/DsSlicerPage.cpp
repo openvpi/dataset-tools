@@ -1,4 +1,5 @@
 #include "DsSlicerPage.h"
+#include "AudacityMarkerIO.h"
 #include "SliceCommands.h"
 #include "SliceListPanel.h"
 #include "SliceNumberLayer.h"
@@ -7,16 +8,21 @@
 #include <MelSpectrogramWidget.h>
 
 #include <QDoubleSpinBox>
+#include <QFileDialog>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QVBoxLayout>
+
+#include <algorithm>
+#include <cmath>
 
 namespace dstools {
 
@@ -148,15 +154,129 @@ void DsSlicerPage::connectSignals() {
 }
 
 void DsSlicerPage::onAutoSlice() {
-    // TODO M.5.9: Run RMS slicer with current parameters
+    // RMS-based silence detection on mono samples
+    const auto &samples = m_waveformPanel->monoSamples();
+    if (samples.empty())
+        return;
+
+    int sr = m_waveformPanel->sampleRate();
+    double thresholdDb = m_thresholdSpin->value();
+    int minLengthMs = m_minLengthSpin->value();
+    int minIntervalMs = m_minIntervalSpin->value();
+    int hopMs = m_hopSizeSpin->value();
+    int maxSilenceMs = m_maxSilenceSpin->value();
+
+    double threshold = std::pow(10.0, thresholdDb / 20.0);
+    int hopSamples = sr * hopMs / 1000;
+    int minLengthSamples = sr * minLengthMs / 1000;
+    int minIntervalSamples = sr * minIntervalMs / 1000;
+    int maxSilenceSamples = sr * maxSilenceMs / 1000;
+
+    if (hopSamples <= 0)
+        hopSamples = 1;
+
+    // Compute RMS per hop
+    int numHops = static_cast<int>(samples.size()) / hopSamples;
+    std::vector<bool> isSilent(numHops, false);
+    for (int i = 0; i < numHops; ++i) {
+        int start = i * hopSamples;
+        int end = std::min(start + hopSamples, static_cast<int>(samples.size()));
+        double sum = 0.0;
+        for (int s = start; s < end; ++s)
+            sum += static_cast<double>(samples[s]) * samples[s];
+        double rms = std::sqrt(sum / (end - start));
+        isSilent[i] = (rms < threshold);
+    }
+
+    // Find silence regions and place cut points
+    std::vector<double> newPoints;
+    int silenceStart = -1;
+    int lastCutSample = 0;
+
+    for (int i = 0; i < numHops; ++i) {
+        int samplePos = i * hopSamples;
+        if (isSilent[i]) {
+            if (silenceStart < 0)
+                silenceStart = samplePos;
+        } else {
+            if (silenceStart >= 0) {
+                int silenceEnd = samplePos;
+                int silenceLen = silenceEnd - silenceStart;
+                int segLen = silenceStart - lastCutSample;
+
+                if (silenceLen >= minIntervalSamples && segLen >= minLengthSamples) {
+                    // Cut at the middle of the silence
+                    int cutSample = silenceStart + silenceLen / 2;
+                    double cutTime = static_cast<double>(cutSample) / sr;
+                    newPoints.push_back(cutTime);
+                    lastCutSample = cutSample;
+                } else if (silenceLen >= maxSilenceSamples) {
+                    int cutSample = silenceStart + silenceLen / 2;
+                    double cutTime = static_cast<double>(cutSample) / sr;
+                    newPoints.push_back(cutTime);
+                    lastCutSample = cutSample;
+                }
+                silenceStart = -1;
+            }
+        }
+    }
+
+    // Replace current points
+    m_undoStack->beginMacro(tr("Auto slice"));
+    // Remove all existing
+    while (!m_slicePoints.empty()) {
+        m_undoStack->push(new RemoveSlicePointCommand(
+            m_slicePoints, static_cast<int>(m_slicePoints.size()) - 1,
+            [this]() { refreshBoundaries(); }));
+    }
+    // Add new
+    for (double t : newPoints) {
+        m_undoStack->push(
+            new AddSlicePointCommand(m_slicePoints, t, [this]() { refreshBoundaries(); }));
+    }
+    m_undoStack->endMacro();
+
+    refreshBoundaries();
 }
 
 void DsSlicerPage::onImportMarkers() {
-    // TODO M.5.11: Import Audacity marker file
+    QString path = QFileDialog::getOpenFileName(
+        this, tr("Import Markers"), {},
+        tr("Audacity Labels (*.txt);;All Files (*)"));
+    if (path.isEmpty())
+        return;
+
+    QString error;
+    auto times = AudacityMarkerIO::read(path, error);
+    if (!error.isEmpty()) {
+        QMessageBox::warning(this, tr("Import Error"), error);
+        return;
+    }
+
+    m_undoStack->beginMacro(tr("Import markers"));
+    while (!m_slicePoints.empty()) {
+        m_undoStack->push(new RemoveSlicePointCommand(
+            m_slicePoints, static_cast<int>(m_slicePoints.size()) - 1,
+            [this]() { refreshBoundaries(); }));
+    }
+    for (double t : times) {
+        m_undoStack->push(
+            new AddSlicePointCommand(m_slicePoints, t, [this]() { refreshBoundaries(); }));
+    }
+    m_undoStack->endMacro();
+    refreshBoundaries();
 }
 
 void DsSlicerPage::onSaveMarkers() {
-    // TODO M.5.11: Save Audacity marker file
+    QString path = QFileDialog::getSaveFileName(
+        this, tr("Save Markers"), {},
+        tr("Audacity Labels (*.txt);;All Files (*)"));
+    if (path.isEmpty())
+        return;
+
+    QString error;
+    if (!AudacityMarkerIO::write(path, m_slicePoints, error))
+        QMessageBox::warning(this, tr("Save Error"), error);
 }
 
 void DsSlicerPage::onExportAudio() {
