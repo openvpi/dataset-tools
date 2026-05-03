@@ -1,7 +1,9 @@
 #include "SettingsPage.h"
 
 #include <QFileDialog>
+#include <QDir>
 #include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -9,16 +11,67 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSettings>
+#include <QStandardItemModel>
 #include <QVBoxLayout>
 
 #include <dsfw/TranslationManager.h>
+#include <dstools/OnnxEnv.h>
+
+#ifdef Q_OS_WIN
+#    include <dxgi.h>
+#    include <wrl/client.h>
+#    pragma comment(lib, "dxgi.lib")
+#endif
 
 namespace dstools {
+
+// ── Device enumeration helper ────────────────────────────────────────────────
+
+struct GpuDeviceInfo {
+    QString name;
+    int index = 0;
+    quint64 vramBytes = 0;
+};
+
+static QVector<GpuDeviceInfo> enumerateGpuDevices() {
+    QVector<GpuDeviceInfo> devices;
+#ifdef Q_OS_WIN
+    Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
+    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))))
+        return devices;
+
+    IDXGIAdapter1 *adapter = nullptr;
+    for (UINT i = 0; factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+        DXGI_ADAPTER_DESC1 desc;
+        adapter->GetDesc1(&desc);
+        adapter->Release();
+
+        // Skip software adapters
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+            continue;
+
+        quint64 vram = desc.DedicatedVideoMemory;
+        // Filter out devices with < 1 GB VRAM
+        if (vram < 1024ULL * 1024 * 1024)
+            continue;
+
+        GpuDeviceInfo info;
+        info.name = QString::fromWCharArray(desc.Description);
+        info.index = static_cast<int>(i);
+        info.vramBytes = vram;
+        devices.append(info);
+    }
+#endif
+    return devices;
+}
+
+// ── SettingsPage implementation ──────────────────────────────────────────────
 
 SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent) {
     m_tabWidget = new QTabWidget(this);
     m_tabWidget->setTabPosition(QTabWidget::North);
 
+    m_tabWidget->addTab(createDeviceTab(), QStringLiteral("设备"));
     m_tabWidget->addTab(createAsrTab(), QStringLiteral("ASR"));
     m_tabWidget->addTab(createDictTab(), QStringLiteral("词典/G2P"));
     m_tabWidget->addTab(createFATab(), QStringLiteral("强制对齐"));
@@ -45,18 +98,24 @@ void SettingsPage::applyToProject() {
 
     auto defaults = m_project->defaults();
 
+    // Device (global provider + device index)
+    defaults.globalProvider = m_providerCombo->currentText();
+    defaults.deviceIndex = m_deviceCombo->currentData().toInt();
+
     // ASR
     {
         auto &cfg = defaults.taskModels[QStringLiteral("asr")];
         cfg.modelPath = m_asrModelPath->text();
-        cfg.provider = m_asrProvider->currentText();
+        cfg.provider = effectiveProvider(m_asrForceCpu);
+        cfg.forceCpu = m_asrForceCpu->isChecked();
     }
 
     // FA
     {
         auto &cfg = defaults.taskModels[QStringLiteral("phoneme_alignment")];
         cfg.modelPath = m_faModelPath->text();
-        cfg.provider = m_faProvider->currentText();
+        cfg.provider = effectiveProvider(m_faForceCpu);
+        cfg.forceCpu = m_faForceCpu->isChecked();
 
         auto &pre = defaults.preload[QStringLiteral("phoneme_alignment")];
         pre.enabled = m_faPreloadEnabled->isChecked();
@@ -67,14 +126,16 @@ void SettingsPage::applyToProject() {
     {
         auto &cfg = defaults.taskModels[QStringLiteral("pitch_extraction")];
         cfg.modelPath = m_pitchModelPath->text();
-        cfg.provider = m_pitchProvider->currentText();
+        cfg.provider = effectiveProvider(m_pitchForceCpu);
+        cfg.forceCpu = m_pitchForceCpu->isChecked();
     }
 
     // MIDI
     {
         auto &cfg = defaults.taskModels[QStringLiteral("midi_transcription")];
         cfg.modelPath = m_midiModelPath->text();
-        cfg.provider = m_midiProvider->currentText();
+        cfg.provider = effectiveProvider(m_midiForceCpu);
+        cfg.forceCpu = m_midiForceCpu->isChecked();
     }
 
     // Pitch preload
@@ -87,6 +148,12 @@ void SettingsPage::applyToProject() {
     m_project->setDefaults(defaults);
     m_dirty = false;
     emit settingsChanged();
+
+    // Trigger model reloads for all models
+    emit modelReloadRequested(QStringLiteral("asr"));
+    emit modelReloadRequested(QStringLiteral("phoneme_alignment"));
+    emit modelReloadRequested(QStringLiteral("pitch_extraction"));
+    emit modelReloadRequested(QStringLiteral("midi_transcription"));
 }
 
 void SettingsPage::loadFromProject() {
@@ -95,12 +162,27 @@ void SettingsPage::loadFromProject() {
 
     const auto defaults = m_project->defaults();
 
+    // Device
+    {
+        int idx = m_providerCombo->findText(defaults.globalProvider);
+        if (idx >= 0)
+            m_providerCombo->setCurrentIndex(idx);
+
+        // Find device by index
+        for (int i = 0; i < m_deviceCombo->count(); ++i) {
+            if (m_deviceCombo->itemData(i).toInt() == defaults.deviceIndex) {
+                m_deviceCombo->setCurrentIndex(i);
+                break;
+            }
+        }
+    }
+
     // ASR
     {
         auto it = defaults.taskModels.find(QStringLiteral("asr"));
         if (it != defaults.taskModels.end()) {
             m_asrModelPath->setText(it->second.modelPath);
-            m_asrProvider->setCurrentText(it->second.provider);
+            m_asrForceCpu->setChecked(it->second.forceCpu);
         }
     }
 
@@ -109,7 +191,7 @@ void SettingsPage::loadFromProject() {
         auto it = defaults.taskModels.find(QStringLiteral("phoneme_alignment"));
         if (it != defaults.taskModels.end()) {
             m_faModelPath->setText(it->second.modelPath);
-            m_faProvider->setCurrentText(it->second.provider);
+            m_faForceCpu->setChecked(it->second.forceCpu);
         }
         auto pit = defaults.preload.find(QStringLiteral("phoneme_alignment"));
         if (pit != defaults.preload.end()) {
@@ -123,12 +205,12 @@ void SettingsPage::loadFromProject() {
         auto it = defaults.taskModels.find(QStringLiteral("pitch_extraction"));
         if (it != defaults.taskModels.end()) {
             m_pitchModelPath->setText(it->second.modelPath);
-            m_pitchProvider->setCurrentText(it->second.provider);
+            m_pitchForceCpu->setChecked(it->second.forceCpu);
         }
         auto mit = defaults.taskModels.find(QStringLiteral("midi_transcription"));
         if (mit != defaults.taskModels.end()) {
             m_midiModelPath->setText(mit->second.modelPath);
-            m_midiProvider->setCurrentText(mit->second.provider);
+            m_midiForceCpu->setChecked(mit->second.forceCpu);
         }
         auto pit = defaults.preload.find(QStringLiteral("pitch_extraction"));
         if (pit != defaults.preload.end()) {
@@ -136,10 +218,162 @@ void SettingsPage::loadFromProject() {
             m_pitchPreloadCount->setValue(pit->second.count);
         }
     }
-
 }
 
 // ── Tab creation ────────────────────────────────────────────────────────────
+
+QWidget *SettingsPage::createDeviceTab() {
+    auto *w = new QWidget(this);
+    auto *layout = new QVBoxLayout(w);
+
+    auto *group = new QGroupBox(QStringLiteral("推理设备"), w);
+    auto *formLayout = new QFormLayout(group);
+
+    // Provider selection
+    m_providerCombo = new QComboBox(group);
+    m_providerCombo->addItem(QStringLiteral("cpu"));
+#ifdef Q_OS_WIN
+    m_providerCombo->addItem(QStringLiteral("dml"));
+#endif
+    // CUDA disabled
+    {
+        m_providerCombo->addItem(QStringLiteral("cuda (暂不可用)"));
+        auto *model = qobject_cast<QStandardItemModel *>(m_providerCombo->model());
+        if (model) {
+            auto *item = model->item(m_providerCombo->count() - 1);
+            item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+        }
+    }
+    formLayout->addRow(QStringLiteral("推理提供者:"), m_providerCombo);
+
+    // Device selection
+    m_deviceCombo = new QComboBox(group);
+    populateDeviceList();
+    formLayout->addRow(QStringLiteral("设备:"), m_deviceCombo);
+
+    layout->addWidget(group);
+
+    // Info label
+    auto *infoLabel = new QLabel(
+        QStringLiteral("选择 CPU 或 DirectML 作为全局推理后端。\n"
+                       "各模型可通过「CPU 强制」复选框单独覆盖为 CPU 运行。\n"
+                       "设备列表仅显示 ≥1GB 显存的 GPU。"),
+        w);
+    infoLabel->setWordWrap(true);
+    infoLabel->setStyleSheet(QStringLiteral("color: gray; font-style: italic; margin-top: 8px;"));
+    layout->addWidget(infoLabel);
+
+    // Enable/disable device combo based on provider
+    connect(m_providerCombo, &QComboBox::currentTextChanged, this, [this](const QString &text) {
+        m_deviceCombo->setEnabled(text == QStringLiteral("dml"));
+        markDirty();
+    });
+    m_deviceCombo->setEnabled(m_providerCombo->currentText() == QStringLiteral("dml"));
+
+    layout->addStretch();
+    return w;
+}
+
+void SettingsPage::populateDeviceList() {
+    m_deviceCombo->clear();
+    auto devices = enumerateGpuDevices();
+
+    if (devices.isEmpty()) {
+        m_deviceCombo->addItem(QStringLiteral("(无可用 GPU)"), 0);
+        m_deviceCombo->setEnabled(false);
+        return;
+    }
+
+    for (const auto &dev : devices) {
+        double vramGB = static_cast<double>(dev.vramBytes) / (1024.0 * 1024.0 * 1024.0);
+        QString label = QStringLiteral("%1 (%2 GB)")
+                            .arg(dev.name)
+                            .arg(vramGB, 0, 'f', 1);
+        m_deviceCombo->addItem(label, dev.index);
+    }
+}
+
+QWidget *SettingsPage::createModelConfigRow(const QString &label, QLineEdit *&pathEdit,
+                                             QCheckBox *&forceCpu, QPushButton *&testBtn) {
+    auto *group = new QGroupBox(label);
+    auto *layout = new QVBoxLayout(group);
+
+    // Path row: [path] [Browse] [Test]
+    auto *pathLayout = new QHBoxLayout;
+    pathEdit = new QLineEdit(group);
+    auto *browseBtn = new QPushButton(QStringLiteral("浏览..."), group);
+    testBtn = new QPushButton(QStringLiteral("Test"), group);
+    testBtn->setFixedWidth(50);
+    testBtn->setToolTip(QStringLiteral("测试加载模型"));
+    pathLayout->addWidget(pathEdit, 1);
+    pathLayout->addWidget(browseBtn);
+    pathLayout->addWidget(testBtn);
+    layout->addLayout(pathLayout);
+
+    // CPU override checkbox
+    forceCpu = new QCheckBox(QStringLiteral("CPU 强制（此模型在 CPU 上运行）"), group);
+    layout->addWidget(forceCpu);
+
+    connect(browseBtn, &QPushButton::clicked, this, [this, pathEdit]() {
+        const QString path =
+            QFileDialog::getExistingDirectory(this, QStringLiteral("选择模型目录"));
+        if (!path.isEmpty())
+            pathEdit->setText(path);
+    });
+
+    return group;
+}
+
+void SettingsPage::onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCheckBox *forceCpu) {
+    QString modelPath = pathEdit->text().trimmed();
+    if (modelPath.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("测试加载"),
+                             QStringLiteral("请先设置模型路径。"));
+        return;
+    }
+
+    // Determine provider and device
+    QString providerStr = effectiveProvider(forceCpu);
+    infer::ExecutionProvider provider = infer::ExecutionProvider::CPU;
+    if (providerStr == QStringLiteral("dml"))
+        provider = infer::ExecutionProvider::DML;
+    else if (providerStr == QStringLiteral("cuda"))
+        provider = infer::ExecutionProvider::CUDA;
+
+    int deviceId = m_deviceCombo->currentData().toInt();
+
+    // Try to create a session with any .onnx file in the directory
+    QDir dir(modelPath);
+    QStringList onnxFiles = dir.entryList({QStringLiteral("*.onnx")}, QDir::Files);
+    if (onnxFiles.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("测试加载"),
+                             QStringLiteral("模型目录中没有找到 .onnx 文件。"));
+        return;
+    }
+
+    QString testFile = dir.absoluteFilePath(onnxFiles.first());
+    std::string errorMsg;
+    auto session = infer::OnnxEnv::createSession(
+        testFile.toStdWString(), provider, deviceId, &errorMsg);
+
+    if (session) {
+        QMessageBox::information(this, QStringLiteral("测试加载"),
+                                 QStringLiteral("✓ 模型加载成功！\n"
+                                                "提供者: %1\n设备: %2")
+                                     .arg(providerStr)
+                                     .arg(m_deviceCombo->currentText()));
+    } else {
+        QMessageBox::critical(this, QStringLiteral("测试加载"),
+                              QStringLiteral("✗ 模型加载失败:\n%1")
+                                  .arg(QString::fromStdString(errorMsg)));
+    }
+}
+
+QString SettingsPage::effectiveProvider(QCheckBox *forceCpu) const {
+    if (forceCpu && forceCpu->isChecked())
+        return QStringLiteral("cpu");
+    return m_providerCombo->currentText().split(' ').first(); // strip "(暂不可用)"
+}
 
 QWidget *SettingsPage::createGeneralTab() {
     auto *w = new QWidget(this);
@@ -179,42 +413,16 @@ QWidget *SettingsPage::createGeneralTab() {
     return w;
 }
 
-QWidget *SettingsPage::createModelConfigRow(QLineEdit *&pathEdit,
-                                             QComboBox *&providerCombo,
-                                             const QString &label) {
-    auto *group = new QGroupBox(label);
-    auto *layout = new QFormLayout(group);
-
-    pathEdit = new QLineEdit(group);
-    auto *browseBtn = new QPushButton(QStringLiteral("浏览..."), group);
-    auto *pathLayout = new QHBoxLayout;
-    pathLayout->addWidget(pathEdit, 1);
-    pathLayout->addWidget(browseBtn);
-    layout->addRow(QStringLiteral("模型路径:"), pathLayout);
-
-    connect(browseBtn, &QPushButton::clicked, this, [this, pathEdit]() {
-        const QString path =
-            QFileDialog::getExistingDirectory(this, QStringLiteral("选择模型目录"));
-        if (!path.isEmpty())
-            pathEdit->setText(path);
-    });
-
-    providerCombo = new QComboBox(group);
-    providerCombo->addItem(QStringLiteral("cpu"));
-#ifdef Q_OS_WIN
-    providerCombo->addItem(QStringLiteral("dml"));
-#endif
-    providerCombo->addItem(QStringLiteral("cuda"));
-    layout->addRow(QStringLiteral("推理提供者:"), providerCombo);
-
-    return group;
-}
-
 QWidget *SettingsPage::createAsrTab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
-    layout->addWidget(createModelConfigRow(m_asrModelPath, m_asrProvider,
-                                           QStringLiteral("ASR 模型")));
+    layout->addWidget(createModelConfigRow(QStringLiteral("ASR 模型"),
+                                           m_asrModelPath, m_asrForceCpu, m_asrTestBtn));
+
+    connect(m_asrTestBtn, &QPushButton::clicked, this, [this]() {
+        onTestModel(QStringLiteral("asr"), m_asrModelPath, m_asrForceCpu);
+    });
+
     layout->addStretch();
     return w;
 }
@@ -236,8 +444,12 @@ QWidget *SettingsPage::createFATab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
 
-    layout->addWidget(createModelConfigRow(m_faModelPath, m_faProvider,
-                                           QStringLiteral("强制对齐模型")));
+    layout->addWidget(createModelConfigRow(QStringLiteral("强制对齐模型"),
+                                           m_faModelPath, m_faForceCpu, m_faTestBtn));
+
+    connect(m_faTestBtn, &QPushButton::clicked, this, [this]() {
+        onTestModel(QStringLiteral("phoneme_alignment"), m_faModelPath, m_faForceCpu);
+    });
 
     auto *preloadGroup = new QGroupBox(QStringLiteral("预加载"), w);
     auto *preloadLayout = new QHBoxLayout(preloadGroup);
@@ -259,10 +471,17 @@ QWidget *SettingsPage::createPitchTab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
 
-    layout->addWidget(createModelConfigRow(m_pitchModelPath, m_pitchProvider,
-                                           QStringLiteral("F0 提取模型 (RMVPE)")));
-    layout->addWidget(createModelConfigRow(m_midiModelPath, m_midiProvider,
-                                           QStringLiteral("MIDI 转录模型 (GAME)")));
+    layout->addWidget(createModelConfigRow(QStringLiteral("F0 提取模型 (RMVPE)"),
+                                           m_pitchModelPath, m_pitchForceCpu, m_pitchTestBtn));
+    layout->addWidget(createModelConfigRow(QStringLiteral("MIDI 转录模型 (GAME)"),
+                                           m_midiModelPath, m_midiForceCpu, m_midiTestBtn));
+
+    connect(m_pitchTestBtn, &QPushButton::clicked, this, [this]() {
+        onTestModel(QStringLiteral("pitch_extraction"), m_pitchModelPath, m_pitchForceCpu);
+    });
+    connect(m_midiTestBtn, &QPushButton::clicked, this, [this]() {
+        onTestModel(QStringLiteral("midi_transcription"), m_midiModelPath, m_midiForceCpu);
+    });
 
     auto *preloadGroup = new QGroupBox(QStringLiteral("预加载"), w);
     auto *preloadLayout = new QHBoxLayout(preloadGroup);
@@ -346,24 +565,27 @@ void SettingsPage::markDirty() {
 }
 
 void SettingsPage::connectDirtySignals() {
+    // Device
+    connect(m_providerCombo, &QComboBox::currentTextChanged, this, &SettingsPage::markDirty);
+    connect(m_deviceCombo, &QComboBox::currentIndexChanged, this, [this]() { markDirty(); });
+
     // ASR
     connect(m_asrModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
-    connect(m_asrProvider, &QComboBox::currentTextChanged, this, &SettingsPage::markDirty);
+    connect(m_asrForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
 
     // FA
     connect(m_faModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
-    connect(m_faProvider, &QComboBox::currentTextChanged, this, &SettingsPage::markDirty);
+    connect(m_faForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_faPreloadEnabled, &QCheckBox::toggled, this, &SettingsPage::markDirty);
-    connect(m_faPreloadCount, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
+    connect(m_faPreloadCount, &QSpinBox::valueChanged, this, [this]() { markDirty(); });
 
     // Pitch/MIDI
     connect(m_pitchModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
-    connect(m_pitchProvider, &QComboBox::currentTextChanged, this, &SettingsPage::markDirty);
+    connect(m_pitchForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_midiModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
-    connect(m_midiProvider, &QComboBox::currentTextChanged, this, &SettingsPage::markDirty);
+    connect(m_midiForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_pitchPreloadEnabled, &QCheckBox::toggled, this, &SettingsPage::markDirty);
-    connect(m_pitchPreloadCount, &QSpinBox::valueChanged, this, &SettingsPage::markDirty);
-
+    connect(m_pitchPreloadCount, &QSpinBox::valueChanged, this, [this]() { markDirty(); });
 }
 
 } // namespace dstools

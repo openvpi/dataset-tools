@@ -23,6 +23,7 @@ struct TaskModelConfig {
     QString modelPath;          ///< Path to model file or directory.
     QString provider = "cpu";   ///< Execution provider: "cpu", "dml", or "cuda".
     int deviceId = 0;           ///< GPU device index.
+    bool forceCpu = false;      ///< Override global provider to force CPU for this model.
     nlohmann::json extra;       ///< Engine-specific parameters.
 };
 
@@ -43,8 +44,10 @@ struct ExportConfig {
 
 /// Default model paths and inference parameters stored in a .dsproj file.
 struct DsProjectDefaults {
-    std::map<QString, TaskModelConfig> taskModels;  ///< Task name → model config.
-    std::map<QString, PreloadConfig> preload;        ///< Task name → preload config.
+    QString globalProvider = QStringLiteral("cpu");  ///< Global inference provider.
+    int deviceIndex = 0;                              ///< Global GPU device index.
+    std::map<QString, TaskModelConfig> taskModels;    ///< Task name → model config.
+    std::map<QString, PreloadConfig> preload;          ///< Task name → preload config.
     ExportConfig exportConfig;
 };
 

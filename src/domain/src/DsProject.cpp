@@ -178,10 +178,13 @@ DsProject DsProject::load(const QString &path, QString &error) {
                         cfg.provider = fromStd(obj["provider"].get<std::string>());
                     if (obj.contains("deviceId") && obj["deviceId"].is_number_integer())
                         cfg.deviceId = obj["deviceId"].get<int>();
+                    if (obj.contains("forceCpu") && obj["forceCpu"].is_boolean())
+                        cfg.forceCpu = obj["forceCpu"].get<bool>();
 
                     for (auto eit = obj.begin(); eit != obj.end(); ++eit) {
                         if (eit.key() != "processor" && eit.key() != "path" &&
-                            eit.key() != "provider" && eit.key() != "deviceId") {
+                            eit.key() != "provider" && eit.key() != "deviceId" &&
+                            eit.key() != "forceCpu") {
                             cfg.extra[eit.key()] = eit.value();
                         }
                     }
@@ -199,6 +202,12 @@ DsProject DsProject::load(const QString &path, QString &error) {
                 }
             }
         }
+
+        // Global provider/device
+        if (def.contains("globalProvider") && def["globalProvider"].is_string())
+            proj.m_defaults.globalProvider = fromStd(def["globalProvider"].get<std::string>());
+        if (def.contains("deviceIndex") && def["deviceIndex"].is_number_integer())
+            proj.m_defaults.deviceIndex = def["deviceIndex"].get<int>();
 
         // Legacy hopSize/sampleRate → migrate to exportConfig
         if (def.contains("hopSize") && def["hopSize"].is_number_integer())
@@ -277,9 +286,12 @@ bool DsProject::save(const QString &path, QString &error) const {
             obj["path"] = qstr(toPosixPath(cfg.modelPath));
         obj["provider"] = qstr(cfg.provider);
         obj["deviceId"] = cfg.deviceId;
+        obj["forceCpu"] = cfg.forceCpu;
         models[qstr(taskName)] = obj;
     }
     def["models"] = models;
+    def["globalProvider"] = qstr(m_defaults.globalProvider);
+    def["deviceIndex"] = m_defaults.deviceIndex;
 
     // Export config
     nlohmann::json exp = nlohmann::json::object();

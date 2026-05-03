@@ -10,6 +10,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QWidget>
@@ -19,7 +20,7 @@ namespace dstools {
 /// @brief Settings page for DsLabeler — tabbed configuration for pipeline steps.
 ///
 /// Reads and writes DsProjectDefaults from the active DsProject.
-/// Each tab corresponds to one pipeline step's configuration.
+/// Contains a unified device tab and per-model configuration tabs.
 class SettingsPage : public QWidget,
                      public labeler::IPageActions,
                      public labeler::IPageLifecycle {
@@ -47,49 +48,62 @@ public:
 
 signals:
     void settingsChanged();
+    /// Emitted when a model needs reloading (path or device changed).
+    void modelReloadRequested(const QString &modelKey);
 
 private:
     DsProject *m_project = nullptr;
     QTabWidget *m_tabWidget = nullptr;
     bool m_dirty = false;
 
+    // ── Device tab widgets ──
+    QComboBox *m_providerCombo = nullptr;   ///< CPU / DML / CUDA(disabled)
+    QComboBox *m_deviceCombo = nullptr;     ///< Specific GPU device (name + VRAM)
+
     // ── ASR tab widgets ──
     QLineEdit *m_asrModelPath = nullptr;
-    QComboBox *m_asrProvider = nullptr;
+    QCheckBox *m_asrForceCpu = nullptr;
+    QPushButton *m_asrTestBtn = nullptr;
 
     // ── FA tab widgets ──
     QLineEdit *m_faModelPath = nullptr;
-    QComboBox *m_faProvider = nullptr;
+    QCheckBox *m_faForceCpu = nullptr;
+    QPushButton *m_faTestBtn = nullptr;
     QCheckBox *m_faPreloadEnabled = nullptr;
     QSpinBox *m_faPreloadCount = nullptr;
 
     // ── Pitch/MIDI tab widgets ──
     QLineEdit *m_pitchModelPath = nullptr;
-    QComboBox *m_pitchProvider = nullptr;
+    QCheckBox *m_pitchForceCpu = nullptr;
+    QPushButton *m_pitchTestBtn = nullptr;
     QLineEdit *m_midiModelPath = nullptr;
-    QComboBox *m_midiProvider = nullptr;
+    QCheckBox *m_midiForceCpu = nullptr;
+    QPushButton *m_midiTestBtn = nullptr;
     QCheckBox *m_pitchPreloadEnabled = nullptr;
     QSpinBox *m_pitchPreloadCount = nullptr;
-
-
 
     // ── General tab widgets ──
     QComboBox *m_languageCombo = nullptr;
 
+    QWidget *createDeviceTab();
     QWidget *createGeneralTab();
     QWidget *createAsrTab();
     QWidget *createDictTab();
     QWidget *createFATab();
     QWidget *createPitchTab();
-
     QWidget *createPreprocessTab();
 
-    QWidget *createModelConfigRow(QLineEdit *&pathEdit, QComboBox *&providerCombo,
-                                  const QString &label);
+    QWidget *createModelConfigRow(const QString &label, QLineEdit *&pathEdit,
+                                  QCheckBox *&forceCpu, QPushButton *&testBtn);
 
     void loadFromProject();
     void markDirty();
     void connectDirtySignals();
+    void populateDeviceList();
+    void onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCheckBox *forceCpu);
+
+    /// Get the effective provider for a model (considering force-CPU override).
+    QString effectiveProvider(QCheckBox *forceCpu) const;
 };
 
 } // namespace dstools
