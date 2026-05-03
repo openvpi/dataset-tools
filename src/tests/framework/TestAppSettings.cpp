@@ -1,13 +1,17 @@
 #include <QTest>
 #include <QTemporaryDir>
 #include <QSignalSpy>
+#include <QDir>
 #include <dsfw/AppSettings.h>
+#include <dsfw/AppPaths.h>
 
 using namespace dstools;
 
 class TestAppSettings : public QObject {
     Q_OBJECT
 private slots:
+    void initTestCase();
+    void cleanup();
     void testGetDefault();
     void testSetAndGet();
     void testSetBool();
@@ -16,25 +20,33 @@ private slots:
     void testRemove();
     void testObserveNotify();
     void testFlushReload();
+
+private:
+    QString m_configDir;
 };
 
-void TestAppSettings::testGetDefault() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
+void TestAppSettings::initTestCase() {
+    m_configDir = dsfw::AppPaths::configDir();
+}
 
+void TestAppSettings::cleanup() {
+    static const QStringList appNames = {
+        "TestApp_default", "TestApp_setget", "TestApp_bool",
+        "TestApp_nested",  "TestApp_contains", "TestApp_remove",
+        "TestApp_observe", "TestApp_flush"};
+    for (const auto &name : appNames) {
+        QString path = m_configDir + QStringLiteral("/") + name + QStringLiteral(".json");
+        QFile::remove(path);
+    }
+}
+
+void TestAppSettings::testGetDefault() {
     AppSettings settings("TestApp_default");
     SettingsKey<int> key("test/value", 42);
     QCOMPARE(settings.get(key), 42);
 }
 
 void TestAppSettings::testSetAndGet() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
-
     AppSettings settings("TestApp_setget");
     SettingsKey<int> key("test/count", 0);
     settings.set(key, 100);
@@ -42,11 +54,6 @@ void TestAppSettings::testSetAndGet() {
 }
 
 void TestAppSettings::testSetBool() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
-
     AppSettings settings("TestApp_bool");
     SettingsKey<bool> key("feature/enabled", false);
     settings.set(key, true);
@@ -54,11 +61,6 @@ void TestAppSettings::testSetBool() {
 }
 
 void TestAppSettings::testNestedPath() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
-
     AppSettings settings("TestApp_nested");
     SettingsKey<QString> key("ui/theme/name", QString("light"));
     settings.set(key, QString("dark"));
@@ -66,11 +68,6 @@ void TestAppSettings::testNestedPath() {
 }
 
 void TestAppSettings::testContains() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
-
     AppSettings settings("TestApp_contains");
     SettingsKey<int> key("some/key", 0);
     QVERIFY(!settings.contains(key));
@@ -79,11 +76,6 @@ void TestAppSettings::testContains() {
 }
 
 void TestAppSettings::testRemove() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
-
     AppSettings settings("TestApp_remove");
     SettingsKey<int> key("del/me", 0);
     settings.set(key, 10);
@@ -93,11 +85,6 @@ void TestAppSettings::testRemove() {
 }
 
 void TestAppSettings::testObserveNotify() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
-
     AppSettings settings("TestApp_observe");
     SettingsKey<int> key("obs/val", 0);
 
@@ -108,11 +95,6 @@ void TestAppSettings::testObserveNotify() {
 }
 
 void TestAppSettings::testFlushReload() {
-    QTemporaryDir tmp;
-    QVERIFY(tmp.isValid());
-    qputenv("APPDATA", tmp.path().toUtf8());
-    qputenv("XDG_CONFIG_HOME", tmp.path().toUtf8());
-
     const QString appName = "TestApp_flush";
     SettingsKey<int> key("persist/val", 0);
 
