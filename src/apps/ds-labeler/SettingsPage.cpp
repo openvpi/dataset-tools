@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <QDir>
+#include <QFile>
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -15,7 +16,6 @@
 #include <QVBoxLayout>
 
 #include <dsfw/TranslationManager.h>
-#include <dstools/OnnxEnv.h>
 
 #ifdef Q_OS_WIN
 #    include <dxgi.h>
@@ -325,6 +325,7 @@ QWidget *SettingsPage::createModelConfigRow(const QString &label, QLineEdit *&pa
 }
 
 void SettingsPage::onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCheckBox *forceCpu) {
+    Q_UNUSED(modelKey)
     QString modelPath = pathEdit->text().trimmed();
     if (modelPath.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("测试加载"),
@@ -332,41 +333,36 @@ void SettingsPage::onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCh
         return;
     }
 
-    // Determine provider and device
-    QString providerStr = effectiveProvider(forceCpu);
-    infer::ExecutionProvider provider = infer::ExecutionProvider::CPU;
-    if (providerStr == QStringLiteral("dml"))
-        provider = infer::ExecutionProvider::DML;
-    else if (providerStr == QStringLiteral("cuda"))
-        provider = infer::ExecutionProvider::CUDA;
-
-    int deviceId = m_deviceCombo->currentData().toInt();
-
-    // Try to create a session with any .onnx file in the directory
     QDir dir(modelPath);
-    QStringList onnxFiles = dir.entryList({QStringLiteral("*.onnx")}, QDir::Files);
-    if (onnxFiles.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("测试加载"),
-                             QStringLiteral("模型目录中没有找到 .onnx 文件。"));
+    if (!dir.exists()) {
+        QMessageBox::critical(this, QStringLiteral("测试加载"),
+                              QStringLiteral("✗ 模型目录不存在:\n%1").arg(modelPath));
         return;
     }
 
-    QString testFile = dir.absoluteFilePath(onnxFiles.first());
-    std::string errorMsg;
-    auto session = infer::OnnxEnv::createSession(
-        testFile.toStdWString(), provider, deviceId, &errorMsg);
-
-    if (session) {
-        QMessageBox::information(this, QStringLiteral("测试加载"),
-                                 QStringLiteral("✓ 模型加载成功！\n"
-                                                "提供者: %1\n设备: %2")
-                                     .arg(providerStr)
-                                     .arg(m_deviceCombo->currentText()));
-    } else {
-        QMessageBox::critical(this, QStringLiteral("测试加载"),
-                              QStringLiteral("✗ 模型加载失败:\n%1")
-                                  .arg(QString::fromStdString(errorMsg)));
+    QStringList onnxFiles = dir.entryList({QStringLiteral("*.onnx")}, QDir::Files);
+    if (onnxFiles.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("测试加载"),
+                             QStringLiteral("✗ 模型目录中没有找到 .onnx 文件:\n%1").arg(modelPath));
+        return;
     }
+
+    // Check config.json existence
+    bool hasConfig = QFile::exists(dir.absoluteFilePath(QStringLiteral("config.json")));
+
+    QString providerStr = effectiveProvider(forceCpu);
+    QMessageBox::information(this, QStringLiteral("测试加载"),
+                             QStringLiteral("✓ 模型路径验证通过\n\n"
+                                            "目录: %1\n"
+                                            "ONNX 文件: %2 个\n"
+                                            "config.json: %3\n"
+                                            "推理提供者: %4\n"
+                                            "设备: %5")
+                                 .arg(modelPath)
+                                 .arg(onnxFiles.size())
+                                 .arg(hasConfig ? QStringLiteral("✓") : QStringLiteral("✗ (缺失)"))
+                                 .arg(providerStr)
+                                 .arg(m_deviceCombo->currentText()));
 }
 
 QString SettingsPage::effectiveProvider(QCheckBox *forceCpu) const {
