@@ -1,4 +1,5 @@
 #include <dstools/OnnxEnv.h>
+#include <dstools/OnnxModelBase.h>
 
 #include <onnxruntime_cxx_api.h>
 
@@ -86,6 +87,14 @@ namespace dstools::infer {
 
     std::unique_ptr<Ort::Session> OnnxEnv::createSession(const std::wstring &modelPath, ExecutionProvider provider,
                                                          int deviceId, std::string *errorMsg) {
+
+        auto validation = OnnxModelBase::validateModelFile(std::filesystem::path(modelPath));
+        if (!validation) {
+            if (errorMsg) {
+                *errorMsg = validation.error();
+            }
+            return nullptr;
+        }
 
         try {
             auto options = createSessionOptions(provider, deviceId);

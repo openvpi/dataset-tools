@@ -35,6 +35,8 @@ namespace dstools::infer {
         static Result<void> loadSessionTo(std::unique_ptr<Ort::Session> &target, const std::filesystem::path &modelPath,
                                           ExecutionProvider provider, int deviceId);
 
+        static Result<void> validateModelFile(const std::filesystem::path &modelPath);
+
         Result<nlohmann::json> loadConfig(const std::filesystem::path &modelDir);
 
         virtual void onConfigLoaded(const nlohmann::json &config) { (void)config; }
