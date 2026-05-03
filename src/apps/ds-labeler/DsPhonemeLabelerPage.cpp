@@ -53,20 +53,27 @@ void DsPhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
     if (!m_source)
         return;
 
-    // Load TextGrid from dstext
     const QString audioPath = m_source->audioPath(sliceId);
 
-    // Load the dstext and try to find phoneme data to build a TextGrid
-    auto result = m_source->loadSlice(sliceId);
-    if (result) {
-        // Create a temporary TextGrid from dstext layers for editing
-        // The PhonemeEditor expects a TextGridDocument loaded from file
-        // For now, load audio directly - TextGrid creation from dstext is future work
-    }
-
-    // Load audio into editor
+    // Load audio into editor first (needed to determine duration)
     if (!audioPath.isEmpty())
         m_editor->loadAudio(audioPath);
+
+    // Load dstext and convert to TextGridDocument for editing
+    auto result = m_source->loadSlice(sliceId);
+    if (result && !result.value().layers.empty()) {
+        const auto &doc = result.value();
+        QList<IntervalLayer> layers;
+        for (const auto &layer : doc.layers)
+            layers.append(layer);
+
+        // Use audio duration from the document, or fall back to editor's document
+        TimePos duration = m_editor->document()->totalDuration();
+        if (doc.audio.out > doc.audio.in)
+            duration = doc.audio.out - doc.audio.in;
+
+        m_editor->document()->loadFromDsText(layers, duration);
+    }
 
     emit sliceChanged(sliceId);
 }
@@ -79,58 +86,24 @@ bool DsPhonemeLabelerPage::saveCurrentSlice() {
         return true;
 
     auto *doc = m_editor->document();
+
+    // Load existing dstext to preserve other data (curves, meta, etc.)
     auto result = m_source->loadSlice(m_currentSliceId);
     DsTextDocument dstext;
     if (result)
         dstext = std::move(result.value());
 
-    bool foundPhonemeLayer = false;
-    for (int t = 0; t < doc->tierCount(); ++t) {
-        QString tierName = doc->tierName(t);
-        if (tierName.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive) ||
-            tierName.contains(QStringLiteral("phone"), Qt::CaseInsensitive)) {
-            IntervalLayer layer;
-            layer.name = tierName;
-            layer.type = QStringLiteral("text");
-            for (int i = 0; i < doc->intervalCount(t); ++i) {
-                Boundary b;
-                b.pos = doc->intervalStart(t, i);
-                b.text = doc->intervalText(t, i);
-                b.id = i;
-                layer.boundaries.push_back(std::move(b));
-            }
-            layer.sortBoundaries();
+    // Replace all interval layers with current editor state
+    auto layers = doc->toDsText();
+    dstext.layers.clear();
+    for (const auto &layer : layers)
+        dstext.layers.push_back(layer);
 
-            bool replaced = false;
-            for (auto &existing : dstext.layers) {
-                if (existing.name == layer.name) {
-                    existing = std::move(layer);
-                    replaced = true;
-                    break;
-                }
-            }
-            if (!replaced)
-                dstext.layers.push_back(std::move(layer));
-            foundPhonemeLayer = true;
-            break;
-        }
-    }
-
-    if (foundPhonemeLayer) {
-        auto saveResult = m_source->saveSlice(m_currentSliceId, dstext);
-        if (!saveResult) {
-            QMessageBox::warning(this, QStringLiteral("保存失败"),
-                                 QString::fromStdString(saveResult.error()));
-            return false;
-        }
-    } else {
-        if (!doc->save(
-                m_source->audioPath(m_currentSliceId).replace(
-                    QStringLiteral(".wav"), QStringLiteral(".TextGrid")))) {
-            QMessageBox::warning(this, QStringLiteral("保存失败"),
-                                 QStringLiteral("无法保存 TextGrid 文件。"));
-            return false;
-        }
+    auto saveResult = m_source->saveSlice(m_currentSliceId, dstext);
+    if (!saveResult) {
+        QMessageBox::warning(this, QStringLiteral("保存失败"),
+                             QString::fromStdString(saveResult.error()));
+        return false;
     }
 
     return true;

@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QStringDecoder>
 
+#include <algorithm>
 #include <sstream>
 
 namespace dstools {
@@ -309,6 +310,85 @@ void TextGridDocument::setActiveTierIndex(int index) {
         m_activeTierIndex = index;
         emit activeTierChanged(index);
     }
+}
+
+void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePos duration) {
+    m_textGrid = textgrid::TextGrid();
+    double maxTime = usToSec(duration);
+    if (maxTime <= 0.0)
+        maxTime = 1.0; // fallback
+
+    m_textGrid.SetMinTime(0.0);
+    m_textGrid.SetMaxTime(maxTime);
+
+    for (const auto &layer : layers) {
+        auto tier = std::make_shared<textgrid::IntervalTier>(
+            layer.name.toStdString(), 0.0, maxTime);
+
+        // Build intervals from boundary positions.
+        // dstext boundaries represent interval starts; each boundary has .pos (start) and .text.
+        // We need to reconstruct intervals: [boundary[i].pos, boundary[i+1].pos) with boundary[i].text.
+        if (layer.boundaries.empty()) {
+            // Single interval covering entire duration
+            tier->AppendInterval(textgrid::Interval(0.0, maxTime, ""));
+        } else {
+            // Sort boundaries by position (should already be sorted, but be safe)
+            auto sorted = layer.boundaries;
+            std::sort(sorted.begin(), sorted.end(), [](const Boundary &a, const Boundary &b) {
+                return a.pos < b.pos;
+            });
+
+            for (size_t i = 0; i < sorted.size(); ++i) {
+                double start = usToSec(sorted[i].pos);
+                double end = (i + 1 < sorted.size()) ? usToSec(sorted[i + 1].pos) : maxTime;
+                if (end <= start)
+                    end = start + 0.001;
+                tier->AppendInterval(textgrid::Interval(start, end, sorted[i].text.toStdString()));
+            }
+
+            // If first boundary doesn't start at 0, insert a silent interval before it
+            double firstStart = usToSec(sorted[0].pos);
+            if (firstStart > 0.001) {
+                tier->InsertInterval(0, textgrid::Interval(0.0, firstStart, ""));
+            }
+        }
+
+        m_textGrid.AppendTier(tier);
+    }
+
+    m_filePath.clear();
+    m_modified = false;
+    m_activeTierIndex = 0;
+    emit documentChanged();
+    emit modifiedChanged(false);
+    emit activeTierChanged(0);
+}
+
+QList<IntervalLayer> TextGridDocument::toDsText() const {
+    QList<IntervalLayer> result;
+
+    for (int t = 0; t < tierCount(); ++t) {
+        const auto *tier = intervalTier(t);
+        if (!tier) continue;
+
+        IntervalLayer layer;
+        layer.name = tierName(t);
+        layer.type = QStringLiteral("text");
+
+        int count = static_cast<int>(tier->GetNumberOfIntervals());
+        for (int i = 0; i < count; ++i) {
+            const auto &interval = tier->GetInterval(i);
+            Boundary b;
+            b.id = i;
+            b.pos = secToUs(interval.min_time);
+            b.text = QString::fromStdString(interval.text);
+            layer.boundaries.push_back(std::move(b));
+        }
+
+        result.append(std::move(layer));
+    }
+
+    return result;
 }
 
 } // namespace phonemelabeler

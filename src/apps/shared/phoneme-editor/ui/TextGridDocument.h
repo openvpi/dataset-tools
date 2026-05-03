@@ -7,6 +7,7 @@
 
 #include <textgrid.hpp>
 #include <dstools/TimePos.h>
+#include <dstools/DsTextTypes.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -19,6 +20,14 @@ public:
 
     bool load(const QString &path);
     bool save(const QString &path);
+
+    /// Build an in-memory TextGrid from dstext IntervalLayers.
+    /// @param layers  IntervalLayer list from DsTextDocument.
+    /// @param duration Total audio duration in microseconds (sets maxTime).
+    void loadFromDsText(const QList<IntervalLayer> &layers, TimePos duration);
+
+    /// Export all tiers as dstext IntervalLayers.
+    QList<IntervalLayer> toDsText() const;
 
     [[nodiscard]] bool isModified() const { return m_modified; }
     [[nodiscard]] QString filePath() const { return m_filePath; }
