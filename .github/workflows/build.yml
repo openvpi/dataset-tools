@@ -235,7 +235,7 @@ jobs:
         run: |
           echo "=== Verifying build outputs ==="
           FAILED=0
-          for app in DatasetPipeline MinLabel PhonemeLabeler PitchLabeler GameInfer DiffSingerLabeler; do
+          for app in LabelSuite DsLabeler dstools-cli WidgetGallery; do
             if [ "$RUNNER_OS" = "Windows" ]; then
               EXE="${{github.workspace}}/build/bin/${app}.exe"
             elif [ "$RUNNER_OS" = "macOS" ]; then
