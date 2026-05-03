@@ -7,6 +7,10 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+namespace dsfw::widgets {
+class FileProgressTracker;
+}
+
 namespace dstools {
 
 class ProjectDataSource;
@@ -15,7 +19,8 @@ class ProjectDataSource;
 ///
 /// Unlike BaseFileListPanel (filesystem-based), this panel is driven by
 /// ProjectDataSource::sliceIds(). Slice status (active/discarded) is
-/// reflected via item styling.
+/// reflected via item styling. Includes a bottom progress bar showing
+/// labeling completion status (e.g. "12 / 50 已标注").
 class SliceListPanel : public QWidget {
     Q_OBJECT
 
@@ -42,12 +47,21 @@ public:
     /// Slice count.
     [[nodiscard]] int sliceCount() const;
 
+    /// Update the labeling progress display.
+    /// @param completed Number of slices that have been labeled/processed.
+    /// @param total Total number of slices.
+    void setProgress(int completed, int total);
+
+    /// Access the progress tracker widget.
+    [[nodiscard]] dsfw::widgets::FileProgressTracker *progressTracker() const;
+
 signals:
     void sliceSelected(const QString &sliceId);
 
 private:
     QListWidget *m_listWidget = nullptr;
     ProjectDataSource *m_source = nullptr;
+    dsfw::widgets::FileProgressTracker *m_progressTracker = nullptr;
 
     void onCurrentRowChanged(int row);
 };

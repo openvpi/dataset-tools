@@ -1,15 +1,24 @@
 #include "SliceListPanel.h"
 #include "ProjectDataSource.h"
 
+#include <dsfw/widgets/FileProgressTracker.h>
+
 namespace dstools {
 
 SliceListPanel::SliceListPanel(QWidget *parent) : QWidget(parent) {
     m_listWidget = new QListWidget(this);
     m_listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
 
+    m_progressTracker = new dsfw::widgets::FileProgressTracker(
+        dsfw::widgets::FileProgressTracker::LabelOnly, this);
+    m_progressTracker->setFormat(QStringLiteral("%1 / %2 已标注 (%3%)"));
+    m_progressTracker->setEmptyText(QStringLiteral("无切片"));
+
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(m_listWidget);
+    layout->setSpacing(0);
+    layout->addWidget(m_listWidget, 1);
+    layout->addWidget(m_progressTracker);
 
     connect(m_listWidget, &QListWidget::currentRowChanged,
             this, &SliceListPanel::onCurrentRowChanged);
@@ -76,6 +85,14 @@ void SliceListPanel::onCurrentRowChanged(int row) {
     if (row < 0 || row >= m_listWidget->count())
         return;
     emit sliceSelected(m_listWidget->item(row)->data(Qt::UserRole).toString());
+}
+
+void SliceListPanel::setProgress(int completed, int total) {
+    m_progressTracker->setProgress(completed, total);
+}
+
+dsfw::widgets::FileProgressTracker *SliceListPanel::progressTracker() const {
+    return m_progressTracker;
 }
 
 } // namespace dstools
