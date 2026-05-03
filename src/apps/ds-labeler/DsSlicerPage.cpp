@@ -1,6 +1,7 @@
 #include "DsSlicerPage.h"
 #include "AudacityMarkerIO.h"
 #include "SliceCommands.h"
+#include "SliceExportDialog.h"
 #include "SliceListPanel.h"
 #include "SliceNumberLayer.h"
 
@@ -280,7 +281,25 @@ void DsSlicerPage::onSaveMarkers() {
 }
 
 void DsSlicerPage::onExportAudio() {
-    // TODO M.5.10: Show export dialog and slice audio
+    if (m_slicePoints.empty() || m_waveformPanel->monoSamples().empty()) {
+        QMessageBox::information(this, tr("Export"),
+                                 tr("No slices to export. Run auto-slice first."));
+        return;
+    }
+
+    SliceExportDialog dlg(this);
+    dlg.setDefaultPrefix(QStringLiteral("slice"));
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    // TODO M.5.13: Write slice WAV files to dlg.outputDir() using
+    // dlg.bitDepth(), dlg.channelMode(), dlg.prefix(), dlg.numDigits().
+    // Then create PipelineContext JSONs.
+
+    QMessageBox::information(
+        this, tr("Export"),
+        tr("Export configuration accepted.\n"
+           "Slice WAV writing will be implemented in M.5.13."));
 }
 
 void DsSlicerPage::refreshBoundaries() {
