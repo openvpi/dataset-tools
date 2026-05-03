@@ -42,6 +42,156 @@
 
 ---
 
+## Phase P — LabelSuite ↔ DsLabeler 高度统一
+
+> **目标**：分两步进行。第一步（P.A）DsLabeler 参照 LabelSuite 补齐页面功能；第二步（P.B）统一底层数据模型和页面代码。P.A 完成后需手动确认才能开始 P.B。
+
+---
+
+### Phase P.A — DsLabeler 页面功能补齐（参照 LabelSuite）
+
+> **前置条件**：无。
+> **完成标准**：DsLabeler 各页面功能与 LabelSuite 对应页面对齐，手动确认后进入 P.B。
+
+#### P.A.1 DsMinLabelPage 功能补齐
+
+参照 `MinLabelPage`（LabelSuite）补齐：
+- [ ] 快捷键管理（ShortcutManager 集成）
+- [ ] 编辑菜单（Undo/Redo、G2P 转换、导出等）
+- [ ] 文件状态委托（FileStatusDelegate — 标注完成状态显示）
+- [ ] 导航快捷键（上一个/下一个切片）
+- [ ] 播放快捷键
+- [ ] 状态栏内容（进度信息）
+- [ ] 拖拽支持（如有意义）
+
+#### P.A.2 DsPhonemeLabelerPage 功能补齐
+
+参照 `PhonemeLabelerPage`（LabelSuite）补齐：
+- [ ] 自动 FA 实际调用 HubertFA 推理（当前为 stub）
+- [ ] 批量 FA 实际调用推理
+- [ ] 快捷键管理（ShortcutManager）
+- [ ] 完整编辑菜单（已有 Undo/Redo，检查是否缺其他操作）
+- [ ] 文件导航（上一个/下一个切片快捷键）
+- [ ] 工具栏集成到页面（当前 `toolbar()` 暴露但未确认集成）
+- [ ] 右键播放行为验证（ADR-62）
+
+#### P.A.3 DsPitchLabelerPage 功能补齐
+
+参照 `PitchLabelerPage`（LabelSuite）补齐：
+- [ ] 自动 F0 提取实际调用 RMVPE（当前为 stub）
+- [ ] 自动 MIDI 转录实际调用 GAME（当前为 stub）
+- [ ] 自动 add_ph_num 执行（当前无实现）
+- [ ] 批量提取实际调用推理
+- [ ] 快捷键管理（ShortcutManager）
+- [ ] 文件导航（上一个/下一个切片快捷键）
+- [ ] A/B 比较功能（abCompareAction）
+- [ ] 缩放操作（zoomIn/Out/Reset — 已有菜单项，确认功能正常）
+- [ ] 完整状态栏信息
+
+#### P.A.4 DsSlicerPage 功能验证
+
+参照 `SlicerPage`（LabelSuite pipeline）验证：
+- [ ] 自动切片算法调用正确
+- [ ] 批量导出所有切片音频
+- [ ] 导入/保存 Audacity 标记文件
+- [ ] 切片参数持久化到工程（.dsproj defaults.slicer）
+- [ ] 切点变更提醒（已有切片的重新切片警告）
+- [ ] 进度条更新
+
+#### P.A.5 SettingsPage 功能补齐
+
+- [ ] 设备 tab（GPU 枚举、推理提供者选择）
+- [ ] ASR tab（模型路径 + Test 按钮 + CPU 强制）
+- [ ] 强制对齐 tab（模型路径 + Test + 预加载）
+- [ ] 音高/MIDI tab（模型路径 + Test + 预加载）
+- [ ] 词典/G2P tab
+- [ ] 配置变更触发 modelReloadRequested 信号
+
+#### P.A.6 推理库集成
+
+DsPhonemeLabelerPage 和 DsPitchLabelerPage 的核心功能依赖推理库实际调用：
+- [ ] HubertFA 推理集成（DsPhonemeLabelerPage::onRunFA 实现）
+- [ ] RMVPE 推理集成（DsPitchLabelerPage::onExtractPitch 实现）
+- [ ] GAME 推理集成（DsPitchLabelerPage::onExtractMidi 实现）
+- [ ] add_ph_num 算法集成
+- [ ] 预加载机制实现（Settings 中配置的前 N 个文件后台执行）
+
+#### P.A.7 ExportPage 实现
+
+- [ ] 导出前置校验（grapheme 层检查）
+- [ ] 自动补全缺失步骤（FA/add_ph_num/GAME/RMVPE）
+- [ ] CSV 生成（CsvAdapter）
+- [ ] .ds 文件生成（per-slice editedSteps 判定）
+- [ ] wavs/ 导出（可选重采样）
+- [ ] 进度显示
+
+---
+
+### ⏸ 手动确认节点
+
+> Phase P.A 完成后，需手动确认 DsLabeler 各页面功能与 LabelSuite 一致，方可开始 P.B。
+
+---
+
+### Phase P.B — 统一底层数据模型和页面代码
+
+> **前置条件**：Phase P.A 手动确认通过。
+> **完成标准**：两个应用共享全部页面组件和 dstext 数据模型。
+
+#### P.B.1 ISettingsBackend 抽象 + SettingsWidget 共享
+
+- [ ] 提取 `ISettingsBackend` 接口（`load()` / `save()` 返回 `QJsonObject`）
+- [ ] 实现 `AppSettingsBackend`（基于 `QSettings`，LabelSuite 用）
+- [ ] 实现 `ProjectSettingsBackend`（基于 `.dsproj` defaults，DsLabeler 用）
+- [ ] 提取 SettingsWidget 到 `src/apps/shared/settings/`
+- [ ] 两个应用共享 SettingsWidget
+
+#### P.B.2 FileDataSource 改造为 dstext 内核
+
+- [ ] `FileDataSource` 内部使用 `DsTextDocument`
+- [ ] `loadSlice()` 通过 FormatAdapter 从旧格式导入
+- [ ] `saveSlice()` 通过 FormatAdapter 导出回原格式
+- [ ] 支持格式：TextGrid、.lab、.ds、CSV
+- [ ] 移动 FileDataSource 到 `src/apps/shared/data-sources/`
+
+#### P.B.3 页面代码统一
+
+- [ ] 移除 LabelSuite 独有的 `TaskWindowAdapter`
+- [ ] 统一 MinLabelPage / DsMinLabelPage 为单一实现 + 数据源注入
+- [ ] 统一 PhonemeLabelerPage / DsPhonemeLabelerPage 为单一实现
+- [ ] 统一 PitchLabelerPage / DsPitchLabelerPage 为单一实现
+- [ ] LabelSuite 专有页面（ASR、Align、CSV、MIDI、DS）改用 dstext 底层
+
+#### P.B.4 LabelSuite 自动补全
+
+- [ ] Phone 页进入时自动 FA（与 DsLabeler 一致）
+- [ ] Pitch 页进入时自动 add_ph_num + F0 + MIDI
+- [ ] Toast 通知行为统一
+- [ ] Align/MIDI 独立页面保留
+
+#### P.B.5 LabelSuite 增加 Settings 页
+
+- [ ] 添加第 10 个页面：Settings
+- [ ] 使用共享 SettingsWidget + AppSettingsBackend
+- [ ] 侧边栏图标
+
+#### P.B.6 旧代码清理
+
+- [ ] 删除 `src/apps/label-suite/pages/` 独立实现（改用 shared 版本）
+- [ ] 更新 LabelSuite CMakeLists.txt
+- [ ] 确保两个应用 CMake 依赖集一致化
+
+#### P.B.7 集成测试 + 旧格式兼容验证
+
+- [ ] LabelSuite 打开/编辑/保存 TextGrid 文件
+- [ ] LabelSuite 打开/编辑/保存 .ds 文件
+- [ ] LabelSuite 打开/编辑/保存 .lab 文件
+- [ ] 自动补全行为验证
+- [ ] Settings 持久化验证
+- [ ] DsLabeler 回归测试
+
+---
+
 ## 架构决策记录 (ADR)
 
 | ADR | 决策 | 理由 |
@@ -94,6 +244,11 @@
 | ADR-63 | 全流程单声道，双声道可切换显示 | DiffSinger 训练数据为单声道；保留双声道显示能力供验证 |
 | ADR-64 | Settings 移至末尾 | 切片参数内嵌切片页；模型配置低频操作放末尾不占核心位置 |
 | ADR-65 | WaveformPanel 提取为共享组件 | 切片/音素标注共享波形+刻度尺+频谱+播放，避免重复实现 |
+| ADR-66 | LabelSuite 底层统一使用 dstext/PipelineContext | 消除数据模型分裂；旧格式通过 FormatAdapter 兼容 |
+| ADR-67 | LabelSuite 增加 Settings 页 | 统一模型配置体验；共享 SettingsWidget |
+| ADR-68 | LabelSuite 享受自动补全 | 与 DsLabeler 一致；同时保留独立页面供手动控制 |
+| ADR-69 | ISettingsBackend 抽象持久化 | Settings UI 共享，后端可切换 QSettings / .dsproj |
+| ADR-70 | FileDataSource 内部使用 dstext + FormatAdapter | 旧格式文件自动转入/转出 dstext，用户无感知 |
 
 ---
 
@@ -106,4 +261,4 @@
 - [framework-architecture.md](framework-architecture.md) — 框架架构
 - [architecture.md](architecture.md) — 项目架构概述
 
-> 更新时间：2026-05-03
+> 更新时间：2026-05-03 — 新增 Phase P（LabelSuite ↔ DsLabeler 高度统一）
