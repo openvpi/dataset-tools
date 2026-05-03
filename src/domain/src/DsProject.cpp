@@ -247,6 +247,21 @@ DsProject DsProject::load(const QString &path, QString &error) {
                 }
             }
         }
+
+        // v3 slicer config
+        if (def.contains("slicer") && def["slicer"].is_object()) {
+            const auto &sl = def["slicer"];
+            if (sl.contains("threshold") && sl["threshold"].is_number())
+                proj.m_defaults.slicerConfig.threshold = sl["threshold"].get<double>();
+            if (sl.contains("minLength") && sl["minLength"].is_number_integer())
+                proj.m_defaults.slicerConfig.minLength = sl["minLength"].get<int>();
+            if (sl.contains("minInterval") && sl["minInterval"].is_number_integer())
+                proj.m_defaults.slicerConfig.minInterval = sl["minInterval"].get<int>();
+            if (sl.contains("hopSize") && sl["hopSize"].is_number_integer())
+                proj.m_defaults.slicerConfig.hopSize = sl["hopSize"].get<int>();
+            if (sl.contains("maxSilence") && sl["maxSilence"].is_number_integer())
+                proj.m_defaults.slicerConfig.maxSilence = sl["maxSilence"].get<int>();
+        }
     }
 
     // Parse items
@@ -314,6 +329,17 @@ bool DsProject::save(const QString &path, QString &error) const {
             preload[qstr(taskName)] = {{"enabled", cfg.enabled}, {"count", cfg.count}};
         }
         def["preload"] = preload;
+    }
+
+    // Slicer config
+    {
+        nlohmann::json slicer = nlohmann::json::object();
+        slicer["threshold"] = m_defaults.slicerConfig.threshold;
+        slicer["minLength"] = m_defaults.slicerConfig.minLength;
+        slicer["minInterval"] = m_defaults.slicerConfig.minInterval;
+        slicer["hopSize"] = m_defaults.slicerConfig.hopSize;
+        slicer["maxSilence"] = m_defaults.slicerConfig.maxSilence;
+        def["slicer"] = slicer;
     }
 
     json["defaults"] = def;

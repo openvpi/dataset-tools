@@ -42,6 +42,15 @@ struct ExportConfig {
     bool includeDiscarded = false;
 };
 
+/// @brief Slicer parameter configuration stored in .dsproj defaults.slicer.
+struct SlicerConfig {
+    double threshold = -40.0;   ///< dB threshold for silence detection.
+    int minLength = 5000;       ///< Minimum slice length in ms.
+    int minInterval = 300;      ///< Minimum interval between slices in ms.
+    int hopSize = 10;           ///< Hop size in ms.
+    int maxSilence = 500;       ///< Maximum silence kept in ms.
+};
+
 /// Default model paths and inference parameters stored in a .dsproj file.
 struct DsProjectDefaults {
     QString globalProvider = QStringLiteral("cpu");  ///< Global inference provider.
@@ -49,6 +58,7 @@ struct DsProjectDefaults {
     std::map<QString, TaskModelConfig> taskModels;    ///< Task name → model config.
     std::map<QString, PreloadConfig> preload;          ///< Task name → preload config.
     ExportConfig exportConfig;
+    SlicerConfig slicerConfig;
 };
 
 /// @brief A single slice within an item.
