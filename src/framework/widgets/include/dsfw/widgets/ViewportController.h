@@ -80,7 +80,7 @@ signals:
 private:
     ViewportState m_state;
     double m_totalDuration = 0.0;
-    double m_minPixelsPerSecond = 10.0;
+    double m_minPixelsPerSecond = 1.0;
     double m_maxPixelsPerSecond = 5000.0;
     void clampAndEmit();
 };
