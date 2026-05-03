@@ -8,7 +8,10 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSettings>
 #include <QVBoxLayout>
+
+#include <dsfw/TranslationManager.h>
 
 namespace dstools {
 
@@ -22,6 +25,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent) {
     m_tabWidget->addTab(createPitchTab(), QStringLiteral("音高/MIDI"));
     m_tabWidget->addTab(createExportTab(), QStringLiteral("导出"));
     m_tabWidget->addTab(createPreprocessTab(), QStringLiteral("预处理"));
+    m_tabWidget->addTab(createGeneralTab(), QStringLiteral("通用"));
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(8, 8, 8, 8);
@@ -161,6 +165,44 @@ void SettingsPage::loadFromProject() {
 }
 
 // ── Tab creation ────────────────────────────────────────────────────────────
+
+QWidget *SettingsPage::createGeneralTab() {
+    auto *w = new QWidget(this);
+    auto *layout = new QFormLayout(w);
+
+    m_languageCombo = new QComboBox(w);
+    m_languageCombo->addItem(QStringLiteral("跟随系统"), QString());
+    m_languageCombo->addItem(QStringLiteral("中文 (zh_CN)"), QStringLiteral("zh_CN"));
+    m_languageCombo->addItem(QStringLiteral("English (en)"), QStringLiteral("en"));
+
+    // Load saved language
+    QSettings settings;
+    QString savedLang = settings.value(QStringLiteral("App/language")).toString();
+    for (int i = 0; i < m_languageCombo->count(); ++i) {
+        if (m_languageCombo->itemData(i).toString() == savedLang) {
+            m_languageCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    layout->addRow(QStringLiteral("语言 / Language:"), m_languageCombo);
+
+    auto *note = new QLabel(QStringLiteral("语言更改需要重启应用后生效。\n"
+                                           "Language change takes effect after restart."),
+                            w);
+    note->setStyleSheet(QStringLiteral("color: gray; font-style: italic;"));
+    layout->addRow(note);
+
+    connect(m_languageCombo, &QComboBox::currentIndexChanged, this, [this]() {
+        QString lang = m_languageCombo->currentData().toString();
+        QSettings settings;
+        settings.setValue(QStringLiteral("App/language"), lang);
+        markDirty();
+    });
+
+    layout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
+    return w;
+}
 
 QWidget *SettingsPage::createModelConfigRow(QLineEdit *&pathEdit,
                                              QComboBox *&providerCombo,

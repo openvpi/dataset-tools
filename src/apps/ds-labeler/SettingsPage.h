@@ -79,6 +79,10 @@ private:
     QSpinBox *m_exportResampleRate = nullptr;
     QCheckBox *m_exportIncludeDiscarded = nullptr;
 
+    // ── General tab widgets ──
+    QComboBox *m_languageCombo = nullptr;
+
+    QWidget *createGeneralTab();
     QWidget *createAsrTab();
     QWidget *createDictTab();
     QWidget *createFATab();
