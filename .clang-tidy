@@ -15,6 +15,23 @@ Checks: >
   cppcoreguidelines-avoid-goto,
   cppcoreguidelines-init-variables,
   cppcoreguidelines-prefer-member-initializer
-WarningsAsErrors: ''
+WarningsAsErrors: >
+  bugprone-use-after-move,
+  bugprone-assignment-in-if-condition,
+  bugprone-dangling-handle,
+  bugprone-infinite-loop,
+  bugprone-integer-division,
+  bugprone-misplaced-operator-in-strlen-in-alloc,
+  bugprone-misplaced-pointer-arithmetic-in-alloc,
+  bugprone-misplaced-widening-cast,
+  bugprone-sizeof-expression,
+  bugprone-suspicious-enum-usage,
+  bugprone-suspicious-memset-usage,
+  bugprone-suspicious-missing-comma,
+  bugprone-suspicious-string-compare,
+  bugprone-undefined-memory-manipulation,
+  bugprone-unused-return-value,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-init-variables
 HeaderFilterRegex: 'src/(framework|domain|widgets|ui-core|types|libs|infer/common)/.*'
 FormatStyle: file

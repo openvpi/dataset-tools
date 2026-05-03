@@ -414,6 +414,10 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           run-clang-tidy -p . -quiet 2>&1 | tee clang-tidy-results.txt
-          if grep -qE "(warning|error):" clang-tidy-results.txt; then
-            echo "::warning::clang-tidy found issues, see clang-tidy-results.txt"
+          if grep -qE "error:" clang-tidy-results.txt; then
+            echo "::error::clang-tidy found errors (WarningsAsErrors checks failed)"
+            exit 1
+          fi
+          if grep -qE "warning:" clang-tidy-results.txt; then
+            echo "::warning::clang-tidy found warnings, see clang-tidy-results.txt"
           fi
