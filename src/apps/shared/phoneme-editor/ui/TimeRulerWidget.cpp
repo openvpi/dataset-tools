@@ -50,10 +50,16 @@ void TimeRulerWidget::paintEvent(QPaintEvent *event) {
     double pixelsPerTick = 80.0;
     double secPerTick = pixelsPerTick / m_pixelsPerSecond;
 
-    // Snap to nice intervals: 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, ...
-    static const double niceSteps[] = {0.001, 0.002, 0.005, 0.01, 0.02, 0.05,
-                                        0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 60.0};
-    double majorInterval = 1.0;
+    // Snap to nice intervals
+    static const double niceSteps[] = {
+        0.001, 0.002, 0.005,
+        0.01, 0.02, 0.05,
+        0.1, 0.2, 0.5,
+        1.0, 2.0, 5.0,
+        10.0, 20.0, 30.0, 60.0,
+        120.0, 300.0, 600.0, 1800.0, 3600.0
+    };
+    double majorInterval = niceSteps[std::size(niceSteps) - 1];
     for (double step : niceSteps) {
         if (step >= secPerTick) {
             majorInterval = step;
