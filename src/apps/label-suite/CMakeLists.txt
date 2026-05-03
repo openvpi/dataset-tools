@@ -25,6 +25,7 @@ dstools_add_executable(${PROJECT_NAME}
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets minlabel-page phonemelabeler-page
                 pitchlabeler-page pipeline-pages game-infer rmvpe-infer settings-page
+                data-sources
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 

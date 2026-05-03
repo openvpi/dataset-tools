@@ -3,6 +3,7 @@
 #include <dsfw/PipelineContext.h>
 #include "CsvAdapter.h"
 #include "DsFileAdapter.h"
+#include "LabAdapter.h"
 #include "TextGridAdapter.h"
 
 namespace dstools {
@@ -12,6 +13,7 @@ void registerDomainFormatAdapters() {
     registry.registerAdapter(std::make_unique<TextGridAdapter>());
     registry.registerAdapter(std::make_unique<CsvAdapter>());
     registry.registerAdapter(std::make_unique<DsFileAdapter>());
+    registry.registerAdapter(std::make_unique<LabAdapter>());
 }
 
 Result<void> exportContextsToCsv(const std::vector<PipelineContext> &contexts,
