@@ -27,6 +27,12 @@ enum class ChannelMode {
     StereoSplit  ///< Show left/right channels stacked vertically.
 };
 
+/// @brief Interaction tool mode for waveform panel.
+enum class ToolMode {
+    Pointer, ///< Select/drag boundaries, right-click delete.
+    Knife    ///< Left-click to add new boundary.
+};
+
 /// @brief Boundary data for overlay rendering and right-click playback.
 struct BoundaryInfo {
     double timeSec = 0.0; ///< Boundary position in seconds.
@@ -82,6 +88,18 @@ public:
     /// Scroll the viewport so that the given time is centered.
     void scrollToTime(double sec);
 
+    /// Set the interaction tool mode.
+    void setToolMode(ToolMode mode);
+
+    /// Get the current tool mode.
+    [[nodiscard]] ToolMode toolMode() const { return m_toolMode; }
+
+    /// Set the selected boundary index (-1 for none).
+    void setSelectedBoundary(int index);
+
+    /// Get the selected boundary index.
+    [[nodiscard]] int selectedBoundary() const { return m_selectedBoundary; }
+
 signals:
     /// Emitted when audio is loaded successfully.
     void audioLoaded();
@@ -94,6 +112,12 @@ signals:
 
     /// Emitted when a boundary is clicked (for selection).
     void boundaryClicked(int index);
+
+    /// Emitted when a boundary is dragged to a new position.
+    void boundaryMoved(int index, double oldTimeSec, double newTimeSec);
+
+    /// Emitted when user right-clicks a boundary (for deletion).
+    void boundaryRightClicked(int index);
 
     /// Emitted on Ctrl+wheel zoom.
     void zoomChanged(double pixelsPerSecond);
@@ -120,6 +144,8 @@ private:
     int m_channelCount = 1;
     ChannelMode m_channelMode = ChannelMode::Mono;
     std::vector<BoundaryInfo> m_boundaries;
+    ToolMode m_toolMode = ToolMode::Pointer;
+    int m_selectedBoundary = -1;
 
     void buildLayout();
     void connectSignals();

@@ -13,6 +13,8 @@
 #include <PlaybackController.h>
 #include <WaveformPanel.h>
 
+#include <dsfw/widgets/FileProgressTracker.h>
+
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFile>
@@ -26,6 +28,9 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QToolBar>
+#include <QToolButton>
+#include <QKeySequence>
 
 #include <QSplitter>
 #include <QVBoxLayout>
@@ -54,12 +59,38 @@ namespace dstools {
         m_audioFileList = new AudioFileListPanel(this);
         m_audioFileList->setMinimumWidth(160);
         m_audioFileList->setMaximumWidth(280);
+        m_audioFileList->setShowProgress(true);
+        m_audioFileList->progressTracker()->setDisplayStyle(dsfw::widgets::FileProgressTracker::ProgressBarStyle);
+        m_audioFileList->progressTracker()->setFormat(QStringLiteral("%1 / %2 已标注"));
 
         // ── Right content area ────────────────────────────────────────────────
         auto *contentWidget = new QWidget(this);
         auto *mainLayout = new QVBoxLayout(contentWidget);
         mainLayout->setContentsMargins(4, 4, 4, 4);
         mainLayout->setSpacing(4);
+
+        // ── Toolbar with tool buttons ─────────────────────────────────────────
+        m_toolbar = new QToolBar(contentWidget);
+        m_toolbar->setIconSize(QSize(20, 20));
+
+        m_btnPointer = new QToolButton(m_toolbar);
+        m_btnPointer->setText(QStringLiteral("↖ 指针"));
+        m_btnPointer->setToolTip(QStringLiteral("选择/拖动切线 (V)"));
+        m_btnPointer->setCheckable(true);
+        m_btnPointer->setChecked(true);
+        m_btnPointer->setShortcut(QKeySequence(Qt::Key_V));
+
+        m_btnKnife = new QToolButton(m_toolbar);
+        m_btnKnife->setText(QStringLiteral("✂ 切刀"));
+        m_btnKnife->setToolTip(QStringLiteral("添加切线 (C)"));
+        m_btnKnife->setCheckable(true);
+        m_btnKnife->setShortcut(QKeySequence(Qt::Key_C));
+
+        m_toolbar->addWidget(m_btnPointer);
+        m_toolbar->addWidget(m_btnKnife);
+        m_toolbar->addSeparator();
+
+        mainLayout->addWidget(m_toolbar);
 
         // ── Slice params panel ────────────────────────────────────────────────
         auto *paramsGroup = new QGroupBox(QStringLiteral("切片参数"), contentWidget);
@@ -167,6 +198,18 @@ namespace dstools {
         connect(m_btnSaveMarkers, &QPushButton::clicked, this, &DsSlicerPage::onSaveMarkers);
         connect(m_btnExportAudio, &QPushButton::clicked, this, &DsSlicerPage::onExportAudio);
 
+        // ── Tool mode switching ───────────────────────────────────────────────
+        connect(m_btnPointer, &QToolButton::clicked, this, [this]() {
+            m_btnPointer->setChecked(true);
+            m_btnKnife->setChecked(false);
+            m_waveformPanel->setToolMode(waveform::ToolMode::Pointer);
+        });
+        connect(m_btnKnife, &QToolButton::clicked, this, [this]() {
+            m_btnKnife->setChecked(true);
+            m_btnPointer->setChecked(false);
+            m_waveformPanel->setToolMode(waveform::ToolMode::Knife);
+        });
+
         // Left sidebar: audio file selection → load audio for slicing
         connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
             m_waveformPanel->loadAudio(filePath);
@@ -175,15 +218,38 @@ namespace dstools {
             updateSlicerListPanel();
         });
 
-        // Left-click on waveform → add slice point
+        // Knife mode: left-click on waveform → add slice point
         connect(m_waveformPanel, &waveform::WaveformPanel::positionClicked, this, [this](double sec) {
             auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
             m_undoStack->push(new AddSlicePointCommand(m_slicePoints, sec, refreshFn));
         });
 
-        // Boundary click → select for potential deletion
+        // Pointer mode: boundary click → select
         connect(m_waveformPanel, &waveform::WaveformPanel::boundaryClicked, this,
-                [this](int index) { m_selectedBoundary = index; });
+                [this](int index) {
+                    m_selectedBoundary = index;
+                    m_waveformPanel->setSelectedBoundary(index);
+                });
+
+        // Pointer mode: boundary drag → move
+        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryMoved, this,
+                [this](int index, double oldTime, double newTime) {
+                    if (index >= 0 && index < static_cast<int>(m_slicePoints.size())) {
+                        auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
+                        m_undoStack->push(new MoveSlicePointCommand(m_slicePoints, index, oldTime, newTime, refreshFn));
+                    }
+                });
+
+        // Pointer mode: right-click boundary → delete
+        connect(m_waveformPanel, &waveform::WaveformPanel::boundaryRightClicked, this,
+                [this](int index) {
+                    if (index >= 0 && index < static_cast<int>(m_slicePoints.size())) {
+                        auto refreshFn = [this]() { refreshBoundaries(); updateSlicerListPanel(); };
+                        m_undoStack->push(new RemoveSlicePointCommand(m_slicePoints, index, refreshFn));
+                        m_selectedBoundary = -1;
+                        m_waveformPanel->setSelectedBoundary(-1);
+                    }
+                });
 
         // SlicerListPanel context menu: add/delete slice points
         connect(m_sliceListPanel, &SlicerListPanel::sliceDoubleClicked, this,

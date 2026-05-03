@@ -9,6 +9,8 @@
 #include <QDoubleSpinBox>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QToolBar>
+#include <QToolButton>
 #include <QUndoStack>
 #include <QWidget>
 
@@ -77,6 +79,11 @@ namespace dstools {
         class QPushButton *m_btnImportMarkers = nullptr;
         class QPushButton *m_btnSaveMarkers = nullptr;
         class QPushButton *m_btnExportAudio = nullptr;
+
+        // Tool buttons
+        QToolBar *m_toolbar = nullptr;
+        QToolButton *m_btnPointer = nullptr;
+        QToolButton *m_btnKnife = nullptr;
 
         // Slice boundary times (seconds)
         std::vector<double> m_slicePoints;

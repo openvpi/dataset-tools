@@ -110,7 +110,7 @@ namespace AudioUtil
 
         s.m_sampleRate = sampleRate;
         s.m_threshold = std::pow(10, params.threshold / 20.0);
-        s.m_hopSize = divIntRound<int64_t>(static_cast<int64_t>(params.hopSize) * sampleRate, 1000LL);
+        s.m_hopSize = static_cast<int>(divIntRound<int64_t>(static_cast<int64_t>(params.hopSize) * sampleRate, 1000LL));
         s.m_winSize = static_cast<int>(std::min(
             divIntRound<int64_t>(static_cast<int64_t>(params.minInterval) * sampleRate, 1000LL),
             static_cast<int64_t>(4) * s.m_hopSize));

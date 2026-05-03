@@ -5,10 +5,12 @@
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #endif
-#include <dstools/TranscriptionPipeline.h>
-#ifdef _MSC_VER
-#pragma warning(pop)
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+
+#include <dstools/TranscriptionPipeline.h>
 
 using namespace dstools;
 
@@ -457,3 +459,10 @@ void TestTranscriptionPipeline::testFullPipeline_checkpointResume() {
 
 QTEST_GUILESS_MAIN(TestTranscriptionPipeline)
 #include "TestTranscriptionPipeline.moc"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

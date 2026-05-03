@@ -158,11 +158,26 @@ public:
         update();
     }
 
+    void setToolMode(ToolMode mode) {
+        m_toolMode = mode;
+        if (mode == ToolMode::Knife)
+            setCursor(Qt::CrossCursor);
+        else
+            setCursor(Qt::ArrowCursor);
+    }
+
+    void setSelectedBoundary(int index) {
+        m_selectedBoundary = index;
+        update();
+    }
+
 signals:
     void positionClicked(double sec);
     void rightClickPlay(double sec);
     void zoomRequested(double atTime, double factor);
     void boundaryClicked(int index);
+    void boundaryDragged(int index, double oldTime, double newTime);
+    void boundaryRightClicked(int index);
 
 protected:
     void paintEvent(QPaintEvent * /*event*/) override {
@@ -182,19 +197,69 @@ protected:
 
     void mousePressEvent(QMouseEvent *event) override {
         if (event->button() == Qt::LeftButton) {
-            // Check boundary hit
             int idx = hitTestBoundary(event->pos().x());
-            if (idx >= 0) {
-                emit boundaryClicked(idx);
-            } else {
+            if (m_toolMode == ToolMode::Pointer) {
+                if (idx >= 0) {
+                    // Start dragging this boundary
+                    m_dragging = true;
+                    m_dragIndex = idx;
+                    m_dragOriginalTime = (*m_boundaries)[idx].timeSec;
+                    m_selectedBoundary = idx;
+                    emit boundaryClicked(idx);
+                    setCursor(Qt::SizeHorCursor);
+                } else {
+                    // Deselect
+                    m_selectedBoundary = -1;
+                    emit boundaryClicked(-1);
+                }
+                update();
+            } else if (m_toolMode == ToolMode::Knife) {
+                // Knife mode: add a slice point at click position
                 emit positionClicked(xToTime(event->pos().x()));
             }
         }
         QWidget::mousePressEvent(event);
     }
 
+    void mouseMoveEvent(QMouseEvent *event) override {
+        if (m_dragging) {
+            // Update cursor position during drag — visual feedback only
+            m_dragCurrentTime = xToTime(event->pos().x());
+            update();
+        } else if (m_toolMode == ToolMode::Pointer) {
+            // Hover: change cursor when over a boundary
+            int idx = hitTestBoundary(event->pos().x());
+            setCursor(idx >= 0 ? Qt::SizeHorCursor : Qt::ArrowCursor);
+        }
+        QWidget::mouseMoveEvent(event);
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override {
+        if (event->button() == Qt::LeftButton && m_dragging) {
+            m_dragging = false;
+            double newTime = xToTime(event->pos().x());
+            if (newTime < 0.0)
+                newTime = 0.0;
+            if (std::abs(newTime - m_dragOriginalTime) > 0.001) {
+                emit boundaryDragged(m_dragIndex, m_dragOriginalTime, newTime);
+            }
+            setCursor(Qt::ArrowCursor);
+            update();
+        }
+        QWidget::mouseReleaseEvent(event);
+    }
+
     void contextMenuEvent(QContextMenuEvent *event) override {
-        // Right-click = direct play (no menu per ADR-62)
+        // Check if right-clicking on a boundary (in Pointer mode → delete)
+        if (m_toolMode == ToolMode::Pointer) {
+            int idx = hitTestBoundary(event->pos().x());
+            if (idx >= 0) {
+                emit boundaryRightClicked(idx);
+                event->accept();
+                return;
+            }
+        }
+        // Otherwise: right-click = direct play (find surrounding boundaries)
         double clickTime = xToTime(event->pos().x());
         emit rightClickPlay(clickTime);
         event->accept();
@@ -239,11 +304,23 @@ private:
     void drawBoundaries(QPainter &painter) {
         if (!m_boundaries)
             return;
-        painter.setPen(QPen(QColor(255, 200, 100, 200), 1));
         for (size_t i = 0; i < m_boundaries->size(); ++i) {
-            int x = timeToX((*m_boundaries)[i].timeSec);
-            if (x >= 0 && x <= width())
-                painter.drawLine(x, 0, x, height());
+            double t = (*m_boundaries)[i].timeSec;
+            // If dragging this boundary, draw at drag position instead
+            if (m_dragging && static_cast<int>(i) == m_dragIndex)
+                t = m_dragCurrentTime;
+
+            int x = timeToX(t);
+            if (x < 0 || x > width())
+                continue;
+
+            bool isSelected = (static_cast<int>(i) == m_selectedBoundary);
+            if (isSelected) {
+                painter.setPen(QPen(QColor(255, 120, 50, 240), 2));
+            } else {
+                painter.setPen(QPen(QColor(255, 200, 100, 200), 1));
+            }
+            painter.drawLine(x, 0, x, height());
         }
     }
 
@@ -327,6 +404,12 @@ private:
     double m_pixelsPerSecond = 200.0;
     double m_playhead = -1.0;
     std::vector<MinMax> m_cache;
+    ToolMode m_toolMode = ToolMode::Pointer;
+    int m_selectedBoundary = -1;
+    bool m_dragging = false;
+    int m_dragIndex = -1;
+    double m_dragOriginalTime = 0.0;
+    double m_dragCurrentTime = 0.0;
 };
 
 // ─── WaveformPanel ───────────────────────────────────────────────────────────
@@ -445,6 +528,16 @@ void WaveformPanel::scrollToTime(double sec) {
     m_viewport->setViewRange(newStart, newStart + viewDuration);
 }
 
+void WaveformPanel::setToolMode(ToolMode mode) {
+    m_toolMode = mode;
+    m_waveformDisplay->setToolMode(mode);
+}
+
+void WaveformPanel::setSelectedBoundary(int index) {
+    m_selectedBoundary = index;
+    m_waveformDisplay->setSelectedBoundary(index);
+}
+
 void WaveformPanel::buildLayout() {
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -484,6 +577,10 @@ void WaveformPanel::connectSignals() {
             &WaveformPanel::positionClicked);
     connect(m_waveformDisplay, &WaveformDisplay::boundaryClicked, this,
             &WaveformPanel::boundaryClicked);
+    connect(m_waveformDisplay, &WaveformDisplay::boundaryDragged, this,
+            &WaveformPanel::boundaryMoved);
+    connect(m_waveformDisplay, &WaveformDisplay::boundaryRightClicked, this,
+            &WaveformPanel::boundaryRightClicked);
 
     // Right-click play: find surrounding boundaries and play
     connect(m_waveformDisplay, &WaveformDisplay::rightClickPlay, this,

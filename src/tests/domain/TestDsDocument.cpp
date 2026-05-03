@@ -1,5 +1,11 @@
 #include <QTest>
 #include <QTemporaryDir>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <dstools/DsDocument.h>
 
 #include <cmath>
@@ -188,3 +194,7 @@ void TestDsDocument::testLoadNonArrayJson() {
 
 QTEST_GUILESS_MAIN(TestDsDocument)
 #include "TestDsDocument.moc"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
