@@ -112,11 +112,11 @@ LabelSuite (AppShell, 10 页面)
 - [x] DS (BuildDs) — 已使用 PipelineRunner + DsFileAdapter（底层已统一到 dstext）
 - [x] MinLabel/Phoneme/Pitch 页面切换为共享版本
 
-#### P.B.5 LabelSuite 自动补全
+#### P.B.5 LabelSuite 自动补全 ✅
 
-- [ ] Phone 页进入时自动 FA（有 grapheme 层且无 phoneme 层或 dirty 时）
-- [ ] Pitch 页进入时自动 add_ph_num + RMVPE + GAME（缺失或 dirty 时）
-- [ ] Toast 通知行为与 DsLabeler 统一
+- [x] Phone 页进入时自动 FA（有 grapheme 层且无 phoneme 层或 dirty 时）
+- [x] Pitch 页进入时自动 add_ph_num + RMVPE + GAME（缺失或 dirty 时）
+- [x] Toast 通知行为与 DsLabeler 统一
 
 #### P.B.6 旧代码清理
 
