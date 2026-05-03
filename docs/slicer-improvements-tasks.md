@@ -2,6 +2,79 @@
 
 基于用户需求整理的 DsSlicerPage / DroppableFileListPanel / WaveformPanel 改进任务。
 
+> 更新时间：2026-05-03 — 新增任务 8-14（可视化组件统一、缩放修复、交互改进）
+
+---
+
+## 任务 8: 可视化组件统一（IBoundaryModel 去耦合）
+
+**状态**: ✅ 完成
+
+**实现**: 引入 `IBoundaryModel` 抽象接口，将 `WaveformWidget` 和 `SpectrogramWidget` 从 `TextGridDocument` 解耦。`TextGridDocument` 和新增的 `SliceBoundaryModel` 均实现此接口。DsSlicerPage 现在直接使用 phoneme-editor 的 `TimeRulerWidget` + `WaveformWidget` + `SpectrogramWidget`，替代了原来的 `WaveformPanel` + `MelSpectrogramWidget`。
+
+**涉及文件**:
+- `src/apps/shared/phoneme-editor/ui/IBoundaryModel.h` (新增)
+- `src/apps/shared/phoneme-editor/ui/SliceBoundaryModel.h/.cpp` (新增)
+- `src/apps/shared/phoneme-editor/ui/WaveformWidget.h/.cpp` (setBoundaryModel)
+- `src/apps/shared/phoneme-editor/ui/SpectrogramWidget.h/.cpp` (setBoundaryModel)
+- `src/apps/shared/phoneme-editor/ui/commands/MoveBoundaryCommand.h/.cpp` (IBoundaryModel)
+- `src/apps/ds-labeler/DsSlicerPage.h/.cpp` (重构)
+- `src/apps/ds-labeler/CMakeLists.txt` (移除 waveform-panel)
+
+---
+
+## 任务 9: Slicer 默认比例修复
+
+**状态**: ✅ 完成
+
+**实现**: 将 Slicer 页面垂直分割器的波形:频谱:底部信息比例从 4:2:0 修正为 2:5:3。
+
+---
+
+## 任务 10: 缩放范围修复 + 刻度线密度修复
+
+**状态**: ✅ 完成
+
+**实现**:
+- `ViewportController::m_minPixelsPerSecond` 从 10.0 降至 1.0，允许显示完整长音频
+- `TimeRulerWidget::niceSteps` 扩展到 3600s，防止低缩放时刻度过密
+
+---
+
+## 任务 11: 选中条目自动切片
+
+**状态**: ✅ 完成
+
+**实现**: Slicer 选中文件时，如果没有已存切点信息，自动运行一次 `onAutoSlice()`。
+
+---
+
+## 任务 12: 文件列表记忆上次选中条目
+
+**状态**: ✅ 完成
+
+**实现**: PhonemeLabeler 和 MinLabel 页面通过 `DsLabelerKeys` 持久化上次选中的切片 ID，页面激活时恢复选择或默认选中第一个。
+
+---
+
+## 任务 13: Phoneme 波形/频谱图无音素数据时正常显示 + 右键崩溃修复
+
+**状态**: ✅ 完成
+
+**实现**:
+- `PhonemeEditor::loadAudio` 先从音频长度设置 viewport duration，再从文档覆盖（如果文档有数据）
+- `WaveformWidget::contextMenuEvent` 和 `SpectrogramWidget::contextMenuEvent` 添加空音频数据保护
+
+---
+
+## 任务 14: Slicer 右键播放切片段 + MinLabel 播放图标修复
+
+**状态**: ✅ 完成
+
+**实现**:
+- Slicer 增加 `PlayWidget`，连接到 `WaveformWidget` 和 `SpectrogramWidget`，右键可播放当前切片段
+- MinLabel 的 `m_playAction` 添加 `play.svg` 图标
+
 ---
 
 ## 任务 1: AudioFileListPanel 顶部增加操作按钮

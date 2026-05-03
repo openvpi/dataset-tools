@@ -67,13 +67,15 @@
 #### P.A.2 DsPhonemeLabelerPage 功能补齐
 
 参照 `PhonemeLabelerPage`（LabelSuite）补齐：
-- [ ] 自动 FA 实际调用 HubertFA 推理（当前为 stub）
-- [ ] 批量 FA 实际调用推理
-- [ ] 快捷键管理（ShortcutManager）
+- [x] 自动 FA 实际调用 HubertFA 推理
+- [x] 批量 FA 实际调用推理
+- [x] 快捷键管理（ShortcutManager）
 - [ ] 完整编辑菜单（已有 Undo/Redo，检查是否缺其他操作）
-- [ ] 文件导航（上一个/下一个切片快捷键）
+- [x] 文件导航（上一个/下一个切片快捷键）
 - [ ] 工具栏集成到页面（当前 `toolbar()` 暴露但未确认集成）
-- [ ] 右键播放行为验证（ADR-62）
+- [x] 右键播放行为验证（ADR-62）—— 已修复空音频崩溃
+- [x] 波形/频谱图在无音素数据时正常显示
+- [x] 上次选中切片持久化恢复
 
 #### P.A.3 DsPitchLabelerPage 功能补齐
 
@@ -91,12 +93,18 @@
 #### P.A.4 DsSlicerPage 功能验证
 
 参照 `SlicerPage`（LabelSuite pipeline）验证：
-- [ ] 自动切片算法调用正确
-- [ ] 批量导出所有切片音频
-- [ ] 导入/保存 Audacity 标记文件
-- [ ] 切片参数持久化到工程（.dsproj defaults.slicer）
-- [ ] 切点变更提醒（已有切片的重新切片警告）
-- [ ] 进度条更新
+- [x] 自动切片算法调用正确
+- [x] 批量导出所有切片音频
+- [x] 导入/保存 Audacity 标记文件
+- [x] 切片参数持久化到工程（.dsproj defaults.slicer）
+- [x] 切点变更提醒（已有切片的重新切片警告）
+- [x] 进度条更新
+- [x] 可视化组件统一（复用 phoneme-editor 的 WaveformWidget/SpectrogramWidget/TimeRulerWidget）
+- [x] 默认比例 2:5:3
+- [x] 缩放范围修复（可显示整首歌）
+- [x] 刻度线密度跟随缩放正确变化
+- [x] 选中文件无切点时自动切片
+- [x] 右键播放当前切片段
 
 #### P.A.5 SettingsPage 功能补齐
 
@@ -243,7 +251,7 @@ DsPhonemeLabelerPage 和 DsPitchLabelerPage 的核心功能依赖推理库实际
 | ADR-62 | 右键直接播放，不弹菜单 | 标注中最频繁操作应零延迟；波形/标注区域不触发右键菜单 |
 | ADR-63 | 全流程单声道，双声道可切换显示 | DiffSinger 训练数据为单声道；保留双声道显示能力供验证 |
 | ADR-64 | Settings 移至末尾 | 切片参数内嵌切片页；模型配置低频操作放末尾不占核心位置 |
-| ADR-65 | WaveformPanel 提取为共享组件 | 切片/音素标注共享波形+刻度尺+频谱+播放，避免重复实现 |
+| ADR-65 | WaveformWidget/SpectrogramWidget 通过 IBoundaryModel 解耦 | 切片/音素标注共享可视化组件，通过抽象 boundary 接口驱动，WaveformPanel 已废弃 |
 | ADR-66 | LabelSuite 底层统一使用 dstext/PipelineContext | 消除数据模型分裂；旧格式通过 FormatAdapter 兼容 |
 | ADR-67 | LabelSuite 增加 Settings 页 | 统一模型配置体验；共享 SettingsWidget |
 | ADR-68 | LabelSuite 享受自动补全 | 与 DsLabeler 一致；同时保留独立页面供手动控制 |
