@@ -176,7 +176,7 @@ namespace dstools {
 
         // Mel spectrogram (collapsible)
         m_melSpectrogram = new waveform::MelSpectrogramWidget(m_waveformPanel->viewport(), contentWidget);
-        m_melSpectrogram->setVisible(false); // Collapsed by default
+        m_melSpectrogram->setVisible(true); // Show mel spectrogram below waveform
         splitter->addWidget(m_melSpectrogram);
 
         // Slice number layer
@@ -233,6 +233,9 @@ namespace dstools {
             m_waveformPanel->loadAudio(filePath);
             m_currentAudioPath = filePath;
             m_undoStack->clear();
+
+            // Update mel spectrogram with the loaded audio data
+            m_melSpectrogram->setAudioData(m_waveformPanel->monoSamples(), m_waveformPanel->sampleRate());
 
             // Restore saved slice points for this file, or start fresh
             loadSlicePointsForFile(filePath);
