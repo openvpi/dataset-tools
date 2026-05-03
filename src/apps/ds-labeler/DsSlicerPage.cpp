@@ -1,4 +1,5 @@
 #include "DsSlicerPage.h"
+#include "SliceCommands.h"
 #include "SliceListPanel.h"
 #include "SliceNumberLayer.h"
 
@@ -9,6 +10,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMenuBar>
 #include <QPushButton>
@@ -130,11 +132,18 @@ void DsSlicerPage::connectSignals() {
     connect(m_btnSaveMarkers, &QPushButton::clicked, this, &DsSlicerPage::onSaveMarkers);
     connect(m_btnExportAudio, &QPushButton::clicked, this, &DsSlicerPage::onExportAudio);
 
-    // Boundary click on waveform → select slice
+    // Left-click on waveform → add slice point
+    connect(m_waveformPanel, &waveform::WaveformPanel::positionClicked, this,
+            [this](double sec) {
+                auto refreshFn = [this]() { refreshBoundaries(); };
+                m_undoStack->push(
+                    new AddSlicePointCommand(m_slicePoints, sec, refreshFn));
+            });
+
+    // Boundary click → select for potential deletion
     connect(m_waveformPanel, &waveform::WaveformPanel::boundaryClicked, this,
             [this](int index) {
-                // TODO: highlight the clicked boundary for editing
-                Q_UNUSED(index)
+                m_selectedBoundary = index;
             });
 }
 
@@ -190,6 +199,33 @@ QString DsSlicerPage::windowTitle() const {
 
 void DsSlicerPage::onActivated() {
     // TODO: Load audio from project's source file and refresh UI
+}
+
+void DsSlicerPage::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_Delete && m_selectedBoundary >= 0 &&
+        m_selectedBoundary < static_cast<int>(m_slicePoints.size())) {
+        auto refreshFn = [this]() { refreshBoundaries(); };
+        m_undoStack->push(
+            new RemoveSlicePointCommand(m_slicePoints, m_selectedBoundary, refreshFn));
+        m_selectedBoundary = -1;
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_Escape) {
+        // Stop playback
+        m_waveformPanel->playback()->stop();
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_Z && (event->modifiers() & Qt::ControlModifier)) {
+        if (event->modifiers() & Qt::ShiftModifier)
+            m_undoStack->redo();
+        else
+            m_undoStack->undo();
+        event->accept();
+        return;
+    }
+    QWidget::keyPressEvent(event);
 }
 
 } // namespace dstools

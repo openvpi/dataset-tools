@@ -75,6 +75,7 @@ private:
 
     // Slice boundary times (seconds)
     std::vector<double> m_slicePoints;
+    int m_selectedBoundary = -1;
 
     void buildLayout();
     void connectSignals();
@@ -83,6 +84,9 @@ private:
     void onSaveMarkers();
     void onExportAudio();
     void refreshBoundaries();
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
 };
 
 } // namespace dstools
