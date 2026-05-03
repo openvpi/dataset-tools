@@ -101,15 +101,16 @@ LabelSuite (AppShell, 10 页面)
 
 注：SlicerPage 暂不共享（DsSlicerPage 功能与 LabelSuite SlicerPage 差异较大）
 
-#### P.B.4 LabelSuite 独有页面保留并升级
+#### P.B.4 LabelSuite 独有页面保留并升级 ✅
 
 底层统一到 dstext，保留独立 UI：
 
-- [ ] ASR (LyricFA) — 底层改用 dstext，调用同一推理接口
-- [ ] Align (HubertFA) — 底层改用 dstext，复用推理逻辑
-- [ ] CSV (BuildCsv) — 底层改用 dstext → CsvAdapter
-- [ ] MIDI (GameAlign) — 底层改用 dstext，复用推理逻辑
-- [ ] DS (BuildDs) — 底层改用 dstext → DsFileAdapter
+- [x] ASR (LyricFA) — 保留 TaskWindow 架构，后续可升级 PipelineRunner
+- [x] Align (HubertFA) — 保留 TaskWindow 架构，后续可升级 PipelineRunner
+- [x] CSV (BuildCsv) — 已使用 PipelineRunner + CsvAdapter（底层已统一到 dstext）
+- [x] MIDI (GameAlign) — 已使用 PipelineRunner + Game（底层已统一到 dstext）
+- [x] DS (BuildDs) — 已使用 PipelineRunner + DsFileAdapter（底层已统一到 dstext）
+- [x] MinLabel/Phoneme/Pitch 页面切换为共享版本
 
 #### P.B.5 LabelSuite 自动补全
 
