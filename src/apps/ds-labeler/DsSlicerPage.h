@@ -14,6 +14,8 @@
 #include <QUndoStack>
 #include <QWidget>
 
+#include <map>
+
 namespace dstools {
 
     class ProjectDataSource;
@@ -89,16 +91,23 @@ namespace dstools {
         std::vector<double> m_slicePoints;
         int m_selectedBoundary = -1;
 
+        // Per-file slice points storage (filePath → slice points)
+        std::map<QString, std::vector<double>> m_fileSlicePoints;
+        QString m_currentAudioPath;
+
         void buildLayout();
         void connectSignals();
         void onAutoSlice();
         void onImportMarkers();
         void onSaveMarkers();
         void onExportAudio();
+        void onBatchExportAll();
         void onOpenAudioFiles();
         void onOpenAudioDirectory();
         void refreshBoundaries();
         void updateSlicerListPanel();
+        void saveCurrentSlicePoints();
+        void loadSlicePointsForFile(const QString &filePath);
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

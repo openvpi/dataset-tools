@@ -9,11 +9,17 @@
 
 #include <dstools/DsProject.h>
 
+#include <dstools/DsItemManager.h>
+#include <dstools/DsItemRecord.h>
+
 #include <MelSpectrogramWidget.h>
 #include <PlaybackController.h>
 #include <WaveformPanel.h>
 
 #include <dsfw/widgets/FileProgressTracker.h>
+
+#include <dstools/AudioDecoder.h>
+#include <dstools/WaveFormat.h>
 
 #include <QDir>
 #include <QDoubleSpinBox>
@@ -212,8 +218,16 @@ namespace dstools {
 
         // Left sidebar: audio file selection → load audio for slicing
         connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
+            // Save current file's slice points before switching
+            saveCurrentSlicePoints();
+
             m_waveformPanel->loadAudio(filePath);
-            m_slicePoints.clear();
+            m_currentAudioPath = filePath;
+            m_undoStack->clear();
+
+            // Restore saved slice points for this file, or start fresh
+            loadSlicePointsForFile(filePath);
+
             refreshBoundaries();
             updateSlicerListPanel();
         });
@@ -401,7 +415,10 @@ namespace dstools {
         }
 
         SliceExportDialog dlg(this);
-        dlg.setDefaultPrefix(QStringLiteral("slice"));
+        // Default prefix = original audio file's basename (without extension)
+        QString currentAudioPath = m_audioFileList->currentFilePath();
+        QFileInfo audioInfo(currentAudioPath);
+        dlg.setDefaultPrefix(audioInfo.completeBaseName());
         if (dlg.exec() != QDialog::Accepted)
             return;
 
@@ -513,6 +530,29 @@ namespace dstools {
                     ctx->audioPath = item.audioSource;
                     m_dataSource->saveContext(sliceId);
                 }
+
+                // Create .dsitem record file for pipeline tracking
+                {
+                    QString dsitemDir = m_dataSource->workingDir()
+                                       + QStringLiteral("/dstemp/dsitems");
+                    QDir().mkpath(dsitemDir);
+
+                    DsItemRecord record;
+                    record.status = DsItemRecord::Status::Pending;
+                    record.inputFile = currentAudioPath.toStdString();
+                    record.outputFile = dir.filePath(
+                        QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0')))
+                        .toStdString();
+
+                    QT_WARNING_PUSH
+                    QT_WARNING_DISABLE_DEPRECATED
+                    DsItemManager mgr;
+                    QT_WARNING_POP
+                    auto dsitemPath = std::filesystem::path(
+                        (dsitemDir + QStringLiteral("/") + sliceId + QStringLiteral(".dsitem"))
+                            .toStdWString());
+                    mgr.save(record, dsitemPath);
+                }
             }
 
             project->setItems(std::move(items));
@@ -558,6 +598,7 @@ namespace dstools {
         processMenu->addAction(QStringLiteral("保存切点..."), this, &DsSlicerPage::onSaveMarkers);
         processMenu->addSeparator();
         processMenu->addAction(QStringLiteral("导出切片音频..."), this, &DsSlicerPage::onExportAudio);
+        processMenu->addAction(QStringLiteral("批量导出全部切片..."), this, &DsSlicerPage::onBatchExportAll);
 
         return bar;
     }
@@ -642,6 +683,129 @@ namespace dstools {
             return;
         }
         QWidget::keyPressEvent(event);
+    }
+
+    void DsSlicerPage::saveCurrentSlicePoints() {
+        if (!m_currentAudioPath.isEmpty()) {
+            m_fileSlicePoints[m_currentAudioPath] = m_slicePoints;
+        }
+    }
+
+    void DsSlicerPage::loadSlicePointsForFile(const QString &filePath) {
+        auto it = m_fileSlicePoints.find(filePath);
+        if (it != m_fileSlicePoints.end()) {
+            m_slicePoints = it->second;
+        } else {
+            m_slicePoints.clear();
+        }
+    }
+
+    void DsSlicerPage::onBatchExportAll() {
+        // Save current file's points first
+        saveCurrentSlicePoints();
+
+        // Check that at least one file has slice points
+        bool hasSlices = false;
+        for (const auto &[path, points] : m_fileSlicePoints) {
+            if (!points.empty()) { hasSlices = true; break; }
+        }
+        if (!hasSlices) {
+            QMessageBox::information(this, tr("Batch Export"),
+                tr("No files have been sliced. Slice audio files first."));
+            return;
+        }
+
+        SliceExportDialog dlg(this);
+        dlg.setDefaultPrefix(QStringLiteral("batch"));
+        dlg.setWindowTitle(tr("Batch Export All Sliced Audio"));
+        if (dlg.exec() != QDialog::Accepted)
+            return;
+
+        QString outputDir = dlg.outputDir();
+        if (outputDir.isEmpty()) return;
+        QDir dir(outputDir);
+        if (!dir.exists()) dir.mkpath(outputDir);
+
+        int digits = dlg.numDigits();
+        int sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        switch (dlg.bitDepth()) {
+            case SliceExportDialog::BitDepth::PCM16:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16; break;
+            case SliceExportDialog::BitDepth::PCM24:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_24; break;
+            case SliceExportDialog::BitDepth::PCM32:  sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_32; break;
+            case SliceExportDialog::BitDepth::Float32: sndFormat = SF_FORMAT_WAV | SF_FORMAT_FLOAT; break;
+        }
+
+        int totalExported = 0;
+
+        for (const auto &[audioPath, slicePoints] : m_fileSlicePoints) {
+            if (slicePoints.empty())
+                continue;
+
+            // Load audio for this file
+            dstools::audio::AudioDecoder decoder;
+            if (!decoder.open(audioPath))
+                continue;
+
+            auto fmt = decoder.format();
+            int sr = fmt.sampleRate();
+            int channels = fmt.channels();
+
+            std::vector<float> allSamples;
+            constexpr int kBufSize = 4096;
+            std::vector<float> buffer(kBufSize);
+            while (true) {
+                int read = decoder.read(buffer.data(), 0, kBufSize);
+                if (read <= 0) break;
+                allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
+            }
+            decoder.close();
+
+            // Mix to mono
+            size_t numFrames = allSamples.size() / channels;
+            std::vector<float> mono(numFrames);
+            if (channels > 1) {
+                for (size_t i = 0; i < numFrames; ++i) {
+                    float sum = 0.0f;
+                    for (int c = 0; c < channels; ++c)
+                        sum += allSamples[i * channels + c];
+                    mono[i] = sum / static_cast<float>(channels);
+                }
+            } else {
+                mono.assign(allSamples.begin(), allSamples.end());
+            }
+
+            // Build segments
+            QString prefix = QFileInfo(audioPath).completeBaseName();
+            int numSegments = static_cast<int>(slicePoints.size()) + 1;
+            for (int i = 0; i < numSegments; ++i) {
+                double startSec = (i == 0) ? 0.0 : slicePoints[i - 1];
+                double endSec = (i < static_cast<int>(slicePoints.size()))
+                                    ? slicePoints[i]
+                                    : static_cast<double>(mono.size()) / sr;
+                int startSamp = static_cast<int>(startSec * sr);
+                int endSamp = std::min(static_cast<int>(endSec * sr), static_cast<int>(mono.size()));
+                if (endSamp <= startSamp) continue;
+
+                QString filename = QStringLiteral("%1_%2.wav")
+                    .arg(prefix).arg(i + 1, digits, 10, QChar('0'));
+                QString filepath = dir.filePath(filename);
+
+#ifdef _WIN32
+                auto pathStr = filepath.toStdWString();
+#else
+                auto pathStr = filepath.toStdString();
+#endif
+                SndfileHandle wf(pathStr.c_str(), SFM_WRITE, sndFormat, 1, sr);
+                if (!wf) continue;
+
+                sf_count_t frameCount = endSamp - startSamp;
+                wf.write(mono.data() + startSamp, frameCount);
+                ++totalExported;
+            }
+        }
+
+        QMessageBox::information(this, tr("Batch Export Complete"),
+            tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));
     }
 
 } // namespace dstools
