@@ -16,6 +16,7 @@
 #include <QWidget>
 
 #include <dstools/ViewportController.h>
+#include <dstools/PlayWidget.h>
 #include <ui/SliceBoundaryModel.h>
 
 #include <map>
@@ -65,6 +66,9 @@ namespace dstools {
 
         // Boundary model
         phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;
+
+        // Playback
+        dstools::widgets::PlayWidget *m_playWidget = nullptr;
 
         // UI components
         AudioFileListPanel *m_audioFileList = nullptr;  // left sidebar

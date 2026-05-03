@@ -58,6 +58,7 @@ namespace dstools {
         m_undoStack = new QUndoStack(this);
         m_viewport = new dstools::widgets::ViewportController(this);
         m_boundaryModel = new phonemelabeler::SliceBoundaryModel();
+        m_playWidget = new dstools::widgets::PlayWidget();
         buildLayout();
         connectSignals();
     }
@@ -186,6 +187,7 @@ namespace dstools {
 
         m_waveformWidget = new phonemelabeler::WaveformWidget(m_viewport, waveformContainer);
         m_waveformWidget->setBoundaryModel(m_boundaryModel);
+        m_waveformWidget->setPlayWidget(m_playWidget);
         // No undo stack — slicer handles undo externally via SliceCommands
         waveformLayout->addWidget(m_waveformWidget, 1);
 
@@ -197,6 +199,7 @@ namespace dstools {
         // Spectrogram (collapsible)
         m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_viewport, contentWidget);
         m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
+        m_spectrogramWidget->setPlayWidget(m_playWidget);
         m_spectrogramWidget->setVisible(true);
         splitter->addWidget(m_spectrogramWidget);
 
@@ -1085,6 +1088,9 @@ namespace dstools {
         // Feed to visualization widgets
         m_waveformWidget->setAudioData(m_samples, m_sampleRate);
         m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
+
+        // Open audio for playback
+        m_playWidget->openFile(filePath);
 
         // Update boundary model duration
         double duration = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
