@@ -85,7 +85,9 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    void computeFullSpectrogram();                      ///< Computes FFT spectrogram from audio data.
+    void prepareSpectrogramParams();                    ///< Prepares FFT parameters without computing.
+    void computeSpectrogramRange(int frameStart, int frameEnd); ///< Computes FFT for a range of frames.
+    void ensureSpectrogramRange(int frameStart, int frameEnd);  ///< Ensures frames are computed (lazy).
     void rebuildViewImage();                            ///< Rebuilds the cached view image.
     static std::vector<double> makeBlackmanHarrisWindow(int N); ///< Creates a Blackman-Harris window.
     [[nodiscard]] QRgb intensityToColor(float normalized) const; ///< Maps normalized intensity to color.
@@ -114,6 +116,9 @@ private:
     SpectrogramColorPalette m_palette = SpectrogramColorPalette::orangeYellow(); ///< Active color palette.
 
     std::vector<std::vector<float>> m_spectrogramData;  ///< Spectrogram data [frame][bin], normalized 0..1.
+    std::vector<bool> m_computedFrames;                 ///< Tracks which frames have been computed.
+    std::vector<double> m_fftWindow;                    ///< Precomputed FFT window.
+    int m_totalFrames = 0;                              ///< Total number of frames in the audio.
     int m_hopSize = 110;                                ///< Hop size in samples.
     int m_windowSize = 512;                             ///< FFT window size in samples.
     int m_numFreqBins = 0;                              ///< Number of frequency bins.

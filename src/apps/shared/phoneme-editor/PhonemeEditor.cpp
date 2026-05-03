@@ -6,6 +6,8 @@
 #include <QIcon>
 #include <QVBoxLayout>
 
+#include <algorithm>
+
 #include <dstools/AudioDecoder.h>
 #include <dstools/WaveFormat.h>
 
@@ -38,13 +40,17 @@ void PhonemeEditor::setDocument(TextGridDocument *doc) {
 void PhonemeEditor::loadAudio(const QString &audioPath) {
     if (audioPath.isEmpty()) return;
 
-    m_waveformWidget->loadAudio(audioPath);
-    m_playWidget->openFile(audioPath);
-
+    // Decode audio once via the renderer, then share the samples
     if (m_renderer->loadAudio(audioPath)) {
-        m_powerWidget->setAudioData(m_renderer->samples(), m_renderer->sampleRate());
-        m_spectrogramWidget->setAudioData(m_renderer->samples(), m_renderer->sampleRate());
+        const auto &samples = m_renderer->samples();
+        int sampleRate = m_renderer->sampleRate();
+
+        m_waveformWidget->setAudioData(samples, sampleRate);
+        m_powerWidget->setAudioData(samples, sampleRate);
+        m_spectrogramWidget->setAudioData(samples, sampleRate);
     }
+
+    m_playWidget->openFile(audioPath);
 
     m_waveformWidget->setDocument(m_document);
     m_tierEditWidget->setDocument(m_document);
@@ -53,7 +59,7 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
     m_boundaryOverlay->setDocument(m_document);
     m_entryListPanel->setDocument(m_document);
 
-    double duration = m_document->totalDuration();
+    double duration = usToSec(m_document->totalDuration());
     m_viewport->setTotalDuration(duration);
     m_viewport->setViewRange(0.0, duration);
     updateScrollBar();
@@ -413,20 +419,31 @@ void PhonemeEditor::updateScrollBar() {
         return;
     }
 
+    // Use a fixed logical range to avoid int overflow for very long audio.
+    // Map [0, totalDuration] → [0, kScrollRange] linearly.
+    static constexpr int kScrollRange = 1'000'000;
+
     double viewDuration = m_viewport->duration();
-    int totalMs = static_cast<int>(totalDuration * 1000.0);
-    int viewMs = static_cast<int>(viewDuration * 1000.0);
-    int maxVal = qMax(0, totalMs - viewMs);
+    double viewFraction = std::clamp(viewDuration / totalDuration, 0.0, 1.0);
+    int pageStep = std::max(1, static_cast<int>(viewFraction * kScrollRange));
+    int maxVal = std::max(0, kScrollRange - pageStep);
+
+    double startFraction = std::clamp(m_viewport->startSec() / totalDuration, 0.0, 1.0);
 
     QSignalBlocker blocker(m_hScrollBar);
     m_hScrollBar->setRange(0, maxVal);
-    m_hScrollBar->setPageStep(viewMs);
-    m_hScrollBar->setSingleStep(qMax(1, viewMs / 10));
-    m_hScrollBar->setValue(static_cast<int>(m_viewport->startSec() * 1000.0));
+    m_hScrollBar->setPageStep(pageStep);
+    m_hScrollBar->setSingleStep(std::max(1, pageStep / 10));
+    m_hScrollBar->setValue(static_cast<int>(startFraction * maxVal));
 }
 
 void PhonemeEditor::onScrollBarValueChanged(int value) {
-    double startSec = value / 1000.0;
+    double totalDuration = m_viewport->totalDuration();
+    if (totalDuration <= 0.0) return;
+
+    int maxVal = m_hScrollBar->maximum();
+    double startFraction = (maxVal > 0) ? static_cast<double>(value) / maxVal : 0.0;
+    double startSec = startFraction * totalDuration;
     double viewDuration = m_viewport->duration();
     m_viewport->setViewRange(startSec, startSec + viewDuration);
 }

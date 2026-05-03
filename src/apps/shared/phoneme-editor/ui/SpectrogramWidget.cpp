@@ -45,7 +45,7 @@ SpectrogramWidget::~SpectrogramWidget() = default;
 void SpectrogramWidget::setAudioData(const std::vector<float> &samples, int sampleRate) {
     m_samples = samples;
     m_sampleRate = sampleRate;
-    computeFullSpectrogram();
+    prepareSpectrogramParams();
     rebuildViewImage();
     update();
 }
@@ -68,9 +68,12 @@ std::vector<double> SpectrogramWidget::makeBlackmanHarrisWindow(int N) {
     return w;
 }
 
-void SpectrogramWidget::computeFullSpectrogram() {
+void SpectrogramWidget::prepareSpectrogramParams() {
     m_spectrogramData.clear();
+    m_computedFrames.clear();
+    m_fftWindow.clear();
     m_numFreqBins = 0;
+    m_totalFrames = 0;
 
     if (m_samples.empty() || m_sampleRate <= 0) return;
 
@@ -86,7 +89,7 @@ void SpectrogramWidget::computeFullSpectrogram() {
     while (p < m_windowSize) p <<= 1;
     m_windowSize = p;
 
-    auto window = makeBlackmanHarrisWindow(m_windowSize);
+    m_fftWindow = makeBlackmanHarrisWindow(m_windowSize);
 
     int halfWindow = m_windowSize / 2;
     int fftOutSize = m_windowSize / 2 + 1;
@@ -99,48 +102,67 @@ void SpectrogramWidget::computeFullSpectrogram() {
     // Pad samples
     int totalSamples = static_cast<int>(m_samples.size());
     int paddedSize = totalSamples + m_windowSize; // halfWindow on each side
-    std::vector<double> padded(paddedSize, 0.0);
-    for (int i = 0; i < totalSamples; ++i) {
-        padded[i + halfWindow] = m_samples[i];
-    }
 
     // Number of frames
-    int numFrames = (paddedSize - m_windowSize) / m_hopSize + 1;
-    if (numFrames <= 0) return;
+    m_totalFrames = (paddedSize - m_windowSize) / m_hopSize + 1;
+    if (m_totalFrames <= 0) {
+        m_totalFrames = 0;
+        return;
+    }
 
-    m_spectrogramData.resize(numFrames);
+    // Allocate empty spectrogram data (not computed yet)
+    m_spectrogramData.resize(m_totalFrames);
+    m_computedFrames.resize(m_totalFrames, false);
+}
+
+void SpectrogramWidget::computeSpectrogramRange(int frameStart, int frameEnd) {
+    if (m_samples.empty() || m_totalFrames <= 0 || m_fftWindow.empty()) return;
+
+    frameStart = std::max(0, frameStart);
+    frameEnd = std::min(m_totalFrames, frameEnd);
+    if (frameStart >= frameEnd) return;
+
+    int halfWindow = m_windowSize / 2;
+    int fftOutSize = m_windowSize / 2 + 1;
+
+    int totalSamples = static_cast<int>(m_samples.size());
+    int paddedSize = totalSamples + m_windowSize;
+
+    // Compute window energy for proper normalization
+    double windowEnergy = 0.0;
+    for (int i = 0; i < m_windowSize; ++i)
+        windowEnergy += m_fftWindow[i] * m_fftWindow[i];
 
     // Allocate FFTW buffers
     double *fftIn = fftw_alloc_real(m_windowSize);
     fftw_complex *fftOut = fftw_alloc_complex(fftOutSize);
     fftw_plan plan = fftw_plan_dft_r2c_1d(m_windowSize, fftIn, fftOut, FFTW_ESTIMATE);
 
-    // Compute window energy for proper normalization (constant across frames)
-    double windowEnergy = 0.0;
-    for (int i = 0; i < m_windowSize; ++i)
-        windowEnergy += window[i] * window[i];
+    for (int frame = frameStart; frame < frameEnd; ++frame) {
+        if (m_computedFrames[frame]) continue;
 
-    for (int frame = 0; frame < numFrames; ++frame) {
         int offset = frame * m_hopSize;
 
-        // Apply window
+        // Apply window with inline padding
         for (int i = 0; i < m_windowSize; ++i) {
-            fftIn[i] = padded[offset + i] * window[i];
+            int srcIdx = offset + i - halfWindow;
+            double sample = 0.0;
+            if (srcIdx >= 0 && srcIdx < totalSamples)
+                sample = m_samples[srcIdx];
+            fftIn[i] = sample * m_fftWindow[i];
         }
 
         // FFT
         fftw_execute(plan);
 
-        // Power spectrum → dB → normalize (Audacity-style)
+        // Power spectrum → dB → normalize
         auto &bins = m_spectrogramData[frame];
         bins.resize(m_numFreqBins);
 
         for (int b = 0; b < m_numFreqBins; ++b) {
             double re = fftOut[b][0];
             double im = fftOut[b][1];
-            // Power spectral density: |X(f)|^2 / (windowEnergy * sampleRate)
             double power = (re * re + im * im) / windowEnergy;
-            // DC and Nyquist bins are not doubled; all others are
             if (b > 0 && b < m_windowSize / 2)
                 power *= 2.0;
 
@@ -151,15 +173,35 @@ void SpectrogramWidget::computeFullSpectrogram() {
                 dB = 10.0 * std::log10(power);
             }
 
-            // Clamp and normalize to [0, 1]
             double norm = (dB - kMinIntensityDb) / (kMaxIntensityDb - kMinIntensityDb);
             bins[b] = static_cast<float>(std::clamp(norm, 0.0, 1.0));
         }
+
+        m_computedFrames[frame] = true;
     }
 
     fftw_destroy_plan(plan);
     fftw_free(fftIn);
     fftw_free(fftOut);
+}
+
+void SpectrogramWidget::ensureSpectrogramRange(int frameStart, int frameEnd) {
+    frameStart = std::max(0, frameStart);
+    frameEnd = std::min(m_totalFrames, frameEnd);
+    if (frameStart >= frameEnd) return;
+
+    // Check if any frames in range need computing
+    bool needsCompute = false;
+    for (int f = frameStart; f < frameEnd; ++f) {
+        if (!m_computedFrames[f]) {
+            needsCompute = true;
+            break;
+        }
+    }
+
+    if (needsCompute) {
+        computeSpectrogramRange(frameStart, frameEnd);
+    }
 }
 
 QRgb SpectrogramWidget::intensityToColor(float normalized) const {
@@ -179,7 +221,7 @@ void SpectrogramWidget::setColorPalette(const SpectrogramColorPalette &palette) 
 }
 
 void SpectrogramWidget::rebuildViewImage() {
-    if (m_spectrogramData.empty() || m_numFreqBins <= 0) {
+    if (m_totalFrames <= 0 || m_numFreqBins <= 0) {
         m_viewImage = QImage();
         return;
     }
@@ -195,11 +237,21 @@ void SpectrogramWidget::rebuildViewImage() {
         return;
     }
 
+    double totalDuration = static_cast<double>(m_samples.size()) / m_sampleRate;
+    int totalFrames = m_totalFrames;
+
+    // Determine the frame range needed for the current view (with margin)
+    double viewFrameStartF = (m_viewStart / totalDuration) * totalFrames;
+    double viewFrameEndF = (m_viewEnd / totalDuration) * totalFrames;
+    int margin = 2;
+    int frameStart = std::max(0, static_cast<int>(viewFrameStartF) - margin);
+    int frameEnd = std::min(totalFrames, static_cast<int>(std::ceil(viewFrameEndF)) + margin);
+
+    // Lazily compute only the needed frames
+    ensureSpectrogramRange(frameStart, frameEnd);
+
     m_viewImage = QImage(w, h, QImage::Format_RGB32);
     m_viewImage.fill(qRgb(0, 0, 0));
-
-    double totalDuration = static_cast<double>(m_samples.size()) / m_sampleRate;
-    int totalFrames = static_cast<int>(m_spectrogramData.size());
 
     for (int x = 0; x < w; ++x) {
         double t = m_viewStart + (m_viewEnd - m_viewStart) * (x + 0.5) / w;
@@ -211,8 +263,14 @@ void SpectrogramWidget::rebuildViewImage() {
         if (frame0 < 0 || frame0 >= totalFrames) continue;
         if (frame1 >= totalFrames) frame1 = frame0;
 
+        // Skip frames that haven't been computed
+        if (!m_computedFrames[frame0]) continue;
+        if (!m_computedFrames[frame1]) frame1 = frame0;
+
         const auto &bins0 = m_spectrogramData[frame0];
         const auto &bins1 = m_spectrogramData[frame1];
+
+        if (bins0.empty() || bins1.empty()) continue;
 
         for (int y = 0; y < h; ++y) {
             // y=0 is top (high freq), y=h-1 is bottom (low freq)
