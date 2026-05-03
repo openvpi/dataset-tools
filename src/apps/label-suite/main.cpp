@@ -23,14 +23,15 @@
 #include "SlicerPage.h"
 #include "LyricFAPage.h"
 #include "HubertFAPage.h"
-#include "MinLabelPage.h"
-#include "PhonemeLabelerPage.h"
-#include "PitchLabelerPage.h"
+#include <MinLabelPage.h>
+#include <PhonemeLabelerPage.h>
+#include <PitchLabelerPage.h>
 #include "pages/BuildCsvPage.h"
 #include "pages/BuildDsPage.h"
 #include "pages/GameAlignPage.h"
 
 #include <SettingsPage.h>
+#include <FileDataSource.h>
 
 using namespace dstools::labeler;
 
@@ -68,16 +69,16 @@ int main(int argc, char *argv[]) {
     auto *asrAdapter = new TaskWindowAdapter(new LyricFAPage(&shell), &shell);
     shell.addPage(asrAdapter, "asr", {}, QObject::tr("ASR"));
 
-    // Step 2: Label (MinLabel)
-    auto *labelPage = new Minlabel::MinLabelPage(&shell);
+    // Step 2: Label (MinLabel) — shared page with FileDataSource
+    auto *labelPage = new dstools::MinLabelPage(&shell);
     shell.addPage(labelPage, "label", {}, QObject::tr("Label"));
 
     // Step 3: Align (HubertFA)
     auto *alignAdapter = new TaskWindowAdapter(new HubertFAPage(&shell), &shell);
     shell.addPage(alignAdapter, "align", {}, QObject::tr("Align"));
 
-    // Step 4: Phone (PhonemeLabeler)
-    auto *phonePage = new dstools::phonemelabeler::PhonemeLabelerPage(&shell);
+    // Step 4: Phone (PhonemeLabeler) — shared page
+    auto *phonePage = new dstools::PhonemeLabelerPage(&shell);
     shell.addPage(phonePage, "phone", {}, QObject::tr("Phone"));
 
     // Step 5: CSV
@@ -92,8 +93,8 @@ int main(int argc, char *argv[]) {
     auto *dsPage = new BuildDsPage(&shell);
     shell.addPage(dsPage, "ds", {}, QObject::tr("DS"));
 
-    // Step 8: Pitch (PitchLabeler)
-    auto *pitchPage = new dstools::pitchlabeler::PitchLabelerPage(&shell);
+    // Step 8: Pitch (PitchLabeler) — shared page
+    auto *pitchPage = new dstools::PitchLabelerPage(&shell);
     shell.addPage(pitchPage, "pitch", {}, QObject::tr("Pitch"));
 
     // Step 9: Settings
