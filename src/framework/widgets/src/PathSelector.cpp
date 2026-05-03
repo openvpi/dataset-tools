@@ -9,9 +9,29 @@
 #include <QLineEdit>
 #include <QMimeData>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QUrl>
 
 namespace dsfw::widgets {
+
+/// Check if a filename matches a Qt file dialog filter string.
+/// e.g. filter = "Audio (*.wav *.mp3);;All (*)" → matches "test.wav"
+static bool matchesDialogFilter(const QString &fileName, const QString &filter) {
+    if (filter.isEmpty())
+        return true;
+
+    // Parse glob patterns from all filter groups: "Name (*.ext1 *.ext2);;Name2 (*.ext3)"
+    static const QRegularExpression re(R"(\*\.\w+)");
+    auto it = re.globalMatch(filter);
+    while (it.hasNext()) {
+        auto match = it.next();
+        auto glob = QRegularExpression::fromWildcard(match.captured(), Qt::CaseInsensitive);
+        if (glob.match(fileName).hasMatch())
+            return true;
+    }
+    // If filter contains (*), accept all
+    return filter.contains(QStringLiteral("(*)"));
+}
 
 PathSelector::PathSelector(Mode mode, const QString &label,
                            const QString &filter, QWidget *parent)
@@ -72,7 +92,7 @@ void PathSelector::dragEnterEvent(QDragEnterEvent *event) {
         break;
     case OpenFile:
     case SaveFile:
-        if (info.isFile())
+        if (info.isFile() && matchesDialogFilter(info.fileName(), m_filter))
             event->acceptProposedAction();
         break;
     }
