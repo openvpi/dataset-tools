@@ -47,6 +47,14 @@ enable_testing()
 
 add_subdirectory(src)
 
+add_custom_target(layer_audit
+    COMMAND ${CMAKE_COMMAND}
+        -DAPPS_DIR=${CMAKE_SOURCE_DIR}/src/apps
+        -P ${CMAKE_SOURCE_DIR}/cmake/LayerAudit.cmake
+    COMMENT "Auditing apps → libs → infer layering rules"
+    VERBATIM
+)
+
 option(BUILD_EXAMPLES "Build example applications" OFF)
 if(BUILD_EXAMPLES)
     add_subdirectory(examples)
