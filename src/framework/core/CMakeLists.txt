@@ -29,7 +29,7 @@ dstools_add_library(${PROJECT_NAME}
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
 )
 
-dstools_add_translations(${PROJECT_NAME})
+dstools_add_translations(${PROJECT_NAME} EXPORT_SET dsfwTargets)
 
 # Install generated Version.h
 include(GNUInstallDirs)
