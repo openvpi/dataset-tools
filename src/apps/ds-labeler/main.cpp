@@ -17,8 +17,10 @@
 #include "DsSlicerPage.h"
 #include "ExportPage.h"
 #include "ProjectDataSource.h"
-#include "SettingsPage.h"
+#include "ProjectSettingsBackend.h"
 #include "WelcomePage.h"
+
+#include <SettingsPage.h>
 
 #include <filesystem>
 
@@ -92,7 +94,8 @@ int main(int argc, char *argv[]) {
     shell.addPage(exportPage, "export", {}, QStringLiteral("导出"));
 
     // Page 6: 设置 (Settings) — moved to last per ADR-64
-    auto *settingsPage = new dstools::SettingsPage(&shell);
+    auto *settingsBackend = new dstools::ProjectSettingsBackend(&shell);
+    auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
     shell.addPage(settingsPage, "settings", {}, QStringLiteral("设置"));
 
     // ── Project lifecycle ────────────────────────────────────────────────
@@ -106,7 +109,7 @@ int main(int argc, char *argv[]) {
                                     : project->workingDirectory();
 
         dataSource->setProject(project, workDir);
-        settingsPage->setProject(project);
+        settingsBackend->setProject(project);
 
         shell.setWindowTitle(
             QStringLiteral("DsLabeler — %1").arg(QFileInfo(path).fileName()));
@@ -123,7 +126,7 @@ int main(int argc, char *argv[]) {
     // Save on quit
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
         if (project) {
-            settingsPage->applyToProject();
+            settingsPage->applySettings();
             QString error;
             project->save(error);
         }

@@ -17,6 +17,8 @@
 #include "CleanupDialog.h"
 #include "TaskWindowAdapter.h"
 
+#include "AppSettingsBackend.h"
+
 // Page includes
 #include "SlicerPage.h"
 #include "LyricFAPage.h"
@@ -27,6 +29,8 @@
 #include "pages/BuildCsvPage.h"
 #include "pages/BuildDsPage.h"
 #include "pages/GameAlignPage.h"
+
+#include <SettingsPage.h>
 
 using namespace dstools::labeler;
 
@@ -91,6 +95,11 @@ int main(int argc, char *argv[]) {
     // Step 8: Pitch (PitchLabeler)
     auto *pitchPage = new dstools::pitchlabeler::PitchLabelerPage(&shell);
     shell.addPage(pitchPage, "pitch", {}, QObject::tr("Pitch"));
+
+    // Step 9: Settings
+    auto *settingsBackend = new dstools::AppSettingsBackend(&shell);
+    auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
+    shell.addPage(settingsPage, "settings", {}, QObject::tr("Settings"));
 
     // ── Global menu actions (File menu — no .dsproj project management) ──
 

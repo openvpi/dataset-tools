@@ -1,5 +1,7 @@
 #include "SettingsPage.h"
 
+#include "ISettingsBackend.h"
+
 #include <QFileDialog>
 #include <QDir>
 #include <QFile>
@@ -15,7 +17,6 @@
 #include <QStandardItemModel>
 #include <QVBoxLayout>
 
-#include <dsfw/TranslationManager.h>
 #include <dstools/PinyinG2PProvider.h>
 #include <hubert-infer/DictionaryG2P.h>
 
@@ -26,8 +27,6 @@
 #endif
 
 namespace dstools {
-
-// ── Device enumeration helper ────────────────────────────────────────────────
 
 struct GpuDeviceInfo {
     QString name;
@@ -48,12 +47,10 @@ static QVector<GpuDeviceInfo> enumerateGpuDevices() {
         adapter->GetDesc1(&desc);
         adapter->Release();
 
-        // Skip software adapters
         if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
             continue;
 
         quint64 vram = desc.DedicatedVideoMemory;
-        // Filter out devices with < 1 GB VRAM
         if (vram < 1024ULL * 1024 * 1024)
             continue;
 
@@ -67,9 +64,25 @@ static QVector<GpuDeviceInfo> enumerateGpuDevices() {
     return devices;
 }
 
-// ── SettingsPage implementation ──────────────────────────────────────────────
+static QString readString(const QJsonObject &obj, const QString &key, const QString &defaultValue = {}) {
+    if (obj.contains(key) && obj[key].isString())
+        return obj[key].toString();
+    return defaultValue;
+}
 
-SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent) {
+static int readInt(const QJsonObject &obj, const QString &key, int defaultValue = 0) {
+    if (obj.contains(key) && obj[key].isDouble())
+        return obj[key].toInt();
+    return defaultValue;
+}
+
+static bool readBool(const QJsonObject &obj, const QString &key, bool defaultValue = false) {
+    if (obj.contains(key) && obj[key].isBool())
+        return obj[key].toBool();
+    return defaultValue;
+}
+
+SettingsPage::SettingsPage(ISettingsBackend *backend, QWidget *parent) : QWidget(parent) {
     m_tabWidget = new QTabWidget(this);
     m_tabWidget->setTabPosition(QTabWidget::North);
 
@@ -86,143 +99,183 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent) {
     layout->addWidget(m_tabWidget);
 
     connectDirtySignals();
+
+    setBackend(backend);
 }
 
-void SettingsPage::setProject(DsProject *project) {
-    m_project = project;
-    loadFromProject();
+void SettingsPage::setBackend(ISettingsBackend *backend) {
+    if (m_backend)
+        disconnect(m_backend, &ISettingsBackend::dataChanged, this, nullptr);
+
+    m_backend = backend;
+
+    if (m_backend) {
+        connect(m_backend, &ISettingsBackend::dataChanged, this, [this]() {
+            loadFromBackend();
+            m_dirty = false;
+        });
+        loadFromBackend();
+    }
+
     m_dirty = false;
 }
 
-void SettingsPage::applyToProject() {
-    if (!m_project)
+void SettingsPage::applySettings() {
+    if (!m_backend)
         return;
 
-    auto defaults = m_project->defaults();
+    QJsonObject data;
 
-    // Device (global provider + device index)
-    defaults.globalProvider = m_providerCombo->currentText();
-    defaults.deviceIndex = m_deviceCombo->currentData().toInt();
+    data["globalProvider"] = m_providerCombo->currentText();
+    data["deviceIndex"] = m_deviceCombo->currentData().toInt();
 
-    // ASR
+    QJsonObject models;
     {
-        auto &cfg = defaults.taskModels[QStringLiteral("asr")];
-        cfg.modelPath = m_asrModelPath->text();
-        cfg.provider = effectiveProvider(m_asrForceCpu);
-        cfg.forceCpu = m_asrForceCpu->isChecked();
+        QJsonObject cfg;
+        cfg["modelPath"] = m_asrModelPath->text();
+        cfg["provider"] = effectiveProvider(m_asrForceCpu);
+        cfg["forceCpu"] = m_asrForceCpu->isChecked();
+        models["asr"] = cfg;
     }
-
-    // FA
     {
-        auto &cfg = defaults.taskModels[QStringLiteral("phoneme_alignment")];
-        cfg.modelPath = m_faModelPath->text();
-        cfg.provider = effectiveProvider(m_faForceCpu);
-        cfg.forceCpu = m_faForceCpu->isChecked();
-
-        auto &pre = defaults.preload[QStringLiteral("phoneme_alignment")];
-        pre.enabled = m_faPreloadEnabled->isChecked();
-        pre.count = m_faPreloadCount->value();
+        QJsonObject cfg;
+        cfg["modelPath"] = m_faModelPath->text();
+        cfg["provider"] = effectiveProvider(m_faForceCpu);
+        cfg["forceCpu"] = m_faForceCpu->isChecked();
+        models["phoneme_alignment"] = cfg;
     }
-
-    // Pitch
     {
-        auto &cfg = defaults.taskModels[QStringLiteral("pitch_extraction")];
-        cfg.modelPath = m_pitchModelPath->text();
-        cfg.provider = effectiveProvider(m_pitchForceCpu);
-        cfg.forceCpu = m_pitchForceCpu->isChecked();
+        QJsonObject cfg;
+        cfg["modelPath"] = m_pitchModelPath->text();
+        cfg["provider"] = effectiveProvider(m_pitchForceCpu);
+        cfg["forceCpu"] = m_pitchForceCpu->isChecked();
+        models["pitch_extraction"] = cfg;
     }
-
-    // MIDI
     {
-        auto &cfg = defaults.taskModels[QStringLiteral("midi_transcription")];
-        cfg.modelPath = m_midiModelPath->text();
-        cfg.provider = effectiveProvider(m_midiForceCpu);
-        cfg.forceCpu = m_midiForceCpu->isChecked();
+        QJsonObject cfg;
+        cfg["modelPath"] = m_midiModelPath->text();
+        cfg["provider"] = effectiveProvider(m_midiForceCpu);
+        cfg["forceCpu"] = m_midiForceCpu->isChecked();
+        models["midi_transcription"] = cfg;
     }
+    data["taskModels"] = models;
 
-    // Pitch preload
+    QJsonObject preload;
     {
-        auto &pre = defaults.preload[QStringLiteral("pitch_extraction")];
-        pre.enabled = m_pitchPreloadEnabled->isChecked();
-        pre.count = m_pitchPreloadCount->value();
+        QJsonObject cfg;
+        cfg["enabled"] = m_faPreloadEnabled->isChecked();
+        cfg["count"] = m_faPreloadCount->value();
+        preload["phoneme_alignment"] = cfg;
     }
+    {
+        QJsonObject cfg;
+        cfg["enabled"] = m_pitchPreloadEnabled->isChecked();
+        cfg["count"] = m_pitchPreloadCount->value();
+        preload["pitch_extraction"] = cfg;
+    }
+    data["preload"] = preload;
 
-    m_project->setDefaults(defaults);
+    QJsonObject g2p;
+    g2p["engine"] = m_g2pEngineCombo->currentData().toString();
+    g2p["dictPath"] = m_dictPath->text();
+    data["g2p"] = g2p;
+
+    m_backend->save(data);
     m_dirty = false;
     emit settingsChanged();
 
-    // Trigger model reloads for all models
     emit modelReloadRequested(QStringLiteral("asr"));
     emit modelReloadRequested(QStringLiteral("phoneme_alignment"));
     emit modelReloadRequested(QStringLiteral("pitch_extraction"));
     emit modelReloadRequested(QStringLiteral("midi_transcription"));
 }
 
-void SettingsPage::loadFromProject() {
-    if (!m_project)
+void SettingsPage::loadFromBackend() {
+    if (!m_backend)
         return;
 
-    const auto defaults = m_project->defaults();
+    const QJsonObject data = m_backend->load();
 
-    // Device
     {
-        int idx = m_providerCombo->findText(defaults.globalProvider);
+        QString provider = readString(data, "globalProvider", "cpu");
+        int idx = m_providerCombo->findText(provider);
         if (idx >= 0)
             m_providerCombo->setCurrentIndex(idx);
 
-        // Find device by index
+        int deviceIndex = readInt(data, "deviceIndex", 0);
         for (int i = 0; i < m_deviceCombo->count(); ++i) {
-            if (m_deviceCombo->itemData(i).toInt() == defaults.deviceIndex) {
+            if (m_deviceCombo->itemData(i).toInt() == deviceIndex) {
                 m_deviceCombo->setCurrentIndex(i);
                 break;
             }
         }
     }
 
-    // ASR
+    const QJsonObject models = data["taskModels"].toObject();
     {
-        auto it = defaults.taskModels.find(QStringLiteral("asr"));
-        if (it != defaults.taskModels.end()) {
-            m_asrModelPath->setText(it->second.modelPath);
-            m_asrForceCpu->setChecked(it->second.forceCpu);
+        auto it = models.find("asr");
+        if (it != models.end()) {
+            auto obj = it.value().toObject();
+            m_asrModelPath->setText(readString(obj, "modelPath"));
+            m_asrForceCpu->setChecked(readBool(obj, "forceCpu"));
+        }
+    }
+    {
+        auto it = models.find("phoneme_alignment");
+        if (it != models.end()) {
+            auto obj = it.value().toObject();
+            m_faModelPath->setText(readString(obj, "modelPath"));
+            m_faForceCpu->setChecked(readBool(obj, "forceCpu"));
+        }
+    }
+    {
+        auto it = models.find("pitch_extraction");
+        if (it != models.end()) {
+            auto obj = it.value().toObject();
+            m_pitchModelPath->setText(readString(obj, "modelPath"));
+            m_pitchForceCpu->setChecked(readBool(obj, "forceCpu"));
+        }
+    }
+    {
+        auto it = models.find("midi_transcription");
+        if (it != models.end()) {
+            auto obj = it.value().toObject();
+            m_midiModelPath->setText(readString(obj, "modelPath"));
+            m_midiForceCpu->setChecked(readBool(obj, "forceCpu"));
         }
     }
 
-    // FA
+    const QJsonObject preload = data["preload"].toObject();
     {
-        auto it = defaults.taskModels.find(QStringLiteral("phoneme_alignment"));
-        if (it != defaults.taskModels.end()) {
-            m_faModelPath->setText(it->second.modelPath);
-            m_faForceCpu->setChecked(it->second.forceCpu);
+        auto it = preload.find("phoneme_alignment");
+        if (it != preload.end()) {
+            auto obj = it.value().toObject();
+            m_faPreloadEnabled->setChecked(readBool(obj, "enabled"));
+            m_faPreloadCount->setValue(readInt(obj, "count", 10));
         }
-        auto pit = defaults.preload.find(QStringLiteral("phoneme_alignment"));
-        if (pit != defaults.preload.end()) {
-            m_faPreloadEnabled->setChecked(pit->second.enabled);
-            m_faPreloadCount->setValue(pit->second.count);
+    }
+    {
+        auto it = preload.find("pitch_extraction");
+        if (it != preload.end()) {
+            auto obj = it.value().toObject();
+            m_pitchPreloadEnabled->setChecked(readBool(obj, "enabled"));
+            m_pitchPreloadCount->setValue(readInt(obj, "count", 10));
         }
     }
 
-    // Pitch + MIDI
+    const QJsonObject g2p = data["g2p"].toObject();
     {
-        auto it = defaults.taskModels.find(QStringLiteral("pitch_extraction"));
-        if (it != defaults.taskModels.end()) {
-            m_pitchModelPath->setText(it->second.modelPath);
-            m_pitchForceCpu->setChecked(it->second.forceCpu);
+        QString engine = readString(g2p, "engine", "pinyin");
+        for (int i = 0; i < m_g2pEngineCombo->count(); ++i) {
+            if (m_g2pEngineCombo->itemData(i).toString() == engine) {
+                m_g2pEngineCombo->setCurrentIndex(i);
+                break;
+            }
         }
-        auto mit = defaults.taskModels.find(QStringLiteral("midi_transcription"));
-        if (mit != defaults.taskModels.end()) {
-            m_midiModelPath->setText(mit->second.modelPath);
-            m_midiForceCpu->setChecked(mit->second.forceCpu);
-        }
-        auto pit = defaults.preload.find(QStringLiteral("pitch_extraction"));
-        if (pit != defaults.preload.end()) {
-            m_pitchPreloadEnabled->setChecked(pit->second.enabled);
-            m_pitchPreloadCount->setValue(pit->second.count);
-        }
+        m_dictPath->setText(readString(g2p, "dictPath"));
+        m_dictPath->setEnabled(engine == QStringLiteral("dictionary"));
     }
 }
-
-// ── Tab creation ────────────────────────────────────────────────────────────
 
 QWidget *SettingsPage::createDeviceTab() {
     auto *w = new QWidget(this);
@@ -231,13 +284,11 @@ QWidget *SettingsPage::createDeviceTab() {
     auto *group = new QGroupBox(QStringLiteral("推理设备"), w);
     auto *formLayout = new QFormLayout(group);
 
-    // Provider selection
     m_providerCombo = new QComboBox(group);
     m_providerCombo->addItem(QStringLiteral("cpu"));
 #ifdef Q_OS_WIN
     m_providerCombo->addItem(QStringLiteral("dml"));
 #endif
-    // CUDA disabled
     {
         m_providerCombo->addItem(QStringLiteral("cuda (暂不可用)"));
         auto *model = qobject_cast<QStandardItemModel *>(m_providerCombo->model());
@@ -248,14 +299,12 @@ QWidget *SettingsPage::createDeviceTab() {
     }
     formLayout->addRow(QStringLiteral("推理提供者:"), m_providerCombo);
 
-    // Device selection
     m_deviceCombo = new QComboBox(group);
     populateDeviceList();
     formLayout->addRow(QStringLiteral("设备:"), m_deviceCombo);
 
     layout->addWidget(group);
 
-    // Info label
     auto *infoLabel = new QLabel(
         QStringLiteral("选择 CPU 或 DirectML 作为全局推理后端。\n"
                        "各模型可通过「CPU 强制」复选框单独覆盖为 CPU 运行。\n"
@@ -265,7 +314,6 @@ QWidget *SettingsPage::createDeviceTab() {
     infoLabel->setStyleSheet(QStringLiteral("color: gray; font-style: italic; margin-top: 8px;"));
     layout->addWidget(infoLabel);
 
-    // Enable/disable device combo based on provider
     connect(m_providerCombo, &QComboBox::currentTextChanged, this, [this](const QString &text) {
         m_deviceCombo->setEnabled(text == QStringLiteral("dml"));
         markDirty();
@@ -300,7 +348,6 @@ QWidget *SettingsPage::createModelConfigRow(const QString &label, QLineEdit *&pa
     auto *group = new QGroupBox(label);
     auto *layout = new QVBoxLayout(group);
 
-    // Path row: [path] [Browse] [Test]
     auto *pathLayout = new QHBoxLayout;
     pathEdit = new QLineEdit(group);
     auto *browseBtn = new QPushButton(QStringLiteral("浏览..."), group);
@@ -312,7 +359,6 @@ QWidget *SettingsPage::createModelConfigRow(const QString &label, QLineEdit *&pa
     pathLayout->addWidget(testBtn);
     layout->addLayout(pathLayout);
 
-    // CPU override checkbox
     forceCpu = new QCheckBox(QStringLiteral("CPU 强制（此模型在 CPU 上运行）"), group);
     layout->addWidget(forceCpu);
 
@@ -349,7 +395,6 @@ void SettingsPage::onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCh
         return;
     }
 
-    // Check config.json existence
     bool hasConfig = QFile::exists(dir.absoluteFilePath(QStringLiteral("config.json")));
 
     QString providerStr = effectiveProvider(forceCpu);
@@ -370,7 +415,7 @@ void SettingsPage::onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCh
 QString SettingsPage::effectiveProvider(QCheckBox *forceCpu) const {
     if (forceCpu && forceCpu->isChecked())
         return QStringLiteral("cpu");
-    return m_providerCombo->currentText().split(' ').first(); // strip "(暂不可用)"
+    return m_providerCombo->currentText().split(' ').first();
 }
 
 QWidget *SettingsPage::createGeneralTab() {
@@ -382,7 +427,6 @@ QWidget *SettingsPage::createGeneralTab() {
     m_languageCombo->addItem(QStringLiteral("中文 (zh_CN)"), QStringLiteral("zh_CN"));
     m_languageCombo->addItem(QStringLiteral("English (en)"), QStringLiteral("en"));
 
-    // Load saved language
     QSettings settings;
     QString savedLang = settings.value(QStringLiteral("App/language")).toString();
     for (int i = 0; i < m_languageCombo->count(); ++i) {
@@ -429,7 +473,6 @@ QWidget *SettingsPage::createDictTab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
 
-    // G2P engine selection
     auto *engineGroup = new QGroupBox(QStringLiteral("G2P 引擎"), w);
     auto *engineLayout = new QFormLayout(engineGroup);
 
@@ -440,7 +483,6 @@ QWidget *SettingsPage::createDictTab() {
 
     layout->addWidget(engineGroup);
 
-    // Dictionary path (for DictionaryG2P)
     auto *dictGroup = new QGroupBox(QStringLiteral("词典路径"), w);
     auto *dictLayout = new QVBoxLayout(dictGroup);
 
@@ -470,7 +512,6 @@ QWidget *SettingsPage::createDictTab() {
 
     layout->addWidget(dictGroup);
 
-    // G2P test area
     auto *testGroup = new QGroupBox(QStringLiteral("G2P 测试"), w);
     auto *testLayout = new QVBoxLayout(testGroup);
 
@@ -501,7 +542,8 @@ QWidget *SettingsPage::createDictTab() {
             if (result) {
                 QStringList phonemes;
                 for (const auto &r : result.value())
-                    phonemes << QString::fromStdString(r.phoneme);
+                    for (const auto &ph : r.phonemes)
+                        phonemes << QString::fromStdString(ph);
                 m_g2pTestResult->setText(phonemes.join(QStringLiteral(" ")));
             } else {
                 m_g2pTestResult->setText(QStringLiteral("错误: ") + QString::fromStdString(result.error()));
@@ -527,7 +569,6 @@ QWidget *SettingsPage::createDictTab() {
 
     layout->addWidget(testGroup);
 
-    // Enable/disable dict path based on engine selection
     connect(m_g2pEngineCombo, &QComboBox::currentTextChanged, this, [this]() {
         bool isDict = m_g2pEngineCombo->currentData().toString() == QStringLiteral("dictionary");
         m_dictPath->setEnabled(isDict);
@@ -613,13 +654,11 @@ QWidget *SettingsPage::createPreprocessTab() {
     return w;
 }
 
-// ── IPageActions / IPageLifecycle ────────────────────────────────────────────
-
 QMenuBar *SettingsPage::createMenuBar(QWidget *parent) {
     auto *bar = new QMenuBar(parent);
     auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
     fileMenu->addAction(QStringLiteral("应用设置"), this, [this]() {
-        applyToProject();
+        applySettings();
     });
     fileMenu->addSeparator();
     fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
@@ -630,7 +669,7 @@ QMenuBar *SettingsPage::createMenuBar(QWidget *parent) {
 }
 
 QString SettingsPage::windowTitle() const {
-    return QStringLiteral("DsLabeler — 设置");
+    return QStringLiteral("设置");
 }
 
 bool SettingsPage::hasUnsavedChanges() const {
@@ -638,7 +677,7 @@ bool SettingsPage::hasUnsavedChanges() const {
 }
 
 void SettingsPage::onActivated() {
-    loadFromProject();
+    loadFromBackend();
 }
 
 bool SettingsPage::onDeactivating() {
@@ -651,14 +690,14 @@ bool SettingsPage::onDeactivating() {
         QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 
     if (ret == QMessageBox::Yes) {
-        applyToProject();
+        applySettings();
         return true;
     }
     if (ret == QMessageBox::No) {
         m_dirty = false;
         return true;
     }
-    return false; // Cancel
+    return false;
 }
 
 void SettingsPage::markDirty() {
@@ -666,21 +705,17 @@ void SettingsPage::markDirty() {
 }
 
 void SettingsPage::connectDirtySignals() {
-    // Device
     connect(m_providerCombo, &QComboBox::currentTextChanged, this, &SettingsPage::markDirty);
     connect(m_deviceCombo, &QComboBox::currentIndexChanged, this, [this]() { markDirty(); });
 
-    // ASR
     connect(m_asrModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
     connect(m_asrForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
 
-    // FA
     connect(m_faModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
     connect(m_faForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_faPreloadEnabled, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_faPreloadCount, &QSpinBox::valueChanged, this, [this]() { markDirty(); });
 
-    // Pitch/MIDI
     connect(m_pitchModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
     connect(m_pitchForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_midiModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);

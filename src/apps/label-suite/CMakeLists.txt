@@ -8,6 +8,8 @@ dstools_add_executable(${PROJECT_NAME}
     DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
     SOURCES
         main.cpp
+        AppSettingsBackend.h
+        AppSettingsBackend.cpp
         TaskWindowAdapter.h
         TaskWindowAdapter.cpp
         CleanupDialog.h
@@ -22,7 +24,7 @@ dstools_add_executable(${PROJECT_NAME}
         pages/GameAlignPage.cpp
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets minlabel-page phonemelabeler-page
-                pitchlabeler-page pipeline-pages game-infer rmvpe-infer
+                pitchlabeler-page pipeline-pages game-infer rmvpe-infer settings-page
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
