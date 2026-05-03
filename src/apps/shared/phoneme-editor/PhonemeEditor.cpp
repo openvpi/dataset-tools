@@ -173,7 +173,9 @@ void PhonemeEditor::buildToolbar() {
     m_actBindingToggle->setCheckable(true);
 
     m_toolbar->addSeparator();
-    m_toolbar->addWidget(m_playWidget);
+
+    // PlayWidget remains as internal backend but is not shown in toolbar
+    // (ADR-62: right-click plays directly, no visible player controls needed)
 }
 
 void PhonemeEditor::buildLayout() {
