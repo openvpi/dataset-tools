@@ -33,6 +33,10 @@ public:
 signals:
     void sliceDoubleClicked(int index, double startSec, double endSec);
     void discardToggled(int index, bool discarded);
+    /// Request to add a slice point at the given time (seconds).
+    void addSlicePointRequested(double timeSec);
+    /// Request to remove the slice point at the given index in the slice points array.
+    void removeSlicePointRequested(int pointIndex);
 
 private:
     QListWidget *m_listWidget = nullptr;

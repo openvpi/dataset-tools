@@ -106,7 +106,36 @@ void SlicerListPanel::onContextMenu(const QPoint &pos) {
     int row = m_listWidget->row(item);
     bool disc = std::find(m_discarded.begin(), m_discarded.end(), row) != m_discarded.end();
 
+    // Compute segment boundaries
+    double segStart = (row == 0) ? 0.0 : m_slicePoints[row - 1];
+    double segEnd = (row < static_cast<int>(m_slicePoints.size()))
+                        ? m_slicePoints[row]
+                        : m_totalDuration;
+
     QMenu menu(this);
+
+    // Add slice point at midpoint of this segment
+    double midpoint = (segStart + segEnd) / 2.0;
+    menu.addAction(tr("Add slice point here (midpoint)"), [this, midpoint]() {
+        emit addSlicePointRequested(midpoint);
+    });
+
+    // Remove slice point before this segment (the left boundary)
+    if (row > 0) {
+        menu.addAction(tr("Remove left boundary"), [this, row]() {
+            emit removeSlicePointRequested(row - 1);
+        });
+    }
+
+    // Remove slice point after this segment (the right boundary)
+    if (row < static_cast<int>(m_slicePoints.size())) {
+        menu.addAction(tr("Remove right boundary"), [this, row]() {
+            emit removeSlicePointRequested(row);
+        });
+    }
+
+    menu.addSeparator();
+
     if (disc) {
         menu.addAction(tr("Restore slice"), [this, row]() { setDiscarded(row, false); });
     } else {
