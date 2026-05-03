@@ -1,5 +1,7 @@
 #include "Asr.h"
 
+#include <Model.h>
+
 #include <QBuffer>
 #include <QFile>
 #include <QMessageBox>

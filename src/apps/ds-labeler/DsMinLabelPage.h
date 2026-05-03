@@ -10,15 +10,13 @@
 
 #include <MinLabelEditor.h>
 
+#include <memory>
+
 namespace dstools {
 
 class ProjectDataSource;
 class SliceListPanel;
 
-/// @brief DsLabeler MinLabel page — project-backed lyric/G2P labeling.
-///
-/// Composes MinLabelEditor with ProjectDataSource. Adds ASR and batch
-/// processing capabilities not present in the standalone MinLabel.
 class DsMinLabelPage : public QWidget,
                        public labeler::IPageActions,
                        public labeler::IPageLifecycle {
@@ -27,9 +25,8 @@ class DsMinLabelPage : public QWidget,
 
 public:
     explicit DsMinLabelPage(QWidget *parent = nullptr);
-    ~DsMinLabelPage() override = default;
+    ~DsMinLabelPage() override;
 
-    /// Set the project data source (called when project is loaded).
     void setDataSource(ProjectDataSource *source);
 
     // IPageActions
@@ -45,19 +42,25 @@ signals:
     void sliceChanged(const QString &sliceId);
 
 private:
+    struct AsrEngine;
+    std::unique_ptr<AsrEngine> m_asrEngine;
+
     Minlabel::MinLabelEditor *m_editor = nullptr;
     SliceListPanel *m_sliceList = nullptr;
     ProjectDataSource *m_source = nullptr;
     QString m_currentSliceId;
     bool m_dirty = false;
+    bool m_asrRunning = false;
 
     void onSliceSelected(const QString &sliceId);
     bool saveCurrentSlice();
     bool maybeSave();
 
-    // ASR
     void onRunAsr();
     void onBatchAsr();
+    void runAsrForSlice(const QString &sliceId);
+    void ensureAsrEngine();
+    void setAsrResult(const QString &sliceId, const QString &text);
 };
 
 } // namespace dstools

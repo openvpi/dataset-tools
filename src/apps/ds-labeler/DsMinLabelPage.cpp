@@ -6,11 +6,30 @@
 #include <QMessageBox>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <QtConcurrent>
+
+#include <Asr.h>
 
 #include <dsfw/PipelineContext.h>
 #include <dsfw/widgets/ToastNotification.h>
+#include <dstools/DsProject.h>
+#include <dstools/DsTextTypes.h>
 
 namespace dstools {
+
+struct DsMinLabelPage::AsrEngine {
+    std::unique_ptr<LyricFA::Asr> engine;
+
+    bool initialized() const { return engine && engine->initialized(); }
+
+    void create(const QString &modelPath, FunAsr::ExecutionProvider provider, int deviceId) {
+        engine = std::make_unique<LyricFA::Asr>(modelPath, provider, deviceId);
+    }
+
+    bool recognize(const std::filesystem::path &filepath, std::string &msg) const {
+        return engine->recognize(filepath, msg);
+    }
+};
 
 DsMinLabelPage::DsMinLabelPage(QWidget *parent) : QWidget(parent) {
     m_editor = new Minlabel::MinLabelEditor(this);
@@ -34,6 +53,8 @@ DsMinLabelPage::DsMinLabelPage(QWidget *parent) : QWidget(parent) {
             this, [this]() { m_dirty = true; });
 }
 
+DsMinLabelPage::~DsMinLabelPage() = default;
+
 void DsMinLabelPage::setDataSource(ProjectDataSource *source) {
     m_source = source;
     m_sliceList->setDataSource(source);
@@ -48,11 +69,9 @@ void DsMinLabelPage::onSliceSelected(const QString &sliceId) {
     if (!m_source)
         return;
 
-    // Load slice data
     auto result = m_source->loadSlice(sliceId);
     if (result) {
         const auto &doc = result.value();
-        // Extract grapheme layer text as lab content
         QString labContent;
         QString rawText;
         for (const auto &layer : doc.layers) {
@@ -77,7 +96,6 @@ void DsMinLabelPage::onSliceSelected(const QString &sliceId) {
         m_editor->loadData({}, {});
     }
 
-    // Load audio
     const QString audio = m_source->audioPath(sliceId);
     m_editor->setAudioFile(audio);
 
@@ -89,13 +107,11 @@ bool DsMinLabelPage::saveCurrentSlice() {
     if (m_currentSliceId.isEmpty() || !m_source || !m_dirty)
         return true;
 
-    // Build DsTextDocument from editor content
     auto result = m_source->loadSlice(m_currentSliceId);
     DsTextDocument doc;
     if (result)
         doc = std::move(result.value());
 
-    // Update grapheme layer
     IntervalLayer *graphemeLayer = nullptr;
     for (auto &layer : doc.layers) {
         if (layer.name == QStringLiteral("grapheme")) {
@@ -110,7 +126,6 @@ bool DsMinLabelPage::saveCurrentSlice() {
         graphemeLayer->type = QStringLiteral("text");
     }
 
-    // Store lab content as boundaries
     graphemeLayer->boundaries.clear();
     const QString lab = m_editor->labContent();
     if (!lab.isEmpty()) {
@@ -150,7 +165,7 @@ bool DsMinLabelPage::maybeSave() {
         m_dirty = false;
         return true;
     }
-    return false; // Cancel
+    return false;
 }
 
 QMenuBar *DsMinLabelPage::createMenuBar(QWidget *parent) {
@@ -183,14 +198,11 @@ bool DsMinLabelPage::hasUnsavedChanges() const {
 }
 
 void DsMinLabelPage::onActivated() {
-    // Refresh slice list when page becomes active
     m_sliceList->refresh();
 
-    // M.3.11: Check dirty layers for current slice
     if (m_source && !m_currentSliceId.isEmpty()) {
         auto *ctx = m_source->context(m_currentSliceId);
         if (ctx && ctx->dirty.contains(QStringLiteral("grapheme"))) {
-            // Placeholder: clear dirty flag (actual recalculation requires inference)
             ctx->dirty.removeAll(QStringLiteral("grapheme"));
             m_source->saveContext(m_currentSliceId);
             dsfw::widgets::ToastNotification::show(
@@ -204,16 +216,187 @@ bool DsMinLabelPage::onDeactivating() {
     return maybeSave();
 }
 
+void DsMinLabelPage::ensureAsrEngine() {
+    if (m_asrEngine && m_asrEngine->initialized())
+        return;
+
+    if (!m_source || !m_source->project())
+        return;
+
+    auto it = m_source->project()->defaults().taskModels.find(QStringLiteral("asr"));
+    if (it == m_source->project()->defaults().taskModels.end())
+        return;
+
+    const auto &config = it->second;
+    if (config.modelPath.isEmpty())
+        return;
+
+    auto provider = FunAsr::ExecutionProvider::CPU;
+#ifdef ONNXRUNTIME_ENABLE_DML
+    if (config.provider == QStringLiteral("dml"))
+        provider = FunAsr::ExecutionProvider::DML;
+#endif
+
+    if (!m_asrEngine)
+        m_asrEngine = std::make_unique<AsrEngine>();
+    m_asrEngine->create(config.modelPath, provider, config.deviceId);
+}
+
 void DsMinLabelPage::onRunAsr() {
-    // TODO: Integrate FunASR inference for current item
-    QMessageBox::information(this, QStringLiteral("ASR"),
-                             QStringLiteral("ASR 功能将在推理库集成后实现。"));
+    if (m_currentSliceId.isEmpty()) {
+        QMessageBox::information(this, QStringLiteral("ASR"),
+                                 QStringLiteral("请先选择一个切片。"));
+        return;
+    }
+
+    ensureAsrEngine();
+    if (!m_asrEngine || !m_asrEngine->initialized()) {
+        QMessageBox::warning(this, QStringLiteral("ASR"),
+                             QStringLiteral("ASR 模型未加载。请在工程设置中配置 ASR 模型路径。"));
+        return;
+    }
+
+    if (m_asrRunning) {
+        QMessageBox::information(this, QStringLiteral("ASR"),
+                                 QStringLiteral("ASR 正在运行中，请稍候。"));
+        return;
+    }
+
+    runAsrForSlice(m_currentSliceId);
+}
+
+void DsMinLabelPage::runAsrForSlice(const QString &sliceId) {
+    if (!m_source)
+        return;
+
+    QString audioPath = m_source->audioPath(sliceId);
+    if (audioPath.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("ASR"),
+                             QStringLiteral("当前切片没有音频文件。"));
+        return;
+    }
+
+    m_asrRunning = true;
+    auto *engine = m_asrEngine.get();
+
+    (void) QtConcurrent::run([engine, audioPath, sliceId, this]() {
+        std::string msg;
+        bool ok = engine->recognize(audioPath.toStdWString(), msg);
+        QString text;
+        if (ok)
+            text = QString::fromUtf8(msg);
+
+        QMetaObject::invokeMethod(this, [this, sliceId, text, ok]() {
+            m_asrRunning = false;
+            if (ok) {
+                setAsrResult(sliceId, text);
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Info,
+                    QStringLiteral("ASR 识别完成"), 3000);
+            } else {
+                QMessageBox::warning(this, QStringLiteral("ASR"),
+                                     QStringLiteral("ASR 识别失败。"));
+            }
+        }, Qt::QueuedConnection);
+    });
 }
 
 void DsMinLabelPage::onBatchAsr() {
-    // TODO: Batch ASR processing
-    QMessageBox::information(this, QStringLiteral("批量 ASR"),
-                             QStringLiteral("批量 ASR 功能将在推理库集成后实现。"));
+    if (!m_source) {
+        QMessageBox::warning(this, QStringLiteral("批量 ASR"),
+                             QStringLiteral("请先打开工程。"));
+        return;
+    }
+
+    ensureAsrEngine();
+    if (!m_asrEngine || !m_asrEngine->initialized()) {
+        QMessageBox::warning(this, QStringLiteral("批量 ASR"),
+                             QStringLiteral("ASR 模型未加载。请在工程设置中配置 ASR 模型路径。"));
+        return;
+    }
+
+    if (m_asrRunning) {
+        QMessageBox::information(this, QStringLiteral("批量 ASR"),
+                                 QStringLiteral("ASR 正在运行中，请稍候。"));
+        return;
+    }
+
+    const auto ids = m_source->sliceIds();
+    if (ids.isEmpty()) {
+        QMessageBox::information(this, QStringLiteral("批量 ASR"),
+                                 QStringLiteral("没有可处理的切片。"));
+        return;
+    }
+
+    m_asrRunning = true;
+    auto *engine = m_asrEngine.get();
+    auto *source = m_source;
+
+    (void) QtConcurrent::run([engine, source, ids, this]() {
+        int processed = 0;
+        for (const auto &sliceId : ids) {
+            QString audioPath = source->audioPath(sliceId);
+            if (audioPath.isEmpty())
+                continue;
+
+            std::string msg;
+            bool ok = engine->recognize(audioPath.toStdWString(), msg);
+            if (ok) {
+                QString text = QString::fromUtf8(msg);
+                QMetaObject::invokeMethod(this, [this, sliceId, text]() {
+                    setAsrResult(sliceId, text);
+                }, Qt::QueuedConnection);
+            }
+            ++processed;
+        }
+        QMetaObject::invokeMethod(this, [this, processed]() {
+            m_asrRunning = false;
+            dsfw::widgets::ToastNotification::show(
+                this, dsfw::widgets::ToastType::Info,
+                QStringLiteral("批量 ASR 完成: %1 个切片").arg(processed), 3000);
+        }, Qt::QueuedConnection);
+    });
+}
+
+void DsMinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
+    if (!m_source)
+        return;
+
+    auto result = m_source->loadSlice(sliceId);
+    DsTextDocument doc;
+    if (result)
+        doc = std::move(result.value());
+
+    IntervalLayer *graphemeLayer = nullptr;
+    for (auto &layer : doc.layers) {
+        if (layer.name == QStringLiteral("grapheme")) {
+            graphemeLayer = &layer;
+            break;
+        }
+    }
+    if (!graphemeLayer) {
+        doc.layers.push_back({});
+        graphemeLayer = &doc.layers.back();
+        graphemeLayer->name = QStringLiteral("grapheme");
+        graphemeLayer->type = QStringLiteral("text");
+    }
+
+    graphemeLayer->boundaries.clear();
+    const auto parts = text.split(QChar(' '), Qt::SkipEmptyParts);
+    int id = 1;
+    for (const auto &part : parts) {
+        Boundary b;
+        b.id = id++;
+        b.text = part;
+        graphemeLayer->boundaries.push_back(std::move(b));
+    }
+
+    (void) m_source->saveSlice(sliceId, doc);
+
+    if (sliceId == m_currentSliceId) {
+        m_editor->loadData(text, {});
+        m_dirty = true;
+    }
 }
 
 } // namespace dstools
