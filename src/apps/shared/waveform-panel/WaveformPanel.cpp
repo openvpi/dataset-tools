@@ -41,40 +41,80 @@ protected:
         painter.fillRect(rect(), QColor(35, 35, 40));
 
         double viewDuration = m_viewEnd - m_viewStart;
-        if (viewDuration <= 0.0)
+        if (viewDuration <= 0.0 || width() <= 0)
             return;
 
-        // Choose tick interval (~150px apart)
-        double secPerTick = 150.0 / m_pixelsPerSecond;
-        static const double niceSteps[] = {0.001, 0.002, 0.005, 0.01,  0.02,  0.05,
-                                           0.1,   0.2,   0.5,   1.0,   2.0,   5.0,
-                                           10.0,  20.0,  30.0,  60.0,  120.0, 300.0,
-                                           600.0, 1800.0, 3600.0};
-        double majorInterval = niceSteps[std::size(niceSteps) - 1]; // fallback to largest
+        // ── Choose major tick interval ──────────────────────────────────
+        //
+        // Strategy: pick the smallest niceStep whose pixel spacing >= minPixelGap.
+        // minPixelGap is derived from the longest label we'd render at that step,
+        // so labels never overlap regardless of zoom level.
+
+        static const double niceSteps[] = {
+            0.001, 0.002, 0.005, 0.01,  0.02,  0.05,
+            0.1,   0.2,   0.5,   1.0,   2.0,   5.0,
+            10.0,  20.0,  30.0,  60.0,  120.0, 300.0,
+            600.0, 1800.0, 3600.0};
+
+        QFont font = painter.font();
+        font.setPixelSize(10);
+        painter.setFont(font);
+        QFontMetrics fm(font);
+
+        // Estimate label width for a given interval to compute minimum gap
+        auto estimateLabelWidth = [&](double interval) -> int {
+            if (interval >= 60.0)
+                return fm.horizontalAdvance(QStringLiteral("99:59"));
+            if (interval >= 1.0)
+                return fm.horizontalAdvance(QStringLiteral("999s"));
+            if (interval >= 0.01)
+                return fm.horizontalAdvance(QStringLiteral("99.99s"));
+            return fm.horizontalAdvance(QStringLiteral("9.999s"));
+        };
+
+        constexpr int kMinPadding = 20; // minimum pixels of empty space between labels
+
+        double majorInterval = niceSteps[std::size(niceSteps) - 1];
         for (double step : niceSteps) {
-            if (step >= secPerTick) {
+            double pixelSpacing = step * m_pixelsPerSecond;
+            int labelW = estimateLabelWidth(step);
+            if (pixelSpacing >= labelW + kMinPadding) {
                 majorInterval = step;
                 break;
             }
         }
 
-        double minorInterval = majorInterval / 5.0;
+        // Subdivisions: pick 2, 4, or 5 based on the niceStep pattern
+        int subdivisions = 5;
+        {
+            // Determine the "mantissa" of majorInterval in its decade
+            double decade = std::pow(10.0, std::floor(std::log10(majorInterval)));
+            double mantissa = majorInterval / decade;
+            if (std::abs(mantissa - 2.0) < 0.01 || std::abs(mantissa - 20.0) < 0.1)
+                subdivisions = 4;
+            else if (std::abs(mantissa - 3.0) < 0.01 || std::abs(mantissa - 30.0) < 0.1)
+                subdivisions = 3;
+        }
+        double minorInterval = majorInterval / subdivisions;
 
-        // Minor ticks
-        painter.setPen(QPen(QColor(70, 70, 80), 1));
-        double firstMinor = std::floor(m_viewStart / minorInterval) * minorInterval;
-        for (double t = firstMinor; t <= m_viewEnd; t += minorInterval) {
-            if (t < m_viewStart)
-                continue;
-            int x = timeToX(t);
-            painter.drawLine(x, height() - 4, x, height());
+        // Ensure minor ticks aren't too dense (minimum ~8px apart)
+        double minorPixelSpacing = minorInterval * m_pixelsPerSecond;
+        if (minorPixelSpacing < 8.0)
+            minorInterval = majorInterval; // suppress minor ticks entirely
+
+        // ── Draw minor ticks ────────────────────────────────────────────
+        if (minorInterval < majorInterval) {
+            painter.setPen(QPen(QColor(70, 70, 80), 1));
+            double firstMinor = std::floor(m_viewStart / minorInterval) * minorInterval;
+            for (double t = firstMinor; t <= m_viewEnd; t += minorInterval) {
+                if (t < m_viewStart)
+                    continue;
+                int x = timeToX(t);
+                painter.drawLine(x, height() - 4, x, height());
+            }
         }
 
-        // Major ticks + labels
-        QFont font = painter.font();
-        font.setPixelSize(10);
-        painter.setFont(font);
-
+        // ── Draw major ticks + labels ───────────────────────────────────
         double firstMajor = std::floor(m_viewStart / majorInterval) * majorInterval;
         for (double t = firstMajor; t <= m_viewEnd; t += majorInterval) {
             if (t < m_viewStart)
@@ -86,21 +126,27 @@ protected:
 
             painter.setPen(QColor(180, 180, 200));
             QString label;
-            if (majorInterval >= 1.0) {
-                int totalSec = static_cast<int>(t);
+            if (majorInterval >= 60.0) {
+                int totalSec = static_cast<int>(std::round(t));
+                int min = totalSec / 60;
+                int sec = totalSec % 60;
+                label = QStringLiteral("%1:%2").arg(min).arg(sec, 2, 10, QChar('0'));
+            } else if (majorInterval >= 1.0) {
+                int totalSec = static_cast<int>(std::round(t));
                 int min = totalSec / 60;
                 int sec = totalSec % 60;
                 if (min > 0)
-                    label = QString("%1:%2").arg(min).arg(sec, 2, 10, QChar('0'));
+                    label = QStringLiteral("%1:%2").arg(min).arg(sec, 2, 10, QChar('0'));
                 else
-                    label = QString::number(totalSec) + "s";
+                    label = QString::number(totalSec) + QStringLiteral("s");
             } else if (majorInterval >= 0.01) {
-                label = QString::number(t, 'f', 2) + "s";
+                label = QString::number(t, 'f', 2) + QStringLiteral("s");
             } else {
-                label = QString::number(t, 'f', 3) + "s";
+                label = QString::number(t, 'f', 3) + QStringLiteral("s");
             }
 
-            QRect textRect(x - 40, 0, 80, height() - 10);
+            int labelW = fm.horizontalAdvance(label);
+            QRect textRect(x - labelW / 2, 0, labelW, height() - 10);
             painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, label);
         }
 
