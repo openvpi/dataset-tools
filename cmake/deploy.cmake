@@ -72,6 +72,15 @@ if (WIN32)
             )
         ")
     endforeach ()
+
+    # qt.conf — override any absolute-path qt.conf that windeployqt may have
+    # generated, ensuring plugins are found via relative paths on end-user machines.
+    install(CODE "
+        file(WRITE \"${_install_dir}/qt.conf\"
+\"[Paths]
+Plugins = plugins
+\")
+    ")
 elseif (APPLE)
     find_program(QT_DEPLOY_EXECUTABLE NAMES macdeployqt HINTS "${__qt_bin_dir}")
     if (NOT EXISTS "${QT_DEPLOY_EXECUTABLE}")
