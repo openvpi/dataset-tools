@@ -234,21 +234,21 @@ Inference libraries (`game-infer`, `hubert-infer`, `rmvpe-infer`) are direct sha
 
 | # | Task | Priority | Effort |
 |---|---|---|---|
-| 3.1 | Extract business logic from `DsSlicerPage` into `SlicerService` | Medium | 1-2d |
-| 3.2 | Extract inference orchestration from `PitchLabelerPage` into `PitchExtractionService` | Medium | 1d |
-| 3.3 | Extract export logic from `ExportPage` into `ExportService` | Medium | 1d |
-| 3.4 | Introduce ViewModel/Presenter pattern for shared data-source pages | Low | 2-3d |
-| 3.5 | Audit and enforce that apps → libs → infer layering (no direct infer usage from apps) | Low | 4h |
+| 3.1 | ~~Extract business logic from `DsSlicerPage` into `SlicerService`~~ ✅ | Medium | 1-2d |
+| 3.2 | ~~Extract inference orchestration from `PitchLabelerPage` into `PitchExtractionService`~~ ✅ | Medium | 1d |
+| 3.3 | ~~Extract export logic from `ExportPage` into `ExportService`~~ ✅ | Medium | 1d |
+| 3.4 | ~~Introduce ViewModel/Presenter pattern for shared data-source pages~~ ✅ | Low | 2-3d |
+| 3.5 | ~~Audit and enforce that apps → libs → infer layering (no direct infer usage from apps)~~ ✅ | Low | 4h |
 
 ### Phase 4: Testing & CI (ongoing)
 
 | # | Task | Priority | Effort |
 |---|---|---|---|
-| 4.1 | Add unit tests for extracted service classes (Phase 3 output) | Medium | 1d per service |
-| 4.2 | Add mock-based inference tests (mock ONNX session) | Medium | 2d |
-| 4.3 | Add code coverage reporting to CI | Low | 4h |
-| 4.4 | Add audio processing unit tests with fixture files | Low | 1d |
-| 4.5 | Uncomment and enable automated release workflow | Low | 2h |
+| 4.1 | ~~Add unit tests for extracted service classes (Phase 3 output)~~ ✅ | Medium | 1d per service |
+| 4.2 | ~~Add mock-based inference tests (mock ONNX session)~~ ✅ | Medium | 2d |
+| 4.3 | ~~Add code coverage reporting to CI~~ ✅ | Low | 4h |
+| 4.4 | ~~Add audio processing unit tests with fixture files~~ ✅ | Low | 1d |
+| 4.5 | ~~Uncomment and enable automated release workflow~~ ✅ | Low | 2h |
 
 ---
 
