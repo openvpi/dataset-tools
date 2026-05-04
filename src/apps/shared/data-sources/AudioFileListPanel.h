@@ -15,7 +15,19 @@ class AudioFileListPanel : public dsfw::widgets::DroppableFileListPanel {
     Q_OBJECT
 
 public:
-    explicit AudioFileListPanel(QWidget *parent = nullptr);
+    explicit AudioFileListPanel(QWidget *parent = nullptr)
+        : DroppableFileListPanel(parent) {
+        setFileFilters({
+            QStringLiteral("*.wav"),
+            QStringLiteral("*.flac"),
+            QStringLiteral("*.mp3"),
+            QStringLiteral("*.m4a"),
+            QStringLiteral("*.ogg"),
+            QStringLiteral("*.opus"),
+            QStringLiteral("*.wma"),
+            QStringLiteral("*.aac"),
+        });
+    }
     ~AudioFileListPanel() override = default;
 };
 
