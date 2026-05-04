@@ -160,18 +160,12 @@ int main(int argc, char *argv[]) {
         // (slicerPage stores per-file slice points internally)
         auto ret = QMessageBox::question(
             &shell,
-            QStringLiteral("尚无切片数据"),
-            QStringLiteral("当前工程没有切片条目 (dsitem)。\n"
-                           "是否按照切片页中的切点自动生成切片？\n\n"
-                           "选择「否」将返回切片页。"),
+            QStringLiteral("未切片/切点信息更新"),
+            QStringLiteral("未切片/切点信息更新，是否回到 Slicer？"),
             QMessageBox::Yes | QMessageBox::No);
 
         if (ret == QMessageBox::Yes) {
-            // Trigger export from slicer page to create items
-            shell.setCurrentPage(1); // go to slicer
-            // The user should use the export function on the slicer page
-        } else {
-            shell.setCurrentPage(1); // go back to slicer
+            shell.setCurrentPage(1);
         }
     });
 
