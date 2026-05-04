@@ -6,7 +6,6 @@ dstools_add_library(${PROJECT_NAME}
     INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/commands>
-               $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/apps/pitch-labeler>
     DEPENDS
         PUBLIC dstools-widgets dstools-domain
                Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets

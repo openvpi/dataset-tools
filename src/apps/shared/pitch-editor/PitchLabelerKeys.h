@@ -1,16 +1,13 @@
-﻿#pragma once
+#pragma once
 #include <dsfw/AppSettings.h>
 #include <dsfw/CommonKeys.h>
 
-/// PitchLabeler settings key schema -- all persisted keys in one place.
 namespace PitchLabelerKeys {
-    // Re-exported from CommonKeys
     using dsfw::CommonKeys::LastDir;
     using dsfw::CommonKeys::ShortcutOpen;
     using dsfw::CommonKeys::NavigationPrev;
     using dsfw::CommonKeys::NavigationNext;
 
-    // Shortcuts
     inline const dstools::SettingsKey<QString> PlaybackPlayPause("Shortcuts/playPause", "Space");
     inline const dstools::SettingsKey<QString> PlaybackStop("Shortcuts/stop", "Escape");
     inline const dstools::SettingsKey<QString> SeekForward("Shortcuts/seekForward", "Right");
@@ -28,7 +25,6 @@ namespace PitchLabelerKeys {
     inline const dstools::SettingsKey<QString> ShortcutABCompare("Shortcuts/abCompare", "Ctrl+B");
     inline const dstools::SettingsKey<QString> ShortcutExit("Shortcuts/exit", "Alt+F4");
 
-    // PianoRoll display options (matching SlurCutter's F0Widget pattern)
     inline const dstools::SettingsKey<bool> ShowPitchTextOverlay("PianoRoll/showPitchTextOverlay", false);
     inline const dstools::SettingsKey<bool> ShowPhonemeTexts("PianoRoll/showPhonemeTexts", true);
     inline const dstools::SettingsKey<bool> ShowCrosshairAndPitch("PianoRoll/showCrosshairAndPitch", true);

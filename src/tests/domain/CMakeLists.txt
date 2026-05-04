@@ -32,10 +32,10 @@ foreach(test_name ${DOMAIN_TESTS})
     )
 endforeach()
 
-# PitchProcessor test (links pitchlabeler-page instead of dstools-domain)
+# PitchProcessor test (links data-sources which includes pitch-editor)
 add_executable(TestPitchProcessor TestPitchProcessor.cpp)
 target_link_libraries(TestPitchProcessor PRIVATE
-    pitchlabeler-page
+    data-sources
     Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestPitchProcessor COMMAND TestPitchProcessor)
