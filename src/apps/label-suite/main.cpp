@@ -21,8 +21,6 @@
 
 // Page includes
 #include "SlicerPage.h"
-#include "LyricFAPage.h"
-#include "HubertFAPage.h"
 #include <MinLabelPage.h>
 #include <PhonemeLabelerPage.h>
 #include <PitchLabelerPage.h>
@@ -31,7 +29,7 @@
 #include "pages/GameAlignPage.h"
 
 #include <SettingsPage.h>
-#include <FileDataSource.h>
+#include <DirectoryDataSource.h>
 
 using namespace dstools::labeler;
 
@@ -59,26 +57,38 @@ int main(int argc, char *argv[]) {
     shell.setWindowTitle(QStringLiteral("LabelSuite"));
     shell.resize(kDefaultWidth, kDefaultHeight);
 
-    // ── Create and register all 9 pages ──────────────────────────────────
+    // ── Data source for shared pages ────────────────────────────────────
+
+    auto *dirSource = new dstools::DirectoryDataSource(&shell);
+    auto *settingsBackend = new dstools::AppSettingsBackend(&shell);
+
+    QObject::connect(&shell, &dsfw::AppShell::workingDirectoryChanged,
+                     dirSource, &dstools::DirectoryDataSource::setWorkingDirectory);
+
+    // ── Create and register all 10 pages ──────────────────────────────────
 
     // Step 0: Slice
     auto *slicerAdapter = new TaskWindowAdapter(new SlicerPage(&shell), &shell);
     shell.addPage(slicerAdapter, "slice", {}, QObject::tr("Slice"));
 
-    // Step 1: ASR
-    auto *asrAdapter = new TaskWindowAdapter(new LyricFAPage(&shell), &shell);
-    shell.addPage(asrAdapter, "asr", {}, QObject::tr("ASR"));
+    // Step 1: ASR — shared MinLabelPage with ASR functionality
+    auto *asrPage = new dstools::MinLabelPage(&shell);
+    asrPage->setDataSource(dirSource, settingsBackend);
+    shell.addPage(asrPage, "asr", {}, QObject::tr("ASR"));
 
-    // Step 2: Label (MinLabel) — shared page with FileDataSource
+    // Step 2: Label (MinLabel) — shared page
     auto *labelPage = new dstools::MinLabelPage(&shell);
+    labelPage->setDataSource(dirSource, settingsBackend);
     shell.addPage(labelPage, "label", {}, QObject::tr("Label"));
 
-    // Step 3: Align (HubertFA)
-    auto *alignAdapter = new TaskWindowAdapter(new HubertFAPage(&shell), &shell);
-    shell.addPage(alignAdapter, "align", {}, QObject::tr("Align"));
+    // Step 3: Align — shared PhonemeLabelerPage with FA functionality
+    auto *alignPage = new dstools::PhonemeLabelerPage(&shell);
+    alignPage->setDataSource(dirSource, settingsBackend);
+    shell.addPage(alignPage, "align", {}, QObject::tr("Align"));
 
     // Step 4: Phone (PhonemeLabeler) — shared page
     auto *phonePage = new dstools::PhonemeLabelerPage(&shell);
+    phonePage->setDataSource(dirSource, settingsBackend);
     shell.addPage(phonePage, "phone", {}, QObject::tr("Phone"));
 
     // Step 5: CSV
@@ -95,10 +105,10 @@ int main(int argc, char *argv[]) {
 
     // Step 8: Pitch (PitchLabeler) — shared page
     auto *pitchPage = new dstools::PitchLabelerPage(&shell);
+    pitchPage->setDataSource(dirSource, settingsBackend);
     shell.addPage(pitchPage, "pitch", {}, QObject::tr("Pitch"));
 
     // Step 9: Settings
-    auto *settingsBackend = new dstools::AppSettingsBackend(&shell);
     auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
     shell.addPage(settingsPage, "settings", {}, QObject::tr("Settings"));
 

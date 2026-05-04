@@ -24,7 +24,7 @@ dstools_add_executable(${PROJECT_NAME}
         pages/GameAlignPage.cpp
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets
-                pipeline-pages game-infer rmvpe-infer settings-page
+                pipeline-slicer-page settings-page
                 data-sources
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
