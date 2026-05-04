@@ -14,7 +14,7 @@
 #include "DsSlicerPage.h"
 #include "ExportPage.h"
 #include "ProjectDataSource.h"
-#include "ProjectSettingsBackend.h"
+#include <AppSettingsBackend.h>
 #include "WelcomePage.h"
 
 #include <MinLabelPage.h>
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     // Shared data source (lifetime = app)
     auto *dataSource = new dstools::ProjectDataSource(&shell);
-    auto *settingsBackend = new dstools::ProjectSettingsBackend(&shell);
+    auto *settingsBackend = new dstools::AppSettingsBackend(&shell);
     std::unique_ptr<dstools::DsProject> project;
 
     // ── Register all 7 pages ─────────────────────────────────────────────
@@ -109,7 +109,6 @@ int main(int argc, char *argv[]) {
                                     : project->workingDirectory();
 
         dataSource->setProject(project.get(), workDir);
-        settingsBackend->setProject(project.get());
 
         shell.setWindowTitle(
             QStringLiteral("DsLabeler — %1").arg(QFileInfo(path).fileName()));

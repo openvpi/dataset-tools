@@ -42,7 +42,7 @@ struct ExportConfig {
     bool includeDiscarded = false;
 };
 
-/// @brief Slicer parameter configuration stored in .dsproj defaults.slicer.
+/// @brief Slicer parameter configuration stored in .dsproj slicer.params.
 struct SlicerConfig {
     double threshold = -40.0;   ///< dB threshold for silence detection.
     int minLength = 5000;       ///< Minimum slice length in ms.
@@ -53,18 +53,20 @@ struct SlicerConfig {
 
 /// @brief Slicer runtime state stored in .dsproj slicer section.
 struct SlicerState {
+    SlicerConfig params;                                ///< Slicer parameters.
     QStringList audioFiles;                              ///< Audio file paths (POSIX).
     std::map<QString, std::vector<double>> slicePoints;  ///< filePath → boundary times (seconds).
 };
 
-/// Default model paths and inference parameters stored in a .dsproj file.
+/// Default model paths and inference parameters.
+/// @deprecated The `defaults` section is no longer written to .dsproj.
+/// Model/device config is stored in AppSettings (user directory).
+/// This struct is kept for backward-compatible migration on load only.
 struct DsProjectDefaults {
-    QString globalProvider = QStringLiteral("cpu");  ///< Global inference provider.
-    int deviceIndex = 0;                              ///< Global GPU device index.
-    std::map<QString, TaskModelConfig> taskModels;    ///< Task name → model config.
-    std::map<QString, PreloadConfig> preload;          ///< Task name → preload config.
-    ExportConfig exportConfig;
-    SlicerConfig slicerConfig;
+    QString globalProvider = QStringLiteral("cpu");
+    int deviceIndex = 0;
+    std::map<QString, TaskModelConfig> taskModels;
+    std::map<QString, PreloadConfig> preload;
 };
 
 /// @brief A single slice within an item.
@@ -124,6 +126,11 @@ public:
     const SlicerState &slicerState() const;
     void setSlicerState(SlicerState state);
 
+    // ── Export config ──────────────────────────────────────────────────
+
+    const ExportConfig &exportConfig() const;
+    void setExportConfig(ExportConfig config);
+
     // ── Path utilities ────────────────────────────────────────────────
 
     static QString toPosixPath(const QString &nativePath);
@@ -135,6 +142,7 @@ private:
     DsProjectDefaults m_defaults;
     std::vector<Item> m_items;
     SlicerState m_slicerState;
+    ExportConfig m_exportConfig;
     nlohmann::json m_extraFields;  // preserve unknown fields for round-trip
 };
 

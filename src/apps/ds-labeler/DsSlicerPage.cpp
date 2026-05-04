@@ -644,12 +644,12 @@ namespace dstools {
         auto *project = m_dataSource->project();
 
         // Load slicer params from project defaults
-        const auto &slicerConfig = project->defaults().slicerConfig;
-        m_thresholdSpin->setValue(slicerConfig.threshold);
-        m_minLengthSpin->setValue(slicerConfig.minLength);
-        m_minIntervalSpin->setValue(slicerConfig.minInterval);
-        m_hopSizeSpin->setValue(slicerConfig.hopSize);
-        m_maxSilenceSpin->setValue(slicerConfig.maxSilence);
+        const auto &slicerParams = project->slicerState().params;
+        m_thresholdSpin->setValue(slicerParams.threshold);
+        m_minLengthSpin->setValue(slicerParams.minLength);
+        m_minIntervalSpin->setValue(slicerParams.minInterval);
+        m_hopSizeSpin->setValue(slicerParams.hopSize);
+        m_maxSilenceSpin->setValue(slicerParams.maxSilence);
 
         // Load slicer state (audio files + slice points) from project
         const auto &slicerState = project->slicerState();
@@ -1086,16 +1086,17 @@ namespace dstools {
         if (!m_dataSource || !m_dataSource->project())
             return;
 
-        auto defaults = m_dataSource->project()->defaults();
-        defaults.slicerConfig.threshold = m_thresholdSpin->value();
-        defaults.slicerConfig.minLength = m_minLengthSpin->value();
-        defaults.slicerConfig.minInterval = m_minIntervalSpin->value();
-        defaults.slicerConfig.hopSize = m_hopSizeSpin->value();
-        defaults.slicerConfig.maxSilence = m_maxSilenceSpin->value();
-        m_dataSource->project()->setDefaults(defaults);
+        auto *project = m_dataSource->project();
+        auto state = project->slicerState();
+        state.params.threshold = m_thresholdSpin->value();
+        state.params.minLength = m_minLengthSpin->value();
+        state.params.minInterval = m_minIntervalSpin->value();
+        state.params.hopSize = m_hopSizeSpin->value();
+        state.params.maxSilence = m_maxSilenceSpin->value();
+        project->setSlicerState(std::move(state));
 
         QString saveError;
-        m_dataSource->project()->save(saveError);
+        project->save(saveError);
     }
 
     void DsSlicerPage::saveSlicerStateToProject() {

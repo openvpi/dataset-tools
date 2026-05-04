@@ -211,56 +211,41 @@ DsProject DsProject::load(const QString &path, QString &error) {
 
         // Legacy hopSize/sampleRate → migrate to exportConfig
         if (def.contains("hopSize") && def["hopSize"].is_number_integer())
-            proj.m_defaults.exportConfig.hopSize = def["hopSize"].get<int>();
+            proj.m_exportConfig.hopSize = def["hopSize"].get<int>();
         if (def.contains("sampleRate") && def["sampleRate"].is_number_integer())
-            proj.m_defaults.exportConfig.sampleRate = def["sampleRate"].get<int>();
+            proj.m_exportConfig.sampleRate = def["sampleRate"].get<int>();
 
-        // v3 export config
+        // v3 slicer config → migrate to slicer.params
+        if (def.contains("slicer") && def["slicer"].is_object()) {
+            const auto &sl = def["slicer"];
+            if (sl.contains("threshold") && sl["threshold"].is_number())
+                proj.m_slicerState.params.threshold = sl["threshold"].get<double>();
+            if (sl.contains("minLength") && sl["minLength"].is_number_integer())
+                proj.m_slicerState.params.minLength = sl["minLength"].get<int>();
+            if (sl.contains("minInterval") && sl["minInterval"].is_number_integer())
+                proj.m_slicerState.params.minInterval = sl["minInterval"].get<int>();
+            if (sl.contains("hopSize") && sl["hopSize"].is_number_integer())
+                proj.m_slicerState.params.hopSize = sl["hopSize"].get<int>();
+            if (sl.contains("maxSilence") && sl["maxSilence"].is_number_integer())
+                proj.m_slicerState.params.maxSilence = sl["maxSilence"].get<int>();
+        }
+
+        // v3 export config → migrate to top-level export
         if (def.contains("export") && def["export"].is_object()) {
             const auto &exp = def["export"];
             if (exp.contains("formats") && exp["formats"].is_array()) {
                 for (const auto &f : exp["formats"])
                     if (f.is_string())
-                        proj.m_defaults.exportConfig.formats.append(fromStd(f.get<std::string>()));
+                        proj.m_exportConfig.formats.append(fromStd(f.get<std::string>()));
             }
             if (exp.contains("hopSize") && exp["hopSize"].is_number_integer())
-                proj.m_defaults.exportConfig.hopSize = exp["hopSize"].get<int>();
+                proj.m_exportConfig.hopSize = exp["hopSize"].get<int>();
             if (exp.contains("sampleRate") && exp["sampleRate"].is_number_integer())
-                proj.m_defaults.exportConfig.sampleRate = exp["sampleRate"].get<int>();
+                proj.m_exportConfig.sampleRate = exp["sampleRate"].get<int>();
             if (exp.contains("resampleRate") && exp["resampleRate"].is_number_integer())
-                proj.m_defaults.exportConfig.resampleRate = exp["resampleRate"].get<int>();
+                proj.m_exportConfig.resampleRate = exp["resampleRate"].get<int>();
             if (exp.contains("includeDiscarded") && exp["includeDiscarded"].is_boolean())
-                proj.m_defaults.exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
-        }
-
-        // v3 preload config
-        if (def.contains("preload") && def["preload"].is_object()) {
-            const auto &preload = def["preload"];
-            for (auto it = preload.begin(); it != preload.end(); ++it) {
-                if (it->is_object()) {
-                    PreloadConfig cfg;
-                    if (it->contains("enabled") && (*it)["enabled"].is_boolean())
-                        cfg.enabled = (*it)["enabled"].get<bool>();
-                    if (it->contains("count") && (*it)["count"].is_number_integer())
-                        cfg.count = (*it)["count"].get<int>();
-                    proj.m_defaults.preload[fromStd(it.key())] = cfg;
-                }
-            }
-        }
-
-        // v3 slicer config
-        if (def.contains("slicer") && def["slicer"].is_object()) {
-            const auto &sl = def["slicer"];
-            if (sl.contains("threshold") && sl["threshold"].is_number())
-                proj.m_defaults.slicerConfig.threshold = sl["threshold"].get<double>();
-            if (sl.contains("minLength") && sl["minLength"].is_number_integer())
-                proj.m_defaults.slicerConfig.minLength = sl["minLength"].get<int>();
-            if (sl.contains("minInterval") && sl["minInterval"].is_number_integer())
-                proj.m_defaults.slicerConfig.minInterval = sl["minInterval"].get<int>();
-            if (sl.contains("hopSize") && sl["hopSize"].is_number_integer())
-                proj.m_defaults.slicerConfig.hopSize = sl["hopSize"].get<int>();
-            if (sl.contains("maxSilence") && sl["maxSilence"].is_number_integer())
-                proj.m_defaults.slicerConfig.maxSilence = sl["maxSilence"].get<int>();
+                proj.m_exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
         }
     }
 
@@ -273,6 +258,19 @@ DsProject DsProject::load(const QString &path, QString &error) {
     // Parse slicer state
     if (json.contains("slicer") && json["slicer"].is_object()) {
         const auto &sl = json["slicer"];
+        if (sl.contains("params") && sl["params"].is_object()) {
+            const auto &p = sl["params"];
+            if (p.contains("threshold") && p["threshold"].is_number())
+                proj.m_slicerState.params.threshold = p["threshold"].get<double>();
+            if (p.contains("minLength") && p["minLength"].is_number_integer())
+                proj.m_slicerState.params.minLength = p["minLength"].get<int>();
+            if (p.contains("minInterval") && p["minInterval"].is_number_integer())
+                proj.m_slicerState.params.minInterval = p["minInterval"].get<int>();
+            if (p.contains("hopSize") && p["hopSize"].is_number_integer())
+                proj.m_slicerState.params.hopSize = p["hopSize"].get<int>();
+            if (p.contains("maxSilence") && p["maxSilence"].is_number_integer())
+                proj.m_slicerState.params.maxSilence = p["maxSilence"].get<int>();
+        }
         if (sl.contains("audioFiles") && sl["audioFiles"].is_array()) {
             for (const auto &f : sl["audioFiles"])
                 if (f.is_string())
@@ -291,6 +289,24 @@ DsProject DsProject::load(const QString &path, QString &error) {
         }
     }
 
+    // Parse top-level export config
+    if (json.contains("export") && json["export"].is_object()) {
+        const auto &exp = json["export"];
+        if (exp.contains("formats") && exp["formats"].is_array()) {
+            for (const auto &f : exp["formats"])
+                if (f.is_string())
+                    proj.m_exportConfig.formats.append(fromStd(f.get<std::string>()));
+        }
+        if (exp.contains("hopSize") && exp["hopSize"].is_number_integer())
+            proj.m_exportConfig.hopSize = exp["hopSize"].get<int>();
+        if (exp.contains("sampleRate") && exp["sampleRate"].is_number_integer())
+            proj.m_exportConfig.sampleRate = exp["sampleRate"].get<int>();
+        if (exp.contains("resampleRate") && exp["resampleRate"].is_number_integer())
+            proj.m_exportConfig.resampleRate = exp["resampleRate"].get<int>();
+        if (exp.contains("includeDiscarded") && exp["includeDiscarded"].is_boolean())
+            proj.m_exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
+    }
+
     return proj;
 }
 
@@ -305,69 +321,23 @@ bool DsProject::save(const QString &path, QString &error) const {
 
     nlohmann::json json = m_extraFields.is_object() ? m_extraFields : nlohmann::json::object();
 
-    json["version"] = "3.0.0";
+    json["version"] = "3.1.0";
 
     if (!m_workingDirectory.isEmpty())
         json["workingDirectory"] = qstr(toPosixPath(m_workingDirectory));
 
-    // Build defaults
-    nlohmann::json def = nlohmann::json::object();
-
-    nlohmann::json models = nlohmann::json::object();
-    for (const auto &[taskName, cfg] : m_defaults.taskModels) {
-        nlohmann::json obj = cfg.extra.is_object() ? cfg.extra : nlohmann::json::object();
-        if (!cfg.processorId.isEmpty())
-            obj["processor"] = qstr(cfg.processorId);
-        if (!cfg.modelPath.isEmpty())
-            obj["path"] = qstr(toPosixPath(cfg.modelPath));
-        obj["provider"] = qstr(cfg.provider);
-        obj["deviceId"] = cfg.deviceId;
-        obj["forceCpu"] = cfg.forceCpu;
-        models[qstr(taskName)] = obj;
-    }
-    def["models"] = models;
-    def["globalProvider"] = qstr(m_defaults.globalProvider);
-    def["deviceIndex"] = m_defaults.deviceIndex;
-
-    // Export config
-    nlohmann::json exp = nlohmann::json::object();
-    if (!m_defaults.exportConfig.formats.isEmpty()) {
-        nlohmann::json fmtArr = nlohmann::json::array();
-        for (const auto &f : m_defaults.exportConfig.formats)
-            fmtArr.push_back(qstr(f));
-        exp["formats"] = fmtArr;
-    }
-    exp["hopSize"] = m_defaults.exportConfig.hopSize;
-    exp["sampleRate"] = m_defaults.exportConfig.sampleRate;
-    exp["resampleRate"] = m_defaults.exportConfig.resampleRate;
-    exp["includeDiscarded"] = m_defaults.exportConfig.includeDiscarded;
-    def["export"] = exp;
-
-    // Preload config
-    if (!m_defaults.preload.empty()) {
-        nlohmann::json preload = nlohmann::json::object();
-        for (const auto &[taskName, cfg] : m_defaults.preload) {
-            preload[qstr(taskName)] = {{"enabled", cfg.enabled}, {"count", cfg.count}};
-        }
-        def["preload"] = preload;
-    }
-
-    // Slicer config
+    // Slicer state (params + audioFiles + slicePoints)
     {
         nlohmann::json slicer = nlohmann::json::object();
-        slicer["threshold"] = m_defaults.slicerConfig.threshold;
-        slicer["minLength"] = m_defaults.slicerConfig.minLength;
-        slicer["minInterval"] = m_defaults.slicerConfig.minInterval;
-        slicer["hopSize"] = m_defaults.slicerConfig.hopSize;
-        slicer["maxSilence"] = m_defaults.slicerConfig.maxSilence;
-        def["slicer"] = slicer;
-    }
 
-    json["defaults"] = def;
+        nlohmann::json params = nlohmann::json::object();
+        params["threshold"] = m_slicerState.params.threshold;
+        params["minLength"] = m_slicerState.params.minLength;
+        params["minInterval"] = m_slicerState.params.minInterval;
+        params["hopSize"] = m_slicerState.params.hopSize;
+        params["maxSilence"] = m_slicerState.params.maxSilence;
+        slicer["params"] = params;
 
-    // Slicer state
-    if (!m_slicerState.audioFiles.isEmpty() || !m_slicerState.slicePoints.empty()) {
-        nlohmann::json slicer = nlohmann::json::object();
         nlohmann::json audioFiles = nlohmann::json::array();
         for (const auto &f : m_slicerState.audioFiles)
             audioFiles.push_back(qstr(toPosixPath(f)));
@@ -384,6 +354,22 @@ bool DsProject::save(const QString &path, QString &error) const {
         }
         slicer["slicePoints"] = slicePoints;
         json["slicer"] = slicer;
+    }
+
+    // Export config
+    {
+        nlohmann::json exp = nlohmann::json::object();
+        if (!m_exportConfig.formats.isEmpty()) {
+            nlohmann::json fmtArr = nlohmann::json::array();
+            for (const auto &f : m_exportConfig.formats)
+                fmtArr.push_back(qstr(f));
+            exp["formats"] = fmtArr;
+        }
+        exp["hopSize"] = m_exportConfig.hopSize;
+        exp["sampleRate"] = m_exportConfig.sampleRate;
+        exp["resampleRate"] = m_exportConfig.resampleRate;
+        exp["includeDiscarded"] = m_exportConfig.includeDiscarded;
+        json["export"] = exp;
     }
 
     // Items
@@ -440,6 +426,14 @@ const SlicerState &DsProject::slicerState() const {
 
 void DsProject::setSlicerState(SlicerState state) {
     m_slicerState = std::move(state);
+}
+
+const ExportConfig &DsProject::exportConfig() const {
+    return m_exportConfig;
+}
+
+void DsProject::setExportConfig(ExportConfig config) {
+    m_exportConfig = std::move(config);
 }
 
 } // namespace dstools

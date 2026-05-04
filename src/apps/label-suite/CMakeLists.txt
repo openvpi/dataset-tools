@@ -8,8 +8,6 @@ dstools_add_executable(${PROJECT_NAME}
     DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
     SOURCES
         main.cpp
-        AppSettingsBackend.h
-        AppSettingsBackend.cpp
         TaskWindowAdapter.h
         TaskWindowAdapter.cpp
         CleanupDialog.h

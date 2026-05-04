@@ -16,7 +16,7 @@
 
 #include "CleanupDialog.h"
 
-#include "AppSettingsBackend.h"
+#include <AppSettingsBackend.h>
 
 // Page includes
 #include <SlicerPage.h>

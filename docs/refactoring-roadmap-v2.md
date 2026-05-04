@@ -69,10 +69,13 @@
 
 ### R.1 配置迁移到用户目录
 
-- [ ] 废弃 `ProjectSettingsBackend`
-- [ ] `ISettingsBackend` 仅保留 `AppSettingsBackend`
-- [ ] DsLabeler Settings 页切换到 `AppSettingsBackend`
-- [ ] `.dsproj` `defaults` 字段废弃（读取时忽略，不再写入）
+- [x] 废弃 `ProjectSettingsBackend`
+- [x] `ISettingsBackend` 仅保留 `AppSettingsBackend`
+- [x] DsLabeler Settings 页切换到 `AppSettingsBackend`
+- [x] `.dsproj` `defaults` 字段废弃（读取时迁移，不再写入）
+- [x] `SlicerConfig` 从 `defaults.slicer` 迁移到 `slicer.params`
+- [x] `ExportConfig` 从 `defaults.export` 迁移到顶层 `export`
+- [x] 版本号升级到 3.1.0
 - [ ] `ds-format.md` 更新
 
 ### R.2 模型懒加载

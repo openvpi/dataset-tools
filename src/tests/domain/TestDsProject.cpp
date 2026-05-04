@@ -14,7 +14,7 @@ private slots:
     void v3ItemsAndSlices();
     void posixPathConversion();
     void exportConfigRoundtrip();
-    void preloadConfigRoundtrip();
+    void slicerStateRoundtrip();
 };
 
 void TestDsProject::defaultConstruction() {
@@ -22,11 +22,12 @@ void TestDsProject::defaultConstruction() {
     QVERIFY(proj.workingDirectory().isEmpty());
     QVERIFY(proj.filePath().isEmpty());
     QVERIFY(proj.items().empty());
-    QVERIFY(proj.defaults().taskModels.empty());
-    QCOMPARE(proj.defaults().exportConfig.hopSize, 512);
-    QCOMPARE(proj.defaults().exportConfig.sampleRate, 44100);
-    QCOMPARE(proj.defaults().exportConfig.resampleRate, 44100);
-    QVERIFY(!proj.defaults().exportConfig.includeDiscarded);
+    QCOMPARE(proj.exportConfig().hopSize, 512);
+    QCOMPARE(proj.exportConfig().sampleRate, 44100);
+    QCOMPARE(proj.exportConfig().resampleRate, 44100);
+    QVERIFY(!proj.exportConfig().includeDiscarded);
+    QCOMPARE(proj.slicerState().params.threshold, -40.0);
+    QCOMPARE(proj.slicerState().params.minLength, 5000);
 }
 
 void TestDsProject::saveLoadRoundtrip() {
@@ -35,27 +36,21 @@ void TestDsProject::saveLoadRoundtrip() {
 
     DsProject proj;
     proj.setWorkingDirectory(QStringLiteral("/test/dir"));
-    DsProjectDefaults defaults;
 
-    TaskModelConfig hubertCfg;
-    hubertCfg.processorId = QStringLiteral("hubert-fa");
-    hubertCfg.modelPath = QStringLiteral("models/hubert.onnx");
-    hubertCfg.provider = QStringLiteral("cuda");
-    hubertCfg.deviceId = 0;
-    defaults.taskModels[QStringLiteral("hubert")] = hubertCfg;
+    ExportConfig exp;
+    exp.hopSize = 256;
+    exp.sampleRate = 22050;
+    exp.resampleRate = 22050;
+    exp.formats = {QStringLiteral("ds"), QStringLiteral("csv")};
+    exp.includeDiscarded = true;
+    proj.setExportConfig(exp);
 
-    defaults.exportConfig.hopSize = 256;
-    defaults.exportConfig.sampleRate = 22050;
-    defaults.exportConfig.resampleRate = 22050;
-    defaults.exportConfig.formats = {QStringLiteral("ds"), QStringLiteral("csv")};
-    defaults.exportConfig.includeDiscarded = true;
-
-    PreloadConfig preloadCfg;
-    preloadCfg.enabled = true;
-    preloadCfg.count = 20;
-    defaults.preload[QStringLiteral("hubert")] = preloadCfg;
-
-    proj.setDefaults(defaults);
+    SlicerState state;
+    state.params.threshold = -30.0;
+    state.params.minLength = 3000;
+    state.audioFiles = {QStringLiteral("audio/test.wav")};
+    state.slicePoints[QStringLiteral("audio/test.wav")] = {1.5, 3.2, 5.7};
+    proj.setSlicerState(std::move(state));
 
     QString path = tmpDir.path() + QStringLiteral("/test.dsproj");
     QString error;
@@ -66,22 +61,18 @@ void TestDsProject::saveLoadRoundtrip() {
     QVERIFY(error.isEmpty());
     QCOMPARE(loaded.workingDirectory(), QStringLiteral("/test/dir"));
 
-    const auto &ld = loaded.defaults();
-    QCOMPARE(ld.taskModels.size(), 1);
-    QVERIFY(ld.taskModels.contains(QStringLiteral("hubert")));
-    QCOMPARE(ld.taskModels.at(QStringLiteral("hubert")).processorId, QStringLiteral("hubert-fa"));
-    QCOMPARE(ld.taskModels.at(QStringLiteral("hubert")).provider, QStringLiteral("cuda"));
+    const auto &lexp = loaded.exportConfig();
+    QCOMPARE(lexp.hopSize, 256);
+    QCOMPARE(lexp.sampleRate, 22050);
+    QCOMPARE(lexp.resampleRate, 22050);
+    QCOMPARE(lexp.formats.size(), 2);
+    QVERIFY(lexp.includeDiscarded);
 
-    QCOMPARE(ld.exportConfig.hopSize, 256);
-    QCOMPARE(ld.exportConfig.sampleRate, 22050);
-    QCOMPARE(ld.exportConfig.resampleRate, 22050);
-    QCOMPARE(ld.exportConfig.formats.size(), 2);
-    QVERIFY(ld.exportConfig.includeDiscarded);
-
-    QCOMPARE(ld.preload.size(), 1);
-    QVERIFY(ld.preload.contains(QStringLiteral("hubert")));
-    QCOMPARE(ld.preload.at(QStringLiteral("hubert")).enabled, true);
-    QCOMPARE(ld.preload.at(QStringLiteral("hubert")).count, 20);
+    const auto &ls = loaded.slicerState();
+    QCOMPARE(ls.params.threshold, -30.0);
+    QCOMPARE(ls.params.minLength, 3000);
+    QCOMPARE(ls.audioFiles.size(), 1);
+    QCOMPARE(ls.slicePoints.size(), 1);
 }
 
 void TestDsProject::v1Migration() {
@@ -111,14 +102,8 @@ void TestDsProject::v1Migration() {
     auto proj = DsProject::load(path, error);
     QVERIFY(error.isEmpty());
 
-    const auto &defaults = proj.defaults();
-    QCOMPARE(defaults.taskModels.size(), 2);
-    QVERIFY(defaults.taskModels.contains(QStringLiteral("asr")));
-    QCOMPARE(defaults.taskModels.at(QStringLiteral("asr")).modelPath, QStringLiteral("/models/asr.onnx"));
-    QCOMPARE(defaults.taskModels.at(QStringLiteral("hubert")).modelPath, QStringLiteral("/models/hubert.onnx"));
-
-    QCOMPARE(defaults.exportConfig.hopSize, 512);
-    QCOMPARE(defaults.exportConfig.sampleRate, 44100);
+    QCOMPARE(proj.exportConfig().hopSize, 512);
+    QCOMPARE(proj.exportConfig().sampleRate, 44100);
 }
 
 void TestDsProject::v3ItemsAndSlices() {
@@ -191,14 +176,13 @@ void TestDsProject::exportConfigRoundtrip() {
     QVERIFY(tmpDir.isValid());
 
     DsProject proj;
-    DsProjectDefaults defaults;
-    auto &exp = defaults.exportConfig;
+    ExportConfig exp;
     exp.formats = {QStringLiteral("ds"), QStringLiteral("csv"), QStringLiteral("json")};
     exp.hopSize = 128;
     exp.sampleRate = 16000;
     exp.resampleRate = 16000;
     exp.includeDiscarded = true;
-    proj.setDefaults(defaults);
+    proj.setExportConfig(exp);
 
     QString path = tmpDir.path() + QStringLiteral("/export.dsproj");
     QString error;
@@ -207,7 +191,7 @@ void TestDsProject::exportConfigRoundtrip() {
     auto loaded = DsProject::load(path, error);
     QVERIFY(error.isEmpty());
 
-    const auto &lexp = loaded.defaults().exportConfig;
+    const auto &lexp = loaded.exportConfig();
     QCOMPARE(lexp.formats.size(), 3);
     QCOMPARE(lexp.hopSize, 128);
     QCOMPARE(lexp.sampleRate, 16000);
@@ -215,36 +199,37 @@ void TestDsProject::exportConfigRoundtrip() {
     QVERIFY(lexp.includeDiscarded);
 }
 
-void TestDsProject::preloadConfigRoundtrip() {
+void TestDsProject::slicerStateRoundtrip() {
     QTemporaryDir tmpDir;
     QVERIFY(tmpDir.isValid());
 
     DsProject proj;
-    DsProjectDefaults defaults;
-    PreloadConfig cfg1;
-    cfg1.enabled = true;
-    cfg1.count = 50;
-    defaults.preload[QStringLiteral("hubert")] = cfg1;
+    SlicerState state;
+    state.params.threshold = -35.0;
+    state.params.minLength = 4000;
+    state.params.minInterval = 200;
+    state.params.hopSize = 20;
+    state.params.maxSilence = 300;
+    state.audioFiles = {QStringLiteral("audio/a.wav"), QStringLiteral("audio/b.wav")};
+    state.slicePoints[QStringLiteral("audio/a.wav")] = {1.0, 2.5, 4.0};
+    proj.setSlicerState(std::move(state));
 
-    PreloadConfig cfg2;
-    cfg2.enabled = false;
-    cfg2.count = 5;
-    defaults.preload[QStringLiteral("rmvpe")] = cfg2;
-    proj.setDefaults(defaults);
-
-    QString path = tmpDir.path() + QStringLiteral("/preload.dsproj");
+    QString path = tmpDir.path() + QStringLiteral("/slicer.dsproj");
     QString error;
     QVERIFY(proj.save(path, error));
 
     auto loaded = DsProject::load(path, error);
     QVERIFY(error.isEmpty());
 
-    const auto &lp = loaded.defaults().preload;
-    QCOMPARE(lp.size(), 2);
-    QCOMPARE(lp.at(QStringLiteral("hubert")).enabled, true);
-    QCOMPARE(lp.at(QStringLiteral("hubert")).count, 50);
-    QCOMPARE(lp.at(QStringLiteral("rmvpe")).enabled, false);
-    QCOMPARE(lp.at(QStringLiteral("rmvpe")).count, 5);
+    const auto &ls = loaded.slicerState();
+    QCOMPARE(ls.params.threshold, -35.0);
+    QCOMPARE(ls.params.minLength, 4000);
+    QCOMPARE(ls.params.minInterval, 200);
+    QCOMPARE(ls.params.hopSize, 20);
+    QCOMPARE(ls.params.maxSilence, 300);
+    QCOMPARE(ls.audioFiles.size(), 2);
+    QCOMPARE(ls.slicePoints.size(), 1);
+    QCOMPARE(ls.slicePoints.at(QStringLiteral("audio/a.wav")).size(), 3);
 }
 
 QTEST_MAIN(TestDsProject)
