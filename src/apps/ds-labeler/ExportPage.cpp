@@ -610,6 +610,13 @@ void ExportPage::onActivated() {
     updateExportButton();
 }
 
+void ExportPage::onDeactivated() {
+    m_hfa.reset();
+    m_rmvpe.reset();
+    m_game.reset();
+    m_phNumCalc.reset();
+}
+
 void ExportPage::runValidation() {
     m_readyForCsv = 0;
     m_readyForDs = 0;

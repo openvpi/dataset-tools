@@ -47,6 +47,7 @@ public:
 
     void onActivated() override;
     bool onDeactivating() override;
+    void onDeactivated() override;
     void onShutdown() override;
 
     dstools::widgets::ShortcutManager *shortcutManager() const;

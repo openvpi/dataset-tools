@@ -40,6 +40,7 @@ public:
 
     void onActivated() override;
     bool onDeactivating() override;
+    void onDeactivated() override;
     void onShutdown() override;
 
     [[nodiscard]] QToolBar *toolbar() const { return m_editor->toolbar(); }

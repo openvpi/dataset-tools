@@ -239,6 +239,15 @@ bool PhonemeLabelerPage::hasUnsavedChanges() const {
 void PhonemeLabelerPage::onActivated() {
     m_sliceList->refresh();
 
+    if (m_settingsBackend) {
+        auto data = m_settingsBackend->load();
+        auto preload = data["preload"].toObject();
+        auto faPreload = preload["phoneme_alignment"].toObject();
+        if (faPreload["enabled"].toBool(false)) {
+            ensureHfaEngine();
+        }
+    }
+
     static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
     if (m_currentSliceId.isEmpty()) {
         QString lastSlice = m_settings.get(kLastSlice);
@@ -291,6 +300,10 @@ void PhonemeLabelerPage::onActivated() {
 
 bool PhonemeLabelerPage::onDeactivating() {
     return maybeSave();
+}
+
+void PhonemeLabelerPage::onDeactivated() {
+    m_hfa.reset();
 }
 
 void PhonemeLabelerPage::onShutdown() {

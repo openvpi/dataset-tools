@@ -335,6 +335,10 @@ bool MinLabelPage::onDeactivating() {
     return maybeSave();
 }
 
+void MinLabelPage::onDeactivated() {
+    m_asrEngine.reset();
+}
+
 void MinLabelPage::onShutdown() {
     m_shortcutManager->saveAll();
 }

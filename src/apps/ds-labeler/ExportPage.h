@@ -52,6 +52,7 @@ public:
     QString windowTitle() const override;
 
     void onActivated() override;
+    void onDeactivated() override;
 
 private:
     ProjectDataSource *m_source = nullptr;

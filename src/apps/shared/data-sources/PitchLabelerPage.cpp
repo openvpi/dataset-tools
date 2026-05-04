@@ -323,6 +323,15 @@ bool PitchLabelerPage::hasUnsavedChanges() const {
 void PitchLabelerPage::onActivated() {
     m_sliceList->refresh();
 
+    if (m_settingsBackend) {
+        auto data = m_settingsBackend->load();
+        auto preload = data["preload"].toObject();
+        auto pitchPreload = preload["pitch_extraction"].toObject();
+        if (pitchPreload["enabled"].toBool(false)) {
+            ensureRmvpeEngine();
+        }
+    }
+
     if (m_source && !m_currentSliceId.isEmpty()) {
         auto dirty = m_source->dirtyLayers(m_currentSliceId);
         QStringList pitchDirtyLayers = {QStringLiteral("pitch"),
@@ -397,6 +406,11 @@ void PitchLabelerPage::onActivated() {
 
 bool PitchLabelerPage::onDeactivating() {
     return maybeSave();
+}
+
+void PitchLabelerPage::onDeactivated() {
+    m_rmvpe.reset();
+    m_game.reset();
 }
 
 void PitchLabelerPage::onShutdown() {
