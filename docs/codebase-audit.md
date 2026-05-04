@@ -326,16 +326,15 @@ Apps/Shared   data-sources                   STATIC    ← 含 Page + Service
               pitch-editor                   STATIC
               waveform-panel                 STATIC
 
-Apps/旧Pages  minlabel-page                  STATIC    ← M.4.1 遗留
-              phonemelabeler-page            STATIC    ← M.4.1 遗留
-              pitchlabeler-page              STATIC    ← M.4.1 遗留
-              pipeline-slicer-page           STATIC    ← M.4.1 遗留
-              pipeline-lyricfa-page          STATIC    ← M.4.1 遗留
-              pipeline-hubertfa-page         STATIC    ← M.4.1 遗留
-              pipeline-pages                 INTERFACE ← M.4.1 遗留
+Apps/旧Pages  ~~minlabel-page~~               已删除 (5B)
+              ~~phonemelabeler-page~~         已删除 (5B)
+              ~~pitchlabeler-page~~           已删除 (5B)
+              ~~pipeline-slicer-page~~        已删除 (5B)
+              ~~pipeline-lyricfa-page~~       已删除 (5B)
+              ~~pipeline-hubertfa-page~~      已删除 (5B)
+              ~~pipeline-pages~~              已删除 (5B)
 
 Apps (exe)    LabelSuite, DsLabeler, dstools-cli, WidgetGallery, TestShell
-其他          game-infer-app/                空目录遗留
 ```
 
 **总计: ~40 个 CMake targets（不含测试）**
@@ -430,31 +429,31 @@ libs/ 层对 CLI 工具（`dstools-cli`）也是必要的——CLI 直接用 lib
 
 **注意**：LabelSuite 的 Align/MIDI 页面与 DsLabeler 的"自动 FA/自动 MIDI"有区别——LabelSuite 需要**独立界面**让用户显式执行。实现方式是在共享 Page 上添加 LabelSuite 专属的"手动运行"按钮/菜单，通过数据源类型判断是否显示。
 
-### Phase 5B: 清理遗留目标（5A 完成后，1 周）
+### Phase 5B: 清理遗留目标 ✅ 已完成
 
-| # | Task | 说明 |
-|---|---|---|
-| 5B.1 | 删除 `pipeline-slicer-page` | 被 data-sources SlicerService 替代 |
-| 5B.2 | 删除 `pipeline-lyricfa-page` | 被 data-sources MinLabelPage 替代 |
-| 5B.3 | 删除 `pipeline-hubertfa-page` | 被 data-sources PhonemeLabelerPage 替代 |
-| 5B.4 | 删除 `pipeline-pages` INTERFACE | 不再需要 |
-| 5B.5 | 删除 `minlabel-page` | data-sources 中已有 MinLabelPage |
-| 5B.6 | 删除 `phonemelabeler-page` | data-sources 中已有 PhonemeLabelerPage |
-| 5B.7 | 删除 `pitchlabeler-page` | data-sources 中已有 PitchLabelerPage |
-| 5B.8 | 删除 `game-infer-app/` 空目录 | 清理 |
-| 5B.9 | 删除 `src/apps/pipeline/` 目录 | 所有 page 已迁移 |
+| # | Task | 说明 | 状态 |
+|---|---|---|---|
+| 5B.1 | 删除 `pipeline-slicer-page` | 被 data-sources SlicerService 替代 | ✅ |
+| 5B.2 | 删除 `pipeline-lyricfa-page` | 被 data-sources MinLabelPage 替代 | ✅ |
+| 5B.3 | 删除 `pipeline-hubertfa-page` | 被 data-sources PhonemeLabelerPage 替代 | ✅ |
+| 5B.4 | 删除 `pipeline-pages` INTERFACE | 不再需要 | ✅ |
+| 5B.5 | 删除 `minlabel-page` | data-sources 中已有 MinLabelPage | ✅ |
+| 5B.6 | 删除 `phonemelabeler-page` | data-sources 中已有 PhonemeLabelerPage | ✅ |
+| 5B.7 | 删除 `pitchlabeler-page` | data-sources 中已有 PitchLabelerPage | ✅ |
+| 5B.8 | 删除 `game-infer-app/` 空目录 | 清理 | ✅ (已不存在) |
+| 5B.9 | 删除 `src/apps/pipeline/` 目录 | 所有 page 已迁移 | ✅ |
 
-**结果**: 减少 7 个 CMake targets，删除 1 个空目录，删除 1 个目录
+**结果**: 减少 7 个 CMake targets，删除 1 个空目录，删除 1 个目录。PitchLabelerKeys.h 迁移到 pitch-editor。
 
-### Phase 5C: 评估 libs 层薄壳（可选，1 周）
+### Phase 5C: 评估 libs 层薄壳 ✅ 已评估
 
-| # | Task | 说明 |
-|---|---|---|
-| 5C.1 | 审计 `gameinfer-lib` | 如果只是 `GameInfer::init()` + `GameInfer::run()` wrapper → 考虑合并到调用方 |
-| 5C.2 | 审计 `rmvpepitch-lib` | 同上 |
-| 5C.3 | `textgrid` 改为 INTERFACE target | header-only 第三方库，无需编译 |
+| # | Task | 说明 | 结论 |
+|---|---|---|---|
+| 5C.1 | 审计 `gameinfer-lib` | ITaskProcessor 适配器 + TaskProcessorRegistry 自注册 | **保留** — 架构合理，infer 引擎保持框架无关 |
+| 5C.2 | 审计 `rmvpepitch-lib` | ITaskProcessor 适配器 + TaskProcessorRegistry 自注册 | **保留** — 同上 |
+| 5C.3 | `textgrid` 改为 INTERFACE target | header-only 第三方库 | **已是 INTERFACE** — 无需改动 |
 
-**注意**: libs 层是 `dstools-cli` 的接口层，即使对 GUI 是薄壳，对 CLI 也是必要抽象。**不轻易删除**，仅在确认 CLI 不需要时才合并。
+**结论**: 三个库均非无意义薄壳。gameinfer-lib 和 rmvpepitch-lib 是有意设计的适配器层（将 infer 引擎适配到 ITaskProcessor 框架接口），textgrid 是完整的第三方 header-only 库。均应保留。
 
 ### Phase 5D: 构建系统优化（1 周）
 
