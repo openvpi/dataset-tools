@@ -143,13 +143,11 @@ QString ProjectDataSource::dstextPath(const QString &sliceId) const {
 }
 
 QString ProjectDataSource::sliceAudioPath(const QString &sliceId) const {
-    // Look up the actual audio path from the project item first
     if (m_project) {
         for (const auto &item : m_project->items()) {
             for (const auto &slice : item.slices) {
                 if (slice.id == sliceId) {
-                    // Use the item's audioSource (set during slice export)
-                    QString audioPath = DsProject::fromPosixPath(item.audioSource);
+                    QString audioPath = item.audioSource;
                     if (QDir::isRelativePath(audioPath))
                         audioPath = QDir(m_workingDir).absoluteFilePath(audioPath);
                     return audioPath;
@@ -157,7 +155,6 @@ QString ProjectDataSource::sliceAudioPath(const QString &sliceId) const {
             }
         }
     }
-    // Fallback: conventional path
     return ProjectPaths::sliceAudioPath(m_workingDir, sliceId);
 }
 

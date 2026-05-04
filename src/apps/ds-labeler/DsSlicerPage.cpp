@@ -647,7 +647,7 @@ namespace dstools {
         if (!slicerState.audioFiles.isEmpty() && m_audioFileList->fileCount() == 0) {
             QStringList resolvedPaths;
             for (const auto &relPath : slicerState.audioFiles) {
-                QString nativePath = DsProject::fromPosixPath(relPath);
+                QString nativePath = relPath;
                 if (QDir::isRelativePath(nativePath))
                     nativePath = QDir(project->workingDirectory()).absoluteFilePath(nativePath);
                 if (QFile::exists(nativePath))
@@ -659,7 +659,7 @@ namespace dstools {
 
         // Restore slice points
         for (const auto &[relPath, points] : slicerState.slicePoints) {
-            QString nativePath = DsProject::fromPosixPath(relPath);
+            QString nativePath = relPath;
             if (QDir::isRelativePath(nativePath))
                 nativePath = QDir(project->workingDirectory()).absoluteFilePath(nativePath);
             if (!points.empty())
@@ -668,7 +668,7 @@ namespace dstools {
 
         // Load first audio file if available
         if (!slicerState.audioFiles.isEmpty()) {
-            QString firstPath = DsProject::fromPosixPath(slicerState.audioFiles.first());
+            QString firstPath = slicerState.audioFiles.first();
             if (QDir::isRelativePath(firstPath))
                 firstPath = QDir(project->workingDirectory()).absoluteFilePath(firstPath);
             if (QFile::exists(firstPath)) {
@@ -689,7 +689,7 @@ namespace dstools {
 
         const auto &firstItem = items[0];
         if (!firstItem.audioSource.isEmpty()) {
-            QString audioPath = DsProject::fromPosixPath(firstItem.audioSource);
+            QString audioPath = firstItem.audioSource;
             if (QDir::isRelativePath(audioPath))
                 audioPath = QDir(project->workingDirectory()).absoluteFilePath(audioPath);
             if (QFile::exists(audioPath)) {

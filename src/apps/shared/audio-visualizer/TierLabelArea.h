@@ -1,9 +1,9 @@
 #pragma once
 
-/// @file TierLabelArea.h
-/// @brief Base class for tier label areas displayed above the chart splitter.
-
+#include <QList>
 #include <QWidget>
+
+#include <dstools/ViewportController.h>
 
 namespace dstools {
 
@@ -11,6 +11,9 @@ namespace phonemelabeler {
 class IBoundaryModel;
 }
 using phonemelabeler::IBoundaryModel;
+
+using dstools::widgets::ViewportController;
+using dstools::widgets::ViewportState;
 
 class TierLabelArea : public QWidget {
     Q_OBJECT
@@ -22,15 +25,26 @@ public:
     void setBoundaryModel(IBoundaryModel *model);
     IBoundaryModel *boundaryModel() const;
 
+    void setViewportController(ViewportController *viewport);
+    ViewportController *viewportController() const;
+
     virtual int activeTierIndex() const;
     virtual void setActiveTierIndex(int index);
+
+    virtual QList<double> activeBoundaries() const;
 
 signals:
     void activeTierChanged(int index);
 
 protected:
     IBoundaryModel *m_boundaryModel = nullptr;
+    ViewportController *m_viewport = nullptr;
     int m_activeTierIndex = 0;
+
+    double m_viewStart = 0.0;
+    double m_viewEnd = 10.0;
+
+    [[nodiscard]] int timeToX(double time) const;
 };
 
 } // namespace dstools

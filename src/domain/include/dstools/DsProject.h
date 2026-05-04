@@ -54,7 +54,7 @@ struct SlicerConfig {
 /// @brief Slicer runtime state stored in .dsproj slicer section.
 struct SlicerState {
     SlicerConfig params;                                ///< Slicer parameters.
-    QStringList audioFiles;                              ///< Audio file paths (POSIX).
+    QStringList audioFiles;                              ///< Audio file paths (native format).
     std::map<QString, std::vector<double>> slicePoints;  ///< filePath → boundary times (seconds).
 };
 
@@ -87,7 +87,7 @@ struct Item {
     QString name;
     QString speaker;
     QString language;
-    QString audioSource;        ///< Relative path to audio file (POSIX).
+    QString audioSource;        ///< Path to audio file (native format, relative or absolute).
     std::vector<Slice> slices;
     nlohmann::json extra;       ///< Preserve unknown fields.
 };

@@ -59,7 +59,7 @@ void TestDsProject::saveLoadRoundtrip() {
 
     auto loaded = DsProject::load(path, error);
     QVERIFY(error.isEmpty());
-    QCOMPARE(loaded.workingDirectory(), QStringLiteral("/test/dir"));
+    QCOMPARE(loaded.workingDirectory(), DsProject::fromPosixPath(QStringLiteral("/test/dir")));
 
     const auto &lexp = loaded.exportConfig();
     QCOMPARE(lexp.hopSize, 256);
@@ -235,7 +235,7 @@ void TestDsProject::slicerStateRoundtrip() {
     QCOMPARE(ls.params.maxSilence, 300);
     QCOMPARE(ls.audioFiles.size(), 2);
     QCOMPARE(ls.slicePoints.size(), 1);
-    QCOMPARE(ls.slicePoints.at(QStringLiteral("audio/a.wav")).size(), 3);
+    QCOMPARE(ls.slicePoints.at(DsProject::fromPosixPath(QStringLiteral("audio/a.wav"))).size(), 3);
 }
 
 QTEST_MAIN(TestDsProject)

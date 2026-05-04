@@ -87,10 +87,10 @@
 
 ### Q.7 工程路径解析修复
 
-- [ ] 排查 `DsProject::load()` 中 `workingDirectory` 读取后是否需要从 posix 路径转回本地路径（当前 `fromStd()` 直接返回 posix 格式字符串）
-- [ ] `main.cpp` `loadProject` lambda：确认 `workDir` 是正确的工程文件夹路径，而非原始音频文件夹
-- [ ] `DsSlicerPage::onExportAudio()` 中 `ProjectPaths::dsItemsDir(m_dataSource->workingDir())` 确认指向工程文件夹下的 `dstemp/dsitems/`
-- [ ] `ProjectPaths` 所有路径方法应基于工程文件夹的 `workingDir`，而非原始音频所在目录
+- [x] 排查 `DsProject::load()` 中 `workingDirectory` 读取后是否需要从 posix 路径转回本地路径（当前 `fromStd()` 直接返回 posix 格式字符串）
+- [x] `main.cpp` `loadProject` lambda：确认 `workDir` 是正确的工程文件夹路径，而非原始音频文件夹
+- [x] `DsSlicerPage::onExportAudio()` 中 `ProjectPaths::dsItemsDir(m_dataSource->workingDir())` 确认指向工程文件夹下的 `dstemp/dsitems/`
+- [x] `ProjectPaths` 所有路径方法应基于工程文件夹的 `workingDir`，而非原始音频所在目录
 - [ ] 验证：新建工程 → 选择工程文件夹 → 切片导出后，`.dsproj`、`dstemp/` 均在工程文件夹内
 
 ---
