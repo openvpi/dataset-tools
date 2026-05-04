@@ -61,6 +61,38 @@
 - [x] 添加 deploy artifact 验证步骤（检查无 .lib/.a 文件）
 - [ ] 可选：添加 `find_package(dsfw)` 验证步骤（单独 job，不使用 DEPLOY_MODE）
 
+### Q.4 Slicer 页面切换弹窗逻辑修复
+
+- [x] `main.cpp` 页面切换守卫：修改弹窗文案为 "未切片/切点信息更新，是否回到 Slicer？"，仅做页面跳转确认，不触发自动生成切片
+- [x] `main.cpp` 页面切换守卫：点"是"回到 slicer 页，点"否"留在当前页面（而非两者都跳回 slicer）
+- [x] `DsSlicerPage::onActivated()`：避免重复添加音频文件——如果文件列表已经包含相同文件则跳过 `addFiles()`
+- [ ] 验证：从 slicer 切换到歌词页再返回 slicer，文件列表不会出现重复条目
+
+### Q.5 文件列表 Discard 按钮支持还原
+
+- [x] `DroppableFileListPanel::onDiscardSelected()`：改为 toggle 逻辑——已丢弃的文件再次点击 Discard 时还原（移除灰色 + 删除线，清除 `UserRole+1` 标记）
+- [x] 按钮文案根据选中项状态动态切换（如 "Discard" / "Restore"），或保持 "Discard" 但行为为 toggle
+- [ ] 验证：标记丢弃后再次选中并点击 Discard 可还原
+
+### Q.6 HubertFA 推理修复
+
+- [x] `Hfa.cpp` `recognize()` 重构：新增重载 `recognize(wavPath, language, non_speech_ph, lyricsText, words)` 接受歌词文本参数，不再内部读取 `.lab` 文件
+  - 将 `.lab` 文件读取逻辑从 `recognize()` 内部移除
+  - 新签名：`Result<void> recognize(fs::path wavPath, const std::string &language, const std::vector<std::string> &non_speech_ph, const std::string &lyricsText, WordList &words) const;`
+  - 旧签名保留为兼容 wrapper（读 .lab → 调用新签名），或直接替换
+- [x] `HubertAlignmentProcessor::process()`（DsLabeler 适配层）：从 `TaskInput` 的 grapheme 层提取歌词文本，传入 `recognize()` 新签名
+- [x] `PhonemeLabelerPage::runFaForSlice()`（LabelSuite 适配层）：从 dstext grapheme 层提取歌词文本，传入 `recognize()` 新签名（不依赖 .lab 文件存在）
+- [x] 两个适配层均不再预填充 WordList — 传入空 WordList 作为输出参数
+- [ ] 验证：DsLabeler 和 LabelSuite 的 HubertFA 推理均正常工作，不依赖 .lab 文件
+
+### Q.7 工程路径解析修复
+
+- [ ] 排查 `DsProject::load()` 中 `workingDirectory` 读取后是否需要从 posix 路径转回本地路径（当前 `fromStd()` 直接返回 posix 格式字符串）
+- [ ] `main.cpp` `loadProject` lambda：确认 `workDir` 是正确的工程文件夹路径，而非原始音频文件夹
+- [ ] `DsSlicerPage::onExportAudio()` 中 `ProjectPaths::dsItemsDir(m_dataSource->workingDir())` 确认指向工程文件夹下的 `dstemp/dsitems/`
+- [ ] `ProjectPaths` 所有路径方法应基于工程文件夹的 `workingDir`，而非原始音频所在目录
+- [ ] 验证：新建工程 → 选择工程文件夹 → 切片导出后，`.dsproj`、`dstemp/` 均在工程文件夹内
+
 ---
 
 ## Phase R — 配置架构重设计
@@ -80,9 +112,9 @@
 
 ### R.2 模型懒加载
 
-- [x] 实现 `LazyModelManager`（首次使用时加载，配置变更时 invalidate）
-- [x] 替换所有直接加载模型的代码为 `LazyModelManager::getOrLoad()`
-- [x] Settings 页模型路径变更 → `LazyModelManager::invalidate()`
+- [x] 实现 `ModelManager`（`ensureLoaded()` 首次使用时加载，`invalidateModel()` 配置变更时 invalidate）
+- [x] 替换所有直接加载模型的代码为 `ModelManager::ensureLoaded()`
+- [x] Settings 页模型路径变更 → `ModelManager::invalidateModel()`
 - [ ] 验证：启动时不加载任何模型，首次 FA/F0/MIDI 时自动加载
 
 ### R.3 图表比例 + 子图顺序持久化
@@ -105,27 +137,28 @@
 - [x] 子图注册 API：`addChart(id, widget, defaultOrder)` / `removeChart(id)`
 - [x] 子图顺序可配置（从 AppSettings 读取 chartOrder）
 - [x] 共享 ViewportController + IBoundaryModel
-- [x] BoundaryOverlayWidget 覆盖 TierLabelArea + QSplitter 区域
-- [x] 验证：可动态添加/移除子图，顺序可调整
+- [x] BoundaryOverlayWidget 初始集成（当前仅 trackWidget(chartSplitter)，完整覆盖 TierLabelArea 待 S.5 实现）
+- [ ] 验证：可动态添加/移除子图，顺序可调整
 
 ### S.2 TierLabelArea 标签区域
 
-- [x] `TierLabelArea` 基类：`activeTierIndex()` / `activeBoundaries()` / `activeTierChanged` 信号
-- [x] `SliceTierLabel`（Slicer 用）：单层，自动编号 "1", "2", "3"...
-- [x] `PhonemeTextGridTierLabel`（PhonemeLabeler 用）：多层 TextGrid 编辑
-  - [x] 最左侧竖排 radio button 组（每层一个）
-  - [x] 选中层的边界线向下贯穿所有子图
-  - [x] 非选中层的边界线仅在标签区域内，从该层向下延伸到最低层截止
-- [x] 验证：radio button 切换时边界线贯穿范围正确变化
+- [x] `TierLabelArea` 基类：`activeTierIndex()` / `activeTierChanged` 信号
+- [ ] `TierLabelArea` 基类增加 `activeBoundaries()` 方法
+- [ ] `SliceTierLabel`（Slicer 用）：单层，自动编号 "1", "2", "3"...
+- [ ] `PhonemeTextGridTierLabel`（PhonemeLabeler 用）：多层 TextGrid 编辑
+  - [ ] 最左侧竖排 radio button 组（每层一个）
+  - [ ] 选中层的边界线向下贯穿所有子图
+  - [ ] 非选中层的边界线仅在标签区域内，从该层向下延伸到最低层截止
+- [ ] 验证：radio button 切换时边界线贯穿范围正确变化
 
 ### S.3 MiniMapScrollBar 组件
 
-- [ ] 新建 `MiniMapScrollBar` widget（迷你波形缩略图 + 滑窗）
-- [ ] 绘制完整音频 peak envelope
-- [ ] 滑窗拖动 → 更新 ViewportController offset
-- [ ] 滑窗边缘拖动 → 更新 ViewportController zoom
-- [ ] 移除底部 QScrollBar
-- [ ] 移除顶部 PlayWidget 工具栏（PlayWidget 保留为内部播放后端）
+- [x] 新建 `MiniMapScrollBar` widget（迷你波形缩略图 + 滑窗）
+- [x] 绘制完整音频 peak envelope
+- [x] 滑窗拖动 → 更新 ViewportController offset
+- [x] 滑窗边缘拖动 → 更新 ViewportController zoom
+- [x] 移除底部 QScrollBar
+- [x] 移除顶部 PlayWidget 工具栏（PlayWidget 保留为内部播放后端）
 
 ### S.4 刻度线重设计
 
@@ -227,7 +260,11 @@ Q.1 ──────┐
 Q.2 ──────┤─→ R.1 → R.2 ─┐
 Q.3.1 ────┤                │
 Q.3.2 ────┤    R.3 ───────┤─→ S.1 → S.2 → S.3 → S.4 → S.5 → S.6 → S.7 → S.8 → S.9 ─→ T.1 → T.2 → T.3
-Q.3.3 ────┘                │
+Q.3.3 ────┤                │
+Q.4 ──────┤                │
+Q.5 ──────┤                │
+Q.6 ──────┤                │
+Q.7 ──────┘                │
                            │
 U.1/U.2 ──────────────────┘ (并行)
 ```
@@ -236,7 +273,7 @@ U.1/U.2 ──────────────────┘ (并行)
 
 | Phase | 复杂度 | 预估天数 |
 |-------|--------|---------|
-| Q (紧急修复) | 低-中 | 1-2 天 |
+| Q (紧急修复，含 Q.4-Q.7 新增) | 低-中 | 2-3 天 |
 | R (配置架构) | 中 | 2-3 天 |
 | S (可视化架构，9 个子任务) | 高 | 8-12 天 |
 | T (功能增强) | 中 | 3-4 天 |

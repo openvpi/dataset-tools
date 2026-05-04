@@ -125,38 +125,4 @@ Result<TaskOutput> HubertAlignmentProcessor::process(const TaskInput &input) {
     return Result<TaskOutput>::Ok(std::move(output));
 }
 
-    // Per-call config overrides
-    auto language = m_language;
-    auto nonSpeechPh = m_nonSpeechPh;
-
-    if (input.config.contains("language"))
-        language = input.config["language"].get<std::string>();
-    if (input.config.contains("nonSpeechPhonemes"))
-        nonSpeechPh = input.config["nonSpeechPhonemes"].get<std::vector<std::string>>();
-
-    HFA::WordList words;
-
-    auto recognizeResult = m_hfa->recognize(
-        input.audioPath.toLocal8Bit().toStdString(), language, nonSpeechPh, words);
-    if (!recognizeResult) {
-        return Result<TaskOutput>::Error(recognizeResult.error());
-    }
-
-    // Convert results to output layer
-    nlohmann::json phonemeArray = nlohmann::json::array();
-    for (const auto &word : words) {
-        for (const auto &phone : word.phones) {
-            phonemeArray.push_back({
-                {"phone", phone.text},
-                {"start", phone.start},
-                {"end",   phone.end  },
-            });
-        }
-    }
-
-    TaskOutput output;
-    output.layers[QStringLiteral("phoneme")] = std::move(phonemeArray);
-    return Result<TaskOutput>::Ok(std::move(output));
-}
-
 } // namespace dstools

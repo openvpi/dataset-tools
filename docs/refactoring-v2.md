@@ -9,7 +9,7 @@
 
 ## 1 需解决的问题
 
-### 1.1 Release 构建闪退（P0）
+### 1.1 Release 构建闪退（P0）✅ 已修复
 
 **现象**：`LabelSuite.exe` 和 `DsLabeler.exe` 的 Release 构建启动即退出（0xC0000135 = STATUS_DLL_NOT_FOUND），缺少 cpp-pinyin、fftw3、sndfile 等 DLL。
 
@@ -18,7 +18,7 @@
 2. 对 vcpkg SHARED 依赖添加 DLL 拷贝逻辑
 3. 对 CLion cmake-build-release 添加 POST_BUILD 自定义命令
 
-### 1.2 Slicer 音频列表和切点不持久化（P0）
+### 1.2 Slicer 音频列表和切点不持久化（P0）✅ 已修复
 
 **现象**：DsLabeler 关闭重开工程后，Slicer 页面之前加载的音频文件列表和切点消失。
 
@@ -26,7 +26,50 @@
 
 **方案**：在 `.dsproj` 增加 `slicer` 字段存储音频列表、切点、切片参数。
 
-### 1.3 CMake 架构整理（P1）
+### 1.3 Slicer 页面切换弹窗导致文件列表重复（P0）✅ 已修复
+
+**现象**：不存在 dsitem 或切点更新后，切换到其他页面的弹窗点"是"回到 slicer 后，文件列表多出一份重复的音频文件。
+
+**根因**：
+1. `main.cpp` 页面切换守卫中，无论点"是"或"否"都 `setCurrentPage(1)` 跳回 slicer，触发 `onActivated()`
+2. `DsSlicerPage::onActivated()` 无条件调用 `m_audioFileList->addFiles(resolvedPaths)`，已有文件会被去重但已选中状态丢失；更重要的是弹窗不应触发 onActivated 的完整加载逻辑
+3. 弹窗文案和行为不正确——应该只做"是否回到 slicer"的页面跳转确认
+
+**方案**：
+1. 弹窗改为 "未切片/切点信息更新，是否回到 Slicer？"，点"是"跳回 slicer、点"否"留在当前页
+2. `onActivated()` 在音频列表已有内容时跳过 addFiles
+
+### 1.4 文件列表 Discard 不支持还原（P1）✅ 已修复
+
+**现象**：`DroppableFileListPanel` 的 Discard 按钮只能标记丢弃，无法还原。
+
+**方案**：改为 toggle 逻辑，已丢弃的文件再次点击时还原。
+
+### 1.5 HubertFA 推理错误（P0）✅ 已修复
+
+**现象**：HubertFA 推理报错。
+
+**根因**：
+1. `HFA::recognize()` 内部硬编码读取同路径 `.lab` 文件获取歌词，但 DsLabeler 的歌词在 `TaskInput` 中、LabelSuite 的歌词在 dstext grapheme 层中，都不依赖磁盘 `.lab` 文件
+2. `HubertAlignmentProcessor::process()` 和 `PhonemeLabelerPage::runFaForSlice()` 都错误地预填充了 WordList，但 recognize 会用 .lab 内容覆盖，预填充无意义且干扰后处理
+
+**方案**：
+1. `Hfa.cpp` `recognize()` 新增接受歌词文本参数的重载，将 .lab 读取逻辑从引擎内部移除
+2. DsLabeler 适配层（`HubertAlignmentProcessor`）：从 TaskInput grapheme 层提取歌词文本传入
+3. LabelSuite 适配层（`PhonemeLabelerPage`）：从 dstext grapheme 层提取歌词文本传入
+4. 两个适配层均传入空 WordList 作为输出参数
+
+### 1.6 工程文件保存到错误目录（P0）
+
+**现象**：选择工程文件夹后，工程文件和 `dstemp/` 临时文件夹被创建到原始音频文件所在目录而非工程文件夹。
+
+**可能根因**：
+1. `DsProject::load()` 读取 `workingDirectory` 后未从 posix 路径转换回本地路径格式
+2. 或 `ProjectDataSource::workingDir()` 返回的路径被后续代码错误解析
+
+**方案**：排查 `workingDirectory` 在 load/save 路径的转换链，确保 `ProjectPaths` 方法始终基于正确的工程文件夹路径。
+
+### 1.7 CMake 架构整理（P1）✅ 大部分已修复
 
 **问题**：
 1. IDE 中部分 targets 显示在根目录而非分组 folder
@@ -43,7 +86,7 @@
 
 ---
 
-## 2 AudioVisualizerContainer — 统一可视化基类
+## 2 AudioVisualizerContainer — 统一可视化基类（部分完成）
 
 ### 2.1 设计目标
 
@@ -117,20 +160,24 @@ protected:
 ```cpp
 class TierLabelArea : public QWidget {
 public:
-    virtual int activeTierIndex() const = 0;
-    virtual QList<double> activeBoundaries() const = 0;
+    virtual int activeTierIndex() const;
+    void setActiveTierIndex(int index);
+    // TODO: virtual QList<double> activeBoundaries() const = 0;
 signals:
     void activeTierChanged(int index);
 };
 ```
 
-#### SliceTierLabel（Slicer 用）
+> **实现状态**：基类已实现，缺少 `activeBoundaries()` 方法。
+
+#### SliceTierLabel（Slicer 用）— 未实现
 
 - 单层，自动按顺序标数字
 - 无 radio button
 - `activeTierIndex()` 始终返回 0
+- 当前 DsSlicerPage 使用独立的 `SliceNumberLayer` 组件，尚未迁移
 
-#### PhonemeTextGridTierLabel（PhonemeLabeler 用）
+#### PhonemeTextGridTierLabel（PhonemeLabeler 用）— 未实现
 
 - 多层 TextGrid 编辑
 - 最左侧竖排 radio button 组（每层一个）
@@ -204,8 +251,11 @@ chartOrder=waveform,power,spectrogram
 
 子图 id：`waveform`、`power`、`spectrogram`、`viseme`（口型，待开发）
 
-### 2.11 Slicer 具体配置
+### 2.11 Slicer 具体配置（未迁移）
 
+> **当前状态**：`DsSlicerPage` 仍使用手动布局，未迁移到 `AudioVisualizerContainer`。使用 `SliceNumberLayer`（独立组件）而非 `SliceTierLabel`（计划中的 TierLabelArea 子类）。
+
+目标布局：
 ```
 AudioVisualizerContainer
 ├── MiniMapScrollBar
@@ -215,7 +265,11 @@ AudioVisualizerContainer
 └── BoundaryOverlayWidget（边界线贯穿所有图）
 ```
 
-### 2.12 PhonemeLabeler 具体配置
+### 2.12 PhonemeLabeler 具体配置（未迁移）
+
+> **当前状态**：`PhonemeLabelerPage` 未迁移到 `AudioVisualizerContainer`。
+
+目标布局：
 
 ```
 AudioVisualizerContainer
@@ -232,38 +286,37 @@ AudioVisualizerContainer
 
 ---
 
-## 3 配置架构重设计
+## 3 配置架构重设计 ✅ 已完成
 
-### 3.1 配置统一到用户目录
+### 3.1 配置统一到用户目录 ✅
 
-所有配置存 `dsfw::AppSettings`（QSettings）。
+所有配置存 `dsfw::AppSettings`（QSettings）。`ProjectSettingsBackend` 已废弃删除。
 
-### 3.2 .dsproj 精简
+### 3.2 .dsproj 精简 ✅
 
 仅保留工程数据：
 
 ```json
 {
-    "version": "3.0.0",
-    "name": "My Dataset",
-    "languages": [...],
+    "version": "3.1.0",
+    "workingDirectory": "path/to/project/dir",
     "slicer": {
         "audioFiles": ["path/to/file1.wav"],
         "slicePoints": { "path/to/file1.wav": [1.234, 5.678] },
         "params": { "threshold": -40.0, "minLength": 5000, ... }
     },
-    "items": [...],
-    "completedSteps": [...]
+    "export": { "hopSize": 512, "sampleRate": 44100, ... },
+    "items": [...]
 }
 ```
 
-### 3.3 模型懒加载
+### 3.3 模型懒加载 ✅
 
-首次使用时加载，配置变更时 invalidate。
+`ModelManager::ensureLoaded()` 首次使用时加载，`invalidateModel()` 配置变更时 invalidate。
 
-### 3.4 图表比例 + 子图顺序持久化
+### 3.4 图表比例 + 子图顺序持久化 ✅
 
-存 AppSettings，跨工程保持。
+存 AppSettings，跨工程保持。`AudioVisualizerContainer` 内置 `saveSplitterState()` / `restoreSplitterState()`。
 
 ---
 
