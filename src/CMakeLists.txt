@@ -50,7 +50,7 @@ set(CMAKE_FOLDER "Libraries/Libs")
 add_subdirectory(libs)
 
 # Applications
-unset(CMAKE_FOLDER)
+set(CMAKE_FOLDER "Applications")
 add_subdirectory(apps)
 
 if (BUILD_TESTS)

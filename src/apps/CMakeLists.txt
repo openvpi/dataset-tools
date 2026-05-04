@@ -1,4 +1,7 @@
+set(CMAKE_FOLDER "Applications/Shared")
 add_subdirectory(shared)
+
+set(CMAKE_FOLDER "Applications")
 add_subdirectory(label-suite)
 add_subdirectory(ds-labeler)
 add_subdirectory(test-shell)

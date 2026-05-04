@@ -33,15 +33,15 @@
 
 #### Q.3.1 IDE FOLDER 分组修复
 
-- [ ] 审查 `src/CMakeLists.txt` 和各子目录的 `CMAKE_FOLDER` 设置
-- [ ] 确保 framework 下所有 targets（dsfw-base、dsfw-core、dsfw-ui-core、dstools-audio、dsfw-widgets、dstools-infer-common）在 `Libraries/Framework`
-- [ ] 确保 domain（dstools-domain）在 `Libraries`
-- [ ] 确保 ui-core（dstools-ui-core）在 `Libraries`
-- [ ] 确保 widgets（dstools-widgets）在 `Libraries`
-- [ ] 确保 infer 下所有 targets（audio-util、game-infer、rmvpe-infer、hubert-infer、FunAsr）在 `Libraries/Infer`
-- [ ] 确保 libs 下所有 targets 在 `Libraries/Libs`
-- [ ] 确保 apps 下的 exe targets 在根目录或 `Applications`
-- [ ] 确保 tests 在 `Tests`
+- [x] 审查 `src/CMakeLists.txt` 和各子目录的 `CMAKE_FOLDER` 设置
+- [x] 确保 framework 下所有 targets（dsfw-base、dsfw-core、dsfw-ui-core、dstools-audio、dsfw-widgets、dstools-infer-common）在 `Libraries/Framework`
+- [x] 确保 domain（dstools-domain）在 `Libraries`
+- [x] 确保 ui-core（dstools-ui-core）在 `Libraries`
+- [x] 确保 widgets（dstools-widgets）在 `Libraries`
+- [x] 确保 infer 下所有 targets（audio-util、game-infer、rmvpe-infer、hubert-infer、FunAsr）在 `Libraries/Infer`
+- [x] 确保 libs 下所有 targets 在 `Libraries/Libs`
+- [x] 确保 apps 下的 exe targets 在根目录或 `Applications`
+- [x] 确保 tests 在 `Tests`
 - [ ] CLion 重新加载 CMake 验证 target 树结构
 
 #### Q.3.2 Install 精简（减少不必要的中间文件）
