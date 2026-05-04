@@ -367,6 +367,38 @@ function(dstools_add_executable target_name)
                     "$<TARGET_FILE_DIR:${target_name}>"
                 COMMAND_EXPAND_LISTS
             )
+
+            # Run windeployqt to copy Qt plugins (platforms/, imageformats/, etc.)
+            if(NOT DEFINED _DSTOOLS_QT_DEPLOY_EXE)
+                if(NOT DEFINED QT_QMAKE_EXECUTABLE)
+                    get_target_property(QT_QMAKE_EXECUTABLE Qt::qmake IMPORTED_LOCATION)
+                endif()
+                if(QT_QMAKE_EXECUTABLE)
+                    cmake_path(GET QT_QMAKE_EXECUTABLE PARENT_PATH _qt_bin_dir)
+                    find_program(_DSTOOLS_QT_DEPLOY_EXE NAMES windeployqt HINTS "${_qt_bin_dir}")
+                endif()
+            endif()
+
+            if(_DSTOOLS_QT_DEPLOY_EXE)
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND "${_DSTOOLS_QT_DEPLOY_EXE}"
+                        --plugindir "$<TARGET_FILE_DIR:${target_name}>/plugins"
+                        --no-translations
+                        --no-system-d3d-compiler
+                        --no-compiler-runtime
+                        --no-opengl-sw
+                        "$<TARGET_FILE:${target_name}>"
+                    COMMENT "Running windeployqt for ${target_name}"
+                )
+                # Write qt.conf so the executable finds plugins at runtime
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E echo "[Paths]$<SEMICOLON>Plugins = plugins" > NUL
+                    COMMAND ${CMAKE_COMMAND}
+                        -DOUT_FILE=$<TARGET_FILE_DIR:${target_name}>/qt.conf
+                        -P "${PROJECT_CMAKE_MODULES_DIR}/WriteQtConf.cmake"
+                    COMMENT "Writing qt.conf for ${target_name}"
+                )
+            endif()
         endif()
     endif()
 
