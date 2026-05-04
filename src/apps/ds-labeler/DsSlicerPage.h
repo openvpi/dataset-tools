@@ -8,7 +8,6 @@
 
 #include <QDoubleSpinBox>
 #include <QPushButton>
-#include <QScrollBar>
 #include <QSpinBox>
 #include <QToolBar>
 #include <QToolButton>
@@ -17,7 +16,10 @@
 
 #include <dstools/ViewportController.h>
 #include <dstools/PlayWidget.h>
+#include <dsfw/widgets/TimeRulerWidget.h>
 #include <ui/SliceBoundaryModel.h>
+
+#include <MiniMapScrollBar.h>
 
 #include <map>
 
@@ -29,7 +31,6 @@ namespace dstools {
     namespace phonemelabeler {
         class WaveformWidget;
         class SpectrogramWidget;
-        class TimeRulerWidget;
     } // namespace phonemelabeler
 
     class SliceNumberLayer;
@@ -62,7 +63,7 @@ namespace dstools {
 
         // Viewport
         dstools::widgets::ViewportController *m_viewport = nullptr;
-        QScrollBar *m_hScrollBar = nullptr;
+        MiniMapScrollBar *m_miniMap = nullptr;
 
         // Boundary model
         phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;
@@ -72,7 +73,7 @@ namespace dstools {
 
         // UI components
         AudioFileListPanel *m_audioFileList = nullptr;  // left sidebar
-        phonemelabeler::TimeRulerWidget *m_timeRuler = nullptr;
+        dsfw::widgets::TimeRulerWidget *m_timeRuler = nullptr;
         phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
         phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
         SliceNumberLayer *m_sliceNumberLayer = nullptr;
@@ -132,7 +133,6 @@ namespace dstools {
         void saveSlicerParamsToProject();
         void saveSlicerStateToProject();
         void loadAudioFile(const QString &filePath);
-        void updateScrollBar();
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

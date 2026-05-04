@@ -16,7 +16,6 @@
 
 #include <ui/WaveformWidget.h>
 #include <ui/SpectrogramWidget.h>
-#include <ui/TimeRulerWidget.h>
 #include <ui/SliceBoundaryModel.h>
 #include <QCheckBox>
 
@@ -42,7 +41,6 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QScrollBar>
 #include <QToolBar>
 #include <QToolButton>
 
@@ -178,13 +176,16 @@ namespace dstools {
         // ── Main content splitter (vertical) ──────────────────────────────────
         auto *splitter = new QSplitter(Qt::Vertical, contentWidget);
 
-        // Time ruler + Waveform + Scrollbar container
+        // Time ruler + Waveform container
         auto *waveformContainer = new QWidget(contentWidget);
         auto *waveformLayout = new QVBoxLayout(waveformContainer);
         waveformLayout->setContentsMargins(0, 0, 0, 0);
         waveformLayout->setSpacing(0);
 
-        m_timeRuler = new phonemelabeler::TimeRulerWidget(m_viewport, waveformContainer);
+        m_miniMap = new MiniMapScrollBar(m_viewport, waveformContainer);
+        waveformLayout->addWidget(m_miniMap);
+
+        m_timeRuler = new dsfw::widgets::TimeRulerWidget(m_viewport, waveformContainer);
         waveformLayout->addWidget(m_timeRuler);
 
         m_waveformWidget = new phonemelabeler::WaveformWidget(m_viewport, waveformContainer);
@@ -192,9 +193,6 @@ namespace dstools {
         m_waveformWidget->setPlayWidget(m_playWidget);
         // No undo stack — slicer handles undo externally via SliceCommands
         waveformLayout->addWidget(m_waveformWidget, 1);
-
-        m_hScrollBar = new QScrollBar(Qt::Horizontal, waveformContainer);
-        waveformLayout->addWidget(m_hScrollBar);
 
         splitter->addWidget(waveformContainer);
 
@@ -251,9 +249,9 @@ namespace dstools {
             m_toolMode = ToolMode::Knife;
         });
 
-        // Viewport → sync ruler and scrollbar
+        // Viewport → sync ruler and minimap
         connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-                m_timeRuler, &phonemelabeler::TimeRulerWidget::setViewport);
+                m_timeRuler, &dsfw::widgets::TimeRulerWidget::setViewport);
         connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
                 m_waveformWidget, &phonemelabeler::WaveformWidget::setViewport);
         connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
@@ -261,16 +259,7 @@ namespace dstools {
         connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
                 m_sliceNumberLayer, &SliceNumberLayer::setViewport);
         connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-                this, [this](const dstools::widgets::ViewportState &) { updateScrollBar(); });
-
-        // Scrollbar
-        connect(m_hScrollBar, &QScrollBar::valueChanged, this, [this](int value) {
-            double totalDuration = m_viewport->totalDuration();
-            if (totalDuration <= 0.0) return;
-            double startSec = value / 1000.0;
-            double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
-            m_viewport->setViewRange(startSec, startSec + viewDuration);
-        });
+                m_miniMap, &MiniMapScrollBar::setViewport);
 
         // Left sidebar: audio file selection → load audio for slicing
         connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
@@ -655,7 +644,7 @@ namespace dstools {
         const auto &slicerState = project->slicerState();
 
         // Restore audio file list
-        if (!slicerState.audioFiles.isEmpty()) {
+        if (!slicerState.audioFiles.isEmpty() && m_audioFileList->fileCount() == 0) {
             QStringList resolvedPaths;
             for (const auto &relPath : slicerState.audioFiles) {
                 QString nativePath = DsProject::fromPosixPath(relPath);
@@ -1151,6 +1140,7 @@ namespace dstools {
         // Feed to visualization widgets
         m_waveformWidget->setAudioData(m_samples, m_sampleRate);
         m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
+        m_miniMap->setAudioData(m_samples, m_sampleRate);
 
         // Open audio for playback
         m_playWidget->openFile(filePath);
@@ -1160,20 +1150,6 @@ namespace dstools {
         m_boundaryModel->setDuration(duration);
         m_viewport->setTotalDuration(duration);
         m_viewport->setViewRange(0.0, duration);
-        updateScrollBar();
-    }
-
-    void DsSlicerPage::updateScrollBar() {
-        double totalDuration = m_viewport->totalDuration();
-        if (totalDuration <= 0.0) {
-            m_hScrollBar->setRange(0, 0);
-            return;
-        }
-        double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
-        int maxVal = static_cast<int>((totalDuration - viewDuration) * 1000.0);
-        m_hScrollBar->setRange(0, qMax(0, maxVal));
-        m_hScrollBar->setValue(static_cast<int>(m_viewport->state().startSec * 1000.0));
-        m_hScrollBar->setPageStep(static_cast<int>(viewDuration * 1000.0));
     }
 
 } // namespace dstools
