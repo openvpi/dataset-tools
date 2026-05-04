@@ -392,9 +392,11 @@ function(dstools_add_executable target_name)
                     COMMENT "Running windeployqt for ${target_name}"
                 )
                 # Write qt.conf so the executable finds plugins at runtime
-                file(GENERATE
-                    OUTPUT "$<TARGET_FILE_DIR:${target_name}>/qt.conf"
-                    CONTENT "[Paths]\nPlugins = plugins\n"
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${PROJECT_CMAKE_MODULES_DIR}/qt.conf"
+                        "$<TARGET_FILE_DIR:${target_name}>/qt.conf"
+                    COMMENT "Writing qt.conf for ${target_name}"
                 )
             endif()
         endif()
