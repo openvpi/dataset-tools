@@ -387,16 +387,14 @@ function(dstools_add_executable target_name)
                         --no-system-d3d-compiler
                         --no-compiler-runtime
                         --no-opengl-sw
+                        --verbose 0
                         "$<TARGET_FILE:${target_name}>"
                     COMMENT "Running windeployqt for ${target_name}"
                 )
                 # Write qt.conf so the executable finds plugins at runtime
-                add_custom_command(TARGET ${target_name} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E echo "[Paths]$<SEMICOLON>Plugins = plugins" > NUL
-                    COMMAND ${CMAKE_COMMAND}
-                        -DOUT_FILE=$<TARGET_FILE_DIR:${target_name}>/qt.conf
-                        -P "${PROJECT_CMAKE_MODULES_DIR}/WriteQtConf.cmake"
-                    COMMENT "Writing qt.conf for ${target_name}"
+                file(GENERATE
+                    OUTPUT "$<TARGET_FILE_DIR:${target_name}>/qt.conf"
+                    CONTENT "[Paths]\nPlugins = plugins\n"
                 )
             endif()
         endif()
