@@ -9,6 +9,37 @@ find_dependency(dstools-types CONFIG)
 
 include("${CMAKE_CURRENT_LIST_DIR}/dsfwTargets.cmake")
 
+# --- Workaround: Qt resource OBJECT library propagation ----------------------
+# Qt's qt_add_translations/qt_add_resources creates OBJECT library targets to
+# propagate resource initialization objects through static library chains.
+# When exported, CMake re-imports these as INTERFACE IMPORTED targets, but the
+# $<TARGET_OBJECTS:...> generator expressions only work on OBJECT targets.
+# Since the resource objects are already archived into the static .lib/.a files,
+# we strip these references from the imported targets' interface properties.
+set(_dsfw_resource_fixup_pairs
+    "dsfw::dsfw-core;dsfw-core_resources_1"
+    "dsfw::dsfw-ui-core;dsfw-ui-core_resources_1"
+)
+foreach(_dsfw_pair IN LISTS _dsfw_resource_fixup_pairs)
+    list(GET _dsfw_pair 0 _dsfw_parent)
+    list(GET _dsfw_pair 1 _dsfw_res_name)
+    if(TARGET ${_dsfw_parent})
+        foreach(_dsfw_prop INTERFACE_LINK_LIBRARIES INTERFACE_SOURCES INTERFACE_LINK_OPTIONS)
+            get_target_property(_dsfw_val ${_dsfw_parent} ${_dsfw_prop})
+            if(_dsfw_val)
+                list(FILTER _dsfw_val EXCLUDE REGEX "${_dsfw_res_name}")
+                set_target_properties(${_dsfw_parent} PROPERTIES ${_dsfw_prop} "${_dsfw_val}")
+            endif()
+        endforeach()
+    endif()
+endforeach()
+unset(_dsfw_resource_fixup_pairs)
+unset(_dsfw_pair)
+unset(_dsfw_parent)
+unset(_dsfw_res_name)
+unset(_dsfw_prop)
+unset(_dsfw_val)
+
 # Provide short-name aliases matching the build-tree ALIAS targets
 # so that consumers can use dsfw::core instead of dsfw::dsfw-core, etc.
 # Requires CMake >= 3.18 for ALIAS of IMPORTED targets.
