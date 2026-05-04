@@ -21,15 +21,26 @@ namespace dstools {
         /// @brief Construct an async task.
         /// @param identifier Unique identifier for this task instance.
         /// @param parent Optional QObject parent.
-        explicit AsyncTask(QString identifier, QObject *parent = nullptr);
+        explicit AsyncTask(QString identifier, QObject *parent = nullptr)
+            : QObject(parent), m_identifier(std::move(identifier)) {
+            setAutoDelete(false);
+        }
         ~AsyncTask() override = default;
 
         /// @brief Entry point called by QThreadPool. Calls execute() internally.
-        void run() final;
+        void run() final {
+            QString msg;
+            if (execute(msg)) {
+                Q_EMIT succeeded(m_identifier, msg);
+            } else {
+                Q_EMIT failed(m_identifier, msg);
+            }
+            deleteLater();
+        }
 
         /// @brief Return the task's identifier.
         /// @return Task identifier string.
-        const QString &identifier() const;
+        const QString &identifier() const { return m_identifier; }
 
     protected:
         /// @brief Implement the task's work here.
