@@ -7,7 +7,7 @@ find_package(SndFile CONFIG REQUIRED)
 dstools_add_executable(${PROJECT_NAME}
     VERSION ${PROJECT_VERSION}
     AUTOMOC AUTORCC
-    DEPLOY WIN32_EXECETABLE MACOSX_BUNDLE WINRC
+    DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets dstools-domain
                 min-label-editor phoneme-editor pitch-editor settings-page

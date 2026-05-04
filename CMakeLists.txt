@@ -43,6 +43,8 @@ set(PROJECT_CMAKE_MODULES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(cmake/DstoolsHelpers.cmake)
 
+option(DSTOOLS_DEPLOY_MODE "Install only runtime artifacts (exe + DLL + resources), skip SDK files (.lib, headers, cmake config)" OFF)
+
 enable_testing()
 
 add_subdirectory(src)

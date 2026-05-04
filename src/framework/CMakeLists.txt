@@ -12,29 +12,31 @@ add_subdirectory(infer)
 add_subdirectory(widgets)
 
 # === dsfw package export/install ===
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+if(NOT DSTOOLS_DEPLOY_MODE)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
 
-install(EXPORT dsfwTargets
-    FILE dsfwTargets.cmake
-    NAMESPACE dsfw::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/dsfw"
-)
+    install(EXPORT dsfwTargets
+        FILE dsfwTargets.cmake
+        NAMESPACE dsfw::
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/dsfw"
+    )
 
-configure_package_config_file(
-    "${PROJECT_CMAKE_MODULES_DIR}/dsfwConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfig.cmake"
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/dsfw"
-)
+    configure_package_config_file(
+        "${PROJECT_CMAKE_MODULES_DIR}/dsfwConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfig.cmake"
+        INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/dsfw"
+    )
 
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfigVersion.cmake"
-    VERSION ${DSFW_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfigVersion.cmake"
+        VERSION ${DSFW_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfigVersion.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/dsfw"
-)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/dsfwConfigVersion.cmake"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/dsfw"
+    )
+endif()

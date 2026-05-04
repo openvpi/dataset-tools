@@ -41,6 +41,17 @@ if (WIN32)
         endforeach()
     ")
 
+    # Copy ONNX Runtime DLLs (not tracked by CMake target dependencies)
+    set(_ORT_LIB_DIR "${PROJECT_DIR}/src/infer/onnxruntime/lib")
+    if(IS_DIRECTORY "${_ORT_LIB_DIR}")
+        install(CODE "
+            file(GLOB _ort_dlls \"${_ORT_LIB_DIR}/*.dll\")
+            foreach(_dll \${_ort_dlls})
+                file(COPY \${_dll} DESTINATION \"${_install_dir}\")
+            endforeach()
+        ")
+    endif()
+
     get_target_property(_targets DeployedTargets TARGETS)
 
     foreach (_target ${_targets})

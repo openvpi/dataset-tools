@@ -90,7 +90,7 @@ function(dstools_add_infer_library _target)
     endif()
 
     # Install / Export (beyond what dstools_add_library already does)
-    if(${_INF_INSTALL_OPTION})
+    if(${_INF_INSTALL_OPTION} AND NOT DSTOOLS_DEPLOY_MODE)
         include(GNUInstallDirs)
         include(CMakePackageConfigHelpers)
 

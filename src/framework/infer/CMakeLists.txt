@@ -20,25 +20,27 @@ dstools_add_library(${PROJECT_NAME}
 )
 
 # Package config for standalone consumption
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+if(NOT DSTOOLS_DEPLOY_MODE)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
 
-install(EXPORT ${PROJECT_NAME}Targets
-    FILE ${PROJECT_NAME}Targets.cmake
-    NAMESPACE ${PROJECT_NAME}::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
-)
+    install(EXPORT ${PROJECT_NAME}Targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+    )
 
-configure_package_config_file(
-    "${PROJECT_CMAKE_MODULES_DIR}/dstools-infer-commonConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/dstools-infer-commonConfig.cmake"
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
-)
+    configure_package_config_file(
+        "${PROJECT_CMAKE_MODULES_DIR}/dstools-infer-commonConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/dstools-infer-commonConfig.cmake"
+        INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+    )
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/dstools-infer-commonConfig.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
-)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/dstools-infer-commonConfig.cmake"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+    )
+endif()
 
 if(MSVC)
     # C4275: non dll-interface class used as base for dll-interface class.
