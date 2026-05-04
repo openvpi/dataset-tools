@@ -455,14 +455,14 @@ libs/ 层对 CLI 工具（`dstools-cli`）也是必要的——CLI 直接用 lib
 
 **结论**: 三个库均非无意义薄壳。gameinfer-lib 和 rmvpepitch-lib 是有意设计的适配器层（将 infer 引擎适配到 ITaskProcessor 框架接口），textgrid 是完整的第三方 header-only 库。均应保留。
 
-### Phase 5D: 构建系统优化（1 周）
+### Phase 5D: 构建系统优化 ✅ 已完成
 
-| # | Task | 说明 |
-|---|---|---|
-| 5D.1 | `dstools-infer-common` 的 `target_link_directories` → imported target | CMake 反模式修复 |
-| 5D.2 | `FunAsr` C++17 → 继承项目 C++20 | 避免混合标准 |
-| 5D.3 | 评估 Unity Build | 对大量小 static libs 效果显著 |
-| 5D.4 | 评估 infer DLL → STATIC | 如果只有本项目用，STATIC 减少运行时依赖和部署复杂度。但 infer 库设计为可独立部署（`dstools_add_infer_library` 宏带 INSTALL），保留 DLL 可能是有意为之 |
+| # | Task | 说明 | 状态 |
+|---|---|---|---|
+| 5D.1 | `dstools-infer-common` 的 `target_link_directories` → imported target | CMake 反模式修复 | ✅ 创建 INTERFACE IMPORTED onnxruntime target |
+| 5D.2 | `FunAsr` C++17 → 继承项目 C++20 | 避免混合标准 | ✅ FunAsr + infer-target.cmake + test-find-package |
+| 5D.3 | 评估 Unity Build | 对大量小 static libs 效果显著 | ❌ 不采用 — PCH + ccache 已覆盖 |
+| 5D.4 | 评估 infer DLL → STATIC | 减少运行时依赖和部署复杂度 | ✅ 默认改为 STATIC，消除 dllimport 警告 |
 
 ---
 
