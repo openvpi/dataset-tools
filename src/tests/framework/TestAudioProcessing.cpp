@@ -231,5 +231,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(TestAudioProcessing)
+QTEST_GUILESS_MAIN(TestAudioProcessing)
 #include "TestAudioProcessing.moc"

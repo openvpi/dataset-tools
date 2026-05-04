@@ -166,8 +166,14 @@ void TestDsProject::v3ItemsAndSlices() {
 }
 
 void TestDsProject::posixPathConversion() {
+#ifdef Q_OS_WIN
     QCOMPARE(DsProject::toPosixPath(QStringLiteral("C:\\Users\\test")), QStringLiteral("C:/Users/test"));
     QCOMPARE(DsProject::fromPosixPath(QStringLiteral("C:/Users/test")), QStringLiteral("C:\\Users\\test"));
+#else
+    // QDir::fromNativeSeparators / toNativeSeparators are no-ops on non-Windows
+    QCOMPARE(DsProject::toPosixPath(QStringLiteral("/usr/local/bin")), QStringLiteral("/usr/local/bin"));
+    QCOMPARE(DsProject::fromPosixPath(QStringLiteral("/usr/local/bin")), QStringLiteral("/usr/local/bin"));
+#endif
     QCOMPARE(DsProject::toPosixPath(QStringLiteral("/usr/local/bin")), QStringLiteral("/usr/local/bin"));
 }
 

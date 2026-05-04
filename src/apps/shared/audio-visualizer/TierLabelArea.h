@@ -7,7 +7,10 @@
 
 namespace dstools {
 
+namespace phonemelabeler {
 class IBoundaryModel;
+}
+using phonemelabeler::IBoundaryModel;
 
 class TierLabelArea : public QWidget {
     Q_OBJECT
