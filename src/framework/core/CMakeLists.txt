@@ -32,7 +32,9 @@ dstools_add_library(${PROJECT_NAME}
 dstools_add_translations(${PROJECT_NAME} EXPORT_SET dsfwTargets)
 
 # Install generated Version.h
-include(GNUInstallDirs)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/dsfw/Version.h
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/dsfw"
-)
+if(NOT DSTOOLS_DEPLOY_MODE)
+    include(GNUInstallDirs)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/dsfw/Version.h
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/dsfw"
+    )
+endif()

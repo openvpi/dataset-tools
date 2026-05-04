@@ -27,7 +27,9 @@ dstools_add_library(${PROJECT_NAME}
 dstools_add_translations(${PROJECT_NAME} EXPORT_SET dsfwTargets)
 
 # Install resource files
-include(GNUInstallDirs)
-install(FILES res/ui-core.qrc
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/dsfw"
-)
+if(NOT DSTOOLS_DEPLOY_MODE)
+    include(GNUInstallDirs)
+    install(FILES res/ui-core.qrc
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/dsfw"
+    )
+endif()
