@@ -76,7 +76,7 @@
 - [x] `SlicerConfig` 从 `defaults.slicer` 迁移到 `slicer.params`
 - [x] `ExportConfig` 从 `defaults.export` 迁移到顶层 `export`
 - [x] 版本号升级到 3.1.0
-- [ ] `ds-format.md` 更新
+- [x] `ds-format.md` 更新
 
 ### R.2 模型懒加载
 
@@ -216,7 +216,7 @@
 - [ ] `build.md` + `local-build.md` → 合并为单个 `build.md`
 - [ ] `unified-app-design.md` §9 更新配置持久化（引用 D-01）
 - [ ] `unified-app-design.md` §11 更新可视化架构（引用 refactoring-v2.md §2）
-- [ ] `ds-format.md` §2 去掉 defaults 字段
+- [x] `ds-format.md` §2 去掉 defaults 字段
 
 ---
 
