@@ -1,7 +1,7 @@
 #include "PowerWidget.h"
 #include "TextGridDocument.h"
 #include "BoundaryBindingManager.h"
-#include "commands/MoveBoundaryCommand.h"
+#include "commands/BoundaryCommands.h"
 
 #include <QPainter>
 #include <QPainterPath>

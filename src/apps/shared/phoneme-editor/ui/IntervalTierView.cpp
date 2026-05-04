@@ -1,7 +1,5 @@
 ﻿#include "IntervalTierView.h"
-#include "commands/MoveBoundaryCommand.h"
-#include "commands/SetIntervalTextCommand.h"
-#include "commands/InsertBoundaryCommand.h"
+#include "commands/BoundaryCommands.h"
 #include "BoundaryBindingManager.h"
 
 #include <QPainter>

@@ -1,7 +1,7 @@
 #include "BoundaryBindingManager.h"
 #include "TextGridDocument.h"
 #include "IBoundaryModel.h"
-#include "commands/MoveBoundaryCommand.h"
+#include "commands/BoundaryCommands.h"
 
 #include <algorithm>
 #include <cmath>

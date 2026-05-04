@@ -1,7 +1,7 @@
 #include "WaveformWidget.h"
 #include "IBoundaryModel.h"
 #include "BoundaryBindingManager.h"
-#include "commands/MoveBoundaryCommand.h"
+#include "commands/BoundaryCommands.h"
 
 #include <QPainter>
 #include <QPaintEvent>
