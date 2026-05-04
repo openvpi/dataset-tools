@@ -87,9 +87,9 @@
 
 ### R.3 图表比例 + 子图顺序持久化
 
-- [ ] `AppSettings` 增加各页面 splitter ratio 和 chartOrder 的存取
-- [ ] splitter 拖动后自动保存比例
-- [ ] 启动时恢复上次保存的比例和子图顺序
+- [x] `AppSettings` 增加各页面 splitter ratio 和 chartOrder 的存取
+- [x] splitter 拖动后自动保存比例
+- [x] 启动时恢复上次保存的比例和子图顺序
 - [ ] 验证：跨工程保持比例和排列
 
 ---

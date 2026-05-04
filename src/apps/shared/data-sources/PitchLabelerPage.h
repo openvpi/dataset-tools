@@ -7,6 +7,7 @@
 #include <dstools/PhNumCalculator.h>
 
 #include <QWidget>
+#include <QSplitter>
 
 #include <PitchEditor.h>
 
@@ -60,6 +61,7 @@ signals:
 private:
     pitchlabeler::PitchEditor *m_editor = nullptr;
     SliceListPanel *m_sliceList = nullptr;
+    QSplitter *m_splitter = nullptr;
     IEditorDataSource *m_source = nullptr;
     ISettingsBackend *m_settingsBackend = nullptr;
     IModelManager *m_modelManager = nullptr;

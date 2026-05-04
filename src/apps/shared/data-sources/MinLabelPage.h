@@ -6,6 +6,7 @@
 #include <dstools/ShortcutManager.h>
 
 #include <QWidget>
+#include <QSplitter>
 
 #include <MinLabelEditor.h>
 
@@ -58,6 +59,7 @@ private:
 
     Minlabel::MinLabelEditor *m_editor = nullptr;
     SliceListPanel *m_sliceList = nullptr;
+    QSplitter *m_splitter = nullptr;
     IEditorDataSource *m_source = nullptr;
     ISettingsBackend *m_settingsBackend = nullptr;
     QString m_currentSliceId;

@@ -2,7 +2,9 @@
 
 #include "ui/SpectrogramColorPalette.h"
 
+#include <QDataStream>
 #include <QHBoxLayout>
+#include <QIODevice>
 #include <QIcon>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -107,6 +109,26 @@ void PhonemeEditor::setSpectrogramVisible(bool visible) {
 
 void PhonemeEditor::setSpectrogramColorStyle(const QString &styleName) {
     m_spectrogramWidget->setColorPalette(SpectrogramColorPalette::fromName(styleName));
+}
+
+QByteArray PhonemeEditor::saveSplitterState() const {
+    QByteArray result;
+    QDataStream ds(&result, QIODevice::WriteOnly);
+    ds << m_mainSplitter->saveState();
+    ds << m_rightSplitter->saveState();
+    return result;
+}
+
+void PhonemeEditor::restoreSplitterState(const QByteArray &state) {
+    if (state.isEmpty())
+        return;
+    QDataStream ds(state);
+    QByteArray mainState, rightState;
+    ds >> mainState >> rightState;
+    if (!mainState.isEmpty())
+        m_mainSplitter->restoreState(mainState);
+    if (!rightState.isEmpty())
+        m_rightSplitter->restoreState(rightState);
 }
 
 QList<QAction *> PhonemeEditor::viewActions() const {

@@ -12,6 +12,7 @@
 #include <ui/SliceBoundaryModel.h>
 
 #include <dsfw/widgets/FileProgressTracker.h>
+#include <dsfw/AppSettings.h>
 
 #include <dstools/AudioDecoder.h>
 #include <dstools/WaveFormat.h>
@@ -46,7 +47,7 @@
 
 namespace dstools {
 
-SlicerPage::SlicerPage(QWidget *parent) : QWidget(parent) {
+SlicerPage::SlicerPage(QWidget *parent) : QWidget(parent), m_settings("Slicer") {
     m_undoStack = new QUndoStack(this);
     m_viewport = new dstools::widgets::ViewportController(this);
     m_boundaryModel = new phonemelabeler::SliceBoundaryModel();
@@ -156,7 +157,7 @@ void SlicerPage::buildLayout() {
 
     mainLayout->addWidget(paramsWidget);
 
-    auto *splitter = new QSplitter(Qt::Vertical, contentWidget);
+    m_vSplitter = new QSplitter(Qt::Vertical, contentWidget);
 
     auto *waveformContainer = new QWidget(contentWidget);
     auto *waveformLayout = new QVBoxLayout(waveformContainer);
@@ -174,36 +175,36 @@ void SlicerPage::buildLayout() {
     m_hScrollBar = new QScrollBar(Qt::Horizontal, waveformContainer);
     waveformLayout->addWidget(m_hScrollBar);
 
-    splitter->addWidget(waveformContainer);
+    m_vSplitter->addWidget(waveformContainer);
 
     m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_viewport, contentWidget);
     m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
     m_spectrogramWidget->setPlayWidget(m_playWidget);
     m_spectrogramWidget->setVisible(true);
-    splitter->addWidget(m_spectrogramWidget);
+    m_vSplitter->addWidget(m_spectrogramWidget);
 
     m_sliceNumberLayer = new SliceNumberLayer(m_viewport, contentWidget);
-    splitter->addWidget(m_sliceNumberLayer);
+    m_vSplitter->addWidget(m_sliceNumberLayer);
 
-    splitter->setStretchFactor(0, 2);
-    splitter->setStretchFactor(1, 5);
-    splitter->setStretchFactor(2, 3);
+    m_vSplitter->setStretchFactor(0, 2);
+    m_vSplitter->setStretchFactor(1, 5);
+    m_vSplitter->setStretchFactor(2, 3);
 
-    mainLayout->addWidget(splitter, 1);
+    mainLayout->addWidget(m_vSplitter, 1);
 
     m_sliceListPanel = new SlicerListPanel(contentWidget);
     m_sliceListPanel->setMaximumHeight(200);
     mainLayout->addWidget(m_sliceListPanel);
 
-    auto *hSplitter = new QSplitter(Qt::Horizontal, this);
-    hSplitter->addWidget(m_audioFileList);
-    hSplitter->addWidget(contentWidget);
-    hSplitter->setStretchFactor(0, 0);
-    hSplitter->setStretchFactor(1, 1);
+    m_hSplitter = new QSplitter(Qt::Horizontal, this);
+    m_hSplitter->addWidget(m_audioFileList);
+    m_hSplitter->addWidget(contentWidget);
+    m_hSplitter->setStretchFactor(0, 0);
+    m_hSplitter->setStretchFactor(1, 1);
 
     auto *topLayout = new QVBoxLayout(this);
     topLayout->setContentsMargins(0, 0, 0, 0);
-    topLayout->addWidget(hSplitter);
+    topLayout->addWidget(m_hSplitter);
 }
 
 void SlicerPage::connectSignals() {
@@ -511,7 +512,27 @@ QString SlicerPage::windowTitle() const {
     return QStringLiteral("切片");
 }
 
-void SlicerPage::onActivated() {}
+void SlicerPage::onActivated() {
+    static const dstools::SettingsKey<QString> kHSplitterState("Layout/hSplitterState", "");
+    static const dstools::SettingsKey<QString> kVSplitterState("Layout/vSplitterState", "");
+
+    auto hState = m_settings.get(kHSplitterState);
+    if (!hState.isEmpty())
+        m_hSplitter->restoreState(QByteArray::fromBase64(hState.toUtf8()));
+
+    auto vState = m_settings.get(kVSplitterState);
+    if (!vState.isEmpty())
+        m_vSplitter->restoreState(QByteArray::fromBase64(vState.toUtf8()));
+}
+
+bool SlicerPage::onDeactivating() {
+    static const dstools::SettingsKey<QString> kHSplitterState("Layout/hSplitterState", "");
+    static const dstools::SettingsKey<QString> kVSplitterState("Layout/vSplitterState", "");
+
+    m_settings.set(kHSplitterState, QString::fromLatin1(m_hSplitter->saveState().toBase64()));
+    m_settings.set(kVSplitterState, QString::fromLatin1(m_vSplitter->saveState().toBase64()));
+    return true;
+}
 
 void SlicerPage::onOpenAudioFiles() {
     const QStringList files = QFileDialog::getOpenFileNames(

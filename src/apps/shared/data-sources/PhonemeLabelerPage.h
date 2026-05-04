@@ -6,6 +6,7 @@
 #include <dstools/ShortcutManager.h>
 
 #include <QWidget>
+#include <QSplitter>
 
 #include <PhonemeEditor.h>
 
@@ -51,6 +52,7 @@ signals:
 private:
     phonemelabeler::PhonemeEditor *m_editor = nullptr;
     SliceListPanel *m_sliceList = nullptr;
+    QSplitter *m_splitter = nullptr;
     IEditorDataSource *m_source = nullptr;
     ISettingsBackend *m_settingsBackend = nullptr;
     IModelManager *m_modelManager = nullptr;

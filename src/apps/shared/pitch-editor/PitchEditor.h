@@ -87,6 +87,9 @@ public:
     void loadConfig(dstools::AppSettings &settings);
     void pullConfig(dstools::AppSettings &settings);
 
+    QByteArray saveSplitterState() const;
+    void restoreSplitterState(const QByteArray &state);
+
     // --- Tool mode shortcuts ---
     void rebuildWindowShortcuts(dstools::AppSettings &settings);
 

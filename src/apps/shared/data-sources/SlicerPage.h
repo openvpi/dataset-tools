@@ -2,10 +2,12 @@
 
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
+#include <dsfw/AppSettings.h>
 
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QToolBar>
 #include <QToolButton>
 #include <QUndoStack>
@@ -44,6 +46,7 @@ public:
 
     // IPageLifecycle
     void onActivated() override;
+    bool onDeactivating() override;
 
 private:
     QUndoStack *m_undoStack = nullptr;
@@ -56,6 +59,8 @@ private:
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
 
     AudioFileListPanel *m_audioFileList = nullptr;
+    QSplitter *m_vSplitter = nullptr;
+    QSplitter *m_hSplitter = nullptr;
     phonemelabeler::TimeRulerWidget *m_timeRuler = nullptr;
     phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
     phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
@@ -89,6 +94,8 @@ private:
 
     std::map<QString, std::vector<double>> m_fileSlicePoints;
     QString m_currentAudioPath;
+
+    dstools::AppSettings m_settings;
 
     void buildLayout();
     void connectSignals();

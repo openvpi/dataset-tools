@@ -98,6 +98,9 @@ public:
     void setSpectrogramVisible(bool visible);
     void setSpectrogramColorStyle(const QString &styleName);
 
+    QByteArray saveSplitterState() const;
+    void restoreSplitterState(const QByteArray &state);
+
 signals:
     void modificationChanged(bool modified);
     void positionChanged(double sec);

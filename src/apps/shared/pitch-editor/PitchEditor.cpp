@@ -14,6 +14,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QDataStream>
 
 #include <functional>
 
@@ -103,6 +104,15 @@ void PitchEditor::loadConfig(dstools::AppSettings &settings) {
 
 void PitchEditor::pullConfig(dstools::AppSettings &settings) {
     m_pianoRoll->pullConfig(settings);
+}
+
+QByteArray PitchEditor::saveSplitterState() const {
+    return m_rightSplitter->saveState();
+}
+
+void PitchEditor::restoreSplitterState(const QByteArray &state) {
+    if (!state.isEmpty())
+        m_rightSplitter->restoreState(state);
 }
 
 void PitchEditor::rebuildWindowShortcuts(dstools::AppSettings &settings) {

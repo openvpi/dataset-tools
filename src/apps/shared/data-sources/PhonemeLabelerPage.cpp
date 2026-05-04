@@ -36,15 +36,15 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     m_sliceList->setMinimumWidth(160);
     m_sliceList->setMaximumWidth(280);
 
-    auto *splitter = new QSplitter(Qt::Horizontal, this);
-    splitter->addWidget(m_sliceList);
-    splitter->addWidget(m_editor);
-    splitter->setStretchFactor(0, 0);
-    splitter->setStretchFactor(1, 1);
+    m_splitter = new QSplitter(Qt::Horizontal, this);
+    m_splitter->addWidget(m_sliceList);
+    m_splitter->addWidget(m_editor);
+    m_splitter->setStretchFactor(0, 0);
+    m_splitter->setStretchFactor(1, 1);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(splitter);
+    layout->addWidget(m_splitter);
 
     m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
     m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
@@ -53,6 +53,7 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
     static const dstools::SettingsKey<QString> kShortcutRedo("Shortcuts/redo", "Ctrl+Y");
     static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
+    static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
 
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
     m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
@@ -244,6 +245,19 @@ bool PhonemeLabelerPage::hasUnsavedChanges() const {
 void PhonemeLabelerPage::onActivated() {
     m_sliceList->refresh();
 
+    {
+        static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
+        auto state = m_settings.get(kSplitterState);
+        if (!state.isEmpty())
+            m_splitter->restoreState(QByteArray::fromBase64(state.toUtf8()));
+    }
+    {
+        static const dstools::SettingsKey<QString> kEditorSplitterState("Layout/editorSplitterState", "");
+        auto state = m_settings.get(kEditorSplitterState);
+        if (!state.isEmpty())
+            m_editor->restoreSplitterState(QByteArray::fromBase64(state.toUtf8()));
+    }
+
     if (m_settingsBackend) {
         auto data = m_settingsBackend->load();
         auto preload = data["preload"].toObject();
@@ -304,6 +318,14 @@ void PhonemeLabelerPage::onActivated() {
 }
 
 bool PhonemeLabelerPage::onDeactivating() {
+    {
+        static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
+        m_settings.set(kSplitterState, QString::fromLatin1(m_splitter->saveState().toBase64()));
+    }
+    {
+        static const dstools::SettingsKey<QString> kEditorSplitterState("Layout/editorSplitterState", "");
+        m_settings.set(kEditorSplitterState, QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
+    }
     return maybeSave();
 }
 
