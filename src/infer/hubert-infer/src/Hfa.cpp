@@ -114,15 +114,26 @@ namespace HFA {
             return dstools::Err("HFA model not loaded");
         }
 
+        if (lyricsText.empty()) {
+            return dstools::Err("Empty lyrics text provided for forced alignment"
+                " (audio: " + wavPath.string() + ")");
+        }
+
         std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(wavPath, msg, 1, hfa_input_sample_rate);
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
                          hfa_input_sample_rate);
         if (!sf) {
-            return dstools::Err("Failed to open resampled audio for HFA: " + msg);
+            return dstools::Err("Failed to open resampled audio for HFA: " + msg
+                + " (path: " + wavPath.string() + ")");
         }
         const auto totalSize = sf.frames();
+
+        if (totalSize == 0) {
+            return dstools::Err("Audio file contains 0 samples, cannot run forced alignment"
+                " (path: " + wavPath.string() + ")");
+        }
 
         std::vector<float> audio(totalSize);
         sf.seek(0, SEEK_SET);

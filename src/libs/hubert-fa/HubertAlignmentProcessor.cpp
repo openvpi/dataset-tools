@@ -4,6 +4,7 @@
 
 #include <dsfw/TaskProcessorRegistry.h>
 #include <dstools/ExecutionProvider.h>
+#include <dstools/PathUtils.h>
 
 namespace dstools {
 
@@ -103,7 +104,7 @@ Result<TaskOutput> HubertAlignmentProcessor::process(const TaskInput &input) {
 
     HFA::WordList words;
     auto recognizeResult = m_hfa->recognize(
-        input.audioPath.toLocal8Bit().toStdString(), language, nonSpeechPh, lyricsText, words);
+        dstools::toFsPath(input.audioPath), language, nonSpeechPh, lyricsText, words);
     if (!recognizeResult) {
         return Result<TaskOutput>::Error(recognizeResult.error());
     }
