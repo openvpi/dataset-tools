@@ -128,6 +128,7 @@ jobs:
           ./vcpkg install \
             --x-manifest-root=../scripts/vcpkg-manifest \
             --x-install-root=./installed \
+            --overlay-triplets=../scripts/vcpkg/triplets \
             --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
@@ -141,7 +142,7 @@ jobs:
         shell: cmd
         working-directory: ${{github.workspace}}/vcpkg
         run: |
-          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --triplet=${{ matrix.triplet }}
+          vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --overlay-triplets=../scripts/vcpkg/triplets --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
@@ -178,6 +179,7 @@ jobs:
             -DCMAKE_PREFIX_PATH=${{env.QT_DIR}}/lib/cmake/Qt6/ \
             -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
             -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
+            -DDSTOOLS_DEPLOY_MODE=ON \
             $EXTRA_CMAKE_ARGS
 
       - name: Build

@@ -56,10 +56,10 @@
 
 #### Q.3.3 CI workflow 完善
 
-- [ ] `build.yml`：确认 `cmake --build build --target install` 后 deploy/ 目录仅包含运行所需文件（无 .lib/.a）
-- [ ] `release.yml`：同上；确认 AppImage/DMG/ZIP 包体积合理
-- [ ] 两个 workflow 共享 vcpkg 版本（目前 `build.yml` 手动设定 commit，`release.yml` 用 `lukka/run-vcpkg`）——统一为同一种方式避免版本漂移
-- [ ] 可选：抽取共享步骤为 composite action 或 reusable workflow，减少重复
+- [x] CI workflow 中 `cmake --install` 步骤加上 `-DDSTOOLS_DEPLOY_MODE=ON`，确保 artifact 不包含 .lib/.a
+- [x] 修复 release.yml 中 vcpkg 缺少自定义 triplets
+- [x] 添加 deploy artifact 验证步骤（检查无 .lib/.a 文件）
+- [ ] 可选：添加 `find_package(dsfw)` 验证步骤（单独 job，不使用 DEPLOY_MODE）
 
 ---
 

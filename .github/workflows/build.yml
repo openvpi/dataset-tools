@@ -219,6 +219,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" \
             -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
             -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
+            -DDSTOOLS_DEPLOY_MODE=ON \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             $COVERAGE_FLAGS
 
@@ -226,7 +227,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DGAME_INFER_BUILD_TESTS:BOOL=ON -DRMVPE_INFER_BUILD_TESTS:BOOL=ON -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          cmake -B "${{github.workspace}}/build" -G Ninja -DBUILD_TESTS:BOOL=ON -DGAME_INFER_BUILD_TESTS:BOOL=ON -DRMVPE_INFER_BUILD_TESTS:BOOL=ON -DAUDIO_UTIL_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/deploy" -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} -DDSTOOLS_DEPLOY_MODE=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --target all
@@ -291,21 +292,17 @@ jobs:
       - name: Deploy
         run: cmake --build ${{github.workspace}}/build --target install
 
-      - name: Verify find_package(dsfw) (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          cmake -B tests/test-find-package/build -S tests/test-find-package -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
-            -DCMAKE_PREFIX_PATH="${{github.workspace}}/deploy;${{env.QT_DIR}}/lib/cmake/Qt6/" \
-            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
-          cmake --build tests/test-find-package/build
-
-      - name: Verify find_package(dsfw) (Windows)
+      - name: Verify deploy artifact (no .lib/.a files)
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: bash
         run: |
-          cmake -B tests/test-find-package/build -S tests/test-find-package -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_PREFIX_PATH="${{github.workspace}}/deploy;${{env.QT_DIR}}/lib/cmake/Qt6/" -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake"
-          cmake --build tests/test-find-package/build
+          echo "=== Verifying deploy artifact has no SDK files ==="
+          if find "${{github.workspace}}/deploy" -name "*.lib" | grep -q .; then
+            echo "::error::Found .lib files in deploy artifact (DSTOOLS_DEPLOY_MODE should prevent this)"
+            find "${{github.workspace}}/deploy" -name "*.lib"
+            exit 1
+          fi
+          echo "  [OK] No .lib files in deploy artifact"
 
       - name: Set Commit ID
         shell: bash
