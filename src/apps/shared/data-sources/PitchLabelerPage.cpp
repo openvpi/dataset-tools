@@ -17,12 +17,18 @@
 #include <QtConcurrent>
 
 #include <rmvpe-infer/Rmvpe.h>
+#include <game-infer/Game.h>
 
 #include <dsfw/CommonKeys.h>
+#include <dsfw/IModelManager.h>
+#include <dsfw/IModelProvider.h>
+#include <dsfw/InferenceModelProvider.h>
+#include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/ExecutionProvider.h>
+#include <dstools/ModelManager.h>
 
 namespace dstools {
 
@@ -409,8 +415,8 @@ bool PitchLabelerPage::onDeactivating() {
 }
 
 void PitchLabelerPage::onDeactivated() {
-    m_rmvpe.reset();
-    m_game.reset();
+    m_rmvpe = nullptr;
+    m_game = nullptr;
 }
 
 void PitchLabelerPage::onShutdown() {
@@ -425,42 +431,75 @@ void PitchLabelerPage::ensureRmvpeEngine() {
     if (m_rmvpe && m_rmvpe->is_open())
         return;
 
+    if (!m_modelManager) {
+        m_modelManager = ServiceLocator::get<IModelManager>();
+        if (m_modelManager) {
+            connect(m_modelManager, &IModelManager::modelInvalidated,
+                    this, &PitchLabelerPage::onModelInvalidated);
+        }
+    }
+
+    if (!m_modelManager)
+        return;
+
+    auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
+    if (!mm)
+        return;
+
     auto config = readModelConfig(m_settingsBackend, QStringLiteral("pitch_extraction"));
     if (config.modelPath.isEmpty())
         return;
 
-    auto provider = dstools::infer::ExecutionProvider::CPU;
-#ifdef ONNXRUNTIME_ENABLE_DML
-    if (config.provider == QStringLiteral("dml"))
-        provider = dstools::infer::ExecutionProvider::DML;
-#endif
+    auto result = mm->loadModel(QStringLiteral("pitch_extraction"), config, config.deviceId);
+    if (!result)
+        return;
 
-    m_rmvpe = std::make_unique<Rmvpe::Rmvpe>();
-    auto result = m_rmvpe->load(config.modelPath.toStdWString(), provider, config.deviceId);
-    if (!result) {
-        m_rmvpe.reset();
-    }
+    auto typeId = registerModelType("pitch_extraction");
+    auto *provider = mm->provider(typeId);
+    auto *rmvpeProvider = dynamic_cast<InferenceModelProvider<Rmvpe::Rmvpe> *>(provider);
+    if (rmvpeProvider && rmvpeProvider->engine().is_open())
+        m_rmvpe = &rmvpeProvider->engine();
 }
 
 void PitchLabelerPage::ensureGameEngine() {
     if (m_game && m_game->isOpen())
         return;
 
+    if (!m_modelManager) {
+        m_modelManager = ServiceLocator::get<IModelManager>();
+        if (m_modelManager) {
+            connect(m_modelManager, &IModelManager::modelInvalidated,
+                    this, &PitchLabelerPage::onModelInvalidated);
+        }
+    }
+
+    if (!m_modelManager)
+        return;
+
+    auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
+    if (!mm)
+        return;
+
     auto config = readModelConfig(m_settingsBackend, QStringLiteral("midi_transcription"));
     if (config.modelPath.isEmpty())
         return;
 
-    auto provider = dstools::infer::ExecutionProvider::CPU;
-#ifdef ONNXRUNTIME_ENABLE_DML
-    if (config.provider == QStringLiteral("dml"))
-        provider = dstools::infer::ExecutionProvider::DML;
-#endif
+    auto result = mm->loadModel(QStringLiteral("midi_transcription"), config, config.deviceId);
+    if (!result)
+        return;
 
-    m_game = std::make_unique<Game::Game>();
-    auto result = m_game->load(config.modelPath.toStdWString(), provider, config.deviceId);
-    if (!result) {
-        m_game.reset();
-    }
+    auto typeId = registerModelType("midi_transcription");
+    auto *provider = mm->provider(typeId);
+    auto *gameProvider = dynamic_cast<InferenceModelProvider<Game::Game> *>(provider);
+    if (gameProvider && gameProvider->engine().isOpen())
+        m_game = &gameProvider->engine();
+}
+
+void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
+    if (taskKey == QStringLiteral("pitch_extraction"))
+        m_rmvpe = nullptr;
+    else if (taskKey == QStringLiteral("midi_transcription"))
+        m_game = nullptr;
 }
 
 void PitchLabelerPage::onExtractPitch() {
@@ -530,7 +569,7 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
     }
 
     m_inferRunning = true;
-    auto *rmvpe = m_rmvpe.get();
+    auto *rmvpe = m_rmvpe;
     QPointer<PitchLabelerPage> guard(this);
 
     (void) QtConcurrent::run([rmvpe, audioPath, sliceId, guard]() {
@@ -578,7 +617,7 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
     }
 
     m_inferRunning = true;
-    auto *game = m_game.get();
+    auto *game = m_game;
     QPointer<PitchLabelerPage> guard(this);
 
     (void) QtConcurrent::run([game, audioPath, sliceId, guard]() {
@@ -803,8 +842,8 @@ void PitchLabelerPage::onBatchExtract() {
     }
 
     m_inferRunning = true;
-    auto *rmvpe = m_rmvpe.get();
-    auto *game = m_game.get();
+    auto *rmvpe = m_rmvpe;
+    auto *game = m_game;
     auto *source = m_source;
     QPointer<PitchLabelerPage> guard(this);
 

@@ -33,11 +33,16 @@ public:
     /// @brief Unload all models.
     virtual void unloadAll() = 0;
 
+    /// @brief Invalidate a model by task key, causing it to be reloaded on next use.
+    virtual void invalidateModel(const QString &taskKey) = 0;
+
 signals:
     /// @brief Emitted when a model's status changes.
     void modelStatusChanged(ModelTypeId type, ModelStatus status);
     /// @brief Emitted when total memory usage changes.
     void memoryUsageChanged(int64_t totalBytes);
+    /// @brief Emitted when a model is invalidated and should be reloaded on next use.
+    void modelInvalidated(const QString &taskKey);
 };
 
 } // namespace dstools

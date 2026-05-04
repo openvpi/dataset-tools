@@ -9,8 +9,6 @@
 
 #include <PhonemeEditor.h>
 
-#include <memory>
-
 namespace HFA {
 class HFA;
 }
@@ -20,6 +18,7 @@ namespace dstools {
 class IEditorDataSource;
 class ISettingsBackend;
 class SliceListPanel;
+class IModelManager;
 
 class PhonemeLabelerPage : public QWidget,
                            public labeler::IPageActions,
@@ -54,6 +53,7 @@ private:
     SliceListPanel *m_sliceList = nullptr;
     IEditorDataSource *m_source = nullptr;
     ISettingsBackend *m_settingsBackend = nullptr;
+    IModelManager *m_modelManager = nullptr;
     QString m_currentSliceId;
 
     dstools::AppSettings m_settings;
@@ -62,7 +62,7 @@ private:
     QAction *m_prevAction = nullptr;
     QAction *m_nextAction = nullptr;
 
-    std::unique_ptr<HFA::HFA> m_hfa;
+    HFA::HFA *m_hfa = nullptr;
     bool m_faRunning = false;
 
     void onSliceSelected(const QString &sliceId);
@@ -72,6 +72,7 @@ private:
     void onRunFA();
     void onBatchFA();
     void ensureHfaEngine();
+    void onModelInvalidated(const QString &taskKey);
     void runFaForSlice(const QString &sliceId);
     void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers);
 };

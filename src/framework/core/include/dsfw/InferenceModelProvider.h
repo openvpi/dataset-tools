@@ -9,6 +9,8 @@
 
 namespace dstools {
 
+using infer::ExecutionProvider;
+
 /// @brief CRTP-style template that adapts an inference engine to the IModelProvider interface,
 ///        handling model loading with execution provider selection (CPU/DML/CUDA).
 /// @tparam Engine The inference engine type (must provide load(), unload(), estimatedMemoryBytes()).
@@ -45,7 +47,7 @@ public:
         auto result = m_engine.load(modelPath.toStdWString(), provider, gpuIndex);
         if (!result) {
             m_status = ModelStatus::Error;
-            return Err(QString::fromStdString(result.error()));
+            return Err(result.error());
         }
         m_status = ModelStatus::Ready;
         return Ok();

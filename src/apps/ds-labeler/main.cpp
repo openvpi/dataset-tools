@@ -3,6 +3,7 @@
 #include <QMessageBox>
 
 #include <dsfw/AppShell.h>
+#include <dsfw/IModelManager.h>
 #include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
 #include <dstools/AppInit.h>
@@ -15,6 +16,7 @@
 #include "ExportPage.h"
 #include "ProjectDataSource.h"
 #include <AppSettingsBackend.h>
+#include <ModelProviderInit.h>
 #include "WelcomePage.h"
 
 #include <MinLabelPage.h>
@@ -51,6 +53,10 @@ int main(int argc, char *argv[]) {
         return 0;
     dstools::registerDomainFormatAdapters();
     dsfw::Theme::instance().init(app);
+
+    auto *modelManager = dstools::ServiceLocator::get<dstools::IModelManager>();
+    if (modelManager)
+        dstools::registerModelProviders(*modelManager);
 
     static constexpr int kDefaultWidth = 1400;
     static constexpr int kDefaultHeight = 900;
@@ -98,6 +104,11 @@ int main(int argc, char *argv[]) {
     // Page 6: 设置 (Settings) — moved to last per ADR-64
     auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
     shell.addPage(settingsPage, "settings", {}, QStringLiteral("设置"));
+
+    if (modelManager) {
+        QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested,
+                         modelManager, &dstools::IModelManager::invalidateModel);
+    }
 
     // ── Project lifecycle ────────────────────────────────────────────────
 

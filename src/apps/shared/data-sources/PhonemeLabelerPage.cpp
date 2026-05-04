@@ -17,10 +17,15 @@
 #include <hubert-infer/Hfa.h>
 
 #include <dsfw/CommonKeys.h>
+#include <dsfw/IModelManager.h>
+#include <dsfw/IModelProvider.h>
+#include <dsfw/InferenceModelProvider.h>
+#include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/ExecutionProvider.h>
+#include <dstools/ModelManager.h>
 
 namespace dstools {
 
@@ -303,7 +308,7 @@ bool PhonemeLabelerPage::onDeactivating() {
 }
 
 void PhonemeLabelerPage::onDeactivated() {
-    m_hfa.reset();
+    m_hfa = nullptr;
 }
 
 void PhonemeLabelerPage::onShutdown() {
@@ -318,21 +323,39 @@ void PhonemeLabelerPage::ensureHfaEngine() {
     if (m_hfa && m_hfa->isOpen())
         return;
 
+    if (!m_modelManager) {
+        m_modelManager = ServiceLocator::get<IModelManager>();
+        if (m_modelManager) {
+            connect(m_modelManager, &IModelManager::modelInvalidated,
+                    this, &PhonemeLabelerPage::onModelInvalidated);
+        }
+    }
+
+    if (!m_modelManager)
+        return;
+
+    auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
+    if (!mm)
+        return;
+
     auto config = readModelConfig(m_settingsBackend, QStringLiteral("phoneme_alignment"));
     if (config.modelPath.isEmpty())
         return;
 
-    auto provider = dstools::infer::ExecutionProvider::CPU;
-#ifdef ONNXRUNTIME_ENABLE_DML
-    if (config.provider == QStringLiteral("dml"))
-        provider = dstools::infer::ExecutionProvider::DML;
-#endif
+    auto result = mm->loadModel(QStringLiteral("phoneme_alignment"), config, config.deviceId);
+    if (!result)
+        return;
 
-    m_hfa = std::make_unique<HFA::HFA>();
-    auto result = m_hfa->load(config.modelPath.toStdWString(), provider, config.deviceId);
-    if (!result) {
-        m_hfa.reset();
-    }
+    auto typeId = registerModelType("phoneme_alignment");
+    auto *provider = mm->provider(typeId);
+    auto *hfaProvider = dynamic_cast<InferenceModelProvider<HFA::HFA> *>(provider);
+    if (hfaProvider && hfaProvider->engine().isOpen())
+        m_hfa = &hfaProvider->engine();
+}
+
+void PhonemeLabelerPage::onModelInvalidated(const QString &taskKey) {
+    if (taskKey == QStringLiteral("phoneme_alignment"))
+        m_hfa = nullptr;
 }
 
 void PhonemeLabelerPage::onRunFA() {
@@ -395,7 +418,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     }
 
     m_faRunning = true;
-    auto *hfa = m_hfa.get();
+    auto *hfa = m_hfa;
     QPointer<PhonemeLabelerPage> guard(this);
 
     (void) QtConcurrent::run([hfa, audioPath, graphemeTexts, sliceId, guard]() {
@@ -526,7 +549,7 @@ void PhonemeLabelerPage::onBatchFA() {
     }
 
     m_faRunning = true;
-    auto *hfa = m_hfa.get();
+    auto *hfa = m_hfa;
     auto *source = m_source;
     QPointer<PhonemeLabelerPage> guard(this);
 

@@ -10,19 +10,21 @@
 
 #include <PitchEditor.h>
 
-#include <memory>
-
 namespace Rmvpe {
 class Rmvpe;
 }
 
-#include <game-infer/Game.h>
+namespace Game {
+class Game;
+struct GameNote;
+}
 
 namespace dstools {
 
 class IEditorDataSource;
 class ISettingsBackend;
 class SliceListPanel;
+class IModelManager;
 
 namespace pitchlabeler {
 class DSFile;
@@ -60,6 +62,7 @@ private:
     SliceListPanel *m_sliceList = nullptr;
     IEditorDataSource *m_source = nullptr;
     ISettingsBackend *m_settingsBackend = nullptr;
+    IModelManager *m_modelManager = nullptr;
     QString m_currentSliceId;
     std::shared_ptr<pitchlabeler::DSFile> m_currentFile;
 
@@ -69,8 +72,8 @@ private:
     QAction *m_prevAction = nullptr;
     QAction *m_nextAction = nullptr;
 
-    std::unique_ptr<Rmvpe::Rmvpe> m_rmvpe;
-    std::unique_ptr<Game::Game> m_game;
+    Rmvpe::Rmvpe *m_rmvpe = nullptr;
+    Game::Game *m_game = nullptr;
     PhNumCalculator m_phNumCalc;
     bool m_inferRunning = false;
 
@@ -85,6 +88,7 @@ private:
 
     void ensureRmvpeEngine();
     void ensureGameEngine();
+    void onModelInvalidated(const QString &taskKey);
     void runPitchExtraction(const QString &sliceId);
     void runMidiTranscription(const QString &sliceId);
     void runAddPhNum(const QString &sliceId);

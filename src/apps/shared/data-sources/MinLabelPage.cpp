@@ -16,33 +16,19 @@
 #include <QtConcurrent>
 
 #include "Asr.h"
+#include "FunAsrModelProvider.h"
 
 #include <dsfw/CommonKeys.h>
+#include <dsfw/IModelManager.h>
+#include <dsfw/IModelProvider.h>
+#include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/ExecutionProvider.h>
+#include <dstools/ModelManager.h>
 
 namespace dstools {
-
-struct MinLabelPage::AsrEngine {
-    std::unique_ptr<LyricFA::Asr> engine;
-
-    bool initialized() const { return engine && engine->initialized(); }
-
-    void create(const QString &modelPath, dstools::infer::ExecutionProvider provider, int deviceId) {
-        auto ep = FunAsr::ExecutionProvider::CPU;
-#ifdef ONNXRUNTIME_ENABLE_DML
-        if (provider == dstools::infer::ExecutionProvider::DML)
-            ep = FunAsr::ExecutionProvider::DML;
-#endif
-        engine = std::make_unique<LyricFA::Asr>(modelPath, ep, deviceId);
-    }
-
-    bool recognize(const std::filesystem::path &filepath, std::string &msg) const {
-        return engine->recognize(filepath, msg);
-    }
-};
 
 MinLabelPage::MinLabelPage(QWidget *parent)
     : QWidget(parent), m_settings("MinLabel") {
@@ -336,7 +322,7 @@ bool MinLabelPage::onDeactivating() {
 }
 
 void MinLabelPage::onDeactivated() {
-    m_asrEngine.reset();
+    m_asr = nullptr;
 }
 
 void MinLabelPage::onShutdown() {
@@ -365,22 +351,42 @@ void MinLabelPage::updateProgress() {
 }
 
 void MinLabelPage::ensureAsrEngine() {
-    if (m_asrEngine && m_asrEngine->initialized())
+    if (m_asr && m_asr->initialized())
+        return;
+
+    if (!m_modelManager) {
+        m_modelManager = ServiceLocator::get<IModelManager>();
+        if (m_modelManager) {
+            connect(m_modelManager, &IModelManager::modelInvalidated,
+                    this, &MinLabelPage::onModelInvalidated);
+        }
+    }
+
+    if (!m_modelManager)
+        return;
+
+    auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
+    if (!mm)
         return;
 
     auto config = readModelConfig(m_settingsBackend, QStringLiteral("asr"));
     if (config.modelPath.isEmpty())
         return;
 
-    auto provider = dstools::infer::ExecutionProvider::CPU;
-#ifdef ONNXRUNTIME_ENABLE_DML
-    if (config.provider == QStringLiteral("dml"))
-        provider = dstools::infer::ExecutionProvider::DML;
-#endif
+    auto result = mm->loadModel(QStringLiteral("asr"), config, config.deviceId);
+    if (!result)
+        return;
 
-    if (!m_asrEngine)
-        m_asrEngine = std::make_unique<AsrEngine>();
-    m_asrEngine->create(config.modelPath, provider, config.deviceId);
+    auto typeId = registerModelType("asr");
+    auto *provider = mm->provider(typeId);
+    auto *asrProvider = dynamic_cast<FunAsrModelProvider *>(provider);
+    if (asrProvider && asrProvider->asr() && asrProvider->asr()->initialized())
+        m_asr = asrProvider->asr();
+}
+
+void MinLabelPage::onModelInvalidated(const QString &taskKey) {
+    if (taskKey == QStringLiteral("asr"))
+        m_asr = nullptr;
 }
 
 void MinLabelPage::onRunAsr() {
@@ -391,7 +397,7 @@ void MinLabelPage::onRunAsr() {
     }
 
     ensureAsrEngine();
-    if (!m_asrEngine || !m_asrEngine->initialized()) {
+    if (!m_asr || !m_asr->initialized()) {
         QMessageBox::warning(this, QStringLiteral("ASR"),
                              QStringLiteral("ASR 模型未加载。请在设置中配置 ASR 模型路径。"));
         return;
@@ -418,12 +424,12 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
     }
 
     m_asrRunning = true;
-    auto *engine = m_asrEngine.get();
+    auto *asr = m_asr;
     QPointer<MinLabelPage> guard(this);
 
-    (void) QtConcurrent::run([engine, audioPath, sliceId, guard]() {
+    (void) QtConcurrent::run([asr, audioPath, sliceId, guard]() {
         std::string msg;
-        bool ok = engine->recognize(audioPath.toStdWString(), msg);
+        bool ok = asr->recognize(audioPath.toStdWString(), msg);
         QString text;
         if (ok)
             text = QString::fromUtf8(msg);
@@ -456,7 +462,7 @@ void MinLabelPage::onBatchAsr() {
     }
 
     ensureAsrEngine();
-    if (!m_asrEngine || !m_asrEngine->initialized()) {
+    if (!m_asr || !m_asr->initialized()) {
         QMessageBox::warning(this, QStringLiteral("批量 ASR"),
                              QStringLiteral("ASR 模型未加载。请在设置中配置 ASR 模型路径。"));
         return;
@@ -476,11 +482,11 @@ void MinLabelPage::onBatchAsr() {
     }
 
     m_asrRunning = true;
-    auto *engine = m_asrEngine.get();
+    auto *asr = m_asr;
     auto *source = m_source;
     QPointer<MinLabelPage> guard(this);
 
-    (void) QtConcurrent::run([engine, source, ids, guard]() {
+    (void) QtConcurrent::run([asr, source, ids, guard]() {
         int processed = 0;
         for (const auto &sliceId : ids) {
             QString audioPath = source->audioPath(sliceId);
@@ -488,7 +494,7 @@ void MinLabelPage::onBatchAsr() {
                 continue;
 
             std::string msg;
-            bool ok = engine->recognize(audioPath.toStdWString(), msg);
+            bool ok = asr->recognize(audioPath.toStdWString(), msg);
             if (ok) {
                 QString text = QString::fromUtf8(msg);
                 QMetaObject::invokeMethod(guard.data(), [guard, sliceId, text]() {

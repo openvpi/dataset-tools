@@ -21,6 +21,7 @@ public:
     Result<void> ensureLoaded(ModelTypeId type, const QString &modelPath, int gpuIndex) override;
     void unload(ModelTypeId type) override;
     void unloadAll() override;
+    void invalidateModel(const QString &taskKey) override;
 
     void setMemoryLimit(int64_t bytes);
     int64_t memoryLimit() const;

@@ -10,6 +10,7 @@
 #include <dstools/ExportFormats.h>
 #include <dstools/QualityMetrics.h>
 #include <dsfw/AppShell.h>
+#include <dsfw/IModelManager.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
@@ -17,6 +18,7 @@
 #include "CleanupDialog.h"
 
 #include <AppSettingsBackend.h>
+#include <ModelProviderInit.h>
 
 // Page includes
 #include <SlicerPage.h>
@@ -42,6 +44,10 @@ int main(int argc, char *argv[]) {
         return 0;
     dstools::registerDomainFormatAdapters();
     dsfw::Theme::instance().init(app);
+
+    auto *modelManager = dstools::ServiceLocator::get<dstools::IModelManager>();
+    if (modelManager)
+        dstools::registerModelProviders(*modelManager);
 
     static constexpr int kDefaultWidth = 1400;
     static constexpr int kDefaultHeight = 900;
@@ -110,6 +116,11 @@ int main(int argc, char *argv[]) {
     // Step 9: Settings
     auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
     shell.addPage(settingsPage, "settings", {}, QObject::tr("Settings"));
+
+    if (modelManager) {
+        QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested,
+                         modelManager, &dstools::IModelManager::invalidateModel);
+    }
 
     // ── Global menu actions (File menu — no .dsproj project management) ──
 

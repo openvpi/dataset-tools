@@ -169,4 +169,10 @@ void ModelManager::unloadModel(const QString &taskKey) {
     unload(typeId);
 }
 
+void ModelManager::invalidateModel(const QString &taskKey) {
+    auto typeId = taskKeyToTypeId(taskKey);
+    unload(typeId);
+    emit modelInvalidated(taskKey);
+}
+
 } // namespace dstools

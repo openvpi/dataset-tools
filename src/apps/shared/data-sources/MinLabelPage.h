@@ -9,13 +9,16 @@
 
 #include <MinLabelEditor.h>
 
-#include <memory>
+namespace LyricFA {
+class Asr;
+}
 
 namespace dstools {
 
 class IEditorDataSource;
 class ISettingsBackend;
 class SliceListPanel;
+class IModelManager;
 
 class MinLabelPage : public QWidget,
                      public labeler::IPageActions,
@@ -50,8 +53,8 @@ signals:
     void sliceChanged(const QString &sliceId);
 
 private:
-    struct AsrEngine;
-    std::unique_ptr<AsrEngine> m_asrEngine;
+    LyricFA::Asr *m_asr = nullptr;
+    IModelManager *m_modelManager = nullptr;
 
     Minlabel::MinLabelEditor *m_editor = nullptr;
     SliceListPanel *m_sliceList = nullptr;
@@ -76,6 +79,7 @@ private:
     void onBatchAsr();
     void runAsrForSlice(const QString &sliceId);
     void ensureAsrEngine();
+    void onModelInvalidated(const QString &taskKey);
     void setAsrResult(const QString &sliceId, const QString &text);
     void updateProgress();
 };

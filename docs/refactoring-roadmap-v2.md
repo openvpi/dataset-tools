@@ -80,9 +80,9 @@
 
 ### R.2 模型懒加载
 
-- [ ] 实现 `LazyModelManager`（首次使用时加载，配置变更时 invalidate）
-- [ ] 替换所有直接加载模型的代码为 `LazyModelManager::getOrLoad()`
-- [ ] Settings 页模型路径变更 → `LazyModelManager::invalidate()`
+- [x] 实现 `LazyModelManager`（首次使用时加载，配置变更时 invalidate）
+- [x] 替换所有直接加载模型的代码为 `LazyModelManager::getOrLoad()`
+- [x] Settings 页模型路径变更 → `LazyModelManager::invalidate()`
 - [ ] 验证：启动时不加载任何模型，首次 FA/F0/MIDI 时自动加载
 
 ### R.3 图表比例 + 子图顺序持久化
