@@ -5,7 +5,6 @@
 #include <dsfw/AppSettings.h>
 
 #include <QPushButton>
-#include <QScrollBar>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QToolBar>
@@ -15,7 +14,10 @@
 
 #include <dstools/ViewportController.h>
 #include <dstools/PlayWidget.h>
+#include <dsfw/widgets/TimeRulerWidget.h>
 #include <ui/SliceBoundaryModel.h>
+
+#include <MiniMapScrollBar.h>
 
 #include <map>
 
@@ -26,7 +28,6 @@ class AudioFileListPanel;
 namespace phonemelabeler {
 class WaveformWidget;
 class SpectrogramWidget;
-class TimeRulerWidget;
 } // namespace phonemelabeler
 
 class SliceNumberLayer;
@@ -52,7 +53,7 @@ private:
     QUndoStack *m_undoStack = nullptr;
 
     dstools::widgets::ViewportController *m_viewport = nullptr;
-    QScrollBar *m_hScrollBar = nullptr;
+    MiniMapScrollBar *m_miniMap = nullptr;
 
     phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;
 
@@ -61,7 +62,7 @@ private:
     AudioFileListPanel *m_audioFileList = nullptr;
     QSplitter *m_vSplitter = nullptr;
     QSplitter *m_hSplitter = nullptr;
-    phonemelabeler::TimeRulerWidget *m_timeRuler = nullptr;
+    dsfw::widgets::TimeRulerWidget *m_timeRuler = nullptr;
     phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
     phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
     SliceNumberLayer *m_sliceNumberLayer = nullptr;
@@ -113,7 +114,6 @@ private:
     void updateFileProgress();
     void autoSliceFiles(const QStringList &filePaths);
     void loadAudioFile(const QString &filePath);
-    void updateScrollBar();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;

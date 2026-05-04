@@ -9,6 +9,7 @@ dstools_add_library(${PROJECT_NAME}
     DEPENDS
         PUBLIC dstools-domain dsfw-core dsfw-widgets settings-page
                min-label-editor phoneme-editor pitch-editor
+               audio-visualizer
                lyricfa-lib hubertfa-lib rmvpepitch-lib gameinfer-lib
                audio-util
                SndFile::sndfile

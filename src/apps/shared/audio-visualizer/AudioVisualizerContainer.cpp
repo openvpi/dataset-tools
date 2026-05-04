@@ -4,7 +4,6 @@
 
 #include <ui/BoundaryOverlayWidget.h>
 #include <ui/IBoundaryModel.h>
-#include <ui/TimeRulerWidget.h>
 
 #include <dsfw/widgets/PlayWidget.h>
 

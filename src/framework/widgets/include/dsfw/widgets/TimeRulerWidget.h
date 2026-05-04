@@ -1,18 +1,14 @@
 #pragma once
 
+#include <dsfw/widgets/WidgetsGlobal.h>
+#include <dsfw/widgets/ViewportController.h>
 #include <QWidget>
-#include <dstools/ViewportController.h>
 
 class QPainter;
 
-namespace dstools {
-namespace phonemelabeler {
+namespace dsfw::widgets {
 
-using dstools::widgets::ViewportController;
-using dstools::widgets::ViewportState;
-
-/// Horizontal time ruler displaying second ticks, aligned with the viewport.
-class TimeRulerWidget : public QWidget {
+class DSFW_WIDGETS_API TimeRulerWidget : public QWidget {
     Q_OBJECT
 
 public:
@@ -29,12 +25,22 @@ protected:
 
 private:
     [[nodiscard]] int timeToX(double time) const;
+    [[nodiscard]] static double smoothStep(double edge0, double edge1, double x);
+    [[nodiscard]] static double spacingVisibility(double spacing, double minimumSpacing);
+
+    struct TickLevel {
+        double interval;
+        int height;
+        bool showLabel;
+    };
 
     ViewportController *m_viewport = nullptr;
     double m_viewStart = 0.0;
     double m_viewEnd = 10.0;
     double m_pixelsPerSecond = 200.0;
+
+    static constexpr double kMinimumSpacing = 24.0;
+    static constexpr double kFadeInSpacing = 48.0;
 };
 
-} // namespace phonemelabeler
-} // namespace dstools
+} // namespace dsfw::widgets

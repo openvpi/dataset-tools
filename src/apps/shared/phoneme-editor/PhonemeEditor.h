@@ -14,6 +14,7 @@
 
 #include <dstools/PlayWidget.h>
 #include <dstools/ViewportController.h>
+#include <dsfw/widgets/TimeRulerWidget.h>
 
 #include "ui/BoundaryBindingManager.h"
 #include "ui/BoundaryOverlayWidget.h"
@@ -22,7 +23,6 @@
 #include "ui/SpectrogramWidget.h"
 #include "ui/TextGridDocument.h"
 #include "ui/TierEditWidget.h"
-#include "ui/TimeRulerWidget.h"
 #include "ui/WaveformRenderer.h"
 #include "ui/WaveformWidget.h"
 
@@ -31,6 +31,7 @@ namespace phonemelabeler {
 
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
+using dsfw::widgets::TimeRulerWidget;
 
 /// @brief Core phoneme editing widget: waveform/spectrogram/power visualization,
 /// multi-tier TextGrid editing with undo/redo, boundary binding, and playback.

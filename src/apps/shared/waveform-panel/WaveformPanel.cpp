@@ -10,6 +10,7 @@
 #include <QMouseEvent>
 #include <QContextMenuEvent>
 
+#include <dsfw/widgets/TimeRulerWidget.h>
 #include <dstools/AudioDecoder.h>
 #include <dstools/WaveFormat.h>
 
@@ -50,155 +51,6 @@ void PlaybackController::stop() {
 bool PlaybackController::isPlaying() const {
     return m_playWidget->isPlaying();
 }
-
-// ─── TimeRuler (internal) ─────────────────────────────────────────────────────
-
-class WaveformPanel::TimeRuler : public QWidget {
-public:
-    explicit TimeRuler(ViewportController * /*viewport*/, QWidget *parent = nullptr)
-        : QWidget(parent) {
-        setFixedHeight(24);
-    }
-
-    void setViewport(const ViewportState &state) {
-        m_viewStart = state.startSec;
-        m_viewEnd = state.endSec;
-        m_pixelsPerSecond = state.pixelsPerSecond;
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent * /*event*/) override {
-        QPainter painter(this);
-        painter.fillRect(rect(), QColor(35, 35, 40));
-
-        double viewDuration = m_viewEnd - m_viewStart;
-        if (viewDuration <= 0.0 || width() <= 0)
-            return;
-
-        // ── Choose major tick interval ──────────────────────────────────
-        //
-        // Strategy: pick the smallest niceStep whose pixel spacing >= minPixelGap.
-        // minPixelGap is derived from the longest label we'd render at that step,
-        // so labels never overlap regardless of zoom level.
-
-        static const double niceSteps[] = {
-            0.001, 0.002, 0.005, 0.01,  0.02,  0.05,
-            0.1,   0.2,   0.5,   1.0,   2.0,   5.0,
-            10.0,  20.0,  30.0,  60.0,  120.0, 300.0,
-            600.0, 1800.0, 3600.0};
-
-        QFont font = painter.font();
-        font.setPixelSize(10);
-        painter.setFont(font);
-        QFontMetrics fm(font);
-
-        // Estimate label width for a given interval to compute minimum gap
-        auto estimateLabelWidth = [&](double interval) -> int {
-            if (interval >= 60.0)
-                return fm.horizontalAdvance(QStringLiteral("99:59"));
-            if (interval >= 1.0)
-                return fm.horizontalAdvance(QStringLiteral("999s"));
-            if (interval >= 0.01)
-                return fm.horizontalAdvance(QStringLiteral("99.99s"));
-            return fm.horizontalAdvance(QStringLiteral("9.999s"));
-        };
-
-        constexpr int kMinPadding = 20; // minimum pixels of empty space between labels
-
-        double majorInterval = niceSteps[std::size(niceSteps) - 1];
-        for (double step : niceSteps) {
-            double pixelSpacing = step * m_pixelsPerSecond;
-            int labelW = estimateLabelWidth(step);
-            if (pixelSpacing >= labelW + kMinPadding) {
-                majorInterval = step;
-                break;
-            }
-        }
-
-        // Subdivisions: pick 2, 4, or 5 based on the niceStep pattern
-        int subdivisions = 5;
-        {
-            // Determine the "mantissa" of majorInterval in its decade
-            double decade = std::pow(10.0, std::floor(std::log10(majorInterval)));
-            double mantissa = majorInterval / decade;
-            if (std::abs(mantissa - 2.0) < 0.01 || std::abs(mantissa - 20.0) < 0.1)
-                subdivisions = 4;
-            else if (std::abs(mantissa - 3.0) < 0.01 || std::abs(mantissa - 30.0) < 0.1)
-                subdivisions = 3;
-        }
-        double minorInterval = majorInterval / subdivisions;
-
-        // Ensure minor ticks aren't too dense (minimum ~8px apart)
-        double minorPixelSpacing = minorInterval * m_pixelsPerSecond;
-        if (minorPixelSpacing < 8.0)
-            minorInterval = majorInterval; // suppress minor ticks entirely
-
-        // ── Draw minor ticks ────────────────────────────────────────────
-        if (minorInterval < majorInterval) {
-            painter.setPen(QPen(QColor(70, 70, 80), 1));
-            double firstMinor = std::floor(m_viewStart / minorInterval) * minorInterval;
-            for (double t = firstMinor; t <= m_viewEnd; t += minorInterval) {
-                if (t < m_viewStart)
-                    continue;
-                int x = timeToX(t);
-                painter.drawLine(x, height() - 4, x, height());
-            }
-        }
-
-        // ── Draw major ticks + labels ───────────────────────────────────
-        double firstMajor = std::floor(m_viewStart / majorInterval) * majorInterval;
-        for (double t = firstMajor; t <= m_viewEnd; t += majorInterval) {
-            if (t < m_viewStart)
-                continue;
-            int x = timeToX(t);
-
-            painter.setPen(QPen(QColor(120, 120, 140), 1));
-            painter.drawLine(x, height() - 10, x, height());
-
-            painter.setPen(QColor(180, 180, 200));
-            QString label;
-            if (majorInterval >= 60.0) {
-                int totalSec = static_cast<int>(std::round(t));
-                int min = totalSec / 60;
-                int sec = totalSec % 60;
-                label = QStringLiteral("%1:%2").arg(min).arg(sec, 2, 10, QChar('0'));
-            } else if (majorInterval >= 1.0) {
-                int totalSec = static_cast<int>(std::round(t));
-                int min = totalSec / 60;
-                int sec = totalSec % 60;
-                if (min > 0)
-                    label = QStringLiteral("%1:%2").arg(min).arg(sec, 2, 10, QChar('0'));
-                else
-                    label = QString::number(totalSec) + QStringLiteral("s");
-            } else if (majorInterval >= 0.01) {
-                label = QString::number(t, 'f', 2) + QStringLiteral("s");
-            } else {
-                label = QString::number(t, 'f', 3) + QStringLiteral("s");
-            }
-
-            int labelW = fm.horizontalAdvance(label);
-            QRect textRect(x - labelW / 2, 0, labelW, height() - 10);
-            painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, label);
-        }
-
-        // Bottom line
-        painter.setPen(QPen(QColor(80, 80, 100), 1));
-        painter.drawLine(0, height() - 1, width(), height() - 1);
-    }
-
-private:
-    int timeToX(double time) const {
-        double viewDuration = m_viewEnd - m_viewStart;
-        if (viewDuration <= 0.0 || width() <= 0)
-            return 0;
-        return static_cast<int>((time - m_viewStart) / viewDuration * width());
-    }
-
-    double m_viewStart = 0.0;
-    double m_viewEnd = 10.0;
-    double m_pixelsPerSecond = 200.0;
-};
 
 // ─── WaveformDisplay (internal) ───────────────────────────────────────────────
 
@@ -622,7 +474,7 @@ void WaveformPanel::buildLayout() {
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    m_timeRuler = new TimeRuler(m_viewport, this);
+    m_timeRuler = new dsfw::widgets::TimeRulerWidget(m_viewport, this);
     layout->addWidget(m_timeRuler);
 
     m_waveformDisplay = new WaveformDisplay(m_viewport, this);
@@ -637,7 +489,7 @@ void WaveformPanel::buildLayout() {
 void WaveformPanel::connectSignals() {
     // Viewport → sub-widgets
     connect(m_viewport, &ViewportController::viewportChanged, m_timeRuler,
-            &TimeRuler::setViewport);
+            &dsfw::widgets::TimeRulerWidget::setViewport);
     connect(m_viewport, &ViewportController::viewportChanged, m_waveformDisplay,
             &WaveformDisplay::setViewport);
     connect(m_viewport, &ViewportController::viewportChanged, this,

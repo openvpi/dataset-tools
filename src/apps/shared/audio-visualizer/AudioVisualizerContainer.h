@@ -17,6 +17,7 @@
 
 #include <dsfw/AppSettings.h>
 #include <dsfw/widgets/PlayWidget.h>
+#include <dsfw/widgets/TimeRulerWidget.h>
 #include <dstools/ViewportController.h>
 
 namespace dstools {
@@ -24,12 +25,11 @@ namespace dstools {
 namespace phonemelabeler {
 class IBoundaryModel;
 class BoundaryOverlayWidget;
-class TimeRulerWidget;
 } // namespace phonemelabeler
 
 using phonemelabeler::IBoundaryModel;
 using phonemelabeler::BoundaryOverlayWidget;
-using phonemelabeler::TimeRulerWidget;
+using TimeRulerWidget = dsfw::widgets::TimeRulerWidget;
 
 class TierLabelArea;
 class MiniMapScrollBar;

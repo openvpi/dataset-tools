@@ -11,6 +11,7 @@
 #include <QWidget>
 #include <vector>
 
+#include <dsfw/widgets/TimeRulerWidget.h>
 #include <dstools/ViewportController.h>
 
 namespace dstools {
@@ -130,11 +131,10 @@ signals:
 
 private:
     class WaveformDisplay;
-    class TimeRuler;
 
     ViewportController *m_viewport = nullptr;
     PlaybackController *m_playback = nullptr;
-    TimeRuler *m_timeRuler = nullptr;
+    dsfw::widgets::TimeRulerWidget *m_timeRuler = nullptr;
     WaveformDisplay *m_waveformDisplay = nullptr;
     QScrollBar *m_hScrollBar = nullptr;
 
