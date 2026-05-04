@@ -15,7 +15,7 @@ on:
       - refactor
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -205,6 +205,10 @@ jobs:
       - name: Configure CMake (Unix)
         if: runner.os != 'Windows'
         run: |
+          COVERAGE_FLAGS=""
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            COVERAGE_FLAGS="-DCMAKE_CXX_FLAGS='--coverage -g -O0' -DCMAKE_EXE_LINKER_FLAGS='--coverage'"
+          fi
           cmake -B "${{github.workspace}}/build" -G Ninja \
             -DBUILD_TESTS:BOOL=ON \
             -DGAME_INFER_BUILD_TESTS:BOOL=ON \
@@ -215,7 +219,8 @@ jobs:
             -DCMAKE_PREFIX_PATH="${{env.QT_DIR}}/lib/cmake/Qt6/" \
             -DCMAKE_TOOLCHAIN_FILE="${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
             -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            $COVERAGE_FLAGS
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
@@ -229,6 +234,21 @@ jobs:
       - name: Run tests
         working-directory: ${{github.workspace}}/build
         run: ctest --output-on-failure -C ${{env.BUILD_TYPE}} --timeout 120
+
+      - name: Generate coverage report (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ${{github.workspace}}/build
+        run: |
+          pip3 install gcovr
+          gcovr --xml -o coverage.xml --root ${{github.workspace}}/src --exclude-unreachable-branches --print-summary
+
+      - name: Upload coverage to Codecov (Linux)
+        if: runner.os == 'Linux'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ${{github.workspace}}/build/coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Verify build outputs
         shell: bash
@@ -301,31 +321,31 @@ jobs:
           name: dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}
           path: ${{github.workspace}}/deploy
 
-      # - name: Compress release archive (Linux)
-      #   if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux'
-      #   working-directory: ${{github.workspace}}/deploy
-      #   run: |
-      #     tar czf dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.tar.gz .
+      - name: Compress release archive (Linux)
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux'
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          tar czf dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.tar.gz .
 
-      # - name: Compress release archive (macOS)
-      #   if: startsWith(github.ref, 'refs/tags/') && runner.os == 'macOS'
-      #   working-directory: ${{github.workspace}}/deploy
-      #   run: |
-      #     zip -r dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip .
+      - name: Compress release archive (macOS)
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'macOS'
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          zip -r dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip .
 
-      # - name: Compress release archive (Windows)
-      #   if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Windows'
-      #   shell: bash
-      #   working-directory: ${{github.workspace}}/deploy
-      #   run: |
-      #     7z a dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip ./*
+      - name: Compress release archive (Windows)
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Windows'
+        shell: bash
+        working-directory: ${{github.workspace}}/deploy
+        run: |
+          7z a dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION}}.zip ./*
 
-      # - name: Release
-      #   if: startsWith(github.ref, 'refs/tags/')
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     files: |
-      #       ${{github.workspace}}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION }}.${{ matrix.archive_ext }}
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{github.workspace}}/deploy/dataset-tools-${{ matrix.artifact_name }}-${{env.VERSION }}.${{ matrix.archive_ext }}
 
   clang-tidy:
     runs-on: ubuntu-24.04
