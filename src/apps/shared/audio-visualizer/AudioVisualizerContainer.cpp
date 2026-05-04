@@ -1,4 +1,5 @@
 #include "AudioVisualizerContainer.h"
+#include "MiniMapScrollBar.h"
 #include "TierLabelArea.h"
 
 #include <ui/BoundaryOverlayWidget.h>
@@ -6,8 +7,6 @@
 #include <ui/TimeRulerWidget.h>
 
 #include <dsfw/widgets/PlayWidget.h>
-
-#include <QScrollBar>
 
 namespace dstools {
 
@@ -24,6 +23,9 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
+    m_miniMap = new MiniMapScrollBar(m_viewport, this);
+    mainLayout->addWidget(m_miniMap);
+
     m_timeRuler = new TimeRulerWidget(m_viewport, this);
     mainLayout->addWidget(m_timeRuler);
 
@@ -33,9 +35,6 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
     m_chartSplitter = new QSplitter(Qt::Vertical, this);
     mainLayout->addWidget(m_chartSplitter, 1);
 
-    m_scrollBar = new QScrollBar(Qt::Horizontal, this);
-    mainLayout->addWidget(m_scrollBar);
-
     m_boundaryOverlay = new BoundaryOverlayWidget(m_viewport, this);
     m_boundaryOverlay->trackWidget(m_chartSplitter);
 
@@ -43,6 +42,8 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
             m_timeRuler, &TimeRulerWidget::setViewport);
     connect(m_viewport, &ViewportController::viewportChanged,
             m_boundaryOverlay, &BoundaryOverlayWidget::setViewport);
+    connect(m_viewport, &ViewportController::viewportChanged,
+            m_miniMap, &MiniMapScrollBar::setViewport);
 }
 
 AudioVisualizerContainer::~AudioVisualizerContainer() = default;
@@ -67,8 +68,8 @@ QSplitter *AudioVisualizerContainer::chartSplitter() const {
     return m_chartSplitter;
 }
 
-QScrollBar *AudioVisualizerContainer::scrollBar() const {
-    return m_scrollBar;
+MiniMapScrollBar *AudioVisualizerContainer::miniMap() const {
+    return m_miniMap;
 }
 
 void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel *model) {
@@ -78,6 +79,10 @@ void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel *model) {
 
 void AudioVisualizerContainer::setTotalDuration(double seconds) {
     m_viewport->setTotalDuration(seconds);
+}
+
+void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, int sampleRate) {
+    m_miniMap->setAudioData(samples, sampleRate);
 }
 
 void AudioVisualizerContainer::addChart(const QString &id, QWidget *widget,
@@ -126,7 +131,7 @@ void AudioVisualizerContainer::setPlayWidget(PlayWidget *playWidget) {
 void AudioVisualizerContainer::rebuildChartLayout() {
     while (m_chartSplitter->count() > 0) {
         auto *w = m_chartSplitter->widget(0);
-        m_chartSplitter->removeWidget(w);
+        w->setParent(nullptr);
     }
 
     for (int i = 0; i < m_chartOrder.size(); ++i) {
@@ -138,8 +143,6 @@ void AudioVisualizerContainer::rebuildChartLayout() {
         m_chartSplitter->setStretchFactor(i, it->stretchFactor);
         it->widget->show();
     }
-
-    m_boundaryOverlay->repositionOverSplitter();
 }
 
 void AudioVisualizerContainer::connectViewportToWidget(QWidget * /*widget*/) {

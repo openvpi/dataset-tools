@@ -13,19 +13,26 @@
 #include <QStringList>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <vector>
 
 #include <dsfw/AppSettings.h>
 #include <dsfw/widgets/PlayWidget.h>
 #include <dstools/ViewportController.h>
 
-class QScrollBar;
-
 namespace dstools {
 
+namespace phonemelabeler {
 class IBoundaryModel;
 class BoundaryOverlayWidget;
 class TimeRulerWidget;
+} // namespace phonemelabeler
+
+using phonemelabeler::IBoundaryModel;
+using phonemelabeler::BoundaryOverlayWidget;
+using phonemelabeler::TimeRulerWidget;
+
 class TierLabelArea;
+class MiniMapScrollBar;
 
 struct ChartEntry {
     QString id;
@@ -47,10 +54,12 @@ public:
     TimeRulerWidget *timeRuler() const;
     TierLabelArea *tierLabelArea() const;
     QSplitter *chartSplitter() const;
-    QScrollBar *scrollBar() const;
+    MiniMapScrollBar *miniMap() const;
 
     void setBoundaryModel(IBoundaryModel *model);
     void setTotalDuration(double seconds);
+
+    void setAudioData(const std::vector<float> &samples, int sampleRate);
 
     void addChart(const QString &id, QWidget *widget, int defaultOrder, int stretchFactor = 1);
     void removeChart(const QString &id);
@@ -75,7 +84,7 @@ private:
     TimeRulerWidget *m_timeRuler = nullptr;
     TierLabelArea *m_tierLabelArea = nullptr;
     QSplitter *m_chartSplitter = nullptr;
-    QScrollBar *m_scrollBar = nullptr;
+    MiniMapScrollBar *m_miniMap = nullptr;
     dsfw::widgets::PlayWidget *m_playWidget = nullptr;
 
     QMap<QString, ChartEntry> m_charts;
