@@ -52,3 +52,23 @@ add_test(NAME TestPitchExtractionService COMMAND TestPitchExtractionService)
 set_tests_properties(TestPitchExtractionService PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
+
+add_executable(TestExportServiceMock TestExportServiceMock.cpp)
+target_link_libraries(TestExportServiceMock PRIVATE
+    data-sources
+    Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestExportServiceMock COMMAND TestExportServiceMock)
+set_tests_properties(TestExportServiceMock PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
+
+add_executable(TestSlicerService TestSlicerService.cpp)
+target_link_libraries(TestSlicerService PRIVATE
+    data-sources
+    Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestSlicerService COMMAND TestSlicerService)
+set_tests_properties(TestSlicerService PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
