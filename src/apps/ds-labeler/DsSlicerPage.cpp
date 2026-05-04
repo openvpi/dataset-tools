@@ -1,11 +1,12 @@
 #include "DsSlicerPage.h"
-#include "AudacityMarkerIO.h"
-#include "AudioFileListPanel.h"
 #include "ProjectDataSource.h"
-#include "SliceCommands.h"
-#include "SliceExportDialog.h"
-#include "SliceNumberLayer.h"
-#include "SlicerListPanel.h"
+
+#include <AudacityMarkerIO.h>
+#include <AudioFileListPanel.h>
+#include <SliceCommands.h>
+#include <SliceExportDialog.h>
+#include <SliceNumberLayer.h>
+#include <SlicerListPanel.h>
 
 #include <dstools/DsProject.h>
 

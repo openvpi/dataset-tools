@@ -18,7 +18,6 @@ SliceExportDialog::SliceExportDialog(QWidget *parent) : QDialog(parent) {
 
     auto *layout = new QFormLayout(this);
 
-    // Bit depth
     m_comboBitDepth = new QComboBox(this);
     m_comboBitDepth->addItem(tr("16-bit PCM"), static_cast<int>(BitDepth::PCM16));
     m_comboBitDepth->addItem(tr("24-bit PCM"), static_cast<int>(BitDepth::PCM24));
@@ -26,13 +25,11 @@ SliceExportDialog::SliceExportDialog(QWidget *parent) : QDialog(parent) {
     m_comboBitDepth->addItem(tr("32-bit float"), static_cast<int>(BitDepth::Float32));
     layout->addRow(tr("Bit depth:"), m_comboBitDepth);
 
-    // Channel mode
     m_comboChannel = new QComboBox(this);
     m_comboChannel->addItem(tr("Mono"), static_cast<int>(ChannelExportMode::Mono));
     m_comboChannel->addItem(tr("Keep original"), static_cast<int>(ChannelExportMode::KeepOriginal));
     layout->addRow(tr("Channels:"), m_comboChannel);
 
-    // Output directory
     auto *dirLayout = new QHBoxLayout;
     m_editOutputDir = new QLineEdit(this);
     auto *btnBrowse = new QPushButton(tr("Browse..."), this);
@@ -41,17 +38,14 @@ SliceExportDialog::SliceExportDialog(QWidget *parent) : QDialog(parent) {
     layout->addRow(tr("Output dir:"), dirLayout);
     connect(btnBrowse, &QPushButton::clicked, this, &SliceExportDialog::onBrowseDir);
 
-    // Prefix
     m_editPrefix = new QLineEdit(this);
     layout->addRow(tr("Prefix:"), m_editPrefix);
 
-    // Digits
     m_spinDigits = new QSpinBox(this);
     m_spinDigits->setRange(1, 10);
     m_spinDigits->setValue(3);
     layout->addRow(tr("Number digits:"), m_spinDigits);
 
-    // Buttons
     m_buttonBox =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     m_buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Export"));

@@ -4,15 +4,12 @@
 
 namespace dstools {
 
-// ── AddSlicePointCommand ─────────────────────────────────────────────────────
-
 AddSlicePointCommand::AddSlicePointCommand(std::vector<double> &points, double timeSec,
                                            std::function<void()> refresh)
     : QUndoCommand(QObject::tr("Add slice point")),
       m_points(points),
       m_time(timeSec),
       m_refresh(std::move(refresh)) {
-    // Find insertion index to keep sorted
     m_insertIndex =
         static_cast<int>(std::lower_bound(m_points.begin(), m_points.end(), m_time) -
                          m_points.begin());
@@ -29,8 +26,6 @@ void AddSlicePointCommand::redo() {
     if (m_refresh)
         m_refresh();
 }
-
-// ── MoveSlicePointCommand ────────────────────────────────────────────────────
 
 MoveSlicePointCommand::MoveSlicePointCommand(std::vector<double> &points, int index,
                                              double oldTime, double newTime,
@@ -55,8 +50,6 @@ void MoveSlicePointCommand::redo() {
     if (m_refresh)
         m_refresh();
 }
-
-// ── RemoveSlicePointCommand ──────────────────────────────────────────────────
 
 RemoveSlicePointCommand::RemoveSlicePointCommand(std::vector<double> &points, int index,
                                                  std::function<void()> refresh)

@@ -242,7 +242,7 @@ Inference libraries (`game-infer`, `hubert-infer`, `rmvpe-infer`) are direct sha
 
 ### Phase 4: Testing & CI (ongoing)
 
-| # | Task | Priority | Effort |
+****| # | Task | Priority | Effort |
 |---|---|---|---|
 | 4.1 | ~~Add unit tests for extracted service classes (Phase 3 output)~~ ✅ | Medium | 1d per service |
 | 4.2 | ~~Add mock-based inference tests (mock ONNX session)~~ ✅ | Medium | 2d |
@@ -252,13 +252,297 @@ Inference libraries (`game-infer`, `hubert-infer`, `rmvpe-infer`) are direct sha
 
 ---
 
+---
+
+## 7. 设计原则回顾（来自 unified-app-design.md）
+
+在分析模块结构之前，先明确设计文档中已确立的两个应用的定位差异：
+
+### 7.1 两个应用的本质区别
+
+| | LabelSuite | DsLabeler |
+|---|---|---|
+| **定位** | 通用标注工具集，散装独立页面 | DiffSinger 一条龙，.dsproj 驱动 |
+| **页面数** | 10（全部暴露，每步可独立操作） | 7（合并/隐藏可自动化步骤） |
+| **文件格式** | FormatAdapter 兼容旧格式（TextGrid/.lab/.ds） | 仅 dstext，内部 PipelineContext |
+| **中间文件** | 无工程目录管理 | **不产生用户可见中间文件**，导出时一次性生成 |
+| **独有页面** | Align, CSV, MIDI, DS（显式控制每步） | Welcome, Export（工程管理+一次性导出） |
+| **数据源** | `FileDataSource`（文件系统） | `ProjectDataSource`（.dsproj） |
+
+### 7.2 核心复用原则（已落地 ✅）
+
+设计文档已明确（ADR-52/66/68/69/70）：
+
+1. **底层统一**：两个 app 共享 dstext/PipelineContext 数据模型
+2. **编辑器共享**：MinLabelEditor, PhonemeEditor, PitchEditor 完全共享
+3. **IEditorDataSource 抽象**：页面不感知数据来源（文件 vs 工程）
+4. **ISettingsBackend 抽象**：Settings UI 共享，后端可切换 QSettings/.dsproj
+5. **自动补全统一**：进入 Phone/Pitch 页时自动 FA/F0/MIDI，两个 app 行为一致
+
+### 7.3 LabelSuite 独有页面的意义
+
+LabelSuite 保留 Align/CSV/MIDI/DS 四个独立页面**不是冗余**，而是设计意图：
+
+- 用户需要**显式控制每个步骤**（如：只跑 HubertFA 对齐，不做后续）
+- 兼容第三方工具（MFA、SOFA）的中间产物
+- 不需要工程文件管理，直接操作文件
+
+---
+
+## 8. 代码现状 vs 设计文档的差距
+
+### 8.1 当前 CMake Target 全景
+
+```
+层级          目标名                         类型
+──────────────────────────────────────────────────
+Framework     dsfw-base                      STATIC
+              dsfw-core                      STATIC/SHARED
+              dsfw-ui-core                   STATIC
+              dstools-audio                  STATIC
+              dstools-infer-common           STATIC
+              dsfw-widgets                   SHARED
+
+Domain        dstools-domain                 STATIC
+
+Infer         audio-util                     SHARED (DLL)
+              FunAsr                         STATIC
+              game-infer                     SHARED (DLL)
+              hubert-infer                   SHARED (DLL)
+              rmvpe-infer                    SHARED (DLL)
+
+Libs          gameinfer-lib                  STATIC
+              hubertfa-lib                   STATIC
+              lyricfa-lib                    STATIC
+              minlabel-lib                   STATIC
+              rmvpepitch-lib                 STATIC
+              slicer-lib                     STATIC
+              textgrid                       STATIC
+
+Apps/Shared   data-sources                   STATIC    ← 含 Page + Service
+              settings-page                  STATIC
+              min-label-editor               STATIC
+              phoneme-editor                 STATIC
+              pitch-editor                   STATIC
+              waveform-panel                 STATIC
+
+Apps/旧Pages  minlabel-page                  STATIC    ← M.4.1 遗留
+              phonemelabeler-page            STATIC    ← M.4.1 遗留
+              pitchlabeler-page              STATIC    ← M.4.1 遗留
+              pipeline-slicer-page           STATIC    ← M.4.1 遗留
+              pipeline-lyricfa-page          STATIC    ← M.4.1 遗留
+              pipeline-hubertfa-page         STATIC    ← M.4.1 遗留
+              pipeline-pages                 INTERFACE ← M.4.1 遗留
+
+Apps (exe)    LabelSuite, DsLabeler, dstools-cli, WidgetGallery, TestShell
+其他          game-infer-app/                空目录遗留
+```
+
+**总计: ~40 个 CMake targets（不含测试）**
+
+### 8.2 依赖关系（当前实际）
+
+```
+LabelSuite ─┬─ pipeline-pages ─┬─ pipeline-slicer-page ── slicer-lib
+             │                  ├─ pipeline-lyricfa-page ── lyricfa-lib
+             │                  └─ pipeline-hubertfa-page ── hubertfa-lib
+             ├─ data-sources ──── (MinLabelPage, PhonemeLabelerPage, PitchLabelerPage...)
+             ├─ game-infer, rmvpe-infer (直接依赖 DLL)
+             └─ dstools-ui-core, dstools-widgets
+
+DsLabeler ──┬─ data-sources (同上)
+             ├─ min-label-editor, phoneme-editor, pitch-editor, settings-page
+             └─ dstools-ui-core, dstools-widgets
+```
+
+### 8.3 关键差距分析
+
+#### ❌ 差距1：LabelSuite 有两套实现路径
+
+设计文档说 LabelSuite 和 DsLabeler **共享全部页面组件**（§4.3），区别仅在数据源。
+
+但当前代码中 LabelSuite 的 Slice/ASR/Align 三个页面走**旧 pipeline-pages 体系**（独立实现），而非 data-sources 中的共享 Page：
+
+```
+设计意图:  LabelSuite Slice 页 → data-sources/SlicerService + FileDataSource
+当前实际:  LabelSuite Slice 页 → pipeline-slicer-page → slicer-lib (独立实现)
+```
+
+这导致：
+- 同一功能维护两份代码
+- LabelSuite 独有页面（Align/CSV/MIDI/DS）中 BuildCsvPage、BuildDsPage、GameAlignPage 已在 LabelSuite 内部实现 ✅
+- 但 Slice/ASR/Align 仍走旧路径 ❌
+
+#### ❌ 差距2：6 个遗留 Page 库 + 1 个空目录
+
+M.4.1 删除独立 exe 后留下的壳：
+- `minlabel-page`, `phonemelabeler-page`, `pitchlabeler-page` — 旧独立 app 的 page 库
+- `pipeline-slicer-page`, `pipeline-lyricfa-page`, `pipeline-hubertfa-page` — 旧 Pipeline app 的 page 库
+- `pipeline-pages` INTERFACE — 聚合上面三个
+- `game-infer-app/` — 空目录
+
+按设计文档，这些应该被 `data-sources` 中的统一 Page 替代。
+
+#### ✅ 做对的部分
+
+- `data-sources` 已包含 SlicerService, ExportService, PitchExtractionService ✅
+- 编辑器组件（phoneme-editor, pitch-editor, min-label-editor）已共享 ✅
+- IEditorDataSource 抽象已实现 ✅
+- DsLabeler 的 7 页结构和 .dsproj 驱动已实现 ✅
+- FormatAdapter 旧格式兼容已实现 ✅
+
+#### ⚠️ libs/ 层是否冗余？
+
+设计文档 §3.11 的 CMake 示例直接链接 `hubert-infer`, `game-infer` 等 DLL，不经过 libs/ 层。但当前代码中 `data-sources` 依赖 `hubertfa-lib`, `gameinfer-lib` 等 wrapper。
+
+这是**有意设计**还是**遗留**？需要看 libs 的实际内容：
+- `hubertfa-lib`：包含 alignment decoding 逻辑（非薄壳），**应保留**
+- `lyricfa-lib`：包含 FunASR + 歌词匹配逻辑（非薄壳），**应保留**
+- `slicer-lib`：包含 RMS 切片算法（非薄壳），**应保留**
+- `gameinfer-lib`：GAME model 的 Qt wrapper，需评估厚度
+- `rmvpepitch-lib`：RMVPE 的 Qt wrapper，需评估厚度
+- `minlabel-lib`：MinLabel 业务逻辑，**应保留**
+
+libs/ 层对 CLI 工具（`dstools-cli`）也是必要的——CLI 直接用 libs 层而不依赖任何 UI。
+
+---
+
+## 9. 模块精简方案（基于设计原则）
+
+### 原则约束
+
+1. LabelSuite 保留全部 10 个散装页面，兼容旧格式
+2. DsLabeler 一条龙，不产生中间文件，一次性导出
+3. 底层不动（framework/infer 层已经很好）
+4. libs/ 层为 CLI 提供无 UI 接口，**不能删**
+5. 目标：消除**旧 page 壳**和**双路径**，不是无脑减 target 数
+
+### Phase 5A: 统一 LabelSuite 到 data-sources（核心，2-3 周）
+
+**目标**：LabelSuite 的 Slice/ASR/Align 三个页面也走 `data-sources` + `FileDataSource`，与 DsLabeler 共享同一套 Page 组件。
+
+| # | Task | 说明 |
+|---|---|---|
+| 5A.1 | LabelSuite Slice 页 → `data-sources/SlicerService` + `FileDataSource` | 替代 `pipeline-slicer-page`。SlicerService 已有切片逻辑，FileDataSource 已有文件系统访问 |
+| 5A.2 | LabelSuite ASR 页 → `data-sources/MinLabelPage` 的 ASR 功能 + `FileDataSource` | 替代 `pipeline-lyricfa-page`。MinLabelPage 已内置 ASR 按钮 |
+| 5A.3 | LabelSuite Align 页 → `data-sources/PhonemeLabelerPage` 的 FA 功能 + `FileDataSource` | 替代 `pipeline-hubertfa-page`。PhonemeLabelerPage 已内置自动 FA |
+| 5A.4 | LabelSuite 独有页面（CSV/DS/MIDI）保留在 `label-suite/pages/` 内部 | 这些是 LabelSuite 的专属页面，不需要共享，保留现状即可 |
+
+**注意**：LabelSuite 的 Align/MIDI 页面与 DsLabeler 的"自动 FA/自动 MIDI"有区别——LabelSuite 需要**独立界面**让用户显式执行。实现方式是在共享 Page 上添加 LabelSuite 专属的"手动运行"按钮/菜单，通过数据源类型判断是否显示。
+
+### Phase 5B: 清理遗留目标（5A 完成后，1 周）
+
+| # | Task | 说明 |
+|---|---|---|
+| 5B.1 | 删除 `pipeline-slicer-page` | 被 data-sources SlicerService 替代 |
+| 5B.2 | 删除 `pipeline-lyricfa-page` | 被 data-sources MinLabelPage 替代 |
+| 5B.3 | 删除 `pipeline-hubertfa-page` | 被 data-sources PhonemeLabelerPage 替代 |
+| 5B.4 | 删除 `pipeline-pages` INTERFACE | 不再需要 |
+| 5B.5 | 删除 `minlabel-page` | data-sources 中已有 MinLabelPage |
+| 5B.6 | 删除 `phonemelabeler-page` | data-sources 中已有 PhonemeLabelerPage |
+| 5B.7 | 删除 `pitchlabeler-page` | data-sources 中已有 PitchLabelerPage |
+| 5B.8 | 删除 `game-infer-app/` 空目录 | 清理 |
+| 5B.9 | 删除 `src/apps/pipeline/` 目录 | 所有 page 已迁移 |
+
+**结果**: 减少 7 个 CMake targets，删除 1 个空目录，删除 1 个目录
+
+### Phase 5C: 评估 libs 层薄壳（可选，1 周）
+
+| # | Task | 说明 |
+|---|---|---|
+| 5C.1 | 审计 `gameinfer-lib` | 如果只是 `GameInfer::init()` + `GameInfer::run()` wrapper → 考虑合并到调用方 |
+| 5C.2 | 审计 `rmvpepitch-lib` | 同上 |
+| 5C.3 | `textgrid` 改为 INTERFACE target | header-only 第三方库，无需编译 |
+
+**注意**: libs 层是 `dstools-cli` 的接口层，即使对 GUI 是薄壳，对 CLI 也是必要抽象。**不轻易删除**，仅在确认 CLI 不需要时才合并。
+
+### Phase 5D: 构建系统优化（1 周）
+
+| # | Task | 说明 |
+|---|---|---|
+| 5D.1 | `dstools-infer-common` 的 `target_link_directories` → imported target | CMake 反模式修复 |
+| 5D.2 | `FunAsr` C++17 → 继承项目 C++20 | 避免混合标准 |
+| 5D.3 | 评估 Unity Build | 对大量小 static libs 效果显著 |
+| 5D.4 | 评估 infer DLL → STATIC | 如果只有本项目用，STATIC 减少运行时依赖和部署复杂度。但 infer 库设计为可独立部署（`dstools_add_infer_library` 宏带 INSTALL），保留 DLL 可能是有意为之 |
+
+---
+
+## 10. 精简后的目标架构
+
+```
+精简后 (~33 targets，含测试目标):
+
+Framework (6, 可独立 find_package 消费):
+  dsfw-base → dsfw-core → dsfw-ui-core → dsfw-widgets
+  dstools-audio
+  dstools-infer-common
+
+Domain (1):
+  dstools-domain
+
+Infer (5, DLL 独立可部署):
+  audio-util, FunAsr, game-infer, hubert-infer, rmvpe-infer
+
+Libs (7, CLI 和 GUI 共用的业务封装):
+  slicer-lib, lyricfa-lib, hubertfa-lib
+  gameinfer-lib, rmvpepitch-lib, minlabel-lib
+  textgrid (→ INTERFACE)
+
+App-Shared (6, 两个 app 共享):
+  data-sources        ← Page + Service 统一入口
+  min-label-editor    ← 歌词编辑 UI 组件
+  phoneme-editor      ← 音素编辑 UI 组件
+  pitch-editor        ← 音高编辑 UI 组件
+  waveform-panel      ← 波形显示组件（注: 设计文档说已被 phoneme-editor 内部组件替代，待确认）
+  settings-page       ← 设置 UI
+
+Apps (4):
+  LabelSuite          ← 10 页散装，独有页面(CSV/DS/MIDI/GameAlign)在内部
+  DsLabeler           ← 7 页一条龙，独有页面(Welcome/Export)在内部
+  dstools-cli
+  WidgetGallery (dev only)
+
+已删除 (8 targets):
+  pipeline-slicer-page, pipeline-lyricfa-page, pipeline-hubertfa-page
+  pipeline-pages (INTERFACE)
+  minlabel-page, phonemelabeler-page, pitchlabeler-page
+  game-infer-app/ (空目录)
+```
+
+### 设计文档 §11.1 的澄清
+
+设计文档提到 `waveform-panel` "已被 phoneme-editor 内的组件 + IBoundaryModel 替代（ADR-65）"。如果 DsSlicerPage 已改为直接使用 phoneme-editor 的 widget（通过 `SliceBoundaryModel`），则 `waveform-panel` target 可能也是遗留：
+
+| 如果 waveform-panel 仍被引用 | 保留 |
+|---|---|
+| 如果仅 phoneme-editor 内部使用 | 合并入 phoneme-editor |
+| 如果无任何引用 | 删除 |
+
+---
+
+## 11. 完整分阶段路线图总览
+
+| Phase | 主题 | 周期 | 核心交付 |
+|---|---|---|---|
+| **1** | 稳定性 & 安全 | 1-2 周 | 修复 build, 线程安全, 模型校验 |
+| **2** | 代码质量 | 2-4 周 | ProjectPaths, RAII, CI 强化 |
+| **3** | 架构重构 | 4-8 周 | God class 拆分, Service 提取 |
+| **4** | 测试 & CI | 持续 | 覆盖率, mock infer, release 自动化 |
+| **5A** | 统一 LabelSuite 到 data-sources | 2-3 周 | LabelSuite Slice/ASR/Align 走共享 Page |
+| **5B** | 清理遗留 targets | 1 周 | 删除 7 个旧 page 库 |
+| **5C** | Libs 层评估 | 1 周 | 审计 thin wrapper，textgrid → INTERFACE |
+| **5D** | 构建优化 | 1 周 | imported target, unity build |
+
+---
+
 ## Positive Findings
 
+- **设计文档质量极高**：unified-app-design.md 已明确两个 app 的边界、复用策略、ADR 记录完整
+- **复用架构已落地**：IEditorDataSource, ISettingsBackend, FormatAdapter 等抽象已实现
+- **M.4.1 迁移已在进行**：独立 exe 已删除，Page 库化已完成，仅差最后一步统一
 - **Clean header hygiene**: No `using namespace` in headers
 - **No dead code blocks**: No `#if 0` sections
 - **No TODO rot**: Project code is clean of stale TODOs
 - **Good CI**: Multi-platform build, test execution, module independence verification, clang-tidy on PRs
 - **Good layering**: Framework is independently consumable via `find_package`
-- **Compiler cache**: sccache/ccache properly configured
 - **Strong test foundation**: 32 test files covering domain + framework core
-- **C++20 adoption**: Modern language features used appropriately

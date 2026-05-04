@@ -15,12 +15,11 @@
 #include <dsfw/Theme.h>
 
 #include "CleanupDialog.h"
-#include "TaskWindowAdapter.h"
 
 #include "AppSettingsBackend.h"
 
 // Page includes
-#include "SlicerPage.h"
+#include <SlicerPage.h>
 #include <MinLabelPage.h>
 #include <PhonemeLabelerPage.h>
 #include <PitchLabelerPage.h>
@@ -67,9 +66,9 @@ int main(int argc, char *argv[]) {
 
     // ── Create and register all 10 pages ──────────────────────────────────
 
-    // Step 0: Slice
-    auto *slicerAdapter = new TaskWindowAdapter(new SlicerPage(&shell), &shell);
-    shell.addPage(slicerAdapter, "slice", {}, QObject::tr("Slice"));
+    // Step 0: Slice — shared SlicerPage
+    auto *slicePage = new dstools::SlicerPage(&shell);
+    shell.addPage(slicePage, "slice", {}, QObject::tr("Slice"));
 
     // Step 1: ASR — shared MinLabelPage with ASR functionality
     auto *asrPage = new dstools::MinLabelPage(&shell);

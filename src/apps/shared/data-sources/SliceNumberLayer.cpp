@@ -50,13 +50,10 @@ void SliceNumberLayer::paintEvent(QPaintEvent * /*event*/) {
     font.setBold(true);
     painter.setFont(font);
 
-    // Draw segments: each segment is between two adjacent slice points
-    // Segment 0: [0, point[0]], Segment 1: [point[0], point[1]], etc.
     std::vector<double> boundaries;
     boundaries.push_back(0.0);
     for (double p : m_slicePoints)
         boundaries.push_back(p);
-    // Don't add end — we don't know total duration here, just draw what we have
 
     for (size_t i = 0; i + 1 < boundaries.size(); ++i) {
         double segStart = boundaries[i];
@@ -68,12 +65,10 @@ void SliceNumberLayer::paintEvent(QPaintEvent * /*event*/) {
         if (x2 < 0 || x1 > width())
             continue;
 
-        // Draw boundary line
         painter.setPen(QPen(QColor(255, 200, 100), 1));
-        if (i > 0) // Don't draw line at time 0
+        if (i > 0)
             painter.drawLine(x1, 0, x1, height());
 
-        // Draw segment number
         int segWidth = x2 - x1;
         if (segWidth > 20) {
             painter.setPen(QColor(200, 200, 220));
@@ -83,14 +78,12 @@ void SliceNumberLayer::paintEvent(QPaintEvent * /*event*/) {
         }
     }
 
-    // Draw last boundary line
     if (!m_slicePoints.empty()) {
         int x = timeToX(m_slicePoints.back());
         painter.setPen(QPen(QColor(255, 200, 100), 1));
         painter.drawLine(x, 0, x, height());
     }
 
-    // Top/bottom lines
     painter.setPen(QPen(QColor(80, 80, 100), 1));
     painter.drawLine(0, 0, width(), 0);
     painter.drawLine(0, height() - 1, width(), height() - 1);

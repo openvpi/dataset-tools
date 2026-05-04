@@ -46,8 +46,8 @@ void TimeRulerWidget::paintEvent(QPaintEvent *event) {
     double viewDuration = m_viewEnd - m_viewStart;
     if (viewDuration <= 0.0) return;
 
-    // Choose tick interval based on zoom level so ticks are ~60-120px apart
-    double pixelsPerTick = 80.0;
+    // Choose tick interval based on zoom level so ticks are ~120-240px apart
+    double pixelsPerTick = 150.0;
     double secPerTick = pixelsPerTick / m_pixelsPerSecond;
 
     // Snap to nice intervals

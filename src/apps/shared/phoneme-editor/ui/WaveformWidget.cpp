@@ -12,6 +12,9 @@
 #include <QDebug>
 #include <QContextMenuEvent>
 
+#include <cmath>
+#include <algorithm>
+
 // Audio loading - use dstools-audio (FFmpeg + AudioDecoder)
 #include <dstools/AudioDecoder.h>
 #include <dstools/WaveFormat.h>
@@ -123,6 +126,7 @@ void WaveformWidget::paintEvent(QPaintEvent * /*event*/) {
     }
 
     drawWaveform(painter);
+    drawDbAxis(painter);
     drawPlayCursor(painter);
 }
 
@@ -147,8 +151,10 @@ void WaveformWidget::drawWaveform(QPainter &painter) {
     int numPixels = static_cast<int>(m_minMaxCache.size());
     for (int x = 0; x < w && x < numPixels; ++x) {
         const auto &mm = m_minMaxCache[x];
-        int yMin = centerY - static_cast<int>(mm.max * centerY);
-        int yMax = centerY - static_cast<int>(mm.min * centerY);
+        float scaledMax = std::clamp(mm.max * static_cast<float>(m_amplitudeScale), -1.0f, 1.0f);
+        float scaledMin = std::clamp(mm.min * static_cast<float>(m_amplitudeScale), -1.0f, 1.0f);
+        int yMin = centerY - static_cast<int>(scaledMax * centerY);
+        int yMax = centerY - static_cast<int>(scaledMin * centerY);
         if (yMin > yMax) std::swap(yMin, yMax);
         painter.drawLine(x, yMin, x, yMax);
     }
@@ -162,6 +168,45 @@ void WaveformWidget::drawPlayCursor(QPainter &painter) {
 
     painter.setPen(QPen(QColor(255, 100, 100), 2));
     painter.drawLine(x, 0, x, height());
+}
+
+void WaveformWidget::drawDbAxis(QPainter &painter) {
+    // Draw simple dB scale on the left side of the waveform
+    int h = height();
+    int centerY = h / 2;
+
+    QFont font = painter.font();
+    font.setPixelSize(9);
+    painter.setFont(font);
+    painter.setPen(QColor(100, 100, 120));
+
+    // dB values to display: 0dB at center line peak, negative going inward
+    // With amplitude scale, the visible range is [-1/scale, 1/scale] in linear
+    // Show reference lines at 0dB, -6dB, -12dB, -24dB
+    static const float dbValues[] = {0.0f, -6.0f, -12.0f, -24.0f};
+
+    for (float db : dbValues) {
+        // linear amplitude for this dB level
+        float linear = std::pow(10.0f, db / 20.0f);
+        // Apply amplitude scale: where this linear value appears on screen
+        float scaled = linear * static_cast<float>(m_amplitudeScale);
+        if (scaled > 1.0f) continue; // off screen
+
+        int yTop = centerY - static_cast<int>(scaled * centerY);
+        int yBot = centerY + static_cast<int>(scaled * centerY);
+
+        // Faint horizontal reference line
+        painter.setPen(QPen(QColor(60, 60, 70), 1, Qt::DotLine));
+        painter.drawLine(0, yTop, width(), yTop);
+        if (db != 0.0f) { // don't draw bottom for 0dB (it's off-screen edge)
+            painter.drawLine(0, yBot, width(), yBot);
+        }
+
+        // Label
+        painter.setPen(QColor(100, 100, 120));
+        QString label = (db == 0.0f) ? QStringLiteral("0dB") : QString::number(static_cast<int>(db)) + "dB";
+        painter.drawText(2, yTop - 1, label);
+    }
 }
 
 void WaveformWidget::drawBoundaryOverlay(QPainter &painter) {
@@ -437,12 +482,12 @@ void WaveformWidget::contextMenuEvent(QContextMenuEvent *event) {
 
 void WaveformWidget::wheelEvent(QWheelEvent *event) {
     if (event->modifiers() & Qt::ControlModifier) {
-        // Zoom
+        // Ctrl+wheel: zoom waveform amplitude vertically
         double delta = event->angleDelta().y() / 120.0;
         double factor = (delta > 0) ? 1.25 : 0.8;
-        if (m_viewport) {
-            m_viewport->zoomAt(xToTime(event->position().x()), factor);
-        }
+        m_amplitudeScale = std::clamp(m_amplitudeScale * factor, 0.1, 20.0);
+        update();
+        event->accept();
     } else {
         // Plain wheel: switch entries
         int d = (event->angleDelta().y() > 0) ? -1 : 1;

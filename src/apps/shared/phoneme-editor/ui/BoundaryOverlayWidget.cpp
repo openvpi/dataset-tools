@@ -58,7 +58,27 @@ void BoundaryOverlayWidget::setDraggedBoundary(int index) {
     }
 }
 
+void BoundaryOverlayWidget::setPlayhead(double sec) {
+    if (m_playhead != sec) {
+        m_playhead = sec;
+        update();
+    }
+}
+
 void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
+    QPainter painter(this);
+    int h = height();
+    int w = width();
+
+    // Draw playhead cursor (across all charts)
+    if (m_playhead >= 0.0) {
+        int px = timeToX(m_playhead);
+        if (px >= 0 && px <= w) {
+            painter.setPen(QPen(QColor(255, 80, 80), 2));
+            painter.drawLine(px, 0, px, h);
+        }
+    }
+
     if (!m_document) return;
 
     int activeTier = m_document->activeTierIndex();
@@ -66,11 +86,6 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
 
     int count = m_document->boundaryCount(activeTier);
     if (count == 0) return;
-
-    QPainter painter(this);
-
-    int h = height();
-    int w = width();
 
     for (int b = 0; b < count; ++b) {
         double t = usToSec(m_document->boundaryTime(activeTier, b));

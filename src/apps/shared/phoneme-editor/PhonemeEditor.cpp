@@ -4,6 +4,7 @@
 
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -245,9 +246,9 @@ void PhonemeEditor::buildLayout() {
     m_rightSplitter->addWidget(m_spectrogramWidget);
 
     m_rightSplitter->setStretchFactor(0, 0); // tier: fixed
-    m_rightSplitter->setStretchFactor(1, 1); // waveform: 1/4
-    m_rightSplitter->setStretchFactor(2, 1); // power: 1/4
-    m_rightSplitter->setStretchFactor(3, 2); // spectrogram: 1/2
+    m_rightSplitter->setStretchFactor(1, 2); // waveform: 2/10
+    m_rightSplitter->setStretchFactor(2, 3); // power: 3/10
+    m_rightSplitter->setStretchFactor(3, 5); // spectrogram: 5/10
     m_rightSplitter->setHandleWidth(1);
 
     // Boundary overlay
@@ -338,11 +339,25 @@ void PhonemeEditor::connectSignals() {
         m_entryListPanel->rebuildEntries();
     });
 
-    // Playback
+    // Playback: playhead cursor across all charts
+    auto *playheadTimer = new QTimer(this);
+    playheadTimer->setSingleShot(true);
+    playheadTimer->setInterval(200);
+    connect(playheadTimer, &QTimer::timeout, this, [this]() {
+        // No playhead updates for 200ms → playback stopped, hide cursor
+        if (!m_playWidget->isPlaying()) {
+            m_waveformWidget->setPlayhead(-1.0);
+            m_boundaryOverlay->setPlayhead(-1.0);
+        }
+    });
+
     connect(m_playWidget, &dstools::widgets::PlayWidget::playheadChanged,
-            [this](double sec) {
+            [this, playheadTimer](double sec) {
                 m_waveformWidget->setPlayhead(sec);
+                m_boundaryOverlay->setPlayhead(sec);
                 emit positionChanged(sec);
+                // Restart timer — if no more updates arrive, we'll clear the playhead
+                playheadTimer->start();
             });
 
     // Mouse wheel entry switching

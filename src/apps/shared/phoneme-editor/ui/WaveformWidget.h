@@ -97,6 +97,7 @@ protected:
 
 private:
     void drawWaveform(QPainter &painter);               ///< Draws the waveform.
+    void drawDbAxis(QPainter &painter);                  ///< Draws dB Y-axis labels.
     void drawPlayCursor(QPainter &painter);              ///< Draws the playback cursor.
     void drawBoundaryOverlay(QPainter &painter);         ///< Draws boundary lines.
     void rebuildMinMaxCache();                           ///< Rebuilds the min/max sample cache.
@@ -137,6 +138,7 @@ private:
     double m_pixelsPerSecond = 200.0;                   ///< Current zoom level.
 
     double m_playhead = -1.0;                           ///< Playhead position, -1 if not playing.
+    double m_amplitudeScale = 1.0;                       ///< Vertical amplitude zoom factor.
     bool m_boundaryOverlayEnabled = true;               ///< Whether boundary overlay is drawn.
 
     bool m_dragging = false;                            ///< Whether viewport is being scrolled.

@@ -34,7 +34,6 @@ std::vector<double> read(const QString &path, QString &error) {
         if (!ok1 || !ok2)
             continue;
 
-        // Use midpoint for region markers, exact time for point markers
         double t = (start == end) ? start : (start + end) / 2.0;
         times.push_back(t);
     }

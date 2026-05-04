@@ -47,6 +47,10 @@ public slots:
     /// @param index Boundary index, or -1 for none.
     void setDraggedBoundary(int index);
 
+    /// @brief Sets the playback cursor position.
+    /// @param sec Playhead position in seconds, or -1 if not playing.
+    void setPlayhead(double sec);
+
 protected:
     void paintEvent(QPaintEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -67,6 +71,7 @@ private:
 
     int m_hoveredBoundary = -1;                  ///< Index of hovered boundary, or -1.
     int m_draggedBoundary = -1;                  ///< Index of dragged boundary, or -1.
+    double m_playhead = -1.0;                    ///< Playhead position in seconds, -1 = hidden.
 };
 
 } // namespace phonemelabeler
