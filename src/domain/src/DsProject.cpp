@@ -89,7 +89,7 @@ static Item parseItem(const nlohmann::json &j) {
     if (j.contains("language") && j["language"].is_string())
         item.language = fromStd(j["language"].get<std::string>());
     if (j.contains("audioSource") && j["audioSource"].is_string())
-        item.audioSource = fromStd(j["audioSource"].get<std::string>());
+        item.audioSource = DsProject::fromPosixPath(fromStd(j["audioSource"].get<std::string>()));
 
     if (j.contains("slices") && j["slices"].is_array()) {
         for (const auto &sj : j["slices"])
@@ -147,7 +147,7 @@ DsProject DsProject::load(const QString &path, QString &error) {
     proj.m_extraFields = json;
 
     if (json.contains("workingDirectory") && json["workingDirectory"].is_string())
-        proj.m_workingDirectory = fromStd(json["workingDirectory"].get<std::string>());
+        proj.m_workingDirectory = fromPosixPath(fromStd(json["workingDirectory"].get<std::string>()));
 
     if (json.contains("defaults") && json["defaults"].is_object()) {
         const auto &def = json["defaults"];
@@ -274,7 +274,7 @@ DsProject DsProject::load(const QString &path, QString &error) {
         if (sl.contains("audioFiles") && sl["audioFiles"].is_array()) {
             for (const auto &f : sl["audioFiles"])
                 if (f.is_string())
-                    proj.m_slicerState.audioFiles.append(fromStd(f.get<std::string>()));
+                    proj.m_slicerState.audioFiles.append(fromPosixPath(fromStd(f.get<std::string>())));
         }
         if (sl.contains("slicePoints") && sl["slicePoints"].is_object()) {
             for (auto it = sl["slicePoints"].begin(); it != sl["slicePoints"].end(); ++it) {
@@ -283,7 +283,7 @@ DsProject DsProject::load(const QString &path, QString &error) {
                     for (const auto &v : *it)
                         if (v.is_number())
                             points.push_back(v.get<double>());
-                    proj.m_slicerState.slicePoints[fromStd(it.key())] = std::move(points);
+                    proj.m_slicerState.slicePoints[fromPosixPath(fromStd(it.key()))] = std::move(points);
                 }
             }
         }
