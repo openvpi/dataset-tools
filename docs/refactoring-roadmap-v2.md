@@ -46,10 +46,10 @@
 
 #### Q.3.2 Install 精简（减少不必要的中间文件）
 
-- [ ] 审查 `dstools_add_library()` 中 EXPORT_SET 带来的 `install(TARGETS ...)` 规则——STATIC 库不需要 install ARCHIVE 到 deploy 目录
-- [ ] `deploy.cmake` 仅拷贝 exe + SHARED DLL + 资源（dict/、translations/、plugins/）到 install prefix
-- [ ] 去掉对 .lib/.a 静态库文件的 install（它们只在 `find_package(dsfw)` 场景下有用，但 CI artifact 不需要）
-- [ ] 分离 `install` 为两种模式：
+- [x] 审查 `dstools_add_library()` 中 EXPORT_SET 带来的 `install(TARGETS ...)` 规则——STATIC 库不需要 install ARCHIVE 到 deploy 目录
+- [x] `deploy.cmake` 仅拷贝 exe + SHARED DLL + 资源（dict/、translations/、plugins/）到 install prefix
+- [x] 去掉对 .lib/.a 静态库文件的 install（它们只在 `find_package(dsfw)` 场景下有用，但 CI artifact 不需要）
+- [x] 分离 `install` 为两种模式：
   - **DEPLOY**（CI/用户打包用）：仅 exe + DLL + 资源 → 最小体积
   - **SDK**（开发者用，`find_package(dsfw)`）：额外包含 headers + .lib + cmake config
 - [ ] 可选：在 `dstools_add_executable()` 的 DEPLOY 模式中使用 CMake 3.21+ 的 `install(RUNTIME_DEPENDENCY_SET)` 自动收集运行时依赖，替代手动 glob
