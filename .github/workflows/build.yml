@@ -257,11 +257,26 @@ jobs:
         run: |
           echo "=== Verifying build outputs ==="
           FAILED=0
-          for app in LabelSuite DsLabeler dstools-cli WidgetGallery; do
+          # GUI apps use MACOSX_BUNDLE on macOS → .app bundle layout
+          for app in LabelSuite DsLabeler; do
             if [ "$RUNNER_OS" = "Windows" ]; then
               EXE="${{github.workspace}}/build/bin/${app}.exe"
             elif [ "$RUNNER_OS" = "macOS" ]; then
               EXE="${{github.workspace}}/build/bin/${app}.app/Contents/MacOS/${app}"
+            else
+              EXE="${{github.workspace}}/build/bin/${app}"
+            fi
+            if [ -f "$EXE" ]; then
+              echo "  [OK] $app"
+            else
+              echo "  [FAIL] $app (not found)"
+              FAILED=1
+            fi
+          done
+          # CLI tools and utilities — plain executables (no MACOSX_BUNDLE)
+          for app in dstools-cli WidgetGallery; do
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              EXE="${{github.workspace}}/build/bin/${app}.exe"
             else
               EXE="${{github.workspace}}/build/bin/${app}"
             fi
