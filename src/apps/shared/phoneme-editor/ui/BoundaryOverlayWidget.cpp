@@ -1,5 +1,6 @@
-﻿#include "BoundaryOverlayWidget.h"
+#include "BoundaryOverlayWidget.h"
 #include "TextGridDocument.h"
+#include "IBoundaryModel.h"
 
 #include <dstools/TimePos.h>
 
@@ -24,6 +25,13 @@ BoundaryOverlayWidget::BoundaryOverlayWidget(ViewportController *viewport, QWidg
 
 void BoundaryOverlayWidget::setDocument(TextGridDocument *doc) {
     m_document = doc;
+    m_boundaryModel = nullptr;
+    update();
+}
+
+void BoundaryOverlayWidget::setBoundaryModel(IBoundaryModel *model) {
+    m_boundaryModel = model;
+    m_document = nullptr;
     update();
 }
 
@@ -79,27 +87,48 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
         }
     }
 
-    if (!m_document) return;
+    if (m_document) {
+        int activeTier = m_document->activeTierIndex();
+        if (activeTier < 0 || activeTier >= m_document->tierCount()) return;
 
-    int activeTier = m_document->activeTierIndex();
-    if (activeTier < 0 || activeTier >= m_document->tierCount()) return;
+        int count = m_document->boundaryCount(activeTier);
+        if (count == 0) return;
 
-    int count = m_document->boundaryCount(activeTier);
-    if (count == 0) return;
+        for (int b = 0; b < count; ++b) {
+            double t = usToSec(m_document->boundaryTime(activeTier, b));
+            int x = timeToX(t);
+            if (x < 0 || x > w) continue;
 
-    for (int b = 0; b < count; ++b) {
-        double t = usToSec(m_document->boundaryTime(activeTier, b));
-        int x = timeToX(t);
-        if (x < 0 || x > w) continue;
-
-        if (b == m_draggedBoundary) {
-            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
-        } else if (b == m_hoveredBoundary) {
-            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
-        } else {
-            painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
+            if (b == m_draggedBoundary) {
+                painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
+            } else if (b == m_hoveredBoundary) {
+                painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
+            } else {
+                painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
+            }
+            painter.drawLine(x, 0, x, h);
         }
-        painter.drawLine(x, 0, x, h);
+    } else if (m_boundaryModel) {
+        int activeTier = m_boundaryModel->activeTierIndex();
+        if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return;
+
+        int count = m_boundaryModel->boundaryCount(activeTier);
+        if (count == 0) return;
+
+        for (int b = 0; b < count; ++b) {
+            double t = usToSec(m_boundaryModel->boundaryTime(activeTier, b));
+            int x = timeToX(t);
+            if (x < 0 || x > w) continue;
+
+            if (b == m_draggedBoundary) {
+                painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
+            } else if (b == m_hoveredBoundary) {
+                painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
+            } else {
+                painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
+            }
+            painter.drawLine(x, 0, x, h);
+        }
     }
 }
 

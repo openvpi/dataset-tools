@@ -1,3 +1,4 @@
+add_subdirectory(audio-visualizer)
 add_subdirectory(data-sources)
 add_subdirectory(settings)
 add_subdirectory(min-label-editor)

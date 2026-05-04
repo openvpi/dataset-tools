@@ -100,23 +100,23 @@
 
 ### S.1 AudioVisualizerContainer 基类
 
-- [ ] 新建 `AudioVisualizerContainer` 基类（`src/apps/shared/audio-visualizer/`）
-- [ ] 垂直布局管理：MiniMapScrollBar → TimeRuler → TierLabelArea → QSplitter(子图)
-- [ ] 子图注册 API：`addChart(id, widget, defaultOrder)` / `removeChart(id)`
-- [ ] 子图顺序可配置（从 AppSettings 读取 chartOrder）
-- [ ] 共享 ViewportController + IBoundaryModel
-- [ ] BoundaryOverlayWidget 覆盖 TierLabelArea + QSplitter 区域
-- [ ] 验证：可动态添加/移除子图，顺序可调整
+- [x] 新建 `AudioVisualizerContainer` 基类（`src/apps/shared/audio-visualizer/`）
+- [x] 垂直布局管理：MiniMapScrollBar → TimeRuler → TierLabelArea → QSplitter(子图)
+- [x] 子图注册 API：`addChart(id, widget, defaultOrder)` / `removeChart(id)`
+- [x] 子图顺序可配置（从 AppSettings 读取 chartOrder）
+- [x] 共享 ViewportController + IBoundaryModel
+- [x] BoundaryOverlayWidget 覆盖 TierLabelArea + QSplitter 区域
+- [x] 验证：可动态添加/移除子图，顺序可调整
 
 ### S.2 TierLabelArea 标签区域
 
-- [ ] `TierLabelArea` 基类：`activeTierIndex()` / `activeBoundaries()` / `activeTierChanged` 信号
-- [ ] `SliceTierLabel`（Slicer 用）：单层，自动编号 "1", "2", "3"...
-- [ ] `PhonemeTextGridTierLabel`（PhonemeLabeler 用）：多层 TextGrid 编辑
-  - [ ] 最左侧竖排 radio button 组（每层一个）
-  - [ ] 选中层的边界线向下贯穿所有子图
-  - [ ] 非选中层的边界线仅在标签区域内，从该层向下延伸到最低层截止
-- [ ] 验证：radio button 切换时边界线贯穿范围正确变化
+- [x] `TierLabelArea` 基类：`activeTierIndex()` / `activeBoundaries()` / `activeTierChanged` 信号
+- [x] `SliceTierLabel`（Slicer 用）：单层，自动编号 "1", "2", "3"...
+- [x] `PhonemeTextGridTierLabel`（PhonemeLabeler 用）：多层 TextGrid 编辑
+  - [x] 最左侧竖排 radio button 组（每层一个）
+  - [x] 选中层的边界线向下贯穿所有子图
+  - [x] 非选中层的边界线仅在标签区域内，从该层向下延伸到最低层截止
+- [x] 验证：radio button 切换时边界线贯穿范围正确变化
 
 ### S.3 MiniMapScrollBar 组件
 
