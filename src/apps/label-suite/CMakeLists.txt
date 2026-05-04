@@ -37,11 +37,16 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 dstools_add_translations(${PROJECT_NAME})
 
 # Copy cpp-pinyin dictionary (needed for MinLabel G2P)
+find_package(cpp-pinyin CONFIG REQUIRED)
+set(_CPP_PINYIN_DICT_DIR "${cpp-pinyin_DIR}/dict")
+if(NOT EXISTS "${_CPP_PINYIN_DICT_DIR}")
+    message(FATAL_ERROR "cpp-pinyin dict not found at: ${_CPP_PINYIN_DICT_DIR}")
+endif()
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/cpp-pinyin/dict
-    ${CMAKE_BINARY_DIR}/bin/dict
+    "${_CPP_PINYIN_DICT_DIR}"
+    "${CMAKE_BINARY_DIR}/bin/dict"
 )
-install(DIRECTORY ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/cpp-pinyin/dict
+install(DIRECTORY "${_CPP_PINYIN_DICT_DIR}"
     DESTINATION .
 )

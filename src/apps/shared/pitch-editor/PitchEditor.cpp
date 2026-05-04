@@ -39,7 +39,7 @@ namespace pitchlabeler {
 PitchEditor::PitchEditor(QWidget *parent)
     : QWidget(parent),
       m_undoStack(new QUndoStack(this)),
-      m_playWidget(new dstools::widgets::PlayWidget())
+      m_playWidget(new dstools::widgets::PlayWidget(this))
 {
     m_viewport = new dstools::widgets::ViewportController(this);
     m_viewport->setPixelsPerSecond(100.0);
@@ -291,8 +291,9 @@ void PitchEditor::buildLayout() {
     progressLayout->addWidget(m_progressCurrentTime);
 
     m_playbackProgressSlider = new QSlider(Qt::Horizontal);
-    m_jumpClickStyle = std::make_unique<JumpClickStyle>(m_playbackProgressSlider->style());
-    m_playbackProgressSlider->setStyle(m_jumpClickStyle.get());
+    auto *jumpClickStyle = new JumpClickStyle(m_playbackProgressSlider->style());
+    jumpClickStyle->setParent(m_playbackProgressSlider);
+    m_playbackProgressSlider->setStyle(jumpClickStyle);
     m_playbackProgressSlider->setRange(0, 10000);
     m_playbackProgressSlider->setValue(0);
     m_playbackProgressSlider->setFixedHeight(16);

@@ -160,7 +160,6 @@ private:
 
     // Shortcuts
     QList<QShortcut *> m_windowShortcuts;
-    std::unique_ptr<QProxyStyle> m_jumpClickStyle;
 
     // Helpers
     void buildActions();
