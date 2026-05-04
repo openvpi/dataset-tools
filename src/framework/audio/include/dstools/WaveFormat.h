@@ -10,33 +10,30 @@ namespace dstools::audio {
 class WaveFormat {
 public:
     /// @brief Construct a default format (44100 Hz, 16-bit, stereo).
-    WaveFormat();
+    WaveFormat() = default;
 
     /// @brief Construct a format with specific parameters.
     /// @param sampleRate Sample rate in Hz.
     /// @param bitsPerSample Bit depth per sample.
     /// @param channels Number of audio channels.
-    WaveFormat(int sampleRate, int bitsPerSample, int channels);
+    WaveFormat(int sampleRate, int bitsPerSample, int channels)
+        : m_sampleRate(sampleRate), m_bitsPerSample(bitsPerSample), m_channels(channels) {
+    }
 
     /// @brief Get the sample rate in Hz.
-    /// @return Sample rate.
-    int sampleRate() const;
+    int sampleRate() const { return m_sampleRate; }
 
     /// @brief Get the bit depth per sample.
-    /// @return Bits per sample.
-    int bitsPerSample() const;
+    int bitsPerSample() const { return m_bitsPerSample; }
 
     /// @brief Get the number of channels.
-    /// @return Channel count.
-    int channels() const;
+    int channels() const { return m_channels; }
 
     /// @brief Get the block alignment (channels * bitsPerSample / 8).
-    /// @return Block align in bytes.
-    int blockAlign() const;
+    int blockAlign() const { return m_channels * (m_bitsPerSample / 8); }
 
     /// @brief Get the average bytes per second.
-    /// @return Bytes per second.
-    int averageBytesPerSecond() const;
+    int averageBytesPerSecond() const { return m_sampleRate * blockAlign(); }
 
 private:
     int m_sampleRate = 44100;
