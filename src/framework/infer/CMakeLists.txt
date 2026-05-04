@@ -2,17 +2,21 @@ project(dstools-infer-common)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 
+if(NOT TARGET onnxruntime)
+    add_library(onnxruntime INTERFACE IMPORTED)
+    target_include_directories(onnxruntime INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/include>
+    )
+    target_link_libraries(onnxruntime INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/lib/onnxruntime.lib>
+    )
+endif()
+
 dstools_add_library(${PROJECT_NAME}
     STATIC
     EXPORT_SET ${PROJECT_NAME}Targets
     DEPENDS
         PUBLIC dstools-types nlohmann_json::nlohmann_json onnxruntime
-    INCLUDE_DIRS
-        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/include>
-)
-
-target_link_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/lib>
 )
 
 # Package config for standalone consumption

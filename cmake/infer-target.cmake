@@ -34,10 +34,10 @@ function(dstools_add_infer_library _target)
     endif()
 
     # Determine library type
-    set(_lib_type SHARED)
+    set(_lib_type STATIC)
     if(DEFINED _INF_STATIC_OPTION)
-        if(${_INF_STATIC_OPTION})
-            set(_lib_type STATIC)
+        if(NOT ${_INF_STATIC_OPTION})
+            set(_lib_type SHARED)
         endif()
     endif()
 
@@ -51,7 +51,7 @@ function(dstools_add_infer_library _target)
     # Create library via dstools_add_library
     dstools_add_library(${_target}
         ${_lib_type}
-        CXX_STANDARD 17
+        CXX_STANDARD 20
         NAMESPACE ${_target}::${_target}
         ${_export_arg}
     )
@@ -61,8 +61,8 @@ function(dstools_add_infer_library _target)
         target_compile_definitions(${_target} PUBLIC ${_INF_STATIC_DEFINE})
     endif()
 
-    # Library export define
-    if(_INF_LIBRARY_DEFINE)
+    # Library export define (only for SHARED libraries)
+    if(_lib_type STREQUAL "SHARED" AND _INF_LIBRARY_DEFINE)
         target_compile_definitions(${_target} PRIVATE ${_INF_LIBRARY_DEFINE})
     endif()
 

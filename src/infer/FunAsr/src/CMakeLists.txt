@@ -21,9 +21,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 find_package(FFTW3 CONFIG REQUIRED)
-target_include_directories(${PROJECT_NAME} PUBLIC ${FFTW3_INCLUDE_DIRS})
-target_link_directories(${PROJECT_NAME} PUBLIC ${FFTW3_LIBRARY_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE fftw3 fftw3f)
+find_package(FFTW3f CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE FFTW3::fftw3 FFTW3::fftw3f)
 
 if (WIN32)
     target_compile_definitions(${PROJECT_NAME} PUBLIC -D_RPASR_API_EXPORT)
