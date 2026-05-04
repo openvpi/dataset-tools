@@ -4,11 +4,19 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 if(NOT TARGET onnxruntime)
     add_library(onnxruntime INTERFACE IMPORTED)
+    set(_ORT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime")
     target_include_directories(onnxruntime INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/include>
+        $<BUILD_INTERFACE:${_ORT_ROOT}/include>
     )
+    if(WIN32)
+        set(_ORT_LINK_LIB "${_ORT_ROOT}/lib/onnxruntime.lib")
+    elseif(APPLE)
+        set(_ORT_LINK_LIB "${_ORT_ROOT}/lib/libonnxruntime.dylib")
+    else()
+        set(_ORT_LINK_LIB "${_ORT_ROOT}/lib/libonnxruntime.so")
+    endif()
     target_link_libraries(onnxruntime INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime/lib/onnxruntime.lib>
+        $<BUILD_INTERFACE:${_ORT_LINK_LIB}>
     )
 endif()
 

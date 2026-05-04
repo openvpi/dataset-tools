@@ -205,9 +205,10 @@ jobs:
       - name: Configure CMake (Unix)
         if: runner.os != 'Windows'
         run: |
-          COVERAGE_FLAGS=""
+          COVERAGE_ARGS=()
           if [ "$RUNNER_OS" = "Linux" ]; then
-            COVERAGE_FLAGS="-DCMAKE_CXX_FLAGS='--coverage -g -O0' -DCMAKE_EXE_LINKER_FLAGS='--coverage'"
+            COVERAGE_ARGS+=("-DCMAKE_CXX_FLAGS=--coverage -g -O0")
+            COVERAGE_ARGS+=("-DCMAKE_EXE_LINKER_FLAGS=--coverage")
           fi
           cmake -B "${{github.workspace}}/build" -G Ninja \
             -DBUILD_TESTS:BOOL=ON \
@@ -221,7 +222,7 @@ jobs:
             -DONNXRUNTIME_ENABLE_DML=${{ matrix.dml }} \
             -DDSTOOLS_DEPLOY_MODE=ON \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            $COVERAGE_FLAGS
+            "${COVERAGE_ARGS[@]}"
 
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
