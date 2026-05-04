@@ -110,6 +110,7 @@ private:
     void onDiscardSelected();
     void onClearAll();
     void onCurrentRowChanged(int row);
+    void updateDiscardButtonText();
 };
 
 } // namespace dsfw::widgets

@@ -65,6 +65,8 @@ DroppableFileListPanel::DroppableFileListPanel(QWidget *parent) : QWidget(parent
     connect(m_btnClear, &QPushButton::clicked, this, &DroppableFileListPanel::onClearAll);
     connect(m_listWidget, &QListWidget::currentRowChanged, this,
             &DroppableFileListPanel::onCurrentRowChanged);
+    connect(m_listWidget, &QListWidget::itemSelectionChanged, this,
+            [this]() { updateDiscardButtonText(); });
 }
 
 DroppableFileListPanel::~DroppableFileListPanel() = default;
@@ -221,12 +223,22 @@ void DroppableFileListPanel::onRemoveSelected() {
 void DroppableFileListPanel::onDiscardSelected() {
     const auto selected = m_listWidget->selectedItems();
     for (auto *item : selected) {
-        item->setForeground(Qt::gray);
-        QFont f = item->font();
-        f.setStrikeOut(true);
-        item->setFont(f);
-        item->setData(Qt::UserRole + 1, true); // discarded flag
+        bool discarded = item->data(Qt::UserRole + 1).toBool();
+        if (discarded) {
+            item->setData(Qt::UserRole + 1, false);
+            item->setForeground(Qt::black);
+            QFont f = item->font();
+            f.setStrikeOut(false);
+            item->setFont(f);
+        } else {
+            item->setData(Qt::UserRole + 1, true);
+            item->setForeground(Qt::gray);
+            QFont f = item->font();
+            f.setStrikeOut(true);
+            item->setFont(f);
+        }
     }
+    updateDiscardButtonText();
 }
 
 void DroppableFileListPanel::onClearAll() {
@@ -238,6 +250,20 @@ void DroppableFileListPanel::onCurrentRowChanged(int row) {
     if (row < 0 || row >= m_listWidget->count())
         return;
     emit fileSelected(m_listWidget->item(row)->data(Qt::UserRole).toString());
+}
+
+void DroppableFileListPanel::updateDiscardButtonText() {
+    const auto selected = m_listWidget->selectedItems();
+    bool anyDiscarded = false;
+    for (auto *item : selected) {
+        if (item->data(Qt::UserRole + 1).toBool()) {
+            anyDiscarded = true;
+            break;
+        }
+    }
+    m_btnDiscard->setText(anyDiscarded ? tr("Restore") : tr("Discard"));
+    m_btnDiscard->setToolTip(anyDiscarded ? tr("Restore selected (unmark as skipped)")
+                                          : tr("Discard selected (mark as skipped)"));
 }
 
 void DroppableFileListPanel::dragEnterEvent(QDragEnterEvent *event) {
