@@ -1,8 +1,5 @@
 #pragma once
 
-/// @file ModelManager.h
-/// @brief Multi-model lifecycle manager with memory limits and LRU eviction.
-
 #include <dsfw/IModelManager.h>
 
 #include <map>
@@ -10,18 +7,11 @@
 
 namespace dstools {
 
-/// @brief Manages multiple IModelProvider instances with memory-aware LRU eviction.
-///
-/// Register model providers by type, then call ensureLoaded() to load on demand.
-/// When memory usage exceeds the configured limit, the least-recently-used model
-/// is evicted automatically.
-///
-/// @note All methods must be called from the main thread.
+struct TaskModelConfig;
+
 class ModelManager : public IModelManager {
     Q_OBJECT
 public:
-    /// @brief Construct a model manager.
-    /// @param parent Optional QObject parent.
     explicit ModelManager(QObject *parent = nullptr);
     ~ModelManager() override;
 
@@ -38,6 +28,9 @@ public:
 
     ModelStatus status(ModelTypeId type) const;
     QList<ModelTypeId> loadedModels() const;
+
+    Result<void> loadModel(const QString &taskKey, const TaskModelConfig &config, int gpuIndex);
+    void unloadModel(const QString &taskKey);
 
 private:
     struct Entry {

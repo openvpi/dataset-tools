@@ -1,4 +1,5 @@
 #include <dstools/ModelManager.h>
+#include <dstools/DsProject.h>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -7,6 +8,10 @@
 #include <algorithm>
 
 namespace dstools {
+
+static ModelTypeId taskKeyToTypeId(const QString &taskKey) {
+    return registerModelType(taskKey.toStdString());
+}
 
 ModelManager::ModelManager(QObject *parent) : IModelManager(parent) {
 }
@@ -145,6 +150,23 @@ void ModelManager::evictIfNeeded(int64_t requiredBytes) {
 
         unload(oldest);
     }
+}
+
+Result<void> ModelManager::loadModel(const QString &taskKey, const TaskModelConfig &config, int gpuIndex) {
+    if (config.modelPath.isEmpty())
+        return Result<void>::Error(("No model path configured for task: " + taskKey).toStdString());
+
+    int effectiveGpuIndex = -1;
+    if (config.provider == QStringLiteral("dml") || config.provider == QStringLiteral("cuda"))
+        effectiveGpuIndex = config.deviceId >= 0 ? config.deviceId : gpuIndex;
+
+    auto typeId = taskKeyToTypeId(taskKey);
+    return ensureLoaded(typeId, config.modelPath, effectiveGpuIndex);
+}
+
+void ModelManager::unloadModel(const QString &taskKey) {
+    auto typeId = taskKeyToTypeId(taskKey);
+    unload(typeId);
 }
 
 } // namespace dstools

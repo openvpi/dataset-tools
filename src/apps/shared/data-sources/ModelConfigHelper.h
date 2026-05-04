@@ -3,15 +3,11 @@
 #include <QString>
 #include <QJsonObject>
 
+#include <dstools/DsProject.h>
+
 #include "ISettingsBackend.h"
 
 namespace dstools {
-
-struct TaskModelConfig {
-    QString modelPath;
-    QString provider;
-    int deviceId = 0;
-};
 
 inline TaskModelConfig readModelConfig(ISettingsBackend *settings, const QString &taskKey) {
     TaskModelConfig cfg;
