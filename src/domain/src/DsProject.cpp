@@ -270,6 +270,27 @@ DsProject DsProject::load(const QString &path, QString &error) {
             proj.m_items.push_back(parseItem(ij));
     }
 
+    // Parse slicer state
+    if (json.contains("slicer") && json["slicer"].is_object()) {
+        const auto &sl = json["slicer"];
+        if (sl.contains("audioFiles") && sl["audioFiles"].is_array()) {
+            for (const auto &f : sl["audioFiles"])
+                if (f.is_string())
+                    proj.m_slicerState.audioFiles.append(fromStd(f.get<std::string>()));
+        }
+        if (sl.contains("slicePoints") && sl["slicePoints"].is_object()) {
+            for (auto it = sl["slicePoints"].begin(); it != sl["slicePoints"].end(); ++it) {
+                if (it->is_array()) {
+                    std::vector<double> points;
+                    for (const auto &v : *it)
+                        if (v.is_number())
+                            points.push_back(v.get<double>());
+                    proj.m_slicerState.slicePoints[fromStd(it.key())] = std::move(points);
+                }
+            }
+        }
+    }
+
     return proj;
 }
 
@@ -344,6 +365,27 @@ bool DsProject::save(const QString &path, QString &error) const {
 
     json["defaults"] = def;
 
+    // Slicer state
+    if (!m_slicerState.audioFiles.isEmpty() || !m_slicerState.slicePoints.empty()) {
+        nlohmann::json slicer = nlohmann::json::object();
+        nlohmann::json audioFiles = nlohmann::json::array();
+        for (const auto &f : m_slicerState.audioFiles)
+            audioFiles.push_back(qstr(toPosixPath(f)));
+        slicer["audioFiles"] = audioFiles;
+
+        nlohmann::json slicePoints = nlohmann::json::object();
+        for (const auto &[filePath, points] : m_slicerState.slicePoints) {
+            if (points.empty())
+                continue;
+            nlohmann::json arr = nlohmann::json::array();
+            for (double t : points)
+                arr.push_back(t);
+            slicePoints[qstr(toPosixPath(filePath))] = arr;
+        }
+        slicer["slicePoints"] = slicePoints;
+        json["slicer"] = slicer;
+    }
+
     // Items
     nlohmann::json items = nlohmann::json::array();
     for (const auto &item : m_items)
@@ -390,6 +432,14 @@ const std::vector<Item> &DsProject::items() const {
 
 void DsProject::setItems(std::vector<Item> items) {
     m_items = std::move(items);
+}
+
+const SlicerState &DsProject::slicerState() const {
+    return m_slicerState;
+}
+
+void DsProject::setSlicerState(SlicerState state) {
+    m_slicerState = std::move(state);
 }
 
 } // namespace dstools

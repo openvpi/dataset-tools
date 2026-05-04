@@ -23,10 +23,10 @@
 
 ### Q.2 Slicer 音频列表和切点持久化
 
-- [ ] `.dsproj` 格式扩展：`slicer.audioFiles` + `slicer.slicePoints` + `slicer.params`
-- [ ] `DsProject` 增加 slicer 数据的序列化/反序列化
-- [ ] `DsSlicerPage` 在切点变更时自动保存到工程
-- [ ] `DsSlicerPage::onActivated()` 从工程加载音频列表和切点
+- [x] `.dsproj` 格式扩展：`slicer.audioFiles` + `slicer.slicePoints` + `slicer.params`
+- [x] `DsProject` 增加 slicer 数据的序列化/反序列化
+- [x] `DsSlicerPage` 在切点变更时自动保存到工程
+- [x] `DsSlicerPage::onActivated()` 从工程加载音频列表和切点
 - [ ] 验证：关闭重开工程后 slicer 状态完整恢复
 
 ### Q.3 CMake 架构整理

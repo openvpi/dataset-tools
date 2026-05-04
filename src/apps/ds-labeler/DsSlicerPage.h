@@ -130,6 +130,7 @@ namespace dstools {
         void autoSliceFiles(const QStringList &filePaths);
         void promptSliceUpdateIfNeeded();
         void saveSlicerParamsToProject();
+        void saveSlicerStateToProject();
         void loadAudioFile(const QString &filePath);
         void updateScrollBar();
 

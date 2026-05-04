@@ -51,6 +51,12 @@ struct SlicerConfig {
     int maxSilence = 500;       ///< Maximum silence kept in ms.
 };
 
+/// @brief Slicer runtime state stored in .dsproj slicer section.
+struct SlicerState {
+    QStringList audioFiles;                              ///< Audio file paths (POSIX).
+    std::map<QString, std::vector<double>> slicePoints;  ///< filePath → boundary times (seconds).
+};
+
 /// Default model paths and inference parameters stored in a .dsproj file.
 struct DsProjectDefaults {
     QString globalProvider = QStringLiteral("cpu");  ///< Global inference provider.
@@ -113,6 +119,11 @@ public:
     const std::vector<Item> &items() const;
     void setItems(std::vector<Item> items);
 
+    // ── Slicer state ──────────────────────────────────────────────────
+
+    const SlicerState &slicerState() const;
+    void setSlicerState(SlicerState state);
+
     // ── Path utilities ────────────────────────────────────────────────
 
     static QString toPosixPath(const QString &nativePath);
@@ -123,6 +134,7 @@ private:
     QString m_workingDirectory;
     DsProjectDefaults m_defaults;
     std::vector<Item> m_items;
+    SlicerState m_slicerState;
     nlohmann::json m_extraFields;  // preserve unknown fields for round-trip
 };
 

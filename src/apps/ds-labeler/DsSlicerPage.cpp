@@ -292,8 +292,8 @@ namespace dstools {
 
         // Update progress and auto-slice when files are added
         connect(m_audioFileList, &AudioFileListPanel::filesAdded, this,
-                [this](const QStringList &paths) { autoSliceFiles(paths); });
-        connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); });
+                [this](const QStringList &paths) { autoSliceFiles(paths); saveSlicerStateToProject(); });
+        connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); saveSlicerStateToProject(); });
 
         // Knife mode: left-click on waveform → add slice point
         connect(m_waveformWidget, &phonemelabeler::WaveformWidget::positionClicked, this, [this](double sec) {
@@ -651,6 +651,49 @@ namespace dstools {
         m_hopSizeSpin->setValue(slicerConfig.hopSize);
         m_maxSilenceSpin->setValue(slicerConfig.maxSilence);
 
+        // Load slicer state (audio files + slice points) from project
+        const auto &slicerState = project->slicerState();
+
+        // Restore audio file list
+        if (!slicerState.audioFiles.isEmpty()) {
+            QStringList resolvedPaths;
+            for (const auto &relPath : slicerState.audioFiles) {
+                QString nativePath = DsProject::fromPosixPath(relPath);
+                if (QDir::isRelativePath(nativePath))
+                    nativePath = QDir(project->workingDirectory()).absoluteFilePath(nativePath);
+                if (QFile::exists(nativePath))
+                    resolvedPaths.append(nativePath);
+            }
+            if (!resolvedPaths.isEmpty())
+                m_audioFileList->addFiles(resolvedPaths);
+        }
+
+        // Restore slice points
+        for (const auto &[relPath, points] : slicerState.slicePoints) {
+            QString nativePath = DsProject::fromPosixPath(relPath);
+            if (QDir::isRelativePath(nativePath))
+                nativePath = QDir(project->workingDirectory()).absoluteFilePath(nativePath);
+            if (!points.empty())
+                m_fileSlicePoints[nativePath] = points;
+        }
+
+        // Load first audio file if available
+        if (!slicerState.audioFiles.isEmpty()) {
+            QString firstPath = DsProject::fromPosixPath(slicerState.audioFiles.first());
+            if (QDir::isRelativePath(firstPath))
+                firstPath = QDir(project->workingDirectory()).absoluteFilePath(firstPath);
+            if (QFile::exists(firstPath)) {
+                loadAudioFile(firstPath);
+                m_currentAudioPath = firstPath;
+                loadSlicePointsForFile(firstPath);
+                refreshBoundaries();
+                updateSlicerListPanel();
+                updateFileProgress();
+                return;
+            }
+        }
+
+        // Fallback: load from items if no slicer state
         const auto &items = project->items();
         if (items.empty())
             return;
@@ -727,6 +770,7 @@ namespace dstools {
         if (!m_currentAudioPath.isEmpty()) {
             m_fileSlicePoints[m_currentAudioPath] = m_slicePoints;
         }
+        saveSlicerStateToProject();
     }
 
     void DsSlicerPage::loadSlicePointsForFile(const QString &filePath) {
@@ -1052,6 +1096,22 @@ namespace dstools {
 
         QString saveError;
         m_dataSource->project()->save(saveError);
+    }
+
+    void DsSlicerPage::saveSlicerStateToProject() {
+        if (!m_dataSource || !m_dataSource->project())
+            return;
+
+        auto *project = m_dataSource->project();
+        SlicerState state;
+
+        state.audioFiles = m_audioFileList->filePaths();
+        state.slicePoints = m_fileSlicePoints;
+
+        project->setSlicerState(std::move(state));
+
+        QString saveError;
+        project->save(saveError);
     }
 
     void DsSlicerPage::loadAudioFile(const QString &filePath) {
