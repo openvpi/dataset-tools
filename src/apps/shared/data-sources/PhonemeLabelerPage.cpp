@@ -443,19 +443,15 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     auto *hfa = m_hfa;
     QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, audioPath, graphemeTexts, sliceId, guard]() {
+    // Build lyrics text from grapheme layer for G2P
+    QString lyricsQStr = graphemeTexts.join(QStringLiteral(" "));
+    std::string lyricsText = lyricsQStr.toStdString();
+
+    (void) QtConcurrent::run([hfa, audioPath, lyricsText, sliceId, guard]() {
         HFA::WordList words;
-        for (const auto &text : graphemeTexts) {
-            HFA::Word word;
-            word.text = text.toStdString();
-            HFA::Phone p;
-            p.text = text.toStdString();
-            word.phones.push_back(p);
-            words.push_back(word);
-        }
 
         std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-        auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, words);
+        auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
 
         if (!guard)
             return;

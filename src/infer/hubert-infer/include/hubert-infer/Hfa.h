@@ -38,8 +38,15 @@ namespace HFA {
         /// @param wavPath Path to the WAV file.
         /// @param language Language identifier for G2P lookup.
         /// @param non_speech_ph Non-speech phoneme labels to detect.
+        /// @param lyricsText Lyrics text for G2P conversion (replaces .lab file reading).
         /// @param[out] words Resulting aligned word list.
         /// @return Success or error.
+        dstools::Result<void> recognize(const std::filesystem::path &wavPath, const std::string &language,
+                                        const std::vector<std::string> &non_speech_ph,
+                                        const std::string &lyricsText, WordList &words) const;
+
+        /// @brief Overload that reads lyrics from a .lab file alongside the audio file.
+        /// @deprecated Prefer the overload accepting lyricsText directly.
         dstools::Result<void> recognize(std::filesystem::path wavPath, const std::string &language,
                                         const std::vector<std::string> &non_speech_ph, WordList &words) const;
 

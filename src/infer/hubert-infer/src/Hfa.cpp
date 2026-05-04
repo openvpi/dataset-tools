@@ -107,8 +107,9 @@ namespace HFA {
         return initialized() ? 300 * 1024 * 1024LL : 0;
     }
 
-    dstools::Result<void> HFA::recognize(std::filesystem::path wavPath, const std::string &language,
-                                          const std::vector<std::string> &non_speech_ph, WordList &words) const {
+    dstools::Result<void> HFA::recognize(const std::filesystem::path &wavPath, const std::string &language,
+                                          const std::vector<std::string> &non_speech_ph,
+                                          const std::string &lyricsText, WordList &words) const {
         if (!m_hfa) {
             return dstools::Err("HFA model not loaded");
         }
@@ -137,25 +138,13 @@ namespace HFA {
         std::string modelMsg;
         HfaLogits hfaRes;
         if (m_hfa->forward(std::vector<std::vector<float>>{audio}, hfaRes, modelMsg)) {
-            const auto labPath = wavPath.replace_extension(".lab");
-            if (!fs::exists(labPath)) {
-                return dstools::Err("Lab does not exist: " + labPath.string());
-            }
-
-            std::ifstream labFile(labPath);
-            if (!labFile.is_open()) {
-                return dstools::Err("Failed to open lab file: " + labPath.string());
-            }
-            std::string labContent((std::istreambuf_iterator<char>(labFile)), std::istreambuf_iterator<char>());
-            labFile.close();
-
             std::vector<std::string> ph_seq;
             std::vector<std::string> word_seq;
             std::vector<int> ph_idx_to_word_idx;
             if (m_dictG2p.find(language) != m_dictG2p.end()) {
                 std::vector<std::string> raw_ph_seq;
                 auto &dict = m_dictG2p.find(language)->second;
-                std::tie(raw_ph_seq, word_seq, ph_idx_to_word_idx) = dict->convert(labContent, language);
+                std::tie(raw_ph_seq, word_seq, ph_idx_to_word_idx) = dict->convert(lyricsText, language);
                 for (auto &ph : raw_ph_seq) {
                     auto it = std::find(m_silent_phonemes.begin(), m_silent_phonemes.end(), ph);
                     ph_seq.push_back(it == m_silent_phonemes.end() ? language + "/" + ph : ph);
@@ -183,5 +172,22 @@ namespace HFA {
             return dstools::Ok();
         }
         return dstools::Err(modelMsg);
+    }
+
+    dstools::Result<void> HFA::recognize(std::filesystem::path wavPath, const std::string &language,
+                                          const std::vector<std::string> &non_speech_ph, WordList &words) const {
+        const auto labPath = std::filesystem::path(wavPath).replace_extension(".lab");
+        if (!fs::exists(labPath)) {
+            return dstools::Err("Lab does not exist: " + labPath.string());
+        }
+
+        std::ifstream labFile(labPath);
+        if (!labFile.is_open()) {
+            return dstools::Err("Failed to open lab file: " + labPath.string());
+        }
+        std::string labContent((std::istreambuf_iterator<char>(labFile)), std::istreambuf_iterator<char>());
+        labFile.close();
+
+        return recognize(wavPath, language, non_speech_ph, labContent, words);
     }
 } // namespace HFA

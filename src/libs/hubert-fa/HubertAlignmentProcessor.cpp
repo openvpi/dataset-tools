@@ -86,17 +86,55 @@ Result<TaskOutput> HubertAlignmentProcessor::process(const TaskInput &input) {
     if (input.config.contains("nonSpeechPhonemes"))
         nonSpeechPh = input.config["nonSpeechPhonemes"].get<std::vector<std::string>>();
 
-    // Build WordList from grapheme input layer
-    const auto &graphemeLayer = input.layers.at(QStringLiteral("grapheme"));
-    HFA::WordList words;
-    for (const auto &item : graphemeLayer) {
-        HFA::Word word;
-        word.text = item.get<std::string>();
-        HFA::Phone p;
-        p.text = item.get<std::string>();
-        word.phones.push_back(p);
-        words.push_back(word);
+    // Extract lyrics text from grapheme input layer
+    std::string lyricsText;
+    if (input.layers.count(QStringLiteral("grapheme"))) {
+        const auto &graphemeLayer = input.layers.at(QStringLiteral("grapheme"));
+        for (const auto &item : graphemeLayer) {
+            if (!lyricsText.empty())
+                lyricsText += " ";
+            lyricsText += item.get<std::string>();
+        }
     }
+
+    if (lyricsText.empty()) {
+        return Result<TaskOutput>::Error("No grapheme/lyrics text provided for forced alignment");
+    }
+
+    HFA::WordList words;
+    auto recognizeResult = m_hfa->recognize(
+        input.audioPath.toLocal8Bit().toStdString(), language, nonSpeechPh, lyricsText, words);
+    if (!recognizeResult) {
+        return Result<TaskOutput>::Error(recognizeResult.error());
+    }
+
+    // Convert results to output layer
+    nlohmann::json phonemeArray = nlohmann::json::array();
+    for (const auto &word : words) {
+        for (const auto &phone : word.phones) {
+            phonemeArray.push_back({
+                {"phone", phone.text},
+                {"start", phone.start},
+                {"end",   phone.end  },
+            });
+        }
+    }
+
+    TaskOutput output;
+    output.layers[QStringLiteral("phoneme")] = std::move(phonemeArray);
+    return Result<TaskOutput>::Ok(std::move(output));
+}
+
+    // Per-call config overrides
+    auto language = m_language;
+    auto nonSpeechPh = m_nonSpeechPh;
+
+    if (input.config.contains("language"))
+        language = input.config["language"].get<std::string>();
+    if (input.config.contains("nonSpeechPhonemes"))
+        nonSpeechPh = input.config["nonSpeechPhonemes"].get<std::vector<std::string>>();
+
+    HFA::WordList words;
 
     auto recognizeResult = m_hfa->recognize(
         input.audioPath.toLocal8Bit().toStdString(), language, nonSpeechPh, words);
