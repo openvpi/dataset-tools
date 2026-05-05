@@ -1,12 +1,7 @@
 #include <QApplication>
-#include <QCheckBox>
-#include <QDialog>
-#include <QDialogButtonBox>
+#include <QDir>
 #include <QFileInfo>
-#include <QLabel>
 #include <QMessageBox>
-#include <QPushButton>
-#include <QVBoxLayout>
 
 #include <dsfw/AppShell.h>
 #include <dsfw/IModelManager.h>
@@ -160,80 +155,110 @@ int main(int argc, char *argv[]) {
             return;
 
         const auto &items = project->items();
-        if (items.empty()) {
-            auto ret = QMessageBox::question(
-                &shell,
-                QStringLiteral("未切片"),
-                QStringLiteral("尚未导出切片，是否回到切片页面？"),
-                QMessageBox::Yes | QMessageBox::No);
-            if (ret == QMessageBox::Yes)
-                shell.setCurrentPage(1);
-            return;
-        }
-
-        // Check slice point consistency: compare current slicer state
-        // against stored item slice durations
         const auto &slicerState = project->slicerState();
-        QStringList changedFiles;
 
-        for (const auto &item : items) {
-            if (item.slices.empty())
-                continue;
-            const QString &audioPath = item.audioSource;
-            auto it = slicerState.slicePoints.find(audioPath);
-            if (it == slicerState.slicePoints.end())
-                continue;
-
-            // Compare slice count: N slice points → N+1 segments
-            const auto &points = it->second;
-            if (static_cast<int>(points.size()) + 1 != static_cast<int>(item.slices.size())) {
-                changedFiles.append(audioPath);
-                continue;
+        // Case 1: No items exported at all but slicer has audio files with slice points
+        if (items.empty()) {
+            if (!slicerState.audioFiles.isEmpty()) {
+                auto ret = QMessageBox::question(
+                    &shell,
+                    QStringLiteral("未导出切片"),
+                    QStringLiteral("切片页面已有音频文件和切点，但尚未导出切片。\n"
+                                   "是否回到切片页面导出？"),
+                    QMessageBox::Yes | QMessageBox::No);
+                if (ret == QMessageBox::Yes)
+                    shell.setCurrentPage(1);
+            } else {
+                auto ret = QMessageBox::question(
+                    &shell,
+                    QStringLiteral("未切片"),
+                    QStringLiteral("尚未导出切片，是否回到切片页面？"),
+                    QMessageBox::Yes | QMessageBox::No);
+                if (ret == QMessageBox::Yes)
+                    shell.setCurrentPage(1);
             }
-
-            // Compare slice boundary positions (tolerance: 1ms = 1000us)
-            constexpr double kToleranceUs = 1000.0;
-            bool mismatch = false;
-            for (size_t s = 0; s < item.slices.size() && !mismatch; ++s) {
-                double expectedStart = (s == 0) ? 0.0 : points[s - 1] * 1e6;
-                double actualStart = static_cast<double>(item.slices[s].inPos);
-                if (std::abs(expectedStart - actualStart) > kToleranceUs)
-                    mismatch = true;
-            }
-            if (mismatch)
-                changedFiles.append(audioPath);
+            return;
         }
 
-        if (changedFiles.isEmpty())
+        // Case 2: Check consistency between slicer state and exported items.
+        // SlicerState.slicePoints keys are original audio paths;
+        // items have exported WAV paths. Match by basename prefix.
+        QStringList problemFiles;
+
+        for (const auto &[originalPath, points] : slicerState.slicePoints) {
+            if (points.empty())
+                continue;
+
+            QString baseName = QFileInfo(originalPath).completeBaseName();
+            int expectedSegments = static_cast<int>(points.size()) + 1;
+
+            // Count project items whose ID starts with this audio's basename
+            int actualSegments = 0;
+            for (const auto &item : items) {
+                if (item.id.startsWith(baseName))
+                    ++actualSegments;
+            }
+
+            if (actualSegments == 0) {
+                // This audio file was sliced but never exported
+                problemFiles.append(QFileInfo(originalPath).fileName()
+                                    + QStringLiteral(" (未导出)"));
+            } else if (actualSegments != expectedSegments) {
+                // Slice count mismatch — points changed after export
+                problemFiles.append(QFileInfo(originalPath).fileName()
+                                    + QStringLiteral(" (切点数不一致: 期望 %1 段, 实际 %2 段)")
+                                          .arg(expectedSegments).arg(actualSegments));
+            } else {
+                // Slice count matches — verify boundary positions (tolerance: 1ms)
+                constexpr double kToleranceUs = 1000.0;
+                bool mismatch = false;
+                int segIdx = 0;
+                for (const auto &item : items) {
+                    if (!item.id.startsWith(baseName))
+                        continue;
+                    if (item.slices.empty())
+                        continue;
+                    const auto &slice = item.slices[0];
+                    double expectedStart = (segIdx == 0) ? 0.0 : points[segIdx - 1] * 1e6;
+                    if (std::abs(expectedStart - static_cast<double>(slice.inPos)) > kToleranceUs) {
+                        mismatch = true;
+                        break;
+                    }
+                    ++segIdx;
+                }
+                if (mismatch)
+                    problemFiles.append(QFileInfo(originalPath).fileName()
+                                        + QStringLiteral(" (切点位置已变化)"));
+            }
+        }
+
+        // Also check for audio files in slicer list that have no slice points at all
+        for (const auto &audioFile : slicerState.audioFiles) {
+            QString resolved = audioFile;
+            if (QDir::isRelativePath(resolved))
+                resolved = QDir(project->workingDirectory()).absoluteFilePath(resolved);
+            if (slicerState.slicePoints.find(resolved) == slicerState.slicePoints.end()) {
+                // Audio file added but never sliced
+                problemFiles.append(QFileInfo(audioFile).fileName()
+                                    + QStringLiteral(" (未切片)"));
+            }
+        }
+
+        if (problemFiles.isEmpty())
             return;
 
-        // Show dialog with checkboxes for changed files
-        QDialog dlg(&shell);
-        dlg.setWindowTitle(QStringLiteral("切点信息变化"));
-        auto *layout = new QVBoxLayout(&dlg);
-        layout->addWidget(new QLabel(
-            QStringLiteral("以下音频的切点已发生变化，需要重新切片导出："), &dlg));
+        // Show warning dialog
+        QMessageBox msgBox(&shell);
+        msgBox.setWindowTitle(QStringLiteral("切片状态不一致"));
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setText(QStringLiteral("以下音频文件的切片结果与当前切点不一致，\n"
+                                      "继续操作可能导致标注数据错误："));
+        msgBox.setDetailedText(problemFiles.join(QStringLiteral("\n")));
+        msgBox.addButton(QStringLiteral("回到切片页面重新导出"), QMessageBox::AcceptRole);
+        msgBox.addButton(QStringLiteral("忽略继续"), QMessageBox::RejectRole);
 
-        QList<QCheckBox *> checkboxes;
-        for (const auto &file : changedFiles) {
-            auto *cb = new QCheckBox(QFileInfo(file).fileName(), &dlg);
-            cb->setChecked(true);
-            cb->setProperty("filePath", file);
-            layout->addWidget(cb);
-            checkboxes.append(cb);
-        }
-
-        auto *buttons = new QDialogButtonBox(
-            QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-        buttons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("回到切片页面"));
-        buttons->button(QDialogButtonBox::Cancel)->setText(QStringLiteral("忽略继续"));
-        layout->addWidget(buttons);
-
-        QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-        QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-        if (dlg.exec() == QDialog::Accepted) {
-            shell.setCurrentPage(1); // Go back to slicer
+        if (msgBox.exec() == 0) { // AcceptRole
+            shell.setCurrentPage(1);
         }
     });
 

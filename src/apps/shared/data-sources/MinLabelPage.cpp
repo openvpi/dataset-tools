@@ -313,8 +313,14 @@ void MinLabelPage::onActivated() {
         QString lastSlice = m_settings.get(kLastSlice);
         if (!lastSlice.isEmpty()) {
             m_sliceList->setCurrentSlice(lastSlice);
-        } else if (m_sliceList->sliceCount() > 0) {
-            m_sliceList->setCurrentSlice(m_sliceList->currentSliceId());
+        }
+        // If m_currentSliceId is still empty (e.g. lastSlice was empty, or
+        // setCurrentSlice didn't trigger onSliceSelected because the row
+        // was already selected), explicitly select the first slice.
+        if (m_currentSliceId.isEmpty() && m_sliceList->sliceCount() > 0) {
+            QString firstId = m_sliceList->currentSliceId();
+            if (!firstId.isEmpty())
+                onSliceSelected(firstId);
         }
     }
 

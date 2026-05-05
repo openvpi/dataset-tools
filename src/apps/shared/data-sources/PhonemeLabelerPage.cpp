@@ -6,6 +6,8 @@
 #include <dstools/IEditorDataSource.h>
 
 #include <QHBoxLayout>
+#include <QFile>
+#include <QFileInfo>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -107,8 +109,17 @@ void PhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
 
     const QString audioPath = m_source->audioPath(sliceId);
 
-    if (!audioPath.isEmpty())
+    if (!audioPath.isEmpty() && QFile::exists(audioPath))
         m_editor->loadAudio(audioPath);
+    else if (!audioPath.isEmpty()) {
+        // Audio file doesn't exist — clear editor to avoid stale data / 0-sample errors
+        m_editor->loadAudio(QString());
+        dsfw::widgets::ToastNotification::show(
+            this, dsfw::widgets::ToastType::Warning,
+            QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
+                .arg(QFileInfo(audioPath).fileName()),
+            5000);
+    }
 
     auto result = m_source->loadSlice(sliceId);
     if (result && !result.value().layers.empty()) {
@@ -283,8 +294,15 @@ void PhonemeLabelerPage::onActivated() {
         QString lastSlice = m_settings.get(kLastSlice);
         if (!lastSlice.isEmpty()) {
             m_sliceList->setCurrentSlice(lastSlice);
-        } else if (m_sliceList->sliceCount() > 0) {
-            m_sliceList->setCurrentSlice(m_sliceList->currentSliceId());
+        }
+        // If m_currentSliceId is still empty after trying lastSlice
+        // (e.g. lastSlice was empty, or setCurrentSlice didn't trigger
+        // onSliceSelected because the row was already selected),
+        // explicitly select the first slice.
+        if (m_currentSliceId.isEmpty() && m_sliceList->sliceCount() > 0) {
+            QString firstId = m_sliceList->currentSliceId();
+            if (!firstId.isEmpty())
+                onSliceSelected(firstId);
         }
     }
 
@@ -422,6 +440,12 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     if (audioPath.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("强制对齐"),
                              QStringLiteral("当前切片没有音频文件。"));
+        return;
+    }
+    if (!QFile::exists(audioPath)) {
+        QMessageBox::warning(this, QStringLiteral("强制对齐"),
+                             QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
+                                 .arg(audioPath));
         return;
     }
 
