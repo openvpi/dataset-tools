@@ -46,7 +46,6 @@ namespace dstools {
 
 SlicerPage::SlicerPage(QWidget *parent) : QWidget(parent), m_settings("Slicer") {
     m_undoStack = new QUndoStack(this);
-    m_viewport = new dstools::widgets::ViewportController(this);
     m_boundaryModel = new phonemelabeler::SliceBoundaryModel();
     m_playWidget = new dstools::widgets::PlayWidget();
     buildLayout();
@@ -154,36 +153,28 @@ void SlicerPage::buildLayout() {
 
     mainLayout->addWidget(paramsWidget);
 
-    m_vSplitter = new QSplitter(Qt::Vertical, contentWidget);
+    m_container = new AudioVisualizerContainer(QStringLiteral("Slicer"), contentWidget);
+    m_viewport = m_container->viewport();
+    m_container->setPlayWidget(m_playWidget);
 
-    auto *waveformContainer = new QWidget(contentWidget);
-    auto *waveformLayout = new QVBoxLayout(waveformContainer);
-    waveformLayout->setContentsMargins(0, 0, 0, 0);
-    waveformLayout->setSpacing(0);
+    m_tierLabel = new SliceTierLabel(m_container);
+    m_tierLabel->setViewportController(m_viewport);
+    m_container->setTierLabelArea(m_tierLabel);
 
-    m_miniMap = new MiniMapScrollBar(m_viewport, waveformContainer);
-    waveformLayout->addWidget(m_miniMap);
-
-    m_timeRuler = new dsfw::widgets::TimeRulerWidget(m_viewport, waveformContainer);
-    waveformLayout->addWidget(m_timeRuler);
-
-    m_waveformWidget = new phonemelabeler::WaveformWidget(m_viewport, waveformContainer);
+    m_waveformWidget = new phonemelabeler::WaveformWidget(m_viewport, m_container);
     m_waveformWidget->setBoundaryModel(m_boundaryModel);
     m_waveformWidget->setPlayWidget(m_playWidget);
-    waveformLayout->addWidget(m_waveformWidget, 1);
+    m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 0, 1, 2.0);
 
-    m_vSplitter->addWidget(waveformContainer);
-
-    m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_viewport, contentWidget);
+    m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_viewport, m_container);
     m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
     m_spectrogramWidget->setPlayWidget(m_playWidget);
     m_spectrogramWidget->setVisible(true);
-    m_vSplitter->addWidget(m_spectrogramWidget);
+    m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 1, 1, 5.0);
 
-    m_vSplitter->setStretchFactor(0, 2);
-    m_vSplitter->setStretchFactor(1, 5);
+    m_container->setBoundaryModel(m_boundaryModel);
 
-    mainLayout->addWidget(m_vSplitter, 1);
+    mainLayout->addWidget(m_container, 1);
 
     m_sliceListPanel = new SliceListPanel(contentWidget);
     m_sliceListPanel->setSlicerMode(true);
@@ -218,15 +209,6 @@ void SlicerPage::connectSignals() {
         m_btnPointer->setChecked(false);
         m_toolMode = ToolMode::Knife;
     });
-
-    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-            m_timeRuler, &dsfw::widgets::TimeRulerWidget::setViewport);
-    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-            m_waveformWidget, &phonemelabeler::WaveformWidget::setViewport);
-    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-            m_spectrogramWidget, &phonemelabeler::SpectrogramWidget::setViewport);
-    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-            m_miniMap, &MiniMapScrollBar::setViewport);
 
     connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
         saveCurrentSlicePoints();
@@ -497,23 +479,30 @@ QString SlicerPage::windowTitle() const {
 
 void SlicerPage::onActivated() {
     static const dstools::SettingsKey<QString> kHSplitterState("Layout/hSplitterState", "");
-    static const dstools::SettingsKey<QString> kVSplitterState("Layout/vSplitterState", "");
+    static const dstools::SettingsKey<QString> kSplitterState("Layout/containerSplitterState", "");
+    static const dstools::SettingsKey<QString> kChartOrder("Layout/chartOrder", "");
 
     auto hState = m_settings.get(kHSplitterState);
     if (!hState.isEmpty())
         m_hSplitter->restoreState(QByteArray::fromBase64(hState.toUtf8()));
 
-    auto vState = m_settings.get(kVSplitterState);
-    if (!vState.isEmpty())
-        m_vSplitter->restoreState(QByteArray::fromBase64(vState.toUtf8()));
+    auto sState = m_settings.get(kSplitterState);
+    if (!sState.isEmpty())
+        m_container->restoreSplitterState(QByteArray::fromBase64(sState.toUtf8()));
+
+    auto chartOrder = m_settings.get(kChartOrder);
+    if (!chartOrder.isEmpty())
+        m_container->setChartOrder(chartOrder.split(QLatin1Char(','), Qt::SkipEmptyParts));
 }
 
 bool SlicerPage::onDeactivating() {
     static const dstools::SettingsKey<QString> kHSplitterState("Layout/hSplitterState", "");
-    static const dstools::SettingsKey<QString> kVSplitterState("Layout/vSplitterState", "");
+    static const dstools::SettingsKey<QString> kSplitterState("Layout/containerSplitterState", "");
+    static const dstools::SettingsKey<QString> kChartOrder("Layout/chartOrder", "");
 
     m_settings.set(kHSplitterState, QString::fromLatin1(m_hSplitter->saveState().toBase64()));
-    m_settings.set(kVSplitterState, QString::fromLatin1(m_vSplitter->saveState().toBase64()));
+    m_settings.set(kSplitterState, QString::fromLatin1(m_container->saveSplitterState().toBase64()));
+    m_settings.set(kChartOrder, m_container->chartOrder().join(QLatin1Char(',')));
     return true;
 }
 
@@ -817,13 +806,13 @@ void SlicerPage::loadAudioFile(const QString &filePath) {
 
     m_waveformWidget->setAudioData(m_samples, m_sampleRate);
     m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
-    m_miniMap->setAudioData(m_samples, m_sampleRate);
+    m_container->setAudioData(m_samples, m_sampleRate);
 
     m_playWidget->openFile(filePath);
 
     double duration = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
     m_boundaryModel->setDuration(duration);
-    m_viewport->setTotalDuration(duration);
+    m_container->setTotalDuration(duration);
     m_viewport->setViewRange(0.0, duration);
 }
 

@@ -8,6 +8,7 @@ dstools_add_library(${PROJECT_NAME}
     INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/commands>
+        PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../audio-visualizer>
     DEPENDS
         PUBLIC dstools-widgets dstools-domain dstools-audio dsfw-ui-core
                textgrid FFTW3::fftw3

@@ -53,6 +53,7 @@ public:
     widgets::ViewportController *viewport() const;
     IBoundaryModel *boundaryModel() const;
     TimeRulerWidget *timeRuler() const;
+    BoundaryOverlayWidget *boundaryOverlay() const;
     TierLabelArea *tierLabelArea() const;
     QSplitter *chartSplitter() const;
     MiniMapScrollBar *miniMap() const;

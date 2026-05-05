@@ -7,6 +7,8 @@
 
 #include <dsfw/widgets/PlayWidget.h>
 
+#include <QMetaMethod>
+#include <QPointer>
 #include <QSettings>
 #include <algorithm>
 
@@ -232,7 +234,26 @@ void AudioVisualizerContainer::applyDefaultHeightRatios() {
     m_chartSplitter->setSizes(sizes);
 }
 
-void AudioVisualizerContainer::connectViewportToWidget(QWidget * /*widget*/) {
+void AudioVisualizerContainer::connectViewportToWidget(QWidget *widget) {
+    if (!widget || !m_viewport)
+        return;
+
+    QPointer<QWidget> safeWidget(widget);
+    connect(m_viewport, &ViewportController::viewportChanged, this,
+            [safeWidget](const ViewportState &state) {
+                if (!safeWidget)
+                    return;
+                const QMetaObject *mo = safeWidget->metaObject();
+                for (int i = 0; i < mo->methodCount(); ++i) {
+                    QMetaMethod method = mo->method(i);
+                    if (method.name() == "setViewport" && method.parameterCount() == 1) {
+                        method.invoke(safeWidget.data(), Qt::DirectConnection,
+                                      QGenericArgument(method.parameterTypes().at(0).constData(),
+                                                      &state));
+                        break;
+                    }
+                }
+            });
 }
 
 } // namespace dstools

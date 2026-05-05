@@ -13,10 +13,10 @@
 #include <dstools/DsItemRecord.h>
 #include <dstools/ProjectPaths.h>
 
-#include <ui/WaveformWidget.h>
-#include <ui/SpectrogramWidget.h>
-#include <ui/SliceBoundaryModel.h>
 #include <QCheckBox>
+#include <ui/SliceBoundaryModel.h>
+#include <ui/SpectrogramWidget.h>
+#include <ui/WaveformWidget.h>
 
 #include <dsfw/widgets/FileProgressTracker.h>
 
@@ -230,10 +230,10 @@ namespace dstools {
         });
 
         // Viewport → sync charts (container handles timeRuler, miniMap, tierLabel, overlay)
-        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged,
-                m_waveformWidget, &phonemelabeler::WaveformWidget::setViewport);
-        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged,
-                m_spectrogramWidget, &phonemelabeler::SpectrogramWidget::setViewport);
+        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged, m_waveformWidget,
+                &phonemelabeler::WaveformWidget::setViewport);
+        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged, m_spectrogramWidget,
+                &phonemelabeler::SpectrogramWidget::setViewport);
 
         // Left sidebar: audio file selection → load audio for slicing
         connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
@@ -254,9 +254,14 @@ namespace dstools {
         });
 
         // Update progress and auto-slice when files are added
-        connect(m_audioFileList, &AudioFileListPanel::filesAdded, this,
-                [this](const QStringList &paths) { autoSliceFiles(paths); saveSlicerStateToProject(); });
-        connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); saveSlicerStateToProject(); });
+        connect(m_audioFileList, &AudioFileListPanel::filesAdded, this, [this](const QStringList &paths) {
+            autoSliceFiles(paths);
+            saveSlicerStateToProject();
+        });
+        connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() {
+            updateFileProgress();
+            saveSlicerStateToProject();
+        });
 
         // Knife mode: left-click on waveform → add slice point
         connect(m_waveformWidget, &phonemelabeler::WaveformWidget::positionClicked, this, [this](double sec) {
@@ -270,22 +275,23 @@ namespace dstools {
         });
 
         // Boundary drag finished → create undo command for the move
-        connect(m_waveformWidget, &phonemelabeler::WaveformWidget::boundaryDragFinished,
-                this, [this](int /*tierIndex*/, int boundaryIndex, dstools::TimePos newTime) {
-            if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
-                // The model was already updated by the widget (no-undo-stack path).
-                // Sync m_slicePoints from model.
-                m_slicePoints = m_boundaryModel->slicePointsSec();
-                refreshBoundaries();
-                updateSlicerListPanel();
-            }
-        });
+        connect(m_waveformWidget, &phonemelabeler::WaveformWidget::boundaryDragFinished, this,
+                [this](int /*tierIndex*/, int boundaryIndex) {
+                    if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
+                        // The model was already updated by the widget (no-undo-stack path).
+                        // Sync m_slicePoints from model.
+                        m_slicePoints = m_boundaryModel->slicePointsSec();
+                        refreshBoundaries();
+                        updateSlicerListPanel();
+                    }
+                });
 
         // SliceListPanel context menu: add/delete slice points
         connect(m_sliceListPanel, &SliceListPanel::sliceDoubleClicked, this,
                 [this](int /*index*/, double startSec, double /*endSec*/) {
                     // Scroll viewport to show this time
-                    double viewDuration = m_container->viewport()->state().endSec - m_container->viewport()->state().startSec;
+                    double viewDuration =
+                        m_container->viewport()->state().endSec - m_container->viewport()->state().startSec;
                     m_container->viewport()->setViewRange(startSec, startSec + viewDuration);
                 });
 
@@ -409,8 +415,7 @@ namespace dstools {
         }
 
         if (slicedCount == 0 && m_slicePoints.empty()) {
-            QMessageBox::information(this, tr("Export"),
-                                     tr("No slices to export. Run auto-slice first."));
+            QMessageBox::information(this, tr("Export"), tr("No slices to export. Run auto-slice first."));
             return;
         }
 
@@ -612,9 +617,11 @@ namespace dstools {
         auto *bar = new QMenuBar(parent);
 
         auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
-        auto *actOpen = fileMenu->addAction(QStringLiteral("打开音频文件(&O)..."), this, &DsSlicerPage::onOpenAudioFiles);
+        auto *actOpen =
+            fileMenu->addAction(QStringLiteral("打开音频文件(&O)..."), this, &DsSlicerPage::onOpenAudioFiles);
         actOpen->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_O));
-        auto *actOpenDir = fileMenu->addAction(QStringLiteral("打开音频目录(&D)..."), this, &DsSlicerPage::onOpenAudioDirectory);
+        auto *actOpenDir =
+            fileMenu->addAction(QStringLiteral("打开音频目录(&D)..."), this, &DsSlicerPage::onOpenAudioDirectory);
         actOpenDir->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
         fileMenu->addSeparator();
         fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
@@ -999,9 +1006,8 @@ namespace dstools {
 
                 for (int i = 0; i < numSegments; ++i) {
                     double startSec = (i == 0) ? 0.0 : slicePoints[i - 1];
-                    double endSec =
-                        (i < static_cast<int>(slicePoints.size())) ? slicePoints[i]
-                                                                    : static_cast<double>(mono.size()) / sr;
+                    double endSec = (i < static_cast<int>(slicePoints.size())) ? slicePoints[i]
+                                                                               : static_cast<double>(mono.size()) / sr;
                     int startSamp2 = static_cast<int>(startSec * sr);
                     int endSamp2 = std::min(static_cast<int>(endSec * sr), static_cast<int>(mono.size()));
                     if (endSamp2 <= startSamp2)
@@ -1189,7 +1195,8 @@ namespace dstools {
         std::vector<float> buffer(kBufSize);
         while (true) {
             int read = decoder.read(buffer.data(), 0, kBufSize);
-            if (read <= 0) break;
+            if (read <= 0)
+                break;
             allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
         }
         decoder.close();

@@ -14,10 +14,10 @@
 
 #include <dstools/ViewportController.h>
 #include <dstools/PlayWidget.h>
-#include <dsfw/widgets/TimeRulerWidget.h>
 #include <ui/SliceBoundaryModel.h>
 
-#include <MiniMapScrollBar.h>
+#include <AudioVisualizerContainer.h>
+#include <SliceTierLabel.h>
 
 #include <map>
 
@@ -52,16 +52,15 @@ private:
     QUndoStack *m_undoStack = nullptr;
 
     dstools::widgets::ViewportController *m_viewport = nullptr;
-    MiniMapScrollBar *m_miniMap = nullptr;
+    AudioVisualizerContainer *m_container = nullptr;
+    SliceTierLabel *m_tierLabel = nullptr;
 
     phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;
 
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
 
     AudioFileListPanel *m_audioFileList = nullptr;
-    QSplitter *m_vSplitter = nullptr;
     QSplitter *m_hSplitter = nullptr;
-    dsfw::widgets::TimeRulerWidget *m_timeRuler = nullptr;
     phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
     phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
     SliceListPanel *m_sliceListPanel = nullptr;
