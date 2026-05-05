@@ -258,9 +258,17 @@ void MiniMapScrollBar::wheelEvent(QWheelEvent *event) {
     if (!m_viewport)
         return;
 
-    double sec = xToTime(event->position().toPoint().x());
-    double factor = event->angleDelta().y() > 0 ? 1.15 : 1.0 / 1.15;
-    m_viewport->zoomAt(sec, factor);
+    if (event->modifiers() & Qt::ControlModifier) {
+        // Ctrl+scroll = zoom
+        double sec = xToTime(event->position().toPoint().x());
+        double factor = event->angleDelta().y() > 0 ? 1.15 : 1.0 / 1.15;
+        m_viewport->zoomAt(sec, factor);
+    } else {
+        // No modifier = horizontal scroll
+        double scrollSec = (event->angleDelta().y() > 0) ? -0.5 : 0.5;
+        m_viewport->scrollBy(scrollSec);
+    }
+    event->accept();
 }
 
 void MiniMapScrollBar::resizeEvent(QResizeEvent * /*event*/) {
