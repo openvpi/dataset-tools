@@ -124,10 +124,10 @@ void SettingsPage::applySettings() {
     if (!m_backend)
         return;
 
-    QJsonObject data;
+    QJsonObject settingsData;
 
-    data["globalProvider"] = m_providerCombo->currentText();
-    data["deviceIndex"] = m_deviceCombo->currentData().toInt();
+    settingsData["globalProvider"] = m_providerCombo->currentText();
+    settingsData["deviceIndex"] = m_deviceCombo->currentData().toInt();
 
     QJsonObject models;
     {
@@ -158,7 +158,7 @@ void SettingsPage::applySettings() {
         cfg["forceCpu"] = m_midiForceCpu->isChecked();
         models["midi_transcription"] = cfg;
     }
-    data["taskModels"] = models;
+    settingsData["taskModels"] = models;
 
     QJsonObject preload;
     {
@@ -173,14 +173,14 @@ void SettingsPage::applySettings() {
         cfg["count"] = m_pitchPreloadCount->value();
         preload["pitch_extraction"] = cfg;
     }
-    data["preload"] = preload;
+    settingsData["preload"] = preload;
 
     QJsonObject g2p;
     g2p["engine"] = m_g2pEngineCombo->currentData().toString();
     g2p["dictPath"] = m_dictPath->text();
-    data["g2p"] = g2p;
+    settingsData["g2p"] = g2p;
 
-    m_backend->save(data);
+    m_backend->save(settingsData);
     m_dirty = false;
 
     if (m_chartOrderList) {
@@ -203,15 +203,15 @@ void SettingsPage::loadFromBackend() {
     if (!m_backend)
         return;
 
-    const QJsonObject data = m_backend->load();
+    const QJsonObject settingsData = m_backend->load();
 
     {
-        QString provider = readString(data, "globalProvider", "cpu");
+        QString provider = readString(settingsData, "globalProvider", "cpu");
         int idx = m_providerCombo->findText(provider);
         if (idx >= 0)
             m_providerCombo->setCurrentIndex(idx);
 
-        int deviceIndex = readInt(data, "deviceIndex", 0);
+        int deviceIndex = readInt(settingsData, "deviceIndex", 0);
         for (int i = 0; i < m_deviceCombo->count(); ++i) {
             if (m_deviceCombo->itemData(i).toInt() == deviceIndex) {
                 m_deviceCombo->setCurrentIndex(i);
@@ -220,7 +220,7 @@ void SettingsPage::loadFromBackend() {
         }
     }
 
-    const QJsonObject models = data["taskModels"].toObject();
+    const QJsonObject models = settingsData["taskModels"].toObject();
     {
         auto it = models.find("asr");
         if (it != models.end()) {
@@ -254,7 +254,7 @@ void SettingsPage::loadFromBackend() {
         }
     }
 
-    const QJsonObject preload = data["preload"].toObject();
+    const QJsonObject preload = settingsData["preload"].toObject();
     {
         auto it = preload.find("phoneme_alignment");
         if (it != preload.end()) {
@@ -272,7 +272,7 @@ void SettingsPage::loadFromBackend() {
         }
     }
 
-    const QJsonObject g2p = data["g2p"].toObject();
+    const QJsonObject g2p = settingsData["g2p"].toObject();
     {
         QString engine = readString(g2p, "engine", "pinyin");
         for (int i = 0; i < m_g2pEngineCombo->count(); ++i) {

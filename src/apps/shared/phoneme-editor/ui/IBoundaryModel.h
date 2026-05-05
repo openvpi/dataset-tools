@@ -44,6 +44,26 @@ public:
 
     /// @brief Whether this model supports boundary insertion via click.
     [[nodiscard]] virtual bool supportsInsert() const { return false; }
+
+    /// @brief Clamp a boundary time to valid range for the given tier.
+    /// Ensures the boundary does not cross adjacent boundaries in the same tier.
+    /// @param tierIndex The tier index.
+    /// @param boundaryIndex The boundary index being dragged.
+    /// @param proposedTime The proposed new time (in microseconds).
+    /// @return The clamped time (in microseconds).
+    [[nodiscard]] virtual TimePos clampBoundaryTime(int /*tierIndex*/, int /*boundaryIndex*/, TimePos proposedTime) const {
+        return proposedTime;
+    }
+
+    /// @brief Snap a boundary time to the nearest lower-tier boundary.
+    /// Used for tier hierarchy constraint (e.g., words must align with phones).
+    /// @param tierIndex The tier index of the boundary being dragged.
+    /// @param proposedTime The proposed new time (in microseconds).
+    /// @param snapThreshold Maximum distance (in microseconds) for snapping.
+    /// @return The snapped time, or the original time if no snap target found.
+    [[nodiscard]] virtual TimePos snapToLowerTier(int /*tierIndex*/, TimePos proposedTime, TimePos /*snapThreshold*/) const {
+        return proposedTime;
+    }
 };
 
 } // namespace phonemelabeler

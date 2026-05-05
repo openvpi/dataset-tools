@@ -259,8 +259,8 @@ void PhonemeLabelerPage::onActivated() {
     }
 
     if (m_settingsBackend) {
-        auto data = m_settingsBackend->load();
-        auto preload = data["preload"].toObject();
+        auto settingsData = m_settingsBackend->load();
+        auto preload = settingsData["preload"].toObject();
         auto faPreload = preload["phoneme_alignment"].toObject();
         if (faPreload["enabled"].toBool(false)) {
             ensureHfaEngine();
