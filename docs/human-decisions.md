@@ -226,17 +226,18 @@
 
 ---
 
-## D-24：刻度线缩放必须与 ViewportController 严格同步
+## D-24：视口统一比例尺系统
 
 **决策**：
-- `ViewportController::zoomAt()` 必须在 PPS 达到上限/下限时**硬停**——PPS clamp 后无变化则不改变视口范围
-- 当前 bug 根因：`zoomAt()` 中 `newDuration = duration / factor` 使用原始 factor 而非 clamp 后的 effective factor，导致 PPS 不变但 view range 继续缩小
-- 修复：改用 `effectiveFactor = newPPS / oldPPS`，当 PPS 已到极限时 effectiveFactor==1，duration 不变
-- PPS 极限应基于实际场景动态设定：
-  - `minPPS` = `widgetWidth / totalDuration`（zoom out 极限 = 整个音频铺满窗口）
-  - `maxPPS` = `sampleRate / 10`（zoom in 极限 = 每 10 采样点 1 像素）
-- MiniMapScrollBar 的 wheelEvent 需与其他图表行为一致：无 modifier = 横向滚动，Ctrl = 缩放
-- `clampAndEmit()` 增加最小可见时长保护（1ms），防止极端缩放导致除零
+- 参考 vLabeler 的 `CanvasResolution` 模型，将 ViewportController 改为 **resolution（整数，每像素采样数）** 驱动
+- `resolution` 取代 `pixelsPerSecond` 作为缩放状态的真相源；`pixelsPerSecond = sampleRate / resolution` 为派生量
+- 默认 resolution = 40（与 vLabeler 一致），对 44100Hz 音频对应 PPS ≈ 1102
+- Resolution 范围硬编码 [10, 400]，步进按对数表（10→15→20→30→40→60→80→100→150→200→300→400），不会出现浮点精度问题或"到极限后继续变化"的 bug
+- 刻度线采用查表法（类似 vLabeler `Timescale.find()`）：预定义 major/minor 刻度级别表，找到 `minorSec * pps >= 60px` 的第一个级别。不再用 smoothStep 渐隐
+- 每张图默认高度比例用 `heightWeight`（waveform=1.0, power=0.5, spectrogram=0.75），首次打开按比例初始化 splitter，用户拖动后持久化
+- 打开新音频时自动 fitToWindow（resolution 自动计算为 totalSamples/widgetWidth）
+- MiniMapScrollBar wheelEvent 统一为：无 modifier = 横向滚动，Ctrl = 缩放
+- 旧 `zoomAt(center, factor)` API 替换为 `zoomIn(centerSec)` / `zoomOut(centerSec)`
 
 ---
 
