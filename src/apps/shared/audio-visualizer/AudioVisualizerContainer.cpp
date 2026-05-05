@@ -203,7 +203,7 @@ void AudioVisualizerContainer::rebuildChartLayout() {
     // Apply default height ratios if no saved splitter state exists
     QSettings settings;
     QByteArray savedState = settings.value(
-        QStringLiteral("AudioVisualizer/%1/splitterState").arg(m_settings.appName())).toByteArray();
+        QStringLiteral("AudioVisualizer/splitterState")).toByteArray();
     if (savedState.isEmpty()) {
         applyDefaultHeightRatios();
     }
