@@ -363,13 +363,20 @@ int SpectrogramWidget::hitTestBoundary(int x) const {
     if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return -1;
 
     int count = m_boundaryModel->boundaryCount(activeTier);
+    int bestIdx = -1;
+    int bestDist = kBoundaryHitWidth / 2 + 1;
+
     for (int b = 0; b < count; ++b) {
         int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(activeTier, b)));
-        if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
-            return b;
+        int dist = std::abs(x - bx);
+        if (dist <= kBoundaryHitWidth / 2) {
+            if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
+                bestDist = dist;
+                bestIdx = b;
+            }
         }
     }
-    return -1;
+    return bestIdx;
 }
 
 void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
@@ -397,16 +404,22 @@ void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
 void SpectrogramWidget::updateBoundaryDrag(TimePos currentTime) {
     if (!m_boundaryDragging || !m_boundaryModel) return;
 
-    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, currentTime);
+    TimePos clampedTime = m_boundaryModel->clampBoundaryTime(m_draggedTier, m_draggedBoundary, currentTime);
+    TimePos snappedTime = m_boundaryModel->snapToLowerTier(m_draggedTier, clampedTime, secToUs(0.01));
 
-    TimePos delta = currentTime - m_boundaryDragStartTime;
+    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, snappedTime);
+
+    TimePos delta = snappedTime - m_boundaryDragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
+        TimePos alignedTime = m_dragAlignedStartTimes[i] + delta;
+        TimePos alignedClamped = m_boundaryModel->clampBoundaryTime(
+            m_dragAligned[i].tierIndex, m_dragAligned[i].boundaryIndex, alignedTime);
         m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
                                  m_dragAligned[i].boundaryIndex,
-                                 m_dragAlignedStartTimes[i] + delta);
+                                 alignedClamped);
     }
 
-    emit boundaryDragging(m_draggedTier, m_draggedBoundary, currentTime);
+    emit boundaryDragging(m_draggedTier, m_draggedBoundary, snappedTime);
 }
 
 void SpectrogramWidget::endBoundaryDrag(TimePos finalTime) {
@@ -508,10 +521,12 @@ void SpectrogramWidget::wheelEvent(QWheelEvent *event) {
         if (m_viewport) {
             m_viewport->zoomAt(xToTime(static_cast<int>(event->position().x())), factor);
         }
+        event->accept();
     } else {
-        // Plain wheel: switch entries
-        int d = (event->angleDelta().y() > 0) ? -1 : 1;
-        emit entryScrollRequested(d);
+        if (m_viewport) {
+            double scrollSec = (event->angleDelta().y() > 0) ? -0.5 : 0.5;
+            m_viewport->scrollBy(scrollSec);
+        }
         event->accept();
     }
 }

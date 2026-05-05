@@ -171,7 +171,6 @@ void WaveformWidget::drawPlayCursor(QPainter &painter) {
 }
 
 void WaveformWidget::drawDbAxis(QPainter &painter) {
-    // Draw simple dB scale on the left side of the waveform
     int h = height();
     int centerY = h / 2;
 
@@ -180,29 +179,16 @@ void WaveformWidget::drawDbAxis(QPainter &painter) {
     painter.setFont(font);
     painter.setPen(QColor(100, 100, 120));
 
-    // dB values to display: 0dB at center line peak, negative going inward
-    // With amplitude scale, the visible range is [-1/scale, 1/scale] in linear
-    // Show reference lines at 0dB, -6dB, -12dB, -24dB
     static const float dbValues[] = {0.0f, -6.0f, -12.0f, -24.0f};
 
     for (float db : dbValues) {
-        // linear amplitude for this dB level
         float linear = std::pow(10.0f, db / 20.0f);
-        // Apply amplitude scale: where this linear value appears on screen
         float scaled = linear * static_cast<float>(m_amplitudeScale);
-        if (scaled > 1.0f) continue; // off screen
+        if (scaled > 1.0f) continue;
 
         int yTop = centerY - static_cast<int>(scaled * centerY);
         int yBot = centerY + static_cast<int>(scaled * centerY);
 
-        // Faint horizontal reference line
-        painter.setPen(QPen(QColor(60, 60, 70), 1, Qt::DotLine));
-        painter.drawLine(0, yTop, width(), yTop);
-        if (db != 0.0f) { // don't draw bottom for 0dB (it's off-screen edge)
-            painter.drawLine(0, yBot, width(), yBot);
-        }
-
-        // Label
         painter.setPen(QColor(100, 100, 120));
         QString label = (db == 0.0f) ? QStringLiteral("0dB") : QString::number(static_cast<int>(db)) + "dB";
         painter.drawText(2, yTop - 1, label);
@@ -346,13 +332,20 @@ int WaveformWidget::hitTestBoundary(int x) const {
     if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return -1;
 
     int count = m_boundaryModel->boundaryCount(activeTier);
+    int bestIdx = -1;
+    int bestDist = kBoundaryHitWidth / 2 + 1;
+
     for (int b = 0; b < count; ++b) {
         int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(activeTier, b)));
-        if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
-            return b;
+        int dist = std::abs(x - bx);
+        if (dist <= kBoundaryHitWidth / 2) {
+            if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
+                bestDist = dist;
+                bestIdx = b;
+            }
         }
     }
-    return -1;
+    return bestIdx;
 }
 
 void WaveformWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
@@ -380,16 +373,22 @@ void WaveformWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
 void WaveformWidget::updateBoundaryDrag(TimePos currentTime) {
     if (!m_boundaryDragging || !m_boundaryModel) return;
 
-    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, currentTime);
+    TimePos clampedTime = m_boundaryModel->clampBoundaryTime(m_draggedTier, m_draggedBoundary, currentTime);
+    TimePos snappedTime = m_boundaryModel->snapToLowerTier(m_draggedTier, clampedTime, secToUs(0.01));
 
-    TimePos delta = currentTime - m_boundaryDragStartTime;
+    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, snappedTime);
+
+    TimePos delta = snappedTime - m_boundaryDragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
+        TimePos alignedTime = m_dragAlignedStartTimes[i] + delta;
+        TimePos alignedClamped = m_boundaryModel->clampBoundaryTime(
+            m_dragAligned[i].tierIndex, m_dragAligned[i].boundaryIndex, alignedTime);
         m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
                                  m_dragAligned[i].boundaryIndex,
-                                 m_dragAlignedStartTimes[i] + delta);
+                                 alignedClamped);
     }
 
-    emit boundaryDragging(m_draggedTier, m_draggedBoundary, currentTime);
+    emit boundaryDragging(m_draggedTier, m_draggedBoundary, snappedTime);
 }
 
 void WaveformWidget::endBoundaryDrag(TimePos finalTime) {
@@ -482,16 +481,23 @@ void WaveformWidget::contextMenuEvent(QContextMenuEvent *event) {
 
 void WaveformWidget::wheelEvent(QWheelEvent *event) {
     if (event->modifiers() & Qt::ControlModifier) {
-        // Ctrl+wheel: zoom waveform amplitude vertically
+        double delta = event->angleDelta().y() / 120.0;
+        double factor = (delta > 0) ? 1.25 : 0.8;
+        if (m_viewport) {
+            m_viewport->zoomAt(xToTime(static_cast<int>(event->position().x())), factor);
+        }
+        event->accept();
+    } else if (event->modifiers() & Qt::ShiftModifier) {
         double delta = event->angleDelta().y() / 120.0;
         double factor = (delta > 0) ? 1.25 : 0.8;
         m_amplitudeScale = std::clamp(m_amplitudeScale * factor, 0.1, 20.0);
         update();
         event->accept();
     } else {
-        // Plain wheel: switch entries
-        int d = (event->angleDelta().y() > 0) ? -1 : 1;
-        emit entryScrollRequested(d);
+        if (m_viewport) {
+            double scrollSec = (event->angleDelta().y() > 0) ? -0.5 : 0.5;
+            m_viewport->scrollBy(scrollSec);
+        }
         event->accept();
     }
 }

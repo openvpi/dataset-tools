@@ -9,6 +9,7 @@
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QResizeEvent>
+#include <QContextMenuEvent>
 #include <QUndoStack>
 
 #include <cmath>
@@ -67,25 +68,7 @@ void PowerWidget::paintEvent(QPaintEvent *event) {
     drawPower(painter);
 }
 
-void PowerWidget::drawReferenceLines(QPainter &painter) {
-    int w = width();
-    int h = height();
-
-    painter.setPen(QPen(QColor(60, 60, 60), 1));
-    QFont font = painter.font();
-    font.setPixelSize(9);
-    painter.setFont(font);
-
-    // Draw horizontal reference lines at -48, -36, -24, -12, 0 dB
-    const float refLevels[] = {-48.0f, -36.0f, -24.0f, -12.0f, 0.0f};
-    for (float dB : refLevels) {
-        float norm = (dB - kMinPower) / (kMaxPower - kMinPower);
-        int y = h - static_cast<int>(norm * h);
-        painter.setPen(QPen(QColor(60, 60, 60), 1));
-        painter.drawLine(0, y, w, y);
-        painter.setPen(QColor(100, 100, 100));
-        painter.drawText(4, y - 2, QString::number(static_cast<int>(dB)) + " dB");
-    }
+void PowerWidget::drawReferenceLines(QPainter & /*painter*/) {
 }
 
 void PowerWidget::drawPower(QPainter &painter) {
@@ -246,13 +229,20 @@ int PowerWidget::hitTestBoundary(int x) const {
     if (activeTier < 0 || activeTier >= m_document->tierCount()) return -1;
 
     int count = m_document->boundaryCount(activeTier);
+    int bestIdx = -1;
+    int bestDist = kBoundaryHitWidth / 2 + 1;
+
     for (int b = 0; b < count; ++b) {
         int bx = timeToX(usToSec(m_document->boundaryTime(activeTier, b)));
-        if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
-            return b;
+        int dist = std::abs(x - bx);
+        if (dist <= kBoundaryHitWidth / 2) {
+            if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
+                bestDist = dist;
+                bestIdx = b;
+            }
         }
     }
-    return -1;
+    return bestIdx;
 }
 
 void PowerWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
@@ -280,16 +270,22 @@ void PowerWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
 void PowerWidget::updateBoundaryDrag(TimePos currentTime) {
     if (!m_boundaryDragging || !m_document) return;
 
-    m_document->moveBoundary(m_draggedTier, m_draggedBoundary, currentTime);
+    TimePos clampedTime = m_document->clampBoundaryTime(m_draggedTier, m_draggedBoundary, currentTime);
+    TimePos snappedTime = m_document->snapToLowerTier(m_draggedTier, clampedTime, secToUs(0.01));
 
-    TimePos delta = currentTime - m_boundaryDragStartTime;
+    m_document->moveBoundary(m_draggedTier, m_draggedBoundary, snappedTime);
+
+    TimePos delta = snappedTime - m_boundaryDragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
+        TimePos alignedTime = m_dragAlignedStartTimes[i] + delta;
+        TimePos alignedClamped = m_document->clampBoundaryTime(
+            m_dragAligned[i].tierIndex, m_dragAligned[i].boundaryIndex, alignedTime);
         m_document->moveBoundary(m_dragAligned[i].tierIndex,
                                  m_dragAligned[i].boundaryIndex,
-                                 m_dragAlignedStartTimes[i] + delta);
+                                 alignedClamped);
     }
 
-    emit boundaryDragging(m_draggedTier, m_draggedBoundary, currentTime);
+    emit boundaryDragging(m_draggedTier, m_draggedBoundary, snappedTime);
 }
 
 void PowerWidget::endBoundaryDrag(TimePos finalTime) {
@@ -382,11 +378,57 @@ void PowerWidget::wheelEvent(QWheelEvent *event) {
         if (m_viewport) {
             m_viewport->zoomAt(xToTime(static_cast<int>(event->position().x())), factor);
         }
-    } else {
-        // Plain wheel: switch entries
-        int d = (event->angleDelta().y() > 0) ? -1 : 1;
-        emit entryScrollRequested(d);
         event->accept();
+    } else {
+        if (m_viewport) {
+            double scrollSec = (event->angleDelta().y() > 0) ? -0.5 : 0.5;
+            m_viewport->scrollBy(scrollSec);
+        }
+        event->accept();
+    }
+}
+
+void PowerWidget::contextMenuEvent(QContextMenuEvent *event) {
+    if (m_samples.empty() || !m_playWidget || !m_document) {
+        event->accept();
+        return;
+    }
+
+    double clickTime = xToTime(event->pos().x());
+
+    double segStart, segEnd;
+    findSurroundingBoundaries(clickTime, segStart, segEnd);
+
+    if (m_playWidget) {
+        m_playWidget->setPlayRange(segStart, segEnd);
+        m_playWidget->seek(segStart);
+        m_playWidget->setPlaying(true);
+    }
+
+    event->accept();
+}
+
+void PowerWidget::findSurroundingBoundaries(double time, double &start, double &end) const {
+    if (!m_document) {
+        start = 0.0;
+        end = m_viewEnd;
+        return;
+    }
+
+    int tier = m_document->activeTierIndex();
+    int count = m_document->boundaryCount(tier);
+
+    start = 0.0;
+    end = usToSec(m_document->totalDuration());
+
+    for (int i = 0; i < count; ++i) {
+        double bTime = usToSec(m_document->boundaryTime(tier, i));
+        if (bTime <= time)
+            start = bTime;
+        if (bTime >= time && bTime < end) {
+            end = bTime;
+            break;
+        }
     }
 }
 

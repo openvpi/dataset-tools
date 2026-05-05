@@ -1,4 +1,4 @@
-﻿#include "IntervalTierView.h"
+#include "IntervalTierView.h"
 #include "commands/BoundaryCommands.h"
 #include "BoundaryBindingManager.h"
 
@@ -142,13 +142,25 @@ void IntervalTierView::drawBindingLines(QPainter &painter) {
 int IntervalTierView::hitTestBoundary(int x) const {
     if (!m_doc) return -1;
     int count = m_doc->boundaryCount(m_tierIndex);
+
+    int bestIdx = -1;
+    int bestDist = kBoundaryHitWidth / 2 + 1;
+
     for (int b = 0; b < count; ++b) {
         int bx = timeToX(usToSec(m_doc->boundaryTime(m_tierIndex, b)));
-        if (std::abs(x - bx) <= kBoundaryHitWidth / 2) {
-            return b;
+        int dist = std::abs(x - bx);
+        if (dist <= kBoundaryHitWidth / 2) {
+            // When multiple boundaries overlap at same pixel, prefer the one
+            // on the side the cursor is approaching from. If exactly equal
+            // distance (fully overlapping), prefer the later boundary so the
+            // user can drag it away to separate them.
+            if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
+                bestDist = dist;
+                bestIdx = b;
+            }
         }
     }
-    return -1;
+    return bestIdx;
 }
 
 int IntervalTierView::timeToX(double time) const {
@@ -279,15 +291,19 @@ void IntervalTierView::startDrag(int boundaryIndex, TimePos startTime) {
 void IntervalTierView::updateDrag(TimePos currentTime) {
     if (m_state != State::Dragging) return;
 
-    // Direct update for visual feedback (not through undo stack during drag)
-    m_doc->moveBoundary(m_tierIndex, m_draggedBoundary, currentTime);
+    TimePos clampedTime = m_doc->clampBoundaryTime(m_tierIndex, m_draggedBoundary, currentTime);
+    TimePos snappedTime = m_doc->snapToLowerTier(m_tierIndex, clampedTime, secToUs(0.01));
 
-    // Update aligned boundaries
-    TimePos delta = currentTime - m_dragStartTime;
+    m_doc->moveBoundary(m_tierIndex, m_draggedBoundary, snappedTime);
+
+    TimePos delta = snappedTime - m_dragStartTime;
     for (size_t i = 0; i < m_dragAligned.size(); ++i) {
+        TimePos alignedTime = m_dragAlignedStartTimes[i] + delta;
+        TimePos alignedClamped = m_doc->clampBoundaryTime(
+            m_dragAligned[i].tierIndex, m_dragAligned[i].boundaryIndex, alignedTime);
         m_doc->moveBoundary(m_dragAligned[i].tierIndex,
                             m_dragAligned[i].boundaryIndex,
-                            m_dragAlignedStartTimes[i] + delta);
+                            alignedClamped);
     }
 
     update();
