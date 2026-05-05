@@ -100,11 +100,11 @@
 
 ---
 
-### Merge 7: waveform-panel PlaybackController 并入 WaveformPanel
+### Merge 7: ~~waveform-panel PlaybackController 并入 WaveformPanel~~ ✅ 已完成
 
-`PlaybackController.cpp`（29 行）是 WaveformPanel 的私有实现细节（隐藏 PlayWidget 做播放后端），只被 WaveformPanel.cpp 使用。并入 WaveformPanel.cpp 开头。
+> waveform-panel 已从构建中删除，此合并项不再适用。
 
-**减少**: 1 个 .cpp
+**减少**: 1 个 .cpp（随 waveform-panel 整体删除）
 
 ---
 

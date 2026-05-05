@@ -143,12 +143,12 @@
 ### S.2 TierLabelArea 标签区域
 
 - [x] `TierLabelArea` 基类：`activeTierIndex()` / `activeTierChanged` 信号
-- [ ] `TierLabelArea` 基类增加 `activeBoundaries()` 方法
-- [ ] `SliceTierLabel`（Slicer 用）：单层，自动编号 "1", "2", "3"...
-- [ ] `PhonemeTextGridTierLabel`（PhonemeLabeler 用）：多层 TextGrid 编辑
-  - [ ] 最左侧竖排 radio button 组（每层一个）
-  - [ ] 选中层的边界线向下贯穿所有子图
-  - [ ] 非选中层的边界线仅在标签区域内，从该层向下延伸到最低层截止
+- [x] `TierLabelArea` 基类增加 `activeBoundaries()` 方法
+- [x] `SliceTierLabel`（Slicer 用）：单层，自动编号 "1", "2", "3"...
+- [x] `PhonemeTextGridTierLabel`（PhonemeLabeler 用）：多层 TextGrid 编辑
+  - [x] 最左侧竖排 radio button 组（每层一个）
+  - [x] 选中层的边界线向下贯穿所有子图
+  - [x] 非选中层的边界线仅在标签区域内，从该层向下延伸到最低层截止
 - [ ] 验证：radio button 切换时边界线贯穿范围正确变化
 
 ### S.3 MiniMapScrollBar 组件
@@ -162,47 +162,47 @@
 
 ### S.4 刻度线重设计
 
-- [ ] 参考 ds-editor-lite `ITimelinePainter` 实现基于时间的刻度算法
-- [ ] 层级：1h / 10min / 1min / 10s / 1s / 100ms / 10ms
-- [ ] `minimumSpacing = 24px`，渐显渐隐（`spacingVisibility` + `smoothStep`）
-- [ ] 替换现有 `TimeRulerWidget::paintEvent()` 实现
-- [ ] 确保所有子图共享 ViewportController 不允许独立横向缩放
+- [x] 参考 ds-editor-lite `ITimelinePainter` 实现基于时间的刻度算法
+- [x] 层级：1h / 10min / 1min / 10s / 1s / 100ms / 10ms
+- [x] `minimumSpacing = 24px`，渐显渐隐（`spacingVisibility` + `smoothStep`）
+- [x] 替换现有 `TimeRulerWidget::paintEvent()` 实现
+- [x] 确保所有子图共享 ViewportController 不允许独立横向缩放
 
 ### S.5 边界线贯穿规则实现
 
-- [ ] `BoundaryOverlayWidget` 覆盖 TierLabelArea + QSplitter 整个区域
-- [ ] 选中层边界线：从标签区域该层顶部 → 最底部子图底部
-- [ ] 非选中层边界线：从该层顶部 → 标签区域最低层底部
-- [ ] 红色播放游标：始终贯穿标签区域 + 所有子图
-- [ ] 播放结束 200ms 后游标消失
+- [x] `BoundaryOverlayWidget` 覆盖 TierLabelArea + QSplitter 整个区域
+- [x] 选中层边界线：从标签区域该层顶部 → 最底部子图底部
+- [x] 非选中层边界线：从该层顶部 → 标签区域最低层底部
+- [x] 红色播放游标：始终贯穿标签区域 + 所有子图
+- [x] 播放结束 200ms 后游标消失
 - [ ] 验证：Slicer 单层全贯穿；PhonemeLabeler radio 切换时贯穿范围正确
 
 ### S.6 层级包含规则与拖动约束
 
-- [ ] 高层级边界强制对齐低层级边界（words 的边界必须与某个 phones 边界重合）
-- [ ] 拖动约束：边界线不允许超越同层级内相邻的边界线（clamp 到 (L, R) 范围）
-- [ ] Slicer 同理：切割线拖动不可越过相邻切割线
-- [ ] 已有 `IntervalTierView::updateDrag()` 和 `WaveformWidget::updateBoundaryDrag()` 需要增加 clamp 逻辑
+- [x] 高层级边界强制对齐低层级边界（words 的边界必须与某个 phones 边界重合）
+- [x] 拖动约束：边界线不允许超越同层级内相邻的边界线（clamp 到 (L, R) 范围）
+- [x] Slicer 同理：切割线拖动不可越过相邻切割线
+- [x] 已有 `IntervalTierView::updateDrag()` 和 `WaveformWidget::updateBoundaryDrag()` 需要增加 clamp 逻辑
 - [ ] 验证：拖动到极限位置时被正确约束
 
 ### S.7 键鼠交互统一
 
-- [ ] Ctrl+滚轮 → 横向缩放（所有子图同步）
-- [ ] Shift+滚轮 → 波形图垂直振幅（仅 WaveformWidget）
-- [ ] 滚轮 → 横向滚动
-- [ ] 右键单击任意子图 → 播放当前分割区域（基于选中层的边界）
-- [ ] 确保频谱图/功率图不能独立缩放时间轴
+- [x] Ctrl+滚轮 → 横向缩放（所有子图同步）
+- [x] Shift+滚轮 → 波形图垂直振幅（仅 WaveformWidget）
+- [x] 滚轮 → 横向滚动
+- [x] 右键单击任意子图 → 播放当前分割区域（基于选中层的边界）
+- [x] 确保频谱图/功率图不能独立缩放时间轴
 
 ### S.8 y 轴刻度清理
 
-- [ ] 波形图：保留左侧 dB 参考刻度（0/-6/-12/-24dB），去掉横向虚线
-- [ ] 频谱图/功率图：移除 y 轴刻度和虚线
+- [x] 波形图：保留左侧 dB 参考刻度，去掉横向虚线
+- [x] 频谱图/功率图：移除 y 轴刻度和虚线
 
 ### S.9 迁移现有页面到 AudioVisualizerContainer
 
-- [ ] DsSlicerPage 改用 AudioVisualizerContainer + SliceTierLabel
-- [ ] PhonemeLabelerPage 改用 AudioVisualizerContainer + PhonemeTextGridTierLabel
-- [ ] 删除旧的独立布局代码
+- [x] DsSlicerPage 改用 AudioVisualizerContainer + SliceTierLabel
+- [x] PhonemeLabelerPage 改用 AudioVisualizerContainer + PhonemeTextGridTierLabel
+- [x] 删除旧的独立布局代码（waveform-panel 已从构建中移除）
 - [ ] 验证：两个页面功能无回归
 
 ---
@@ -246,9 +246,9 @@
 
 ### U.2 待完成的合并/更新
 
-- [ ] `build.md` + `local-build.md` → 合并为单个 `build.md`
-- [ ] `unified-app-design.md` §9 更新配置持久化（引用 D-01）
-- [ ] `unified-app-design.md` §11 更新可视化架构（引用 refactoring-v2.md §2）
+- [x] `build.md` + `local-build.md` → 合并为单个 `build.md`（local-build.md 已删除）
+- [x] `unified-app-design.md` §9 更新配置持久化（引用 D-01）
+- [x] `unified-app-design.md` §11 更新可视化架构（引用 refactoring-v2.md §2）
 - [x] `ds-format.md` §2 去掉 defaults 字段
 
 ---

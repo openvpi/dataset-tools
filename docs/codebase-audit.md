@@ -324,7 +324,7 @@ Apps/Shared   data-sources                   STATIC    ← 含 Page + Service
               min-label-editor               STATIC
               phoneme-editor                 STATIC
               pitch-editor                   STATIC
-              waveform-panel                 STATIC
+              audio-visualizer               STATIC    ← AudioVisualizerContainer + MiniMap + SliceTierLabel
 
 Apps/旧Pages  ~~minlabel-page~~               已删除 (5B)
               ~~phonemelabeler-page~~         已删除 (5B)
@@ -490,9 +490,9 @@ Libs (7, CLI 和 GUI 共用的业务封装):
 App-Shared (6, 两个 app 共享):
   data-sources        ← Page + Service 统一入口
   min-label-editor    ← 歌词编辑 UI 组件
-  phoneme-editor      ← 音素编辑 UI 组件
+  phoneme-editor      ← 音素编辑 UI 组件 (含 TierLabelArea, PhonemeTextGridTierLabel)
   pitch-editor        ← 音高编辑 UI 组件
-  waveform-panel      ← 波形显示组件（注: 设计文档说已被 phoneme-editor 内部组件替代，待确认）
+  audio-visualizer    ← 统一音频可视化容器 (AudioVisualizerContainer + MiniMap + SliceTierLabel)
   settings-page       ← 设置 UI
 
 Apps (4):
@@ -510,12 +510,7 @@ Apps (4):
 
 ### 设计文档 §11.1 的澄清
 
-设计文档提到 `waveform-panel` "已被 phoneme-editor 内的组件 + IBoundaryModel 替代（ADR-65）"。如果 DsSlicerPage 已改为直接使用 phoneme-editor 的 widget（通过 `SliceBoundaryModel`），则 `waveform-panel` target 可能也是遗留：
-
-| 如果 waveform-panel 仍被引用 | 保留 |
-|---|---|
-| 如果仅 phoneme-editor 内部使用 | 合并入 phoneme-editor |
-| 如果无任何引用 | 删除 |
+设计文档 §11 已更新：`waveform-panel` 已删除，`AudioVisualizerContainer`（`src/apps/shared/audio-visualizer/`）为统一替代方案。Slicer 和 PhonemeLabeler 均已迁移到该架构。
 
 ---
 

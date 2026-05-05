@@ -138,7 +138,7 @@
 | LabelSuite | dstools-widgets, dstools-domain, dstools-audio, cpp-pinyin, cpp-kana, textgrid, FFTW3, SndFile, nlohmann_json |
 | DsLabeler | dstools-widgets, dstools-domain, dstools-audio, audio-util, hubert-infer, game-infer, rmvpe-infer, FunAsr, cpp-pinyin, cpp-kana, textgrid, FFTW3, SndFile, nlohmann_json, Qt::Concurrent |
 
-> **LabelSuite** 使用 `dsfw::AppShell` 多页面模式，9 个标注页面（Slice, ASR, Label, Align, Phone, CSV, MIDI, DS, Pitch），各自使用文件系统 I/O。**DsLabeler** 使用多页面模式，7 个页面（Welcome, Slicer, MinLabel, PhonemeLabeler, PitchLabeler, Export, Settings）由 `.dsproj` 工程文件驱动。详见 [unified-app-design.md](unified-app-design.md)。
+> **LabelSuite** 使用 `dsfw::AppShell` 多页面模式，10 个标注页面（Slice, ASR, Label, Align, Phone, CSV, MIDI, DS, Pitch, Settings），各自使用文件系统 I/O。**DsLabeler** 使用多页面模式，7 个页面（Welcome, Slicer, MinLabel, PhonemeLabeler, PitchLabeler, Export, Settings）由 `.dsproj` 工程文件驱动。详见 [unified-app-design.md](unified-app-design.md)。
 
 ## 共享库
 
@@ -259,7 +259,13 @@ dataset-tools/
 │   ├── apps/
 │   │   ├── label-suite/            # LabelSuite — 通用标注工具集
 │   │   ├── ds-labeler/             # DsLabeler — DiffSinger 专用标注器
-│   │   ├── shared/                 # 共享编辑器组件 (MinLabelEditor, PhonemeEditor, PitchEditor)
+│   │   ├── shared/                 # 共享编辑器组件
+│   │   │   ├── audio-visualizer/   # 统一音频可视化容器 (AudioVisualizerContainer)
+│   │   │   ├── data-sources/       # 数据源 + Page + Service
+│   │   │   ├── min-label-editor/   # 歌词编辑 UI 组件
+│   │   │   ├── phoneme-editor/     # 音素编辑 UI 组件 (含 TierLabelArea)
+│   │   │   ├── pitch-editor/       # 音高编辑 UI 组件
+│   │   │   └── settings/           # 设置 UI
 │   │   ├── cli/                    # dstools-cli
 │   │   ├── test-shell/             # TestShell
 │   │   └── widget-gallery/         # WidgetGallery

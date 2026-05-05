@@ -86,7 +86,7 @@
 
 ---
 
-## 2 AudioVisualizerContainer — 统一可视化基类（部分完成）
+## 2 AudioVisualizerContainer — 统一可视化基类（✅ 已完成）
 
 ### 2.1 设计目标
 
@@ -161,28 +161,29 @@ protected:
 class TierLabelArea : public QWidget {
 public:
     virtual int activeTierIndex() const;
-    void setActiveTierIndex(int index);
-    // TODO: virtual QList<double> activeBoundaries() const = 0;
+    virtual void setActiveTierIndex(int index);
+    virtual QList<double> activeBoundaries() const;
 signals:
     void activeTierChanged(int index);
 };
 ```
 
-> **实现状态**：基类已实现，缺少 `activeBoundaries()` 方法。
+> **实现状态**：基类已实现。源文件位于 `src/apps/shared/phoneme-editor/ui/TierLabelArea.h/.cpp`。
 
-#### SliceTierLabel（Slicer 用）— 未实现
+#### SliceTierLabel（Slicer 用）— ✅ 已实现
 
 - 单层，自动按顺序标数字
 - 无 radio button
 - `activeTierIndex()` 始终返回 0
-- 当前 DsSlicerPage 使用独立的 `SliceNumberLayer` 组件，尚未迁移
+- 源文件位于 `src/apps/shared/audio-visualizer/SliceTierLabel.h/.cpp`
 
-#### PhonemeTextGridTierLabel（PhonemeLabeler 用）— 未实现
+#### PhonemeTextGridTierLabel（PhonemeLabeler 用）— ✅ 已实现
 
 - 多层 TextGrid 编辑
 - 最左侧竖排 radio button 组（每层一个）
 - 选中层的边界线向下贯穿所有子图
 - 非选中层的边界线仅在标签区域内，从该层向下延伸到最低层截止
+- 源文件位于 `src/apps/shared/phoneme-editor/ui/PhonemeTextGridTierLabel.h/.cpp`
 
 ### 2.5 层级包含规则与拖动约束
 
@@ -251,11 +252,9 @@ chartOrder=waveform,power,spectrogram
 
 子图 id：`waveform`、`power`、`spectrogram`、`viseme`（口型，待开发）
 
-### 2.11 Slicer 具体配置（未迁移）
+### 2.11 Slicer 具体配置（✅ 已迁移）
 
-> **当前状态**：`DsSlicerPage` 仍使用手动布局，未迁移到 `AudioVisualizerContainer`。使用 `SliceNumberLayer`（独立组件）而非 `SliceTierLabel`（计划中的 TierLabelArea 子类）。
-
-目标布局：
+布局：
 ```
 AudioVisualizerContainer
 ├── MiniMapScrollBar
@@ -265,11 +264,9 @@ AudioVisualizerContainer
 └── BoundaryOverlayWidget（边界线贯穿所有图）
 ```
 
-### 2.12 PhonemeLabeler 具体配置（未迁移）
+### 2.12 PhonemeLabeler 具体配置（✅ 已迁移）
 
-> **当前状态**：`PhonemeLabelerPage` 未迁移到 `AudioVisualizerContainer`。
-
-目标布局：
+布局：
 
 ```
 AudioVisualizerContainer
