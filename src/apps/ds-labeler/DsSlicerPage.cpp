@@ -183,12 +183,12 @@ namespace dstools {
         m_waveformWidget = new phonemelabeler::WaveformWidget(m_container->viewport(), m_container);
         m_waveformWidget->setBoundaryModel(m_boundaryModel);
         m_waveformWidget->setPlayWidget(m_playWidget);
-        m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 0, 2);
+        m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 0, 2, 1.0);
 
         m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_container->viewport(), m_container);
         m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
         m_spectrogramWidget->setPlayWidget(m_playWidget);
-        m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 1, 5);
+        m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 1, 5, 0.75);
 
         mainLayout->addWidget(m_container, 1);
 

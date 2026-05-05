@@ -113,8 +113,9 @@ void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, i
 }
 
 void AudioVisualizerContainer::addChart(const QString &id, QWidget *widget,
-                                         int defaultOrder, int stretchFactor) {
-    ChartEntry entry{id, widget, defaultOrder, stretchFactor};
+                                         int defaultOrder, int stretchFactor,
+                                         double heightWeight) {
+    ChartEntry entry{id, widget, defaultOrder, stretchFactor, heightWeight};
     m_charts[id] = entry;
 
     if (!m_chartOrder.contains(id))
@@ -187,6 +188,37 @@ void AudioVisualizerContainer::rebuildChartLayout() {
         m_chartSplitter->setStretchFactor(i, it->stretchFactor);
         it->widget->show();
     }
+
+    // Apply default height ratios if no saved splitter state exists
+    QSettings settings;
+    QByteArray savedState = settings.value(
+        QStringLiteral("AudioVisualizer/%1/splitterState").arg(m_settings.appName())).toByteArray();
+    if (savedState.isEmpty()) {
+        applyDefaultHeightRatios();
+    }
+}
+
+void AudioVisualizerContainer::applyDefaultHeightRatios() {
+    int totalHeight = m_chartSplitter->height();
+    if (totalHeight <= 0)
+        totalHeight = 600; // fallback before first show
+
+    double totalWeight = 0.0;
+    for (const auto &id : m_chartOrder) {
+        auto it = m_charts.find(id);
+        if (it != m_charts.end())
+            totalWeight += it->heightWeight;
+    }
+    if (totalWeight <= 0.0)
+        return;
+
+    QList<int> sizes;
+    for (const auto &id : m_chartOrder) {
+        auto it = m_charts.find(id);
+        if (it != m_charts.end())
+            sizes.append(static_cast<int>(totalHeight * it->heightWeight / totalWeight));
+    }
+    m_chartSplitter->setSizes(sizes);
 }
 
 void AudioVisualizerContainer::connectViewportToWidget(QWidget * /*widget*/) {

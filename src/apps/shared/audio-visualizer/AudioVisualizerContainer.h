@@ -39,6 +39,7 @@ struct ChartEntry {
     QWidget *widget = nullptr;
     int defaultOrder = 0;
     int stretchFactor = 1;
+    double heightWeight = 1.0;
 };
 
 class AudioVisualizerContainer : public QWidget {
@@ -62,7 +63,8 @@ public:
 
     void setAudioData(const std::vector<float> &samples, int sampleRate);
 
-    void addChart(const QString &id, QWidget *widget, int defaultOrder, int stretchFactor = 1);
+    void addChart(const QString &id, QWidget *widget, int defaultOrder,
+                  int stretchFactor = 1, double heightWeight = 1.0);
     void removeChart(const QString &id);
     QStringList chartOrder() const;
     void setChartOrder(const QStringList &order);
@@ -78,6 +80,7 @@ signals:
 private:
     void rebuildChartLayout();
     void connectViewportToWidget(QWidget *widget);
+    void applyDefaultHeightRatios();
 
     widgets::ViewportController *m_viewport = nullptr;
     IBoundaryModel *m_boundaryModel = nullptr;
