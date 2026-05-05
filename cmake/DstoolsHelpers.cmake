@@ -361,22 +361,6 @@ function(dstools_add_executable target_name)
         set_property(TARGET DeployedTargets APPEND PROPERTY TARGETS ${target_name})
 
         if(WIN32)
-            install(TARGETS ${target_name}
-                RUNTIME DESTINATION .
-                RUNTIME_DEPENDENCY_SET DstoolsRuntimeDeps
-            )
-        elseif(APPLE)
-            install(TARGETS ${target_name}
-                BUNDLE DESTINATION .
-            )
-        else()
-            install(TARGETS ${target_name}
-                RUNTIME DESTINATION bin
-                RUNTIME_DEPENDENCY_SET DstoolsRuntimeDeps
-            )
-        endif()
-
-        if(WIN32)
             add_custom_command(TARGET ${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "$<TARGET_RUNTIME_DLLS:${target_name}>"
