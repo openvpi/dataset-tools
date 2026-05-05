@@ -355,7 +355,7 @@ struct ViewportState {
 - [x] 用户确认后跳回 Slicer 页面
 - [x] 修复跳转按钮不生效：使用 `clickedButton()` + `QTimer::singleShot` 延迟跳转
 - [x] 验证：修改切点后切换到 MinLabel 页面触发提醒
-- [ ] 复选框选择需要重新切片的音频（当前简化为全局提醒 + 详情展示）
+- [ ] 复选框选择需要重新切片的音频（低优先级，当前全局提醒 + 详情展示 + promptSliceUpdateIfNeeded 已覆盖主要场景）
 
 ### V.8 批量导出不更新项目 items + 导出模式合并（D-26）
 
