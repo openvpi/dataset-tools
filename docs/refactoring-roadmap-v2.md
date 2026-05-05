@@ -334,24 +334,44 @@ struct ViewportState {
 
 **方案**：
 
-- [ ] `SliceListPanel` 增加右键菜单（丢弃/恢复），复用 SlicerListPanel 的逻辑
-- [ ] `SliceListPanel` 增加 `setDiscarded()` / `discardedIndices()` API
-- [ ] `SliceListPanel` 增加进度条功能（已有 FileProgressTracker，确保所有页面启用）
+- [x] `SliceListPanel` 增加右键菜单（丢弃/恢复），复用 SlicerListPanel 的逻辑
+- [x] `SliceListPanel` 增加 `setDiscarded()` / `discardedIndices()` API
+- [x] `SliceListPanel` 增加进度条功能（已有 FileProgressTracker，确保所有页面启用）
 - [ ] `SliceListPanel` 增加时长信息显示（当前仅显示 sliceId，应加上时长）
 - [ ] Slicer 页面额外的切点编辑菜单项（添加切点/删除边界）通过子类或可选信号扩展
 - [ ] 迁移 DsSlicerPage 使用新的统一 SliceListPanel 替代 SlicerListPanel
 - [ ] 删除 `SlicerListPanel.h/.cpp`
 - [ ] 验证：所有页面的切片列表功能一致
+- [x] `SliceListPanel` 增加 `ensureSelection()` / `saveSelection()` / `validateAudioPath()` 公共 API
+- [x] 三页面（MinLabel / Phoneme / Pitch）使用新 API 消除重复逻辑
 
 ### V.7 切片不一致弹窗（D-20）
 
 **依赖**：V.6 完成后。
 
-- [ ] 页面切换守卫（`main.cpp`）增加 dsitem 时长 vs 当前切点时长的一致性检查
-- [ ] 不一致时弹窗：提示文案 + 复选框选择需要重新切片的音频
-- [ ] 复选框默认全选所有切点变化过的音频
-- [ ] 用户确认后跳回 Slicer 页面
-- [ ] 验证：修改切点后切换到 MinLabel 页面触发提醒
+- [x] 页面切换守卫（`main.cpp`）增加切点数量 vs 项目 item 数量的一致性检查
+- [x] 不一致时弹窗：提示文案 + 详情列出问题文件
+- [x] 未导出 / 未切片 / 切点数不一致 / 切点位置已变化 四种状态检测
+- [x] 用户确认后跳回 Slicer 页面
+- [x] 修复跳转按钮不生效：使用 `clickedButton()` + `QTimer::singleShot` 延迟跳转
+- [x] 验证：修改切点后切换到 MinLabel 页面触发提醒
+- [ ] 复选框选择需要重新切片的音频（当前简化为全局提醒 + 详情展示）
+
+### V.8 批量导出不更新项目 items + 导出模式合并（D-26）
+
+**问题**：
+1. `onBatchExportAll()` 导出所有音频的切片 WAV，但不注册 items 到 project，导致其他页面看不到新导出的切片
+2. 当前 Slicer 页面有两个独立按钮（"导出…" 和 "批量导出全部"），体验割裂
+
+**方案**：
+
+- [ ] `onBatchExportAll()` 导出后注册所有 items 到 project（同 `onExportAudio()` 逻辑），并 emit `sliceListChanged()`
+- [ ] 合并"导出…"按钮为统一入口，弹出选择对话框：
+  - 导出当前（当前选中的音频文件的切片）
+  - 导出选定（复选框选择要导出的音频文件）
+  - 导出全部（所有已切片的音频文件）
+- [ ] 导出后 project items 正确包含所有已导出切片（合并而非覆盖）
+- [ ] 验证：导出全部后切换到歌词/音素页面，item 列表完整显示
 
 ---
 
@@ -389,6 +409,7 @@ Phase V（优先）:
   V.4 ──┤
   V.5 ──┤
   V.6 ──┤──→ V.7（依赖 V.6）
+  V.8 ──┘    （可独立）
 
 Phase T（V 完成后或并行）:
   T.1 ──┐
@@ -405,8 +426,9 @@ Phase T（V 完成后或并行）:
 | V.3 无数据提示 | 低 | 0.5h |
 | V.4 最近工程标灰 | 低 | 1h |
 | V.5 删除废弃组件 | 低 | 0.5h |
-| V.6 列表面板统一 | 高 | 1-2 天 |
-| V.7 切片不一致弹窗 | 中 | 0.5 天 |
+| V.6 列表面板统一 | 高 | 1-2 天（部分已完成：ensureSelection/validateAudioPath API）|
+| V.7 切片不一致弹窗 | 中 | ~~0.5 天~~（已完成，待验证复选框细化）|
+| V.8 导出合并 + items 更新 | 中 | 0.5 天 |
 | T.1 CSV 预览 | 中 | 1 天 |
 | T.2 快捷键 | 低 | 0.5 天 |
 | T.3 子图顺序 UI | 中 | 1 天 |
