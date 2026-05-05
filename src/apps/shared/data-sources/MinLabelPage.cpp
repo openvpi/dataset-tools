@@ -67,6 +67,8 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     m_shortcutManager->bind(m_asrAction, kAsrRun,
                             QStringLiteral("ASR 识别"), QStringLiteral("处理"));
     m_shortcutManager->applyAll();
+    m_shortcutManager->updateTooltips();
+    m_shortcutManager->setEnabled(false); // enabled on page activation
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
             this, &MinLabelPage::onSliceSelected);
@@ -296,6 +298,7 @@ dstools::widgets::ShortcutManager *MinLabelPage::shortcutManager() const {
 }
 
 void MinLabelPage::onActivated() {
+    m_shortcutManager->setEnabled(true);
     m_sliceList->refresh();
     updateProgress();
 
@@ -329,6 +332,7 @@ bool MinLabelPage::onDeactivating() {
 }
 
 void MinLabelPage::onDeactivated() {
+    m_shortcutManager->setEnabled(false);
     m_asr = nullptr;
 }
 

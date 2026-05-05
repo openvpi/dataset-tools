@@ -58,4 +58,15 @@ namespace dsfw::widgets {
         }
     }
 
+    void ShortcutManager::updateTooltips() {
+        for (const auto &b : m_bindings) {
+            auto seq = b.action->shortcut();
+            if (seq.isEmpty())
+                continue;
+            QString base = b.displayName;
+            b.action->setToolTip(
+                QStringLiteral("%1 (%2)").arg(base, seq.toString(QKeySequence::NativeText)));
+        }
+    }
+
 } // namespace dsfw::widgets

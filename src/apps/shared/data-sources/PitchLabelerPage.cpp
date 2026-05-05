@@ -90,6 +90,8 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     m_shortcutManager->bind(m_extractMidiAction, kShortcutExtractMidi,
                             QStringLiteral("提取 MIDI"), QStringLiteral("处理"));
     m_shortcutManager->applyAll();
+    m_shortcutManager->updateTooltips();
+    m_shortcutManager->setEnabled(false); // enabled on page activation
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
             this, &PitchLabelerPage::onSliceSelected);
@@ -335,6 +337,7 @@ bool PitchLabelerPage::hasUnsavedChanges() const {
 }
 
 void PitchLabelerPage::onActivated() {
+    m_shortcutManager->setEnabled(true);
     m_sliceList->refresh();
 
     {
@@ -448,6 +451,7 @@ bool PitchLabelerPage::onDeactivating() {
 }
 
 void PitchLabelerPage::onDeactivated() {
+    m_shortcutManager->setEnabled(false);
     m_rmvpe = nullptr;
     m_game = nullptr;
 }

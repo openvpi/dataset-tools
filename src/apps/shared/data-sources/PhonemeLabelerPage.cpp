@@ -70,6 +70,8 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     m_shortcutManager->bind(m_faAction, kShortcutFA,
                             QStringLiteral("强制对齐"), QStringLiteral("处理"));
     m_shortcutManager->applyAll();
+    m_shortcutManager->updateTooltips();
+    m_shortcutManager->setEnabled(false); // enabled on page activation
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
             this, &PhonemeLabelerPage::onSliceSelected);
@@ -252,6 +254,7 @@ bool PhonemeLabelerPage::hasUnsavedChanges() const {
 }
 
 void PhonemeLabelerPage::onActivated() {
+    m_shortcutManager->setEnabled(true);
     m_sliceList->refresh();
 
     {
@@ -332,6 +335,7 @@ bool PhonemeLabelerPage::onDeactivating() {
 }
 
 void PhonemeLabelerPage::onDeactivated() {
+    m_shortcutManager->setEnabled(false);
     m_hfa = nullptr;
 }
 

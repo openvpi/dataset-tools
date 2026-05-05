@@ -44,6 +44,12 @@ public:
     /// @param enabled True to enable, false to disable.
     void setEnabled(bool enabled);
 
+    /// @brief Update tooltips for all bound actions to include their shortcut key.
+    ///
+    /// Appends " (shortcut)" to each action's tooltip based on its current shortcut.
+    /// Call after applyAll() to annotate tool buttons with shortcut hints.
+    void updateTooltips();
+
 private:
     struct Binding {
         QAction *action;
