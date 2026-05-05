@@ -182,6 +182,15 @@ void SettingsPage::applySettings() {
 
     m_backend->save(data);
     m_dirty = false;
+
+    if (m_chartOrderList) {
+        QStringList order;
+        for (int i = 0; i < m_chartOrderList->count(); ++i)
+            order.append(m_chartOrderList->item(i)->data(Qt::UserRole).toString());
+        QSettings settings;
+        settings.setValue(QStringLiteral("AudioVisualizer/chartOrder"), order.join(QLatin1Char(',')));
+    }
+
     emit settingsChanged();
 
     emit modelReloadRequested(QStringLiteral("asr"));
@@ -449,6 +458,68 @@ QWidget *SettingsPage::createGeneralTab() {
         QSettings settings;
         settings.setValue(QStringLiteral("App/language"), lang);
         markDirty();
+    });
+
+    layout->addItem(new QSpacerItem(0, 16, QSizePolicy::Minimum, QSizePolicy::Fixed));
+
+    auto *chartGroup = new QGroupBox(QStringLiteral("子图显示顺序"), w);
+    auto *chartLayout = new QHBoxLayout(chartGroup);
+
+    m_chartOrderList = new QListWidget(chartGroup);
+
+    QMap<QString, QString> chartNames = {
+        {QStringLiteral("waveform"),    QStringLiteral("波形图")},
+        {QStringLiteral("power"),       QStringLiteral("功率图")},
+        {QStringLiteral("spectrogram"), QStringLiteral("频谱图")},
+    };
+
+    QString savedOrder = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
+    QStringList chartIds;
+    if (!savedOrder.isEmpty()) {
+        chartIds = savedOrder.split(QLatin1Char(','), Qt::SkipEmptyParts);
+    } else {
+        chartIds = {QStringLiteral("waveform"), QStringLiteral("power"), QStringLiteral("spectrogram")};
+    }
+    for (const auto &id : chartIds) {
+        auto *item = new QListWidgetItem(chartNames.value(id, id), m_chartOrderList);
+        item->setData(Qt::UserRole, id);
+    }
+    for (auto it = chartNames.constBegin(); it != chartNames.constEnd(); ++it) {
+        if (!chartIds.contains(it.key())) {
+            auto *item = new QListWidgetItem(it.value(), m_chartOrderList);
+            item->setData(Qt::UserRole, it.key());
+        }
+    }
+
+    chartLayout->addWidget(m_chartOrderList, 1);
+
+    auto *btnLayout = new QVBoxLayout;
+    m_chartUpBtn = new QPushButton(QStringLiteral("↑ 上移"), chartGroup);
+    m_chartDownBtn = new QPushButton(QStringLiteral("↓ 下移"), chartGroup);
+    btnLayout->addWidget(m_chartUpBtn);
+    btnLayout->addWidget(m_chartDownBtn);
+    btnLayout->addStretch();
+    chartLayout->addLayout(btnLayout);
+
+    layout->addRow(chartGroup);
+
+    connect(m_chartUpBtn, &QPushButton::clicked, this, [this]() {
+        int row = m_chartOrderList->currentRow();
+        if (row > 0) {
+            auto *item = m_chartOrderList->takeItem(row);
+            m_chartOrderList->insertItem(row - 1, item);
+            m_chartOrderList->setCurrentRow(row - 1);
+            markDirty();
+        }
+    });
+    connect(m_chartDownBtn, &QPushButton::clicked, this, [this]() {
+        int row = m_chartOrderList->currentRow();
+        if (row >= 0 && row < m_chartOrderList->count() - 1) {
+            auto *item = m_chartOrderList->takeItem(row);
+            m_chartOrderList->insertItem(row + 1, item);
+            m_chartOrderList->setCurrentRow(row + 1);
+            markDirty();
+        }
     });
 
     layout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
