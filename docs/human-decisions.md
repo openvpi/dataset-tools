@@ -229,10 +229,14 @@
 ## D-24：刻度线缩放必须与 ViewportController 严格同步
 
 **决策**：
-- `ViewportController::zoomAt()` 必须在 `m_maxPixelsPerSecond` 处**硬停**——一旦 PPS 达到上限，继续 Ctrl+滚轮不应产生任何效果
-- 当前问题：`zoomAt()` 正确 clamp 了 `newPPS`，但 `newDuration = duration / factor` 仍在缩小 view range，导致刻度线继续变稀疏/消失
-- 修复：在 `zoomAt()` 中，如果 clamp 后 `newPPS == m_state.pixelsPerSecond`（已到极限），应直接 return 不改变视口
-- 同理 zoomOut 到 `m_minPixelsPerSecond` 时也硬停
+- `ViewportController::zoomAt()` 必须在 PPS 达到上限/下限时**硬停**——PPS clamp 后无变化则不改变视口范围
+- 当前 bug 根因：`zoomAt()` 中 `newDuration = duration / factor` 使用原始 factor 而非 clamp 后的 effective factor，导致 PPS 不变但 view range 继续缩小
+- 修复：改用 `effectiveFactor = newPPS / oldPPS`，当 PPS 已到极限时 effectiveFactor==1，duration 不变
+- PPS 极限应基于实际场景动态设定：
+  - `minPPS` = `widgetWidth / totalDuration`（zoom out 极限 = 整个音频铺满窗口）
+  - `maxPPS` = `sampleRate / 10`（zoom in 极限 = 每 10 采样点 1 像素）
+- MiniMapScrollBar 的 wheelEvent 需与其他图表行为一致：无 modifier = 横向滚动，Ctrl = 缩放
+- `clampAndEmit()` 增加最小可见时长保护（1ms），防止极端缩放导致除零
 
 ---
 
