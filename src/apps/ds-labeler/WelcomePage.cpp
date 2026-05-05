@@ -79,7 +79,22 @@ WelcomePage::WelcomePage(QWidget *parent) : QWidget(parent) {
     connect(m_btnNewProject, &QPushButton::clicked, this, &WelcomePage::onNewProject);
     connect(m_btnOpenProject, &QPushButton::clicked, this, &WelcomePage::onOpenProject);
     connect(m_recentList, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
-        loadProject(item->data(Qt::UserRole).toString());
+        const QString path = item->data(Qt::UserRole).toString();
+        if (!QFileInfo::exists(path)) {
+            auto result = QMessageBox::question(
+                this, QStringLiteral("工程不存在"),
+                QStringLiteral("工程文件不存在：\n%1\n\n是否从列表中移除？").arg(path),
+                QMessageBox::Yes | QMessageBox::No);
+            if (result == QMessageBox::Yes) {
+                QSettings settings;
+                auto recent = settings.value(kRecentProjectsKey).toStringList();
+                recent.removeAll(path);
+                settings.setValue(kRecentProjectsKey, recent);
+                refreshRecentList();
+            }
+            return;
+        }
+        loadProject(path);
     });
 
     refreshRecentList();
@@ -171,11 +186,20 @@ void WelcomePage::refreshRecentList() {
 
     for (const auto &path : recent) {
         QFileInfo fi(path);
+        const bool exists = fi.exists();
         auto *item = new QListWidgetItem(
             QStringLiteral("%1    %2    %3")
-                .arg(fi.fileName(), fi.lastModified().toString("yyyy-MM-dd"),
+                .arg(fi.fileName(),
+                     exists ? fi.lastModified().toString("yyyy-MM-dd")
+                            : QStringLiteral("—"),
                      fi.absolutePath()));
         item->setData(Qt::UserRole, path);
+        if (!exists) {
+            item->setForeground(Qt::gray);
+            QFont f = item->font();
+            f.setStrikeOut(true);
+            item->setFont(f);
+        }
         m_recentList->addItem(item);
     }
 }
