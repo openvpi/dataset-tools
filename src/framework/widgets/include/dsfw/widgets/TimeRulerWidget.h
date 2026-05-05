@@ -23,13 +23,14 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
-private:
-    [[nodiscard]] int timeToX(double time) const;
-
+public:
     struct TimescaleLevel {
         double majorSec;    ///< Major tick interval (seconds).
         double minorSec;    ///< Minor tick interval (seconds).
     };
+
+private:
+    [[nodiscard]] int timeToX(double time) const;
 
     /// Find appropriate timescale level for the current PPS.
     [[nodiscard]] static TimescaleLevel findLevel(double pps);
