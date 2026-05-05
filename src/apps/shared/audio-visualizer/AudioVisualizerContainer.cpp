@@ -8,6 +8,7 @@
 #include <dsfw/widgets/PlayWidget.h>
 
 #include <QSettings>
+#include <algorithm>
 
 namespace dstools {
 
@@ -110,6 +111,16 @@ void AudioVisualizerContainer::setTotalDuration(double seconds) {
 
 void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, int sampleRate) {
     m_miniMap->setAudioData(samples, sampleRate);
+}
+
+void AudioVisualizerContainer::fitToWindow() {
+    int64_t totalSamples = m_viewport->totalSamples();
+    if (totalSamples <= 0 || width() <= 0)
+        return;
+    int fitResolution = static_cast<int>(totalSamples / width());
+    fitResolution = std::clamp(fitResolution, 10, 400);
+    m_viewport->setResolution(fitResolution);
+    m_viewport->setViewRange(0, m_viewport->totalDuration());
 }
 
 void AudioVisualizerContainer::addChart(const QString &id, QWidget *widget,

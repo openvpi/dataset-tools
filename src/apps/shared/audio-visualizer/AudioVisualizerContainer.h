@@ -63,6 +63,8 @@ public:
 
     void setAudioData(const std::vector<float> &samples, int sampleRate);
 
+    void fitToWindow();
+
     void addChart(const QString &id, QWidget *widget, int defaultOrder,
                   int stretchFactor = 1, double heightWeight = 1.0);
     void removeChart(const QString &id);
