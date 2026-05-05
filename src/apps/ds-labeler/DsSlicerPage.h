@@ -14,12 +14,12 @@
 #include <QUndoStack>
 #include <QWidget>
 
-#include <dstools/ViewportController.h>
-#include <dstools/PlayWidget.h>
-#include <dsfw/widgets/TimeRulerWidget.h>
 #include <ui/SliceBoundaryModel.h>
 
-#include <MiniMapScrollBar.h>
+#include <dstools/PlayWidget.h>
+
+#include <AudioVisualizerContainer.h>
+#include <SliceTierLabel.h>
 
 #include <map>
 
@@ -33,13 +33,8 @@ namespace dstools {
         class SpectrogramWidget;
     } // namespace phonemelabeler
 
-    class SliceNumberLayer;
     class SlicerListPanel;
 
-    /// @brief Slicer page for DsLabeler.
-    ///
-    /// Uses phoneme-editor's WaveformWidget, SpectrogramWidget, and TimeRulerWidget
-    /// for visualization, driven by a SliceBoundaryModel.
     class DsSlicerPage : public QWidget, public labeler::IPageActions, public labeler::IPageLifecycle {
         Q_OBJECT
         Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
@@ -61,23 +56,20 @@ namespace dstools {
         ProjectDataSource *m_dataSource = nullptr;
         QUndoStack *m_undoStack = nullptr;
 
-        // Viewport
-        dstools::widgets::ViewportController *m_viewport = nullptr;
-        MiniMapScrollBar *m_miniMap = nullptr;
-
         // Boundary model
         phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;
 
         // Playback
         dstools::widgets::PlayWidget *m_playWidget = nullptr;
 
+        // AudioVisualizerContainer (owns viewport, miniMap, timeRuler, tierLabel, charts)
+        AudioVisualizerContainer *m_container = nullptr;
+
         // UI components
-        AudioFileListPanel *m_audioFileList = nullptr;  // left sidebar
-        dsfw::widgets::TimeRulerWidget *m_timeRuler = nullptr;
+        AudioFileListPanel *m_audioFileList = nullptr;
         phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
         phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
-        SliceNumberLayer *m_sliceNumberLayer = nullptr;
-        SlicerListPanel *m_sliceListPanel = nullptr;  // bottom panel
+        SlicerListPanel *m_sliceListPanel = nullptr;
 
         // Audio data
         std::vector<float> m_samples;

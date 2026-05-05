@@ -50,6 +50,12 @@ void ExportPage::buildUi() {
     mainLayout->addWidget(titleLabel);
     mainLayout->addSpacing(16);
 
+    m_tabWidget = new QTabWidget(this);
+
+    auto *settingsWidget = new QWidget(this);
+    auto *settingsLayout = new QVBoxLayout(settingsWidget);
+    settingsLayout->setContentsMargins(0, 12, 0, 0);
+
     auto *dirLayout = new QHBoxLayout;
     auto *dirLabel = new QLabel(QStringLiteral("目标文件夹:"), this);
     m_outputDir = new QLineEdit(this);
@@ -57,8 +63,8 @@ void ExportPage::buildUi() {
     dirLayout->addWidget(dirLabel);
     dirLayout->addWidget(m_outputDir, 1);
     dirLayout->addWidget(m_btnBrowse);
-    mainLayout->addLayout(dirLayout);
-    mainLayout->addSpacing(12);
+    settingsLayout->addLayout(dirLayout);
+    settingsLayout->addSpacing(12);
 
     auto *contentGroup = new QGroupBox(QStringLiteral("导出内容"), this);
     auto *contentLayout = new QVBoxLayout(contentGroup);
@@ -71,8 +77,8 @@ void ExportPage::buildUi() {
     contentLayout->addWidget(m_chkCsv);
     contentLayout->addWidget(m_chkDs);
     contentLayout->addWidget(m_chkWavs);
-    mainLayout->addWidget(contentGroup);
-    mainLayout->addSpacing(12);
+    settingsLayout->addWidget(contentGroup);
+    settingsLayout->addSpacing(12);
 
     auto *audioGroup = new QGroupBox(QStringLiteral("音频设置"), this);
     auto *audioLayout = new QFormLayout(audioGroup);
@@ -83,8 +89,8 @@ void ExportPage::buildUi() {
     audioLayout->addRow(QStringLiteral("采样率:"), m_sampleRate);
     m_chkResample = new QCheckBox(QStringLiteral("需要时重采样（使用 soxr）"), audioGroup);
     audioLayout->addRow(m_chkResample);
-    mainLayout->addWidget(audioGroup);
-    mainLayout->addSpacing(12);
+    settingsLayout->addWidget(audioGroup);
+    settingsLayout->addSpacing(12);
 
     auto *advGroup = new QGroupBox(QStringLiteral("高级"), this);
     auto *advLayout = new QFormLayout(advGroup);
@@ -103,15 +109,15 @@ void ExportPage::buildUi() {
                        "• 缺少 pitch 曲线 → 运行 RMVPE\n"
                        "• 缺少 midi 层 → 运行 GAME"));
     advLayout->addRow(m_chkAutoComplete);
-    mainLayout->addWidget(advGroup);
-    mainLayout->addSpacing(12);
+    settingsLayout->addWidget(advGroup);
+    settingsLayout->addSpacing(12);
 
     m_validationLabel = new QLabel(this);
     m_validationLabel->setWordWrap(true);
     m_validationLabel->setStyleSheet(
         QStringLiteral("QLabel { padding: 8px; border-radius: 4px; }"));
-    mainLayout->addWidget(m_validationLabel);
-    mainLayout->addSpacing(12);
+    settingsLayout->addWidget(m_validationLabel);
+    settingsLayout->addSpacing(12);
 
     auto *btnLayout = new QHBoxLayout;
     btnLayout->addStretch();
@@ -120,23 +126,140 @@ void ExportPage::buildUi() {
     m_btnExport->setEnabled(false);
     btnLayout->addWidget(m_btnExport);
     btnLayout->addStretch();
-    mainLayout->addLayout(btnLayout);
-    mainLayout->addSpacing(12);
+    settingsLayout->addLayout(btnLayout);
+    settingsLayout->addSpacing(12);
 
     m_progressBar = new QProgressBar(this);
     m_progressBar->setVisible(false);
-    mainLayout->addWidget(m_progressBar);
+    settingsLayout->addWidget(m_progressBar);
 
     m_statusLabel = new QLabel(this);
     m_statusLabel->setAlignment(Qt::AlignCenter);
     m_statusLabel->setStyleSheet(QStringLiteral("color: gray;"));
-    mainLayout->addWidget(m_statusLabel);
+    settingsLayout->addWidget(m_statusLabel);
 
-    mainLayout->addStretch();
+    settingsLayout->addStretch();
+
+    m_tabWidget->addTab(settingsWidget, QStringLiteral("导出设置"));
+
+    buildPreviewTab();
+
+    mainLayout->addWidget(m_tabWidget);
 
     connect(m_btnBrowse, &QPushButton::clicked, this, &ExportPage::onBrowseOutput);
     connect(m_btnExport, &QPushButton::clicked, this, &ExportPage::onExport);
     connect(m_outputDir, &QLineEdit::textChanged, this, [this]() { updateExportButton(); });
+    connect(m_tabWidget, &QTabWidget::currentChanged, this, [this](int index) {
+        if (index == 1)
+            refreshPreview();
+    });
+}
+
+void ExportPage::buildPreviewTab() {
+    auto *previewWidget = new QWidget(this);
+    auto *previewLayout = new QVBoxLayout(previewWidget);
+    previewLayout->setContentsMargins(0, 0, 0, 0);
+
+    m_previewModel = new QStandardItemModel(this);
+    m_previewTable = new QTableView(this);
+    m_previewTable->setModel(m_previewModel);
+    m_previewTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_previewTable->setAlternatingRowColors(true);
+    m_previewTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    previewLayout->addWidget(m_previewTable);
+
+    m_tabWidget->addTab(previewWidget, QStringLiteral("预览数据"));
+}
+
+void ExportPage::refreshPreview() {
+    m_previewModel->clear();
+
+    if (!m_source) return;
+
+    QStringList headers = {
+        QStringLiteral("name"),
+        QStringLiteral("ph_seq"),
+        QStringLiteral("ph_dur"),
+        QStringLiteral("ph_num"),
+        QStringLiteral("f0_seq"),
+        QStringLiteral("input_type"),
+    };
+    m_previewModel->setHorizontalHeaderLabels(headers);
+
+    const auto sliceIds = m_source->sliceIds();
+    for (const auto &sliceId : sliceIds) {
+        auto *ctxPtr = m_source->context(sliceId);
+        if (!ctxPtr || ctxPtr->status != PipelineContext::Status::Active)
+            continue;
+        const auto &ctx = *ctxPtr;
+
+        QList<QStandardItem *> items;
+
+        auto *nameItem = new QStandardItem(sliceId);
+        items.append(nameItem);
+
+        QString phSeq, phDur, phNum, f0Seq, inputType;
+
+        if (ctx.layers.contains("phoneme")) {
+            const auto &phonemeLayer = ctx.layers.at("phoneme");
+            if (phonemeLayer.contains("boundaries") && phonemeLayer["boundaries"].is_array()) {
+                QStringList phs;
+                QStringList durs;
+                const auto &bounds = phonemeLayer["boundaries"];
+                for (size_t i = 0; i + 1 < bounds.size(); ++i) {
+                    double startUs = bounds[i].get<double>();
+                    double endUs = bounds[i + 1].get<double>();
+                    double durSec = (endUs - startUs) / 1e6;
+                    QString label = phonemeLayer.contains("labels") && i < phonemeLayer["labels"].size()
+                                        ? QString::fromStdString(phonemeLayer["labels"][i].get<std::string>())
+                                        : QStringLiteral("?");
+                    phs.append(label);
+                    durs.append(QString::number(durSec, 'f', 6));
+                }
+                phSeq = phs.join(' ');
+                phDur = durs.join(' ');
+            }
+        }
+
+        if (ctx.layers.contains("ph_num")) {
+            const auto &phNumLayer = ctx.layers.at("ph_num");
+            if (phNumLayer.contains("values") && phNumLayer["values"].is_array()) {
+                QStringList nums;
+                for (const auto &v : phNumLayer["values"])
+                    nums.append(QString::number(v.get<int>()));
+                phNum = nums.join(' ');
+            }
+        }
+
+        if (ctx.layers.contains("pitch")) {
+            const auto &pitchLayer = ctx.layers.at("pitch");
+            if (pitchLayer.contains("values") && pitchLayer["values"].is_array()) {
+                QStringList f0s;
+                for (const auto &v : pitchLayer["values"])
+                    f0s.append(QString::number(v.get<double>(), 'f', 1));
+                f0Seq = f0s.join(' ');
+            }
+        }
+
+        inputType = ctx.layers.contains("phoneme") ? "phoneme" : "grapheme";
+
+        items.append(new QStandardItem(phSeq));
+        items.append(new QStandardItem(phDur));
+        items.append(new QStandardItem(phNum));
+        items.append(new QStandardItem(f0Seq));
+        items.append(new QStandardItem(inputType));
+
+        bool hasMissing = phSeq.isEmpty() || phDur.isEmpty();
+        if (hasMissing) {
+            for (auto *item : items) {
+                item->setBackground(QColor(255, 200, 200));
+            }
+        }
+
+        m_previewModel->appendRow(items);
+    }
+
+    m_previewTable->resizeColumnsToContents();
 }
 
 void ExportPage::setDataSource(ProjectDataSource *source) {
