@@ -43,6 +43,13 @@ public:
     /// Resolve the audio file path associated with a slice.
     [[nodiscard]] virtual QString audioPath(const QString &sliceId) const = 0;
 
+    /// Return the duration of a slice in seconds, or -1.0 if unknown.
+    /// Default implementation returns -1.0.
+    [[nodiscard]] virtual double sliceDuration(const QString &sliceId) const {
+        Q_UNUSED(sliceId)
+        return -1.0;
+    }
+
     /// Return dirty layer names for the given slice (pipeline dependency tracking).
     /// Default implementation returns an empty list (no dirty layers).
     [[nodiscard]] virtual QStringList dirtyLayers(const QString &sliceId) const {

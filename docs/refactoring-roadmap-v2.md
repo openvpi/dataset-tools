@@ -337,10 +337,10 @@ struct ViewportState {
 - [x] `SliceListPanel` 增加右键菜单（丢弃/恢复），复用 SlicerListPanel 的逻辑
 - [x] `SliceListPanel` 增加 `setDiscarded()` / `discardedIndices()` API
 - [x] `SliceListPanel` 增加进度条功能（已有 FileProgressTracker，确保所有页面启用）
-- [ ] `SliceListPanel` 增加时长信息显示（当前仅显示 sliceId，应加上时长）
-- [ ] Slicer 页面额外的切点编辑菜单项（添加切点/删除边界）通过子类或可选信号扩展
-- [ ] 迁移 DsSlicerPage 使用新的统一 SliceListPanel 替代 SlicerListPanel
-- [ ] 删除 `SlicerListPanel.h/.cpp`
+- [x] `SliceListPanel` 增加时长信息显示（当前仅显示 sliceId，应加上时长）
+- [x] Slicer 页面额外的切点编辑菜单项（添加切点/删除边界）通过子类或可选信号扩展
+- [x] 迁移 DsSlicerPage 使用新的统一 SliceListPanel 替代 SlicerListPanel
+- [x] 删除 `SlicerListPanel.h/.cpp`
 - [ ] 验证：所有页面的切片列表功能一致
 - [x] `SliceListPanel` 增加 `ensureSelection()` / `saveSelection()` / `validateAudioPath()` 公共 API
 - [x] 三页面（MinLabel / Phoneme / Pitch）使用新 API 消除重复逻辑

@@ -68,6 +68,13 @@ QString ProjectDataSource::audioPath(const QString &sliceId) const {
     return sliceAudioPath(sliceId);
 }
 
+double ProjectDataSource::sliceDuration(const QString &sliceId) const {
+    const Slice *slice = findSlice(sliceId);
+    if (!slice || slice->outPos <= slice->inPos)
+        return -1.0;
+    return static_cast<double>(slice->outPos - slice->inPos) / 1'000'000.0;
+}
+
 QStringList ProjectDataSource::dirtyLayers(const QString &sliceId) const {
     auto it = m_contexts.find(sliceId);
     if (it != m_contexts.end())

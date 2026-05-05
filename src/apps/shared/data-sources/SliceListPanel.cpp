@@ -54,7 +54,13 @@ void SliceListPanel::refresh() {
     if (m_source) {
         const auto ids = m_source->sliceIds();
         for (const auto &id : ids) {
-            auto *item = new QListWidgetItem(id, m_listWidget);
+            double dur = m_source->sliceDuration(id);
+            QString text;
+            if (dur > 0.0)
+                text = QStringLiteral("%1  %2s").arg(id).arg(dur, 0, 'f', 1);
+            else
+                text = id;
+            auto *item = new QListWidgetItem(text, m_listWidget);
             item->setData(Qt::UserRole, id);
         }
     }
