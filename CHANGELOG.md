@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **T-6.1.2** Merge duplicate Slicer implementations: removed Qt-wrapper `Slicer` class from `libs/slicer/`, `SliceJob` now uses `ISlicerService` via `ServiceLocator` instead of directly instantiating the Qt wrapper. Added `maxSilKept` parameter to `ISlicerService::slice()`. Registered `SlicerService` with `ServiceLocator` in pipeline and CLI apps.
 - **T-6.3.4** Thread-safety fix for `registerModelType()` and `registerDocumentFormat()`: added `std::mutex` to protect concurrent access to the internal registry. Created `IDocumentFormat` interface and `DocumentFormatId` registration pattern (matching `ModelTypeId`).
 
+### Fixed
+
+- **Q.8** Overlapping boundaries in PhonemeLabeler could not be selected/dragged. `hitTestBoundary()` now uses best-match with tie-break to later index, allowing users to drag overlapping boundaries apart.
+- **Q.9** FA output had all phoneme boundaries at position 0 (no duration) due to missing `secToUs()` conversion from float seconds to int64 microseconds. Also fixed stale document data persisting when switching to unannoted slices.
+
 ## [0.5.0] - 2026-04-30
 
 ### Added

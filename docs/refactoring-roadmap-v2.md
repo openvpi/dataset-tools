@@ -93,6 +93,22 @@
 - [x] `ProjectPaths` 所有路径方法应基于工程文件夹的 `workingDir`，而非原始音频所在目录
 - [ ] 验证：新建工程 → 选择工程文件夹 → 切片导出后，`.dsproj`、`dstemp/` 均在工程文件夹内
 
+### Q.8 重叠边界线无法拖动修复
+
+- [x] `IntervalTierView::hitTestBoundary()`：重叠时优先选中索引较大的边界（tie-break to right）
+- [x] `WaveformWidget::hitTestBoundary()`：同上
+- [x] `SpectrogramWidget::hitTestBoundary()`：同上
+- [x] `PowerWidget::hitTestBoundary()`：同上
+- [ ] 验证：两条边界完全重合时，点击可选中后方边界并向右拖开
+
+### Q.9 PhonemeLabelerPage FA 输出与切片切换修复
+
+- [x] `runFaForSlice()`：FA 结果的 `Boundary.pos` 使用 `secToUs()` 从秒转微秒（之前直接赋值 float→int64 截断为 0）
+- [x] `onBatchFA()`：同上修复
+- [x] `onSliceSelected()`：切换到无 layers 的切片时清空文档（之前保留上一个切片的旧数据）
+- [ ] 验证：FA 输出的边界位置正确分布在音频时间轴上
+- [ ] 验证：切换到未标注的切片时不再显示上一个切片的数据
+
 ---
 
 ## Phase R — 配置架构重设计
@@ -264,7 +280,9 @@ Q.3.3 ────┤                │
 Q.4 ──────┤                │
 Q.5 ──────┤                │
 Q.6 ──────┤                │
-Q.7 ──────┘                │
+Q.7 ──────┤                │
+Q.8 ──────┤                │
+Q.9 ──────┘                │
                            │
 U.1/U.2 ──────────────────┘ (并行)
 ```
@@ -273,7 +291,7 @@ U.1/U.2 ──────────────────┘ (并行)
 
 | Phase | 复杂度 | 预估天数 |
 |-------|--------|---------|
-| Q (紧急修复，含 Q.4-Q.7 新增) | 低-中 | 2-3 天 |
+| Q (紧急修复，含 Q.4-Q.9 新增) | 低-中 | 2-3 天 |
 | R (配置架构) | 中 | 2-3 天 |
 | S (可视化架构，9 个子任务) | 高 | 8-12 天 |
 | T (功能增强) | 中 | 3-4 天 |

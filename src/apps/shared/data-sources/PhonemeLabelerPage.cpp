@@ -117,6 +117,12 @@ void PhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
             duration = doc.audio.out - doc.audio.in;
 
         m_editor->document()->loadFromDsText(layers, duration);
+    } else {
+        // No layers for this slice — clear the document to avoid showing stale data
+        TimePos duration = m_editor->document()->totalDuration();
+        if (result && result.value().audio.out > result.value().audio.in)
+            duration = result.value().audio.out - result.value().audio.in;
+        m_editor->document()->loadFromDsText({}, duration);
     }
 
     emit sliceChanged(sliceId);
@@ -471,7 +477,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                     for (const auto &phone : word.phones) {
                         Boundary b;
                         b.id = id++;
-                        b.pos = phone.start;
+                        b.pos = secToUs(phone.start);
                         b.text = QString::fromStdString(phone.text);
                         phonemeLayer.boundaries.push_back(std::move(b));
                     }
@@ -479,7 +485,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 if (!phonemeLayer.boundaries.empty()) {
                     Boundary endB;
                     endB.id = id;
-                    endB.pos = words.back().phones.back().end;
+                    endB.pos = secToUs(words.back().phones.back().end);
                     endB.text = QString();
                     phonemeLayer.boundaries.push_back(std::move(endB));
                 }
@@ -617,7 +623,7 @@ void PhonemeLabelerPage::onBatchFA() {
                     for (const auto &phone : word.phones) {
                         Boundary b;
                         b.id = id++;
-                        b.pos = phone.start;
+                        b.pos = secToUs(phone.start);
                         b.text = QString::fromStdString(phone.text);
                         phonemeLayer.boundaries.push_back(std::move(b));
                     }
@@ -625,7 +631,7 @@ void PhonemeLabelerPage::onBatchFA() {
                 if (!phonemeLayer.boundaries.empty()) {
                     Boundary endB;
                     endB.id = id;
-                    endB.pos = words.back().phones.back().end;
+                    endB.pos = secToUs(words.back().phones.back().end);
                     endB.text = QString();
                     phonemeLayer.boundaries.push_back(std::move(endB));
                 }
