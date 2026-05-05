@@ -11,6 +11,9 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QTabWidget>
+#include <QTableView>
+#include <QStandardItemModel>
 #include <QWidget>
 
 #include <memory>
@@ -64,6 +67,7 @@ private:
     std::unique_ptr<PhNumCalculator> m_phNumCalc;
 
     // UI
+    QTabWidget *m_tabWidget = nullptr;
     QLineEdit *m_outputDir = nullptr;
     QPushButton *m_btnBrowse = nullptr;
     QCheckBox *m_chkCsv = nullptr;
@@ -78,6 +82,10 @@ private:
     QProgressBar *m_progressBar = nullptr;
     QLabel *m_statusLabel = nullptr;
 
+    // Preview
+    QTableView *m_previewTable = nullptr;
+    QStandardItemModel *m_previewModel = nullptr;
+
     // Validation
     QLabel *m_validationLabel = nullptr;
     int m_readyForCsv = 0;   ///< Slices with grapheme layer
@@ -90,6 +98,8 @@ private:
     int m_missingPhNum = 0;  ///< Slices missing ph_num layer
 
     void buildUi();
+    void buildPreviewTab();
+    void refreshPreview();
     void onBrowseOutput();
     void onExport();
     void updateExportButton();
