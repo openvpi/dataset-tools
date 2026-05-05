@@ -7,6 +7,8 @@
 
 #include <dsfw/widgets/PlayWidget.h>
 
+#include <QSettings>
+
 namespace dstools {
 
 using dsfw::widgets::ViewportController;
@@ -29,6 +31,7 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
     mainLayout->addWidget(m_timeRuler);
 
     m_tierLabelArea = new TierLabelArea(this);
+    m_tierLabelArea->setViewportController(m_viewport);
     mainLayout->addWidget(m_tierLabelArea);
 
     m_chartSplitter = new QSplitter(Qt::Vertical, this);
@@ -74,6 +77,31 @@ MiniMapScrollBar *AudioVisualizerContainer::miniMap() const {
 void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel *model) {
     m_boundaryModel = model;
     m_tierLabelArea->setBoundaryModel(model);
+    m_boundaryOverlay->setBoundaryModel(model);
+    m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+}
+
+void AudioVisualizerContainer::setTierLabelArea(TierLabelArea *area) {
+    if (!area || area == m_tierLabelArea)
+        return;
+
+    auto *layout = qobject_cast<QVBoxLayout *>(this->layout());
+    if (!layout)
+        return;
+
+    int idx = layout->indexOf(m_tierLabelArea);
+    if (idx < 0)
+        return;
+
+    layout->removeWidget(m_tierLabelArea);
+    m_tierLabelArea->deleteLater();
+
+    m_tierLabelArea = area;
+    m_tierLabelArea->setViewportController(m_viewport);
+    if (m_boundaryModel)
+        m_tierLabelArea->setBoundaryModel(m_boundaryModel);
+    layout->insertWidget(idx, m_tierLabelArea);
+    m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
 }
 
 void AudioVisualizerContainer::setTotalDuration(double seconds) {
@@ -93,6 +121,23 @@ void AudioVisualizerContainer::addChart(const QString &id, QWidget *widget,
         m_chartOrder.append(id);
 
     connectViewportToWidget(widget);
+
+    QSettings settings;
+    QString saved = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
+    if (!saved.isEmpty()) {
+        QStringList savedOrder = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        QStringList reordered;
+        for (const auto &chartId : savedOrder) {
+            if (m_chartOrder.contains(chartId))
+                reordered.append(chartId);
+        }
+        for (const auto &chartId : m_chartOrder) {
+            if (!reordered.contains(chartId))
+                reordered.append(chartId);
+        }
+        m_chartOrder = reordered;
+    }
+
     rebuildChartLayout();
 }
 
@@ -108,8 +153,8 @@ QStringList AudioVisualizerContainer::chartOrder() const {
 
 void AudioVisualizerContainer::setChartOrder(const QStringList &order) {
     m_chartOrder = order;
-    static const SettingsKey<QString> kChartOrder("Layout/chartOrder", "");
-    m_settings.set(kChartOrder, order.join(QLatin1Char(',')));
+    QSettings settings;
+    settings.setValue(QStringLiteral("AudioVisualizer/chartOrder"), order.join(QLatin1Char(',')));
     rebuildChartLayout();
     emit chartOrderChanged(order);
 }

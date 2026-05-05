@@ -57,6 +57,7 @@ public:
     MiniMapScrollBar *miniMap() const;
 
     void setBoundaryModel(IBoundaryModel *model);
+    void setTierLabelArea(TierLabelArea *area);
     void setTotalDuration(double seconds);
 
     void setAudioData(const std::vector<float> &samples, int sampleRate);

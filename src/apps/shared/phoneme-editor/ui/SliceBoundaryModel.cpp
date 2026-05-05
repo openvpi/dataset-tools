@@ -43,5 +43,21 @@ TimePos SliceBoundaryModel::totalDuration() const {
     return static_cast<TimePos>(m_durationSec * kUsPerSec);
 }
 
+TimePos SliceBoundaryModel::clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const {
+    if (tierIndex != 0 || boundaryIndex < 0 ||
+        boundaryIndex >= static_cast<int>(m_pointsSec.size()))
+        return proposedTime;
+
+    double proposedSec = static_cast<double>(proposedTime) / kUsPerSec;
+    double prevBoundary = (boundaryIndex > 0) ? m_pointsSec[boundaryIndex - 1] : 0.0;
+    double nextBoundary = (boundaryIndex + 1 < static_cast<int>(m_pointsSec.size()))
+                              ? m_pointsSec[boundaryIndex + 1]
+                              : m_durationSec;
+
+    constexpr double kMinInterval = 0.001;
+    double clamped = std::clamp(proposedSec, prevBoundary + kMinInterval, nextBoundary - kMinInterval);
+    return static_cast<TimePos>(clamped * kUsPerSec);
+}
+
 } // namespace phonemelabeler
 } // namespace dstools

@@ -5,7 +5,6 @@
 #include <AudioFileListPanel.h>
 #include <SliceCommands.h>
 #include <SliceExportDialog.h>
-#include <SliceNumberLayer.h>
 #include <SlicerListPanel.h>
 
 #include <dstools/DsProject.h>
@@ -56,7 +55,6 @@ namespace dstools {
 
     DsSlicerPage::DsSlicerPage(QWidget *parent) : QWidget(parent) {
         m_undoStack = new QUndoStack(this);
-        m_viewport = new dstools::widgets::ViewportController(this);
         m_boundaryModel = new phonemelabeler::SliceBoundaryModel();
         m_playWidget = new dstools::widgets::PlayWidget();
         buildLayout();
@@ -174,44 +172,25 @@ namespace dstools {
         mainLayout->addWidget(paramsWidget);
 
         // ── Main content splitter (vertical) ──────────────────────────────────
-        auto *splitter = new QSplitter(Qt::Vertical, contentWidget);
+        m_container = new AudioVisualizerContainer(QStringLiteral("DsSlicerPage"), contentWidget);
+        m_container->setBoundaryModel(m_boundaryModel);
+        m_container->setPlayWidget(m_playWidget);
 
-        // Time ruler + Waveform container
-        auto *waveformContainer = new QWidget(contentWidget);
-        auto *waveformLayout = new QVBoxLayout(waveformContainer);
-        waveformLayout->setContentsMargins(0, 0, 0, 0);
-        waveformLayout->setSpacing(0);
+        auto *tierLabel = new SliceTierLabel(m_container);
+        tierLabel->setBoundaryModel(m_boundaryModel);
+        m_container->setTierLabelArea(tierLabel);
 
-        m_miniMap = new MiniMapScrollBar(m_viewport, waveformContainer);
-        waveformLayout->addWidget(m_miniMap);
-
-        m_timeRuler = new dsfw::widgets::TimeRulerWidget(m_viewport, waveformContainer);
-        waveformLayout->addWidget(m_timeRuler);
-
-        m_waveformWidget = new phonemelabeler::WaveformWidget(m_viewport, waveformContainer);
+        m_waveformWidget = new phonemelabeler::WaveformWidget(m_container->viewport(), m_container);
         m_waveformWidget->setBoundaryModel(m_boundaryModel);
         m_waveformWidget->setPlayWidget(m_playWidget);
-        // No undo stack — slicer handles undo externally via SliceCommands
-        waveformLayout->addWidget(m_waveformWidget, 1);
+        m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 0, 2);
 
-        splitter->addWidget(waveformContainer);
-
-        // Spectrogram (collapsible)
-        m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_viewport, contentWidget);
+        m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_container->viewport(), m_container);
         m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
         m_spectrogramWidget->setPlayWidget(m_playWidget);
-        m_spectrogramWidget->setVisible(true);
-        splitter->addWidget(m_spectrogramWidget);
+        m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 1, 5);
 
-        // Slice number layer
-        m_sliceNumberLayer = new SliceNumberLayer(m_viewport, contentWidget);
-        splitter->addWidget(m_sliceNumberLayer);
-
-        splitter->setStretchFactor(0, 2); // waveform
-        splitter->setStretchFactor(1, 5); // spectrogram
-        splitter->setStretchFactor(2, 3); // number layer
-
-        mainLayout->addWidget(splitter, 1);
+        mainLayout->addWidget(m_container, 1);
 
         // ── Slice list panel (bottom) ─────────────────────────────────────────
         m_sliceListPanel = new SlicerListPanel(contentWidget);
@@ -249,17 +228,11 @@ namespace dstools {
             m_toolMode = ToolMode::Knife;
         });
 
-        // Viewport → sync ruler and minimap
-        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-                m_timeRuler, &dsfw::widgets::TimeRulerWidget::setViewport);
-        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+        // Viewport → sync charts (container handles timeRuler, miniMap, tierLabel, overlay)
+        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged,
                 m_waveformWidget, &phonemelabeler::WaveformWidget::setViewport);
-        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged,
                 m_spectrogramWidget, &phonemelabeler::SpectrogramWidget::setViewport);
-        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-                m_sliceNumberLayer, &SliceNumberLayer::setViewport);
-        connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-                m_miniMap, &MiniMapScrollBar::setViewport);
 
         // Left sidebar: audio file selection → load audio for slicing
         connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
@@ -311,8 +284,8 @@ namespace dstools {
         connect(m_sliceListPanel, &SlicerListPanel::sliceDoubleClicked, this,
                 [this](int /*index*/, double startSec, double /*endSec*/) {
                     // Scroll viewport to show this time
-                    double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
-                    m_viewport->setViewRange(startSec, startSec + viewDuration);
+                    double viewDuration = m_container->viewport()->state().endSec - m_container->viewport()->state().startSec;
+                    m_container->viewport()->setViewRange(startSec, startSec + viewDuration);
                 });
 
         connect(m_sliceListPanel, &SlicerListPanel::addSlicePointRequested, this, [this](double timeSec) {
@@ -594,15 +567,17 @@ namespace dstools {
         m_boundaryModel->setSlicePoints(m_slicePoints);
         m_waveformWidget->updateBoundaryOverlay();
         m_spectrogramWidget->updateBoundaryOverlay();
-        m_sliceNumberLayer->setSlicePoints(m_slicePoints);
+        m_container->tierLabelArea()->update();
     }
 
     QMenuBar *DsSlicerPage::createMenuBar(QWidget *parent) {
         auto *bar = new QMenuBar(parent);
 
         auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
-        fileMenu->addAction(QStringLiteral("打开音频文件(&O)..."), this, &DsSlicerPage::onOpenAudioFiles);
-        fileMenu->addAction(QStringLiteral("打开音频目录(&D)..."), this, &DsSlicerPage::onOpenAudioDirectory);
+        auto *actOpen = fileMenu->addAction(QStringLiteral("打开音频文件(&O)..."), this, &DsSlicerPage::onOpenAudioFiles);
+        actOpen->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_O));
+        auto *actOpenDir = fileMenu->addAction(QStringLiteral("打开音频目录(&D)..."), this, &DsSlicerPage::onOpenAudioDirectory);
+        actOpenDir->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
         fileMenu->addSeparator();
         fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
             if (auto *w = window())
@@ -610,13 +585,18 @@ namespace dstools {
         });
 
         auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
-        processMenu->addAction(QStringLiteral("自动切片"), this, &DsSlicerPage::onAutoSlice);
-        processMenu->addAction(QStringLiteral("重新切片"), this, &DsSlicerPage::onAutoSlice);
+        auto *actSlice = processMenu->addAction(QStringLiteral("自动切片"), this, &DsSlicerPage::onAutoSlice);
+        actSlice->setShortcut(QKeySequence(Qt::Key_S));
+        auto *actReSlice = processMenu->addAction(QStringLiteral("重新切片"), this, &DsSlicerPage::onAutoSlice);
+        actReSlice->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_S));
         processMenu->addSeparator();
-        processMenu->addAction(QStringLiteral("导入切点..."), this, &DsSlicerPage::onImportMarkers);
-        processMenu->addAction(QStringLiteral("保存切点..."), this, &DsSlicerPage::onSaveMarkers);
+        auto *actImport = processMenu->addAction(QStringLiteral("导入切点..."), this, &DsSlicerPage::onImportMarkers);
+        actImport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
+        auto *actSave = processMenu->addAction(QStringLiteral("保存切点..."), this, &DsSlicerPage::onSaveMarkers);
+        actSave->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_S));
         processMenu->addSeparator();
-        processMenu->addAction(QStringLiteral("导出切片音频..."), this, &DsSlicerPage::onExportAudio);
+        auto *actExport = processMenu->addAction(QStringLiteral("导出切片音频..."), this, &DsSlicerPage::onExportAudio);
+        actExport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
         processMenu->addAction(QStringLiteral("批量导出全部切片..."), this, &DsSlicerPage::onBatchExportAll);
 
         return bar;
@@ -1093,7 +1073,7 @@ namespace dstools {
             return;
 
         auto *project = m_dataSource->project();
-        SlicerState state;
+        auto state = project->slicerState();
 
         state.audioFiles = m_audioFileList->filePaths();
         state.slicePoints = m_fileSlicePoints;
@@ -1140,16 +1120,14 @@ namespace dstools {
         // Feed to visualization widgets
         m_waveformWidget->setAudioData(m_samples, m_sampleRate);
         m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
-        m_miniMap->setAudioData(m_samples, m_sampleRate);
+        m_container->setAudioData(m_samples, m_sampleRate);
 
-        // Open audio for playback
         m_playWidget->openFile(filePath);
 
-        // Update boundary model duration
         double duration = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
         m_boundaryModel->setDuration(duration);
-        m_viewport->setTotalDuration(duration);
-        m_viewport->setViewRange(0.0, duration);
+        m_container->setTotalDuration(duration);
+        m_container->viewport()->setViewRange(0.0, duration);
     }
 
 } // namespace dstools

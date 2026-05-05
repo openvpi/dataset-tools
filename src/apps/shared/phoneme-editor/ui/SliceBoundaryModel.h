@@ -37,6 +37,8 @@ public:
     [[nodiscard]] bool supportsBinding() const override { return false; }
     [[nodiscard]] bool supportsInsert() const override { return true; }
 
+    [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const override;
+
 private:
     std::vector<double> m_pointsSec;  ///< Sorted slice times in seconds.
     double m_durationSec = 0.0;
