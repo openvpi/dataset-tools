@@ -3,7 +3,7 @@
 > 本文档记录所有由用户明确给出的设计决策，供后续实施参考。
 > 与其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-05-04
+> 最后更新：2026-05-05
 
 ---
 
@@ -176,6 +176,69 @@
 **决策**：
 - 垂直布局从上到下：MiniMapScrollBar → TimeRuler → 标签区域 → 波形图 → Power 图（可选）→ 口型曲线图（待开发）→ Mel 频谱图
 - 用户可在 Settings 中自定义子图排列顺序
+
+---
+
+## D-19：所有页面统一使用全功能文件/切片列表
+
+**决策**：
+- 所有应用页面（Slicer、MinLabel、PhonemeLabeler、PitchLabeler）的左侧文件/切片列表**统一使用 Slicer 级别的全功能列表面板**
+- 功能包括：添加文件/文件夹、丢弃/恢复、进度条、右键菜单
+- 实现方式：将 `SlicerListPanel` 的功能合并进 `SliceListPanel`，后者作为统一底层；Slicer 的额外切点编辑功能（添加切点/删除边界）通过可选信号/菜单项扩展
+- `AudioFileListPanel`（原始音频文件列表）仅在 Slicer 页面保留，其他页面使用切片列表
+
+---
+
+## D-20：切片不一致时弹窗提示回 Slicer
+
+**决策**：
+- 当用户从 Slicer 切换到其他页面（MinLabel/Phoneme/Pitch）时，如果检测到**现有 dsitem 的时长与 Slicer 当前切点计算出的时长不一致**（说明切点已修改但未重新导出），弹窗提示用户
+- 弹窗内容："切片数据已过期（切点已修改），是否回到 Slicer 页面重新切片？"
+- 点"是"→ 回到 Slicer 页面，并弹出复选框对话框让用户选择需要重新切片的音频文件（默认全选所有切点变化过的音频）
+- 点"否"→ 留在当前页面，使用旧的 dsitem 数据
+
+---
+
+## D-21：Phoneme 页面无数据时显示"No label data"
+
+**决策**：
+- PhonemeLabeler 的 `PhonemeTextGridTierLabel` 在**没有任何层**（tierCount == 0）时，仍然显示标签区域，但内容为居中的灰色文字 "No label data"
+- 不因 tierCount == 0 而将标签区域高度设为 0 或隐藏
+
+---
+
+## D-22：最右侧边界线自由拖动 + 边界修复
+
+**决策**：
+- TextGridDocument 中最右侧（最后一条）边界线的 clamp 约束应以**音频总时长**为右边界，而非 `tier->GetMaxTime()`
+- 当前问题：`clampBoundaryTime` 使用 `tier->GetInterval(boundaryIndex).max_time` 作为 nextBoundary，但对最后一条边界线这等于该 interval 自身的 max_time（等于边界本身），导致 clamp 区间为 0，无法拖动
+- 修复：最后一条边界（`boundaryIndex == count - 1`）的 nextBoundary 应使用 `tier->GetMaxTime()`（即文档总时长）
+- 同时排查 SliceBoundaryModel 的 clampBoundaryTime 是否有类似问题
+
+---
+
+## D-23：最近工程列表标灰找不到的路径
+
+**决策**：
+- WelcomePage 的 `refreshRecentList()` 在构建列表时，对每个路径检查 `QFileInfo::exists()`
+- 不存在的路径：item 文字设为灰色 + 删除线样式，双击时弹出 "工程文件不存在，是否从列表中移除？"
+- 不自动移除（用户可能只是 U 盘未插入）
+
+---
+
+## D-24：刻度线缩放必须与 ViewportController 严格同步
+
+**决策**：
+- `ViewportController::zoomAt()` 必须在 `m_maxPixelsPerSecond` 处**硬停**——一旦 PPS 达到上限，继续 Ctrl+滚轮不应产生任何效果
+- 当前问题：`zoomAt()` 正确 clamp 了 `newPPS`，但 `newDuration = duration / factor` 仍在缩小 view range，导致刻度线继续变稀疏/消失
+- 修复：在 `zoomAt()` 中，如果 clamp 后 `newPPS == m_state.pixelsPerSecond`（已到极限），应直接 return 不改变视口
+- 同理 zoomOut 到 `m_minPixelsPerSecond` 时也硬停
+
+---
+
+## D-25：删除已废弃的 SliceNumberLayer
+
+**决策**：删除 `src/apps/shared/data-sources/SliceNumberLayer.h/.cpp`，该组件已被 `SliceTierLabel` 完全取代。
 
 ---
 
