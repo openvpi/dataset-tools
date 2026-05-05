@@ -39,8 +39,10 @@ private slots:
         ViewportController vc(nullptr);
         QCOMPARE(vc.startSec(), 0.0);
         QCOMPARE(vc.endSec(), 10.0);
-        QCOMPARE(vc.pixelsPerSecond(), 200.0);
+        // Default: resolution=40, sampleRate=44100 → PPS=1102.5
+        QCOMPARE(vc.pixelsPerSecond(), 44100.0 / 40.0);
         QCOMPARE(vc.totalDuration(), 0.0);
+        QCOMPARE(vc.resolution(), 40);
     }
 
     void testViewportControllerSetRange() {
