@@ -3,7 +3,7 @@
 #include "AudioFileListPanel.h"
 #include "SliceCommands.h"
 #include "SliceExportDialog.h"
-#include "SlicerListPanel.h"
+#include "SliceListPanel.h"
 
 #include <ui/WaveformWidget.h>
 #include <ui/SpectrogramWidget.h>
@@ -185,7 +185,8 @@ void SlicerPage::buildLayout() {
 
     mainLayout->addWidget(m_vSplitter, 1);
 
-    m_sliceListPanel = new SlicerListPanel(contentWidget);
+    m_sliceListPanel = new SliceListPanel(contentWidget);
+    m_sliceListPanel->setSlicerMode(true);
     m_sliceListPanel->setMaximumHeight(200);
     mainLayout->addWidget(m_sliceListPanel);
 
@@ -266,13 +267,13 @@ void SlicerPage::connectSignals() {
         }
     });
 
-    connect(m_sliceListPanel, &SlicerListPanel::sliceDoubleClicked, this,
+    connect(m_sliceListPanel, &SliceListPanel::sliceDoubleClicked, this,
             [this](int, double startSec, double) {
                 double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
                 m_viewport->setViewRange(startSec, startSec + viewDuration);
             });
 
-    connect(m_sliceListPanel, &SlicerListPanel::addSlicePointRequested, this, [this](double timeSec) {
+    connect(m_sliceListPanel, &SliceListPanel::addSlicePointRequested, this, [this](double timeSec) {
         auto refreshFn = [this]() {
             refreshBoundaries();
             updateSlicerListPanel();
@@ -280,7 +281,7 @@ void SlicerPage::connectSignals() {
         m_undoStack->push(new AddSlicePointCommand(m_slicePoints, timeSec, refreshFn));
     });
 
-    connect(m_sliceListPanel, &SlicerListPanel::removeSlicePointRequested, this, [this](int pointIndex) {
+    connect(m_sliceListPanel, &SliceListPanel::removeSlicePointRequested, this, [this](int pointIndex) {
         if (pointIndex >= 0 && pointIndex < static_cast<int>(m_slicePoints.size())) {
             auto refreshFn = [this]() {
                 refreshBoundaries();

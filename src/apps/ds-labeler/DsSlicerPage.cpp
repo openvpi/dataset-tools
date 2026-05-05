@@ -5,7 +5,7 @@
 #include <AudioFileListPanel.h>
 #include <SliceCommands.h>
 #include <SliceExportDialog.h>
-#include <SlicerListPanel.h>
+#include <SliceListPanel.h>
 
 #include <dstools/DsProject.h>
 
@@ -193,7 +193,8 @@ namespace dstools {
         mainLayout->addWidget(m_container, 1);
 
         // ── Slice list panel (bottom) ─────────────────────────────────────────
-        m_sliceListPanel = new SlicerListPanel(contentWidget);
+        m_sliceListPanel = new SliceListPanel(contentWidget);
+        m_sliceListPanel->setSlicerMode(true);
         m_sliceListPanel->setMaximumHeight(200);
         mainLayout->addWidget(m_sliceListPanel);
 
@@ -280,15 +281,15 @@ namespace dstools {
             }
         });
 
-        // SlicerListPanel context menu: add/delete slice points
-        connect(m_sliceListPanel, &SlicerListPanel::sliceDoubleClicked, this,
+        // SliceListPanel context menu: add/delete slice points
+        connect(m_sliceListPanel, &SliceListPanel::sliceDoubleClicked, this,
                 [this](int /*index*/, double startSec, double /*endSec*/) {
                     // Scroll viewport to show this time
                     double viewDuration = m_container->viewport()->state().endSec - m_container->viewport()->state().startSec;
                     m_container->viewport()->setViewRange(startSec, startSec + viewDuration);
                 });
 
-        connect(m_sliceListPanel, &SlicerListPanel::addSlicePointRequested, this, [this](double timeSec) {
+        connect(m_sliceListPanel, &SliceListPanel::addSlicePointRequested, this, [this](double timeSec) {
             auto refreshFn = [this]() {
                 refreshBoundaries();
                 updateSlicerListPanel();
@@ -296,7 +297,7 @@ namespace dstools {
             m_undoStack->push(new AddSlicePointCommand(m_slicePoints, timeSec, refreshFn));
         });
 
-        connect(m_sliceListPanel, &SlicerListPanel::removeSlicePointRequested, this, [this](int pointIndex) {
+        connect(m_sliceListPanel, &SliceListPanel::removeSlicePointRequested, this, [this](int pointIndex) {
             if (pointIndex >= 0 && pointIndex < static_cast<int>(m_slicePoints.size())) {
                 auto refreshFn = [this]() {
                     refreshBoundaries();

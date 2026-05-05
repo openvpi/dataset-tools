@@ -33,7 +33,7 @@ namespace dstools {
         class SpectrogramWidget;
     } // namespace phonemelabeler
 
-    class SlicerListPanel;
+    class SliceListPanel;
 
     class DsSlicerPage : public QWidget, public labeler::IPageActions, public labeler::IPageLifecycle {
         Q_OBJECT
@@ -69,7 +69,7 @@ namespace dstools {
         AudioFileListPanel *m_audioFileList = nullptr;
         phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
         phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
-        SlicerListPanel *m_sliceListPanel = nullptr;
+        SliceListPanel *m_sliceListPanel = nullptr;
 
         // Audio data
         std::vector<float> m_samples;
