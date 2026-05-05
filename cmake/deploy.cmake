@@ -1,5 +1,9 @@
 # Deploy logic for Qt runtime and project binaries
 # Included from src/CMakeLists.txt
+#
+# Uses CMake 3.21+ install(RUNTIME_DEPENDENCY_SET) to automatically
+# collect and install runtime dependencies (DLLs on Windows, .so on Linux),
+# replacing the previous manual file(GLOB *.dll) approach.
 
 # "QT_QMAKE_EXECUTABLE" is usually defined by QtCreator.
 if (NOT DEFINED QT_QMAKE_EXECUTABLE)
@@ -26,20 +30,12 @@ if (WIN32)
 
     string(REPLACE "\\" "/" _install_dir ${CMAKE_INSTALL_PREFIX})
 
-    get_target_property(_deploy_targets DeployedTargets TARGETS)
-    # Copy only deployed executables (not test executables)
-    foreach (_target ${_deploy_targets})
-        install(CODE "
-            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}\")
-        ")
-    endforeach ()
-    # Copy all DLLs (shared libraries needed at runtime)
-    install(CODE "
-        file(GLOB _dlls \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.dll\")
-        foreach(_dll \${_dlls})
-            file(COPY \${_dll} DESTINATION \"${_install_dir}\")
-        endforeach()
-    ")
+    # Install runtime dependencies (DLLs) tracked by CMake's dependency graph.
+    # This replaces the previous file(GLOB *.dll) approach and automatically
+    # resolves all linked shared libraries (vcpkg, project DLLs, etc.).
+    install(RUNTIME_DEPENDENCY_SET DstoolsRuntimeDeps
+        RUNTIME DESTINATION .
+    )
 
     # Copy ONNX Runtime DLLs (not tracked by CMake target dependencies)
     set(_ORT_LIB_DIR "${PROJECT_DIR}/src/infer/onnxruntime/lib")
@@ -52,6 +48,7 @@ if (WIN32)
         ")
     endif()
 
+    # Run windeployqt for Qt plugins (platforms/, imageformats/, etc.)
     get_target_property(_targets DeployedTargets TARGETS)
 
     foreach (_target ${_targets})
@@ -92,12 +89,6 @@ elseif (APPLE)
 
     get_target_property(_targets DeployedTargets TARGETS)
 
-    foreach (_target ${_targets})
-        install(CODE "
-            file(COPY \"$<TARGET_BUNDLE_DIR:${_target}>\" DESTINATION \"${_install_dir}\")
-        ")
-    endforeach ()
-
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         foreach (_target ${_targets})
             install(CODE "
@@ -125,53 +116,16 @@ elseif (APPLE)
 elseif (UNIX)
     set(_install_dir ${CMAKE_INSTALL_PREFIX})
 
-    # --- Copy project shared libraries (.so) ---
-    install(CODE "
-        file(GLOB _files \"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/*.so*\")
-        foreach(_file \${_files})
-            file(COPY \${_file} DESTINATION \"${_install_dir}/lib\")
-        endforeach()
-    ")
-    install(CODE "
-        file(GLOB _lib_files \"${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/*.so*\")
-        foreach(_file \${_lib_files})
-            file(COPY \${_file} DESTINATION \"${_install_dir}/lib\")
-        endforeach()
-    ")
+    # Install runtime dependencies (.so files) tracked by CMake's dependency graph.
+    # This replaces the previous file(GLOB *.so*) approach.
+    install(RUNTIME_DEPENDENCY_SET DstoolsRuntimeDeps
+        LIBRARY DESTINATION lib
+    )
 
-    # --- Copy deployed executables ---
-    get_target_property(_targets DeployedTargets TARGETS)
-
-    foreach (_target ${_targets})
-        install(CODE "
-            file(COPY \"$<TARGET_FILE:${_target}>\" DESTINATION \"${_install_dir}/bin\")
-        ")
-    endforeach ()
-
-    # --- Deploy Qt shared libraries and plugins ---
+    # --- Deploy Qt plugins ---
     cmake_path(GET __qt_bin_dir PARENT_PATH __qt_root_dir)
-    set(__qt_lib_dir "${__qt_root_dir}/lib")
     set(__qt_plugins_dir "${__qt_root_dir}/plugins")
 
-    # Qt shared libraries
-    install(CODE "
-        set(_qt_lib_dir \"${__qt_lib_dir}\")
-        set(_install_dir \"${_install_dir}\")
-        foreach(_lib Core Gui Widgets Svg Network DBus OpenGL XcbQpa WaylandClient WaylandEglClientHwIntegration)
-            file(GLOB _matches \"\${_qt_lib_dir}/libQt6\${_lib}.so*\")
-            foreach(_f \${_matches})
-                file(COPY \${_f} DESTINATION \"\${_install_dir}/lib\")
-            endforeach()
-        endforeach()
-
-        # Copy ICU libraries if present (Qt dependency)
-        file(GLOB _icu_libs \"\${_qt_lib_dir}/libicu*.so*\")
-        foreach(_f \${_icu_libs})
-            file(COPY \${_f} DESTINATION \"\${_install_dir}/lib\")
-        endforeach()
-    ")
-
-    # Qt plugins
     install(CODE "
         set(_qt_plugins_dir \"${__qt_plugins_dir}\")
         set(_install_dir \"${_install_dir}\")
@@ -194,6 +148,7 @@ Plugins = plugins
     ")
 
     # Generate launcher scripts that set LD_LIBRARY_PATH
+    get_target_property(_targets DeployedTargets TARGETS)
     foreach (_target ${_targets})
         install(CODE "
             set(_install_dir \"${_install_dir}\")
