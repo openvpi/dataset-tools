@@ -94,8 +94,11 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
 
     painter.fillRect(rect(), QColor(40, 40, 45));
 
-    if (!m_boundaryModel || m_boundaryModel->tierCount() == 0)
+    if (!m_boundaryModel || m_boundaryModel->tierCount() == 0) {
+        painter.setPen(QColor(128, 128, 128));
+        painter.drawText(rect(), Qt::AlignCenter, tr("No label data"));
         return;
+    }
 
     int tiers = m_boundaryModel->tierCount();
     int rowH = kTierRowHeight;
@@ -165,7 +168,7 @@ void PhonemeTextGridTierLabel::rebuildRadioButtons() {
         return;
 
     int tiers = m_boundaryModel->tierCount();
-    setFixedHeight(tiers * kTierRowHeight);
+    setFixedHeight(qMax(tiers, 1) * kTierRowHeight);
 
     for (int t = 0; t < tiers; ++t) {
         auto *btn = new QRadioButton(m_radioPanel);
