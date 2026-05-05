@@ -30,7 +30,6 @@ class WaveformWidget;
 class SpectrogramWidget;
 } // namespace phonemelabeler
 
-class SliceNumberLayer;
 class SlicerListPanel;
 
 class SlicerPage : public QWidget, public labeler::IPageActions, public labeler::IPageLifecycle {
@@ -65,7 +64,6 @@ private:
     dsfw::widgets::TimeRulerWidget *m_timeRuler = nullptr;
     phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
     phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
-    SliceNumberLayer *m_sliceNumberLayer = nullptr;
     SlicerListPanel *m_sliceListPanel = nullptr;
 
     std::vector<float> m_samples;

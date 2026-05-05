@@ -3,7 +3,6 @@
 #include "AudioFileListPanel.h"
 #include "SliceCommands.h"
 #include "SliceExportDialog.h"
-#include "SliceNumberLayer.h"
 #include "SlicerListPanel.h"
 
 #include <ui/WaveformWidget.h>
@@ -181,12 +180,8 @@ void SlicerPage::buildLayout() {
     m_spectrogramWidget->setVisible(true);
     m_vSplitter->addWidget(m_spectrogramWidget);
 
-    m_sliceNumberLayer = new SliceNumberLayer(m_viewport, contentWidget);
-    m_vSplitter->addWidget(m_sliceNumberLayer);
-
     m_vSplitter->setStretchFactor(0, 2);
     m_vSplitter->setStretchFactor(1, 5);
-    m_vSplitter->setStretchFactor(2, 3);
 
     mainLayout->addWidget(m_vSplitter, 1);
 
@@ -229,8 +224,6 @@ void SlicerPage::connectSignals() {
             m_waveformWidget, &phonemelabeler::WaveformWidget::setViewport);
     connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
             m_spectrogramWidget, &phonemelabeler::SpectrogramWidget::setViewport);
-    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-            m_sliceNumberLayer, &SliceNumberLayer::setViewport);
     connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
             m_miniMap, &MiniMapScrollBar::setViewport);
 
@@ -470,7 +463,6 @@ void SlicerPage::refreshBoundaries() {
     m_boundaryModel->setSlicePoints(m_slicePoints);
     m_waveformWidget->updateBoundaryOverlay();
     m_spectrogramWidget->updateBoundaryOverlay();
-    m_sliceNumberLayer->setSlicePoints(m_slicePoints);
 }
 
 QMenuBar *SlicerPage::createMenuBar(QWidget *parent) {
