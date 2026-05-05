@@ -89,7 +89,6 @@ int PhonemeTextGridTierLabel::tierRowHeight() const {
 
 void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
-    int h = height();
     int w = width();
 
     painter.fillRect(rect(), QColor(40, 40, 45));
