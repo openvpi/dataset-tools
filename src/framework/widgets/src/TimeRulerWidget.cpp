@@ -57,14 +57,13 @@ void TimeRulerWidget::paintEvent(QPaintEvent *event) {
     if (viewDuration <= 0.0) return;
 
     static const TickLevel levels[] = {
-        {3600.0,  10, true},
+        {3600.0,  12, true},
         { 600.0,  10, true},
-        {  60.0,  10, true},
-        {  10.0,  10, true},
-        {   1.0,  10, true},
-        {   0.1,   7, true},
-        {   0.01,   4, false},
-        {  0.001,   3, false},
+        {  60.0,   8, true},
+        {  10.0,   7, true},
+        {   1.0,   6, true},
+        {   0.1,   5, true},
+        {  0.01,   4, false},
     };
 
     QFont font = painter.font();
@@ -96,33 +95,29 @@ void TimeRulerWidget::paintEvent(QPaintEvent *event) {
                 int x = timeToX(t);
 
                 QString label;
-                if (level.interval >= 60.0) {
+                if (level.interval >= 3600.0) {
                     int totalSec = static_cast<int>(t);
                     int hr = totalSec / 3600;
                     int min = (totalSec % 3600) / 60;
                     int sec = totalSec % 60;
-                    if (hr > 0) {
-                        label = QString("%1:%2:%3")
-                                    .arg(hr)
-                                    .arg(min, 2, 10, QChar('0'))
-                                    .arg(sec, 2, 10, QChar('0'));
-                    } else {
-                        label = QString("%1:%2")
-                                    .arg(min)
-                                    .arg(sec, 2, 10, QChar('0'));
-                    }
+                    label = QString("%1:%2:%3")
+                                .arg(hr)
+                                .arg(min, 2, 10, QChar('0'))
+                                .arg(sec, 2, 10, QChar('0'));
+                } else if (level.interval >= 60.0) {
+                    int totalSec = static_cast<int>(t);
+                    int min = totalSec / 60;
+                    int sec = totalSec % 60;
+                    label = QString("%1:%2")
+                                .arg(min)
+                                .arg(sec, 2, 10, QChar('0'));
                 } else if (level.interval >= 1.0) {
                     int totalSec = static_cast<int>(t);
-                    double frac = t - std::floor(t);
-                    if (frac > 0.0005) {
-                        label = QString::number(t, 'f', 1) + "s";
-                    } else {
-                        label = QString::number(totalSec) + "s";
-                    }
+                    label = QString::number(totalSec) + QStringLiteral("s");
                 } else if (level.interval >= 0.1) {
-                    label = QString::number(t, 'f', 2) + "s";
+                    label = QString::number(t, 'f', 1) + QStringLiteral("s");
                 } else {
-                    label = QString::number(t, 'f', 3) + "s";
+                    label = QString::number(t * 1000.0, 'f', 0) + QStringLiteral("ms");
                 }
 
                 QRect textRect(x - 40, 0, 80, height() - level.height);

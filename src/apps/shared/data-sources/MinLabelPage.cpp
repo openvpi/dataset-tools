@@ -15,7 +15,7 @@
 #include <QPointer>
 #include <QtConcurrent>
 
-#include "Asr.h"
+#include "AsrPipeline.h"
 #include "FunAsrModelProvider.h"
 
 #include <dsfw/CommonKeys.h>

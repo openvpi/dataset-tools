@@ -7,6 +7,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QTabWidget>
@@ -67,6 +68,10 @@ private:
     QSpinBox *m_pitchPreloadCount = nullptr;
 
     QComboBox *m_languageCombo = nullptr;
+
+    QListWidget *m_chartOrderList = nullptr;
+    QPushButton *m_chartUpBtn = nullptr;
+    QPushButton *m_chartDownBtn = nullptr;
 
     QComboBox *m_g2pEngineCombo = nullptr;
     QLineEdit *m_dictPath = nullptr;

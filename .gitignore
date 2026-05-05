@@ -99,3 +99,6 @@ setup-vcpkg.json
 setup-vcpkg-temp*
 /src/libs/onnxruntime/
 docs/api/
+build-stdout.txt
+build-stderr.txt
+build_test_log.txt
