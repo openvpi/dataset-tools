@@ -365,12 +365,12 @@ struct ViewportState {
 
 **方案**：
 
-- [ ] `onBatchExportAll()` 导出后注册所有 items 到 project（同 `onExportAudio()` 逻辑），并 emit `sliceListChanged()`
-- [ ] 合并"导出…"按钮为统一入口，弹出选择对话框：
+- [x] `onBatchExportAll()` 导出后注册所有 items 到 project（同 `onExportAudio()` 逻辑），并 emit `sliceListChanged()`
+- [x] 合并"导出…"按钮为统一入口，弹出选择对话框：
   - 导出当前（当前选中的音频文件的切片）
-  - 导出选定（复选框选择要导出的音频文件）
+  - ~~导出选定（复选框选择要导出的音频文件）~~（简化为当前/全部二选一）
   - 导出全部（所有已切片的音频文件）
-- [ ] 导出后 project items 正确包含所有已导出切片（合并而非覆盖）
+- [x] 导出后 project items 正确包含所有已导出切片（合并而非覆盖）
 - [ ] 验证：导出全部后切换到歌词/音素页面，item 列表完整显示
 
 ---

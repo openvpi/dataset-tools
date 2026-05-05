@@ -113,6 +113,7 @@ namespace dstools {
         void onSaveMarkers();
         void onExportAudio();
         void onBatchExportAll();
+        void onExportMenu();
         void onOpenAudioFiles();
         void onOpenAudioDirectory();
         void refreshBoundaries();

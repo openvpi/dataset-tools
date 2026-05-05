@@ -399,6 +399,43 @@ namespace dstools {
             QMessageBox::warning(this, tr("Save Error"), error);
     }
 
+    void DsSlicerPage::onExportMenu() {
+        // Count how many files have slice points
+        saveCurrentSlicePoints();
+        int slicedCount = 0;
+        for (const auto &[path, points] : m_fileSlicePoints) {
+            if (!points.empty())
+                ++slicedCount;
+        }
+
+        if (slicedCount == 0 && m_slicePoints.empty()) {
+            QMessageBox::information(this, tr("Export"),
+                                     tr("No slices to export. Run auto-slice first."));
+            return;
+        }
+
+        // If only one file is sliced, export it directly
+        if (slicedCount <= 1) {
+            onExportAudio();
+            return;
+        }
+
+        // Multiple files: ask user what to export
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle(tr("Export Sliced Audio"));
+        msgBox.setText(tr("Choose export scope:"));
+        auto *btnCurrent = msgBox.addButton(tr("Current File"), QMessageBox::AcceptRole);
+        auto *btnAll = msgBox.addButton(tr("All Files (%1)").arg(slicedCount), QMessageBox::ActionRole);
+        msgBox.addButton(QMessageBox::Cancel);
+
+        msgBox.exec();
+        auto *clicked = msgBox.clickedButton();
+        if (clicked == btnCurrent)
+            onExportAudio();
+        else if (clicked == btnAll)
+            onBatchExportAll();
+    }
+
     void DsSlicerPage::onExportAudio() {
         if (m_slicePoints.empty() || m_samples.empty()) {
             QMessageBox::information(this, tr("Export"), tr("No slices to export. Run auto-slice first."));
@@ -596,9 +633,8 @@ namespace dstools {
         auto *actSave = processMenu->addAction(QStringLiteral("保存切点..."), this, &DsSlicerPage::onSaveMarkers);
         actSave->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_S));
         processMenu->addSeparator();
-        auto *actExport = processMenu->addAction(QStringLiteral("导出切片音频..."), this, &DsSlicerPage::onExportAudio);
+        auto *actExport = processMenu->addAction(QStringLiteral("导出切片..."), this, &DsSlicerPage::onExportMenu);
         actExport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
-        processMenu->addAction(QStringLiteral("批量导出全部切片..."), this, &DsSlicerPage::onBatchExportAll);
 
         return bar;
     }
@@ -954,7 +990,61 @@ namespace dstools {
                 wf.write(mono.data() + startSamp, frameCount);
                 ++totalExported;
             }
+
+            // Register items to project for this audio file
+            if (m_dataSource && m_dataSource->project()) {
+                auto *project = m_dataSource->project();
+                auto currentItems = project->items();
+                const auto discarded = m_sliceListPanel->discardedIndices();
+
+                for (int i = 0; i < numSegments; ++i) {
+                    double startSec = (i == 0) ? 0.0 : slicePoints[i - 1];
+                    double endSec =
+                        (i < static_cast<int>(slicePoints.size())) ? slicePoints[i]
+                                                                    : static_cast<double>(mono.size()) / sr;
+                    int startSamp2 = static_cast<int>(startSec * sr);
+                    int endSamp2 = std::min(static_cast<int>(endSec * sr), static_cast<int>(mono.size()));
+                    if (endSamp2 <= startSamp2)
+                        continue;
+
+                    QString sliceId = QStringLiteral("%1_%2").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
+
+                    // Skip if item already exists
+                    bool exists = false;
+                    for (const auto &item : currentItems) {
+                        if (item.id == sliceId) {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (exists)
+                        continue;
+
+                    Slice slice;
+                    slice.id = sliceId;
+                    slice.name = sliceId;
+                    slice.inPos = static_cast<int64_t>(startSec * 1000000.0);
+                    slice.outPos = static_cast<int64_t>(endSec * 1000000.0);
+                    slice.status = QStringLiteral("active");
+
+                    Item item;
+                    item.id = sliceId;
+                    item.name = sliceId;
+                    item.audioSource = DsProject::toPosixPath(
+                        dir.filePath(QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'))));
+                    item.slices.push_back(std::move(slice));
+                    currentItems.push_back(std::move(item));
+                }
+
+                project->setItems(std::move(currentItems));
+                QString saveError;
+                project->save(saveError);
+            }
         }
+
+        // Notify data source to refresh slice list
+        if (m_dataSource)
+            emit m_dataSource->sliceListChanged();
 
         QMessageBox::information(this, tr("Batch Export Complete"),
                                  tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));
