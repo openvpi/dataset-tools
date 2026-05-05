@@ -5,7 +5,6 @@ find_package(FFTW3 CONFIG REQUIRED)
 dstools_add_library(${PROJECT_NAME}
     STATIC
     AUTOMOC
-    NO_PCH
     INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/commands>

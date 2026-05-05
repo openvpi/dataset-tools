@@ -45,7 +45,7 @@
 #  dstools_add_library
 # --------------------------------------------------------------------------- #
 function(dstools_add_library target_name)
-    set(_options STATIC SHARED INTERFACE AUTOMOC AUTORCC AUTOUIC NO_PCH)
+    set(_options STATIC SHARED INTERFACE AUTOMOC AUTORCC AUTOUIC)
     set(_one_value NAMESPACE EXPORT_SET CXX_STANDARD)
     set(_multi_value DEPENDS DEFINITIONS INCLUDE_DIRS RESOURCES)
     cmake_parse_arguments(ARG "${_options}" "${_one_value}" "${_multi_value}" ${ARGN})
@@ -252,34 +252,13 @@ function(dstools_add_library target_name)
             )
         endif()
     endif()
-
-    # --- Precompiled headers (PCH) ---------------------------------------------
-    if(NOT _type STREQUAL "INTERFACE" AND NOT ARG_NO_PCH)
-        set(_pch_headers
-            <vector>
-            <map>
-            <memory>
-            <string>
-            <functional>
-            <cstdint>
-        )
-        if(ARG_AUTOMOC)
-            list(PREPEND _pch_headers
-                <QString>
-                <QStringList>
-                <QObject>
-                <QDebug>
-            )
-        endif()
-        target_precompile_headers(${target_name} PRIVATE ${_pch_headers})
-    endif()
 endfunction()
 
 # --------------------------------------------------------------------------- #
 #  dstools_add_executable
 # --------------------------------------------------------------------------- #
 function(dstools_add_executable target_name)
-    set(_options DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC AUTOMOC AUTORCC AUTOUIC NO_PCH)
+    set(_options DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC AUTOMOC AUTORCC AUTOUIC)
     set(_one_value VERSION)
     set(_multi_value DEPENDS SOURCES)
     cmake_parse_arguments(ARG "${_options}" "${_one_value}" "${_multi_value}" ${ARGN})
@@ -399,31 +378,7 @@ function(dstools_add_executable target_name)
             endif()
         endif()
     endif()
-
-    # --- Precompiled headers (PCH) ---------------------------------------------
-    if(NOT ARG_NO_PCH)
-        set(_pch_headers
-            <vector>
-            <map>
-            <memory>
-            <string>
-            <functional>
-            <cstdint>
-        )
-        if(ARG_AUTOMOC)
-            list(PREPEND _pch_headers
-                <QString>
-                <QStringList>
-                <QObject>
-                <QDebug>
-            )
-        endif()
-        target_precompile_headers(${target_name} PRIVATE ${_pch_headers})
-    endif()
 endfunction()
-
-# --------------------------------------------------------------------------- #
-#  dstools_add_translations
 # --------------------------------------------------------------------------- #
 #[[
   Add i18n translation support to a target.
