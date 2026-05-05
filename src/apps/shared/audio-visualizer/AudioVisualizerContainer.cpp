@@ -65,6 +65,10 @@ TimeRulerWidget *AudioVisualizerContainer::timeRuler() const {
     return m_timeRuler;
 }
 
+BoundaryOverlayWidget *AudioVisualizerContainer::boundaryOverlay() const {
+    return m_boundaryOverlay;
+}
+
 TierLabelArea *AudioVisualizerContainer::tierLabelArea() const {
     return m_tierLabelArea;
 }
