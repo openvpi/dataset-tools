@@ -9,6 +9,7 @@
 
 #include <dstools/ViewportController.h>
 #include <dstools/TimePos.h>
+#include <dstools/PlayWidget.h>
 #include "BoundaryBindingManager.h"
 
 class QPainter;
@@ -52,6 +53,9 @@ public:
     /// @brief Sets the undo stack for boundary edit commands.
     void setUndoStack(QUndoStack *stack) { m_undoStack = stack; }
 
+    /// @brief Sets the play widget for audio playback integration.
+    void setPlayWidget(dstools::widgets::PlayWidget *pw) { m_playWidget = pw; }
+
     /// @brief Triggers a repaint of the boundary overlay.
     void updateBoundaryOverlay();
 
@@ -67,6 +71,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
@@ -80,6 +85,7 @@ private:
     void startBoundaryDrag(int boundaryIndex, TimePos time);   ///< Begins boundary drag.
     void updateBoundaryDrag(TimePos currentTime);              ///< Updates drag position.
     void endBoundaryDrag(TimePos finalTime);                   ///< Commits boundary drag.
+    void findSurroundingBoundaries(double time, double &start, double &end) const;
 
     [[nodiscard]] double xToTime(int x) const;          ///< Converts pixel x to time.
     [[nodiscard]] int timeToX(double time) const;       ///< Converts time to pixel x.
@@ -88,6 +94,7 @@ private:
     TextGridDocument *m_document = nullptr;             ///< Associated document.
     BoundaryBindingManager *m_bindingMgr = nullptr;     ///< Binding manager.
     QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
+    dstools::widgets::PlayWidget *m_playWidget = nullptr;
 
     std::vector<float> m_samples;                       ///< Raw audio samples.
     int m_sampleRate = 44100;                           ///< Audio sample rate in Hz.
