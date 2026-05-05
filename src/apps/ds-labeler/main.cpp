@@ -1,6 +1,12 @@
 #include <QApplication>
+#include <QCheckBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFileInfo>
+#include <QLabel>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 #include <dsfw/AppShell.h>
 #include <dsfw/IModelManager.h>
@@ -24,6 +30,7 @@
 #include <PitchLabelerPage.h>
 #include <SettingsPage.h>
 
+#include <cmath>
 #include <filesystem>
 #include <memory>
 
@@ -143,7 +150,7 @@ int main(int argc, char *argv[]) {
         project.reset();
     });
 
-    // ── Page-switch guard: check for dsitems when entering downstream pages ──
+    // ── Page-switch guard: check slice consistency when entering downstream pages ──
     QObject::connect(&shell, &dsfw::AppShell::currentPageChanged, &shell,
                      [&](int index) {
         // Pages 2-4 (minlabel, phoneme, pitch) need items from slicer
@@ -153,19 +160,80 @@ int main(int argc, char *argv[]) {
             return;
 
         const auto &items = project->items();
-        if (!items.empty())
-            return; // items exist, all good
+        if (items.empty()) {
+            auto ret = QMessageBox::question(
+                &shell,
+                QStringLiteral("未切片"),
+                QStringLiteral("尚未导出切片，是否回到切片页面？"),
+                QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes)
+                shell.setCurrentPage(1);
+            return;
+        }
 
-        // Check if slicer has slice points
-        // (slicerPage stores per-file slice points internally)
-        auto ret = QMessageBox::question(
-            &shell,
-            QStringLiteral("未切片/切点信息更新"),
-            QStringLiteral("未切片/切点信息更新，是否回到 Slicer？"),
-            QMessageBox::Yes | QMessageBox::No);
+        // Check slice point consistency: compare current slicer state
+        // against stored item slice durations
+        const auto &slicerState = project->slicerState();
+        QStringList changedFiles;
 
-        if (ret == QMessageBox::Yes) {
-            shell.setCurrentPage(1);
+        for (const auto &item : items) {
+            if (item.slices.empty())
+                continue;
+            const QString &audioPath = item.audioSource;
+            auto it = slicerState.slicePoints.find(audioPath);
+            if (it == slicerState.slicePoints.end())
+                continue;
+
+            // Compare slice count: N slice points → N+1 segments
+            const auto &points = it->second;
+            if (static_cast<int>(points.size()) + 1 != static_cast<int>(item.slices.size())) {
+                changedFiles.append(audioPath);
+                continue;
+            }
+
+            // Compare slice boundary positions (tolerance: 1ms = 1000us)
+            constexpr double kToleranceUs = 1000.0;
+            bool mismatch = false;
+            for (size_t s = 0; s < item.slices.size() && !mismatch; ++s) {
+                double expectedStart = (s == 0) ? 0.0 : points[s - 1] * 1e6;
+                double actualStart = static_cast<double>(item.slices[s].inPos);
+                if (std::abs(expectedStart - actualStart) > kToleranceUs)
+                    mismatch = true;
+            }
+            if (mismatch)
+                changedFiles.append(audioPath);
+        }
+
+        if (changedFiles.isEmpty())
+            return;
+
+        // Show dialog with checkboxes for changed files
+        QDialog dlg(&shell);
+        dlg.setWindowTitle(QStringLiteral("切点信息变化"));
+        auto *layout = new QVBoxLayout(&dlg);
+        layout->addWidget(new QLabel(
+            QStringLiteral("以下音频的切点已发生变化，需要重新切片导出："), &dlg));
+
+        QList<QCheckBox *> checkboxes;
+        for (const auto &file : changedFiles) {
+            auto *cb = new QCheckBox(QFileInfo(file).fileName(), &dlg);
+            cb->setChecked(true);
+            cb->setProperty("filePath", file);
+            layout->addWidget(cb);
+            checkboxes.append(cb);
+        }
+
+        auto *buttons = new QDialogButtonBox(
+            QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+        buttons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("回到切片页面"));
+        buttons->button(QDialogButtonBox::Cancel)->setText(QStringLiteral("忽略继续"));
+        layout->addWidget(buttons);
+
+        QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+        QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+        if (dlg.exec() == QDialog::Accepted) {
+            shell.setCurrentPage(1); // Go back to slicer
         }
     });
 
