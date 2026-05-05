@@ -7,17 +7,32 @@
 
 namespace dsfw::widgets {
 
+static const TimeRulerWidget::TimescaleLevel kLevels[] = {
+    {0.001,  0.0005},   // 1ms / 0.5ms
+    {0.005,  0.001},
+    {0.01,   0.005},
+    {0.05,   0.01},
+    {0.1,    0.05},
+    {0.5,    0.1},
+    {1.0,    0.5},
+    {5.0,    1.0},
+    {15.0,   5.0},
+    {30.0,   10.0},
+    {60.0,   15.0},
+    {300.0,  60.0},
+    {900.0,  300.0},
+    {3600.0, 900.0},
+};
+
+static constexpr int kLevelCount = static_cast<int>(std::size(kLevels));
+
 TimeRulerWidget::TimeRulerWidget(ViewportController *viewport, QWidget *parent)
-    : QWidget(parent),
-    m_viewport(viewport)
-{
+    : QWidget(parent), m_viewport(viewport) {
     setFixedHeight(24);
 
     if (m_viewport) {
         connect(m_viewport, &ViewportController::viewportChanged,
-                this, [this](const ViewportState &state) {
-                    setViewport(state);
-                });
+                this, [this](const ViewportState &state) { setViewport(state); });
         m_viewStart = m_viewport->state().startSec;
         m_viewEnd = m_viewport->state().endSec;
         m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
@@ -37,97 +52,98 @@ int TimeRulerWidget::timeToX(double time) const {
     return static_cast<int>((time - m_viewStart) / viewDuration * width());
 }
 
-double TimeRulerWidget::smoothStep(double edge0, double edge1, double x) {
-    double t = std::clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-    return t * t * (3.0 - 2.0 * t);
+TimeRulerWidget::TimescaleLevel TimeRulerWidget::findLevel(double pps) {
+    for (int i = 0; i < kLevelCount; ++i) {
+        if (kLevels[i].minorSec * pps >= kMinMinorStepPx)
+            return kLevels[i];
+    }
+    return kLevels[kLevelCount - 1];
 }
 
-double TimeRulerWidget::spacingVisibility(double spacing, double minimumSpacing) {
-    if (spacing < minimumSpacing) return 0.0;
-    if (spacing > kFadeInSpacing) return 1.0;
-    return smoothStep(minimumSpacing, kFadeInSpacing, spacing);
+QString TimeRulerWidget::formatTime(double timeSec, double intervalSec) {
+    if (intervalSec >= 3600.0) {
+        int totalSec = static_cast<int>(timeSec);
+        int hr = totalSec / 3600;
+        int min = (totalSec % 3600) / 60;
+        int sec = totalSec % 60;
+        return QStringLiteral("%1:%2:%3")
+            .arg(hr)
+            .arg(min, 2, 10, QChar('0'))
+            .arg(sec, 2, 10, QChar('0'));
+    }
+    if (intervalSec >= 60.0) {
+        int totalSec = static_cast<int>(timeSec);
+        int min = totalSec / 60;
+        int sec = totalSec % 60;
+        return QStringLiteral("%1:%2")
+            .arg(min)
+            .arg(sec, 2, 10, QChar('0'));
+    }
+    if (intervalSec >= 1.0) {
+        return QString::number(static_cast<int>(timeSec)) + QStringLiteral("s");
+    }
+    if (intervalSec >= 0.1) {
+        return QString::number(timeSec, 'f', 1) + QStringLiteral("s");
+    }
+    if (intervalSec >= 0.01) {
+        return QString::number(timeSec, 'f', 2) + QStringLiteral("s");
+    }
+    return QString::number(timeSec * 1000.0, 'f', 1) + QStringLiteral("ms");
 }
 
-void TimeRulerWidget::paintEvent(QPaintEvent *event) {
-    Q_UNUSED(event);
+void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
     painter.fillRect(rect(), QColor(35, 35, 40));
 
     double viewDuration = m_viewEnd - m_viewStart;
     if (viewDuration <= 0.0) return;
 
-    static const TickLevel levels[] = {
-        {3600.0,  12, true},
-        { 600.0,  10, true},
-        {  60.0,   8, true},
-        {  10.0,   7, true},
-        {   1.0,   6, true},
-        {   0.1,   5, true},
-        {  0.01,   4, false},
-    };
+    auto level = findLevel(m_pixelsPerSecond);
 
     QFont font = painter.font();
     font.setPixelSize(10);
     painter.setFont(font);
 
-    for (const auto &level : levels) {
-        double spacing = level.interval * m_pixelsPerSecond;
-        double alpha = spacingVisibility(spacing, kMinimumSpacing);
-        if (alpha <= 0.0) continue;
+    int h = height();
+    static constexpr int kMajorTickH = 12;
+    static constexpr int kMinorTickH = 6;
 
-        int tickAlpha = static_cast<int>(alpha * 255);
-        int labelAlpha = static_cast<int>(alpha * 200);
+    // Draw minor ticks
+    {
+        QPen minorPen(QColor(80, 80, 100), 1);
+        painter.setPen(minorPen);
 
-        QPen tickPen(QColor(120, 120, 140, tickAlpha), 1);
-        painter.setPen(tickPen);
-
-        double firstTick = std::floor(m_viewStart / level.interval) * level.interval;
-        for (double t = firstTick; t <= m_viewEnd; t += level.interval) {
+        double firstTick = std::floor(m_viewStart / level.minorSec) * level.minorSec;
+        for (double t = firstTick; t <= m_viewEnd; t += level.minorSec) {
             if (t < m_viewStart) continue;
             int x = timeToX(t);
-            painter.drawLine(x, height() - level.height, x, height());
-        }
-
-        if (level.showLabel) {
-            painter.setPen(QColor(180, 180, 200, labelAlpha));
-            for (double t = firstTick; t <= m_viewEnd; t += level.interval) {
-                if (t < m_viewStart) continue;
-                int x = timeToX(t);
-
-                QString label;
-                if (level.interval >= 3600.0) {
-                    int totalSec = static_cast<int>(t);
-                    int hr = totalSec / 3600;
-                    int min = (totalSec % 3600) / 60;
-                    int sec = totalSec % 60;
-                    label = QString("%1:%2:%3")
-                                .arg(hr)
-                                .arg(min, 2, 10, QChar('0'))
-                                .arg(sec, 2, 10, QChar('0'));
-                } else if (level.interval >= 60.0) {
-                    int totalSec = static_cast<int>(t);
-                    int min = totalSec / 60;
-                    int sec = totalSec % 60;
-                    label = QString("%1:%2")
-                                .arg(min)
-                                .arg(sec, 2, 10, QChar('0'));
-                } else if (level.interval >= 1.0) {
-                    int totalSec = static_cast<int>(t);
-                    label = QString::number(totalSec) + QStringLiteral("s");
-                } else if (level.interval >= 0.1) {
-                    label = QString::number(t, 'f', 1) + QStringLiteral("s");
-                } else {
-                    label = QString::number(t * 1000.0, 'f', 0) + QStringLiteral("ms");
-                }
-
-                QRect textRect(x - 40, 0, 80, height() - level.height);
-                painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, label);
-            }
+            painter.drawLine(x, h - kMinorTickH, x, h);
         }
     }
 
+    // Draw major ticks + labels
+    {
+        QPen majorPen(QColor(140, 140, 160), 1);
+        painter.setPen(majorPen);
+
+        double firstMajor = std::floor(m_viewStart / level.majorSec) * level.majorSec;
+        for (double t = firstMajor; t <= m_viewEnd; t += level.majorSec) {
+            if (t < m_viewStart) continue;
+            int x = timeToX(t);
+            painter.drawLine(x, h - kMajorTickH, x, h);
+
+            // Label
+            painter.setPen(QColor(180, 180, 200));
+            QString label = formatTime(t, level.majorSec);
+            QRect textRect(x - 40, 0, 80, h - kMajorTickH);
+            painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, label);
+            painter.setPen(majorPen);
+        }
+    }
+
+    // Bottom border
     painter.setPen(QPen(QColor(80, 80, 100), 1));
-    painter.drawLine(0, height() - 1, width(), height() - 1);
+    painter.drawLine(0, h - 1, width(), h - 1);
 }
 
 void TimeRulerWidget::wheelEvent(QWheelEvent *event) {
