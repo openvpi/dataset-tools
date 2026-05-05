@@ -1,6 +1,6 @@
 #include "TierLabelArea.h"
 
-#include <ui/IBoundaryModel.h>
+#include "IBoundaryModel.h"
 
 #include <dstools/TimePos.h>
 

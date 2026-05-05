@@ -26,6 +26,8 @@
 #include "ui/WaveformRenderer.h"
 #include "ui/WaveformWidget.h"
 
+#include "PhonemeTextGridTierLabel.h"
+
 namespace dstools {
 namespace phonemelabeler {
 
@@ -133,6 +135,7 @@ private:
     TimeRulerWidget *m_timeRulerWidget = nullptr;
     QScrollBar *m_hScrollBar = nullptr;
     BoundaryOverlayWidget *m_boundaryOverlay = nullptr;
+    PhonemeTextGridTierLabel *m_tierLabel = nullptr;
     QToolBar *m_toolbar = nullptr;
 
     // Actions
