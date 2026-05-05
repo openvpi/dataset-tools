@@ -1,7 +1,5 @@
-#include "LyricMatcher.h"
-#include "LyricMatchTask.h"
-#include "SmartHighlighter.h"
-#include "ChineseProcessor.h"
+#include "LyricAlignment.h"
+#include "MatchLyric.h"
 #include "Utils.h"
 
 #include <QApplication>

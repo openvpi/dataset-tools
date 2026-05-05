@@ -1,6 +1,6 @@
 #include "FunAsrModelProvider.h"
 
-#include "Asr.h"
+#include "AsrPipeline.h"
 
 #include <dstools/ExecutionProvider.h>
 

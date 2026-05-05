@@ -2,7 +2,7 @@
 /// @file MatchLyric.h
 /// @brief Batch lyric matching controller.
 
-#include "LyricMatcher.h"
+#include "LyricAlignment.h"
 #include <QMap>
 #include <QString>
 #include <memory>
