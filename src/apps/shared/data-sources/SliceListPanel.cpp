@@ -3,11 +3,11 @@
 #include <dstools/IEditorDataSource.h>
 #include <dsfw/AppSettings.h>
 #include <dsfw/widgets/FileProgressTracker.h>
-#include <dsfw/widgets/ToastNotification.h>
 
 #include <QAction>
 #include <QFile>
 #include <QFileInfo>
+#include <QIcon>
 #include <QMenu>
 
 #include <algorithm>
@@ -41,6 +41,8 @@ void SliceListPanel::setDataSource(IEditorDataSource *source) {
     if (m_source) {
         connect(m_source, &IEditorDataSource::sliceListChanged,
                 this, &SliceListPanel::refresh, Qt::UniqueConnection);
+        connect(m_source, &IEditorDataSource::audioAvailabilityChanged,
+                this, &SliceListPanel::refresh, Qt::UniqueConnection);
     }
     refresh();
 }
@@ -62,6 +64,14 @@ void SliceListPanel::refresh() {
                 text = id;
             auto *item = new QListWidgetItem(text, m_listWidget);
             item->setData(Qt::UserRole, id);
+
+            if (!m_source->audioExists(id)) {
+                item->setForeground(QColor(200, 120, 50));  // orange
+                item->setIcon(QIcon(QStringLiteral(":/icons/warning.svg")));
+                item->setToolTip(
+                    QStringLiteral("音频文件不存在: %1")
+                        .arg(m_source->audioPath(id)));
+            }
         }
     }
 
@@ -153,27 +163,6 @@ QString SliceListPanel::ensureSelection(AppSettings &settings) {
 void SliceListPanel::saveSelection(AppSettings &settings) const {
     static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
     settings.set(kLastSlice, currentSliceId());
-}
-
-QString SliceListPanel::validateAudioPath(QWidget *toastParent, IEditorDataSource *source,
-                                           const QString &sliceId) {
-    if (!source)
-        return {};
-
-    QString audioPath = source->audioPath(sliceId);
-    if (audioPath.isEmpty())
-        return {};
-
-    if (QFile::exists(audioPath))
-        return audioPath;
-
-    // File doesn't exist — show warning
-    dsfw::widgets::ToastNotification::show(
-        toastParent, dsfw::widgets::ToastType::Warning,
-        QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
-            .arg(QFileInfo(audioPath).fileName()),
-        5000);
-    return {};
 }
 
 // ── Slicer mode ───────────────────────────────────────────────────────────────

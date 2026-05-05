@@ -119,7 +119,7 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
             hasPitch = true;
     }
 
-    QString audioPath = source->audioPath(sliceId);
+    QString audioPath = source->validatedAudioPath(sliceId);
 
     if (!hasPhoneme && hasGrapheme && hfa && hfa->isOpen() && !audioPath.isEmpty()) {
         HFA::WordList words;
@@ -257,8 +257,8 @@ ExportResult ExportService::exportDataset(IEditorDataSource *source, const Expor
         const DsTextDocument &doc = loadResult.value();
 
         if (options.exportWavs) {
-            QString srcAudio = source->audioPath(sliceId);
-            if (QFile::exists(srcAudio)) {
+            QString srcAudio = source->validatedAudioPath(sliceId);
+            if (!srcAudio.isEmpty()) {
                 QString dstName = sliceId + QStringLiteral(".wav");
                 QString dstPath = wavsDir + QStringLiteral("/") + dstName;
                 if (!QFile::copy(srcAudio, dstPath)) {

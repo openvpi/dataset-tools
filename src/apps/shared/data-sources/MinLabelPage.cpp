@@ -10,15 +10,13 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QSplitter>
-#include <QVBoxLayout>
 #include <QPointer>
+#include <QHBoxLayout>
 #include <QtConcurrent>
 
 #include "AsrPipeline.h"
 #include "FunAsrModelProvider.h"
 
-#include <dsfw/CommonKeys.h>
 #include <dsfw/IModelManager.h>
 #include <dsfw/IModelProvider.h>
 #include <dsfw/ServiceLocator.h>
@@ -31,24 +29,12 @@
 namespace dstools {
 
 MinLabelPage::MinLabelPage(QWidget *parent)
-    : QWidget(parent), m_settings("MinLabel") {
+    : EditorPageBase("MinLabel", parent) {
     m_editor = new Minlabel::MinLabelEditor(this);
-    m_sliceList = new SliceListPanel(this);
-    m_sliceList->setMinimumWidth(160);
-    m_sliceList->setMaximumWidth(280);
 
-    m_splitter = new QSplitter(Qt::Horizontal, this);
-    m_splitter->addWidget(m_sliceList);
-    m_splitter->addWidget(m_editor);
-    m_splitter->setStretchFactor(0, 0);
-    m_splitter->setStretchFactor(1, 1);
+    setupBaseLayout(m_editor);
+    setupNavigationActions();
 
-    auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(m_splitter);
-
-    m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
-    m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
     m_playAction = new QAction(QStringLiteral("播放/停止"), this);
     m_playAction->setIcon(QIcon(QStringLiteral(":/icons/play.svg")));
     m_asrAction = new QAction(QStringLiteral("ASR 识别当前曲目"), this);
@@ -57,29 +43,16 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/play", "F5");
     static const dstools::SettingsKey<QString> kAsrRun("Shortcuts/asr", "R");
 
-    m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
-    m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
-                            QStringLiteral("上一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_nextAction, dsfw::CommonKeys::NavigationNext,
-                            QStringLiteral("下一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_playAction, kPlaybackPlay,
+    shortcutManager()->bind(m_playAction, kPlaybackPlay,
                             QStringLiteral("播放/停止"), QStringLiteral("播放"));
-    m_shortcutManager->bind(m_asrAction, kAsrRun,
+    shortcutManager()->bind(m_asrAction, kAsrRun,
                             QStringLiteral("ASR 识别"), QStringLiteral("处理"));
-    m_shortcutManager->applyAll();
-    m_shortcutManager->updateTooltips();
-    m_shortcutManager->setEnabled(false); // enabled on page activation
+    shortcutManager()->applyAll();
+    shortcutManager()->updateTooltips();
+    shortcutManager()->setEnabled(false);
 
-    connect(m_sliceList, &SliceListPanel::sliceSelected,
-            this, &MinLabelPage::onSliceSelected);
     connect(m_editor, &Minlabel::MinLabelEditor::dataChanged,
             this, [this]() { m_dirty = true; });
-    connect(m_prevAction, &QAction::triggered, this, [this]() {
-        m_sliceList->selectPrev();
-    });
-    connect(m_nextAction, &QAction::triggered, this, [this]() {
-        m_sliceList->selectNext();
-    });
     connect(m_playAction, &QAction::triggered, this, [this]() {
         if (m_editor->playWidget())
             m_editor->playWidget()->setPlaying(!m_editor->playWidget()->isPlaying());
@@ -88,62 +61,21 @@ MinLabelPage::MinLabelPage(QWidget *parent)
 
 MinLabelPage::~MinLabelPage() = default;
 
-void MinLabelPage::setDataSource(IEditorDataSource *source,
-                                  ISettingsBackend *settingsBackend) {
-    m_source = source;
-    m_settingsBackend = settingsBackend;
-    m_sliceList->setDataSource(source);
+// ── EditorPageBase hooks ──────────────────────────────────────────────────────
+
+QString MinLabelPage::windowTitlePrefix() const {
+    return QStringLiteral("歌词标注");
 }
 
-void MinLabelPage::onSliceSelected(const QString &sliceId) {
-    if (!maybeSave())
-        return;
-
-    m_currentSliceId = sliceId;
-    m_sliceList->saveSelection(m_settings);
-
-    if (!m_source)
-        return;
-
-    auto result = m_source->loadSlice(sliceId);
-    if (result) {
-        const auto &doc = result.value();
-        QString labContent;
-        QString rawText;
-        for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("grapheme")) {
-                QStringList parts;
-                for (const auto &b : layer.boundaries) {
-                    if (!b.text.isEmpty())
-                        parts << b.text;
-                }
-                labContent = parts.join(QStringLiteral(" "));
-            } else if (layer.name == QStringLiteral("raw_text")) {
-                QStringList parts;
-                for (const auto &b : layer.boundaries) {
-                    if (!b.text.isEmpty())
-                        parts << b.text;
-                }
-                rawText = parts.join(QStringLiteral(" "));
-            }
-        }
-        m_editor->loadData(labContent, rawText);
-    } else {
-        m_editor->loadData({}, {});
-    }
-
-    const QString audio = SliceListPanel::validateAudioPath(this, m_source, sliceId);
-    m_editor->setAudioFile(audio.isEmpty() ? QString() : audio);
-
-    m_dirty = false;
-    emit sliceChanged(sliceId);
+bool MinLabelPage::isDirty() const {
+    return m_dirty;
 }
 
 bool MinLabelPage::saveCurrentSlice() {
-    if (m_currentSliceId.isEmpty() || !m_source || !m_dirty)
+    if (currentSliceId().isEmpty() || !source() || !m_dirty)
         return true;
 
-    auto result = m_source->loadSlice(m_currentSliceId);
+    auto result = source()->loadSlice(currentSliceId());
     DsTextDocument doc;
     if (result)
         doc = std::move(result.value());
@@ -175,7 +107,7 @@ bool MinLabelPage::saveCurrentSlice() {
         }
     }
 
-    auto saveResult = m_source->saveSlice(m_currentSliceId, doc);
+    auto saveResult = source()->saveSlice(currentSliceId(), doc);
     if (!saveResult) {
         QMessageBox::warning(this, QStringLiteral("保存失败"),
                              QString::fromStdString(saveResult.error()));
@@ -186,23 +118,59 @@ bool MinLabelPage::saveCurrentSlice() {
     return true;
 }
 
-bool MinLabelPage::maybeSave() {
-    if (!m_dirty)
-        return true;
-
-    auto ret = QMessageBox::question(
-        this, QStringLiteral("未保存的更改"),
-        QStringLiteral("当前切片已修改，是否保存？"),
-        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-
-    if (ret == QMessageBox::Save)
-        return saveCurrentSlice();
-    if (ret == QMessageBox::Discard) {
-        m_dirty = false;
-        return true;
+void MinLabelPage::onSliceSelectedImpl(const QString &sliceId) {
+    auto result = source()->loadSlice(sliceId);
+    if (result) {
+        const auto &doc = result.value();
+        QString labContent;
+        QString rawText;
+        for (const auto &layer : doc.layers) {
+            if (layer.name == QStringLiteral("grapheme")) {
+                QStringList parts;
+                for (const auto &b : layer.boundaries) {
+                    if (!b.text.isEmpty())
+                        parts << b.text;
+                }
+                labContent = parts.join(QStringLiteral(" "));
+            } else if (layer.name == QStringLiteral("raw_text")) {
+                QStringList parts;
+                for (const auto &b : layer.boundaries) {
+                    if (!b.text.isEmpty())
+                        parts << b.text;
+                }
+                rawText = parts.join(QStringLiteral(" "));
+            }
+        }
+        m_editor->loadData(labContent, rawText);
+    } else {
+        m_editor->loadData({}, {});
     }
-    return false;
+
+    const QString audio = source()->validatedAudioPath(sliceId);
+    m_editor->setAudioFile(audio.isEmpty() ? QString() : audio);
+
+    m_dirty = false;
 }
+
+void MinLabelPage::onAutoInfer() {
+    updateProgress();
+
+    if (source() && !currentSliceId().isEmpty()) {
+        auto dirty = source()->dirtyLayers(currentSliceId());
+        if (dirty.contains(QStringLiteral("grapheme"))) {
+            source()->clearDirtyLayers(currentSliceId(), {QStringLiteral("grapheme")});
+            dsfw::widgets::ToastNotification::show(
+                this, dsfw::widgets::ToastType::Info,
+                QStringLiteral("歌词层已更新"), 3000);
+        }
+    }
+}
+
+void MinLabelPage::onDeactivatedImpl() {
+    m_asr = nullptr;
+}
+
+// ── IPageActions ──────────────────────────────────────────────────────────────
 
 QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
     auto *bar = new QMenuBar(parent);
@@ -215,13 +183,13 @@ QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
     });
 
     auto *editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
-    editMenu->addAction(m_prevAction);
-    editMenu->addAction(m_nextAction);
+    editMenu->addAction(prevAction());
+    editMenu->addAction(nextAction());
     editMenu->addSeparator();
     {
         auto *shortcutAction = editMenu->addAction(QStringLiteral("快捷键设置..."));
         connect(shortcutAction, &QAction::triggered, this, [this]() {
-            m_shortcutManager->showEditor(this);
+            shortcutManager()->showEditor(this);
         });
     }
 
@@ -256,17 +224,6 @@ QWidget *MinLabelPage::createStatusBarContent(QWidget *parent) {
     return container;
 }
 
-QString MinLabelPage::windowTitle() const {
-    QString title = QStringLiteral("歌词标注");
-    if (!m_currentSliceId.isEmpty())
-        title += QStringLiteral(" — ") + m_currentSliceId;
-    return title;
-}
-
-bool MinLabelPage::hasUnsavedChanges() const {
-    return m_dirty;
-}
-
 bool MinLabelPage::supportsDragDrop() const {
     return true;
 }
@@ -293,62 +250,17 @@ void MinLabelPage::handleDrop(QDropEvent *event) {
     }
 }
 
-dstools::widgets::ShortcutManager *MinLabelPage::shortcutManager() const {
-    return m_shortcutManager;
-}
-
-void MinLabelPage::onActivated() {
-    m_shortcutManager->setEnabled(true);
-    m_sliceList->refresh();
-    updateProgress();
-
-    {
-        static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
-        auto state = m_settings.get(kSplitterState);
-        if (!state.isEmpty())
-            m_splitter->restoreState(QByteArray::fromBase64(state.toUtf8()));
-    }
-
-    if (m_currentSliceId.isEmpty())
-        m_sliceList->ensureSelection(m_settings);
-
-    if (m_source && !m_currentSliceId.isEmpty()) {
-        auto dirty = m_source->dirtyLayers(m_currentSliceId);
-        if (dirty.contains(QStringLiteral("grapheme"))) {
-            m_source->clearDirtyLayers(m_currentSliceId, {QStringLiteral("grapheme")});
-            dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Info,
-                QStringLiteral("歌词层已更新"), 3000);
-        }
-    }
-}
-
-bool MinLabelPage::onDeactivating() {
-    {
-        static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
-        m_settings.set(kSplitterState, QString::fromLatin1(m_splitter->saveState().toBase64()));
-    }
-    return maybeSave();
-}
-
-void MinLabelPage::onDeactivated() {
-    m_shortcutManager->setEnabled(false);
-    m_asr = nullptr;
-}
-
-void MinLabelPage::onShutdown() {
-    m_shortcutManager->saveAll();
-}
+// ── ASR ───────────────────────────────────────────────────────────────────────
 
 void MinLabelPage::updateProgress() {
-    if (!m_source)
+    if (!source())
         return;
 
-    const auto ids = m_source->sliceIds();
+    const auto ids = source()->sliceIds();
     int total = ids.size();
     int completed = 0;
     for (const auto &id : ids) {
-        auto result = m_source->loadSlice(id);
+        auto result = source()->loadSlice(id);
         if (result) {
             for (const auto &layer : result.value().layers) {
                 if (layer.name == QStringLiteral("grapheme") && !layer.boundaries.empty()) {
@@ -358,7 +270,7 @@ void MinLabelPage::updateProgress() {
             }
         }
     }
-    m_sliceList->setProgress(completed, total);
+    sliceListPanel()->setProgress(completed, total);
 }
 
 void MinLabelPage::ensureAsrEngine() {
@@ -380,7 +292,7 @@ void MinLabelPage::ensureAsrEngine() {
     if (!mm)
         return;
 
-    auto config = readModelConfig(m_settingsBackend, QStringLiteral("asr"));
+    auto config = readModelConfig(settingsBackend(), QStringLiteral("asr"));
     if (config.modelPath.isEmpty())
         return;
 
@@ -401,7 +313,7 @@ void MinLabelPage::onModelInvalidated(const QString &taskKey) {
 }
 
 void MinLabelPage::onRunAsr() {
-    if (m_currentSliceId.isEmpty()) {
+    if (currentSliceId().isEmpty()) {
         QMessageBox::information(this, QStringLiteral("ASR"),
                                  QStringLiteral("请先选择一个切片。"));
         return;
@@ -420,16 +332,16 @@ void MinLabelPage::onRunAsr() {
         return;
     }
 
-    runAsrForSlice(m_currentSliceId);
+    runAsrForSlice(currentSliceId());
 }
 
 void MinLabelPage::runAsrForSlice(const QString &sliceId) {
-    if (!m_source)
+    if (!source())
         return;
 
-    QString audioPath = SliceListPanel::validateAudioPath(this, m_source, sliceId);
+    QString audioPath = source()->validatedAudioPath(sliceId);
     if (audioPath.isEmpty()) {
-        if (m_source->audioPath(sliceId).isEmpty())
+        if (source()->audioPath(sliceId).isEmpty())
             QMessageBox::warning(this, QStringLiteral("ASR"),
                                  QStringLiteral("当前切片没有音频文件。"));
         return;
@@ -467,7 +379,7 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
 }
 
 void MinLabelPage::onBatchAsr() {
-    if (!m_source) {
+    if (!source()) {
         QMessageBox::warning(this, QStringLiteral("批量 ASR"),
                              QStringLiteral("请先打开工程。"));
         return;
@@ -486,7 +398,7 @@ void MinLabelPage::onBatchAsr() {
         return;
     }
 
-    const auto ids = m_source->sliceIds();
+    const auto ids = source()->sliceIds();
     if (ids.isEmpty()) {
         QMessageBox::information(this, QStringLiteral("批量 ASR"),
                                  QStringLiteral("没有可处理的切片。"));
@@ -495,15 +407,18 @@ void MinLabelPage::onBatchAsr() {
 
     m_asrRunning = true;
     auto *asr = m_asr;
-    auto *source = m_source;
+    auto *src = source();
     QPointer<MinLabelPage> guard(this);
 
-    (void) QtConcurrent::run([asr, source, ids, guard]() {
+    (void) QtConcurrent::run([asr, src, ids, guard]() {
         int processed = 0;
+        int skipped = 0;
         for (const auto &sliceId : ids) {
-            QString audioPath = source->audioPath(sliceId);
-            if (audioPath.isEmpty())
+            QString audioPath = src->validatedAudioPath(sliceId);
+            if (audioPath.isEmpty()) {
+                ++skipped;
                 continue;
+            }
 
             std::string msg;
             bool ok = asr->recognize(audioPath.toStdWString(), msg);
@@ -516,22 +431,25 @@ void MinLabelPage::onBatchAsr() {
             }
             ++processed;
         }
-        QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+        QMetaObject::invokeMethod(guard.data(), [guard, processed, skipped]() {
             if (!guard)
                 return;
             guard->m_asrRunning = false;
+            QString msg = QStringLiteral("批量 ASR 完成: %1 个切片").arg(processed);
+            if (skipped > 0)
+                msg += QStringLiteral("，%1 个音频文件缺失已跳过").arg(skipped);
             dsfw::widgets::ToastNotification::show(
                 guard.data(), dsfw::widgets::ToastType::Info,
-                QStringLiteral("批量 ASR 完成: %1 个切片").arg(processed), 3000);
+                msg, 3000);
         }, Qt::QueuedConnection);
     });
 }
 
 void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
-    if (!m_source)
+    if (!source())
         return;
 
-    auto result = m_source->loadSlice(sliceId);
+    auto result = source()->loadSlice(sliceId);
     DsTextDocument doc;
     if (result)
         doc = std::move(result.value());
@@ -560,9 +478,9 @@ void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
         graphemeLayer->boundaries.push_back(std::move(b));
     }
 
-    (void) m_source->saveSlice(sliceId, doc);
+    (void) source()->saveSlice(sliceId, doc);
 
-    if (sliceId == m_currentSliceId) {
+    if (sliceId == currentSliceId()) {
         m_editor->loadData(text, {});
         m_dirty = true;
     }

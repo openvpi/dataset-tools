@@ -41,11 +41,6 @@ public:
     /// @brief Save the current slice ID to settings for later restore.
     void saveSelection(AppSettings &settings) const;
 
-    /// @brief Validate an audio path for a slice: checks existence, shows toast on failure.
-    /// @return The validated path, or empty string if file doesn't exist.
-    static QString validateAudioPath(QWidget *toastParent, IEditorDataSource *source,
-                                     const QString &sliceId);
-
     // ── Slicer mode (used by SlicerPage, DsSlicerPage) ────────────────────
     void setSlicerMode(bool enabled);
     void setSliceData(const std::vector<double> &slicePoints, double totalDuration,

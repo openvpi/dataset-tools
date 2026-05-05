@@ -10,6 +10,7 @@
 #include <dstools/DsTextTypes.h>
 #include <dstools/Result.h>
 
+#include <QFile>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -43,6 +44,17 @@ public:
     /// Resolve the audio file path associated with a slice.
     [[nodiscard]] virtual QString audioPath(const QString &sliceId) const = 0;
 
+    /// Check whether the audio file for a slice exists on disk.
+    /// Default: QFile::exists(audioPath(sliceId)).
+    [[nodiscard]] virtual bool audioExists(const QString &sliceId) const;
+
+    /// Return a validated audio path: non-empty only if the file exists.
+    /// Use this instead of raw audioPath() before passing to inference engines.
+    [[nodiscard]] QString validatedAudioPath(const QString &sliceId) const;
+
+    /// Return all slice IDs whose audio files are missing.
+    [[nodiscard]] QStringList missingAudioSlices() const;
+
     /// Return the duration of a slice in seconds, or -1.0 if unknown.
     /// Default implementation returns -1.0.
     [[nodiscard]] virtual double sliceDuration(const QString &sliceId) const {
@@ -70,6 +82,9 @@ signals:
 
     /// Emitted after a slice is successfully saved.
     void sliceSaved(const QString &sliceId);
+
+    /// Emitted when audio file availability changes (files appear/disappear).
+    void audioAvailabilityChanged();
 };
 
 } // namespace dstools

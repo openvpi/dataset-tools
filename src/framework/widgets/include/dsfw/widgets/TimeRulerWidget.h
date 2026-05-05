@@ -43,7 +43,7 @@ private:
     double m_viewEnd = 10.0;
     double m_pixelsPerSecond = 200.0;
 
-    static constexpr double kMinMinorStepPx = 24.0;
+    static constexpr double kMinMinorStepPx = 60.0;
 };
 
 } // namespace dsfw::widgets

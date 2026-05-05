@@ -33,24 +33,12 @@
 namespace dstools {
 
 PitchLabelerPage::PitchLabelerPage(QWidget *parent)
-    : QWidget(parent), m_settings("PitchLabeler") {
+    : EditorPageBase("PitchLabeler", parent) {
     m_editor = new pitchlabeler::PitchEditor(this);
-    m_sliceList = new SliceListPanel(this);
-    m_sliceList->setMinimumWidth(160);
-    m_sliceList->setMaximumWidth(280);
 
-    m_splitter = new QSplitter(Qt::Horizontal, this);
-    m_splitter->addWidget(m_sliceList);
-    m_splitter->addWidget(m_editor);
-    m_splitter->setStretchFactor(0, 0);
-    m_splitter->setStretchFactor(1, 1);
+    setupBaseLayout(m_editor);
+    setupNavigationActions();
 
-    auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(m_splitter);
-
-    m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
-    m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
     m_extractPitchAction = new QAction(QStringLiteral("提取音高"), this);
     m_extractMidiAction = new QAction(QStringLiteral("提取 MIDI"), this);
     connect(m_extractPitchAction, &QAction::triggered, this, &PitchLabelerPage::onExtractPitch);
@@ -66,69 +54,58 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutExtractPitch("Shortcuts/extractPitch", "F");
     static const dstools::SettingsKey<QString> kShortcutExtractMidi("Shortcuts/extractMidi", "M");
 
-    m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
-    m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
-                            QStringLiteral("上一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_nextAction, dsfw::CommonKeys::NavigationNext,
-                            QStringLiteral("下一个切片"), QStringLiteral("导航"));
-    m_shortcutManager->bind(m_editor->saveAction(), kShortcutSave,
+    shortcutManager()->bind(m_editor->saveAction(), kShortcutSave,
                             QStringLiteral("保存"), QStringLiteral("文件"));
-    m_shortcutManager->bind(m_editor->undoAction(), kShortcutUndo,
+    shortcutManager()->bind(m_editor->undoAction(), kShortcutUndo,
                             QStringLiteral("撤销"), QStringLiteral("编辑"));
-    m_shortcutManager->bind(m_editor->redoAction(), kShortcutRedo,
+    shortcutManager()->bind(m_editor->redoAction(), kShortcutRedo,
                             QStringLiteral("重做"), QStringLiteral("编辑"));
-    m_shortcutManager->bind(m_editor->zoomInAction(), kShortcutZoomIn,
+    shortcutManager()->bind(m_editor->zoomInAction(), kShortcutZoomIn,
                             QStringLiteral("放大"), QStringLiteral("视图"));
-    m_shortcutManager->bind(m_editor->zoomOutAction(), kShortcutZoomOut,
+    shortcutManager()->bind(m_editor->zoomOutAction(), kShortcutZoomOut,
                             QStringLiteral("缩小"), QStringLiteral("视图"));
-    m_shortcutManager->bind(m_editor->zoomResetAction(), kShortcutZoomReset,
+    shortcutManager()->bind(m_editor->zoomResetAction(), kShortcutZoomReset,
                             QStringLiteral("重置缩放"), QStringLiteral("视图"));
-    m_shortcutManager->bind(m_editor->abCompareAction(), kShortcutABCompare,
+    shortcutManager()->bind(m_editor->abCompareAction(), kShortcutABCompare,
                             QStringLiteral("A/B 比较"), QStringLiteral("工具"));
-    m_shortcutManager->bind(m_extractPitchAction, kShortcutExtractPitch,
+    shortcutManager()->bind(m_extractPitchAction, kShortcutExtractPitch,
                             QStringLiteral("提取音高"), QStringLiteral("处理"));
-    m_shortcutManager->bind(m_extractMidiAction, kShortcutExtractMidi,
+    shortcutManager()->bind(m_extractMidiAction, kShortcutExtractMidi,
                             QStringLiteral("提取 MIDI"), QStringLiteral("处理"));
-    m_shortcutManager->applyAll();
-    m_shortcutManager->updateTooltips();
-    m_shortcutManager->setEnabled(false); // enabled on page activation
+    shortcutManager()->applyAll();
+    shortcutManager()->updateTooltips();
+    shortcutManager()->setEnabled(false);
 
-    connect(m_sliceList, &SliceListPanel::sliceSelected,
-            this, &PitchLabelerPage::onSliceSelected);
     connect(m_editor->saveAction(), &QAction::triggered,
             this, [this]() { saveCurrentSlice(); });
-    connect(m_prevAction, &QAction::triggered, this, [this]() {
-        m_sliceList->selectPrev();
-    });
-    connect(m_nextAction, &QAction::triggered, this, [this]() {
-        m_sliceList->selectNext();
-    });
 }
 
 PitchLabelerPage::~PitchLabelerPage() = default;
 
-void PitchLabelerPage::setDataSource(IEditorDataSource *source,
-                                      ISettingsBackend *settingsBackend) {
-    m_source = source;
-    m_settingsBackend = settingsBackend;
-    m_sliceList->setDataSource(source);
+QString PitchLabelerPage::windowTitlePrefix() const {
+    return QStringLiteral("音高标注");
 }
 
-void PitchLabelerPage::onSliceSelected(const QString &sliceId) {
-    if (!maybeSave())
-        return;
+bool PitchLabelerPage::isDirty() const {
+    return m_editor->undoStack() && !m_editor->undoStack()->isClean();
+}
 
-    m_currentSliceId = sliceId;
+void PitchLabelerPage::onDeactivatedImpl() {
+    m_rmvpe = nullptr;
+    m_game = nullptr;
+}
+
+void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     m_currentFile.reset();
 
-    if (!m_source) {
+    if (!source()) {
         m_editor->clear();
         return;
     }
 
-    const QString audioPath = SliceListPanel::validateAudioPath(this, m_source, sliceId);
+    const QString audioPath = source()->validatedAudioPath(sliceId);
 
-    auto result = m_source->loadSlice(sliceId);
+    auto result = source()->loadSlice(sliceId);
     if (result) {
         const auto &doc = result.value();
         auto file = std::make_shared<pitchlabeler::DSFile>();
@@ -160,15 +137,13 @@ void PitchLabelerPage::onSliceSelected(const QString &sliceId) {
     if (!audioPath.isEmpty()) {
         m_editor->loadAudio(audioPath, 0.0);
     }
-
-    emit sliceChanged(sliceId);
 }
 
 bool PitchLabelerPage::saveCurrentSlice() {
-    if (m_currentSliceId.isEmpty() || !m_source || !m_currentFile)
+    if (currentSliceId().isEmpty() || !source() || !m_currentFile)
         return true;
 
-    auto result = m_source->loadSlice(m_currentSliceId);
+    auto result = source()->loadSlice(currentSliceId());
     DsTextDocument doc;
     if (result)
         doc = std::move(result.value());
@@ -214,32 +189,13 @@ bool PitchLabelerPage::saveCurrentSlice() {
     if (!doc.meta.editedSteps.contains(QStringLiteral("pitch_review")))
         doc.meta.editedSteps.append(QStringLiteral("pitch_review"));
 
-    auto saveResult = m_source->saveSlice(m_currentSliceId, doc);
+    auto saveResult = source()->saveSlice(currentSliceId(), doc);
     if (!saveResult) {
         QMessageBox::warning(this, QStringLiteral("保存失败"),
                              QString::fromStdString(saveResult.error()));
         return false;
     }
 
-    return true;
-}
-
-bool PitchLabelerPage::maybeSave() {
-    if (!m_currentFile)
-        return true;
-
-    if (m_editor->undoStack() && !m_editor->undoStack()->isClean()) {
-        auto ret = QMessageBox::question(
-            this, QStringLiteral("未保存的更改"),
-            QStringLiteral("当前切片已修改，是否保存？"),
-            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-
-        if (ret == QMessageBox::Save)
-            return saveCurrentSlice();
-        if (ret == QMessageBox::Discard)
-            return true;
-        return false;
-    }
     return true;
 }
 
@@ -257,13 +213,13 @@ QMenuBar *PitchLabelerPage::createMenuBar(QWidget *parent) {
     editMenu->addAction(m_editor->undoAction());
     editMenu->addAction(m_editor->redoAction());
     editMenu->addSeparator();
-    editMenu->addAction(m_prevAction);
-    editMenu->addAction(m_nextAction);
+    editMenu->addAction(prevAction());
+    editMenu->addAction(nextAction());
     editMenu->addSeparator();
     {
         auto *shortcutAction = editMenu->addAction(QStringLiteral("快捷键设置..."));
         connect(shortcutAction, &QAction::triggered, this, [this]() {
-            m_shortcutManager->showEditor(this);
+            shortcutManager()->showEditor(this);
         });
     }
 
@@ -325,145 +281,6 @@ QWidget *PitchLabelerPage::createStatusBarContent(QWidget *parent) {
     return container;
 }
 
-QString PitchLabelerPage::windowTitle() const {
-    QString title = QStringLiteral("音高标注");
-    if (!m_currentSliceId.isEmpty())
-        title += QStringLiteral(" — ") + m_currentSliceId;
-    return title;
-}
-
-bool PitchLabelerPage::hasUnsavedChanges() const {
-    return m_editor->undoStack() && !m_editor->undoStack()->isClean();
-}
-
-void PitchLabelerPage::onActivated() {
-    m_shortcutManager->setEnabled(true);
-    m_sliceList->refresh();
-
-    {
-        static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
-        auto state = m_settings.get(kSplitterState);
-        if (!state.isEmpty())
-            m_splitter->restoreState(QByteArray::fromBase64(state.toUtf8()));
-    }
-    {
-        static const dstools::SettingsKey<QString> kEditorSplitterState("Layout/editorSplitterState", "");
-        auto state = m_settings.get(kEditorSplitterState);
-        if (!state.isEmpty())
-            m_editor->restoreSplitterState(QByteArray::fromBase64(state.toUtf8()));
-    }
-
-    // Ensure first slice is selected if nothing is selected yet
-    if (m_currentSliceId.isEmpty())
-        m_sliceList->ensureSelection(m_settings);
-
-    if (m_settingsBackend) {
-        auto data = m_settingsBackend->load();
-        auto preload = data["preload"].toObject();
-        auto pitchPreload = preload["pitch_extraction"].toObject();
-        if (pitchPreload["enabled"].toBool(false)) {
-            ensureRmvpeEngine();
-        }
-    }
-
-    if (m_source && !m_currentSliceId.isEmpty()) {
-        auto dirty = m_source->dirtyLayers(m_currentSliceId);
-        QStringList pitchDirtyLayers = {QStringLiteral("pitch"),
-                                        QStringLiteral("ph_num"),
-                                        QStringLiteral("midi")};
-        QStringList affected;
-        for (const auto &layer : pitchDirtyLayers) {
-            if (dirty.contains(layer))
-                affected << layer;
-        }
-
-        bool needAutoInfer = !affected.isEmpty();
-
-        if (!needAutoInfer) {
-            auto result = m_source->loadSlice(m_currentSliceId);
-            if (result) {
-                bool hasPhoneme = false;
-                bool hasPitch = false;
-                bool hasMidi = false;
-                bool hasPhNum = false;
-                for (const auto &layer : result.value().layers) {
-                    if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive) && !layer.boundaries.empty())
-                        hasPhoneme = true;
-                    if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty())
-                        hasPhNum = true;
-                    if (layer.name == QStringLiteral("midi") && !layer.boundaries.empty())
-                        hasMidi = true;
-                }
-                for (const auto &curve : result.value().curves) {
-                    if (curve.name == QStringLiteral("pitch") && !curve.values.empty())
-                        hasPitch = true;
-                }
-                if (hasPhoneme && (!hasPitch || !hasMidi || !hasPhNum))
-                    needAutoInfer = true;
-            }
-        }
-
-        if (needAutoInfer) {
-            m_source->clearDirtyLayers(m_currentSliceId, affected);
-
-            ensureRmvpeEngine();
-            ensureGameEngine();
-
-            bool hasRmvpe = m_rmvpe && m_rmvpe->is_open();
-            bool hasGame = m_game && m_game->isOpen();
-
-            if ((hasRmvpe || hasGame) && !m_inferRunning) {
-                QStringList tasks;
-                if (hasRmvpe)
-                    tasks << QStringLiteral("音高提取");
-                if (hasGame)
-                    tasks << QStringLiteral("MIDI转录");
-
-                dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Info,
-                    QStringLiteral("自动运行: %1...").arg(tasks.join(QStringLiteral(", "))),
-                    3000);
-
-                if (hasRmvpe)
-                    runPitchExtraction(m_currentSliceId);
-                else if (hasGame)
-                    runMidiTranscription(m_currentSliceId);
-            } else {
-                dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Warning,
-                    QStringLiteral("音高/MIDI 数据缺失或过期，请手动运行提取"),
-                    3000);
-            }
-        }
-    }
-}
-
-bool PitchLabelerPage::onDeactivating() {
-    {
-        static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
-        m_settings.set(kSplitterState, QString::fromLatin1(m_splitter->saveState().toBase64()));
-    }
-    {
-        static const dstools::SettingsKey<QString> kEditorSplitterState("Layout/editorSplitterState", "");
-        m_settings.set(kEditorSplitterState, QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
-    }
-    return maybeSave();
-}
-
-void PitchLabelerPage::onDeactivated() {
-    m_shortcutManager->setEnabled(false);
-    m_rmvpe = nullptr;
-    m_game = nullptr;
-}
-
-void PitchLabelerPage::onShutdown() {
-    m_shortcutManager->saveAll();
-}
-
-dstools::widgets::ShortcutManager *PitchLabelerPage::shortcutManager() const {
-    return m_shortcutManager;
-}
-
 void PitchLabelerPage::ensureRmvpeEngine() {
     if (m_rmvpe && m_rmvpe->is_open())
         return;
@@ -483,7 +300,7 @@ void PitchLabelerPage::ensureRmvpeEngine() {
     if (!mm)
         return;
 
-    auto config = readModelConfig(m_settingsBackend, QStringLiteral("pitch_extraction"));
+    auto config = readModelConfig(settingsBackend(), QStringLiteral("pitch_extraction"));
     if (config.modelPath.isEmpty())
         return;
 
@@ -517,7 +334,7 @@ void PitchLabelerPage::ensureGameEngine() {
     if (!mm)
         return;
 
-    auto config = readModelConfig(m_settingsBackend, QStringLiteral("midi_transcription"));
+    auto config = readModelConfig(settingsBackend(), QStringLiteral("midi_transcription"));
     if (config.modelPath.isEmpty())
         return;
 
@@ -540,7 +357,7 @@ void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
 }
 
 void PitchLabelerPage::onExtractPitch() {
-    if (m_currentSliceId.isEmpty()) {
+    if (currentSliceId().isEmpty()) {
         QMessageBox::information(this, QStringLiteral("提取音高"),
                                  QStringLiteral("请先选择一个切片。"));
         return;
@@ -559,11 +376,11 @@ void PitchLabelerPage::onExtractPitch() {
         return;
     }
 
-    runPitchExtraction(m_currentSliceId);
+    runPitchExtraction(currentSliceId());
 }
 
 void PitchLabelerPage::onExtractMidi() {
-    if (m_currentSliceId.isEmpty()) {
+    if (currentSliceId().isEmpty()) {
         QMessageBox::information(this, QStringLiteral("提取 MIDI"),
                                  QStringLiteral("请先选择一个切片。"));
         return;
@@ -582,25 +399,25 @@ void PitchLabelerPage::onExtractMidi() {
         return;
     }
 
-    runMidiTranscription(m_currentSliceId);
+    runMidiTranscription(currentSliceId());
 }
 
 void PitchLabelerPage::onAddPhNum() {
-    if (m_currentSliceId.isEmpty()) {
+    if (currentSliceId().isEmpty()) {
         QMessageBox::information(this, QStringLiteral("计算 ph_num"),
                                  QStringLiteral("请先选择一个切片。"));
         return;
     }
-    runAddPhNum(m_currentSliceId);
+    runAddPhNum(currentSliceId());
 }
 
 void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
-    if (!m_source)
+    if (!source())
         return;
 
-    QString audioPath = SliceListPanel::validateAudioPath(this, m_source, sliceId);
+    QString audioPath = source()->validatedAudioPath(sliceId);
     if (audioPath.isEmpty()) {
-        if (m_source->audioPath(sliceId).isEmpty())
+        if (source()->audioPath(sliceId).isEmpty())
             QMessageBox::warning(this, QStringLiteral("提取音高"),
                                  QStringLiteral("当前切片没有音频文件。"));
         return;
@@ -644,12 +461,12 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
 }
 
 void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
-    if (!m_source)
+    if (!source())
         return;
 
-    QString audioPath = SliceListPanel::validateAudioPath(this, m_source, sliceId);
+    QString audioPath = source()->validatedAudioPath(sliceId);
     if (audioPath.isEmpty()) {
-        if (m_source->audioPath(sliceId).isEmpty())
+        if (source()->audioPath(sliceId).isEmpty())
             QMessageBox::warning(this, QStringLiteral("提取 MIDI"),
                                  QStringLiteral("当前切片没有音频文件。"));
         return;
@@ -685,10 +502,10 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
 }
 
 void PitchLabelerPage::runAddPhNum(const QString &sliceId) {
-    if (!m_source)
+    if (!source())
         return;
 
-    auto result = m_source->loadSlice(sliceId);
+    auto result = source()->loadSlice(sliceId);
     if (!result) {
         QMessageBox::warning(this, QStringLiteral("计算 ph_num"),
                              QStringLiteral("无法加载切片数据。"));
@@ -740,7 +557,7 @@ void PitchLabelerPage::runAddPhNum(const QString &sliceId) {
             phNumLayer->boundaries.push_back(std::move(b));
         }
 
-        (void) m_source->saveSlice(sliceId, doc);
+        (void) source()->saveSlice(sliceId, doc);
 
         dsfw::widgets::ToastNotification::show(
             this, dsfw::widgets::ToastType::Info,
@@ -754,10 +571,10 @@ void PitchLabelerPage::runAddPhNum(const QString &sliceId) {
 void PitchLabelerPage::applyPitchResult(const QString &sliceId,
                                             const std::vector<int32_t> &f0,
                                             float timestep) {
-    if (!m_source)
+    if (!source())
         return;
 
-    auto result = m_source->loadSlice(sliceId);
+    auto result = source()->loadSlice(sliceId);
     DsTextDocument doc;
     if (result)
         doc = std::move(result.value());
@@ -777,9 +594,9 @@ void PitchLabelerPage::applyPitchResult(const QString &sliceId,
     pitchCurve->values = f0;
     pitchCurve->timestep = timestep;
 
-    (void) m_source->saveSlice(sliceId, doc);
+    (void) source()->saveSlice(sliceId, doc);
 
-    if (sliceId == m_currentSliceId) {
+    if (sliceId == currentSliceId()) {
         if (!m_currentFile)
             m_currentFile = std::make_shared<pitchlabeler::DSFile>();
         m_currentFile->f0.values = f0;
@@ -790,10 +607,10 @@ void PitchLabelerPage::applyPitchResult(const QString &sliceId,
 
 void PitchLabelerPage::applyMidiResult(const QString &sliceId,
                                            const std::vector<Game::GameNote> &notes) {
-    if (!m_source)
+    if (!source())
         return;
 
-    auto result = m_source->loadSlice(sliceId);
+    auto result = source()->loadSlice(sliceId);
     DsTextDocument doc;
     if (result)
         doc = std::move(result.value());
@@ -827,9 +644,9 @@ void PitchLabelerPage::applyMidiResult(const QString &sliceId,
         midiLayer->boundaries.push_back(std::move(b));
     }
 
-    (void) m_source->saveSlice(sliceId, doc);
+    (void) source()->saveSlice(sliceId, doc);
 
-    if (sliceId == m_currentSliceId) {
+    if (sliceId == currentSliceId()) {
         if (!m_currentFile)
             m_currentFile = std::make_shared<pitchlabeler::DSFile>();
         m_currentFile->notes.clear();
@@ -849,7 +666,7 @@ void PitchLabelerPage::applyMidiResult(const QString &sliceId,
 }
 
 void PitchLabelerPage::onBatchExtract() {
-    if (!m_source) {
+    if (!source()) {
         QMessageBox::warning(this, QStringLiteral("批量提取"),
                              QStringLiteral("请先打开工程。"));
         return;
@@ -873,7 +690,7 @@ void PitchLabelerPage::onBatchExtract() {
         return;
     }
 
-    const auto ids = m_source->sliceIds();
+    const auto ids = source()->sliceIds();
     if (ids.isEmpty()) {
         QMessageBox::information(this, QStringLiteral("批量提取"),
                                  QStringLiteral("没有可处理的切片。"));
@@ -883,15 +700,18 @@ void PitchLabelerPage::onBatchExtract() {
     m_inferRunning = true;
     auto *rmvpe = m_rmvpe;
     auto *game = m_game;
-    auto *source = m_source;
+    auto *src = source();
     QPointer<PitchLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([rmvpe, game, hasRmvpe, hasGame, source, ids, guard]() {
+    (void) QtConcurrent::run([rmvpe, game, hasRmvpe, hasGame, src, ids, guard]() {
         int processed = 0;
+        int skipped = 0;
         for (const auto &sliceId : ids) {
-            QString audioPath = source->audioPath(sliceId);
-            if (audioPath.isEmpty())
+            QString audioPath = src->validatedAudioPath(sliceId);
+            if (audioPath.isEmpty()) {
+                ++skipped;
                 continue;
+            }
 
             if (hasRmvpe) {
                 std::vector<Rmvpe::RmvpeRes> results;
@@ -923,13 +743,16 @@ void PitchLabelerPage::onBatchExtract() {
 
             ++processed;
         }
-        QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+        QMetaObject::invokeMethod(guard.data(), [guard, processed, skipped]() {
             if (!guard)
                 return;
             guard->m_inferRunning = false;
+            QString msg = QStringLiteral("批量提取完成: %1 个切片").arg(processed);
+            if (skipped > 0)
+                msg += QStringLiteral("，%1 个音频文件缺失已跳过").arg(skipped);
             dsfw::widgets::ToastNotification::show(
                 guard.data(), dsfw::widgets::ToastType::Info,
-                QStringLiteral("批量提取完成: %1 个切片").arg(processed), 3000);
+                msg, 3000);
         }, Qt::QueuedConnection);
     });
 }

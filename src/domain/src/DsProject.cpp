@@ -146,6 +146,17 @@ DsProject DsProject::load(const QString &path, QString &error) {
     proj.m_filePath = path;
     proj.m_extraFields = json;
 
+    // Version check
+    if (json.contains("version") && json["version"].is_string()) {
+        std::string version = json["version"].get<std::string>();
+        // Major version must be 3; warn on unknown major versions
+        if (!version.empty() && version[0] != '3') {
+            error = QStringLiteral("不支持的工程文件版本: %1。本程序支持版本 3.x。")
+                        .arg(fromStd(version));
+            return proj;
+        }
+    }
+
     if (json.contains("workingDirectory") && json["workingDirectory"].is_string())
         proj.m_workingDirectory = fromPosixPath(fromStd(json["workingDirectory"].get<std::string>()));
 
@@ -307,6 +318,9 @@ DsProject DsProject::load(const QString &path, QString &error) {
             proj.m_exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
     }
 
+    // Deduplicate export formats (defaults.export + top-level export may overlap)
+    proj.m_exportConfig.formats.removeDuplicates();
+
     return proj;
 }
 
@@ -320,6 +334,9 @@ bool DsProject::save(const QString &path, QString &error) const {
     }
 
     nlohmann::json json = m_extraFields.is_object() ? m_extraFields : nlohmann::json::object();
+
+    // Remove deprecated 'defaults' section from round-trip data
+    json.erase("defaults");
 
     json["version"] = "3.1.0";
 

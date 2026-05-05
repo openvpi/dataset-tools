@@ -2,7 +2,9 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
+#include <QDebug>
 
 #include <nlohmann/json.hpp>
 
@@ -16,6 +18,8 @@ void ProjectDataSource::setProject(DsProject *project, const QString &workingDir
     m_project = project;
     m_workingDir = workingDir;
     m_contexts.clear();
+    m_audioScanned = false;
+    m_missingAudioIds.clear();
     emit sliceListChanged();
 }
 
@@ -23,6 +27,8 @@ void ProjectDataSource::clear() {
     m_project = nullptr;
     m_workingDir.clear();
     m_contexts.clear();
+    m_audioScanned = false;
+    m_missingAudioIds.clear();
     emit sliceListChanged();
 }
 
@@ -92,6 +98,37 @@ void ProjectDataSource::clearDirtyLayers(const QString &sliceId,
     saveContext(sliceId);
 }
 
+bool ProjectDataSource::audioExists(const QString &sliceId) const {
+    ensureAudioScanned();
+    return !m_missingAudioIds.contains(sliceId);
+}
+
+void ProjectDataSource::ensureAudioScanned() const {
+    if (m_audioScanned)
+        return;
+    m_audioScanned = true;
+    m_missingAudioIds.clear();
+    if (!m_project)
+        return;
+    for (const auto &item : m_project->items()) {
+        for (const auto &slice : item.slices) {
+            if (slice.status != QStringLiteral("active"))
+                continue;
+            const QString path = sliceAudioPath(slice.id);
+            if (path.isEmpty() || !QFile::exists(path))
+                m_missingAudioIds.insert(slice.id);
+        }
+    }
+}
+
+void ProjectDataSource::rescanAudioAvailability() {
+    m_audioScanned = false;
+    QSet<QString> oldMissing = m_missingAudioIds;
+    ensureAudioScanned();
+    if (oldMissing != m_missingAudioIds)
+        emit audioAvailabilityChanged();
+}
+
 PipelineContext *ProjectDataSource::context(const QString &sliceId) {
     auto it = m_contexts.find(sliceId);
     if (it != m_contexts.end())
@@ -157,12 +194,31 @@ QString ProjectDataSource::sliceAudioPath(const QString &sliceId) const {
                     QString audioPath = item.audioSource;
                     if (QDir::isRelativePath(audioPath))
                         audioPath = QDir(m_workingDir).absoluteFilePath(audioPath);
+                    if (QFile::exists(audioPath))
+                        return audioPath;
+
+                    // V.7: Heuristic fallback — try wavs/<sliceId>.wav
+                    QString fallback = QDir(m_workingDir).absoluteFilePath(
+                        QStringLiteral("wavs/%1.wav").arg(sliceId));
+                    if (QFile::exists(fallback)) {
+                        qWarning() << "ProjectDataSource: audioSource not found:"
+                                   << audioPath << "— using fallback:" << fallback;
+                        return fallback;
+                    }
+
+                    // Return original path even if missing (caller uses validatedAudioPath)
+                    qWarning() << "ProjectDataSource: audio file not found for slice"
+                               << sliceId << "at" << audioPath;
                     return audioPath;
                 }
             }
         }
     }
-    return ProjectPaths::sliceAudioPath(m_workingDir, sliceId);
+    // Final fallback via ProjectPaths
+    QString fallbackPath = ProjectPaths::sliceAudioPath(m_workingDir, sliceId);
+    qWarning() << "ProjectDataSource: slice" << sliceId
+               << "not found in project items, falling back to:" << fallbackPath;
+    return fallbackPath;
 }
 
 const Slice *ProjectDataSource::findSlice(const QString &sliceId) const {

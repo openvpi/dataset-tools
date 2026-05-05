@@ -9,21 +9,23 @@
 namespace dsfw::widgets {
 
 static const TimeRulerWidget::TimescaleLevel kLevels[] = {
-    {0.01,   0.005},  // 10ms / 5ms
-    {0.1,    0.01},   // 100ms / 10ms
-    {1.0,    0.1},    // 1s / 100ms
-    {10.0,   1.0},    // 10s / 1s
-    {60.0,   10.0},   // 1min / 10s
-    {600.0,  60.0},   // 10min / 1min
-    {3600.0, 600.0},  // 1h / 10min
+    {0.001,  0.0005},   // 1ms / 0.5ms
+    {0.005,  0.001},    // 5ms / 1ms
+    {0.01,   0.005},    // 10ms / 5ms
+    {0.05,   0.01},     // 50ms / 10ms
+    {0.1,    0.05},     // 100ms / 50ms
+    {0.5,    0.1},      // 500ms / 100ms
+    {1.0,    0.5},      // 1s / 500ms
+    {5.0,    1.0},      // 5s / 1s
+    {15.0,   5.0},      // 15s / 5s
+    {30.0,   10.0},     // 30s / 10s
+    {60.0,   15.0},     // 1min / 15s
+    {300.0,  60.0},     // 5min / 1min
+    {900.0,  300.0},    // 15min / 5min
+    {3600.0, 900.0},    // 1h / 15min
 };
 
 static constexpr int kLevelCount = static_cast<int>(std::size(kLevels));
-
-static double smoothStep(double edge0, double edge1, double x) {
-    double t = std::clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-    return t * t * (3.0 - 2.0 * t);
-}
 
 TimeRulerWidget::TimeRulerWidget(ViewportController *viewport, QWidget *parent)
     : QWidget(parent), m_viewport(viewport) {
@@ -107,16 +109,9 @@ void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
     static constexpr int kMajorTickH = 12;
     static constexpr int kMinorTickH = 6;
 
-    double actualMinorSpacing = level.minorSec * m_pixelsPerSecond;
-    double minorAlpha = smoothStep(kMinMinorStepPx, kMinMinorStepPx * 2.0, actualMinorSpacing);
-    double actualMajorSpacing = level.majorSec * m_pixelsPerSecond;
-    double majorAlpha = smoothStep(kMinMinorStepPx, kMinMinorStepPx * 2.0, actualMajorSpacing);
-
-    // Draw minor ticks with fade
-    if (minorAlpha > 0.01) {
-        QColor minorColor(80, 80, 100);
-        minorColor.setAlphaF(minorAlpha);
-        QPen minorPen(minorColor, 1);
+    // Draw minor ticks (no fade — level is selected by findLevel to guarantee adequate spacing)
+    {
+        QPen minorPen(QColor(80, 80, 100), 1);
         painter.setPen(minorPen);
 
         double firstTick = std::floor(m_viewStart / level.minorSec) * level.minorSec;
@@ -127,15 +122,12 @@ void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
         }
     }
 
-    // Draw major ticks + labels with fade
-    if (majorAlpha > 0.01) {
-        QColor majorLineColor(140, 140, 160);
-        majorLineColor.setAlphaF(majorAlpha);
-        QPen majorPen(majorLineColor, 1);
+    // Draw major ticks + labels
+    {
+        QPen majorPen(QColor(140, 140, 160), 1);
         painter.setPen(majorPen);
 
         QColor labelColor(180, 180, 200);
-        labelColor.setAlphaF(majorAlpha);
 
         double firstMajor = std::floor(m_viewStart / level.majorSec) * level.majorSec;
         for (double t = firstMajor; t <= m_viewEnd; t += level.majorSec) {

@@ -8,6 +8,7 @@
 #include <dsfw/PipelineContext.h>
 
 #include <map>
+#include <QSet>
 
 namespace dstools {
 
@@ -40,12 +41,16 @@ public:
     /// Save PipelineContext for a slice to disk.
     Result<void> saveContext(const QString &sliceId);
 
+    /// Re-scan audio file availability and emit audioAvailabilityChanged if changed.
+    void rescanAudioAvailability();
+
     // IEditorDataSource
     [[nodiscard]] QStringList sliceIds() const override;
     [[nodiscard]] Result<DsTextDocument> loadSlice(const QString &sliceId) override;
     [[nodiscard]] Result<void> saveSlice(const QString &sliceId,
                                          const DsTextDocument &doc) override;
     [[nodiscard]] QString audioPath(const QString &sliceId) const override;
+    [[nodiscard]] bool audioExists(const QString &sliceId) const override;
     [[nodiscard]] double sliceDuration(const QString &sliceId) const override;
     [[nodiscard]] QStringList dirtyLayers(const QString &sliceId) const override;
     void clearDirtyLayers(const QString &sliceId, const QStringList &layers) override;
@@ -54,6 +59,11 @@ private:
     DsProject *m_project = nullptr;
     QString m_workingDir;
     std::map<QString, PipelineContext> m_contexts;
+
+    mutable QSet<QString> m_missingAudioIds;
+    mutable bool m_audioScanned = false;
+
+    void ensureAudioScanned() const;
 
     [[nodiscard]] QString contextPath(const QString &sliceId) const;
     [[nodiscard]] QString dstextPath(const QString &sliceId) const;
