@@ -350,7 +350,6 @@ void PhonemeEditor::connectSignals() {
     auto *playheadTimer = new QTimer(this);
     playheadTimer->setSingleShot(true);
     playheadTimer->setInterval(200);
-    auto *boundaryOverlay = m_container->boundaryOverlay();
     connect(playheadTimer, &QTimer::timeout, this, [this]() {
         if (!m_playWidget->isPlaying()) {
             m_waveformWidget->setPlayhead(-1.0);
