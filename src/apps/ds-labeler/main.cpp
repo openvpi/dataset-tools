@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QTimer>
 
 #include <dsfw/AppShell.h>
 #include <dsfw/IModelManager.h>
@@ -167,7 +168,7 @@ int main(int argc, char *argv[]) {
                                    "是否回到切片页面导出？"),
                     QMessageBox::Yes | QMessageBox::No);
                 if (ret == QMessageBox::Yes)
-                    shell.setCurrentPage(1);
+                    QTimer::singleShot(0, &shell, [&shell]() { shell.setCurrentPage(1); });
             } else {
                 auto ret = QMessageBox::question(
                     &shell,
@@ -175,7 +176,7 @@ int main(int argc, char *argv[]) {
                     QStringLiteral("尚未导出切片，是否回到切片页面？"),
                     QMessageBox::Yes | QMessageBox::No);
                 if (ret == QMessageBox::Yes)
-                    shell.setCurrentPage(1);
+                    QTimer::singleShot(0, &shell, [&shell]() { shell.setCurrentPage(1); });
             }
             return;
         }
@@ -254,11 +255,12 @@ int main(int argc, char *argv[]) {
         msgBox.setText(QStringLiteral("以下音频文件的切片结果与当前切点不一致，\n"
                                       "继续操作可能导致标注数据错误："));
         msgBox.setDetailedText(problemFiles.join(QStringLiteral("\n")));
-        msgBox.addButton(QStringLiteral("回到切片页面重新导出"), QMessageBox::AcceptRole);
+        auto *goBackBtn = msgBox.addButton(QStringLiteral("回到切片页面重新导出"), QMessageBox::AcceptRole);
         msgBox.addButton(QStringLiteral("忽略继续"), QMessageBox::RejectRole);
 
-        if (msgBox.exec() == 0) { // AcceptRole
-            shell.setCurrentPage(1);
+        msgBox.exec();
+        if (msgBox.clickedButton() == goBackBtn) {
+            QTimer::singleShot(0, &shell, [&shell]() { shell.setCurrentPage(1); });
         }
     });
 

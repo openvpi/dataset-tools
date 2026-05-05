@@ -13,6 +13,7 @@ class FileProgressTracker;
 namespace dstools {
 
 class IEditorDataSource;
+class AppSettings;
 
 class SliceListPanel : public QWidget {
     Q_OBJECT
@@ -31,6 +32,19 @@ public:
     [[nodiscard]] int sliceCount() const;
     void setProgress(int completed, int total);
     [[nodiscard]] dsfw::widgets::FileProgressTracker *progressTracker() const;
+
+    /// @brief Ensure a slice is selected. Tries to restore from settings,
+    /// falls back to the first item. Emits sliceSelected if a selection is made.
+    /// @return The selected slice ID, or empty if no slices exist.
+    QString ensureSelection(AppSettings &settings);
+
+    /// @brief Save the current slice ID to settings for later restore.
+    void saveSelection(AppSettings &settings) const;
+
+    /// @brief Validate an audio path for a slice: checks existence, shows toast on failure.
+    /// @return The validated path, or empty string if file doesn't exist.
+    static QString validateAudioPath(QWidget *toastParent, IEditorDataSource *source,
+                                     const QString &sliceId);
 
     // ── Slicer mode (used by SlicerPage, DsSlicerPage) ────────────────────
     void setSlicerMode(bool enabled);

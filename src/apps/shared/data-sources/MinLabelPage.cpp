@@ -6,8 +6,6 @@
 #include <dstools/IEditorDataSource.h>
 
 #include <QLabel>
-#include <QFile>
-#include <QFileInfo>
 #include <QIcon>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -58,7 +56,6 @@ MinLabelPage::MinLabelPage(QWidget *parent)
 
     static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/play", "F5");
     static const dstools::SettingsKey<QString> kAsrRun("Shortcuts/asr", "R");
-    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
 
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
     m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
@@ -101,8 +98,7 @@ void MinLabelPage::onSliceSelected(const QString &sliceId) {
         return;
 
     m_currentSliceId = sliceId;
-    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
-    m_settings.set(kLastSlice, sliceId);
+    m_sliceList->saveSelection(m_settings);
 
     if (!m_source)
         return;
@@ -134,17 +130,8 @@ void MinLabelPage::onSliceSelected(const QString &sliceId) {
         m_editor->loadData({}, {});
     }
 
-    const QString audio = m_source->audioPath(sliceId);
-    if (!audio.isEmpty() && QFile::exists(audio))
-        m_editor->setAudioFile(audio);
-    else if (!audio.isEmpty()) {
-        m_editor->setAudioFile(QString());
-        dsfw::widgets::ToastNotification::show(
-            this, dsfw::widgets::ToastType::Warning,
-            QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
-                .arg(QFileInfo(audio).fileName()),
-            5000);
-    }
+    const QString audio = SliceListPanel::validateAudioPath(this, m_source, sliceId);
+    m_editor->setAudioFile(audio.isEmpty() ? QString() : audio);
 
     m_dirty = false;
     emit sliceChanged(sliceId);
@@ -319,21 +306,8 @@ void MinLabelPage::onActivated() {
             m_splitter->restoreState(QByteArray::fromBase64(state.toUtf8()));
     }
 
-    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
-    if (m_currentSliceId.isEmpty()) {
-        QString lastSlice = m_settings.get(kLastSlice);
-        if (!lastSlice.isEmpty()) {
-            m_sliceList->setCurrentSlice(lastSlice);
-        }
-        // If m_currentSliceId is still empty (e.g. lastSlice was empty, or
-        // setCurrentSlice didn't trigger onSliceSelected because the row
-        // was already selected), explicitly select the first slice.
-        if (m_currentSliceId.isEmpty() && m_sliceList->sliceCount() > 0) {
-            QString firstId = m_sliceList->currentSliceId();
-            if (!firstId.isEmpty())
-                onSliceSelected(firstId);
-        }
-    }
+    if (m_currentSliceId.isEmpty())
+        m_sliceList->ensureSelection(m_settings);
 
     if (m_source && !m_currentSliceId.isEmpty()) {
         auto dirty = m_source->dirtyLayers(m_currentSliceId);
@@ -449,16 +423,11 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
     if (!m_source)
         return;
 
-    QString audioPath = m_source->audioPath(sliceId);
+    QString audioPath = SliceListPanel::validateAudioPath(this, m_source, sliceId);
     if (audioPath.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("ASR"),
-                             QStringLiteral("当前切片没有音频文件。"));
-        return;
-    }
-    if (!QFile::exists(audioPath)) {
-        QMessageBox::warning(this, QStringLiteral("ASR"),
-                             QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
-                                 .arg(audioPath));
+        if (m_source->audioPath(sliceId).isEmpty())
+            QMessageBox::warning(this, QStringLiteral("ASR"),
+                                 QStringLiteral("当前切片没有音频文件。"));
         return;
     }
 

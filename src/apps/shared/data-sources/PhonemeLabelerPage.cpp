@@ -6,8 +6,6 @@
 #include <dstools/IEditorDataSource.h>
 
 #include <QHBoxLayout>
-#include <QFile>
-#include <QFileInfo>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -57,8 +55,6 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
     static const dstools::SettingsKey<QString> kShortcutRedo("Shortcuts/redo", "Ctrl+Y");
     static const dstools::SettingsKey<QString> kShortcutFA("Shortcuts/fa", "F");
-    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
-    static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
 
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
     m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
@@ -101,25 +97,16 @@ void PhonemeLabelerPage::onSliceSelected(const QString &sliceId) {
         return;
 
     m_currentSliceId = sliceId;
-    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
-    m_settings.set(kLastSlice, sliceId);
+    m_sliceList->saveSelection(m_settings);
 
     if (!m_source)
         return;
 
-    const QString audioPath = m_source->audioPath(sliceId);
-
-    if (!audioPath.isEmpty() && QFile::exists(audioPath))
+    const QString audioPath = SliceListPanel::validateAudioPath(this, m_source, sliceId);
+    if (!audioPath.isEmpty())
         m_editor->loadAudio(audioPath);
-    else if (!audioPath.isEmpty()) {
-        // Audio file doesn't exist — clear editor to avoid stale data / 0-sample errors
+    else
         m_editor->loadAudio(QString());
-        dsfw::widgets::ToastNotification::show(
-            this, dsfw::widgets::ToastType::Warning,
-            QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
-                .arg(QFileInfo(audioPath).fileName()),
-            5000);
-    }
 
     auto result = m_source->loadSlice(sliceId);
     if (result && !result.value().layers.empty()) {
@@ -289,22 +276,8 @@ void PhonemeLabelerPage::onActivated() {
         }
     }
 
-    static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
-    if (m_currentSliceId.isEmpty()) {
-        QString lastSlice = m_settings.get(kLastSlice);
-        if (!lastSlice.isEmpty()) {
-            m_sliceList->setCurrentSlice(lastSlice);
-        }
-        // If m_currentSliceId is still empty after trying lastSlice
-        // (e.g. lastSlice was empty, or setCurrentSlice didn't trigger
-        // onSliceSelected because the row was already selected),
-        // explicitly select the first slice.
-        if (m_currentSliceId.isEmpty() && m_sliceList->sliceCount() > 0) {
-            QString firstId = m_sliceList->currentSliceId();
-            if (!firstId.isEmpty())
-                onSliceSelected(firstId);
-        }
-    }
+    if (m_currentSliceId.isEmpty())
+        m_sliceList->ensureSelection(m_settings);
 
     if (m_source && !m_currentSliceId.isEmpty()) {
         auto dirty = m_source->dirtyLayers(m_currentSliceId);
@@ -436,16 +409,11 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     if (!m_source)
         return;
 
-    QString audioPath = m_source->audioPath(sliceId);
+    QString audioPath = SliceListPanel::validateAudioPath(this, m_source, sliceId);
     if (audioPath.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("强制对齐"),
-                             QStringLiteral("当前切片没有音频文件。"));
-        return;
-    }
-    if (!QFile::exists(audioPath)) {
-        QMessageBox::warning(this, QStringLiteral("强制对齐"),
-                             QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
-                                 .arg(audioPath));
+        if (m_source->audioPath(sliceId).isEmpty())
+            QMessageBox::warning(this, QStringLiteral("强制对齐"),
+                                 QStringLiteral("当前切片没有音频文件。"));
         return;
     }
 
