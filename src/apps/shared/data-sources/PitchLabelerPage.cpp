@@ -8,6 +8,8 @@
 #include <DSFile.h>
 
 #include <QHBoxLayout>
+#include <QFile>
+#include <QFileInfo>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -155,8 +157,14 @@ void PitchLabelerPage::onSliceSelected(const QString &sliceId) {
         }
     }
 
-    if (!audioPath.isEmpty()) {
+    if (!audioPath.isEmpty() && QFile::exists(audioPath)) {
         m_editor->loadAudio(audioPath, 0.0);
+    } else if (!audioPath.isEmpty()) {
+        dsfw::widgets::ToastNotification::show(
+            this, dsfw::widgets::ToastType::Warning,
+            QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
+                .arg(QFileInfo(audioPath).fileName()),
+            5000);
     }
 
     emit sliceChanged(sliceId);
@@ -348,6 +356,13 @@ void PitchLabelerPage::onActivated() {
         auto state = m_settings.get(kEditorSplitterState);
         if (!state.isEmpty())
             m_editor->restoreSplitterState(QByteArray::fromBase64(state.toUtf8()));
+    }
+
+    // Ensure first slice is selected if nothing is selected yet
+    if (m_currentSliceId.isEmpty() && m_sliceList->sliceCount() > 0) {
+        QString firstId = m_sliceList->currentSliceId();
+        if (!firstId.isEmpty())
+            onSliceSelected(firstId);
     }
 
     if (m_settingsBackend) {
@@ -596,6 +611,12 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
                              QStringLiteral("当前切片没有音频文件。"));
         return;
     }
+    if (!QFile::exists(audioPath)) {
+        QMessageBox::warning(this, QStringLiteral("提取音高"),
+                             QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
+                                 .arg(audioPath));
+        return;
+    }
 
     m_inferRunning = true;
     auto *rmvpe = m_rmvpe;
@@ -642,6 +663,12 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
     if (audioPath.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("提取 MIDI"),
                              QStringLiteral("当前切片没有音频文件。"));
+        return;
+    }
+    if (!QFile::exists(audioPath)) {
+        QMessageBox::warning(this, QStringLiteral("提取 MIDI"),
+                             QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
+                                 .arg(audioPath));
         return;
     }
 

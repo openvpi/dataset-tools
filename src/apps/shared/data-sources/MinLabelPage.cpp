@@ -6,6 +6,8 @@
 #include <dstools/IEditorDataSource.h>
 
 #include <QLabel>
+#include <QFile>
+#include <QFileInfo>
 #include <QIcon>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -133,7 +135,16 @@ void MinLabelPage::onSliceSelected(const QString &sliceId) {
     }
 
     const QString audio = m_source->audioPath(sliceId);
-    m_editor->setAudioFile(audio);
+    if (!audio.isEmpty() && QFile::exists(audio))
+        m_editor->setAudioFile(audio);
+    else if (!audio.isEmpty()) {
+        m_editor->setAudioFile(QString());
+        dsfw::widgets::ToastNotification::show(
+            this, dsfw::widgets::ToastType::Warning,
+            QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
+                .arg(QFileInfo(audio).fileName()),
+            5000);
+    }
 
     m_dirty = false;
     emit sliceChanged(sliceId);
@@ -442,6 +453,12 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
     if (audioPath.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("ASR"),
                              QStringLiteral("当前切片没有音频文件。"));
+        return;
+    }
+    if (!QFile::exists(audioPath)) {
+        QMessageBox::warning(this, QStringLiteral("ASR"),
+                             QStringLiteral("音频文件不存在: %1\n请返回切片页面重新导出。")
+                                 .arg(audioPath));
         return;
     }
 
