@@ -64,6 +64,9 @@ public:
     [[nodiscard]] bool supportsBinding() const override { return true; }
     [[nodiscard]] bool supportsInsert() const override { return true; }
 
+    [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const override;
+    [[nodiscard]] TimePos snapToLowerTier(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const override;
+
 signals:
     void documentChanged();
     void boundaryMoved(int tierIndex, int boundaryIndex, TimePos newTime);

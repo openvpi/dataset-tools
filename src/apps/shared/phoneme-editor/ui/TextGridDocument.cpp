@@ -312,6 +312,51 @@ void TextGridDocument::setActiveTierIndex(int index) {
     }
 }
 
+TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const {
+    if (tierIndex < 0 || tierIndex >= tierCount()) return proposedTime;
+
+    const auto *tier = intervalTier(tierIndex);
+    if (!tier) return proposedTime;
+
+    const int count = static_cast<int>(tier->GetNumberOfIntervals());
+    if (boundaryIndex < 0 || boundaryIndex > count) return proposedTime;
+
+    double proposedSec = usToSec(proposedTime);
+    double prevBoundary = (boundaryIndex > 0) ? tier->GetInterval(boundaryIndex - 1).min_time : tier->GetMinTime();
+    double nextBoundary = (boundaryIndex < count) ? tier->GetInterval(boundaryIndex).max_time : tier->GetMaxTime();
+
+    constexpr double kMinInterval = 0.001;
+    double clamped = std::clamp(proposedSec, prevBoundary + kMinInterval, nextBoundary - kMinInterval);
+    return secToUs(clamped);
+}
+
+TimePos TextGridDocument::snapToLowerTier(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const {
+    if (tierIndex <= 0 || tierIndex >= tierCount()) return proposedTime;
+
+    double proposedSec = usToSec(proposedTime);
+    double thresholdSec = usToSec(snapThreshold);
+
+    double bestDist = thresholdSec;
+    double bestTime = proposedSec;
+
+    for (int t = 0; t < tierIndex; ++t) {
+        const auto *tier = intervalTier(t);
+        if (!tier) continue;
+
+        int bCount = boundaryCount(t);
+        for (int b = 0; b < bCount; ++b) {
+            double bTime = usToSec(boundaryTime(t, b));
+            double dist = std::abs(bTime - proposedSec);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestTime = bTime;
+            }
+        }
+    }
+
+    return secToUs(bestTime);
+}
+
 void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePos duration) {
     m_textGrid = textgrid::TextGrid();
     double maxTime = usToSec(duration);

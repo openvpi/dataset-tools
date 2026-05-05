@@ -67,6 +67,8 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
     m_powerWidget->setDocument(m_document);
     m_spectrogramWidget->setBoundaryModel(m_document);
     m_boundaryOverlay->setDocument(m_document);
+    m_tierLabel->setBoundaryModel(m_document);
+    m_boundaryOverlay->setTierLabelGeometry(m_tierLabel->height(), m_tierLabel->tierRowHeight());
     m_entryListPanel->setDocument(m_document);
 
     // If document has duration info, prefer it (it may include padding)
@@ -239,6 +241,11 @@ void PhonemeEditor::buildLayout() {
     m_timeRulerWidget = new TimeRulerWidget(m_viewport, this);
     centerLayout->addWidget(m_timeRulerWidget);
 
+    // Tier label area (radio buttons + tier boundary labels)
+    m_tierLabel = new PhonemeTextGridTierLabel(this);
+    m_tierLabel->setViewportController(m_viewport);
+    centerLayout->addWidget(m_tierLabel);
+
     // Vertical splitter with tiers + waveform + power + spectrogram
     m_rightSplitter = new QSplitter(Qt::Vertical, this);
     centerLayout->addWidget(m_rightSplitter, 1);
@@ -276,6 +283,7 @@ void PhonemeEditor::buildLayout() {
     // Boundary overlay
     m_boundaryOverlay = new BoundaryOverlayWidget(m_viewport, centerContainer);
     m_boundaryOverlay->trackWidget(m_rightSplitter);
+    m_boundaryOverlay->setTierLabelGeometry(m_tierLabel->height(), m_tierLabel->tierRowHeight());
 
     // Horizontal scrollbar at bottom
     m_hScrollBar = new QScrollBar(Qt::Horizontal, this);
@@ -330,11 +338,14 @@ void PhonemeEditor::connectSignals() {
     connect(m_hScrollBar, &QScrollBar::valueChanged, this, &PhonemeEditor::onScrollBarValueChanged);
 
     // Active tier → repaint boundary overlays
-    connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int) {
+    connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int tier) {
         updateAllBoundaryOverlays();
+        m_tierLabel->setActiveTierIndex(tier);
+        m_boundaryOverlay->setTierLabelGeometry(m_tierLabel->height(), m_tierLabel->tierRowHeight());
     });
     connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, TimePos) {
         updateAllBoundaryOverlays();
+        m_tierLabel->update();
         m_tierEditWidget->update();
         for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
             child->update();
@@ -342,9 +353,16 @@ void PhonemeEditor::connectSignals() {
     });
     connect(m_document, &TextGridDocument::boundaryInserted, this, [this](int, int) {
         updateAllBoundaryOverlays();
+        m_tierLabel->update();
     });
     connect(m_document, &TextGridDocument::boundaryRemoved, this, [this](int, int) {
         updateAllBoundaryOverlays();
+        m_tierLabel->update();
+    });
+
+    // Tier label → document active tier sync
+    connect(m_tierLabel, &PhonemeTextGridTierLabel::activeTierChanged, m_document, [this](int tier) {
+        m_document->setActiveTierIndex(tier);
     });
 
     // Entry list panel: rebuild when active tier changes or boundaries change

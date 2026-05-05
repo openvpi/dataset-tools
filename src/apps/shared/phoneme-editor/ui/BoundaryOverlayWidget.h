@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QTimer>
 
 #include <dstools/ViewportController.h>
 
@@ -21,6 +22,7 @@ public:
 
     void setDocument(TextGridDocument *doc);
     void setBoundaryModel(IBoundaryModel *model);
+    void setTierLabelGeometry(int totalHeight, int rowHeight);
     void trackWidget(QWidget *widget);
 
 public slots:
@@ -48,6 +50,11 @@ private:
     int m_hoveredBoundary = -1;
     int m_draggedBoundary = -1;
     double m_playhead = -1.0;
+
+    int m_tierLabelTotalHeight = 0;
+    int m_tierLabelRowHeight = 24;
+
+    QTimer m_playheadHideTimer;
 };
 
 } // namespace phonemelabeler
