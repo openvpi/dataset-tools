@@ -102,3 +102,4 @@ docs/api/
 build-stdout.txt
 build-stderr.txt
 build_test_log.txt
+build-vs/
