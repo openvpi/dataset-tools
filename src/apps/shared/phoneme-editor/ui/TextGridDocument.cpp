@@ -323,10 +323,19 @@ TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, Ti
 
     double proposedSec = usToSec(proposedTime);
     double prevBoundary = (boundaryIndex > 0) ? tier->GetInterval(boundaryIndex - 1).min_time : tier->GetMinTime();
-    double nextBoundary = (boundaryIndex < count) ? tier->GetInterval(boundaryIndex).max_time : tier->GetMaxTime();
+    double nextBoundary;
+    if (boundaryIndex < count) {
+        nextBoundary = tier->GetInterval(boundaryIndex).max_time;
+    } else {
+        // Last boundary (tier end): allow dragging up to document max time
+        nextBoundary = tier->GetMaxTime();
+    }
 
+    // When boundary is AT the upper limit (last boundary), don't subtract kMinInterval
     constexpr double kMinInterval = 0.001;
-    double clamped = std::clamp(proposedSec, prevBoundary + kMinInterval, nextBoundary - kMinInterval);
+    double minClamp = prevBoundary + kMinInterval;
+    double maxClamp = (boundaryIndex == count) ? nextBoundary : nextBoundary - kMinInterval;
+    double clamped = std::clamp(proposedSec, minClamp, maxClamp);
     return secToUs(clamped);
 }
 
