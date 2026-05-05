@@ -73,6 +73,8 @@ private:
 
     QAction *m_prevAction = nullptr;
     QAction *m_nextAction = nullptr;
+    QAction *m_extractPitchAction = nullptr;
+    QAction *m_extractMidiAction = nullptr;
 
     Rmvpe::Rmvpe *m_rmvpe = nullptr;
     Game::Game *m_game = nullptr;

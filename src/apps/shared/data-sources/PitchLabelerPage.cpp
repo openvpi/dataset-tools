@@ -51,6 +51,10 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
 
     m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
     m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
+    m_extractPitchAction = new QAction(QStringLiteral("提取音高"), this);
+    m_extractMidiAction = new QAction(QStringLiteral("提取 MIDI"), this);
+    connect(m_extractPitchAction, &QAction::triggered, this, &PitchLabelerPage::onExtractPitch);
+    connect(m_extractMidiAction, &QAction::triggered, this, &PitchLabelerPage::onExtractMidi);
 
     static const dstools::SettingsKey<QString> kShortcutSave("Shortcuts/save", "Ctrl+S");
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
@@ -59,6 +63,8 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutZoomOut("Shortcuts/zoomOut", "Ctrl+-");
     static const dstools::SettingsKey<QString> kShortcutZoomReset("Shortcuts/zoomReset", "Ctrl+0");
     static const dstools::SettingsKey<QString> kShortcutABCompare("Shortcuts/abCompare", "Ctrl+B");
+    static const dstools::SettingsKey<QString> kShortcutExtractPitch("Shortcuts/extractPitch", "F");
+    static const dstools::SettingsKey<QString> kShortcutExtractMidi("Shortcuts/extractMidi", "M");
 
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
     m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
@@ -79,6 +85,10 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
                             QStringLiteral("重置缩放"), QStringLiteral("视图"));
     m_shortcutManager->bind(m_editor->abCompareAction(), kShortcutABCompare,
                             QStringLiteral("A/B 比较"), QStringLiteral("工具"));
+    m_shortcutManager->bind(m_extractPitchAction, kShortcutExtractPitch,
+                            QStringLiteral("提取音高"), QStringLiteral("处理"));
+    m_shortcutManager->bind(m_extractMidiAction, kShortcutExtractMidi,
+                            QStringLiteral("提取 MIDI"), QStringLiteral("处理"));
     m_shortcutManager->applyAll();
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
@@ -256,10 +266,8 @@ QMenuBar *PitchLabelerPage::createMenuBar(QWidget *parent) {
     }
 
     auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
-    processMenu->addAction(QStringLiteral("提取音高 (当前切片)"),
-                           this, &PitchLabelerPage::onExtractPitch);
-    processMenu->addAction(QStringLiteral("提取 MIDI (当前切片)"),
-                           this, &PitchLabelerPage::onExtractMidi);
+    processMenu->addAction(m_extractPitchAction);
+    processMenu->addAction(m_extractMidiAction);
     processMenu->addAction(QStringLiteral("计算 ph_num (当前切片)"),
                            this, &PitchLabelerPage::onAddPhNum);
     processMenu->addSeparator();

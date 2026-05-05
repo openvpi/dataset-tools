@@ -48,10 +48,13 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
 
     m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
     m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
+    m_faAction = new QAction(QStringLiteral("强制对齐当前切片"), this);
+    connect(m_faAction, &QAction::triggered, this, &PhonemeLabelerPage::onRunFA);
 
     static const dstools::SettingsKey<QString> kShortcutSave("Shortcuts/save", "Ctrl+S");
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
     static const dstools::SettingsKey<QString> kShortcutRedo("Shortcuts/redo", "Ctrl+Y");
+    static const dstools::SettingsKey<QString> kShortcutFA("Shortcuts/fa", "F");
     static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
     static const dstools::SettingsKey<QString> kSplitterState("Layout/splitterState", "");
 
@@ -66,6 +69,8 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
                             QStringLiteral("撤销"), QStringLiteral("编辑"));
     m_shortcutManager->bind(m_editor->redoAction(), kShortcutRedo,
                             QStringLiteral("重做"), QStringLiteral("编辑"));
+    m_shortcutManager->bind(m_faAction, kShortcutFA,
+                            QStringLiteral("强制对齐"), QStringLiteral("处理"));
     m_shortcutManager->applyAll();
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
@@ -198,7 +203,7 @@ QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
     }
 
     auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
-    processMenu->addAction(QStringLiteral("强制对齐当前切片"), this, &PhonemeLabelerPage::onRunFA);
+    processMenu->addAction(m_faAction);
     processMenu->addSeparator();
     processMenu->addAction(QStringLiteral("批量强制对齐..."), this, &PhonemeLabelerPage::onBatchFA);
 

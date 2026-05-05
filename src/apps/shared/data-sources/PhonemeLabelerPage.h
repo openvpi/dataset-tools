@@ -63,6 +63,7 @@ private:
 
     QAction *m_prevAction = nullptr;
     QAction *m_nextAction = nullptr;
+    QAction *m_faAction = nullptr;
 
     HFA::HFA *m_hfa = nullptr;
     bool m_faRunning = false;

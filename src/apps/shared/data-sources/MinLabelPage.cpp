@@ -51,8 +51,11 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
     m_playAction = new QAction(QStringLiteral("播放/停止"), this);
     m_playAction->setIcon(QIcon(QStringLiteral(":/icons/play.svg")));
+    m_asrAction = new QAction(QStringLiteral("ASR 识别当前曲目"), this);
+    connect(m_asrAction, &QAction::triggered, this, &MinLabelPage::onRunAsr);
 
     static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/play", "F5");
+    static const dstools::SettingsKey<QString> kAsrRun("Shortcuts/asr", "R");
     static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
 
     m_shortcutManager = new dstools::widgets::ShortcutManager(&m_settings, this);
@@ -62,6 +65,8 @@ MinLabelPage::MinLabelPage(QWidget *parent)
                             QStringLiteral("下一个切片"), QStringLiteral("导航"));
     m_shortcutManager->bind(m_playAction, kPlaybackPlay,
                             QStringLiteral("播放/停止"), QStringLiteral("播放"));
+    m_shortcutManager->bind(m_asrAction, kAsrRun,
+                            QStringLiteral("ASR 识别"), QStringLiteral("处理"));
     m_shortcutManager->applyAll();
 
     connect(m_sliceList, &SliceListPanel::sliceSelected,
@@ -224,7 +229,7 @@ QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
     playMenu->addAction(m_playAction);
 
     auto *processMenu = bar->addMenu(QStringLiteral("处理(&R)"));
-    processMenu->addAction(QStringLiteral("ASR 识别当前曲目"), this, &MinLabelPage::onRunAsr);
+    processMenu->addAction(m_asrAction);
     processMenu->addSeparator();
     processMenu->addAction(QStringLiteral("批量 ASR..."), this, &MinLabelPage::onBatchAsr);
 

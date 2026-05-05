@@ -72,6 +72,7 @@ private:
     QAction *m_prevAction = nullptr;
     QAction *m_nextAction = nullptr;
     QAction *m_playAction = nullptr;
+    QAction *m_asrAction = nullptr;
 
     void onSliceSelected(const QString &sliceId);
     bool saveCurrentSlice();
