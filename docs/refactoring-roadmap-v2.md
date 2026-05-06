@@ -1,6 +1,6 @@
 # 重构路线图
 
-> 2026-05-06（更新）
+> 2026-05-06（更新于 2026-05-06）
 >
 > 前置文档：[human-decisions.md](human-decisions.md)、[unified-app-design.md](unified-app-design.md)
 >
@@ -86,57 +86,37 @@
 
 **分析**：代码逻辑正确（`setAudioData` + `rebuildMinMaxCache` + deferred `fitToWindow`）。可能原因：(1) 保存的 splitter state 将 waveform 高度压为 0；(2) `fitToWindow` 延迟执行时序问题。需要清除 QSettings 中的 `Layout/editorSplitterState` 验证。
 
-### B-04 Slicer 默认比例尺 3000 未生效
+### ~~B-04 Slicer 默认比例尺 3000 未生效~~ ✅ 已修复
 
-**问题**：`SlicerPage` 设置 `setDefaultResolution(3000)`，但刚打开仍显示 50 spx。
+**根因**：`fitToWindow()` 曾调用 `restoreResolution()` 从 QSettings 恢复旧会话保存的 50，覆盖了 `setDefaultResolution(3000)`。
 
-**根因**：`fitToWindow()` 中 `restoreResolution()` 从 QSettings 恢复旧会话保存的 50（之前默认 40 快照为 50），覆盖了 `setDefaultResolution(3000)` 的设置。
+**修复**：`fitToWindow()` 改为使用 `m_defaultResolution`；`restoreResolution()` 仅在 `onActivated()`（页面切换回来）时调用，新旧音频加载始终从默认分辨率开始。
 
-**流程分析**：
-1. 构造：`setDefaultResolution(3000)` → viewport = 3000 ✓
-2. `loadAudioFile()` → `fitToWindow()` → `restoreResolution()` 从 QSettings 加载旧值 50，**覆盖** 3000
-3. `onActivated()` → 再次 `restoreResolution()` 恢复旧值
+### ~~B-05 Phoneme 右键播放未连接~~ ✅ 已修复
 
-**修复方案**：
-- `fitToWindow()` 是新加载音频的入口，应使用默认分辨率；`restoreResolution()` 仅应在 `onActivated()`（页面切换回来）时调用
-- 或在 `restoreResolution()` 中增加版本标记：如果保存的分辨率来自旧默认版本，回退到新默认
+**实现**：`WaveformWidget::contextMenuEvent()` 和 `SpectrogramWidget::contextMenuEvent()` 均已实现 ADR-62（右键直接播放分段，不弹菜单）。两个 widget 都通过 `m_playWidget` 直接设置播放范围并启动播放。
 
-### B-05 Phoneme 右键播放未连接
+### ~~B-06 Phoneme Bind/Snap 按钮选中状态区分不明确~~ ✅ 已修复
 
-**问题**：PhonemeEditor 有 `playBoundarySegment()` 方法（按分段播放音频），但未连接任何触发信号。而 SlicerPage 中右键点击波形图可以触发切点操作。
+**修复**：Bind/Snap 按钮通过 `QToolButton` 的 `widgetForAction()` 获取 widget 并应用显式 QSS 样式（`:checked` 蓝色背景 + 白色文字，`!checked` 透明 + 灰色文字），视觉区分清晰。
 
-**分析**：ADR 62 规定"右键直接播放，不弹菜单"。`playBoundarySegment(double timeSec)` 已实现（PhonemeEditor.cpp:493-512），可根据当前时间计算所在分段的起止时间并播放。需要在 `connectSignals()` 中连接 `WaveformWidget::positionClicked` 或类似信号。
-
-**修复**：在 `PhonemeEditor::connectSignals()` 中添加右键播放连接：
-- `WaveformWidget` / `SpectrogramWidget` 右键 → `playBoundarySegment()`
-- 或通过 context menu action 触发
-
-### B-06 Phoneme Bind/Snap 按钮选中状态区分不明确
-
-**问题**：`PhonemeEditor` 工具栏中的 Bind 和 Snap 按钮使用默认 `QAction` + `setCheckable(true)`，在暗色主题下 checked/unchecked 视觉差异很小。
-
-**修复方案**：
-- 方案 A：添加显式 QSS 样式（`:checked` 状态下用醒目背景色/边框）
-- 方案 B：改为 `QPushButton` 并设置 `setCheckable(true)`，文本动态显示状态（如 "Bind: ON" / "Bind: OFF"）
-- 推荐方案 B：更直观且不依赖主题
-
-### 6.3 快捷键系统（部分完成）
+### ~~6.3 快捷键系统~~ ✅ 已完成
 
 | 页面 | 规划快捷键 | 实际状态 |
 |------|-----------|---------|
-| Slicer | S=自动切片, E=导出, I=导入切点, P=指针, K=切刀 | ⚠️ 只有 V=指针, C=切刀，缺少 S/E/I（DsSlicerPage 已补全 S/Ctrl+E/Ctrl+I） |
+| Slicer | S=自动切片, E=导出, I=导入切点, P=指针, K=切刀 | ✅ S/Shift+S/Ctrl+I/Ctrl+S/Ctrl+E 已补全（`createMenuBar()` 中 `setShortcut()`） |
 | PhonemeLabeler | F=FA, ←/→=切换切片 | ✅ |
 | PitchLabeler | F=提取音高, M=MIDI, ←/→=切换切片 | ✅ |
 | MinLabel | R=ASR, ←/→=切换切片 | ✅ |
 
-> 注：LabelSuite 版 SlicerPage 缺少 S/E/I 快捷键；DsLabeler 版 DsSlicerPage 已通过 `createMenuBar()` 中的 `setShortcut()` 补全。
+> ~~注：LabelSuite 版 SlicerPage 缺少 S/E/I 快捷键；DsLabeler 版 DsSlicerPage 已通过 `createMenuBar()` 中的 `setShortcut()` 补全。~~ 已同步补全。
 
-### 7.7 Slicer/Phoneme 界面行为不统一（部分完成）
+### ~~7.7 Slicer/Phoneme 界面行为不统一~~ ✅ 已完成
 
 - ✅ playhead 连接已统一到 `setPlayWidget()`
 - ✅ splitter 状态延迟恢复已实现
-- ⬜ dragController 连接可进一步统一，减少 SlicerPage 组装代码
-- ⬜ Phoneme 缺少右键分段播放（见 B-05）
+- ✅ dragController 连接已统一：`addChart()` 中通过 QMetaMethod 自动传播到 chart widget
+- ✅ Phoneme 右键分段播放（`contextMenuEvent` 在 WaveformWidget/SpectrogramWidget 中直接实现）
 
 ---
 
@@ -177,8 +157,11 @@
 | 7.6 | 波形图缺失 | 同 7.5 |
 | B-01 | 绑定边界拖动 | 移除跨层 clamp；binding 使用 word.start 保证时间对齐 |
 | B-05 | FA SP 过滤 | 不再过滤 SP/AP，完整保留 FA 输出 |
-
-> 注：原 B-04（Slicer 默认比例尺）标记完成但实际未完全生效，已回退到待修复列表。
+| B-04 | Slicer 默认比例尺 | `fitToWindow()` 使用 `m_defaultResolution`，`restoreResolution()` 仅 onActivated |
+| B-05 | Phoneme 右键播放 | `contextMenuEvent` 在 WaveformWidget/SpectrogramWidget 中直接播放分段 |
+| B-06 | Bind/Snap 按钮样式 | QToolButton QSS `:checked`/`!checked` 样式 |
+| 6.3 | Slicer 快捷键补全 | `createMenuBar()` 中 S/Shift+S/Ctrl+I/Ctrl+S/Ctrl+E 快捷键 |
+| 7.7 | dragController 统一 | `addChart()` QMetaMethod 自动传播；移除 PhonemeEditor 显式调用 |
 
 ---
 
