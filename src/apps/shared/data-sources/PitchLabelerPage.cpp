@@ -576,6 +576,7 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
                 guard->applyMidiResult(sliceId, notes);
                 DSFW_LOG_INFO("infer", ("MIDI transcription completed: " + sliceId.toStdString()
                               + " - " + std::to_string(notes.size()) + " notes").c_str());
+                dsfw::widgets::ToastNotification::show(
                     guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("MIDI 转录完成"), 3000);
             } else {
