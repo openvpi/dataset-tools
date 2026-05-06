@@ -2,6 +2,8 @@
 
 #include "EditorPageBase.h"
 
+#include <functional>
+
 #include <MinLabelEditor.h>
 
 namespace LyricFA {
@@ -50,6 +52,7 @@ private:
     void onBatchAsr();
     void runAsrForSlice(const QString &sliceId);
     void ensureAsrEngine();
+    void ensureAsrEngineAsync(std::function<void()> onReady = {});
     void onModelInvalidated(const QString &taskKey);
     void setAsrResult(const QString &sliceId, const QString &text);
     void updateProgress();

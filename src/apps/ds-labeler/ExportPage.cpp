@@ -582,7 +582,6 @@ void ExportPage::onExport() {
         for (const auto &sliceId : sliceIds) {
             m_statusLabel->setText(QStringLiteral("补全: %1").arg(sliceId));
             m_progressBar->setValue(++completed);
-            QApplication::processEvents();
 
             autoCompleteSlice(sliceId);
         }
@@ -610,7 +609,6 @@ void ExportPage::onExport() {
     for (const auto &sliceId : sliceIds) {
         m_statusLabel->setText(QStringLiteral("正在导出: %1").arg(sliceId));
         m_progressBar->setValue(++exported);
-        QApplication::processEvents();
 
         auto result = m_source->loadSlice(sliceId);
         if (!result) {

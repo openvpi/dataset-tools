@@ -12,6 +12,7 @@
 #include <QMimeData>
 #include <QPointer>
 #include <QHBoxLayout>
+#include <QTimer>
 #include <QtConcurrent>
 
 #include "AsrPipeline.h"
@@ -310,6 +311,20 @@ void MinLabelPage::ensureAsrEngine() {
 void MinLabelPage::onModelInvalidated(const QString &taskKey) {
     if (taskKey == QStringLiteral("asr"))
         m_asr = nullptr;
+}
+
+void MinLabelPage::ensureAsrEngineAsync(std::function<void()> onReady) {
+    if (m_asr && m_asr->initialized()) {
+        if (onReady) onReady();
+        return;
+    }
+    QPointer<MinLabelPage> guard(this);
+    QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
+        if (!guard) return;
+        ensureAsrEngine();
+        if (m_asr && m_asr->initialized() && onReady)
+            onReady();
+    });
 }
 
 void MinLabelPage::onRunAsr() {

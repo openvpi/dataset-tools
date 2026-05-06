@@ -3,6 +3,8 @@
 #include "EditorPageBase.h"
 #include <dstools/PhNumCalculator.h>
 
+#include <functional>
+
 #include <PitchEditor.h>
 
 namespace Rmvpe {
@@ -37,6 +39,7 @@ protected:
     bool isDirty() const override;
     bool saveCurrentSlice() override;
     void onSliceSelectedImpl(const QString &sliceId) override;
+    void onAutoInfer() override;
     void onDeactivatedImpl() override;
 
 private:
@@ -59,6 +62,8 @@ private:
 
     void ensureRmvpeEngine();
     void ensureGameEngine();
+    void ensureRmvpeEngineAsync(std::function<void()> onReady = {});
+    void ensureGameEngineAsync(std::function<void()> onReady = {});
     void onModelInvalidated(const QString &taskKey);
     void runPitchExtraction(const QString &sliceId);
     void runMidiTranscription(const QString &sliceId);

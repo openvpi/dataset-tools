@@ -12,6 +12,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSplitter>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QPointer>
 #include <QtConcurrent>
@@ -354,6 +355,83 @@ void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
         m_rmvpe = nullptr;
     else if (taskKey == QStringLiteral("midi_transcription"))
         m_game = nullptr;
+}
+
+void PitchLabelerPage::ensureRmvpeEngineAsync(std::function<void()> onReady) {
+    if (m_rmvpe && m_rmvpe->is_open()) {
+        if (onReady) onReady();
+        return;
+    }
+    QPointer<PitchLabelerPage> guard(this);
+    QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
+        if (!guard) return;
+        ensureRmvpeEngine();
+        if (m_rmvpe && m_rmvpe->is_open() && onReady)
+            onReady();
+    });
+}
+
+void PitchLabelerPage::ensureGameEngineAsync(std::function<void()> onReady) {
+    if (m_game && m_game->isOpen()) {
+        if (onReady) onReady();
+        return;
+    }
+    QPointer<PitchLabelerPage> guard(this);
+    QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
+        if (!guard) return;
+        ensureGameEngine();
+        if (m_game && m_game->isOpen() && onReady)
+            onReady();
+    });
+}
+
+void PitchLabelerPage::onAutoInfer() {
+    // Preload engines if configured
+    if (settingsBackend()) {
+        auto settingsData = settingsBackend()->load();
+        auto preload = settingsData["preload"].toObject();
+
+        auto pitchPreload = preload["pitch_extraction"].toObject();
+        if (pitchPreload["enabled"].toBool(false))
+            ensureRmvpeEngineAsync();
+
+        auto midiPreload = preload["midi_transcription"].toObject();
+        if (midiPreload["enabled"].toBool(false))
+            ensureGameEngineAsync();
+    }
+
+    // Auto-run inference for dirty layers
+    if (!source() || currentSliceId().isEmpty())
+        return;
+
+    auto dirty = source()->dirtyLayers(currentSliceId());
+
+    bool needPitch = dirty.contains(QStringLiteral("pitch"));
+    bool needMidi = dirty.contains(QStringLiteral("midi"));
+
+    if (needPitch) {
+        source()->clearDirtyLayers(currentSliceId(), {QStringLiteral("pitch")});
+        ensureRmvpeEngineAsync([this]() {
+            if (m_rmvpe && m_rmvpe->is_open() && !m_inferRunning) {
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Info,
+                    QStringLiteral("自动提取音高..."), 3000);
+                runPitchExtraction(currentSliceId());
+            }
+        });
+    }
+
+    if (needMidi) {
+        source()->clearDirtyLayers(currentSliceId(), {QStringLiteral("midi")});
+        ensureGameEngineAsync([this]() {
+            if (m_game && m_game->isOpen() && !m_inferRunning) {
+                dsfw::widgets::ToastNotification::show(
+                    this, dsfw::widgets::ToastType::Info,
+                    QStringLiteral("自动转写 MIDI..."), 3000);
+                runMidiTranscription(currentSliceId());
+            }
+        });
+    }
 }
 
 void PitchLabelerPage::onExtractPitch() {
