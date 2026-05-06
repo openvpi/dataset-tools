@@ -271,9 +271,11 @@ namespace dstools {
         }
         m_needsFitOnResize = false;
 
-        // Use saved resolution if available, otherwise fall back to default
-        if (!restoreResolution())
-            m_viewport->setResolution(m_defaultResolution);
+        // fitToWindow is called when new audio is loaded — always use the
+        // page's default resolution so the initial view matches design intent.
+        // Saved per-page resolution is restored separately in onActivated()
+        // (page re-entry), not here.
+        m_viewport->setResolution(m_defaultResolution);
         updateViewRangeFromResolution();
     }
 
