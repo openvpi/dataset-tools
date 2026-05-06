@@ -8,6 +8,7 @@
 #pragma once
 
 #include <dstools/TimePos.h>
+#include <QString>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -23,6 +24,10 @@ public:
 
     /// @brief Number of tiers in this model.
     [[nodiscard]] virtual int tierCount() const = 0;
+
+    /// @brief Display name for a tier (e.g. "phoneme", "grapheme").
+    /// Default returns empty string.
+    [[nodiscard]] virtual QString tierName(int /*tierIndex*/) const { return {}; }
 
     /// @brief Index of the currently active tier (for hit-testing and rendering).
     [[nodiscard]] virtual int activeTierIndex() const = 0;

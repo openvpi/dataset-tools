@@ -41,7 +41,7 @@ public:
 
     [[nodiscard]] TimePos totalDuration() const override;
 
-    [[nodiscard]] QString tierName(int index) const;
+    [[nodiscard]] QString tierName(int index) const override;
     [[nodiscard]] bool isIntervalTier(int index) const;
 
     void moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) override;

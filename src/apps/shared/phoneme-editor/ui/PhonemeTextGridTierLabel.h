@@ -3,10 +3,14 @@
 #include "TierLabelArea.h"
 
 #include <QList>
-#include <QRadioButton>
-#include <QButtonGroup>
+
+class QComboBox;
 
 namespace dstools {
+
+namespace phonemelabeler {
+class IBoundaryModel;
+}
 
 class PhonemeTextGridTierLabel : public TierLabelArea {
     Q_OBJECT
@@ -38,17 +42,14 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
-    void rebuildRadioButtons();
+    void rebuildComboBox();
 
-    QButtonGroup *m_buttonGroup = nullptr;
-    QWidget *m_radioPanel = nullptr;
-    QList<QRadioButton *> m_radioButtons;
+    QComboBox *m_tierCombo = nullptr;
 
     static constexpr int kTierRowHeight = 24;
-    static constexpr int kRadioPanelWidth = 28;
+    static constexpr int kComboWidth = 100;
 
     bool m_alignmentRunning = false;
-    int m_leftMargin = kRadioPanelWidth;
 };
 
 } // namespace dstools

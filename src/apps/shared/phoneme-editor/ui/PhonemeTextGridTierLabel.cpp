@@ -4,7 +4,7 @@
 
 #include <dstools/TimePos.h>
 
-#include <QHBoxLayout>
+#include <QComboBox>
 #include <QPainter>
 #include <QPaintEvent>
 
@@ -12,16 +12,16 @@ namespace dstools {
 
 PhonemeTextGridTierLabel::PhonemeTextGridTierLabel(QWidget *parent)
     : TierLabelArea(parent) {
-    // Radio buttons sit in an overlay panel at the left edge.
-    // They are positioned absolutely per tier row (no layout) so they
-    // align vertically with the tier label text.
-    m_radioPanel = new QWidget(this);
-    m_radioPanel->setStyleSheet(QStringLiteral("background-color: #2a2a2f;"));
+    m_tierCombo = new QComboBox(this);
+    m_tierCombo->setFixedHeight(kTierRowHeight - 2);
+    m_tierCombo->setMinimumWidth(kComboWidth);
+    m_tierCombo->setMaximumWidth(160);
+    m_tierCombo->setToolTip(tr("选择活跃层级（该层的边界线贯穿全图）"));
 
-    m_buttonGroup = new QButtonGroup(this);
-    m_buttonGroup->setExclusive(true);
-    connect(m_buttonGroup, &QButtonGroup::idClicked, this, [this](int id) {
-        setActiveTierIndex(id);
+    connect(m_tierCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int index) {
+        if (index >= 0)
+            setActiveTierIndex(index);
     });
 
     setFixedHeight(kTierRowHeight);
@@ -29,7 +29,7 @@ PhonemeTextGridTierLabel::PhonemeTextGridTierLabel(QWidget *parent)
 
 void PhonemeTextGridTierLabel::setBoundaryModel(IBoundaryModel *model) {
     TierLabelArea::setBoundaryModel(model);
-    rebuildRadioButtons();
+    rebuildComboBox();
 }
 
 int PhonemeTextGridTierLabel::activeTierIndex() const {
@@ -39,8 +39,8 @@ int PhonemeTextGridTierLabel::activeTierIndex() const {
 void PhonemeTextGridTierLabel::setActiveTierIndex(int index) {
     if (m_activeTierIndex != index) {
         m_activeTierIndex = index;
-        if (m_buttonGroup && index >= 0 && index < m_radioButtons.size())
-            m_radioButtons[index]->setChecked(true);
+        if (m_tierCombo && index >= 0 && index < m_tierCombo->count())
+            m_tierCombo->setCurrentIndex(index);
         emit activeTierChanged(index);
         update();
     }
@@ -81,6 +81,7 @@ int PhonemeTextGridTierLabel::tierRowHeight() const {
 void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
     int w = width();
+    int h = height();
 
     painter.fillRect(rect(), QColor(40, 40, 45));
 
@@ -96,24 +97,15 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
         return;
     }
 
+    // Draw boundary lines in the label area for ALL tiers.
+    // Active tier lines are solid; non-active are dashed.
     int tiers = m_boundaryModel->tierCount();
-    int rowH = kTierRowHeight;
-    int totalH = tiers * rowH;
-
     auto allBounds = allTierBoundaries();
 
     for (int t = 0; t < tiers; ++t) {
-        int rowTop = t * rowH;
-        int rowBottom = rowTop + rowH;
-
         bool isActive = (t == m_activeTierIndex);
-
-        if (t > 0) {
-            painter.setPen(QPen(QColor(60, 60, 70), 1));
-            painter.drawLine(0, rowTop, w, rowTop);
-        }
-
         const auto &bounds = allBounds[t];
+
         for (double bTime : bounds) {
             int x = timeToX(bTime);
             if (x < 0 || x > w)
@@ -124,36 +116,13 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
             } else {
                 painter.setPen(QPen(QColor(100, 100, 120), 1, Qt::DashLine));
             }
-            painter.drawLine(x, rowTop, x, rowBottom);
-        }
-
-        if (!bounds.isEmpty() && isActive) {
-            QFont font = painter.font();
-            font.setPixelSize(10);
-            painter.setFont(font);
-            painter.setPen(QColor(180, 180, 200));
-
-            std::vector<double> segBounds;
-            segBounds.push_back(0.0);
-            for (double b : bounds)
-                segBounds.push_back(b);
-
-            for (size_t i = 0; i + 1 < segBounds.size(); ++i) {
-                int x1 = timeToX(segBounds[i]);
-                int x2 = timeToX(segBounds[i + 1]);
-                int segWidth = x2 - x1;
-                if (segWidth > 30) {
-                    QRect textRect(x1 + 2, rowTop, segWidth - 4, rowH);
-                    painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft,
-                                     QString::number(i));
-                }
-            }
+            painter.drawLine(x, 0, x, h);
         }
     }
 
+    // Bottom border
     painter.setPen(QPen(QColor(80, 80, 100), 1));
-    painter.drawLine(0, 0, w, 0);
-    painter.drawLine(0, totalH - 1, w, totalH - 1);
+    painter.drawLine(0, h - 1, w, h - 1);
 
     if (m_alignmentRunning) {
         painter.setPen(QColor(100, 180, 255));
@@ -165,16 +134,16 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
 
 void PhonemeTextGridTierLabel::resizeEvent(QResizeEvent *event) {
     TierLabelArea::resizeEvent(event);
-    // Keep radio panel at left edge, matching full tier height
-    if (m_radioPanel) {
-        int h = height();
-        m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, h);
-        m_radioPanel->raise();
+    // Position combo box at the left edge, vertically centered
+    if (m_tierCombo) {
+        int comboW = qMin(m_tierCombo->sizeHint().width(), 160);
+        int y = (height() - m_tierCombo->height()) / 2;
+        m_tierCombo->setGeometry(2, qMax(y, 1), comboW, m_tierCombo->height());
     }
 }
 
 void PhonemeTextGridTierLabel::onModelDataChanged() {
-    rebuildRadioButtons();
+    rebuildComboBox();
 }
 
 void PhonemeTextGridTierLabel::setAlignmentRunning(bool running) {
@@ -184,34 +153,44 @@ void PhonemeTextGridTierLabel::setAlignmentRunning(bool running) {
     }
 }
 
-void PhonemeTextGridTierLabel::rebuildRadioButtons() {
-    qDeleteAll(m_radioButtons);
-    m_radioButtons.clear();
-
-    if (!m_boundaryModel)
+void PhonemeTextGridTierLabel::rebuildComboBox() {
+    if (!m_tierCombo)
         return;
 
-    int tiers = m_boundaryModel->tierCount();
-    int totalH = qMax(tiers, 1) * kTierRowHeight;
-    setFixedHeight(totalH);
+    // Block signals to avoid triggering currentIndexChanged during rebuild
+    m_tierCombo->blockSignals(true);
+    m_tierCombo->clear();
 
-    // Size radio panel to match the total tier height
-    m_radioPanel->setFixedSize(kRadioPanelWidth, totalH);
-    m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, totalH);
-
-    for (int t = 0; t < tiers; ++t) {
-        auto *btn = new QRadioButton(m_radioPanel);
-        btn->setFixedSize(kRadioPanelWidth, kTierRowHeight);
-        if (t == m_activeTierIndex)
-            btn->setChecked(true);
-        m_buttonGroup->addButton(btn, t);
-        // Position each button at the exact y offset for its tier row
-        btn->move(0, t * kTierRowHeight);
-        btn->show();
-        m_radioButtons.append(btn);
+    if (!m_boundaryModel) {
+        m_tierCombo->blockSignals(false);
+        setFixedHeight(kTierRowHeight);
+        return;
     }
 
-    m_radioPanel->raise();
+    int tiers = m_boundaryModel->tierCount();
+    setFixedHeight(kTierRowHeight);
+
+    for (int t = 0; t < tiers; ++t) {
+        QString name = m_boundaryModel->tierName(t);
+        if (name.isEmpty())
+            name = QStringLiteral("Tier %1").arg(t + 1);
+        m_tierCombo->addItem(name);
+    }
+
+    if (m_activeTierIndex >= 0 && m_activeTierIndex < tiers)
+        m_tierCombo->setCurrentIndex(m_activeTierIndex);
+    else if (tiers > 0)
+        m_tierCombo->setCurrentIndex(0);
+
+    m_tierCombo->blockSignals(false);
+    m_tierCombo->setVisible(tiers > 0);
+
+    // Trigger resize to reposition combo
+    if (auto *e = new QResizeEvent(size(), size())) {
+        resizeEvent(e);
+        delete e;
+    }
+
     update();
 }
 
