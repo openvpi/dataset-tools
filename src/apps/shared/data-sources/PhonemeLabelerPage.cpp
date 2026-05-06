@@ -278,6 +278,7 @@ void PhonemeLabelerPage::restoreExtraSplitters() {
 void PhonemeLabelerPage::saveExtraSplitters() {
     static const dstools::SettingsKey<QString> kEditorSplitterState("Layout/editorSplitterState", "");
     settings().set(kEditorSplitterState, QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
+    m_editor->saveViewportResolution();
 }
 
 void PhonemeLabelerPage::onAutoInfer() {

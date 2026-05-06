@@ -245,7 +245,22 @@ bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
 }
 
 void AudioVisualizerContainer::setDefaultResolution(int resolution) {
-    m_defaultResolution = std::clamp(resolution, 10, 400);
+    m_defaultResolution = std::clamp(resolution, 10, 44100);
+}
+
+void AudioVisualizerContainer::saveResolution() {
+    static const dstools::SettingsKey<int> kResolution("Viewport/resolution", 0);
+    m_settings.set(kResolution, m_viewport->resolution());
+}
+
+bool AudioVisualizerContainer::restoreResolution() {
+    static const dstools::SettingsKey<int> kResolution("Viewport/resolution", 0);
+    int saved = m_settings.get(kResolution);
+    if (saved > 0) {
+        m_viewport->setResolution(saved);
+        return true;
+    }
+    return false;
 }
 
 void AudioVisualizerContainer::fitToWindow() {
@@ -260,8 +275,9 @@ void AudioVisualizerContainer::fitToWindow() {
     }
     m_needsFitOnResize = false;
 
-    // Apply the configured default resolution
-    m_viewport->setResolution(m_defaultResolution);
+    // Try to restore previously saved resolution; fall back to default
+    if (!restoreResolution())
+        m_viewport->setResolution(m_defaultResolution);
     // Compute and set the correct view range for this resolution + width
     updateViewRangeFromResolution();
 }

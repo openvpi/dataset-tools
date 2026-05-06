@@ -73,8 +73,15 @@ public:
     void setAudioData(const std::vector<float> &samples, int sampleRate);
 
     /// Set default resolution for this container (samples per pixel).
-    /// Called once during page setup. Default = 40.
+    /// Called once during page setup.
     void setDefaultResolution(int resolution);
+
+    /// Save current resolution to per-page persistent settings.
+    void saveResolution();
+
+    /// Restore resolution from per-page persistent settings.
+    /// Returns true if a saved value was found and applied.
+    bool restoreResolution();
 
     void fitToWindow();
 

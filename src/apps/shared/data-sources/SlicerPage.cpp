@@ -154,7 +154,7 @@ void SlicerPage::buildLayout() {
     mainLayout->addWidget(paramsWidget);
 
     m_container = new AudioVisualizerContainer(QStringLiteral("Slicer"), contentWidget);
-    m_container->setDefaultResolution(60); // ~735 PPS at 44100Hz — wider view for slicing
+    m_container->setDefaultResolution(5000); // ~2 min visible at 44100Hz / 1200px viewport
     m_viewport = m_container->viewport();
     m_container->setPlayWidget(m_playWidget);
 
@@ -511,6 +511,7 @@ bool SlicerPage::onDeactivating() {
     m_settings.set(kHSplitterState, QString::fromLatin1(m_hSplitter->saveState().toBase64()));
     m_settings.set(kSplitterState, QString::fromLatin1(m_container->saveSplitterState().toBase64()));
     m_settings.set(kChartOrder, m_container->chartOrder().join(QLatin1Char(',')));
+    m_container->saveResolution();
     return true;
 }
 

@@ -128,6 +128,14 @@ void PhonemeEditor::restoreSplitterState(const QByteArray &state) {
         m_container->restoreSplitterState(rightState);
 }
 
+void PhonemeEditor::saveViewportResolution() {
+    m_container->saveResolution();
+}
+
+void PhonemeEditor::restoreViewportResolution() {
+    m_container->restoreResolution();
+}
+
 QList<QAction *> PhonemeEditor::viewActions() const {
     return {m_actZoomIn, m_actZoomOut, m_actZoomReset, nullptr,
             m_actToggleBinding, nullptr,
@@ -248,7 +256,7 @@ void PhonemeEditor::buildLayout() {
     mainLayout->addWidget(m_mainSplitter);
 
     m_container = new AudioVisualizerContainer(QStringLiteral("PhonemeEditor"), this);
-    m_container->setDefaultResolution(40); // ~1102 PPS at 44100Hz — fine detail for phoneme editing
+    m_container->setDefaultResolution(800); // ~20s visible at 44100Hz / 1200px viewport
     m_viewport = m_container->viewport();
     m_container->setPlayWidget(m_playWidget);
 
@@ -474,7 +482,7 @@ void PhonemeEditor::onZoomOut() {
 }
 
 void PhonemeEditor::onZoomReset() {
-    m_viewport->setResolution(40); // default resolution
+    m_viewport->setResolution(800); // default resolution for phoneme editing
     m_container->updateViewRangeFromResolution();
     emit zoomChanged(m_viewport->resolution());
 }

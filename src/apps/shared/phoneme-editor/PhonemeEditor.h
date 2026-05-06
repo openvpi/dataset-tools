@@ -148,6 +148,10 @@ namespace dstools {
             QByteArray saveSplitterState() const;
             void restoreSplitterState(const QByteArray &state);
 
+            /// Save/restore the viewport resolution to per-page persistent settings.
+            void saveViewportResolution();
+            void restoreViewportResolution();
+
         signals:
             void modificationChanged(bool modified);
             void positionChanged(double sec);
