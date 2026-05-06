@@ -74,7 +74,7 @@
 
 ## 待修复
 
-### B-02 Phoneme 非活跃层边界贯穿线显示
+### B-02 Phoneme 非活跃层边界贯穿线显示 ✅
 
 **问题**：未选中的层级的边界线在下方图表（waveform/spectrogram/power）中也显示为贯穿线。
 

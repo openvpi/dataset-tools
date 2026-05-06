@@ -4,6 +4,7 @@
 
 #include <dstools/TimePos.h>
 
+#include <algorithm>
 #include <QPainter>
 #include <QPen>
 #include <QEvent>
@@ -122,11 +123,9 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
         int lineBottom;
 
         if (isActive) {
-            // D-05: Active tier boundary lines extend through ALL charts
             lineBottom = fullBottom;
         } else {
-            // D-05: Non-active tier boundary lines stay within the tier label area
-            lineBottom = tiers * tierRowH;
+            lineBottom = std::min(tiers * tierRowH, tierLabelH);
         }
 
         for (int b = 0; b < count; ++b) {

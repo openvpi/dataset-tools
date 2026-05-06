@@ -329,7 +329,10 @@ void PhonemeEditor::buildLayout() {
     auto *boundaryOverlay = m_container->boundaryOverlay();
     if (boundaryOverlay) {
         boundaryOverlay->setDocument(m_document);
-        boundaryOverlay->setTierLabelGeometry(m_tierLabel->height(), m_tierLabel->tierRowHeight());
+        int tierCount = m_document->tierCount();
+        int totalH = m_tierLabel->height();
+        int rowH = (tierCount > 1) ? totalH / tierCount : totalH;
+        boundaryOverlay->setTierLabelGeometry(totalH, rowH);
     }
 
     m_mainSplitter->addWidget(m_container);
@@ -411,7 +414,10 @@ void PhonemeEditor::connectSignals() {
         updateAllBoundaryOverlays();
         m_tierLabel->setActiveTierIndex(tier);
         if (auto *bo = m_container->boundaryOverlay()) {
-            bo->setTierLabelGeometry(m_tierLabel->height(), m_tierLabel->tierRowHeight());
+            int tierCount = m_document->tierCount();
+            int totalH = m_tierLabel->height();
+            int rowH = (tierCount > 1) ? totalH / tierCount : totalH;
+            bo->setTierLabelGeometry(totalH, rowH);
         }
     });
     connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, TimePos) {
