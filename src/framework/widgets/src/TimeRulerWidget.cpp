@@ -36,14 +36,16 @@ TimeRulerWidget::TimeRulerWidget(ViewportController *viewport, QWidget *parent)
                 this, [this](const ViewportState &state) { setViewport(state); });
         m_viewStart = m_viewport->state().startSec;
         m_viewEnd = m_viewport->state().endSec;
-        m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
+        m_resolution = m_viewport->state().resolution;
+        m_sampleRate = m_viewport->state().sampleRate;
     }
 }
 
 void TimeRulerWidget::setViewport(const ViewportState &state) {
     m_viewStart = state.startSec;
     m_viewEnd = state.endSec;
-    m_pixelsPerSecond = state.pixelsPerSecond;
+    m_resolution = state.resolution;
+    m_sampleRate = state.sampleRate;
     update();
 }
 
@@ -99,7 +101,9 @@ void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
     double viewDuration = m_viewEnd - m_viewStart;
     if (viewDuration <= 0.0) return;
 
-    auto level = findLevel(m_pixelsPerSecond);
+    auto level = findLevel(m_sampleRate > 0 && m_resolution > 0
+                           ? static_cast<double>(m_sampleRate) / m_resolution
+                           : 200.0);
 
     QFont font = painter.font();
     font.setPixelSize(10);

@@ -76,8 +76,12 @@ void AudioVisualizerContainer::updateScaleIndicator() {
         return;
 
     int resolution = m_viewport->resolution();
-    double pps = m_viewport->pixelsPerSecond();
-    double msPerDiv = 1000.0 / pps * 80.0; // ~80px per division
+    int sampleRate = m_viewport->sampleRate();
+
+    // msPerDiv: time represented by ~80 pixels at current resolution
+    double msPerDiv = (sampleRate > 0)
+        ? static_cast<double>(resolution) / sampleRate * 80.0 * 1000.0
+        : 0.0;
 
     // Format: show time-per-division and resolution
     QString text;

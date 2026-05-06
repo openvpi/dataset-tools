@@ -35,7 +35,6 @@ IntervalTierView::IntervalTierView(int tierIndex, TextGridDocument *doc,
 void IntervalTierView::setViewport(const ViewportState &state) {
     m_viewStart = state.startSec;
     m_viewEnd = state.endSec;
-    m_pixelsPerSecond = state.pixelsPerSecond;
     update();
 }
 

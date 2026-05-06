@@ -30,7 +30,6 @@ PowerWidget::PowerWidget(ViewportController *viewport, QWidget *parent)
     if (m_viewport) {
         m_viewStart = m_viewport->state().startSec;
         m_viewEnd = m_viewport->state().endSec;
-        m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
     }
 }
 
@@ -46,7 +45,6 @@ void PowerWidget::setAudioData(const std::vector<float> &samples, int sampleRate
 void PowerWidget::setViewport(const ViewportState &state) {
     m_viewStart = state.startSec;
     m_viewEnd = state.endSec;
-    m_pixelsPerSecond = state.pixelsPerSecond;
     rebuildPowerCache();
     update();
 }
@@ -140,7 +138,7 @@ void PowerWidget::drawPower(QPainter &painter) {
 }
 
 void PowerWidget::rebuildPowerCache() {
-    if (m_samples.empty() || m_pixelsPerSecond <= 0.0) {
+    if (m_samples.empty() || m_viewEnd <= m_viewStart) {
         m_powerCache.clear();
         return;
     }

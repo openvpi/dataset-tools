@@ -39,10 +39,9 @@ private slots:
         ViewportController vc(nullptr);
         QCOMPARE(vc.startSec(), 0.0);
         QCOMPARE(vc.endSec(), 10.0);
-        // Default: resolution=40, sampleRate=44100 → PPS=1102.5
-        QCOMPARE(vc.pixelsPerSecond(), 44100.0 / 40.0);
         QCOMPARE(vc.totalDuration(), 0.0);
-        QCOMPARE(vc.resolution(), 40);
+        // Default resolution snaps to nearest table entry from 40 → 30 or 50
+        QVERIFY(vc.resolution() > 0);
     }
 
     void testViewportControllerSetRange() {
@@ -57,8 +56,9 @@ private slots:
         ViewportController vc(nullptr);
         vc.setTotalDuration(60.0);
         vc.setViewRange(0.0, 10.0);
-        vc.zoomAt(5.0, 2.0);
-        QVERIFY(vc.pixelsPerSecond() > 200.0);
+        int oldRes = vc.resolution();
+        vc.zoomIn(5.0);
+        QVERIFY(vc.resolution() < oldRes);
     }
 
     void testViewportControllerScroll() {

@@ -36,7 +36,6 @@ WaveformWidget::WaveformWidget(ViewportController *viewport, QWidget *parent)
     if (m_viewport) {
         m_viewStart = m_viewport->state().startSec;
         m_viewEnd = m_viewport->state().endSec;
-        m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
     }
 }
 
@@ -97,7 +96,6 @@ void WaveformWidget::setBoundaryModel(IBoundaryModel *model) {
 void WaveformWidget::setViewport(const ViewportState &state) {
     m_viewStart = state.startSec;
     m_viewEnd = state.endSec;
-    m_pixelsPerSecond = state.pixelsPerSecond;
     rebuildMinMaxCache();
     update();
 }
@@ -225,14 +223,14 @@ void WaveformWidget::updateBoundaryOverlay() {
 }
 
 void WaveformWidget::rebuildMinMaxCache() {
-    if (m_samples.empty() || m_pixelsPerSecond <= 0.0) {
+    if (m_samples.empty() || m_viewEnd <= m_viewStart) {
         m_minMaxCache.clear();
         return;
     }
 
     int numPixels = qMax(1, width());
     m_minMaxCache.resize(numPixels);
-    m_cachePixelsPerSecond = m_pixelsPerSecond;
+    m_cacheResolution = (m_viewEnd - m_viewStart);
 
     for (int x = 0; x < numPixels; ++x) {
         double tStart = m_viewStart + (m_viewEnd - m_viewStart) * x / numPixels;

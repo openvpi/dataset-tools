@@ -5,6 +5,8 @@
 #include <QResizeEvent>
 #include <QWheelEvent>
 
+#include <cmath>
+
 namespace dstools {
 
 using dsfw::widgets::ViewportController;
@@ -235,9 +237,10 @@ void MiniMapScrollBar::mouseReleaseEvent(QMouseEvent * /*event*/) {
     // so the viewport always uses a resolution from the table
     if ((m_dragMode == DragMode::ZoomLeft || m_dragMode == DragMode::ZoomRight) && m_viewport) {
         double viewDur = m_viewEnd - m_viewStart;
-        if (viewDur > 0.0 && width() > 0) {
-            double pps = static_cast<double>(width()) / viewDur;
-            m_viewport->setPixelsPerSecond(pps); // snaps to nearest resolution
+        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
+            // Compute the resolution that matches the dragged view range
+            int newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
+            m_viewport->setResolution(newRes); // snaps to nearest table entry
         }
     }
     m_dragMode = DragMode::None;

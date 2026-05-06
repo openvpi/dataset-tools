@@ -137,7 +137,6 @@ namespace dstools {
             void setBindingEnabled(bool enabled);
             void setSnapEnabled(bool enabled);
             void setBindingToleranceMs(double ms);
-            void setPixelsPerSecond(double pps);
             void setPowerVisible(bool visible);
             void setSpectrogramVisible(bool visible);
             void setSpectrogramColorStyle(const QString &styleName);
@@ -152,7 +151,7 @@ namespace dstools {
         signals:
             void modificationChanged(bool modified);
             void positionChanged(double sec);
-            void zoomChanged(double pixelsPerSecond);
+            void zoomChanged(int resolution);
             void bindingChanged(bool enabled);
             void fileStatusChanged(const QString &fileName);
             void documentLoaded();

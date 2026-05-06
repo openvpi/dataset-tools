@@ -676,8 +676,10 @@ void PianoRollView::setViewportController(dstools::widgets::ViewportController *
 }
 
 void PianoRollView::onViewportChanged(const dstools::widgets::ViewportState &state) {
-    m_hScale = state.pixelsPerSecond;
-    m_scrollX = state.startSec * state.pixelsPerSecond;
+    m_hScale = (state.sampleRate > 0 && state.resolution > 0)
+        ? static_cast<double>(state.sampleRate) / state.resolution
+        : 200.0;
+    m_scrollX = state.startSec * m_hScale;
     updateScrollBars();
     m_hScrollBar->blockSignals(true);
     m_hScrollBar->setValue(static_cast<int>(m_scrollX));

@@ -134,7 +134,6 @@ private:
 
     double m_viewStart = 0.0;                           ///< Visible range start in seconds.
     double m_viewEnd = 10.0;                            ///< Visible range end in seconds.
-    double m_pixelsPerSecond = 200.0;                   ///< Current zoom level.
 
     static constexpr int kStandardHopSize = 256;        ///< Standard hop size.
     static constexpr int kStandardWindowSize = 2048;    ///< Standard FFT window size.

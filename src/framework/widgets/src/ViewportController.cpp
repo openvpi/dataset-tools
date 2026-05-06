@@ -4,11 +4,12 @@
 
 namespace dsfw::widgets {
 
-// Discrete resolution steps (samples per pixel).
-// All values are round numbers matching common zoom levels.
-// Zoom always snaps to the nearest entry — no continuous scaling.
+// Logarithmic resolution step table (samples per pixel).
+// 22 entries covering fine editing (10 spx) to full overview (44100 spx = 1 px/s).
+// All values are round numbers. Zoom steps through this table sequentially.
 static const std::vector<int> kResolutionTable = {
-    10, 20, 30, 40, 60, 80, 100, 150, 200, 300, 400
+    10, 20, 30, 50, 80, 100, 150, 200, 300, 500, 800, 1000,
+    1500, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 30000, 44100
 };
 
 const std::vector<int> &ViewportController::resolutionTable() {
@@ -17,7 +18,6 @@ const std::vector<int> &ViewportController::resolutionTable() {
 
 int ViewportController::findResolutionIndex(int res) const {
     const auto &table = resolutionTable();
-    // Find closest entry
     int bestIdx = 0;
     int bestDist = std::abs(table[0] - res);
     for (int i = 1; i < static_cast<int>(table.size()); ++i) {
@@ -31,16 +31,15 @@ int ViewportController::findResolutionIndex(int res) const {
 }
 
 ViewportController::ViewportController(QObject *parent) : QObject(parent) {
-    // Default resolution = 40 (index 4 in table)
     m_resolutionIndex = findResolutionIndex(m_resolution);
     m_resolution = resolutionTable()[m_resolutionIndex];
-    updatePPS();
+    syncStateFields();
 }
 
 void ViewportController::setAudioParams(int sampleRate, int64_t totalSamples) {
     m_sampleRate = sampleRate;
     m_totalSamples = totalSamples;
-    updatePPS();
+    syncStateFields();
     clampAndEmit();
 }
 
@@ -57,12 +56,7 @@ double ViewportController::totalDuration() const {
 void ViewportController::setResolution(int resolution) {
     m_resolutionIndex = findResolutionIndex(resolution);
     m_resolution = resolutionTable()[m_resolutionIndex];
-    updatePPS();
-    // Note: view range (startSec/endSec) is NOT adjusted here.
-    // The container is responsible for calling setViewRange() after
-    // setResolution() to match the new PPS with the widget width.
-    // This avoids the old bug where setResolution would compute
-    // endSec from a stale "duration" that didn't match widget width.
+    syncStateFields();
     clampAndEmit();
 }
 
@@ -72,7 +66,7 @@ void ViewportController::zoomIn(double centerSec) {
     int oldRes = m_resolution;
     m_resolutionIndex--;
     m_resolution = resolutionTable()[m_resolutionIndex];
-    updatePPS();
+    syncStateFields();
 
     // Keep the center time at the same pixel position
     double oldDuration = m_state.endSec - m_state.startSec;
@@ -89,7 +83,7 @@ void ViewportController::zoomOut(double centerSec) {
     int oldRes = m_resolution;
     m_resolutionIndex++;
     m_resolution = resolutionTable()[m_resolutionIndex];
-    updatePPS();
+    syncStateFields();
 
     double oldDuration = m_state.endSec - m_state.startSec;
     double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
@@ -107,12 +101,6 @@ bool ViewportController::canZoomOut() const {
     return m_resolutionIndex < static_cast<int>(resolutionTable().size()) - 1;
 }
 
-void ViewportController::setPixelsPerSecond(double pps) {
-    if (m_sampleRate <= 0) return;
-    int newRes = static_cast<int>(std::round(static_cast<double>(m_sampleRate) / pps));
-    setResolution(newRes);
-}
-
 void ViewportController::zoomAt(double centerSec, double factor) {
     if (factor <= 0.0) return;
     if (factor > 1.0) {
@@ -120,6 +108,12 @@ void ViewportController::zoomAt(double centerSec, double factor) {
     } else if (factor < 1.0) {
         zoomOut(centerSec);
     }
+}
+
+void ViewportController::setPixelsPerSecond(double pps) {
+    if (m_sampleRate <= 0 || pps <= 0.0) return;
+    int newRes = static_cast<int>(std::round(static_cast<double>(m_sampleRate) / pps));
+    setResolution(newRes);
 }
 
 void ViewportController::setViewRange(double startSec, double endSec) {
@@ -134,10 +128,9 @@ void ViewportController::scrollBy(double deltaSec) {
     clampAndEmit();
 }
 
-void ViewportController::updatePPS() {
-    if (m_sampleRate > 0 && m_resolution > 0) {
-        m_state.pixelsPerSecond = static_cast<double>(m_sampleRate) / m_resolution;
-    }
+void ViewportController::syncStateFields() {
+    m_state.resolution = m_resolution;
+    m_state.sampleRate = m_sampleRate;
 }
 
 void ViewportController::clampAndEmit() {
@@ -154,6 +147,9 @@ void ViewportController::clampAndEmit() {
         m_state.startSec -= diff;
         if (m_state.startSec < 0.0) m_state.startSec = 0.0;
     }
+    // Ensure state fields are in sync before emitting
+    m_state.resolution = m_resolution;
+    m_state.sampleRate = m_sampleRate;
     emit viewportChanged(m_state);
 }
 

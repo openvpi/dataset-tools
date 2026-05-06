@@ -1,6 +1,10 @@
 #pragma once
 /// @file ViewportController.h
 /// @brief Resolution-driven time-axis viewport controller for waveform/spectrogram views.
+///
+/// The sole zoom state is "resolution" (samples per pixel). All time↔pixel
+/// conversions use resolution + sampleRate. The legacy "pixelsPerSecond"
+/// concept is intentionally absent — see D-26 in human-decisions.md.
 
 #include <dsfw/widgets/WidgetsGlobal.h>
 #include <QObject>
@@ -10,17 +14,23 @@
 namespace dsfw::widgets {
 
 /// @brief Describes the visible time range and zoom level of a viewport.
+///
+/// Widgets receive this struct via viewportChanged(). To convert between
+/// time and pixel coordinates, use:
+///   pixelX  = (timeSec - startSec) * sampleRate / resolution
+///   timeSec = pixelX * resolution / sampleRate + startSec
 struct DSFW_WIDGETS_API ViewportState {
-    double startSec = 0.0;        ///< @brief Start of the visible range in seconds.
-    double endSec = 10.0;         ///< @brief End of the visible range in seconds.
-    double pixelsPerSecond = 200.0; ///< @brief Horizontal zoom level (derived from resolution).
+    double startSec = 0.0;  ///< Start of the visible range in seconds.
+    double endSec = 10.0;   ///< End of the visible range in seconds.
+    int resolution = 40;    ///< Samples per pixel (zoom level).
+    int sampleRate = 44100; ///< Audio sample rate in Hz.
 };
 
 /// @brief Controls the visible time range and zoom for time-axis views.
 ///
-/// Internally driven by "resolution" (samples per pixel), following vLabeler's model.
-/// The resolution is discrete and steps through a logarithmic table, eliminating
-/// floating-point precision issues and ensuring hard zoom limits.
+/// Zoom is driven by "resolution" (samples per pixel). The resolution steps
+/// through a logarithmic table of round numbers, ensuring predictable zoom
+/// levels and hard limits.
 class DSFW_WIDGETS_API ViewportController : public QObject {
     Q_OBJECT
 public:
@@ -30,7 +40,7 @@ public:
 
     // === Audio parameters (call once when audio is loaded) ===
 
-    /// @brief Set audio parameters. Replaces setTotalDuration().
+    /// @brief Set audio parameters.
     /// @param sampleRate Audio sample rate in Hz.
     /// @param totalSamples Total number of samples.
     void setAudioParams(int sampleRate, int64_t totalSamples);
@@ -52,10 +62,11 @@ public:
     // === Resolution (core zoom state) ===
 
     /// @brief Set the resolution (samples per pixel).
-    /// @param resolution Samples per pixel (clamped to valid range).
+    /// Snaps to the nearest entry in the resolution table.
+    /// @param resolution Samples per pixel.
     void setResolution(int resolution);
 
-    /// @brief Get current resolution.
+    /// @brief Get current resolution (samples per pixel).
     [[nodiscard]] int resolution() const { return m_resolution; }
 
     /// @brief Zoom in (decrease resolution) centered on a time.
@@ -72,16 +83,15 @@ public:
     /// @brief Check if further zoom out is possible.
     [[nodiscard]] bool canZoomOut() const;
 
-    // === Legacy zoom API (maps to resolution changes) ===
-
-    /// @brief Set the horizontal zoom level.
-    /// @param pps Pixels per second.
-    void setPixelsPerSecond(double pps);
-
-    /// @brief Zoom in or out centered on a time position.
+    /// @brief Zoom in or out centered on a time position (convenience wrapper).
     /// @param centerSec Center time for zooming.
     /// @param factor Zoom factor (>1 zooms in, <1 zooms out).
     void zoomAt(double centerSec, double factor);
+
+    /// @brief Set resolution from a pixels-per-second value (legacy compatibility).
+    /// Converts pps to resolution and snaps to nearest table entry.
+    /// @param pps Pixels per second.
+    void setPixelsPerSecond(double pps);
 
     // === Viewport (visible range) ===
 
@@ -96,9 +106,6 @@ public:
 
     /// @brief Get the current viewport state.
     [[nodiscard]] const ViewportState &state() const { return m_state; }
-
-    /// @brief Get the current zoom level (derived).
-    [[nodiscard]] double pixelsPerSecond() const { return m_state.pixelsPerSecond; }
 
     /// @brief Get the start of the visible range.
     [[nodiscard]] double startSec() const { return m_state.startSec; }
@@ -124,9 +131,9 @@ private:
     ViewportState m_state;
     int m_sampleRate = 44100;
     int64_t m_totalSamples = 0;
-    int m_resolution = 40;          ///< Samples per pixel (default matches vLabeler).
+    int m_resolution = 40;          ///< Samples per pixel.
 
-    /// Logarithmic resolution step table.
+    /// Logarithmic resolution step table (round numbers).
     static const std::vector<int> &resolutionTable();
 
     /// Find the index of the closest resolution in the table.
@@ -135,7 +142,7 @@ private:
     /// Current index in resolution table.
     int m_resolutionIndex = -1;
 
-    void updatePPS();
+    void syncStateFields();
     void clampAndEmit();
 };
 

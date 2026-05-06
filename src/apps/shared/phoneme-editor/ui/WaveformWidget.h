@@ -131,11 +131,10 @@ private:
         float max; ///< Maximum sample value in the block.
     };
     std::vector<MinMaxPair> m_minMaxCache;              ///< Min/max cache array.
-    double m_cachePixelsPerSecond = 0.0;                ///< Zoom level of cached data.
+    double m_cacheResolution = 0;                       ///< Resolution of cached data.
 
     double m_viewStart = 0.0;                           ///< Visible range start in seconds.
     double m_viewEnd = 10.0;                            ///< Visible range end in seconds.
-    double m_pixelsPerSecond = 200.0;                   ///< Current zoom level.
 
     double m_playhead = -1.0;                           ///< Playhead position, -1 if not playing.
     double m_amplitudeScale = 1.0;                       ///< Vertical amplitude zoom factor.

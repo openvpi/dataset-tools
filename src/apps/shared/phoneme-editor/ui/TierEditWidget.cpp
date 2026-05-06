@@ -29,7 +29,6 @@ TierEditWidget::TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack,
                 this, &TierEditWidget::onViewportChanged);
         m_viewStart = m_viewport->state().startSec;
         m_viewEnd = m_viewport->state().endSec;
-        m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
     }
 
     if (m_document) {
@@ -47,7 +46,6 @@ void TierEditWidget::setDocument(TextGridDocument *doc) {
 void TierEditWidget::setViewport(const ViewportState &state) {
     m_viewStart = state.startSec;
     m_viewEnd = state.endSec;
-    m_pixelsPerSecond = state.pixelsPerSecond;
 
     for (auto *view : m_tierViews) {
         view->setViewport(state);
@@ -70,7 +68,9 @@ void TierEditWidget::rebuildTierViews() {
         if (m_document->isIntervalTier(i)) {
             auto *view = new IntervalTierView(i, m_document, m_undoStack,
                                               m_viewport, m_bindingManager, this);
-            view->setViewport({m_viewStart, m_viewEnd, m_pixelsPerSecond});
+            view->setViewport({m_viewStart, m_viewEnd,
+                               m_viewport ? m_viewport->resolution() : 40,
+                               m_viewport ? m_viewport->sampleRate() : 44100});
             view->setActive(i == m_document->activeTierIndex());
 
             connect(view, &IntervalTierView::activated, this, [this](int tierIndex) {

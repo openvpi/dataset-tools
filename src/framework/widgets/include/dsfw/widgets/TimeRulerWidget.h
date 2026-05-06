@@ -32,7 +32,7 @@ public:
 private:
     [[nodiscard]] int timeToX(double time) const;
 
-    /// Find appropriate timescale level for the current PPS.
+    /// Find appropriate timescale level for the given pixels-per-second.
     [[nodiscard]] static TimescaleLevel findLevel(double pps);
 
     /// Format time label based on the time value.
@@ -41,7 +41,8 @@ private:
     ViewportController *m_viewport = nullptr;
     double m_viewStart = 0.0;
     double m_viewEnd = 10.0;
-    double m_pixelsPerSecond = 200.0;
+    int m_resolution = 40;
+    int m_sampleRate = 44100;
 
     static constexpr double kMinMinorStepPx = 60.0;
 };

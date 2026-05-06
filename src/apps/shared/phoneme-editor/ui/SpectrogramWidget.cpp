@@ -34,7 +34,6 @@ SpectrogramWidget::SpectrogramWidget(ViewportController *viewport, QWidget *pare
     if (m_viewport) {
         m_viewStart = m_viewport->state().startSec;
         m_viewEnd = m_viewport->state().endSec;
-        m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
     }
 }
 
@@ -51,7 +50,6 @@ void SpectrogramWidget::setAudioData(const std::vector<float> &samples, int samp
 void SpectrogramWidget::setViewport(const ViewportState &state) {
     m_viewStart = state.startSec;
     m_viewEnd = state.endSec;
-    m_pixelsPerSecond = state.pixelsPerSecond;
     rebuildViewImage();
     update();
 }

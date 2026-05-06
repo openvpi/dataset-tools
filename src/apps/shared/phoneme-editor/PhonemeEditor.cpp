@@ -94,11 +94,6 @@ void PhonemeEditor::setSnapEnabled(bool enabled) {
         m_actSnapToggle->setChecked(enabled);
 }
 
-void PhonemeEditor::setPixelsPerSecond(double pps) {
-    m_viewport->setPixelsPerSecond(pps);
-    emit zoomChanged(pps);
-}
-
 void PhonemeEditor::setPowerVisible(bool visible) {
     m_powerWidget->setVisible(visible);
     m_actTogglePower->setChecked(visible);
@@ -469,19 +464,19 @@ void PhonemeEditor::updateAllBoundaryOverlays() {
 }
 
 void PhonemeEditor::onZoomIn() {
-    m_viewport->zoomAt(m_viewport->viewCenter(), 1.25);
-    emit zoomChanged(m_viewport->pixelsPerSecond());
+    m_viewport->zoomIn(m_viewport->viewCenter());
+    emit zoomChanged(m_viewport->resolution());
 }
 
 void PhonemeEditor::onZoomOut() {
-    m_viewport->zoomAt(m_viewport->viewCenter(), 0.8);
-    emit zoomChanged(m_viewport->pixelsPerSecond());
+    m_viewport->zoomOut(m_viewport->viewCenter());
+    emit zoomChanged(m_viewport->resolution());
 }
 
 void PhonemeEditor::onZoomReset() {
     m_viewport->setResolution(40); // default resolution
     m_container->updateViewRangeFromResolution();
-    emit zoomChanged(m_viewport->pixelsPerSecond());
+    emit zoomChanged(m_viewport->resolution());
 }
 
 void PhonemeEditor::onPlayPause() {

@@ -121,7 +121,6 @@ private:
 
     double m_viewStart = 0.0;                           ///< Visible range start in seconds.
     double m_viewEnd = 10.0;                            ///< Visible range end in seconds.
-    double m_pixelsPerSecond = 200.0;                   ///< Current zoom level.
 
     /// @brief Interaction state machine.
     enum class State { Idle, Hovering, Dragging };
