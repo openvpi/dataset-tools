@@ -257,11 +257,10 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     // Sync viewport to document duration (after loadFromDsText set the TextGrid maxTime)
     double docDuration = usToSec(m_editor->document()->totalDuration());
     if (docDuration > 0.0) {
+        // setTotalDuration() internally calls clampAndEmit(), which clamps the
+        // view range to within the new total duration while preserving the current
+        // view position — no need to force setViewRange(0.0, docDuration).
         m_editor->viewport()->setTotalDuration(docDuration);
-        // Only reset view range if not already within bounds
-        if (m_editor->viewport()->endSec() > docDuration || m_editor->viewport()->startSec() >= docDuration) {
-            m_editor->viewport()->setViewRange(0.0, docDuration);
-        }
     }
 }
 

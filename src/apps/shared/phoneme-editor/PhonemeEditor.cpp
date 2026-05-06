@@ -369,6 +369,7 @@ void PhonemeEditor::connectSignals() {
         for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
             child->update();
         }
+        m_entryListPanel->rebuildEntries();
     });
     connect(m_document, &TextGridDocument::boundaryInserted, this, [this](int, int) {
         updateAllBoundaryOverlays();

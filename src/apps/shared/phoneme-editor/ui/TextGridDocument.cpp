@@ -179,7 +179,6 @@ void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, TimePos ne
 
     m_modified = true;
     emit boundaryMoved(tierIndex, boundaryIndex, secToUs(clamped));
-    emit documentChanged();
     emit modifiedChanged(true);
 }
 
