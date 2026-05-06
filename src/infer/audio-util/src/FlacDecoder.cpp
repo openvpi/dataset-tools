@@ -5,7 +5,11 @@
 namespace AudioUtil
 {
     void write_flac_to_vio(const std::filesystem::path &filepath, SF_VIO &sf_vio) {
+#ifdef _WIN32
+        SndfileHandle infile(filepath.wstring().c_str(), SFM_READ);
+#else
         SndfileHandle infile(filepath.string(), SFM_READ);
+#endif
         if (!infile) {
             std::cerr << "Unable to open input file for reading: " << filepath << " Error: " << infile.strError()
                       << std::endl;

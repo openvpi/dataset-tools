@@ -76,7 +76,11 @@ namespace AudioUtil
 
         SndfileHandle srcHandle;
         if (extension == ".wav") {
+#ifdef _WIN32
+            srcHandle = SndfileHandle(filepath.wstring().c_str());
+#else
             srcHandle = SndfileHandle(filepath.string());
+#endif
             if (!srcHandle) {
                 msg = "Failed to open WAV file: " + std::string(sf_strerror(nullptr));
                 return {};
@@ -362,7 +366,11 @@ namespace AudioUtil
         }
 
         // 创建输出WAV文件
+#ifdef _WIN32
+        SndfileHandle outBuf(filepath.wstring().c_str(), SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_FLOAT, tar_channel, samplerate);
+#else
         SndfileHandle outBuf(filepath.string(), SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_FLOAT, tar_channel, samplerate);
+#endif
         if (!outBuf) {
             std::cerr << "Failed to open output WAV file: " << sf_strerror(nullptr) << std::endl;
             return false;
