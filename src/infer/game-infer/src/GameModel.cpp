@@ -35,7 +35,7 @@ namespace Game
     bool GameModel::loadModel(const std::filesystem::path &modelPath, const ExecutionProvider provider,
                                const int device_id, std::string &msg) {
         modelDir = modelPath;
-        std::ifstream configFile((modelPath / "config.json").string());
+        std::ifstream configFile(modelPath / "config.json");
         if (!configFile.is_open()) {
             msg = "Could not open config.json: " + (modelPath / "config.json").string();
             return false;

@@ -6,6 +6,8 @@
 #include "FlacDecoder.h"
 #include "Mp3Decoder.h"
 
+#include <audio-util/PathCompat.h>
+
 static std::vector<float> convertChannels(
     const std::vector<float> &output_buffer,
     size_t output_frames,
@@ -76,11 +78,7 @@ namespace AudioUtil
 
         SndfileHandle srcHandle;
         if (extension == ".wav") {
-#ifdef _WIN32
-            srcHandle = SndfileHandle(filepath.wstring().c_str());
-#else
-            srcHandle = SndfileHandle(filepath.string());
-#endif
+            srcHandle = openSndfile(filepath);
             if (!srcHandle) {
                 msg = "Failed to open WAV file: " + std::string(sf_strerror(nullptr));
                 return {};
@@ -369,11 +367,7 @@ namespace AudioUtil
         }
 
         // 创建输出WAV文件
-#ifdef _WIN32
-        SndfileHandle outBuf(filepath.wstring().c_str(), SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_FLOAT, tar_channel, samplerate);
-#else
-        SndfileHandle outBuf(filepath.string(), SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_FLOAT, tar_channel, samplerate);
-#endif
+        auto outBuf = openSndfile(filepath, SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_FLOAT, tar_channel, samplerate);
         if (!outBuf) {
             std::cerr << "Failed to open output WAV file: " << sf_strerror(nullptr) << std::endl;
             return false;
