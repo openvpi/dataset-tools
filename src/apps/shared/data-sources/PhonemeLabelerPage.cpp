@@ -102,8 +102,6 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     const QString audioPath = source()->validatedAudioPath(sliceId);
     if (!audioPath.isEmpty())
         m_editor->loadAudio(audioPath);
-    else
-        m_editor->loadAudio(QString());
 
     auto result = source()->loadSlice(sliceId);
     if (result && !result.value().layers.empty()) {
@@ -112,16 +110,41 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
         for (const auto &layer : doc.layers)
             layers.append(layer);
 
-        TimePos duration = m_editor->document()->totalDuration();
+        TimePos duration = 0;
         if (doc.audio.out > doc.audio.in)
             duration = doc.audio.out - doc.audio.in;
 
-        m_editor->document()->loadFromDsText(layers, duration);
+        // Use audio file duration as fallback if document doesn't specify
+        if (duration <= 0) {
+            double audioDur = m_editor->viewport()->totalDuration();
+            if (audioDur > 0.0)
+                duration = secToUs(audioDur);
+        }
+
+        if (duration > 0)
+            m_editor->document()->loadFromDsText(layers, duration);
+        else
+            m_editor->document()->loadFromDsText(layers, secToUs(m_editor->viewport()->totalDuration()));
     } else {
-        TimePos duration = m_editor->document()->totalDuration();
+        // No layers — load empty document with audio duration
+        double audioDur = m_editor->viewport()->totalDuration();
+        TimePos duration = 0;
         if (result && result.value().audio.out > result.value().audio.in)
             duration = result.value().audio.out - result.value().audio.in;
-        m_editor->document()->loadFromDsText({}, duration);
+        if (duration <= 0 && audioDur > 0.0)
+            duration = secToUs(audioDur);
+        if (duration > 0)
+            m_editor->document()->loadFromDsText({}, duration);
+    }
+
+    // Sync viewport to document duration (after loadFromDsText set the TextGrid maxTime)
+    double docDuration = usToSec(m_editor->document()->totalDuration());
+    if (docDuration > 0.0) {
+        m_editor->viewport()->setTotalDuration(docDuration);
+        // Only reset view range if not already within bounds
+        if (m_editor->viewport()->endSec() > docDuration || m_editor->viewport()->startSec() >= docDuration) {
+            m_editor->viewport()->setViewRange(0.0, docDuration);
+        }
     }
 }
 
@@ -162,7 +185,7 @@ void PhonemeLabelerPage::onAutoInfer() {
                 bool hasGrapheme = false;
                 bool hasPhoneme = false;
                 for (const auto &layer : result.value().layers) {
-                    if (layer.name == QStringLiteral("grapheme"))
+                    if (layer.name == QStringLiteral("grapheme") && !layer.boundaries.empty())
                         hasGrapheme = true;
                     if (layer.name == QStringLiteral("phoneme") && !layer.boundaries.empty())
                         hasPhoneme = true;
@@ -449,11 +472,18 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         for (const auto &layer : doc.layers)
             allLayers.append(layer);
 
-        TimePos duration = m_editor->document()->totalDuration();
+        // Use document's audio duration, falling back to viewport's audio duration
+        TimePos duration = 0;
         if (doc.audio.out > doc.audio.in)
             duration = doc.audio.out - doc.audio.in;
+        if (duration <= 0) {
+            double audioDur = m_editor->viewport()->totalDuration();
+            if (audioDur > 0.0)
+                duration = secToUs(audioDur);
+        }
 
-        m_editor->document()->loadFromDsText(allLayers, duration);
+        if (duration > 0)
+            m_editor->document()->loadFromDsText(allLayers, duration);
     }
 }
 

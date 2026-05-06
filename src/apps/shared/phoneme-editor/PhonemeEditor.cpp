@@ -70,13 +70,6 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
     m_tierLabel->setBoundaryModel(m_document);
     m_entryListPanel->setDocument(m_document);
 
-    // If document has duration info, prefer it (it may include padding)
-    double docDuration = usToSec(m_document->totalDuration());
-    if (docDuration > 0.0) {
-        m_viewport->setTotalDuration(docDuration);
-        m_viewport->setViewRange(0.0, docDuration);
-    }
-
     emit documentLoaded();
 }
 
