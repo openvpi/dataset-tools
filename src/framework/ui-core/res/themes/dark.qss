@@ -347,6 +347,30 @@ QHeaderView::section {
     color: #6F737A;
 }
 
+/* ---- Table view ---- */
+QTableView {
+    background-color: #1E1F22;
+    alternate-background-color: #26282E;
+    color: #BCBEC4;
+    gridline-color: #393B40;
+    selection-background-color: #2E436E;
+    selection-color: #FFFFFF;
+    border: 1px solid #393B40;
+}
+
+QTableView::item {
+    padding: 4px 8px;
+    border: none;
+}
+
+QTableView::item:hover {
+    background-color: #2E3135;
+}
+
+QTableView::item:selected {
+    background-color: #2E436E;
+}
+
 /* ---- Splitters ---- */
 QSplitter::handle {
     background-color: #43454A;
