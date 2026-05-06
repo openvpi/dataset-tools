@@ -350,38 +350,98 @@
 
 **决策**：
 
-当前 phoneme 页面的层级边界 binding（跨层同步拖动）和 snap（释放时对齐）存在架构问题：
-- `BoundaryBindingManager` 使用 `tierIndex * 10000 + boundaryIndex + 1` 的合成 ID 方案，当边界增删后 ID 失效
-- `snapToLowerTier` 只查找 `tierIndex < current` 的层，不支持高层向低层对齐
-- binding group 在 TextGridDocument 内部维护，但 clamp/snap 逻辑也在 TextGridDocument 中，职责混乱
-- IntervalTierView 的 `updateDrag()` 同时做 clamp + snap + binding move，逻辑耦合
+### 现状分析（基于实际代码）
 
-**新设计**：将边界约束分为三个独立阶段，每个阶段职责清晰：
+**架构问题 1：合成 ID 方案 + BindingGroup 数据结构**
 
-1. **Clamp 阶段**（硬约束）：边界不得越过同层相邻边界。由 `IBoundaryModel::clampBoundaryTime()` 负责，保持不变。
+`BoundaryBindingManager::findAlignedBoundaries()` 依赖 `TextGridDocument` 中预存的 `BindingGroup`，每个 group 是一组合成 ID（`tierIndex * 10000 + boundaryIndex + 1`）。这个方案有两个致命缺陷：
 
-2. **Binding 阶段**（跨层联动）：使用**时间位置匹配**而非 ID 绑定——每次拖动开始时，搜索所有层中时间位置在容差范围内的边界作为 "binding partners"，记录它们的 (tier, index, startTime)。拖动过程中 partners 跟随移动。释放时统一提交 undo command。废弃合成 ID 方案和 `BindingGroup` 数据结构。
+- **ID 随 index 变化失效**：边界插入/删除后 boundaryIndex 偏移，合成 ID 指向错误的边界。`autoDetectBindingGroups()` 在 `loadFromDsText()` 后调用一次，之后不再更新。
+- **序列化负担**：`BindingGroup` 存储在 `DsTextDocument.groups` 中，需要在 `PhonemeLabelerPage::saveCurrentSlice()` 和 `applyFaResult()` 中同步维护。FA 结果 `buildFaLayers()` 也必须生成 groups。
 
-3. **Snap 阶段**（释放时吸附）：释放边界时，查找**所有其他层**（不限 lower tier）中距离最近的边界，在像素阈值内吸附。由 `IBoundaryModel::snapToNearestBoundary(tierIndex, proposedTime, thresholdUs)` 负责。
+**架构问题 2：边界拖动逻辑四处重复**
 
-**Binding Partners 查找算法**：
+`startBoundaryDrag()`/`updateBoundaryDrag()`/`endBoundaryDrag()` 完全相同的逻辑存在于 **四个** widget 中：
+- `WaveformWidget`（~90 行拖动代码）
+- `SpectrogramWidget`（~90 行拖动代码）
+- `PowerWidget`（~90 行拖动代码）
+- `IntervalTierView`（~50 行拖动代码，略有不同）
+
+每个 widget 都持有 `BoundaryBindingManager *m_bindingMgr`、`m_dragAligned`、`m_dragAlignedStartTimes` 等完全相同的成员变量。违反 P-01（模块职责单一，行为不得分散重复）。
+
+**架构问题 3：snapToLowerTier 方向限制**
+
+`TextGridDocument::snapToLowerTier()` 只搜索 `tierIndex < current`（只向 tier index 更小的层吸附），无法处理：
+- 低层（如 phoneme）边界向高层（如 grapheme）吸附
+- 同层吸附（不常见但合理）
+
+**实际上不是问题的地方**
+
+- `BindingGroup` 在 `DsTextDocument` 中作为序列化字段是合理的——FA 产出的关联关系确实需要持久化
+- `clampBoundaryTime()` 的逻辑本身是正确的（D-22 已记录最右侧边界的独立 bug）
+- binding enable/disable 的 toolbar toggle 是合理的 UX
+
+### 新设计
+
+**核心改变：拖动时实时搜索 partners，不依赖预存 group**
+
+1. **废弃 `BoundaryBindingManager` 类**：其全部功能（findAlignedBoundaries + createLinkedMoveCommand）内联到一个新的 **`BoundaryDragController`** 类中。
+
+2. **`BoundaryDragController`（新类）**：封装边界拖动的完整三阶段管线，作为 `AudioVisualizerContainer` 的组成部分。所有 widget 不再各自实现拖动逻辑——它们只做 hit-test 和鼠标事件转发，实际拖动行为由 controller 统一处理。
+
+3. **Partners 搜索改为实时时间匹配**：拖动开始时，扫描所有其他层中时间位置在容差范围内的边界作为 partners。不依赖 `BindingGroup` 的合成 ID。
+
+4. **Snap 改为搜索所有其他层**：释放时的 snap 不限 "lower tier"，搜索所有 `tierIndex != current` 的层。
+
+5. **`DsTextDocument.groups` 保留但不参与运行时 binding**：FA 产出的 groups 仍然序列化到 dstext 文件中（作为关联元数据），但运行时 binding 完全由时间匹配驱动。`TextGridDocument::autoDetectBindingGroups()`、`setBindingGroups()`、`findGroupForBoundary()` 保留，但只用于序列化，不用于拖动。
+
 ```
-findBindingPartners(sourceTier, sourceBoundaryIndex):
-    sourceTime = boundaryTime(sourceTier, sourceBoundaryIndex)
-    partners = []
-    for each tier t != sourceTier:
-        for each boundary b in tier t:
-            if |boundaryTime(t, b) - sourceTime| <= toleranceUs:
-                partners.append({t, b, boundaryTime(t, b)})
-    return partners
+BoundaryDragController
+├── startDrag(tier, boundaryIndex, model)
+│   → findPartners: 扫描所有层，时间容差内的边界
+│   → 记录 [(tier, index, originalTime)]
+│
+├── updateDrag(proposedTime)
+│   → clamp source → move source (preview)
+│   → for each partner: clamp → move (preview)
+│
+├── endDrag(finalTime, undoStack)
+│   → snap to nearest cross-tier boundary (pixel threshold)
+│   → restore all to original positions
+│   → push LinkedMoveBoundaryCommand
+│
+├── cancelDrag()
+│   → restore all to original positions
+│
+├── setBindingEnabled(bool)
+├── setSnapEnabled(bool)
+├── setToleranceMs(double)
+└── isDragging() const
 ```
 
-**影响**：
-- 删除 `BoundaryBindingManager` 类
-- 删除 `TextGridDocument::m_groups`、`setBindingGroups()`、`findGroupForBoundary()`、`autoDetectBindingGroups()`
-- 删除 `BindingGroup` 类型定义
-- `IntervalTierView` 的拖动逻辑简化为：startDrag → findBindingPartners → updateDrag(clamp each) → endDrag(snap + commit)
-- `PhonemeLabelerPage::buildFaLayers()` 不再生成 BindingGroup，FA 结果只需要正确的边界位置
+**受影响的文件**：
+
+| 文件 | 变更 |
+|------|------|
+| `BoundaryBindingManager.h/cpp` | **删除** |
+| `BoundaryDragController.h/cpp` | **新建** |
+| `WaveformWidget.h/cpp` | 删除 ~90 行拖动代码 + m_bindingMgr/m_dragAligned 等成员，改为调用 controller |
+| `SpectrogramWidget.h/cpp` | 同上 |
+| `PowerWidget.h/cpp` | 同上 |
+| `IntervalTierView.h/cpp` | 删除 ~50 行拖动代码，改为调用 controller |
+| `AudioVisualizerContainer.h/cpp` | 持有 `BoundaryDragController`，转发 widget 的鼠标事件 |
+| `PhonemeEditor.h/cpp` | `m_bindingManager` → `m_dragController`（通过 container 访问） |
+| `IBoundaryModel.h` | `snapToLowerTier()` → `snapToNearestBoundary()`（搜索所有层） |
+| `TextGridDocument.h/cpp` | 实现新的 `snapToNearestBoundary()`；保留 groups 相关方法用于序列化 |
+| `BoundaryCommands.h/cpp` | `LinkedMoveBoundaryCommand` 保持不变 |
+| `PhonemeLabelerPage.cpp` | `buildFaLayers()` 中 groups 生成逻辑保留（用于序列化） |
+
+**不变的部分**：
+- `BindingGroup` 类型定义（DsTextTypes.h）
+- `DsTextDocument.groups` 字段和序列化
+- `BoundaryCommands`（MoveBoundaryCommand, LinkedMoveBoundaryCommand 等）
+- `IBoundaryModel::clampBoundaryTime()` 逻辑
+- toolbar 中 binding/snap toggle 的 UX
 
 ---
 

@@ -219,52 +219,76 @@ constexpr double kMinMinorStepPx = 60.0;
 
 > 参考 human-decisions.md D-27。
 
-#### 问题
+#### 问题总结
 
-1. **合成 ID 方案脆弱**：`BoundaryBindingManager` 用 `tierIndex * 10000 + boundaryIndex + 1` 做 binding group ID。边界插入/删除后 index 偏移，ID 失效，binding 错乱。
-2. **snap 方向限制**：`snapToLowerTier()` 只查 `tierIndex < current`（只向下查找），不支持低层向高层对齐、也不支持同层吸附。
-3. **职责混乱**：clamp、snap、binding 逻辑分散在 `TextGridDocument`、`BoundaryBindingManager`、`IntervalTierView::updateDrag()` 三处。
-4. **BindingGroup 数据结构**：要求 FA 产出时预计算 group，但实际只需要"同一时间位置的边界联动"这一行为。
+1. **合成 ID 方案脆弱**：`tier*10000+index+1` 在边界增删后失效
+2. **拖动逻辑四处重复**：WaveformWidget/SpectrogramWidget/PowerWidget/IntervalTierView 各有 ~90 行完全相同的 startDrag/updateDrag/endDrag 代码（违反 P-01）
+3. **snap 方向限制**：`snapToLowerTier()` 只向 tierIndex 更小的层吸附
+4. **BoundaryBindingManager 职责不清**：只是 findAlignedBoundaries + createLinkedMoveCommand 两个方法的容器
 
-#### 新架构：三阶段拖动管线
+#### 新架构：BoundaryDragController
+
+将四个 widget 中重复的拖动逻辑**提取**到 `BoundaryDragController`，由 `AudioVisualizerContainer` 持有。各 widget 只做 hit-test + 鼠标事件转发。
 
 ```
-startDrag(tier, boundaryIndex)
-  → phase1: findBindingPartners(time-proximity search, tolerance=1ms)
-  → store partners as [(tier, index, originalTime)]
-
-updateDrag(proposedTime)
-  → phase2: for source + each partner:
-      clampedTime = clampBoundaryTime(tier, idx, proposed + delta)
-      moveBoundary(tier, idx, clampedTime)  // preview only
-
-endDrag(finalTime)
-  → phase3: snap source to nearest cross-tier boundary (pixel threshold)
-  → commit via single QUndoCommand (LinkedMoveBoundaryCommand)
+Widget.mousePressEvent → container->dragController()->startDrag(tier, idx)
+Widget.mouseMoveEvent  → container->dragController()->updateDrag(time)
+Widget.mouseReleaseEvent → container->dragController()->endDrag(time, undoStack)
 ```
-
-**关键改变**：
-- Binding 在拖动开始时**实时搜索**（按时间容差），不依赖预存 group
-- Snap 在释放时执行，搜索**所有其他层**（不限方向）
-- 整个拖动管线在 `IntervalTierView` 内闭合完成
 
 #### 实施步骤
 
-- [ ] 新增 `IBoundaryModel::findBindingPartners(tierIndex, boundaryIndex, toleranceUs)` → 返回 `vector<BoundaryRef>{tier, index, time}`
-- [ ] 新增 `IBoundaryModel::snapToNearestBoundary(tierIndex, proposedTime, thresholdUs)` → 搜索所有其他层
-- [ ] `TextGridDocument` 实现上述两个方法
-- [ ] `IntervalTierView::startDrag()` 改为调用 `findBindingPartners()`（不依赖 BoundaryBindingManager）
-- [ ] `IntervalTierView::updateDrag()` 改为：source clamp + 对每个 partner 计算 delta → clamp → preview move
-- [ ] `IntervalTierView::endDrag()` 改为：snap → 创建 `LinkedMoveBoundaryCommand`（source + all partners）
-- [ ] 删除 `BoundaryBindingManager` 类（.h/.cpp）
-- [ ] 删除 `TextGridDocument::m_groups`、`setBindingGroups()`、`findGroupForBoundary()`、`autoDetectBindingGroups()`
-- [ ] 删除 `BindingGroup` 类型（从 DsTextTypes.h）
-- [ ] `PhonemeLabelerPage::buildFaLayers()` 删除 `r.groups` 生成逻辑
-- [ ] `PhonemeEditor` 构造函数删除 `m_bindingManager` 创建，toolbar 中 binding toggle 改为 enable/disable partners search
-- [ ] 验证：拖动 word 层边界 → phoneme 层对应位置的边界跟随移动
-- [ ] 验证：释放边界 → 自动吸附到最近的其他层边界（阈值 5px）
-- [ ] 验证：插入/删除边界后，binding 仍正常工作（不依赖 index 稳定性）
-- [ ] 验证：禁用 binding 后拖动 → 不联动，但释放时仍 snap
+**Step 1：创建 BoundaryDragController**
+
+- [ ] 新建 `src/apps/shared/phoneme-editor/ui/BoundaryDragController.h/cpp`
+- [ ] 实现 `startDrag(tier, boundaryIndex, IBoundaryModel*)`：实时搜索时间容差内的 partners
+- [ ] 实现 `updateDrag(proposedTime)`：clamp source + clamp each partner + preview move
+- [ ] 实现 `endDrag(finalTime, QUndoStack*)`：snap → restore → push LinkedMoveBoundaryCommand
+- [ ] 实现 `cancelDrag()`：restore all to original positions
+- [ ] 实现 `setBindingEnabled(bool)`、`setSnapEnabled(bool)`、`setToleranceMs(double)`
+
+**Step 2：IBoundaryModel 接口调整**
+
+- [ ] `IBoundaryModel::snapToLowerTier()` 重命名为 `snapToNearestBoundary(tierIndex, proposedTime, thresholdUs)` 并搜索**所有其他层**
+- [ ] `TextGridDocument` 实现新的 `snapToNearestBoundary()`
+- [ ] `SliceBoundaryModel`：单层无需 snap，返回 proposedTime
+
+**Step 3：AudioVisualizerContainer 集成**
+
+- [ ] `AudioVisualizerContainer` 新增 `BoundaryDragController *m_dragController` 成员
+- [ ] 构造函数中创建 dragController
+- [ ] 暴露 `dragController()` 访问器
+
+**Step 4：Widget 拖动代码清理**
+
+- [ ] `WaveformWidget`：删除 startBoundaryDrag/updateBoundaryDrag/endBoundaryDrag + m_bindingMgr + m_dragAligned + m_dragAlignedStartTimes 等成员；mousePressEvent 中调用 container->dragController()
+- [ ] `SpectrogramWidget`：同上
+- [ ] `PowerWidget`：同上
+- [ ] `IntervalTierView`：删除拖动代码，改为调用 controller（注意：IntervalTierView 的 container 是通过 TierEditWidget 间接访问）
+
+**Step 5：PhonemeEditor 适配**
+
+- [ ] `PhonemeEditor`：删除 `m_bindingManager` 成员
+- [ ] toolbar 中 binding/snap toggle 改为调用 `m_container->dragController()->setBindingEnabled()`
+- [ ] 删除 `#include "ui/BoundaryBindingManager.h"`
+
+**Step 6：删除 BoundaryBindingManager**
+
+- [ ] 删除 `BoundaryBindingManager.h/cpp`
+- [ ] 更新 CMakeLists.txt 移除这两个文件
+- [ ] `BoundaryCommands.cpp` 删除 `#include "../BoundaryBindingManager.h"`（如果 LinkedMoveBoundaryCommand 不需要）
+
+**Step 7：验证**
+
+- [ ] 编译通过，无 BoundaryBindingManager 残留引用
+- [ ] 拖动 word 层边界 → phoneme 层对应位置的边界跟随移动
+- [ ] 释放边界 → 自动吸附到最近的其他层边界（阈值 5px）
+- [ ] 插入边界后立即拖动 → binding 仍正常（不依赖预存 group）
+- [ ] 删除边界后拖动其他边界 → 不崩溃，binding 正确
+- [ ] 禁用 binding → 拖动不联动，释放时仍 snap（如 snap 开启）
+- [ ] 禁用 snap → 释放时不吸附
+- [ ] Undo/Redo linked move → 所有关联边界正确恢复
+- [ ] FA 完成后 → 边界自动对齐，拖动联动正常
 
 ---
 
