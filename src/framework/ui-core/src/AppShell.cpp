@@ -4,8 +4,12 @@
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
 #include <dsfw/IconNavBar.h>
+#include <dsfw/Log.h>
+#include <dsfw/LogNotifier.h>
+#include <dsfw/widgets/LogPanelWidget.h>
 #include <dsfw/widgets/ToastNotification.h>
 
+#include <QAction>
 #include <QCloseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -13,11 +17,13 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QSplitter>
 #include <QRegularExpression>
 #include <QShowEvent>
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QTimer>
+#include <QToolButton>
 
 #ifdef Q_OS_WIN
 #  include <windows.h>
@@ -77,19 +83,61 @@ namespace dsfw {
         hLayout->setSpacing(0);
 
         m_navBar = new IconNavBar(this);
+
+        // Content area: QStackedWidget + optional LogPanel
+        m_contentSplitter = new QSplitter(Qt::Horizontal, this);
+        m_contentSplitter->setChildrenCollapsible(false);
+
         m_stack = new QStackedWidget(this);
+        m_contentSplitter->addWidget(m_stack);
+
+        m_logPanel = new widgets::LogPanelWidget(this);
+        m_logPanel->setFixedWidth(320);
+        m_logPanel->hide();
+        m_contentSplitter->addWidget(m_logPanel);
+
+        // Init sizes: page takes all space, log panel is 0 when hidden
+        m_contentSplitter->setSizes({1, 0});
+        m_contentSplitter->setStretchFactor(0, 1);
+        m_contentSplitter->setStretchFactor(1, 0);
 
         hLayout->addWidget(m_navBar);
-        hLayout->addWidget(m_stack, 1);
+        hLayout->addWidget(m_contentSplitter, 1);
 
         setCentralWidget(central);
 
+        // Install sinks (background thread → main thread bridge)
+        dstools::Logger::instance().addSink(dstools::Logger::ringBufferSink(500));
+        dstools::Logger::instance().addSink(dstools::LogNotifier::instance().sink());
+        dstools::Logger::instance().addSink(dstools::Logger::qtMessageSink());
+        m_logPanel->connectToNotifier();
+
         m_navBar->hide(); // Hidden until >1 page
 
-        // Create persistent menu bar and register it BEFORE FramelessHelper,
-        // so FramelessHelper can embed it into the custom title bar.
+        // Create persistent menu bar and register it BEFORE FramelessHelper
         m_menuBar = new QMenuBar(this);
         setMenuBar(m_menuBar);
+
+        // Toggle log button in the menu bar (right-aligned via corner widget)
+        m_toggleLogAction = new QAction(tr("Log"), this);
+        m_toggleLogAction->setCheckable(true);
+        m_toggleLogAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
+        connect(m_toggleLogAction, &QAction::toggled, this, [this](bool visible) {
+            if (visible) {
+                m_logPanel->show();
+                m_contentSplitter->setSizes({m_contentSplitter->width() - m_logPanel->width(),
+                                             m_logPanel->width()});
+            } else {
+                m_logPanel->hide();
+                m_contentSplitter->setSizes({1, 0});
+            }
+        });
+
+        // Add log toggle as a corner widget in the menu bar
+        auto *logBtn = new QToolButton(m_menuBar);
+        logBtn->setDefaultAction(m_toggleLogAction);
+        logBtn->setToolTip(tr("Toggle Log Panel (Ctrl+L)"));
+        m_menuBar->setCornerWidget(logBtn, Qt::TopRightCorner);
 
         connect(m_navBar, &IconNavBar::currentChanged, this, &AppShell::onPageSwitched);
 
@@ -419,6 +467,14 @@ namespace dsfw {
     void AppShell::showToast(dsfw::widgets::ToastType type, const QString &message,
                              int timeoutMs) {
         widgets::ToastNotification::show(this, type, message, timeoutMs);
+    }
+
+    void AppShell::toggleLogPanel() {
+        m_toggleLogAction->toggle();
+    }
+
+    bool AppShell::isLogPanelVisible() const {
+        return m_logPanel && m_logPanel->isVisible();
     }
 
 } // namespace dsfw

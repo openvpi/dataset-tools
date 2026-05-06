@@ -9,6 +9,7 @@
 
 namespace dsfw::widgets {
 enum class ToastType;
+class LogPanelWidget;
 }
 
 class QStackedWidget;
@@ -16,6 +17,7 @@ class QStatusBar;
 class QAction;
 class QMenuBar;
 class QShowEvent;
+class QSplitter;
 
 namespace dstools {
 class AppSettings;
@@ -92,11 +94,14 @@ public:
     QString workingDirectory() const;
 
     /// @brief Show a non-modal toast notification.
-    /// @param type Notification type (Info/Warning/Error).
-    /// @param message Message text.
-    /// @param timeoutMs Auto-dismiss timeout in milliseconds (default: 3000).
     void showToast(dsfw::widgets::ToastType type, const QString &message,
                    int timeoutMs = 3000);
+
+    /// @brief Toggle the log panel visibility.
+    void toggleLogPanel();
+
+    /// @brief Return whether the log panel is currently visible.
+    bool isLogPanelVisible() const;
 
 signals:
     /// @brief Emitted when the active page changes.
@@ -125,6 +130,9 @@ private:
 
     IconNavBar *m_navBar = nullptr;
     QStackedWidget *m_stack = nullptr;
+    QSplitter *m_contentSplitter = nullptr;
+    widgets::LogPanelWidget *m_logPanel = nullptr;
+    QAction *m_toggleLogAction = nullptr;
     QVector<PageEntry> m_pages;
     QList<QAction *> m_globalActions;
     QString m_workingDir;
