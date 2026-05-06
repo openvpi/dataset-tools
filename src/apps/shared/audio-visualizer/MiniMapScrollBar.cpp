@@ -230,6 +230,15 @@ void MiniMapScrollBar::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void MiniMapScrollBar::mouseReleaseEvent(QMouseEvent * /*event*/) {
+    // After edge-drag zoom, snap to the nearest discrete resolution step
+    // so the viewport always uses a resolution from the table
+    if ((m_dragMode == DragMode::ZoomLeft || m_dragMode == DragMode::ZoomRight) && m_viewport) {
+        double viewDur = m_viewEnd - m_viewStart;
+        if (viewDur > 0.0 && width() > 0) {
+            double pps = static_cast<double>(width()) / viewDur;
+            m_viewport->setPixelsPerSecond(pps); // snaps to nearest resolution
+        }
+    }
     m_dragMode = DragMode::None;
     setCursor(Qt::OpenHandCursor);
 }
