@@ -811,20 +811,21 @@ void SlicerPage::loadAudioFile(const QString &filePath) {
         m_samples = std::move(allSamples);
     }
 
-    m_waveformWidget->setAudioData(m_samples, m_sampleRate);
-    m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
-    m_container->setAudioData(m_samples, m_sampleRate);
-
     m_playWidget->openFile(filePath);
 
     double duration = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
     m_boundaryModel->setDuration(duration);
 
-    // Use setAudioParams to propagate the actual sample rate to ViewportController,
-    // so resolution → PPS → tick density is correct for this audio
+    // Set viewport FIRST with actual sample rate, THEN load audio data into widgets.
+    // This ensures chart widgets receive correct PPS when setAudioData triggers
+    // their initial cache rebuild.
     m_viewport->setAudioParams(m_sampleRate, static_cast<int64_t>(m_samples.size()));
     m_viewport->setViewRange(0.0, duration);
     m_container->fitToWindow();
+
+    m_waveformWidget->setAudioData(m_samples, m_sampleRate);
+    m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
+    m_container->setAudioData(m_samples, m_sampleRate);
 }
 
 } // namespace dstools

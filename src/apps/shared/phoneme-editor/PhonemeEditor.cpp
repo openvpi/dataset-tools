@@ -51,21 +51,19 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
         const auto &samples = m_renderer->samples();
         int sampleRate = m_renderer->sampleRate();
 
+        // Set viewport FIRST so that chart widgets receive correct PPS
+        // when setAudioData triggers their initial rebuildMinMaxCache
+        double audioDuration = sampleRate > 0 ? static_cast<double>(samples.size()) / sampleRate : 0.0;
+        if (audioDuration > 0.0) {
+            m_viewport->setAudioParams(sampleRate, static_cast<int64_t>(samples.size()));
+            m_viewport->setViewRange(0.0, audioDuration);
+            m_container->fitToWindow();
+        }
+
         m_waveformWidget->setAudioData(samples, sampleRate);
         m_powerWidget->setAudioData(samples, sampleRate);
         m_spectrogramWidget->setAudioData(samples, sampleRate);
         m_container->setAudioData(samples, sampleRate);
-
-        // Set viewport duration from audio length (not document, which may be empty)
-        double audioDuration = sampleRate > 0 ? static_cast<double>(samples.size()) / sampleRate : 0.0;
-        if (audioDuration > 0.0) {
-            // Use setAudioParams to propagate the actual sample rate,
-            // so resolution → PPS calculation is correct for this audio
-            m_viewport->setAudioParams(sampleRate, static_cast<int64_t>(samples.size()));
-            m_viewport->setViewRange(0.0, audioDuration);
-            // Fit to window so the waveform fills the available width
-            m_container->fitToWindow();
-        }
     }
 
     m_playWidget->openFile(audioPath);
