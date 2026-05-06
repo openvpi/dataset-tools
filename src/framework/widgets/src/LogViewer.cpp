@@ -35,7 +35,7 @@ LogViewer::LogViewer(QWidget *parent) : QWidget(parent) {
     auto *toolbar = new QHBoxLayout();
 
     m_filterCombo = new QComboBox(this);
-    m_filterCombo->addItems({tr("Debug"), tr("Info"), tr("Warning"), tr("Error")});
+    m_filterCombo->addItems({tr("All"), tr("Debug"), tr("Info"), tr("Warning"), tr("Error")});
     m_filterCombo->setCurrentIndex(0);
     toolbar->addWidget(m_filterCombo);
 
@@ -90,7 +90,7 @@ void LogViewer::setMinimumLevel(LogLevel level) {
     if (m_minLevel == level)
         return;
     m_minLevel = level;
-    m_filterCombo->setCurrentIndex(static_cast<int>(level));
+    m_filterCombo->setCurrentIndex(static_cast<int>(level) + 1);
     rebuildDisplay();
 }
 
@@ -103,7 +103,10 @@ int LogViewer::count() const {
 }
 
 void LogViewer::setFilterLevel(int level) {
-    m_minLevel = static_cast<LogLevel>(level);
+    if (level == 0)
+        m_minLevel = Debug;
+    else
+        m_minLevel = static_cast<LogLevel>(level - 1);
     rebuildDisplay();
 }
 

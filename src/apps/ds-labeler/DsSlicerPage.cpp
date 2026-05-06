@@ -173,7 +173,7 @@ namespace dstools {
 
         // ── Main content splitter (vertical) ──────────────────────────────────
         m_container = new AudioVisualizerContainer(QStringLiteral("DsSlicerPage"), contentWidget);
-        m_container->setDefaultResolution(60);
+        m_container->setDefaultResolution(3000);
         m_container->setBoundaryModel(m_boundaryModel);
         m_container->setPlayWidget(m_playWidget);
 
