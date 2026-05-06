@@ -340,13 +340,15 @@ TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, Ti
     if (tierIndex > 0) {
         const auto *parentTier = intervalTier(tierIndex - 1);
         if (parentTier) {
-            // Find the parent interval that contains the boundary's current position
-            double currentSec = usToSec(boundaryTime(tierIndex, boundaryIndex));
+            // Find the parent interval that contains this boundary.
+            // Use prevBoundary (left same-tier neighbor, which is NOT being dragged)
+            // as the lookup position to avoid stale-position bugs during drag preview.
+            double lookupSec = prevBoundary + kEpsilon;
             int parentCount = static_cast<int>(parentTier->GetNumberOfIntervals());
             for (int i = 0; i < parentCount; ++i) {
                 const auto &interval = parentTier->GetInterval(i);
-                if (currentSec >= interval.min_time - kEpsilon
-                    && currentSec <= interval.max_time + kEpsilon) {
+                if (lookupSec >= interval.min_time - kEpsilon
+                    && lookupSec <= interval.max_time + kEpsilon) {
                     // Tighten clamp to parent interval bounds
                     minClamp = std::max(minClamp, interval.min_time);
                     maxClamp = std::min(maxClamp, interval.max_time - kEpsilon);
