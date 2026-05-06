@@ -36,6 +36,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     void rebuildRadioButtons();
@@ -49,6 +50,7 @@ private:
     static constexpr int kRadioPanelWidth = 28;
 
     bool m_alignmentRunning = false;
+    int m_leftMargin = kRadioPanelWidth;
 };
 
 } // namespace dstools

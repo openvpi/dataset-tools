@@ -12,12 +12,10 @@ namespace dstools {
 
 PhonemeTextGridTierLabel::PhonemeTextGridTierLabel(QWidget *parent)
     : TierLabelArea(parent) {
-    auto *mainLayout = new QHBoxLayout(this);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-
+    // Radio buttons sit in an overlay panel at the left edge.
+    // They are NOT added to any layout — positioned absolutely via resizeEvent
+    // so they don't shift boundary line positions.
     m_radioPanel = new QWidget(this);
-    m_radioPanel->setFixedWidth(kRadioPanelWidth);
     m_radioPanel->setStyleSheet(QStringLiteral("background-color: #2a2a2f;"));
 
     m_radioLayout = new QVBoxLayout(m_radioPanel);
@@ -29,9 +27,6 @@ PhonemeTextGridTierLabel::PhonemeTextGridTierLabel(QWidget *parent)
     connect(m_buttonGroup, &QButtonGroup::idClicked, this, [this](int id) {
         setActiveTierIndex(id);
     });
-
-    mainLayout->addWidget(m_radioPanel);
-    mainLayout->addStretch(1);
 
     setFixedHeight(kTierRowHeight);
 }
@@ -119,13 +114,13 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
 
         if (t > 0) {
             painter.setPen(QPen(QColor(60, 60, 70), 1));
-            painter.drawLine(kRadioPanelWidth, rowTop, w, rowTop);
+            painter.drawLine(0, rowTop, w, rowTop);
         }
 
         const auto &bounds = allBounds[t];
         for (double bTime : bounds) {
             int x = timeToX(bTime);
-            if (x < kRadioPanelWidth || x > w)
+            if (x < 0 || x > w)
                 continue;
 
             if (isActive) {
@@ -172,6 +167,13 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     }
 }
 
+void PhonemeTextGridTierLabel::resizeEvent(QResizeEvent *event) {
+    TierLabelArea::resizeEvent(event);
+    // Position the radio panel overlay at the left edge
+    if (m_radioPanel)
+        m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, height());
+}
+
 void PhonemeTextGridTierLabel::onModelDataChanged() {
     rebuildRadioButtons();
 }
@@ -204,6 +206,7 @@ void PhonemeTextGridTierLabel::rebuildRadioButtons() {
     }
 
     m_radioPanel->setFixedHeight(tiers * kTierRowHeight);
+    m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, height());
     update();
 }
 
