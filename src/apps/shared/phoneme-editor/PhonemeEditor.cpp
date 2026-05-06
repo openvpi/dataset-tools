@@ -58,6 +58,8 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
         if (audioDuration > 0.0) {
             m_viewport->setTotalDuration(audioDuration);
             m_viewport->setViewRange(0.0, audioDuration);
+            // Fit to window so the waveform fills the available width
+            m_container->fitToWindow();
         }
     }
 
