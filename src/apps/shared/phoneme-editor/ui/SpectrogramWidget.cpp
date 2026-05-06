@@ -356,27 +356,66 @@ void SpectrogramWidget::updateBoundaryOverlay() {
 int SpectrogramWidget::hitTestBoundary(int x, int *outTier) const {
     if (!m_boundaryModel) return -1;
 
-    int bestIdx = -1;
-    int bestTier = -1;
-    int bestDist = kBoundaryHitWidth / 2 + 1;
+    struct Hit {
+        int tier;
+        int boundary;
+        int dist;
+        int dragRoom;
+    };
+    QVector<Hit> hits;
 
     int tierCount = m_boundaryModel->tierCount();
+    int activeTier = m_boundaryModel->activeTierIndex();
+
     for (int t = 0; t < tierCount; ++t) {
         int count = m_boundaryModel->boundaryCount(t);
         for (int b = 0; b < count; ++b) {
             int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(t, b)));
             int dist = std::abs(x - bx);
             if (dist <= kBoundaryHitWidth / 2) {
-                if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
-                    bestDist = dist;
-                    bestIdx = b;
-                    bestTier = t;
-                }
+                TimePos pos = m_boundaryModel->boundaryTime(t, b);
+                TimePos leftClamp = (b > 0) ? m_boundaryModel->boundaryTime(t, b - 1) : 0;
+                TimePos rightClamp = (b + 1 < count) ? m_boundaryModel->boundaryTime(t, b + 1) : INT64_MAX;
+                int room = static_cast<int>(std::min(pos - leftClamp, rightClamp - pos));
+
+                hits.push_back({t, b, dist, room});
             }
         }
     }
-    if (outTier) *outTier = bestTier;
-    return bestIdx;
+
+    if (hits.isEmpty()) {
+        if (outTier) *outTier = -1;
+        return -1;
+    }
+
+    int bestIdx = 0;
+    for (int i = 1; i < hits.size(); ++i) {
+        const auto &cur = hits[i];
+        const auto &best = hits[bestIdx];
+
+        bool curActive = (cur.tier == activeTier);
+        bool bestActive = (best.tier == activeTier);
+
+        if (curActive != bestActive) {
+            if (curActive) bestIdx = i;
+            continue;
+        }
+
+        if (cur.dist != best.dist) {
+            if (cur.dist < best.dist) bestIdx = i;
+            continue;
+        }
+
+        if (cur.dragRoom != best.dragRoom) {
+            if (cur.dragRoom > best.dragRoom) bestIdx = i;
+            continue;
+        }
+
+        if (cur.boundary < best.boundary) bestIdx = i;
+    }
+
+    if (outTier) *outTier = hits[bestIdx].tier;
+    return hits[bestIdx].boundary;
 }
 
 void SpectrogramWidget::mousePressEvent(QMouseEvent *event) {

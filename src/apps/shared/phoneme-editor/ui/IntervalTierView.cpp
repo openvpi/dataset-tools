@@ -139,24 +139,48 @@ int IntervalTierView::hitTestBoundary(int x) const {
     if (!m_doc) return -1;
     int count = m_doc->boundaryCount(m_tierIndex);
 
-    int bestIdx = -1;
-    int bestDist = kBoundaryHitWidth / 2 + 1;
+    struct Hit {
+        int boundary;
+        int dist;
+        int dragRoom;
+    };
+    QVector<Hit> hits;
 
     for (int b = 0; b < count; ++b) {
         int bx = timeToX(usToSec(m_doc->boundaryTime(m_tierIndex, b)));
         int dist = std::abs(x - bx);
         if (dist <= kBoundaryHitWidth / 2) {
-            // When multiple boundaries overlap at same pixel, prefer the one
-            // on the side the cursor is approaching from. If exactly equal
-            // distance (fully overlapping), prefer the later boundary so the
-            // user can drag it away to separate them.
-            if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
-                bestDist = dist;
-                bestIdx = b;
-            }
+            TimePos pos = m_doc->boundaryTime(m_tierIndex, b);
+            TimePos leftClamp = (b > 0) ? m_doc->boundaryTime(m_tierIndex, b - 1) : 0;
+            TimePos rightClamp = (b + 1 < count) ? m_doc->boundaryTime(m_tierIndex, b + 1) : INT64_MAX;
+            int room = static_cast<int>(std::min(pos - leftClamp, rightClamp - pos));
+
+            hits.push_back({b, dist, room});
         }
     }
-    return bestIdx;
+
+    if (hits.isEmpty())
+        return -1;
+
+    int bestIdx = 0;
+    for (int i = 1; i < hits.size(); ++i) {
+        const auto &cur = hits[i];
+        const auto &best = hits[bestIdx];
+
+        if (cur.dist != best.dist) {
+            if (cur.dist < best.dist) bestIdx = i;
+            continue;
+        }
+
+        if (cur.dragRoom != best.dragRoom) {
+            if (cur.dragRoom > best.dragRoom) bestIdx = i;
+            continue;
+        }
+
+        if (cur.boundary < best.boundary) bestIdx = i;
+    }
+
+    return hits[bestIdx].boundary;
 }
 
 int IntervalTierView::timeToX(double time) const {

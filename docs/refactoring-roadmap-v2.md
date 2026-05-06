@@ -130,7 +130,7 @@
 
 ---
 
-### 9.3 Phoneme 多层边界重合时的拖拽激活方案
+### 9.3 Phoneme 多层边界重合时的拖拽激活方案 ✅
 
 **根因**：4 个 widget 的 `hitTestBoundary()` 函数（`WaveformWidget`、`PowerWidget`、`SpectrogramWidget`、`IntervalTierView`）在遍历所有 tier 时使用 `b > bestIdx` 作为同像素位置的 tiebreaker——但 `b` 和 `bestIdx` 是不同 tier 的 boundary 索引，比较无意义，导致选择结果随机。
 
