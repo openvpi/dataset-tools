@@ -58,27 +58,26 @@ void ViewportController::setResolution(int resolution) {
     m_resolutionIndex = findResolutionIndex(resolution);
     m_resolution = resolutionTable()[m_resolutionIndex];
     updatePPS();
-    // Adjust view range to maintain center
-    double center = viewCenter();
-    double halfDur = duration() / 2.0;
-    // Recalculate based on new PPS — keep center stable
-    m_state.startSec = center - halfDur;
-    m_state.endSec = center + halfDur;
+    // Note: view range (startSec/endSec) is NOT adjusted here.
+    // The container is responsible for calling setViewRange() after
+    // setResolution() to match the new PPS with the widget width.
+    // This avoids the old bug where setResolution would compute
+    // endSec from a stale "duration" that didn't match widget width.
     clampAndEmit();
 }
 
 void ViewportController::zoomIn(double centerSec) {
     if (!canZoomIn()) return;
-    double oldDuration = duration();
-    double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
 
+    int oldRes = m_resolution;
     m_resolutionIndex--;
     m_resolution = resolutionTable()[m_resolutionIndex];
     updatePPS();
 
-    // Zoom in → resolution decreases → more PPS → visible duration shrinks
-    // newDuration = oldDuration * newRes / oldRes  = smaller when newRes < oldRes
-    double newDuration = oldDuration * static_cast<double>(m_resolution) / resolutionTable()[m_resolutionIndex + 1];
+    // Keep the center time at the same pixel position
+    double oldDuration = m_state.endSec - m_state.startSec;
+    double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
+    double newDuration = oldDuration * static_cast<double>(m_resolution) / oldRes;
     m_state.startSec = centerSec - ratio * newDuration;
     m_state.endSec = m_state.startSec + newDuration;
     clampAndEmit();
@@ -86,15 +85,15 @@ void ViewportController::zoomIn(double centerSec) {
 
 void ViewportController::zoomOut(double centerSec) {
     if (!canZoomOut()) return;
-    double oldDuration = duration();
-    double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
 
+    int oldRes = m_resolution;
     m_resolutionIndex++;
     m_resolution = resolutionTable()[m_resolutionIndex];
     updatePPS();
 
-    // Zoom out → resolution increases → fewer PPS → visible duration grows
-    double newDuration = oldDuration * static_cast<double>(m_resolution) / resolutionTable()[m_resolutionIndex - 1];
+    double oldDuration = m_state.endSec - m_state.startSec;
+    double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
+    double newDuration = oldDuration * static_cast<double>(m_resolution) / oldRes;
     m_state.startSec = centerSec - ratio * newDuration;
     m_state.endSec = m_state.startSec + newDuration;
     clampAndEmit();

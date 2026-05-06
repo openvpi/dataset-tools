@@ -478,8 +478,9 @@ void PhonemeEditor::onZoomOut() {
 }
 
 void PhonemeEditor::onZoomReset() {
-    m_viewport->setPixelsPerSecond(200.0);
-    emit zoomChanged(200.0);
+    m_viewport->setResolution(40); // default resolution
+    m_container->updateViewRangeFromResolution();
+    emit zoomChanged(m_viewport->pixelsPerSecond());
 }
 
 void PhonemeEditor::onPlayPause() {

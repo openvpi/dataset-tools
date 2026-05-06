@@ -258,21 +258,39 @@ void AudioVisualizerContainer::fitToWindow() {
 
     // Apply the configured default resolution
     m_viewport->setResolution(m_defaultResolution);
+    // Compute and set the correct view range for this resolution + width
+    updateViewRangeFromResolution();
+}
 
-    // Compute how much audio fits in the current widget width at this resolution
-    double pps = m_viewport->pixelsPerSecond();
-    double visibleDuration = static_cast<double>(w) / pps;
+void AudioVisualizerContainer::updateViewRangeFromResolution() {
+    int w = m_chartSplitter ? m_chartSplitter->width() : width();
+    if (w <= 0 || m_viewport->sampleRate() <= 0)
+        return;
+
+    // visibleDuration = widgetWidth * resolution / sampleRate
+    double visibleDuration = static_cast<double>(w) * m_viewport->resolution()
+                             / m_viewport->sampleRate();
     double totalDur = m_viewport->totalDuration();
+    double startSec = m_viewport->startSec();
 
-    // Show from the beginning, capped at audio length
-    double endSec = std::min(visibleDuration, totalDur);
-    m_viewport->setViewRange(0.0, endSec);
+    // Clamp: don't exceed audio end
+    double endSec = startSec + visibleDuration;
+    if (totalDur > 0.0 && endSec > totalDur) {
+        endSec = totalDur;
+        startSec = endSec - visibleDuration;
+        if (startSec < 0.0) startSec = 0.0;
+    }
+
+    m_viewport->setViewRange(startSec, endSec);
 }
 
 void AudioVisualizerContainer::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
     if (m_needsFitOnResize && width() > 0) {
         fitToWindow();
+    } else if (m_viewport->totalSamples() > 0) {
+        // On resize, recalculate view range to match new width at current resolution
+        updateViewRangeFromResolution();
     }
     updateScaleIndicator();
 }

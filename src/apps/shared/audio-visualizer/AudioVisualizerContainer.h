@@ -96,6 +96,10 @@ public:
     /// Update the scale indicator text from the current viewport state.
     void updateScaleIndicator();
 
+    /// Recalculate the view range to match current resolution + widget width.
+    /// Call after setResolution() or zoom changes to keep the viewport consistent.
+    void updateViewRangeFromResolution();
+
 signals:
     void chartOrderChanged(const QStringList &order);
 
