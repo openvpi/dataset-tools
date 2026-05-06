@@ -300,6 +300,16 @@ void PhonemeEditor::connectSignals() {
         connect(m_viewport, &ViewportController::viewportChanged, boundaryOverlay, &BoundaryOverlayWidget::setViewport);
     }
 
+    // Sync menu action checked state with widget visibility (for external visibility changes)
+    connect(m_powerWidget, &QWidget::visibleChanged, this, [this](bool visible) {
+        m_actTogglePower->setChecked(visible);
+        emit powerVisibilityChanged(visible);
+    });
+    connect(m_spectrogramWidget, &QWidget::visibleChanged, this, [this](bool visible) {
+        m_actToggleSpectrogram->setChecked(visible);
+        emit spectrogramVisibilityChanged(visible);
+    });
+
     // Active tier -> repaint boundary overlays
     connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int tier) {
         updateAllBoundaryOverlays();

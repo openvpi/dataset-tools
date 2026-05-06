@@ -152,6 +152,11 @@ namespace dstools {
             void documentLoaded();
             void documentSaved();
 
+            /// Emitted when the power widget's visibility changes externally.
+            void powerVisibilityChanged(bool visible);
+            /// Emitted when the spectrogram widget's visibility changes externally.
+            void spectrogramVisibilityChanged(bool visible);
+
         private:
             // Document
             TextGridDocument *m_document = nullptr;
