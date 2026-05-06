@@ -819,8 +819,12 @@ void SlicerPage::loadAudioFile(const QString &filePath) {
 
     double duration = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
     m_boundaryModel->setDuration(duration);
-    m_container->setTotalDuration(duration);
+
+    // Use setAudioParams to propagate the actual sample rate to ViewportController,
+    // so resolution → PPS → tick density is correct for this audio
+    m_viewport->setAudioParams(m_sampleRate, static_cast<int64_t>(m_samples.size()));
     m_viewport->setViewRange(0.0, duration);
+    m_container->fitToWindow();
 }
 
 } // namespace dstools
