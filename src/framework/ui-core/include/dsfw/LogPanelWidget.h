@@ -4,23 +4,21 @@
 /// @brief Collapsible side panel displaying structured log output with filtering.
 
 #include <dsfw/Log.h>
-#include <dsfw/widgets/LogViewer.h>
 #include <QComboBox>
 #include <QPushButton>
 #include <QSet>
 #include <QWidget>
 
 namespace dsfw::widgets {
+class LogViewer;
+}
+
+namespace dsfw {
 
 /// @brief Right-side log panel with level filter, category filter, clear, and export.
 ///
 /// Connects to dstools::LogNotifier for live updates and prepopulates
 /// from dstools::Logger::recentEntries() on construction.
-///
-/// @code
-/// auto *panel = new LogPanelWidget(parent);
-/// panel->connectToNotifier();  // Start receiving live log entries
-/// @endcode
 class LogPanelWidget : public QWidget {
     Q_OBJECT
 
@@ -43,7 +41,7 @@ private:
     void rebuildCategoryFilter();
     void applyCategoryFilter();
 
-    LogViewer *m_viewer = nullptr;
+    widgets::LogViewer *m_viewer = nullptr;
     QComboBox *m_categoryFilter = nullptr;
     QPushButton *m_clearButton = nullptr;
     QPushButton *m_exportButton = nullptr;
@@ -51,4 +49,4 @@ private:
     QSet<QString> m_activeCategories; // Empty = show all
 };
 
-} // namespace dsfw::widgets
+} // namespace dsfw

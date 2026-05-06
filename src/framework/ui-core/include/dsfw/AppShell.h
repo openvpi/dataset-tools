@@ -9,6 +9,9 @@
 
 namespace dsfw::widgets {
 enum class ToastType;
+}
+
+namespace dsfw {
 class LogPanelWidget;
 }
 
@@ -131,7 +134,7 @@ private:
     IconNavBar *m_navBar = nullptr;
     QStackedWidget *m_stack = nullptr;
     QSplitter *m_contentSplitter = nullptr;
-    widgets::LogPanelWidget *m_logPanel = nullptr;
+    LogPanelWidget *m_logPanel = nullptr;
     QAction *m_toggleLogAction = nullptr;
     QVector<PageEntry> m_pages;
     QList<QAction *> m_globalActions;

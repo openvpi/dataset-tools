@@ -1,5 +1,6 @@
-#include <dsfw/widgets/LogPanelWidget.h>
+#include <dsfw/LogPanelWidget.h>
 #include <dsfw/LogNotifier.h>
+#include <dsfw/widgets/LogViewer.h>
 
 #include <QDateTime>
 #include <QFile>
@@ -10,20 +11,20 @@
 #include <QTextStream>
 #include <QVBoxLayout>
 
-namespace dsfw::widgets {
+namespace dsfw {
 
 // ── Mapping dstools::LogLevel → LogViewer::LogLevel ─────────────────
 
-static LogViewer::LogLevel mapLevel(dstools::LogLevel lvl) {
+static widgets::LogViewer::LogLevel mapLevel(dstools::LogLevel lvl) {
     switch (lvl) {
-        case dstools::LogLevel::Trace:   return LogViewer::Debug;
-        case dstools::LogLevel::Debug:   return LogViewer::Debug;
-        case dstools::LogLevel::Info:    return LogViewer::Info;
-        case dstools::LogLevel::Warning: return LogViewer::Warning;
-        case dstools::LogLevel::Error:   return LogViewer::Error;
-        case dstools::LogLevel::Fatal:   return LogViewer::Error;
+        case dstools::LogLevel::Trace:   return widgets::LogViewer::Debug;
+        case dstools::LogLevel::Debug:   return widgets::LogViewer::Debug;
+        case dstools::LogLevel::Info:    return widgets::LogViewer::Info;
+        case dstools::LogLevel::Warning: return widgets::LogViewer::Warning;
+        case dstools::LogLevel::Error:   return widgets::LogViewer::Error;
+        case dstools::LogLevel::Fatal:   return widgets::LogViewer::Error;
     }
-    return LogViewer::Debug;
+    return widgets::LogViewer::Debug;
 }
 
 // ── Construction ─────────────────────────────────────────────────────
@@ -44,7 +45,7 @@ LogPanelWidget::LogPanelWidget(QWidget *parent)
     layout->addLayout(titleBar);
 
     // Viewer
-    m_viewer = new LogViewer(this);
+    m_viewer = new widgets::LogViewer(this);
     layout->addWidget(m_viewer, 1);
 
     // Bottom toolbar
@@ -171,4 +172,4 @@ void LogPanelWidget::applyCategoryFilter() {
     }
 }
 
-} // namespace dsfw::widgets
+} // namespace dsfw

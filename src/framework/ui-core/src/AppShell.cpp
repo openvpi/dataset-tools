@@ -6,7 +6,7 @@
 #include <dsfw/IconNavBar.h>
 #include <dsfw/Log.h>
 #include <dsfw/LogNotifier.h>
-#include <dsfw/widgets/LogPanelWidget.h>
+#include <dsfw/LogPanelWidget.h>
 #include <dsfw/widgets/ToastNotification.h>
 
 #include <QAction>
@@ -91,7 +91,7 @@ namespace dsfw {
         m_stack = new QStackedWidget(this);
         m_contentSplitter->addWidget(m_stack);
 
-        m_logPanel = new widgets::LogPanelWidget(this);
+        m_logPanel = new LogPanelWidget(this);
         m_logPanel->setFixedWidth(320);
         m_logPanel->hide();
         m_contentSplitter->addWidget(m_logPanel);
