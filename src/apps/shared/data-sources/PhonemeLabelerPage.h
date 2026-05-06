@@ -2,6 +2,8 @@
 
 #include "EditorPageBase.h"
 
+#include <functional>
+
 #include <PhonemeEditor.h>
 
 namespace HFA {
@@ -46,6 +48,7 @@ private:
     void onRunFA();
     void onBatchFA();
     void ensureHfaEngine();
+    void ensureHfaEngineAsync(std::function<void()> onReady = {});
     void onModelInvalidated(const QString &taskKey);
     void runFaForSlice(const QString &sliceId);
     void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers);

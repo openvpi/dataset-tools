@@ -8,6 +8,8 @@
 
 #include <QWidget>
 #include <QString>
+#include <QSet>
+#include <functional>
 
 class QAction;
 class QMenuBar;
@@ -111,6 +113,20 @@ protected:
     /// Called during onShutdown() for final save (e.g. shortcut persistence).
     virtual void onShutdownImpl() {}
 
+    // ── Async engine loading ──
+
+    /// Load an inference engine asynchronously in a background thread.
+    /// @param taskKey Unique key for this loading task (prevents duplicate loads).
+    /// @param loadFunc Blocking function that loads the engine. Returns true on success.
+    ///        Called on a background thread — must not touch UI.
+    /// @param onReady Callback invoked on the main thread after successful load.
+    void loadEngineAsync(const QString &taskKey,
+                         std::function<bool()> loadFunc,
+                         std::function<void()> onReady);
+
+    /// Check if an async engine load is in progress for the given task key.
+    bool isEngineLoading(const QString &taskKey) const;
+
     // ── Common utility ──
 
     /// Show Save/Discard/Cancel dialog and act accordingly.
@@ -129,6 +145,8 @@ private:
 
     QAction *m_prevAction = nullptr;
     QAction *m_nextAction = nullptr;
+
+    QSet<QString> m_loadingEngines;
 
     void onSliceSelected(const QString &sliceId);
 };

@@ -96,6 +96,12 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     if (!m_boundaryModel || m_boundaryModel->tierCount() == 0) {
         painter.setPen(QColor(128, 128, 128));
         painter.drawText(rect(), Qt::AlignCenter, tr("No label data"));
+        if (m_alignmentRunning) {
+            painter.setPen(QColor(100, 180, 255));
+            painter.drawText(rect().adjusted(0, 2, -4, 0),
+                             Qt::AlignTop | Qt::AlignRight,
+                             tr("对齐中..."));
+        }
         return;
     }
 
@@ -157,10 +163,24 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     painter.setPen(QPen(QColor(80, 80, 100), 1));
     painter.drawLine(0, 0, w, 0);
     painter.drawLine(0, totalH - 1, w, totalH - 1);
+
+    if (m_alignmentRunning) {
+        painter.setPen(QColor(100, 180, 255));
+        painter.drawText(rect().adjusted(0, 2, -4, 0),
+                         Qt::AlignTop | Qt::AlignRight,
+                         tr("对齐中..."));
+    }
 }
 
 void PhonemeTextGridTierLabel::onModelDataChanged() {
     rebuildRadioButtons();
+}
+
+void PhonemeTextGridTierLabel::setAlignmentRunning(bool running) {
+    if (m_alignmentRunning != running) {
+        m_alignmentRunning = running;
+        update();
+    }
 }
 
 void PhonemeTextGridTierLabel::rebuildRadioButtons() {

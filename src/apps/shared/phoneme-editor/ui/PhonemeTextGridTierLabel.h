@@ -31,6 +31,9 @@ public:
 
     void onModelDataChanged() override;
 
+    /// Show/hide alignment-in-progress indicator.
+    void setAlignmentRunning(bool running);
+
 protected:
     void paintEvent(QPaintEvent *event) override;
 
@@ -44,6 +47,8 @@ private:
 
     static constexpr int kTierRowHeight = 24;
     static constexpr int kRadioPanelWidth = 28;
+
+    bool m_alignmentRunning = false;
 };
 
 } // namespace dstools

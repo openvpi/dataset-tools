@@ -9,9 +9,11 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPointer>
 #include <QSplitter>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QtConcurrent>
 
 namespace dstools {
 
@@ -172,6 +174,36 @@ bool EditorPageBase::maybeSave() {
     if (ret == QMessageBox::Discard)
         return true;
     return false; // Cancel
+}
+
+void EditorPageBase::loadEngineAsync(const QString &taskKey,
+                                      std::function<bool()> loadFunc,
+                                      std::function<void()> onReady) {
+    if (m_loadingEngines.contains(taskKey))
+        return; // Already loading
+
+    m_loadingEngines.insert(taskKey);
+    QPointer<EditorPageBase> guard(this);
+
+    (void) QtConcurrent::run([guard, taskKey, loadFunc = std::move(loadFunc),
+                              onReady = std::move(onReady)]() {
+        bool success = false;
+        if (loadFunc)
+            success = loadFunc();
+
+        QMetaObject::invokeMethod(guard.data(), [guard, taskKey, success,
+                                                  onReady = std::move(onReady)]() {
+            if (!guard)
+                return;
+            guard->m_loadingEngines.remove(taskKey);
+            if (success && onReady)
+                onReady();
+        }, Qt::QueuedConnection);
+    });
+}
+
+bool EditorPageBase::isEngineLoading(const QString &taskKey) const {
+    return m_loadingEngines.contains(taskKey);
 }
 
 } // namespace dstools

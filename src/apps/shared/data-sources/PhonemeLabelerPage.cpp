@@ -10,6 +10,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPointer>
+#include <QTimer>
 #include <QtConcurrent>
 
 #include <hubert-infer/Hfa.h>
@@ -170,7 +171,7 @@ void PhonemeLabelerPage::onAutoInfer() {
         auto preload = settingsData["preload"].toObject();
         auto faPreload = preload["phoneme_alignment"].toObject();
         if (faPreload["enabled"].toBool(false)) {
-            ensureHfaEngine();
+            ensureHfaEngineAsync();
         }
     }
 
@@ -198,18 +199,26 @@ void PhonemeLabelerPage::onAutoInfer() {
         if (needAutoFA) {
             source()->clearDirtyLayers(currentSliceId(), {QStringLiteral("phoneme")});
 
-            ensureHfaEngine();
-            if (m_hfa && m_hfa->isOpen() && !m_faRunning) {
-                dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Info,
-                    QStringLiteral("自动运行强制对齐..."), 3000);
-                runFaForSlice(currentSliceId());
-            } else {
-                dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Warning,
-                    QStringLiteral("音素层数据已过期，请手动运行强制对齐"),
-                    3000);
-            }
+            // Use async engine loading so UI doesn't block during model init
+            auto *tierLabel = m_editor->document() ?
+                dynamic_cast<PhonemeTextGridTierLabel *>(
+                    m_editor->findChild<PhonemeTextGridTierLabel *>()) : nullptr;
+
+            ensureHfaEngineAsync([this, tierLabel]() {
+                if (m_hfa && m_hfa->isOpen() && !m_faRunning) {
+                    if (tierLabel)
+                        tierLabel->setAlignmentRunning(true);
+                    dsfw::widgets::ToastNotification::show(
+                        this, dsfw::widgets::ToastType::Info,
+                        QStringLiteral("自动运行强制对齐..."), 3000);
+                    runFaForSlice(currentSliceId());
+                } else {
+                    dsfw::widgets::ToastNotification::show(
+                        this, dsfw::widgets::ToastType::Warning,
+                        QStringLiteral("音素层数据已过期，请手动运行强制对齐"),
+                        3000);
+                }
+            });
         }
     }
 }
@@ -321,6 +330,32 @@ void PhonemeLabelerPage::onModelInvalidated(const QString &taskKey) {
         m_hfa = nullptr;
 }
 
+void PhonemeLabelerPage::ensureHfaEngineAsync(std::function<void()> onReady) {
+    // Already loaded — invoke callback immediately
+    if (m_hfa && m_hfa->isOpen()) {
+        if (onReady) onReady();
+        return;
+    }
+
+    // Already loading in background
+    if (isEngineLoading(QStringLiteral("phoneme_alignment")))
+        return;
+
+    // ModelManager::loadModel must run on main thread (Q_ASSERT).
+    // The heavy work is IModelProvider::load() (ONNX session creation).
+    // We use loadEngineAsync to track loading state and provide callback,
+    // but the actual load is deferred to a QTimer::singleShot so the
+    // current call stack (onAutoInfer → onActivated) can return first.
+    QPointer<PhonemeLabelerPage> guard(this);
+    QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
+        if (!guard)
+            return;
+        ensureHfaEngine();
+        if (m_hfa && m_hfa->isOpen() && onReady)
+            onReady();
+    });
+}
+
 void PhonemeLabelerPage::onRunFA() {
     if (currentSliceId().isEmpty()) {
         QMessageBox::information(this, QStringLiteral("强制对齐"),
@@ -401,6 +436,12 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
             if (!guard)
                 return;
             guard->m_faRunning = false;
+
+            // Clear alignment indicator
+            auto *tierLabel = guard->m_editor->findChild<PhonemeTextGridTierLabel *>();
+            if (tierLabel)
+                tierLabel->setAlignmentRunning(false);
+
             if (result) {
                 QList<IntervalLayer> layers;
 
