@@ -248,15 +248,25 @@ void AudioVisualizerContainer::fitToWindow() {
     int64_t totalSamples = m_viewport->totalSamples();
     if (totalSamples <= 0)
         return;
-    if (width() <= 0) {
-        // Widget not yet shown — defer until first resizeEvent
+
+    int w = m_chartSplitter ? m_chartSplitter->width() : width();
+    if (w <= 0) {
         m_needsFitOnResize = true;
         return;
     }
     m_needsFitOnResize = false;
-    // Use the page's configured default resolution (not computed from width)
+
+    // Apply the configured default resolution
     m_viewport->setResolution(m_defaultResolution);
-    m_viewport->setViewRange(0, m_viewport->totalDuration());
+
+    // Compute how much audio fits in the current widget width at this resolution
+    double pps = m_viewport->pixelsPerSecond();
+    double visibleDuration = static_cast<double>(w) / pps;
+    double totalDur = m_viewport->totalDuration();
+
+    // Show from the beginning, capped at audio length
+    double endSec = std::min(visibleDuration, totalDur);
+    m_viewport->setViewRange(0.0, endSec);
 }
 
 void AudioVisualizerContainer::resizeEvent(QResizeEvent *event) {
