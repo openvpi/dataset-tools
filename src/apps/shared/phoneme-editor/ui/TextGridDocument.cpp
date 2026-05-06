@@ -331,10 +331,15 @@ TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, Ti
         nextBoundary = tier->GetMaxTime();
     }
 
-    // When boundary is AT the upper limit (last boundary), don't subtract kMinInterval
-    constexpr double kMinInterval = 0.001;
-    double minClamp = prevBoundary + kMinInterval;
-    double maxClamp = (boundaryIndex == count) ? nextBoundary : nextBoundary - kMinInterval;
+    // Allow boundaries to reach adjacent boundary positions (zero-width interval),
+    // so overlapped boundaries can be separated by dragging either direction.
+    // kEpsilon is a single time-unit guard against floating-point noise.
+    constexpr double kEpsilon = 0.000001;
+    double minClamp = prevBoundary;
+    double maxClamp = nextBoundary;
+    // For non-last boundaries, prevent crossing into the next interval
+    if (boundaryIndex < count)
+        maxClamp = nextBoundary - kEpsilon;
     double clamped = std::clamp(proposedSec, minClamp, maxClamp);
     return secToUs(clamped);
 }

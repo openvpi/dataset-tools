@@ -54,8 +54,13 @@ TimePos SliceBoundaryModel::clampBoundaryTime(int tierIndex, int boundaryIndex, 
                               ? m_pointsSec[boundaryIndex + 1]
                               : m_durationSec;
 
-    constexpr double kMinInterval = 0.001;
-    double clamped = std::clamp(proposedSec, prevBoundary + kMinInterval, nextBoundary - kMinInterval);
+    // Allow zero-width intervals so overlapped boundaries can be separated
+    constexpr double kEpsilon = 0.000001;
+    double minClamp = prevBoundary;
+    double maxClamp = (boundaryIndex + 1 < static_cast<int>(m_pointsSec.size()))
+                          ? nextBoundary - kEpsilon
+                          : nextBoundary;
+    double clamped = std::clamp(proposedSec, minClamp, maxClamp);
     return static_cast<TimePos>(clamped * kUsPerSec);
 }
 
