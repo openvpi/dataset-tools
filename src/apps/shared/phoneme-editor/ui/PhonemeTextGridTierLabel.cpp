@@ -165,9 +165,12 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
 
 void PhonemeTextGridTierLabel::resizeEvent(QResizeEvent *event) {
     TierLabelArea::resizeEvent(event);
-    // Position the radio panel overlay at the left edge
-    if (m_radioPanel)
-        m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, height());
+    // Keep radio panel at left edge, matching full tier height
+    if (m_radioPanel) {
+        int h = height();
+        m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, h);
+        m_radioPanel->raise();
+    }
 }
 
 void PhonemeTextGridTierLabel::onModelDataChanged() {
@@ -189,23 +192,26 @@ void PhonemeTextGridTierLabel::rebuildRadioButtons() {
         return;
 
     int tiers = m_boundaryModel->tierCount();
-    setFixedHeight(qMax(tiers, 1) * kTierRowHeight);
+    int totalH = qMax(tiers, 1) * kTierRowHeight;
+    setFixedHeight(totalH);
+
+    // Size radio panel to match the total tier height
+    m_radioPanel->setFixedSize(kRadioPanelWidth, totalH);
+    m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, totalH);
 
     for (int t = 0; t < tiers; ++t) {
         auto *btn = new QRadioButton(m_radioPanel);
-        btn->setFixedSize(20, kTierRowHeight);
+        btn->setFixedSize(kRadioPanelWidth, kTierRowHeight);
         if (t == m_activeTierIndex)
             btn->setChecked(true);
         m_buttonGroup->addButton(btn, t);
         // Position each button at the exact y offset for its tier row
-        // so it aligns vertically with the tier label text
-        btn->move(4, t * kTierRowHeight);
+        btn->move(0, t * kTierRowHeight);
         btn->show();
         m_radioButtons.append(btn);
     }
 
-    m_radioPanel->setFixedHeight(tiers * kTierRowHeight);
-    m_radioPanel->setGeometry(0, 0, kRadioPanelWidth, height());
+    m_radioPanel->raise();
     update();
 }
 
