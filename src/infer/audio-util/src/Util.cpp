@@ -337,6 +337,9 @@ namespace AudioUtil
 
         sf_vio_out.info.frames = total_output_frames;
 
+        // Reset seek to beginning so callers can read immediately
+        sf_vio_out.data.seek = 0;
+
         const double input_duration = static_cast<double>(total_input_frames) / original_src_samplerate;
         const double output_duration = static_cast<double>(total_output_frames) / tar_samplerate;
 
