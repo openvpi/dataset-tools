@@ -480,13 +480,18 @@ QMenuBar *SlicerPage::createMenuBar(QWidget *parent) {
     });
 
     auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
-    processMenu->addAction(QStringLiteral("自动切片"), this, &SlicerPage::onAutoSlice);
-    processMenu->addAction(QStringLiteral("重新切片"), this, &SlicerPage::onAutoSlice);
+    auto *actSlice = processMenu->addAction(QStringLiteral("自动切片"), this, &SlicerPage::onAutoSlice);
+    actSlice->setShortcut(QKeySequence(Qt::Key_S));
+    auto *actReSlice = processMenu->addAction(QStringLiteral("重新切片"), this, &SlicerPage::onAutoSlice);
+    actReSlice->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_S));
     processMenu->addSeparator();
-    processMenu->addAction(QStringLiteral("导入切点..."), this, &SlicerPage::onImportMarkers);
-    processMenu->addAction(QStringLiteral("保存切点..."), this, &SlicerPage::onSaveMarkers);
+    auto *actImport = processMenu->addAction(QStringLiteral("导入切点..."), this, &SlicerPage::onImportMarkers);
+    actImport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
+    auto *actSave = processMenu->addAction(QStringLiteral("保存切点..."), this, &SlicerPage::onSaveMarkers);
+    actSave->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_S));
     processMenu->addSeparator();
-    processMenu->addAction(QStringLiteral("导出切片音频..."), this, &SlicerPage::onExportAudio);
+    auto *actExport = processMenu->addAction(QStringLiteral("导出切片音频..."), this, &SlicerPage::onExportAudio);
+    actExport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
     processMenu->addAction(QStringLiteral("批量导出全部切片..."), this, &SlicerPage::onBatchExportAll);
 
     return bar;
