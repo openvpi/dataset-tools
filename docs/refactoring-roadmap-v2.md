@@ -27,27 +27,33 @@
 
 ## 待修复
 
-### B-01 Phoneme 绑定边界只能向左拖动
+### B-01 Phoneme 绑定边界只能向左拖动 ✅
 
 **问题**：音素层中与词级绑定的边界线只能向左移动，不能向右。
 
-**根因**：`BoundaryDragController::updateDrag()` 中跨层 clamp 逻辑有误。
+**根因**：`TextGridDocument::clampBoundaryTime()` 中跨层 clamp 使用 `boundaryTime()` 获取当前位置作为查找键，但在拖动预览期间该位置已被 `moveBoundary()` 更新，导致查找到错误的父区间。
+
+**修复**：✅ 改用 `prevBoundary`（左侧同层相邻边界，不会被拖动）作为查找键。
 
 ### B-02 Phoneme 非活跃层边界贯穿线显示
 
-**问题**：未选中的层级的边界线在下方图表（waveform/spectrogram/power）中也显示为贯穿线。应该只在 BoundaryOverlay 中以虚线显示非活跃层，chart widget 内不绘制非活跃层边界。
+**问题**：未选中的层级的边界线在下方图表（waveform/spectrogram/power）中也显示为贯穿线。
+
+**分析**：代码审查显示 `BoundaryOverlayWidget` 的逻辑正确（非活跃层 `lineBottom = tiers * tierRowH` 止于 tierLabel 区域内）。chart widget 自身 `paintEvent` 不绘制边界线。需要实际运行验证是否为渲染时序或 geometry 问题。
 
 ### B-03 Phoneme 波形图不显示
 
 **问题**：PhonemeLabeler 页面加载切片后波形图没有显示。
 
-### B-04 Slicer 默认比例尺 1200 有问题
+**分析**：代码逻辑正确（`setAudioData` + `rebuildMinMaxCache` + deferred `fitToWindow`）。可能原因：(1) 保存的 splitter state 将 waveform 高度压为 0；(2) `fitToWindow` 延迟执行时序问题。需要清除 QSettings 中的 `Layout/editorSplitterState` 验证。
 
-**问题**：Slicer 默认 resolution 应为 1200 而非 5000。当前 `SlicerPage` 中设置的默认值不正确。
+### B-04 Slicer 默认比例尺 ✅
 
-### B-05 Phoneme 不应自动过滤 FA 的 SP
+**修复**：✅ `SlicerPage` 默认 resolution 改为 1200。
 
-**问题**：`buildFaLayers()` 目前过滤了 SP/AP 静音词和音素，但用户期望保留 FA 输出的原始 SP 标注。FA 的 SP 是对齐结果的一部分，不应被静默移除。
+### B-05 Phoneme 不应自动过滤 FA 的 SP ✅
+
+**修复**：✅ `buildFaLayers()` 不再过滤 SP/AP 词和音素。FA 输出的所有标注（包括静音标记）完整保留到 grapheme/phoneme 层。
 
 ### 6.3 快捷键系统（部分完成）
 
