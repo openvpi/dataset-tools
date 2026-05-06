@@ -96,9 +96,13 @@ namespace Rmvpe
         std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, 16000);
 
+        if (!msg.empty()) {
+            return dstools::Err("Failed to resample audio for RMVPE: " + msg);
+        }
+
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
         if (!sf) {
-            return dstools::Err("Failed to open resampled audio for RMVPE: " + msg);
+            return dstools::Err("Failed to open resampled audio for RMVPE");
         }
         const auto totalSize = sf.frames();
 

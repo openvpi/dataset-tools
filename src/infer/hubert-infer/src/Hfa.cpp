@@ -122,16 +122,21 @@ namespace HFA {
         std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(wavPath, msg, 1, hfa_input_sample_rate);
 
+        if (!msg.empty()) {
+            return dstools::Err("Failed to resample audio: " + msg
+                + " (path: " + wavPath.string() + ")");
+        }
+
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
                          hfa_input_sample_rate);
         if (!sf) {
-            return dstools::Err("Failed to open resampled audio for HFA: " + msg
-                + " (path: " + wavPath.string() + ")");
+            return dstools::Err("Failed to open resampled audio for HFA"
+                " (path: " + wavPath.string() + ")");
         }
         const auto totalSize = sf.frames();
 
         if (totalSize == 0) {
-            return dstools::Err("Audio file contains 0 samples, cannot run forced alignment"
+            return dstools::Err("Audio file contains 0 samples after resampling, cannot run forced alignment"
                 " (path: " + wavPath.string() + ")");
         }
 
