@@ -42,8 +42,8 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     setupBaseLayout(m_editor);
     setupNavigationActions();
 
-    m_extractPitchAction = new QAction(QStringLiteral("提取音高"), this);
-    m_extractMidiAction = new QAction(QStringLiteral("提取 MIDI"), this);
+    m_extractPitchAction = new QAction(tr("Extract Pitch"), this);
+    m_extractMidiAction = new QAction(tr("Extract MIDI"), this);
     connect(m_extractPitchAction, &QAction::triggered, this, &PitchLabelerPage::onExtractPitch);
     connect(m_extractMidiAction, &QAction::triggered, this, &PitchLabelerPage::onExtractMidi);
 
@@ -58,23 +58,23 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutExtractMidi("Shortcuts/extractMidi", "M");
 
     shortcutManager()->bind(m_editor->saveAction(), kShortcutSave,
-                            QStringLiteral("保存"), QStringLiteral("文件"));
+                            tr("Save"), tr("File"));
     shortcutManager()->bind(m_editor->undoAction(), kShortcutUndo,
-                            QStringLiteral("撤销"), QStringLiteral("编辑"));
+                            tr("Undo"), tr("Edit"));
     shortcutManager()->bind(m_editor->redoAction(), kShortcutRedo,
-                            QStringLiteral("重做"), QStringLiteral("编辑"));
+                            tr("Redo"), tr("Edit"));
     shortcutManager()->bind(m_editor->zoomInAction(), kShortcutZoomIn,
-                            QStringLiteral("放大"), QStringLiteral("视图"));
+                            tr("Zoom In"), tr("View"));
     shortcutManager()->bind(m_editor->zoomOutAction(), kShortcutZoomOut,
-                            QStringLiteral("缩小"), QStringLiteral("视图"));
+                            tr("Zoom Out"), tr("View"));
     shortcutManager()->bind(m_editor->zoomResetAction(), kShortcutZoomReset,
-                            QStringLiteral("重置缩放"), QStringLiteral("视图"));
+                            tr("Reset Zoom"), tr("View"));
     shortcutManager()->bind(m_editor->abCompareAction(), kShortcutABCompare,
-                            QStringLiteral("A/B 比较"), QStringLiteral("工具"));
+                            tr("A/B Compare"), tr("Tools"));
     shortcutManager()->bind(m_extractPitchAction, kShortcutExtractPitch,
-                            QStringLiteral("提取音高"), QStringLiteral("处理"));
+                            tr("Extract Pitch"), tr("Processing"));
     shortcutManager()->bind(m_extractMidiAction, kShortcutExtractMidi,
-                            QStringLiteral("提取 MIDI"), QStringLiteral("处理"));
+                            tr("Extract MIDI"), tr("Processing"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
     shortcutManager()->setEnabled(false);
@@ -86,7 +86,7 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
 PitchLabelerPage::~PitchLabelerPage() = default;
 
 QString PitchLabelerPage::windowTitlePrefix() const {
-    return QStringLiteral("音高标注");
+    return tr("Pitch Labeling");
 }
 
 bool PitchLabelerPage::isDirty() const {

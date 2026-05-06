@@ -38,18 +38,18 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     setupBaseLayout(m_editor);
     setupNavigationActions();
 
-    m_playAction = new QAction(QStringLiteral("播放/停止"), this);
+    m_playAction = new QAction(tr("Play/Stop"), this);
     m_playAction->setIcon(QIcon(QStringLiteral(":/icons/play.svg")));
-    m_asrAction = new QAction(QStringLiteral("ASR 识别当前曲目"), this);
+    m_asrAction = new QAction(tr("ASR Recognize Current"), this);
     connect(m_asrAction, &QAction::triggered, this, &MinLabelPage::onRunAsr);
 
     static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/play", "F5");
     static const dstools::SettingsKey<QString> kAsrRun("Shortcuts/asr", "R");
 
     shortcutManager()->bind(m_playAction, kPlaybackPlay,
-                            QStringLiteral("播放/停止"), QStringLiteral("播放"));
+                            tr("Play/Stop"), tr("Playback"));
     shortcutManager()->bind(m_asrAction, kAsrRun,
-                            QStringLiteral("ASR 识别"), QStringLiteral("处理"));
+                            tr("ASR Recognize"), tr("Processing"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
     shortcutManager()->setEnabled(false);
@@ -67,7 +67,7 @@ MinLabelPage::~MinLabelPage() = default;
 // ── EditorPageBase hooks ──────────────────────────────────────────────────────
 
 QString MinLabelPage::windowTitlePrefix() const {
-    return QStringLiteral("歌词标注");
+    return tr("Lyrics Labeling");
 }
 
 bool MinLabelPage::isDirty() const {
@@ -112,7 +112,7 @@ bool MinLabelPage::saveCurrentSlice() {
 
     auto saveResult = source()->saveSlice(currentSliceId(), doc);
     if (!saveResult) {
-        QMessageBox::warning(this, QStringLiteral("保存失败"),
+        QMessageBox::warning(this, tr("Save Failed"),
                              QString::fromStdString(saveResult.error()));
         return false;
     }
@@ -164,7 +164,7 @@ void MinLabelPage::onAutoInfer() {
             source()->clearDirtyLayers(currentSliceId(), {QStringLiteral("grapheme")});
             dsfw::widgets::ToastNotification::show(
                 this, dsfw::widgets::ToastType::Info,
-                QStringLiteral("歌词层已更新"), 3000);
+                tr("Lyrics layer updated"), 3000);
         }
     }
 }
@@ -178,33 +178,33 @@ void MinLabelPage::onDeactivatedImpl() {
 QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
     auto *bar = new QMenuBar(parent);
 
-    auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
-    fileMenu->addAction(QStringLiteral("保存"), QKeySequence::Save, this, [this]() { saveCurrentSlice(); });
+    auto *fileMenu = bar->addMenu(tr("&File"));
+    fileMenu->addAction(tr("Save"), QKeySequence::Save, this, [this]() { saveCurrentSlice(); });
     fileMenu->addSeparator();
-    fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
+    fileMenu->addAction(tr("E&xit"), this, [this]() {
         if (auto *w = window()) w->close();
     });
 
-    auto *editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
+    auto *editMenu = bar->addMenu(tr("&Edit"));
     editMenu->addAction(prevAction());
     editMenu->addAction(nextAction());
     editMenu->addSeparator();
     {
-        auto *shortcutAction = editMenu->addAction(QStringLiteral("快捷键设置..."));
+        auto *shortcutAction = editMenu->addAction(tr("Shortcut Settings..."));
         connect(shortcutAction, &QAction::triggered, this, [this]() {
             shortcutManager()->showEditor(this);
         });
     }
 
-    auto *playMenu = bar->addMenu(QStringLiteral("播放(&P)"));
+    auto *playMenu = bar->addMenu(tr("&Playback"));
     playMenu->addAction(m_playAction);
 
-    auto *processMenu = bar->addMenu(QStringLiteral("处理(&R)"));
+    auto *processMenu = bar->addMenu(tr("P&rocessing"));
     processMenu->addAction(m_asrAction);
     processMenu->addSeparator();
-    processMenu->addAction(QStringLiteral("批量 ASR..."), this, &MinLabelPage::onBatchAsr);
+    processMenu->addAction(tr("Batch ASR..."), this, &MinLabelPage::onBatchAsr);
 
-    auto *viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
+    auto *viewMenu = bar->addMenu(tr("&View"));
     dsfw::Theme::instance().populateThemeMenu(viewMenu);
 
     return bar;
@@ -215,13 +215,13 @@ QWidget *MinLabelPage::createStatusBarContent(QWidget *parent) {
     auto *layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    auto *sliceLabel = new QLabel(QStringLiteral("未选择切片"), container);
+    auto *sliceLabel = new QLabel(tr("No slice selected"), container);
     auto *progressLabel = new QLabel(container);
     layout->addWidget(sliceLabel, 1);
     layout->addWidget(progressLabel);
 
-    connect(this, &MinLabelPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
-        sliceLabel->setText(id.isEmpty() ? QStringLiteral("未选择切片") : id);
+    connect(this, &MinLabelPage::sliceChanged, sliceLabel, [this, sliceLabel](const QString &id) {
+        sliceLabel->setText(id.isEmpty() ? tr("No slice selected") : id);
     });
 
     return container;
@@ -331,21 +331,21 @@ void MinLabelPage::ensureAsrEngineAsync(std::function<void()> onReady) {
 
 void MinLabelPage::onRunAsr() {
     if (currentSliceId().isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("ASR"),
-                                 QStringLiteral("请先选择一个切片。"));
+        QMessageBox::information(this, tr("ASR"),
+                                 tr("Please select a slice first."));
         return;
     }
 
     ensureAsrEngine();
     if (!m_asr || !m_asr->initialized()) {
-        QMessageBox::warning(this, QStringLiteral("ASR"),
-                             QStringLiteral("ASR 模型未加载。请在设置中配置 ASR 模型路径。"));
+        QMessageBox::warning(this, tr("ASR"),
+                             tr("ASR model not loaded. Please configure the ASR model path in Settings."));
         return;
     }
 
     if (m_asrRunning) {
-        QMessageBox::information(this, QStringLiteral("ASR"),
-                                 QStringLiteral("ASR 正在运行中，请稍候。"));
+        QMessageBox::information(this, tr("ASR"),
+                                 tr("ASR is running, please wait."));
         return;
     }
 
@@ -359,8 +359,8 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
     QString audioPath = source()->validatedAudioPath(sliceId);
     if (audioPath.isEmpty()) {
         if (source()->audioPath(sliceId).isEmpty())
-            QMessageBox::warning(this, QStringLiteral("ASR"),
-                                 QStringLiteral("当前切片没有音频文件。"));
+            QMessageBox::warning(this, tr("ASR"),
+                                 tr("Current slice has no audio file."));
         return;
     }
 
@@ -389,11 +389,11 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
                               + " - \"" + text.left(50).toStdString() + "\"").c_str());
                 dsfw::widgets::ToastNotification::show(
                     guard.data(), dsfw::widgets::ToastType::Info,
-                    QStringLiteral("ASR 识别完成"), 3000);
+                    tr("ASR recognition completed"), 3000);
             } else {
                 DSFW_LOG_ERROR("infer", ("ASR failed: " + sliceId.toStdString()).c_str());
-                QMessageBox::warning(guard.data(), QStringLiteral("ASR"),
-                                     QStringLiteral("ASR 识别失败。"));
+                QMessageBox::warning(guard.data(), tr("ASR"),
+                                     tr("ASR recognition failed."));
             }
         }, Qt::QueuedConnection);
     });
@@ -401,28 +401,28 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
 
 void MinLabelPage::onBatchAsr() {
     if (!source()) {
-        QMessageBox::warning(this, QStringLiteral("批量 ASR"),
-                             QStringLiteral("请先打开工程。"));
+        QMessageBox::warning(this, tr("Batch ASR"),
+                             tr("Please open a project first."));
         return;
     }
 
     ensureAsrEngine();
     if (!m_asr || !m_asr->initialized()) {
-        QMessageBox::warning(this, QStringLiteral("批量 ASR"),
-                             QStringLiteral("ASR 模型未加载。请在设置中配置 ASR 模型路径。"));
+        QMessageBox::warning(this, tr("Batch ASR"),
+                             tr("ASR model not loaded. Please configure the ASR model path in Settings."));
         return;
     }
 
     if (m_asrRunning) {
-        QMessageBox::information(this, QStringLiteral("批量 ASR"),
-                                 QStringLiteral("ASR 正在运行中，请稍候。"));
+        QMessageBox::information(this, tr("Batch ASR"),
+                                 tr("ASR is running, please wait."));
         return;
     }
 
     const auto ids = source()->sliceIds();
     if (ids.isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("批量 ASR"),
-                                 QStringLiteral("没有可处理的切片。"));
+        QMessageBox::information(this, tr("Batch ASR"),
+                                 tr("No slices to process."));
         return;
     }
 
@@ -456,9 +456,9 @@ void MinLabelPage::onBatchAsr() {
             if (!guard)
                 return;
             guard->m_asrRunning = false;
-            QString msg = QStringLiteral("批量 ASR 完成: %1 个切片").arg(processed);
+            QString msg = tr("Batch ASR completed: %1 slices").arg(processed);
             if (skipped > 0)
-                msg += QStringLiteral("，%1 个音频文件缺失已跳过").arg(skipped);
+                msg += tr(", %1 skipped (missing audio)").arg(skipped);
             dsfw::widgets::ToastNotification::show(
                 guard.data(), dsfw::widgets::ToastType::Info,
                 msg, 3000);

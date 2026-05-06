@@ -126,7 +126,7 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     setupBaseLayout(m_editor);
     setupNavigationActions();
 
-    m_faAction = new QAction(QStringLiteral("强制对齐当前切片"), this);
+    m_faAction = new QAction(tr("Force Align Current Slice"), this);
     connect(m_faAction, &QAction::triggered, this, &PhonemeLabelerPage::onRunFA);
 
     // Add FA button to the editor toolbar
@@ -138,13 +138,13 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutFA("Shortcuts/fa", "F");
 
     shortcutManager()->bind(m_editor->saveAction(), kShortcutSave,
-                            QStringLiteral("保存"), QStringLiteral("文件"));
+                            tr("Save"), tr("File"));
     shortcutManager()->bind(m_editor->undoAction(), kShortcutUndo,
-                            QStringLiteral("撤销"), QStringLiteral("编辑"));
+                            tr("Undo"), tr("Edit"));
     shortcutManager()->bind(m_editor->redoAction(), kShortcutRedo,
-                            QStringLiteral("重做"), QStringLiteral("编辑"));
+                            tr("Redo"), tr("Edit"));
     shortcutManager()->bind(m_faAction, kShortcutFA,
-                            QStringLiteral("强制对齐"), QStringLiteral("处理"));
+                            tr("Force Align"), tr("Processing"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
     shortcutManager()->setEnabled(false);
@@ -158,7 +158,7 @@ PhonemeLabelerPage::~PhonemeLabelerPage() = default;
 // ── EditorPageBase hooks ──────────────────────────────────────────────────────
 
 QString PhonemeLabelerPage::windowTitlePrefix() const {
-    return QStringLiteral("音素标注");
+    return tr("Phoneme Labeling");
 }
 
 bool PhonemeLabelerPage::isDirty() const {
@@ -189,7 +189,7 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
 
     auto saveResult = source()->saveSlice(currentSliceId(), dstext);
     if (!saveResult) {
-        QMessageBox::warning(this, QStringLiteral("保存失败"),
+        QMessageBox::warning(this, tr("Save Failed"),
                              QString::fromStdString(saveResult.error()));
         return false;
     }
@@ -314,12 +314,12 @@ void PhonemeLabelerPage::onAutoInfer() {
                         tierLabel->setAlignmentRunning(true);
                     dsfw::widgets::ToastNotification::show(
                         this, dsfw::widgets::ToastType::Info,
-                        QStringLiteral("自动运行强制对齐..."), 3000);
+                        tr("Auto force-aligning..."), 3000);
                     runFaForSlice(currentSliceId());
                 } else {
                     dsfw::widgets::ToastNotification::show(
                         this, dsfw::widgets::ToastType::Warning,
-                        QStringLiteral("音素层数据已过期，请手动运行强制对齐"),
+                        tr("Phoneme layer outdated, please run force align manually"),
                         3000);
                 }
             });
@@ -332,14 +332,14 @@ void PhonemeLabelerPage::onAutoInfer() {
 QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
     auto *bar = new QMenuBar(parent);
 
-    auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
+    auto *fileMenu = bar->addMenu(tr("&File"));
     fileMenu->addAction(m_editor->saveAction());
     fileMenu->addSeparator();
-    fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
+    fileMenu->addAction(tr("E&xit"), this, [this]() {
         if (auto *w = window()) w->close();
     });
 
-    auto *editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
+    auto *editMenu = bar->addMenu(tr("&Edit"));
     editMenu->addAction(m_editor->undoAction());
     editMenu->addAction(m_editor->redoAction());
     editMenu->addSeparator();
@@ -347,18 +347,18 @@ QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
     editMenu->addAction(nextAction());
     editMenu->addSeparator();
     {
-        auto *shortcutAction = editMenu->addAction(QStringLiteral("快捷键设置..."));
+        auto *shortcutAction = editMenu->addAction(tr("Shortcut Settings..."));
         connect(shortcutAction, &QAction::triggered, this, [this]() {
             shortcutManager()->showEditor(this);
         });
     }
 
-    auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
+    auto *processMenu = bar->addMenu(tr("&Processing"));
     processMenu->addAction(m_faAction);
     processMenu->addSeparator();
-    processMenu->addAction(QStringLiteral("批量强制对齐..."), this, &PhonemeLabelerPage::onBatchFA);
+    processMenu->addAction(tr("Batch Force Align..."), this, &PhonemeLabelerPage::onBatchFA);
 
-    auto *viewMenu = bar->addMenu(QStringLiteral("视图(&V)"));
+    auto *viewMenu = bar->addMenu(tr("&View"));
     for (auto *act : m_editor->viewActions()) {
         if (act)
             viewMenu->addAction(act);
@@ -377,13 +377,13 @@ QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
     auto *layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    auto *sliceLabel = new QLabel(QStringLiteral("未选择切片"), container);
+    auto *sliceLabel = new QLabel(tr("No slice selected"), container);
     auto *posLabel = new QLabel(QStringLiteral("0.000s"), container);
     layout->addWidget(sliceLabel, 1);
     layout->addWidget(posLabel);
 
-    connect(this, &PhonemeLabelerPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
-        sliceLabel->setText(id.isEmpty() ? QStringLiteral("未选择切片") : id);
+    connect(this, &PhonemeLabelerPage::sliceChanged, sliceLabel, [this, sliceLabel](const QString &id) {
+        sliceLabel->setText(id.isEmpty() ? tr("No slice selected") : id);
     });
     connect(m_editor, &phonemelabeler::PhonemeEditor::positionChanged,
             this, [posLabel](double sec) {
@@ -462,21 +462,21 @@ void PhonemeLabelerPage::ensureHfaEngineAsync(std::function<void()> onReady) {
 
 void PhonemeLabelerPage::onRunFA() {
     if (currentSliceId().isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("强制对齐"),
-                                 QStringLiteral("请先选择一个切片。"));
+        QMessageBox::information(this, tr("Force Align"),
+                                 tr("Please select a slice first."));
         return;
     }
 
     ensureHfaEngine();
     if (!m_hfa || !m_hfa->isOpen()) {
-        QMessageBox::warning(this, QStringLiteral("强制对齐"),
-                             QStringLiteral("强制对齐模型未加载。请在设置中配置 HuBERT-FA 模型路径。"));
+        QMessageBox::warning(this, tr("Force Align"),
+                             tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
         return;
     }
 
     if (m_faRunning) {
-        QMessageBox::information(this, QStringLiteral("强制对齐"),
-                                 QStringLiteral("强制对齐正在运行中，请稍候。"));
+        QMessageBox::information(this, tr("Force Align"),
+                                 tr("Force alignment is running, please wait."));
         return;
     }
 
@@ -491,16 +491,16 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     if (audioPath.isEmpty()) {
         if (source()->audioPath(sliceId).isEmpty()) {
             DSFW_LOG_WARN("infer", ("FA skipped: slice has no audio file - " + sliceId.toStdString()).c_str());
-            QMessageBox::warning(this, QStringLiteral("强制对齐"),
-                                 QStringLiteral("当前切片没有音频文件。"));
+            QMessageBox::warning(this, tr("Force Align"),
+                                 tr("Current slice has no audio file."));
         }
         return;
     }
 
     auto loadResult = source()->loadSlice(sliceId);
     if (!loadResult) {
-        QMessageBox::warning(this, QStringLiteral("强制对齐"),
-                             QStringLiteral("无法加载切片数据。"));
+        QMessageBox::warning(this, tr("Force Align"),
+                             tr("Unable to load slice data."));
         return;
     }
 
@@ -518,8 +518,8 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     if (graphemeTexts.isEmpty()) {
         DSFW_LOG_WARN("infer", ("FA skipped: no grapheme layer data - " + sliceId.toStdString()).c_str());
-        QMessageBox::information(this, QStringLiteral("强制对齐"),
-                                 QStringLiteral("当前切片没有歌词数据，请先在歌词页标注。"));
+        QMessageBox::information(this, tr("Force Align"),
+                                 tr("Current slice has no lyrics data. Please label lyrics first."));
         return;
     }
 
@@ -561,11 +561,11 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 guard->applyFaResult(sliceId, layers, faResult.groups);
                 dsfw::widgets::ToastNotification::show(
                     guard.data(), dsfw::widgets::ToastType::Info,
-                    QStringLiteral("强制对齐完成"), 3000);
+                    tr("Force alignment completed"), 3000);
             } else {
                 DSFW_LOG_ERROR("infer", ("FA failed: " + sliceId.toStdString() + " - " + result.error()).c_str());
-                QMessageBox::warning(guard.data(), QStringLiteral("强制对齐"),
-                                     QStringLiteral("强制对齐失败: %1")
+                QMessageBox::warning(guard.data(), tr("Force Align"),
+                                     tr("Force alignment failed: %1")
                                          .arg(QString::fromStdString(result.error())));
             }
         }, Qt::QueuedConnection);
@@ -633,29 +633,29 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
 
 void PhonemeLabelerPage::onBatchFA() {
     if (!source()) {
-        QMessageBox::warning(this, QStringLiteral("批量强制对齐"),
-                             QStringLiteral("请先打开工程。"));
+        QMessageBox::warning(this, tr("Batch Force Align"),
+                             tr("Please open a project first."));
         return;
     }
 
     ensureHfaEngine();
     if (!m_hfa || !m_hfa->isOpen()) {
-        QMessageBox::warning(this, QStringLiteral("批量强制对齐"),
-                             QStringLiteral("强制对齐模型未加载。请在设置中配置 HuBERT-FA 模型路径。"));
+        QMessageBox::warning(this, tr("Batch Force Align"),
+                             tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
         return;
     }
 
     if (m_faRunning) {
-        QMessageBox::information(this, QStringLiteral("批量强制对齐"),
-                                 QStringLiteral("强制对齐正在运行中，请稍候。"));
+        QMessageBox::information(this, tr("Batch Force Align"),
+                                 tr("Force alignment is running, please wait."));
         return;
     }
 
     const auto ids = source()->sliceIds();
     if (ids.isEmpty()) {
         DSFW_LOG_WARN("infer", "Batch FA skipped: no slices");
-        QMessageBox::information(this, QStringLiteral("批量强制对齐"),
-                                 QStringLiteral("没有可处理的切片。"));
+        QMessageBox::information(this, tr("Batch Force Align"),
+                                 tr("No slices to process."));
         return;
     }
 
@@ -727,9 +727,9 @@ void PhonemeLabelerPage::onBatchFA() {
             guard->m_faRunning = false;
             DSFW_LOG_INFO("infer", ("Batch FA completed: " + std::to_string(processed)
                           + " processed, " + std::to_string(skipped) + " skipped").c_str());
-            QString msg = QStringLiteral("批量强制对齐完成: %1 个切片").arg(processed);
+            QString msg = tr("Batch force align completed: %1 slices").arg(processed);
             if (skipped > 0)
-                msg += QStringLiteral("，%1 个音频文件缺失已跳过").arg(skipped);
+                msg += tr(", %1 skipped (missing audio)").arg(skipped);
             dsfw::widgets::ToastNotification::show(
                 guard.data(), dsfw::widgets::ToastType::Info,
                 msg, 3000);

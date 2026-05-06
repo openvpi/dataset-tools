@@ -49,13 +49,13 @@ void EditorPageBase::setupBaseLayout(QWidget *editorWidget) {
 }
 
 void EditorPageBase::setupNavigationActions() {
-    m_prevAction = new QAction(QStringLiteral("上一个切片"), this);
-    m_nextAction = new QAction(QStringLiteral("下一个切片"), this);
+    m_prevAction = new QAction(tr("Previous Slice"), this);
+    m_nextAction = new QAction(tr("Next Slice"), this);
 
     m_shortcutManager->bind(m_prevAction, dsfw::CommonKeys::NavigationPrev,
-                            QStringLiteral("上一个切片"), QStringLiteral("导航"));
+                            tr("Previous Slice"), tr("Navigation"));
     m_shortcutManager->bind(m_nextAction, dsfw::CommonKeys::NavigationNext,
-                            QStringLiteral("下一个切片"), QStringLiteral("导航"));
+                            tr("Next Slice"), tr("Navigation"));
 
     connect(m_prevAction, &QAction::triggered, this, [this]() {
         m_sliceList->selectPrev();
@@ -167,8 +167,8 @@ bool EditorPageBase::maybeSave() {
         return true;
 
     auto ret = QMessageBox::question(
-        this, QStringLiteral("未保存的更改"),
-        QStringLiteral("当前切片已修改，是否保存？"),
+        this, tr("Unsaved Changes"),
+        tr("Current slice has been modified. Save changes?"),
         QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
 
     if (ret == QMessageBox::Save)
