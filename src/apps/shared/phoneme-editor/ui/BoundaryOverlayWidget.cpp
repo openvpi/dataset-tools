@@ -119,9 +119,15 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
         bool isActive = (t == activeTier);
 
         int lineTop = t * tierRowH;
-        // All boundary lines extend through the full height (tier labels + charts),
-        // so the user can visually track them across all visualizations.
-        int lineBottom = fullBottom;
+        int lineBottom;
+
+        if (isActive) {
+            // D-05: Active tier boundary lines extend through ALL charts
+            lineBottom = fullBottom;
+        } else {
+            // D-05: Non-active tier boundary lines stay within the tier label area
+            lineBottom = tiers * tierRowH;
+        }
 
         for (int b = 0; b < count; ++b) {
             double tSec = usToSec(model->boundaryTime(t, b));
