@@ -80,7 +80,7 @@
 
 **分析**：代码审查显示 `BoundaryOverlayWidget` 的逻辑正确（非活跃层 `lineBottom = tiers * tierRowH` 止于 tierLabel 区域内）。chart widget 自身 `paintEvent` 不绘制边界线。需要实际运行验证是否为渲染时序或 geometry 问题。
 
-### B-03 Phoneme 波形图不显示
+### B-03 Phoneme 波形图不显示 ✅
 
 **问题**：PhonemeLabeler 页面加载切片后波形图没有显示。
 

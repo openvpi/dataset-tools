@@ -313,10 +313,18 @@ namespace dstools {
             // On resize, recalculate view range to match new width at current resolution
             updateViewRangeFromResolution();
         }
-        // Apply deferred splitter state now that the widget has valid size
         if (!m_pendingSplitterState.isEmpty() && m_chartSplitter && m_chartSplitter->height() > 0) {
             m_chartSplitter->restoreState(m_pendingSplitterState);
             m_pendingSplitterState.clear();
+            bool hasZeroHeight = false;
+            for (int i = 0; i < m_chartSplitter->count(); ++i) {
+                if (m_chartSplitter->widget(i)->isVisible() && m_chartSplitter->sizes().at(i) == 0) {
+                    hasZeroHeight = true;
+                    break;
+                }
+            }
+            if (hasZeroHeight)
+                applyDefaultHeightRatios();
         }
         updateScaleIndicator();
     }
@@ -453,10 +461,17 @@ namespace dstools {
     void AudioVisualizerContainer::restoreSplitterState(const QByteArray &state) {
         if (state.isEmpty())
             return;
-        // Defer restore until the splitter has been laid out (non-zero height).
-        // Otherwise QSplitter::restoreState clamps all child sizes to 0.
         if (m_chartSplitter && m_chartSplitter->height() > 0) {
             m_chartSplitter->restoreState(state);
+            bool hasZeroHeight = false;
+            for (int i = 0; i < m_chartSplitter->count(); ++i) {
+                if (m_chartSplitter->widget(i)->isVisible() && m_chartSplitter->sizes().at(i) == 0) {
+                    hasZeroHeight = true;
+                    break;
+                }
+            }
+            if (hasZeroHeight)
+                applyDefaultHeightRatios();
         } else {
             m_pendingSplitterState = state;
         }
