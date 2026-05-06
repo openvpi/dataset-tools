@@ -103,6 +103,7 @@ private:
     void connectViewportToWidget(QWidget *widget);
     void applyDefaultHeightRatios();
     void updateOverlayTopOffset();
+    void resizeEvent(QResizeEvent *event) override;
 
     // eventFilter: track editor widget resize
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -122,6 +123,7 @@ private:
     QStringList m_chartOrder;
 
     AppSettings m_settings;
+    bool m_needsFitOnResize = false; ///< fitToWindow was deferred because width was 0
 };
 
 } // namespace dstools

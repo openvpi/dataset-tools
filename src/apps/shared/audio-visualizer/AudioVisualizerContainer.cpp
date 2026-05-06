@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QMetaMethod>
 #include <QPointer>
+#include <QResizeEvent>
 #include <QSettings>
 #include <algorithm>
 
@@ -241,12 +242,26 @@ bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
 
 void AudioVisualizerContainer::fitToWindow() {
     int64_t totalSamples = m_viewport->totalSamples();
-    if (totalSamples <= 0 || width() <= 0)
+    if (totalSamples <= 0)
         return;
+    if (width() <= 0) {
+        // Widget not yet shown — defer until first resizeEvent
+        m_needsFitOnResize = true;
+        return;
+    }
+    m_needsFitOnResize = false;
     int fitResolution = static_cast<int>(totalSamples / width());
     fitResolution = std::clamp(fitResolution, 10, 400);
     m_viewport->setResolution(fitResolution);
     m_viewport->setViewRange(0, m_viewport->totalDuration());
+}
+
+void AudioVisualizerContainer::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+    if (m_needsFitOnResize && width() > 0) {
+        fitToWindow();
+    }
+    updateScaleIndicator();
 }
 
 void AudioVisualizerContainer::addChart(const QString &id, QWidget *widget,
