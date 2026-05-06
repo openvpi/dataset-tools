@@ -7,6 +7,7 @@
 
 #include <dsfw/widgets/PlayWidget.h>
 
+#include <QLabel>
 #include <QMetaMethod>
 #include <QPointer>
 #include <QSettings>
@@ -38,10 +39,25 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
     mainLayout->addWidget(m_tierLabelArea);
 
     m_chartSplitter = new QSplitter(Qt::Vertical, this);
+    m_chartSplitter->installEventFilter(this);
     mainLayout->addWidget(m_chartSplitter, 1);
 
     m_boundaryOverlay = new BoundaryOverlayWidget(m_viewport, this);
     m_boundaryOverlay->trackWidget(m_chartSplitter);
+
+    // Scale indicator at the bottom-right of the chart area
+    m_scaleLabel = new QLabel(this);
+    m_scaleLabel->setStyleSheet(QStringLiteral(
+        "QLabel {"
+        "  color: #aaa;"
+        "  background-color: rgba(30, 30, 30, 180);"
+        "  border: 1px solid #555;"
+        "  border-radius: 3px;"
+        "  padding: 2px 6px;"
+        "  font-size: 11px;"
+        "}"));
+    m_scaleLabel->setAlignment(Qt::AlignCenter);
+    m_scaleLabel->adjustSize();
 
     connect(m_viewport, &ViewportController::viewportChanged,
             m_timeRuler, &TimeRulerWidget::setViewport);
@@ -49,6 +65,41 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
             m_boundaryOverlay, &BoundaryOverlayWidget::setViewport);
     connect(m_viewport, &ViewportController::viewportChanged,
             m_miniMap, &MiniMapScrollBar::setViewport);
+    connect(m_viewport, &ViewportController::viewportChanged,
+            this, &AudioVisualizerContainer::updateScaleIndicator);
+}
+
+void AudioVisualizerContainer::updateScaleIndicator() {
+    if (!m_scaleLabel || !m_viewport)
+        return;
+
+    int resolution = m_viewport->resolution();
+    double pps = m_viewport->pixelsPerSecond();
+    double msPerDiv = 1000.0 / pps * 80.0; // ~80px per division
+
+    // Format: show time-per-division and resolution
+    QString text;
+    if (msPerDiv >= 1000.0)
+        text = QStringLiteral("%1s/div  (%2 spx)")
+            .arg(msPerDiv / 1000.0, 0, 'f', 1)
+            .arg(resolution);
+    else if (msPerDiv >= 1.0)
+        text = QStringLiteral("%1ms/div  (%2 spx)")
+            .arg(msPerDiv, 0, 'f', 0)
+            .arg(resolution);
+    else
+        text = QStringLiteral("%1μs/div  (%2 spx)")
+            .arg(msPerDiv * 1000.0, 0, 'f', 0)
+            .arg(resolution);
+
+    m_scaleLabel->setText(text);
+    m_scaleLabel->adjustSize();
+
+    // Position at bottom-right of the chart splitter area
+    int x = m_chartSplitter->width() - m_scaleLabel->width() - 8;
+    int y = m_chartSplitter->y() + m_chartSplitter->height() - m_scaleLabel->height() - 8;
+    m_scaleLabel->move(x, y);
+    m_scaleLabel->raise();
 }
 
 AudioVisualizerContainer::~AudioVisualizerContainer() = default;
@@ -170,6 +221,11 @@ void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, i
 bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
     if (watched == m_editorWidget && event->type() == QEvent::Resize) {
         updateOverlayTopOffset();
+    }
+    if (event->type() == QEvent::Resize) {
+        // Update scale label and overlay position on any resize
+        if (watched == m_chartSplitter)
+            updateScaleIndicator();
     }
     return QWidget::eventFilter(watched, event);
 }

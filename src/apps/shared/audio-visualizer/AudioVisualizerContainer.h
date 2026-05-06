@@ -20,6 +20,8 @@
 #include <dsfw/widgets/TimeRulerWidget.h>
 #include <dstools/ViewportController.h>
 
+class QLabel;
+
 namespace dstools {
 
 namespace phonemelabeler {
@@ -87,6 +89,9 @@ public:
     /// tier structure changed). Refreshes overlay, tier label, and all chart widgets.
     void invalidateBoundaryModel();
 
+    /// Update the scale indicator text from the current viewport state.
+    void updateScaleIndicator();
+
 signals:
     void chartOrderChanged(const QStringList &order);
 
@@ -110,6 +115,7 @@ private:
     QWidget *m_editorWidget = nullptr;
     QSplitter *m_chartSplitter = nullptr;
     MiniMapScrollBar *m_miniMap = nullptr;
+    QLabel *m_scaleLabel = nullptr;
     dsfw::widgets::PlayWidget *m_playWidget = nullptr;
 
     QMap<QString, ChartEntry> m_charts;
