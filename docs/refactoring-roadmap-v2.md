@@ -528,11 +528,9 @@ ExportPage 内部 TabWidget："导出设置" | "预览数据" → QTableView + Q
 
 **问题**：SlicerPage 右键播放音频片段时没有显示红色竖线播放游标。
 
-**根因**：`WaveformWidget::drawPlayCursor()` 存在且正确。但 SlicerPage 中没有连接 `PlayWidget::playheadChanged` → `WaveformWidget::setPlayhead()`。PhonemeEditor 有此连接（PhonemeEditor::connectSignals 中），但 SlicerPage 是独立组装的，可能遗漏了此连接。
+**根因**：SlicerPage 独立组装，缺少 playhead 信号连接到 waveform 和自动清除超时。PhonemeEditor 有此逻辑但未复用。
 
-**修复**：
-- [ ] `SlicerPage::connectSignals()` 新增 `connect(m_playWidget, &PlayWidget::playheadChanged, m_waveformWidget, &WaveformWidget::setPlayhead)`
-- [ ] 验证：右键播放时红色游标实时移动
+**修复**：✅ `AudioVisualizerContainer::setPlayWidget()` 统一处理：自动连接 playhead 到所有有 `setPlayhead` 方法的 chart widget（通过 QMetaMethod），包含 200ms 自动清除超时。SlicerPage 和 PhonemeEditor 的 per-page 连接已删除。
 
 ### 7.3 Phoneme 层级边界约束失效（跨层 clamp）
 
@@ -552,42 +550,36 @@ ExportPage 内部 TabWidget："导出设置" | "预览数据" → QTableView + Q
 - [ ] `BoundaryDragController::updateDrag()` 在 `clampBoundaryTime()` 后再调用 `clampToParentTier()`
 - [ ] 验证：phoneme 层边界拖动到达 grapheme 边界时被阻挡
 
-### 7.4 选中词级时音素级边界不能拖动
+### 7.4 选择词级时音素级边界不能拖动 ✅ D-28
 
-**问题**：当前 `activeTierIndex` 决定了 hit-test 的层级——只有 active tier 的边界才能被点中拖动。用户期望所有层的边界都可以拖动，`activeTierIndex` 只控制哪个层的边界线在子图中显示。
+**问题**：已修复。`hitTestBoundary()` 改为搜索所有层级。详见 commit f63efb3。
 
-**根因**：`WaveformWidget::hitTestBoundary()` 和所有 widget 的 `mousePressEvent` 中用 `m_boundaryModel->activeTierIndex()` 作为 hit-test 的唯一 tier。
+### 7.7 Slicer/Phoneme 界面行为不统一
 
-**修复**：
-- [ ] 修改 `hitTestBoundary()` 为搜索**所有层**的边界（不只 active tier），返回 `(tierIndex, boundaryIndex)` pair
-- [ ] `mousePressEvent` 使用搜索到的 tier 调用 `dragController->startDrag(tier, idx, model)`
-- [ ] BoundaryOverlayWidget 仍只绘制 active tier 的贯穿线，但所有层的边界在标签区域都可点击
-- [ ] 验证：选中 grapheme 层时仍可拖动 phoneme 层边界
+**问题**：两个页面虽然共享 AudioVisualizerContainer，但：
+- Slicer 的 playhead、dragController 等连接由页面自行组装，与 PhonemeEditor 行为不一致
+- splitter 状态在 `onActivated()` 中恢复时产生双写冲突
+
+**修复方向**：将更多公共逻辑下沉到 AudioVisualizerContainer：
+- ✅ playhead 连接已统一到 `setPlayWidget()`
+- ✅ splitter 状态延迟恢复已实现
+- ⬜ dragController 连接可进一步统一，减少 SlicerPage 组装代码
 
 ### 7.5 Slicer 默认比例尺仍过小
 
 **问题**：用户期望视口默认显示 ~2 分钟音频，但实际可能恢复了旧的保存值。
 
-**根因**：`fitToWindow()` 中 `restoreResolution()` 优先于默认值。如果之前保存了 resolution=60（旧默认值），会恢复到旧值。首次设置新默认值后应该清除旧存储或检测到默认值变更。
+**根因**：`onActivated()` 中 `restoreSplitterState()` 在 widget 高度=0 时调用，QSplitter 将所有子图尺寸设为 0，导致波形图消失、视口显示异常。同时 `rebuildChartLayout()` 中的全局 QSettings 与 per-page AppSettings 分裂器状态冲突。
 
-**修复**：
-- [ ] `fitToWindow()` 改为：始终使用 `m_defaultResolution`（不 restore）
-- [ ] `AudioVisualizerContainer` 的 resolution restore 移到单独的 `restoreViewState()` 方法，由页面 `onActivated()` 主动调用（区分"新音频加载"和"页面重新激活"场景）
-- [ ] 新音频加载 → `fitToWindow()` 使用默认值
-- [ ] 页面重新激活 → `restoreViewState()` 恢复上次保存的值
-- [ ] 验证：Slicer 打开新 5 分钟音频 → 视口显示约 2 分钟
+**修复**：✅ `restoreSplitterState()` 延迟到 widget 首次 layout 后执行；`rebuildChartLayout()` 删除重复的 QSettings 检查。
 
 ### 7.6 PhonemeEditor 波形图缺失
 
-**问题**：PhonemeEditor 中波形图没有正常显示，Power 图和频谱图存在但波形图不可见。
+**问题**：PhonemeEditor 中波形图没有正常显示。
 
-**根因**：可能是 `addChart()` 的 order/heightWeight 问题导致 waveform 在 splitter 中分配了 0 高度，或 `WaveformWidget::rebuildMinMaxCache()` 由于时序问题返回空数据。已在路线图 1.3 中记录但未修复。
+**根因**：同 7.5 — 分裂器状态恢复时高度=0 导致。同时 `onActivated` → `setChartOrder()` → `rebuildChartLayout()` → `applyDefaultHeightRatios()`（QSettings 路径）覆盖了 AppSettings 恢复的状态。
 
-**修复**：
-- [ ] 检查 `PhonemeEditor::loadAudio()` 中 `m_waveformWidget->setAudioData()` 是否在 viewport 设置之后被调用
-- [ ] 检查 `rebuildMinMaxCache()` 的 guard 条件 `m_viewEnd <= m_viewStart` 是否在音频加载时为 true（导致 cache 为空）
-- [ ] 确保 `addChart("waveform", ..., heightWeight=2.0)` 分配了足够的初始高度
-- [ ] 验证：PhonemeEditor 加载音频后波形图正常渲染
+**修复**：✅ 同上。
 
 ---
 
