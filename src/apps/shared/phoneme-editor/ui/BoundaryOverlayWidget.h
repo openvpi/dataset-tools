@@ -23,6 +23,7 @@ public:
     void setDocument(TextGridDocument *doc);
     void setBoundaryModel(IBoundaryModel *model);
     void setTierLabelGeometry(int totalHeight, int rowHeight);
+    void setExtraTopOffset(int pixels);
     void trackWidget(QWidget *widget);
 
 public slots:
@@ -53,6 +54,7 @@ private:
 
     int m_tierLabelTotalHeight = 0;
     int m_tierLabelRowHeight = 24;
+    int m_extraTopOffset = 0;
 
     QTimer m_playheadHideTimer;
 };

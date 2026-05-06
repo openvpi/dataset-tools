@@ -48,6 +48,13 @@ void BoundaryOverlayWidget::setTierLabelGeometry(int totalHeight, int rowHeight)
     update();
 }
 
+void BoundaryOverlayWidget::setExtraTopOffset(int pixels) {
+    if (m_extraTopOffset != pixels) {
+        m_extraTopOffset = pixels;
+        repositionOverSplitter();
+    }
+}
+
 void BoundaryOverlayWidget::trackWidget(QWidget *widget) {
     if (m_trackedWidget) {
         m_trackedWidget->removeEventFilter(this);
@@ -111,19 +118,10 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
 
         bool isActive = (t == activeTier);
 
-        int lineTop;
-        int lineBottom;
-
-        if (tiers == 1) {
-            lineTop = 0;
-            lineBottom = fullBottom;
-        } else if (isActive) {
-            lineTop = t * tierRowH;
-            lineBottom = fullBottom;
-        } else {
-            lineTop = t * tierRowH;
-            lineBottom = tiers * tierRowH;
-        }
+        int lineTop = t * tierRowH;
+        // All boundary lines extend through the full height (tier labels + charts),
+        // so the user can visually track them across all visualizations.
+        int lineBottom = fullBottom;
 
         for (int b = 0; b < count; ++b) {
             double tSec = usToSec(model->boundaryTime(t, b));
@@ -177,9 +175,10 @@ void BoundaryOverlayWidget::repositionOverSplitter() {
     int widgetWidth = m_trackedWidget->width();
     int widgetHeight = m_trackedWidget->height();
 
-    if (m_tierLabelTotalHeight > 0) {
-        top -= m_tierLabelTotalHeight;
-        widgetHeight += m_tierLabelTotalHeight;
+    int totalTopOffset = m_tierLabelTotalHeight + m_extraTopOffset;
+    if (totalTopOffset > 0) {
+        top -= totalTopOffset;
+        widgetHeight += totalTopOffset;
     }
 
     setGeometry(left, top, widgetWidth, widgetHeight);

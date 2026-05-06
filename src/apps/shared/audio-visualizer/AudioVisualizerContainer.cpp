@@ -86,6 +86,7 @@ void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel *model) {
     m_tierLabelArea->setBoundaryModel(model);
     m_boundaryOverlay->setBoundaryModel(model);
     m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+    updateOverlayTopOffset();
 }
 
 void AudioVisualizerContainer::setTierLabelArea(TierLabelArea *area) {
@@ -109,6 +110,7 @@ void AudioVisualizerContainer::setTierLabelArea(TierLabelArea *area) {
         m_tierLabelArea->setBoundaryModel(m_boundaryModel);
     layout->insertWidget(idx, m_tierLabelArea);
     m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+    updateOverlayTopOffset();
 }
 
 void AudioVisualizerContainer::setEditorWidget(QWidget *widget) {
@@ -140,6 +142,21 @@ void AudioVisualizerContainer::setEditorWidget(QWidget *widget) {
 
     // Connect viewport to editor widget
     connectViewportToWidget(m_editorWidget);
+
+    // Update the boundary overlay so it covers the tier label + editor area
+    // (the overlay tracks chartSplitter and extends upward by this offset)
+    updateOverlayTopOffset();
+
+    // Track editor widget height changes to keep overlay covering it
+    m_editorWidget->installEventFilter(this);
+}
+
+void AudioVisualizerContainer::updateOverlayTopOffset() {
+    int extraHeight = 0;
+    if (m_editorWidget)
+        extraHeight = m_editorWidget->height();
+    if (m_boundaryOverlay)
+        m_boundaryOverlay->setExtraTopOffset(extraHeight);
 }
 
 void AudioVisualizerContainer::setTotalDuration(double seconds) {
@@ -148,6 +165,13 @@ void AudioVisualizerContainer::setTotalDuration(double seconds) {
 
 void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, int sampleRate) {
     m_miniMap->setAudioData(samples, sampleRate);
+}
+
+bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == m_editorWidget && event->type() == QEvent::Resize) {
+        updateOverlayTopOffset();
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void AudioVisualizerContainer::fitToWindow() {

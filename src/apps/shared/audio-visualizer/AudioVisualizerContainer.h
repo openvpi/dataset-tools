@@ -97,6 +97,10 @@ private:
     void rebuildChartLayout();
     void connectViewportToWidget(QWidget *widget);
     void applyDefaultHeightRatios();
+    void updateOverlayTopOffset();
+
+    // eventFilter: track editor widget resize
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
     widgets::ViewportController *m_viewport = nullptr;
     IBoundaryModel *m_boundaryModel = nullptr;
