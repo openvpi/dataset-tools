@@ -27,14 +27,6 @@
 
 ## 待修复
 
-### B-01 Phoneme 绑定边界只能向左拖动 ✅
-
-**问题**：音素层中与词级绑定的边界线只能向左移动，不能向右。
-
-**根因**：`TextGridDocument::clampBoundaryTime()` 中跨层 clamp 使用 `boundaryTime()` 获取当前位置作为查找键，但在拖动预览期间该位置已被 `moveBoundary()` 更新，导致查找到错误的父区间。
-
-**修复**：✅ 改用 `prevBoundary`（左侧同层相邻边界，不会被拖动）作为查找键。
-
 ### B-02 Phoneme 非活跃层边界贯穿线显示
 
 **问题**：未选中的层级的边界线在下方图表（waveform/spectrogram/power）中也显示为贯穿线。
@@ -46,14 +38,6 @@
 **问题**：PhonemeLabeler 页面加载切片后波形图没有显示。
 
 **分析**：代码逻辑正确（`setAudioData` + `rebuildMinMaxCache` + deferred `fitToWindow`）。可能原因：(1) 保存的 splitter state 将 waveform 高度压为 0；(2) `fitToWindow` 延迟执行时序问题。需要清除 QSettings 中的 `Layout/editorSplitterState` 验证。
-
-### B-04 Slicer 默认比例尺 ✅
-
-**修复**：✅ `SlicerPage` 默认 resolution 改为 1200。
-
-### B-05 Phoneme 不应自动过滤 FA 的 SP ✅
-
-**修复**：✅ `buildFaLayers()` 不再过滤 SP/AP 词和音素。FA 输出的所有标注（包括静音标记）完整保留到 grapheme/phoneme 层。
 
 ### 6.3 快捷键系统（部分完成）
 
@@ -102,10 +86,13 @@
 | 6.5 | CSV 预览 | ExportPage QTabWidget "预览数据" |
 | 7.1 | TimeRuler 刻度 | `syncStateFields()` 在 `clampAndEmit()` 前 |
 | 7.2 | 播放游标 | `setPlayWidget()` 统一 playhead 连接 |
-| 7.3 | 跨层 clamp | D-29 内联在 `clampBoundaryTime()` |
+| 7.3 | 跨层 clamp | D-29 已移除（拖动期间位置失效导致不可用） |
 | 7.4 | 跨层 hitTest | D-28，搜索所有层级 |
 | 7.5 | splitter 恢复 | 延迟到 resizeEvent |
 | 7.6 | 波形图缺失 | 同 7.5 |
+| B-01 | 绑定边界拖动 | 移除跨层 clamp；binding 使用 word.start 保证时间对齐 |
+| B-04 | Slicer 默认比例尺 | 默认 3000 + fitToWindow 尊重已保存值 + onActivated restoreResolution |
+| B-05 | FA SP 过滤 | 不再过滤 SP/AP，完整保留 FA 输出 |
 
 ---
 
