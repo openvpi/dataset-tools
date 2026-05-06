@@ -309,6 +309,82 @@
 
 ---
 
+## D-26：比例尺从固定列表改为连续范围 + 页面独立默认值与持久化
+
+**决策**：
+
+1. **废弃 PPS 概念，统一使用「比例尺」（resolution）**：全局统一用 `resolution`（整数，每像素采样数）作为唯一的缩放量。`pixelsPerSecond` 作为概念和 API 全部删除——所有 widget 内部存储的 `m_pixelsPerSecond` 改为 `m_resolution`，`ViewportState::pixelsPerSecond` 字段删除，替换为 `ViewportState::resolution`。时间↔像素转换统一通过 `resolution` 和 `sampleRate` 计算。
+
+2. **去掉固定 resolution 列表**：当前 `kResolutionTable = {10, 20, 30, 40, ..., 400}` 写死了 11 个离散档位，max=400 对应 44100Hz 音频约 110s/1200px 视口——根本无法在视口内显示几分钟的音频。改为连续范围 `[resolutionMin, resolutionMax]`，**zoom 步进取整十**（对数步进后 round 到最近的整十数）。
+
+3. **zoom 步进取整十的对数表**：
+   ```
+   10, 20, 30, 50, 80, 100, 150, 200, 300, 500, 800, 1000,
+   1500, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 30000, 44100
+   ```
+   每步约 ×1.3~1.7，覆盖从精细编辑到全局概览。zoomIn/zoomOut 在此表中前后移动一格。
+
+4. **默认 resolution 按页面功能定义**：
+   - **Slicer 默认**：视口显示约 **2 分钟**音频。`defaultResolution = sampleRate * 120 / viewportWidth`，对 44100Hz / 1200px ≈ 4410 → 取表中最近值 5000。
+   - **Phoneme 默认**：视口显示约 **20 秒**音频。`defaultResolution = sampleRate * 20 / viewportWidth`，对 44100Hz / 1200px ≈ 735 → 取表中最近值 800。
+   - `setDefaultResolution()` 传 resolution 值，`fitToWindow()` 使用该值初始化。
+
+5. **放大/缩小极限**：
+   - 表首项 `10`（放大极限，@44100Hz 每像素 0.23ms）
+   - 表末项 `44100`（缩小极限，= 1 px/s @44100Hz，1200px 可显示 20 分钟）
+
+6. **每页比例尺独立持久化**：每个 AudioVisualizerContainer 实例通过 `settingsAppName`（如 "Slicer"、"PhonemeEditor"）将当前 resolution 保存到 AppSettings，下次打开同一页面时恢复。不同页面互不影响。
+
+7. **UI 显示**：比例尺指示器显示 `"{N} spx"`（samples per pixel）或 `"{time}/div"`，不再显示 PPS。
+
+**废弃**：
+- D-24 中 "Resolution 范围硬编码 [10, 400]" → 改为整十对数表 [10, 44100]
+- `ViewportState::pixelsPerSecond` 字段 → 删除，改为 `resolution`
+- `ViewportController::setPixelsPerSecond()` / `pixelsPerSecond()` → 删除
+- 所有 widget 中的 `m_pixelsPerSecond` 成员 → 改为使用 `state.resolution` + `sampleRate`
+- `PhonemeEditor::setPixelsPerSecond()` / `zoomChanged(double pixelsPerSecond)` → 删除或改签名
+
+---
+
+## D-27：Phoneme 标签区域层级边界绑定与吸附重新设计
+
+**决策**：
+
+当前 phoneme 页面的层级边界 binding（跨层同步拖动）和 snap（释放时对齐）存在架构问题：
+- `BoundaryBindingManager` 使用 `tierIndex * 10000 + boundaryIndex + 1` 的合成 ID 方案，当边界增删后 ID 失效
+- `snapToLowerTier` 只查找 `tierIndex < current` 的层，不支持高层向低层对齐
+- binding group 在 TextGridDocument 内部维护，但 clamp/snap 逻辑也在 TextGridDocument 中，职责混乱
+- IntervalTierView 的 `updateDrag()` 同时做 clamp + snap + binding move，逻辑耦合
+
+**新设计**：将边界约束分为三个独立阶段，每个阶段职责清晰：
+
+1. **Clamp 阶段**（硬约束）：边界不得越过同层相邻边界。由 `IBoundaryModel::clampBoundaryTime()` 负责，保持不变。
+
+2. **Binding 阶段**（跨层联动）：使用**时间位置匹配**而非 ID 绑定——每次拖动开始时，搜索所有层中时间位置在容差范围内的边界作为 "binding partners"，记录它们的 (tier, index, startTime)。拖动过程中 partners 跟随移动。释放时统一提交 undo command。废弃合成 ID 方案和 `BindingGroup` 数据结构。
+
+3. **Snap 阶段**（释放时吸附）：释放边界时，查找**所有其他层**（不限 lower tier）中距离最近的边界，在像素阈值内吸附。由 `IBoundaryModel::snapToNearestBoundary(tierIndex, proposedTime, thresholdUs)` 负责。
+
+**Binding Partners 查找算法**：
+```
+findBindingPartners(sourceTier, sourceBoundaryIndex):
+    sourceTime = boundaryTime(sourceTier, sourceBoundaryIndex)
+    partners = []
+    for each tier t != sourceTier:
+        for each boundary b in tier t:
+            if |boundaryTime(t, b) - sourceTime| <= toleranceUs:
+                partners.append({t, b, boundaryTime(t, b)})
+    return partners
+```
+
+**影响**：
+- 删除 `BoundaryBindingManager` 类
+- 删除 `TextGridDocument::m_groups`、`setBindingGroups()`、`findGroupForBoundary()`、`autoDetectBindingGroups()`
+- 删除 `BindingGroup` 类型定义
+- `IntervalTierView` 的拖动逻辑简化为：startDrag → findBindingPartners → updateDrag(clamp each) → endDrag(snap + commit)
+- `PhonemeLabelerPage::buildFaLayers()` 不再生成 BindingGroup，FA 结果只需要正确的边界位置
+
+---
+
 ## ADR 冲突解决
 
 | 冲突项 | 旧决策 | 新决策（以此为准） |

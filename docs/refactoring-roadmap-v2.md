@@ -93,149 +93,178 @@
 
 ## 2. 视口与刻度系统重构
 
-### 2.1 视口统一比例尺系统（原任务 1）
+### 2.1 比例尺从固定列表改为整十对数表 + 废弃 PPS（D-26）
 
-> 参考 vLabeler（Kotlin/Compose）的 resolution 模型，适配到本项目的 Qt ViewportController 流式视口架构。
+> 参考 human-decisions.md D-26。
 
-#### 设计理念
+#### 问题
 
-**vLabeler 模型**：`resolution` = 每像素代表多少个采样点（整数，默认 40，范围 10-400），整个音频被渲染为一个定宽的可滚动画布（`canvasLength = dataLength / resolution`）。刻度线通过预定义的 major/minor 表查找合适级别（`MIN_MINOR_STEP_PX = 80`）。各子图高度由 `heightWeight` 配比。
+1. 当前 `kResolutionTable = {10, 20, 30, 40, 60, 80, 100, 150, 200, 300, 400}` 最大 400，44100Hz 音频在 1200px 视口只能显示 ~110s，**无法显示几分钟的音频**。
+2. `pixelsPerSecond` 作为概念散落在 ViewportState、ViewportController 和十几个 widget 中，与 resolution 重复表达同一状态，增加认知负担。
 
-**本项目适配**：保留 ViewportController 的 startSec/endSec 流式视口（不预渲染整段音频），但引入 **resolution 概念**作为 PPS 的反面，并以 `defaultResolution` 定义每张图的初始比例尺。
+#### 设计
 
-#### 核心概念
-
-```
-resolution = samplesPerPixel = sampleRate / pixelsPerSecond
-pixelsPerSecond = sampleRate / resolution
-
-默认 resolution = 40（与 vLabeler 一致）
-→ 44100Hz 音频的默认 PPS = 44100 / 40 = 1102.5
-→ 1 分钟音频的完整画布宽度 = 60 * 1102.5 = 66150px（虚拟，只渲染可见部分）
-```
-
-```
-AudioVisualizerContainer
-├── ViewportController（单一真相源）
-│   ├── resolution: int（当前分辨率，可缩放）
-│   ├── sampleRate: int（音频采样率）
-│   ├── totalSamples: int64（音频总采样数）
-│   ├── viewStartSec / viewEndSec（可见区间）
-│   ├── pixelsPerSecond() = sampleRate / resolution（派生，只读）
-│   ├── totalDuration() = totalSamples / sampleRate（派生）
-│   └── canvasLengthPx() = totalSamples / resolution（虚拟总宽度）
-│
-├── MiniMapScrollBar（显示完整音频缩略图 + 滑窗）
-├── TimeRulerWidget（刻度线 — 从 ViewportController 的 resolution 和 sampleRate 计算刻度）
-├── TierLabelArea（标签区域）
-├── QSplitter
-│   ├── WaveformWidget（默认 heightWeight = 1.0）
-│   ├── PowerWidget（默认 heightWeight = 0.5）
-│   └── SpectrogramWidget（默认 heightWeight = 0.75）
-└── BoundaryOverlayWidget
-```
-
-#### Step 1：ViewportController 改为 resolution 驱动
+**废弃 PPS，统一使用 resolution（比例尺）**：
 
 ```cpp
-class ViewportController {
-public:
-    // === 设置音频参数（加载音频时调用一次） ===
-    void setAudioParams(int sampleRate, int64_t totalSamples);
-    
-    // === Resolution（核心缩放状态） ===
-    void setResolution(int resolution);    // 每像素采样数
-    int resolution() const;
-    
-    // === 缩放 ===
-    void zoomIn(double centerSec);         // resolution -= step (zoom in)
-    void zoomOut(double centerSec);        // resolution += step (zoom out)
-    bool canZoomIn() const { return m_resolution > m_minResolution; }
-    bool canZoomOut() const { return m_resolution < m_maxResolution; }
-    
-    // === 派生量（只读） ===
-    double pixelsPerSecond() const { return double(m_sampleRate) / m_resolution; }
-    double totalDuration() const { return double(m_totalSamples) / m_sampleRate; }
-    double canvasLength() const { return double(m_totalSamples) / m_resolution; }
-    
-    // === 视口（可见区间） ===
-    void setViewRange(double startSec, double endSec);
-    void scrollBy(double deltaSec);
-    double startSec() const;
-    double endSec() const;
-
-private:
-    int m_sampleRate = 44100;
-    int64_t m_totalSamples = 0;
-    int m_resolution = 40;
-    int m_minResolution = 10;
-    int m_maxResolution = 400;
-    int m_resolutionStep = 5;
-    double m_viewStartSec = 0.0;
-    double m_viewEndSec = 10.0;
+// ViewportState 改为：
+struct ViewportState {
+    double startSec = 0.0;
+    double endSec = 10.0;
+    int resolution = 40;    // samples per pixel（唯一缩放量）
+    int sampleRate = 44100; // 需要 sampleRate 才能做 time↔pixel 转换
 };
+
+// 所有 widget 中的 m_pixelsPerSecond 成员变量 → 删除
+// time↔pixel 转换统一用：
+//   pixelX = (timeSec * sampleRate / resolution) - scrollOffset
+//   timeSec = (pixelX + scrollOffset) * resolution / sampleRate
 ```
 
-- [ ] 重写 ViewportController 为 resolution 驱动模型
-- [ ] 保留 `setViewRange()` / `scrollBy()` 不变（向后兼容）
-- [ ] 新增 `setAudioParams()` 替代 `setTotalDuration()`
-- [ ] Resolution step 按对数步进（10→15→20→30→40→60→80→100→150→200→300→400）
-
-#### Step 2：TimeRulerWidget 刻度计算改为查表法
+**整十对数步进表**（替代旧的 11 档固定表）：
 
 ```cpp
-struct TimescaleLevel {
-    double majorSec;
-    double minorSec;
+static const std::vector<int> kResolutionTable = {
+    10, 20, 30, 50, 80, 100, 150, 200, 300, 500, 800, 1000,
+    1500, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 30000, 44100
 };
+// 22 档，覆盖精细编辑（10 spx ≈ 4410 px/s）到全局概览（44100 spx = 1 px/s）
+```
 
+**每页默认 resolution**（fitToWindow 时使用）：
+
+| 页面 | 目标视口时长 | 计算值 @44100Hz/1200px | 取表中最近值 |
+|------|------------|----------------------|------------|
+| Slicer | ~2 min | 4410 | **5000** |
+| Phoneme | ~20 sec | 735 | **800** |
+
+**每页 resolution 持久化**：
+- `AudioVisualizerContainer` 在 `m_settings` 中保存/恢复 `"Viewport/resolution"` 键
+- 各实例通过 `settingsAppName`（"Slicer" / "PhonemeEditor"）隔离
+
+#### 实施步骤
+
+**Phase A：ViewportController + ViewportState 改造**
+
+- [ ] `ViewportState`：删除 `pixelsPerSecond` 字段，新增 `resolution` 和 `sampleRate` 字段
+- [ ] `ViewportController`：删除 `setPixelsPerSecond()`、`pixelsPerSecond()` 方法
+- [ ] `ViewportController`：删除 `updatePPS()` 内部方法
+- [ ] `ViewportController`：`kResolutionTable` 替换为 22 档整十对数表
+- [ ] `ViewportController`：`zoomIn()`/`zoomOut()` 在新表中前后移动一格
+- [ ] `ViewportController`：`setResolution()` snap 到表中最近值
+- [ ] `ViewportController`：`clampAndEmit()` 中 emit 的 `ViewportState` 包含 `resolution` 和 `sampleRate`
+
+**Phase B：所有 Widget 适配**
+
+- [ ] `WaveformWidget`：`m_pixelsPerSecond` → 删除，`timeToX()`/`xToTime()` 改用 `m_resolution`+`m_sampleRate`
+- [ ] `SpectrogramWidget`：同上
+- [ ] `PowerWidget`：同上
+- [ ] `IntervalTierView`：同上
+- [ ] `TierEditWidget`：`m_pixelsPerSecond` → 删除
+- [ ] `TierLabelArea`：`timeToX()` 改用 resolution
+- [ ] `TimeRulerWidget`：`m_pixelsPerSecond` → 删除，刻度计算改用 resolution
+- [ ] `MiniMapScrollBar`：删除 `setPixelsPerSecond()` 调用
+
+**Phase C：PhonemeEditor / PitchEditor 适配**
+
+- [ ] `PhonemeEditor`：删除 `setPixelsPerSecond()`，删除 `zoomChanged(double pixelsPerSecond)` 信号（或改为 `zoomChanged(int resolution)`）
+- [ ] `PianoRollView`：`m_hScale`（原 PPS）→ 改用 resolution
+- [ ] `PitchEditor`：`setPixelsPerSecond(100.0)` → `setResolution(对应值)`
+
+**Phase D：默认值 + 持久化**
+
+- [ ] `SlicerPage`：`setDefaultResolution(5000)` 替代原 `setDefaultResolution(60)`
+- [ ] `PhonemeEditor`：`setDefaultResolution(800)` 替代原 `setDefaultResolution(40)`
+- [ ] `AudioVisualizerContainer`：`onActivated()` 恢复保存的 resolution；页面离开时保存
+- [ ] 比例尺指示器文本改为 `"{N} spx"` 或 `"{time}/div"`
+
+**Phase E：测试修复**
+
+- [ ] `TestDsfwWidgets.cpp`：删除 `pixelsPerSecond()` 相关断言，改为 resolution 断言
+
+**验证矩阵**
+
+- [ ] 编译通过，无 `pixelsPerSecond` 残留引用
+- [ ] Slicer 打开 5 分钟音频 → 视口显示约 2 分钟
+- [ ] Phoneme 打开切片 → 视口显示约 20 秒
+- [ ] Ctrl+滚轮 zoom out 到极限（resolution=44100）→ 可显示 20 分钟，硬停
+- [ ] Ctrl+滚轮 zoom in 到极限（resolution=10）→ 硬停
+- [ ] 切换页面后回来，resolution 恢复为上次离开时的值
+- [ ] 两个页面的 resolution 互不影响
+
+### 2.2 TimeRulerWidget 刻度计算查表法
+
+```cpp
+struct TimescaleLevel { double majorSec; double minorSec; };
 static const TimescaleLevel kLevels[] = {
-    {0.001,  0.0005}, {0.005,  0.001},  {0.01,   0.005},
-    {0.05,   0.01},   {0.1,    0.05},   {0.5,    0.1},
-    {1.0,    0.5},    {5.0,    1.0},    {15.0,   5.0},
-    {30.0,   10.0},   {60.0,   15.0},   {300.0,  60.0},
-    {900.0,  300.0},  {3600.0, 900.0},
+    {0.001, 0.0005}, {0.005, 0.001}, {0.01, 0.005},
+    {0.05, 0.01}, {0.1, 0.05}, {0.5, 0.1},
+    {1.0, 0.5}, {5.0, 1.0}, {15.0, 5.0},
+    {30.0, 10.0}, {60.0, 15.0}, {300.0, 60.0},
+    {900.0, 300.0}, {3600.0, 900.0},
 };
 constexpr double kMinMinorStepPx = 60.0;
-
-TimescaleLevel findLevel(double pps) {
-    for (auto &level : kLevels) {
-        if (level.minorSec * pps >= kMinMinorStepPx)
-            return level;
-    }
-    return kLevels[std::size(kLevels) - 1];
-}
 ```
 
-- [ ] 用查表法替代当前 7 层循环 + smoothStep 渐隐逻辑
-- [ ] 主刻度：长线 + 时间标签（格式自动选择 ms/s/min:sec/h:min:sec）
+- [ ] 用查表法替代当前 smoothStep 渐隐逻辑
+- [ ] 主刻度：长线 + 时间标签（自动选择 ms/s/min:sec/h:min:sec）
 - [ ] 次刻度：短线，无标签
-- [ ] `kMinMinorStepPx` 可在 Settings 中配置
 
-#### Step 3：每张图的默认高度比例
+### 2.3 wheelEvent 统一
 
-- [ ] `addChart()` 增加 `double heightWeight` 参数（已实现）
-- [ ] 首次打开（无保存状态时）按 heightWeight 比例初始化 splitter
-- [ ] 用户手动拖动 splitter 后保存到 AppSettings
-
-#### Step 4：默认 resolution 的 "Fit to Window"
-
-- [ ] 打开新音频时自动 `fitToWindow()`（已实现 `AudioVisualizerContainer::fitToWindow()`）
-- [ ] 用户缩放后不再自动 fit（直到下一次打开新音频）
-
-#### Step 5：wheelEvent 统一
-
-- [ ] 所有子图的 Ctrl+滚轮 → 调用 `m_viewport->zoomIn(centerSec)` / `zoomOut(centerSec)`
-- [ ] ViewportController 的 `zoomIn/zoomOut` 内部按对数步进表递进，不超过 [10, 400]
+- [ ] 所有子图的 Ctrl+滚轮 → `m_viewport->zoomIn/zoomOut(centerSec)`
 - [ ] MiniMapScrollBar wheelEvent：无 modifier = 横向滚动，Ctrl = 缩放
 
-#### Step 6：验证矩阵
+### 2.4 Phoneme 标签区域层级边界绑定与吸附重设计（D-27）
 
-- [ ] Ctrl+滚轮 zoom in 到 resolution=10 → 硬停
-- [ ] Ctrl+滚轮 zoom out 到 resolution=400 → 硬停
-- [ ] 刻度线密度始终与 PPS 严格对应
-- [ ] 各子图 x 坐标与刻度线完美对齐
-- [ ] MiniMap 滚轮 = 横向滚动，Ctrl+滚轮 = 缩放
+> 参考 human-decisions.md D-27。
+
+#### 问题
+
+1. **合成 ID 方案脆弱**：`BoundaryBindingManager` 用 `tierIndex * 10000 + boundaryIndex + 1` 做 binding group ID。边界插入/删除后 index 偏移，ID 失效，binding 错乱。
+2. **snap 方向限制**：`snapToLowerTier()` 只查 `tierIndex < current`（只向下查找），不支持低层向高层对齐、也不支持同层吸附。
+3. **职责混乱**：clamp、snap、binding 逻辑分散在 `TextGridDocument`、`BoundaryBindingManager`、`IntervalTierView::updateDrag()` 三处。
+4. **BindingGroup 数据结构**：要求 FA 产出时预计算 group，但实际只需要"同一时间位置的边界联动"这一行为。
+
+#### 新架构：三阶段拖动管线
+
+```
+startDrag(tier, boundaryIndex)
+  → phase1: findBindingPartners(time-proximity search, tolerance=1ms)
+  → store partners as [(tier, index, originalTime)]
+
+updateDrag(proposedTime)
+  → phase2: for source + each partner:
+      clampedTime = clampBoundaryTime(tier, idx, proposed + delta)
+      moveBoundary(tier, idx, clampedTime)  // preview only
+
+endDrag(finalTime)
+  → phase3: snap source to nearest cross-tier boundary (pixel threshold)
+  → commit via single QUndoCommand (LinkedMoveBoundaryCommand)
+```
+
+**关键改变**：
+- Binding 在拖动开始时**实时搜索**（按时间容差），不依赖预存 group
+- Snap 在释放时执行，搜索**所有其他层**（不限方向）
+- 整个拖动管线在 `IntervalTierView` 内闭合完成
+
+#### 实施步骤
+
+- [ ] 新增 `IBoundaryModel::findBindingPartners(tierIndex, boundaryIndex, toleranceUs)` → 返回 `vector<BoundaryRef>{tier, index, time}`
+- [ ] 新增 `IBoundaryModel::snapToNearestBoundary(tierIndex, proposedTime, thresholdUs)` → 搜索所有其他层
+- [ ] `TextGridDocument` 实现上述两个方法
+- [ ] `IntervalTierView::startDrag()` 改为调用 `findBindingPartners()`（不依赖 BoundaryBindingManager）
+- [ ] `IntervalTierView::updateDrag()` 改为：source clamp + 对每个 partner 计算 delta → clamp → preview move
+- [ ] `IntervalTierView::endDrag()` 改为：snap → 创建 `LinkedMoveBoundaryCommand`（source + all partners）
+- [ ] 删除 `BoundaryBindingManager` 类（.h/.cpp）
+- [ ] 删除 `TextGridDocument::m_groups`、`setBindingGroups()`、`findGroupForBoundary()`、`autoDetectBindingGroups()`
+- [ ] 删除 `BindingGroup` 类型（从 DsTextTypes.h）
+- [ ] `PhonemeLabelerPage::buildFaLayers()` 删除 `r.groups` 生成逻辑
+- [ ] `PhonemeEditor` 构造函数删除 `m_bindingManager` 创建，toolbar 中 binding toggle 改为 enable/disable partners search
+- [ ] 验证：拖动 word 层边界 → phoneme 层对应位置的边界跟随移动
+- [ ] 验证：释放边界 → 自动吸附到最近的其他层边界（阈值 5px）
+- [ ] 验证：插入/删除边界后，binding 仍正常工作（不依赖 index 稳定性）
+- [ ] 验证：禁用 binding 后拖动 → 不联动，但释放时仍 snap
 
 ---
 
@@ -443,15 +472,17 @@ ExportPage 内部 TabWidget："导出设置" | "预览数据" → QTableView + Q
 
 ## 执行优先级
 
-1. **1.1-1.5** — 显示与 UX 修复（紧急，影响用户直接体验）
-2. **3.1、3.2、3.4** — 简单边界/标签修复
-3. **5.1** — 刷新框架（关键 bug：FA 结果不刷新）
-4. **2.1** — 视口统一比例尺（最大任务，可独立进行）
-5. **3.5、3.6、3.7** — 数据健壮性
-6. **4.1、4.2** — 编辑器去重
-7. **5.2、5.3** — 推理异步化
-8. **6.1** — 路径管理
-9. **6.2-6.5、3.3** — 低优先级完善
+1. **2.1** — 比例尺连续范围改造（当前最影响使用体验：zoom out 不够）
+2. **2.4** — Phoneme 标签 binding/snap 重设计（架构问题，越早改越少技术债）
+3. **1.1-1.5** — 显示与 UX 修复（紧急，影响用户直接体验）
+4. **3.1、3.2、3.4** — 简单边界/标签修复
+5. **5.1** — 刷新框架（关键 bug：FA 结果不刷新）
+6. **2.2、2.3** — 刻度查表法 + wheelEvent 统一（2.1 的后续）
+7. **3.5、3.6、3.7** — 数据健壮性
+8. **4.1、4.2** — 编辑器去重
+9. **5.2、5.3** — 推理异步化
+10. **6.1** — 路径管理
+11. **6.2-6.5、3.3** — 低优先级完善
 
 ---
 
