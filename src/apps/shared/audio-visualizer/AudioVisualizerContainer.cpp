@@ -13,6 +13,7 @@
 #include <QPointer>
 #include <QResizeEvent>
 #include <QSettings>
+#include <QTimer>
 #include <algorithm>
 
 namespace dstools {
@@ -318,6 +319,11 @@ void AudioVisualizerContainer::resizeEvent(QResizeEvent *event) {
         // On resize, recalculate view range to match new width at current resolution
         updateViewRangeFromResolution();
     }
+    // Apply deferred splitter state now that the widget has valid size
+    if (!m_pendingSplitterState.isEmpty() && m_chartSplitter && m_chartSplitter->height() > 0) {
+        m_chartSplitter->restoreState(m_pendingSplitterState);
+        m_pendingSplitterState.clear();
+    }
     updateScaleIndicator();
 }
 
@@ -374,12 +380,91 @@ QByteArray AudioVisualizerContainer::saveSplitterState() const {
 }
 
 void AudioVisualizerContainer::restoreSplitterState(const QByteArray &state) {
-    if (!state.isEmpty())
+    if (state.isEmpty())
+        return;
+    // Defer restore until the splitter has been laid out (non-zero height).
+    // Otherwise QSplitter::restoreState clamps all child sizes to 0.
+    if (m_chartSplitter && m_chartSplitter->height() > 0) {
         m_chartSplitter->restoreState(state);
+    } else {
+        m_pendingSplitterState = state;
+    }
 }
 
 void AudioVisualizerContainer::setPlayWidget(PlayWidget *playWidget) {
+    if (m_playWidget == playWidget)
+        return;
+
+    // Disconnect previous
+    if (m_playWidget) {
+        disconnect(m_playWidget, nullptr, this, nullptr);
+    }
     m_playWidget = playWidget;
+
+    if (!m_playWidget)
+        return;
+
+    // Create playhead timer (auto-clear after 200ms of no updates)
+    if (!m_playheadTimer) {
+        m_playheadTimer = new QTimer(this);
+        m_playheadTimer->setSingleShot(true);
+        m_playheadTimer->setInterval(200);
+    }
+
+    // Forward playhead to all registered chart widgets via QMetaMethod invocation
+    connect(m_playWidget, &PlayWidget::playheadChanged, this,
+            [this](double sec) {
+                // Iterate all chart widgets and call setPlayhead if they have the method
+                for (const auto &id : m_chartOrder) {
+                    auto it = m_charts.find(id);
+                    if (it == m_charts.end() || !it->widget)
+                        continue;
+                    const QMetaObject *mo = it->widget->metaObject();
+                    for (int i = 0; i < mo->methodCount(); ++i) {
+                        QMetaMethod method = mo->method(i);
+                        if (method.name() == "setPlayhead" && method.parameterCount() == 1) {
+                            double secCopy = sec;
+                            method.invoke(it->widget.data(), Qt::DirectConnection,
+                                          QGenericArgument("double", &secCopy));
+                            break;
+                        }
+                    }
+                }
+                // Also forward to boundary overlay
+                if (m_boundaryOverlay)
+                    m_boundaryOverlay->setPlayhead(sec);
+                // Reset auto-clear timer
+                if (m_playheadTimer)
+                    m_playheadTimer->start();
+            });
+
+    // Auto-clear playhead when playback stops
+    connect(m_playheadTimer, &QTimer::timeout, this, [this]() {
+        for (const auto &id : m_chartOrder) {
+            auto it = m_charts.find(id);
+            if (it == m_charts.end() || !it->widget)
+                continue;
+            const QMetaObject *mo = it->widget->metaObject();
+            for (int i = 0; i < mo->methodCount(); ++i) {
+                QMetaMethod method = mo->method(i);
+                if (method.name() == "setPlayhead" && method.parameterCount() == 1) {
+                    double negOne = -1.0;
+                    method.invoke(it->widget.data(), Qt::DirectConnection,
+                                  QGenericArgument("double", &negOne));
+                    break;
+                }
+            }
+        }
+        if (m_boundaryOverlay)
+            m_boundaryOverlay->setPlayhead(-1.0);
+    });
+}
+
+void AudioVisualizerContainer::connectPlayheadToWidget(QWidget *chart) {
+    // Explicit connection for charts added after setPlayWidget.
+    // The setPlayWidget already handles all registered charts via iteration,
+    // so this is a no-op if setPlayWidget was called first.
+    Q_UNUSED(chart)
 }
 
 void AudioVisualizerContainer::invalidateBoundaryModel() {
@@ -414,13 +499,8 @@ void AudioVisualizerContainer::rebuildChartLayout() {
         it->widget->show();
     }
 
-    // Apply default height ratios if no saved splitter state exists
-    QSettings settings;
-    QByteArray savedState = settings.value(
-        QStringLiteral("AudioVisualizer/splitterState")).toByteArray();
-    if (savedState.isEmpty()) {
-        applyDefaultHeightRatios();
-    }
+    // Apply default height ratios — per-page state is restored externally
+    applyDefaultHeightRatios();
 }
 
 void AudioVisualizerContainer::applyDefaultHeightRatios() {

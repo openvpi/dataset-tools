@@ -99,6 +99,9 @@ public:
 
     void setPlayWidget(dsfw::widgets::PlayWidget *playWidget);
 
+    /// Convenience: connect playhead to a chart widget that has setPlayhead(double).
+    void connectPlayheadToWidget(QWidget *chart);
+
     /// Notify that boundary model data has changed (boundaries added/moved/removed,
     /// tier structure changed). Refreshes overlay, tier label, and all chart widgets.
     void invalidateBoundaryModel();
@@ -137,12 +140,14 @@ private:
     MiniMapScrollBar *m_miniMap = nullptr;
     QLabel *m_scaleLabel = nullptr;
     dsfw::widgets::PlayWidget *m_playWidget = nullptr;
+    QTimer *m_playheadTimer = nullptr;
 
     QMap<QString, ChartEntry> m_charts;
     QStringList m_chartOrder;
 
     AppSettings m_settings;
     bool m_needsFitOnResize = false; ///< fitToWindow was deferred because width was 0
+    QByteArray m_pendingSplitterState; ///< splitter state deferred until layout is valid
     int m_defaultResolution = 40;
 };
 

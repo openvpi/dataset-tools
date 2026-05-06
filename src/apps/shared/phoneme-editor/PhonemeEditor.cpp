@@ -408,25 +408,10 @@ void PhonemeEditor::connectSignals() {
         m_entryListPanel->rebuildEntries();
     });
 
-    // Playback: playhead cursor across all charts
-    auto *playheadTimer = new QTimer(this);
-    playheadTimer->setSingleShot(true);
-    playheadTimer->setInterval(200);
-    connect(playheadTimer, &QTimer::timeout, this, [this]() {
-        if (!m_playWidget->isPlaying()) {
-            m_waveformWidget->setPlayhead(-1.0);
-            if (auto *bo = m_container->boundaryOverlay())
-                bo->setPlayhead(-1.0);
-        }
-    });
-
+    // Playback: positionChanged signal (playhead itself handled by container)
     connect(m_playWidget, &dstools::widgets::PlayWidget::playheadChanged,
-            [this, playheadTimer](double sec) {
-                m_waveformWidget->setPlayhead(sec);
-                if (auto *bo = m_container->boundaryOverlay())
-                    bo->setPlayhead(sec);
+            this, [this](double sec) {
                 emit positionChanged(sec);
-                playheadTimer->start();
             });
 
     // Mouse wheel entry switching
