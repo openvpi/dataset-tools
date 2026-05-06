@@ -160,7 +160,8 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
 
 bool BoundaryOverlayWidget::eventFilter(QObject *watched, QEvent *event) {
     if (watched == m_trackedWidget &&
-        (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+        (event->type() == QEvent::Resize || event->type() == QEvent::Move ||
+         event->type() == QEvent::Show)) {
         repositionOverSplitter();
     }
     return QWidget::eventFilter(watched, event);

@@ -36,6 +36,7 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
 
     m_tierLabelArea = new TierLabelArea(this);
     m_tierLabelArea->setViewportController(m_viewport);
+    m_tierLabelArea->installEventFilter(this);
     mainLayout->addWidget(m_tierLabelArea);
 
     m_chartSplitter = new QSplitter(Qt::Vertical, this);
@@ -157,6 +158,7 @@ void AudioVisualizerContainer::setTierLabelArea(TierLabelArea *area) {
 
     m_tierLabelArea = area;
     m_tierLabelArea->setViewportController(m_viewport);
+    m_tierLabelArea->installEventFilter(this);
     if (m_boundaryModel)
         m_tierLabelArea->setBoundaryModel(m_boundaryModel);
     layout->insertWidget(idx, m_tierLabelArea);
@@ -226,6 +228,13 @@ bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
         // Update scale label and overlay position on any resize
         if (watched == m_chartSplitter)
             updateScaleIndicator();
+    }
+    // When the tier label area resizes (e.g. after rebuildRadioButtons changes height),
+    // update the overlay geometry so boundary lines align correctly
+    if (watched == m_tierLabelArea && event->type() == QEvent::Resize) {
+        m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(),
+                                                 m_tierLabelArea->height());
+        updateOverlayTopOffset();
     }
     return QWidget::eventFilter(watched, event);
 }
