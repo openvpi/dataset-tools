@@ -2,6 +2,7 @@
 
 #include "ISettingsBackend.h"
 
+#include <QAbstractItemModel>
 #include <QFileDialog>
 #include <QDir>
 #include <QFile>
@@ -13,6 +14,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSet>
 #include <QSettings>
 #include <QStandardItemModel>
 #include <QVBoxLayout>
@@ -185,10 +187,17 @@ void SettingsPage::applySettings() {
 
     if (m_chartOrderList) {
         QStringList order;
-        for (int i = 0; i < m_chartOrderList->count(); ++i)
-            order.append(m_chartOrderList->item(i)->data(Qt::UserRole).toString());
+        QStringList visible;
+        for (int i = 0; i < m_chartOrderList->count(); ++i) {
+            auto *item = m_chartOrderList->item(i);
+            QString id = item->data(Qt::UserRole).toString();
+            order.append(id);
+            if (item->checkState() == Qt::Checked)
+                visible.append(id);
+        }
         QSettings settings;
         settings.setValue(QStringLiteral("AudioVisualizer/chartOrder"), order.join(QLatin1Char(',')));
+        settings.setValue(QStringLiteral("ViewLayout/chartVisible"), visible.join(QLatin1Char(',')));
     }
 
     emit settingsChanged();
@@ -462,10 +471,12 @@ QWidget *SettingsPage::createGeneralTab() {
 
     layout->addItem(new QSpacerItem(0, 16, QSizePolicy::Minimum, QSizePolicy::Fixed));
 
-    auto *chartGroup = new QGroupBox(QStringLiteral("子图显示顺序"), w);
-    auto *chartLayout = new QHBoxLayout(chartGroup);
+    auto *chartGroup = new QGroupBox(QStringLiteral("视图布局（子图显隐与顺序）"), w);
+    auto *chartLayout = new QVBoxLayout(chartGroup);
 
     m_chartOrderList = new QListWidget(chartGroup);
+    m_chartOrderList->setDragDropMode(QAbstractItemView::InternalMove);
+    m_chartOrderList->setDefaultDropAction(Qt::MoveAction);
 
     QMap<QString, QString> chartNames = {
         {QStringLiteral("waveform"),    QStringLiteral("波形图")},
@@ -473,7 +484,14 @@ QWidget *SettingsPage::createGeneralTab() {
         {QStringLiteral("spectrogram"), QStringLiteral("频谱图")},
     };
 
+    // Load saved state
     QString savedOrder = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
+    QString savedVisible = settings.value(QStringLiteral("ViewLayout/chartVisible")).toString();
+    QSet<QString> visibleSet;
+    if (!savedVisible.isEmpty())
+        visibleSet = QSet(savedVisible.split(QLatin1Char(','), Qt::SkipEmptyParts).begin(),
+                           savedVisible.split(QLatin1Char(','), Qt::SkipEmptyParts).end());
+
     QStringList chartIds;
     if (!savedOrder.isEmpty()) {
         chartIds = savedOrder.split(QLatin1Char(','), Qt::SkipEmptyParts);
@@ -483,26 +501,37 @@ QWidget *SettingsPage::createGeneralTab() {
     for (const auto &id : chartIds) {
         auto *item = new QListWidgetItem(chartNames.value(id, id), m_chartOrderList);
         item->setData(Qt::UserRole, id);
+        // Default: all visible unless saved state says otherwise.
+        // On first run (savedVisible empty), all are checked.
+        bool checked = savedVisible.isEmpty() || visibleSet.contains(id);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
     }
     for (auto it = chartNames.constBegin(); it != chartNames.constEnd(); ++it) {
         if (!chartIds.contains(it.key())) {
             auto *item = new QListWidgetItem(it.value(), m_chartOrderList);
             item->setData(Qt::UserRole, it.key());
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(Qt::Checked);
         }
     }
 
     chartLayout->addWidget(m_chartOrderList, 1);
 
-    auto *btnLayout = new QVBoxLayout;
+    auto *btnRow = new QHBoxLayout;
     m_chartUpBtn = new QPushButton(QStringLiteral("↑ 上移"), chartGroup);
     m_chartDownBtn = new QPushButton(QStringLiteral("↓ 下移"), chartGroup);
-    btnLayout->addWidget(m_chartUpBtn);
-    btnLayout->addWidget(m_chartDownBtn);
-    btnLayout->addStretch();
-    chartLayout->addLayout(btnLayout);
+    auto *resetBtn = new QPushButton(QStringLiteral("恢复默认"), chartGroup);
+    resetBtn->setToolTip(QStringLiteral("恢复为默认显隐状态和排列顺序"));
+    btnRow->addWidget(m_chartUpBtn);
+    btnRow->addWidget(m_chartDownBtn);
+    btnRow->addStretch();
+    btnRow->addWidget(resetBtn);
+    chartLayout->addLayout(btnRow);
 
     layout->addRow(chartGroup);
 
+    // Connect up/down
     connect(m_chartUpBtn, &QPushButton::clicked, this, [this]() {
         int row = m_chartOrderList->currentRow();
         if (row > 0) {
@@ -520,6 +549,32 @@ QWidget *SettingsPage::createGeneralTab() {
             m_chartOrderList->setCurrentRow(row + 1);
             markDirty();
         }
+    });
+
+    // Reset to defaults
+    connect(resetBtn, &QPushButton::clicked, this, [this]() {
+        m_chartOrderList->clear();
+        QMap<QString, QString> defaultNames = {
+            {QStringLiteral("waveform"),    QStringLiteral("波形图")},
+            {QStringLiteral("power"),       QStringLiteral("功率图")},
+            {QStringLiteral("spectrogram"), QStringLiteral("频谱图")},
+        };
+        QStringList defaultOrder = {QStringLiteral("waveform"), QStringLiteral("power"), QStringLiteral("spectrogram")};
+        for (const auto &id : defaultOrder) {
+            auto *item = new QListWidgetItem(defaultNames.value(id, id), m_chartOrderList);
+            item->setData(Qt::UserRole, id);
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(Qt::Checked);
+        }
+        markDirty();
+    });
+
+    // Track changes
+    connect(m_chartOrderList->model(), &QAbstractItemModel::rowsMoved, this, [this]() {
+        markDirty();
+    });
+    connect(m_chartOrderList, &QListWidget::itemChanged, this, [this]() {
+        markDirty();
     });
 
     layout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
