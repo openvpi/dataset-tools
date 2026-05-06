@@ -113,7 +113,7 @@
 
 ---
 
-### 9.2 FA 分层日志输出（层级从属信息追踪）
+### 9.2 FA 分层日志输出（层级从属信息追踪） ✅
 
 **现状**：`runFaForSlice()` 仅输出 "FA started/completed/failed" + sliceId + phoneme 总数。`buildFaLayers()` 静默构建 tier，无日志。
 

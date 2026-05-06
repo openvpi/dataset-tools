@@ -54,42 +54,49 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
 
     int nextId = 1;
 
-    // Include all words and phones from FA output (including SP/AP).
-    // SP/AP are part of the alignment result and should be preserved.
     for (const auto &word : words) {
         if (word.phones.empty())
             continue;
 
-        // Grapheme boundary at word start
         Boundary graphemeB;
         graphemeB.id = nextId++;
         graphemeB.pos = secToUs(word.start);
         graphemeB.text = QString::fromStdString(word.text);
         int graphemeBId = graphemeB.id;
+
+        DSFW_LOG_DEBUG("fa",
+            ("[grapheme] word='" + word.text + "' → [" +
+             std::to_string(word.start) + "s-" +
+             std::to_string(word.end) + "s]").c_str());
+
         r.graphemeLayer.boundaries.push_back(std::move(graphemeB));
 
-        // Phoneme boundaries for each phone in this word
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
             const auto &phone = word.phones[pi];
 
             Boundary phoneB;
             phoneB.id = nextId++;
-            // For the first phone, use word.start to guarantee exact time match
-            // with the grapheme boundary (enables binding via time proximity).
             phoneB.pos = (pi == 0) ? secToUs(word.start) : secToUs(phone.start);
             phoneB.text = QString::fromStdString(phone.text);
 
-            // The first phone of each word shares its start time with the word
-            // → create a BindingGroup linking grapheme boundary ↔ phoneme boundary
+            DSFW_LOG_DEBUG("fa",
+                ("[phoneme] phone='" + phone.text + "' @ " +
+                 std::to_string(phone.start) + "s (id=" +
+                 std::to_string(phoneB.id) + ", tier=phoneme)").c_str());
+
             if (pi == 0) {
                 r.groups.push_back({graphemeBId, phoneB.id});
+
+                DSFW_LOG_TRACE("fa",
+                    ("[bind] grapheme#" + std::to_string(graphemeBId) +
+                     " ↔ phoneme#" + std::to_string(phoneB.id) +
+                     " @ " + std::to_string(word.start) + "s").c_str());
             }
 
             r.phonemeLayer.boundaries.push_back(std::move(phoneB));
         }
     }
 
-    // Add end boundaries (closing the last interval)
     if (!r.graphemeLayer.boundaries.empty() && !words.empty()) {
         Boundary endG;
         endG.id = nextId++;
@@ -111,9 +118,13 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         endP.pos = lastEnd;
         r.phonemeLayer.boundaries.push_back(std::move(endP));
 
-        // End boundaries also form a binding group
         r.groups.push_back({r.graphemeLayer.boundaries.back().id,
                             r.phonemeLayer.boundaries.back().id});
+
+        DSFW_LOG_TRACE("fa",
+            ("[bind] grapheme#" + std::to_string(r.graphemeLayer.boundaries.back().id) +
+             " ↔ phoneme#" + std::to_string(r.phonemeLayer.boundaries.back().id) +
+             " @ " + std::to_string(usToSec(lastEnd)) + "s (end)").c_str());
     }
 
     return r;
@@ -492,7 +503,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     QString audioPath = source()->validatedAudioPath(sliceId);
     if (audioPath.isEmpty()) {
         if (source()->audioPath(sliceId).isEmpty()) {
-            DSFW_LOG_WARN("infer", ("FA skipped: slice has no audio file - " + sliceId.toStdString()).c_str());
+            DSFW_LOG_ERROR("fa", ("FA pipeline error [audio]: no audio file - " + sliceId.toStdString()).c_str());
             QMessageBox::warning(this, tr("Force Align"),
                                  tr("Current slice has no audio file."));
         }
@@ -501,6 +512,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     auto loadResult = source()->loadSlice(sliceId);
     if (!loadResult) {
+        DSFW_LOG_ERROR("fa", ("FA pipeline error [load]: unable to load slice data - " + sliceId.toStdString()).c_str());
         QMessageBox::warning(this, tr("Force Align"),
                              tr("Unable to load slice data."));
         return;
@@ -519,14 +531,14 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     }
 
     if (graphemeTexts.isEmpty()) {
-        DSFW_LOG_WARN("infer", ("FA skipped: no grapheme layer data - " + sliceId.toStdString()).c_str());
+        DSFW_LOG_ERROR("fa", ("FA pipeline error [grapheme]: no grapheme layer data - " + sliceId.toStdString()).c_str());
         QMessageBox::information(this, tr("Force Align"),
                                  tr("Current slice has no lyrics data. Please label lyrics first."));
         return;
     }
 
     m_faRunning = true;
-    DSFW_LOG_INFO("infer", ("FA started: " + sliceId.toStdString()).c_str());
+    DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString()).c_str());
     auto *hfa = m_hfa;
     QPointer<PhonemeLabelerPage> guard(this);
 
@@ -553,8 +565,9 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
             if (result) {
                 auto faResult = buildFaLayers(words);
-                DSFW_LOG_INFO("infer", ("FA completed: " + sliceId.toStdString() + " - "
-                              + std::to_string(faResult.phonemeLayer.boundaries.size()) + " phonemes").c_str());
+                DSFW_LOG_INFO("fa", ("FA completed: " + sliceId.toStdString() + " - "
+                              + std::to_string(faResult.phonemeLayer.boundaries.size()) + " phonemes, "
+                              + std::to_string(faResult.groups.size()) + " bindings").c_str());
 
                 QList<IntervalLayer> layers;
                 layers.push_back(std::move(faResult.graphemeLayer));
@@ -565,7 +578,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                     guard.data(), dsfw::widgets::ToastType::Info,
                     tr("Force alignment completed"), 3000);
             } else {
-                DSFW_LOG_ERROR("infer", ("FA failed: " + sliceId.toStdString() + " - " + result.error()).c_str());
+                DSFW_LOG_ERROR("fa", ("FA pipeline error [inference]: " + sliceId.toStdString() + " - " + result.error()).c_str());
                 QMessageBox::warning(guard.data(), tr("Force Align"),
                                      tr("Force alignment failed: %1")
                                          .arg(QString::fromStdString(result.error())));
@@ -655,7 +668,7 @@ void PhonemeLabelerPage::onBatchFA() {
 
     const auto ids = source()->sliceIds();
     if (ids.isEmpty()) {
-        DSFW_LOG_WARN("infer", "Batch FA skipped: no slices");
+        DSFW_LOG_WARN("fa", "Batch FA skipped: no slices");
         QMessageBox::information(this, tr("Batch Force Align"),
                                  tr("No slices to process."));
         return;
@@ -664,7 +677,7 @@ void PhonemeLabelerPage::onBatchFA() {
     m_faRunning = true;
     {
         std::string msg = "Batch FA started: " + std::to_string(ids.size()) + " slices";
-        DSFW_LOG_INFO("infer", msg.c_str());
+        DSFW_LOG_INFO("fa", msg.c_str());
     }
     auto *hfa = m_hfa;
     auto *src = source();
@@ -727,7 +740,7 @@ void PhonemeLabelerPage::onBatchFA() {
             if (!guard)
                 return;
             guard->m_faRunning = false;
-            DSFW_LOG_INFO("infer", ("Batch FA completed: " + std::to_string(processed)
+            DSFW_LOG_INFO("fa", ("Batch FA completed: " + std::to_string(processed)
                           + " processed, " + std::to_string(skipped) + " skipped").c_str());
             QString msg = tr("Batch force align completed: %1 slices").arg(processed);
             if (skipped > 0)
