@@ -35,6 +35,21 @@
 
 ---
 
+## 1.3 设计准则（最高优先级）
+
+以下准则约束所有框架和应用层代码，详见 [human-decisions.md](human-decisions.md) P-01 ~ P-04。
+
+| 编号 | 准则 | 要求 |
+|---|---|---|
+| **P-01** | 模块职责单一 | 相同行为只存在一处；刷新/通知由容器统一分发，不散落在各消费者 |
+| **P-02** | 被动接口 + 容器通知 | 纯数据接口不加 QObject；变更通知由容器的 `invalidateXxx()` 负责 |
+| **P-03** | 异步一切 | 超过 50ms 的操作禁止主线程同步执行；禁止 `processEvents` 反模式 |
+| **P-04** | 错误根因传播 | 错误消息必须追溯到根因，不得忽略 out-parameter 继续报二次错误 |
+
+**模式示例**：`AudioVisualizerContainer::invalidateBoundaryModel()` — 一次调用刷新 overlay + tier label + 所有 chart，消费者无需知道内部有哪些 widget。
+
+---
+
 ## 2. 六层架构
 
 ```
