@@ -325,10 +325,24 @@ namespace dstools {
         if (!m_chartOrder.contains(id))
             m_chartOrder.append(id);
 
-        connectViewportToWidget(widget);
+    connectViewportToWidget(widget);
 
-        QSettings settings;
-        QString saved = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
+    // Auto-set drag controller on chart widgets that support it (reduces boilerplate
+    // in page assembly code; see refactoring-roadmap-v2.md §7.7).
+    if (m_dragController) {
+        const QMetaObject *mo = widget->metaObject();
+        for (int i = 0; i < mo->methodCount(); ++i) {
+            QMetaMethod method = mo->method(i);
+            if (method.name() == "setDragController" && method.parameterCount() == 1) {
+                method.invoke(widget, Qt::DirectConnection,
+                              Q_ARG(BoundaryDragController*, m_dragController));
+                break;
+            }
+        }
+    }
+
+    QSettings settings;
+    QString saved = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
         if (!saved.isEmpty()) {
             QStringList savedOrder = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
             QStringList reordered;

@@ -308,19 +308,16 @@ void PhonemeEditor::buildLayout() {
     m_container->setEditorWidget(m_tierEditWidget);
 
     m_waveformWidget = new WaveformWidget(m_viewport, m_container);
-    m_waveformWidget->setDragController(m_container->dragController());
     m_waveformWidget->setUndoStack(m_undoStack);
     m_waveformWidget->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 1, 1, 2.0);
 
     m_powerWidget = new PowerWidget(m_viewport, m_container);
-    m_powerWidget->setDragController(m_container->dragController());
     m_powerWidget->setUndoStack(m_undoStack);
     m_powerWidget->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("power"), m_powerWidget, 2, 1, 3.0);
 
     m_spectrogramWidget = new SpectrogramWidget(m_viewport, m_container);
-    m_spectrogramWidget->setDragController(m_container->dragController());
     m_spectrogramWidget->setUndoStack(m_undoStack);
     m_spectrogramWidget->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 3, 1, 5.0);
