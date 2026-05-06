@@ -92,7 +92,7 @@
 
 > 范围：4 个子任务，覆盖 Log UI 重构、FA 分层日志、边界重叠方案、拖拽实时刷新。
 
-### 9.1 Log 侧边栏改为独立 LogPage（ADR-79）
+### 9.1 Log 侧边栏改为独立 LogPage（ADR-79） ✅
 
 **现状**：`LogPanelWidget` 是 AppShell 内部 QSplitter 右侧折叠面板，由一个 QToolButton（Ctrl+L）控制显隐。Sidebar 仅显示 Log toggle 按钮。
 

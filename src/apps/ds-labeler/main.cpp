@@ -25,6 +25,7 @@
 #include <PhonemeLabelerPage.h>
 #include <PitchLabelerPage.h>
 #include <SettingsPage.h>
+#include <LogPage.h>
 
 #include <cmath>
 #include <filesystem>
@@ -107,6 +108,10 @@ int main(int argc, char *argv[]) {
     // Page 6: 设置 (Settings) — moved to last per ADR-64
     auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
     shell.addPage(settingsPage, "settings", {}, QStringLiteral("设置"));
+
+    // Page 7: 日志 (Log)
+    auto *logPage = new dstools::LogPage(&shell);
+    shell.addPage(logPage, "log", {}, QStringLiteral("日志"));
 
     if (modelManager) {
         QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested,

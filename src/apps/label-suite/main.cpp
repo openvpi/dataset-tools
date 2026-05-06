@@ -30,6 +30,7 @@
 #include "pages/GameAlignPage.h"
 
 #include <SettingsPage.h>
+#include <LogPage.h>
 #include <DirectoryDataSource.h>
 
 using namespace dstools::labeler;
@@ -116,6 +117,10 @@ int main(int argc, char *argv[]) {
     // Step 9: Settings
     auto *settingsPage = new dstools::SettingsPage(settingsBackend, &shell);
     shell.addPage(settingsPage, "settings", {}, QObject::tr("Settings"));
+
+    // Step 10: Log
+    auto *logPage = new dstools::LogPage(&shell);
+    shell.addPage(logPage, "log", {}, QObject::tr("Log"));
 
     if (modelManager) {
         QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested,

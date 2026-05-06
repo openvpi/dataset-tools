@@ -11,16 +11,11 @@ namespace dsfw::widgets {
 enum class ToastType;
 }
 
-namespace dsfw {
-class LogPanelWidget;
-}
-
 class QStackedWidget;
 class QStatusBar;
 class QAction;
 class QMenuBar;
 class QShowEvent;
-class QSplitter;
 
 namespace dstools {
 class AppSettings;
@@ -100,12 +95,6 @@ public:
     void showToast(dsfw::widgets::ToastType type, const QString &message,
                    int timeoutMs = 3000);
 
-    /// @brief Toggle the log panel visibility.
-    void toggleLogPanel();
-
-    /// @brief Return whether the log panel is currently visible.
-    bool isLogPanelVisible() const;
-
 signals:
     /// @brief Emitted when the active page changes.
     /// @param index New page index.
@@ -133,13 +122,10 @@ private:
 
     IconNavBar *m_navBar = nullptr;
     QStackedWidget *m_stack = nullptr;
-    QSplitter *m_contentSplitter = nullptr;
-    LogPanelWidget *m_logPanel = nullptr;
-    QAction *m_toggleLogAction = nullptr;
     QVector<PageEntry> m_pages;
     QList<QAction *> m_globalActions;
     QString m_workingDir;
-    QMenuBar *m_menuBar = nullptr; // persistent — never replaced, only cleared/repopulated
+    QMenuBar *m_menuBar = nullptr;
     dstools::AppSettings *m_settings = nullptr;
     bool m_geometryRestored = false;
 };

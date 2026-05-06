@@ -11,7 +11,7 @@ dstools_add_executable(${PROJECT_NAME}
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets dstools-domain
                 min-label-editor phoneme-editor pitch-editor settings-page
-                data-sources
+                data-sources log-page
                 lyricfa-lib hubertfa-lib rmvpepitch-lib gameinfer-lib
                 SndFile::sndfile
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent

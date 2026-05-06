@@ -22,7 +22,7 @@ dstools_add_executable(${PROJECT_NAME}
         pages/GameAlignPage.cpp
     DEPENDS
         PRIVATE dstools-ui-core dstools-widgets
-                settings-page data-sources
+                settings-page data-sources log-page
                 Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
