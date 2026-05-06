@@ -5,7 +5,6 @@
 #include <QList>
 #include <QRadioButton>
 #include <QButtonGroup>
-#include <QVBoxLayout>
 
 namespace dstools {
 
@@ -42,7 +41,6 @@ private:
     void rebuildRadioButtons();
 
     QButtonGroup *m_buttonGroup = nullptr;
-    QVBoxLayout *m_radioLayout = nullptr;
     QWidget *m_radioPanel = nullptr;
     QList<QRadioButton *> m_radioButtons;
 

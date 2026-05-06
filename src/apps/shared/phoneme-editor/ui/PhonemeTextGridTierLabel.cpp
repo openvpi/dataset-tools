@@ -13,14 +13,10 @@ namespace dstools {
 PhonemeTextGridTierLabel::PhonemeTextGridTierLabel(QWidget *parent)
     : TierLabelArea(parent) {
     // Radio buttons sit in an overlay panel at the left edge.
-    // They are NOT added to any layout — positioned absolutely via resizeEvent
-    // so they don't shift boundary line positions.
+    // They are positioned absolutely per tier row (no layout) so they
+    // align vertically with the tier label text.
     m_radioPanel = new QWidget(this);
     m_radioPanel->setStyleSheet(QStringLiteral("background-color: #2a2a2f;"));
-
-    m_radioLayout = new QVBoxLayout(m_radioPanel);
-    m_radioLayout->setContentsMargins(2, 0, 2, 0);
-    m_radioLayout->setSpacing(0);
 
     m_buttonGroup = new QButtonGroup(this);
     m_buttonGroup->setExclusive(true);
@@ -201,7 +197,10 @@ void PhonemeTextGridTierLabel::rebuildRadioButtons() {
         if (t == m_activeTierIndex)
             btn->setChecked(true);
         m_buttonGroup->addButton(btn, t);
-        m_radioLayout->addWidget(btn);
+        // Position each button at the exact y offset for its tier row
+        // so it aligns vertically with the tier label text
+        btn->move(4, t * kTierRowHeight);
+        btn->show();
         m_radioButtons.append(btn);
     }
 
