@@ -8,6 +8,7 @@
 #include <QIODevice>
 #include <QIcon>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -247,6 +248,29 @@ void PhonemeEditor::buildToolbar() {
     m_actSnapToggle->setCheckable(true);
     m_actSnapToggle->setChecked(m_snapEnabled);
     m_actSnapToggle->setToolTip(tr("吸附：释放边界时自动对齐到附近其他层的边界"));
+
+    // Apply distinct styling to Bind/Snap toggle buttons
+    static const QString kToggleStyle = QStringLiteral(
+        "QToolButton:checked {"
+        "  background-color: #3d6fa5;"
+        "  color: #ffffff;"
+        "  border: 1px solid #5a9fd4;"
+        "  border-radius: 3px;"
+        "  padding: 3px 8px;"
+        "}"
+        "QToolButton:!checked {"
+        "  background-color: transparent;"
+        "  color: #888888;"
+        "  border: 1px solid #555555;"
+        "  border-radius: 3px;"
+        "  padding: 3px 8px;"
+        "}"
+    );
+    // Find the QToolButton widgets created by addAction and style them
+    if (auto *btn = qobject_cast<QToolButton *>(m_toolbar->widgetForAction(m_actBindingToggle)))
+        btn->setStyleSheet(kToggleStyle);
+    if (auto *btn = qobject_cast<QToolButton *>(m_toolbar->widgetForAction(m_actSnapToggle)))
+        btn->setStyleSheet(kToggleStyle);
 
     m_toolbar->addSeparator();
 }
