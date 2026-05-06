@@ -168,11 +168,16 @@ void SliceListPanel::saveSelection(AppSettings &settings) const {
 // ── Slicer mode ───────────────────────────────────────────────────────────────
 
 void SliceListPanel::setSlicerMode(bool enabled) {
+    if (m_slicerMode == enabled)
+        return;
     m_slicerMode = enabled;
     if (enabled) {
         m_listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(m_listWidget, &QListWidget::customContextMenuRequested,
                 this, &SliceListPanel::onContextMenu, Qt::UniqueConnection);
+        // Qt::UniqueConnection is incompatible with lambdas; each lambda is a
+        // unique functor type and Qt cannot deduplicate. Since setSlicerMode is
+        // called once per panel instance, a plain connection is safe.
         connect(m_listWidget, &QListWidget::itemDoubleClicked, this,
                 [this](QListWidgetItem *item) {
                     int row = m_listWidget->row(item);
@@ -181,8 +186,7 @@ void SliceListPanel::setSlicerMode(bool enabled) {
                                      ? m_slicePoints[row]
                                      : m_totalDuration;
                     emit sliceDoubleClicked(row, start, end);
-                },
-                Qt::UniqueConnection);
+                });
         m_progressTracker->hide();
     } else {
         m_listWidget->setContextMenuPolicy(Qt::NoContextMenu);
