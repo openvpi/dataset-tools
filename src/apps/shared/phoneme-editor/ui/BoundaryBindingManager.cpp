@@ -38,27 +38,31 @@ std::vector<AlignedBoundary> BoundaryBindingManager::findAlignedBoundaries(
     if (!m_enabled || !m_document || sourceTierIndex < 0)
         return result;
 
-    TimePos sourceTime = m_document->boundaryTime(sourceTierIndex, sourceBoundaryIndex);
+    // Use BindingGroups from TextGridDocument (auto-detected or from FA).
+    // Each group contains boundaries at the exact same TimePos.
+    int sourceId = sourceTierIndex * 10000 + sourceBoundaryIndex + 1;
+    int groupIdx = m_document->findGroupForBoundary(sourceId);
+    if (groupIdx < 0)
+        return result;
 
-    int tierCount = m_document->tierCount();
-    for (int tier = 0; tier < tierCount; ++tier) {
-        if (tier == sourceTierIndex)
+    const auto &groups = m_document->bindingGroups();
+    if (groupIdx >= static_cast<int>(groups.size()))
+        return result;
+
+    for (int id : groups[groupIdx]) {
+        if (id == sourceId)
             continue;
-        if (!m_document->isIntervalTier(tier))
+
+        // Decode synthetic ID back to (tier, index)
+        int tier = (id - 1) / 10000;
+        int index = (id - 1) % 10000;
+        if (tier < 0 || tier >= m_document->tierCount())
+            continue;
+        if (index < 0 || index >= m_document->boundaryCount(tier))
             continue;
 
-        int count = m_document->boundaryCount(tier);
-        for (int b = 0; b < count; ++b) {
-            TimePos t = m_document->boundaryTime(tier, b);
-            if (t < sourceTime - m_toleranceUs)
-                continue;
-            if (t > sourceTime + m_toleranceUs)
-                break;
-
-            if (std::abs(t - sourceTime) <= m_toleranceUs) {
-                result.push_back({tier, b, t});
-            }
-        }
+        TimePos t = m_document->boundaryTime(tier, index);
+        result.push_back({tier, index, t});
     }
 
     return result;

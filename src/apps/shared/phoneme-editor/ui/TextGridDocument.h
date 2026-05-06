@@ -67,6 +67,22 @@ public:
     [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const override;
     [[nodiscard]] TimePos snapToLowerTier(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const override;
 
+    // ── Binding groups ──────────────────────────────────────────────────
+
+    /// Replace all binding groups. Each group is a set of boundary IDs
+    /// that are at the same time position and must move together.
+    void setBindingGroups(const std::vector<BindingGroup> &groups);
+
+    /// Get all binding groups.
+    [[nodiscard]] const std::vector<BindingGroup> &bindingGroups() const { return m_groups; }
+
+    /// Find the group that contains the given boundary ID, or -1 if none.
+    [[nodiscard]] int findGroupForBoundary(int boundaryId) const;
+
+    /// Auto-detect binding groups: any boundaries at the exact same time
+    /// position across different tiers form a group. Called after loadFromDsText.
+    void autoDetectBindingGroups();
+
 signals:
     void documentChanged();
     void boundaryMoved(int tierIndex, int boundaryIndex, TimePos newTime);
@@ -83,6 +99,11 @@ private:
     QString m_filePath;
     bool m_modified = false;
     int m_activeTierIndex = 0;
+
+    // Binding groups: each entry is a set of boundary IDs that are at the same
+    // time position and must move together when dragged.
+    // Populated from FA results or auto-detected on TextGrid load.
+    std::vector<BindingGroup> m_groups;
 };
 
 } // namespace phonemelabeler

@@ -28,42 +28,107 @@
 namespace dstools {
 
 // ---------------------------------------------------------------------------
-// Helper: filter out auto-added leading/trailing silence (SP/AP) phonemes
-// from HFA results, while preserving intentional mid-word silences.
+// Build grapheme + phoneme layers with BindingGroups from HFA WordList.
+//
+// The FA system accepts grapheme input and produces Word→Phone mapping.
+// Word boundaries are grapheme-layer boundaries; phone boundaries are
+// phoneme-layer boundaries. Where a word start coincides with a phone start,
+// those two boundary IDs form a BindingGroup (they must move together).
+//
+// Leading/trailing auto-added SP/AP words are filtered out.
 // ---------------------------------------------------------------------------
-static std::vector<Boundary> buildPhonemeBoundaries(const HFA::WordList &words, int &nextId) {
-    std::vector<Boundary> boundaries;
-    int id = nextId;
+struct FaLayerResult {
+    IntervalLayer graphemeLayer;
+    IntervalLayer phonemeLayer;
+    std::vector<BindingGroup> groups;
+};
 
-    // First pass: collect all phoneme boundaries
+static bool isSilenceWord(const HFA::Word &word) {
+    return word.text == "SP" || word.text == "AP";
+}
+
+static FaLayerResult buildFaLayers(const HFA::WordList &words) {
+    FaLayerResult r;
+    r.graphemeLayer.name = QStringLiteral("grapheme");
+    r.graphemeLayer.type = QStringLiteral("interval");
+    r.phonemeLayer.name = QStringLiteral("phoneme");
+    r.phonemeLayer.type = QStringLiteral("interval");
+
+    int nextId = 1;
+
+    // Collect non-silence words and all their phones
     for (const auto &word : words) {
-        for (const auto &phone : word.phones) {
-            Boundary b;
-            b.id = id++;
-            b.pos = secToUs(phone.start);
-            b.text = QString::fromStdString(phone.text);
-            boundaries.push_back(std::move(b));
+        if (isSilenceWord(word))
+            continue;
+        if (word.phones.empty())
+            continue;
+
+        // Grapheme boundary at word start
+        Boundary graphemeB;
+        graphemeB.id = nextId++;
+        graphemeB.pos = secToUs(word.start);
+        graphemeB.text = QString::fromStdString(word.text);
+        int graphemeBId = graphemeB.id;
+        r.graphemeLayer.boundaries.push_back(std::move(graphemeB));
+
+        // Phoneme boundaries for each phone in this word
+        for (size_t pi = 0; pi < word.phones.size(); ++pi) {
+            const auto &phone = word.phones[pi];
+            if (phone.text == "SP" || phone.text == "AP")
+                continue;
+
+            Boundary phoneB;
+            phoneB.id = nextId++;
+            phoneB.pos = secToUs(phone.start);
+            phoneB.text = QString::fromStdString(phone.text);
+
+            // The first phone of each word shares its start time with the word
+            // → create a BindingGroup linking grapheme boundary ↔ phoneme boundary
+            if (pi == 0) {
+                r.groups.push_back({graphemeBId, phoneB.id});
+            }
+
+            r.phonemeLayer.boundaries.push_back(std::move(phoneB));
         }
     }
 
-    // Remove leading auto-SP/AP (algorithmically added silence at head)
-    while (!boundaries.empty()) {
-        if (boundaries.front().text == QStringLiteral("SP") || boundaries.front().text == QStringLiteral("AP"))
-            boundaries.erase(boundaries.begin());
-        else
-            break;
+    // Add end boundaries (closing the last interval)
+    if (!r.graphemeLayer.boundaries.empty()) {
+        // Find the last non-silence word's end time
+        TimePos lastEnd = 0;
+        for (auto it = words.end(); it != words.begin(); ) {
+            --it;
+            if (!isSilenceWord(*it)) {
+                lastEnd = secToUs(it->end);
+                break;
+            }
+        }
+        Boundary endG;
+        endG.id = nextId++;
+        endG.pos = lastEnd;
+        r.graphemeLayer.boundaries.push_back(std::move(endG));
     }
 
-    // Remove trailing auto-SP/AP (algorithmically added silence at tail)
-    while (!boundaries.empty()) {
-        if (boundaries.back().text == QStringLiteral("SP") || boundaries.back().text == QStringLiteral("AP"))
-            boundaries.pop_back();
-        else
-            break;
+    if (!r.phonemeLayer.boundaries.empty()) {
+        TimePos lastEnd = 0;
+        for (auto it = words.end(); it != words.begin(); ) {
+            --it;
+            if (!isSilenceWord(*it) && !it->phones.empty()) {
+                lastEnd = secToUs(it->phones.back().end);
+                break;
+            }
+        }
+        Boundary endP;
+        endP.id = nextId++;
+        endP.pos = lastEnd;
+        r.phonemeLayer.boundaries.push_back(std::move(endP));
+
+        // End boundaries also form a binding group
+        r.groups.push_back({r.graphemeLayer.boundaries.back().id,
+                            r.phonemeLayer.boundaries.back().id});
     }
 
-    nextId = id;
-    return boundaries;
+    return r;
 }
 
 PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
@@ -131,6 +196,9 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
     for (const auto &layer : layers)
         dstext.layers.push_back(layer);
 
+    // Preserve binding groups from the current document
+    dstext.groups = doc->bindingGroups();
+
     auto saveResult = source()->saveSlice(currentSliceId(), dstext);
     if (!saveResult) {
         QMessageBox::warning(this, QStringLiteral("保存失败"),
@@ -168,6 +236,12 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
             m_editor->document()->loadFromDsText(layers, duration);
         else
             m_editor->document()->loadFromDsText(layers, secToUs(m_editor->viewport()->totalDuration()));
+
+        // Restore or auto-detect binding groups
+        if (!doc.groups.empty())
+            m_editor->document()->setBindingGroups(doc.groups);
+        else if (doc.layers.size() > 1)
+            m_editor->document()->autoDetectBindingGroups();
     } else {
         // No layers — load empty document with audio duration
         double audioDur = m_editor->viewport()->totalDuration();
@@ -485,26 +559,13 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 tierLabel->setAlignmentRunning(false);
 
             if (result) {
+                auto faResult = buildFaLayers(words);
+
                 QList<IntervalLayer> layers;
+                layers.push_back(std::move(faResult.graphemeLayer));
+                layers.push_back(std::move(faResult.phonemeLayer));
 
-                IntervalLayer phonemeLayer;
-                phonemeLayer.name = QStringLiteral("phoneme");
-                phonemeLayer.type = QStringLiteral("interval");
-                int id = 1;
-                {
-                    auto boundaries = buildPhonemeBoundaries(words, id);
-                    phonemeLayer.boundaries = std::move(boundaries);
-                }
-                if (!phonemeLayer.boundaries.empty()) {
-                    Boundary endB;
-                    endB.id = id;
-                    endB.pos = secToUs(words.back().phones.back().end);
-                    endB.text = QString();
-                    phonemeLayer.boundaries.push_back(std::move(endB));
-                }
-                layers.push_back(std::move(phonemeLayer));
-
-                guard->applyFaResult(sliceId, layers);
+                guard->applyFaResult(sliceId, layers, faResult.groups);
                 dsfw::widgets::ToastNotification::show(
                     guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("强制对齐完成"), 3000);
@@ -518,7 +579,8 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 }
 
 void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
-                                        const QList<IntervalLayer> &layers) {
+                                        const QList<IntervalLayer> &layers,
+                                        const std::vector<BindingGroup> &groups) {
     if (!source())
         return;
 
@@ -543,6 +605,10 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         }
     }
 
+    // Save binding groups from FA (grapheme↔phoneme boundary associations)
+    if (!groups.empty())
+        doc.groups = groups;
+
     (void) source()->saveSlice(sliceId, doc);
 
     if (sliceId == currentSliceId()) {
@@ -562,6 +628,12 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
 
         if (duration > 0)
             m_editor->document()->loadFromDsText(allLayers, duration);
+
+        // Restore binding groups from the saved document
+        if (!doc.groups.empty())
+            m_editor->document()->setBindingGroups(doc.groups);
+        else if (doc.layers.size() > 1)
+            m_editor->document()->autoDetectBindingGroups();
     }
 }
 
@@ -637,27 +709,15 @@ void PhonemeLabelerPage::onBatchFA() {
             std::vector<std::string> nonSpeechPh = {"AP", "SP"};
             auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, words);
             if (result) {
-                QList<IntervalLayer> layers;
-                IntervalLayer phonemeLayer;
-                phonemeLayer.name = QStringLiteral("phoneme");
-                phonemeLayer.type = QStringLiteral("interval");
-                int id = 1;
-                {
-                    auto boundaries = buildPhonemeBoundaries(words, id);
-                    phonemeLayer.boundaries = std::move(boundaries);
-                }
-                if (!phonemeLayer.boundaries.empty()) {
-                    Boundary endB;
-                    endB.id = id;
-                    endB.pos = secToUs(words.back().phones.back().end);
-                    endB.text = QString();
-                    phonemeLayer.boundaries.push_back(std::move(endB));
-                }
-                layers.push_back(std::move(phonemeLayer));
+                auto faResult = buildFaLayers(words);
 
-                QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers]() {
+                QList<IntervalLayer> layers;
+                layers.push_back(std::move(faResult.graphemeLayer));
+                layers.push_back(std::move(faResult.phonemeLayer));
+
+                QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers, groups = std::move(faResult.groups)]() {
                     if (guard)
-                        guard->applyFaResult(sliceId, layers);
+                        guard->applyFaResult(sliceId, layers, groups);
                 }, Qt::QueuedConnection);
             }
             ++processed;

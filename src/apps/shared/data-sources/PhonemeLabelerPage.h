@@ -51,7 +51,8 @@ private:
     void ensureHfaEngineAsync(std::function<void()> onReady = {});
     void onModelInvalidated(const QString &taskKey);
     void runFaForSlice(const QString &sliceId);
-    void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers);
+    void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers,
+                       const std::vector<BindingGroup> &groups = {});
 };
 
 } // namespace dstools

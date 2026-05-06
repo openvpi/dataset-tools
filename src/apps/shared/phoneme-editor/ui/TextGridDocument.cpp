@@ -7,6 +7,7 @@
 #include <QStringDecoder>
 
 #include <algorithm>
+#include <map>
 #include <sstream>
 
 namespace dstools {
@@ -448,6 +449,55 @@ QList<IntervalLayer> TextGridDocument::toDsText() const {
     }
 
     return result;
+}
+
+// ── Binding groups ─────────────────────────────────────────────────────
+
+void TextGridDocument::setBindingGroups(const std::vector<BindingGroup> &groups) {
+    m_groups = groups;
+}
+
+int TextGridDocument::findGroupForBoundary(int boundaryId) const {
+    for (size_t g = 0; g < m_groups.size(); ++g) {
+        for (int id : m_groups[g]) {
+            if (id == boundaryId)
+                return static_cast<int>(g);
+        }
+    }
+    return -1;
+}
+
+void TextGridDocument::autoDetectBindingGroups() {
+    m_groups.clear();
+
+    // Build a map: tier + boundaryIndex → boundaryId
+    // When two boundaries from different tiers share the exact same TimePos,
+    // they form a binding group.
+    struct Loc { int tier; int index; int id; };
+    std::vector<Loc> allBoundaries;
+
+    for (int t = 0; t < tierCount(); ++t) {
+        int n = boundaryCount(t);
+        for (int b = 0; b < n; ++b) {
+            allBoundaries.push_back({t, b, b}); // ID = index within tier
+        }
+    }
+
+    // Group by exact time position
+    std::map<TimePos, std::vector<int>> posMap;
+    for (const auto &loc : allBoundaries) {
+        // Generate a unique-ish cross-tier boundary ID: use tier*N+boundary+1
+        // (positive, non-zero, unique across tiers)
+        int uniqueId = loc.tier * 10000 + loc.index + 1;
+        TimePos pos = boundaryTime(loc.tier, loc.index);
+        posMap[pos].push_back(uniqueId);
+    }
+
+    for (auto &[pos, ids] : posMap) {
+        if (ids.size() > 1) {
+            m_groups.push_back(std::move(ids));
+        }
+    }
 }
 
 } // namespace phonemelabeler
