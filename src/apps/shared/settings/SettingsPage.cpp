@@ -2,6 +2,8 @@
 
 #include "ISettingsBackend.h"
 
+#include <dsfw/AppSettings.h>
+
 #include <QAbstractItemModel>
 #include <QFileDialog>
 #include <QDir>
@@ -195,9 +197,11 @@ void SettingsPage::applySettings() {
             if (item->checkState() == Qt::Checked)
                 visible.append(id);
         }
-        QSettings settings;
-        settings.setValue(QStringLiteral("AudioVisualizer/chartOrder"), order.join(QLatin1Char(',')));
-        settings.setValue(QStringLiteral("ViewLayout/chartVisible"), visible.join(QLatin1Char(',')));
+        static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+        static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+        static dstools::AppSettings s_chartSettings("AudioVisualizer");
+        s_chartSettings.set(kChartOrder, order.join(QLatin1Char(',')));
+        s_chartSettings.set(kChartVisible, visible.join(QLatin1Char(',')));
     }
 
     emit settingsChanged();
@@ -485,8 +489,12 @@ QWidget *SettingsPage::createGeneralTab() {
     };
 
     // Load saved state
-    QString savedOrder = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
-    QString savedVisible = settings.value(QStringLiteral("ViewLayout/chartVisible")).toString();
+    static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+    static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+    static dstools::AppSettings s_chartSettings("AudioVisualizer");
+    s_chartSettings.reload();
+    QString savedOrder = s_chartSettings.get(kChartOrder);
+    QString savedVisible = s_chartSettings.get(kChartVisible);
     QSet<QString> visibleSet;
     if (!savedVisible.isEmpty()) {
         const QStringList visibleIds = savedVisible.split(QLatin1Char(','), Qt::SkipEmptyParts);

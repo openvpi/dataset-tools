@@ -95,6 +95,11 @@ public:
     QStringList chartOrder() const;
     void setChartOrder(const QStringList &order);
 
+    /// Return the shared global AppSettings used for chart layout persistence
+    /// (chartOrder + chartVisible).  Both AudioVisualizerContainer and
+    /// SettingsPage must use this instance so they read/write the same store.
+    static AppSettings &chartLayoutSettings();
+
     /// Set visibility of a chart widget by id.
     /// Hidden charts are excluded from the splitter layout.
     void setChartVisible(const QString &id, bool visible);
@@ -102,12 +107,19 @@ public:
     /// Return whether a chart is currently visible.
     bool chartVisible(const QString &id) const;
 
-    /// Save current chart visibility state to per-page AppSettings.
+    /// Save current chart visibility state to global AppSettings.
     void saveChartVisibility();
 
-    /// Restore chart visibility from per-page AppSettings.
+    /// Restore chart visibility from global AppSettings.
     /// Charts not listed in the saved state keep their current visibility.
     void restoreChartVisibility();
+
+    /// Save current chart order to global AppSettings.
+    void saveChartOrder();
+
+    /// Restore chart order from global AppSettings.
+    /// Returns true if a saved order was found and applied.
+    bool restoreChartOrder();
 
     QByteArray saveSplitterState() const;
     void restoreSplitterState(const QByteArray &state);

@@ -12,7 +12,6 @@
 #include <QMetaMethod>
 #include <QPointer>
 #include <QResizeEvent>
-#include <QSettings>
 #include <QTimer>
 #include <algorithm>
 
@@ -21,6 +20,11 @@ namespace dstools {
     using dsfw::widgets::PlayWidget;
     using dsfw::widgets::ViewportController;
     using dsfw::widgets::ViewportState;
+
+    AppSettings &AudioVisualizerContainer::chartLayoutSettings() {
+        static AppSettings s_settings("AudioVisualizer");
+        return s_settings;
+    }
 
     AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppName, QWidget *parent)
         : QWidget(parent), m_settings(settingsAppName) {
@@ -341,21 +345,7 @@ namespace dstools {
         }
     }
 
-    QSettings settings;
-    QString saved = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
-        if (!saved.isEmpty()) {
-            QStringList savedOrder = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
-            QStringList reordered;
-            for (const auto &chartId : savedOrder) {
-                if (m_chartOrder.contains(chartId))
-                    reordered.append(chartId);
-            }
-            for (const auto &chartId : m_chartOrder) {
-                if (!reordered.contains(chartId))
-                    reordered.append(chartId);
-            }
-            m_chartOrder = reordered;
-        }
+    restoreChartOrder();
 
         rebuildChartLayout();
     }
@@ -372,8 +362,7 @@ namespace dstools {
 
     void AudioVisualizerContainer::setChartOrder(const QStringList &order) {
         m_chartOrder = order;
-        QSettings settings;
-        settings.setValue(QStringLiteral("AudioVisualizer/chartOrder"), order.join(QLatin1Char(',')));
+        saveChartOrder();
         rebuildChartLayout();
         emit chartOrderChanged(order);
     }
@@ -404,14 +393,15 @@ namespace dstools {
             if (!m_hiddenCharts.contains(id))
                 visible.append(id);
         }
-        m_settings.set(kChartVisible, visible.join(QLatin1Char(',')));
+        chartLayoutSettings().set(kChartVisible, visible.join(QLatin1Char(',')));
     }
 
     void AudioVisualizerContainer::restoreChartVisibility() {
         static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
-        QString saved = m_settings.get(kChartVisible);
+        chartLayoutSettings().reload();
+        QString saved = chartLayoutSettings().get(kChartVisible);
         if (saved.isEmpty())
-            return; // No saved state — keep defaults
+            return;
 
         QStringList visibleIds = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
         QSet<QString> visibleSet(visibleIds.begin(), visibleIds.end());
@@ -428,6 +418,32 @@ namespace dstools {
                 it->widget->setVisible(shouldBeVisible);
         }
         rebuildChartLayout();
+    }
+
+    void AudioVisualizerContainer::saveChartOrder() {
+        static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+        chartLayoutSettings().set(kChartOrder, m_chartOrder.join(QLatin1Char(',')));
+    }
+
+    bool AudioVisualizerContainer::restoreChartOrder() {
+        static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+        chartLayoutSettings().reload();
+        QString saved = chartLayoutSettings().get(kChartOrder);
+        if (saved.isEmpty())
+            return false;
+
+        QStringList savedOrder = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        QStringList reordered;
+        for (const auto &chartId : savedOrder) {
+            if (m_chartOrder.contains(chartId))
+                reordered.append(chartId);
+        }
+        for (const auto &chartId : m_chartOrder) {
+            if (!reordered.contains(chartId))
+                reordered.append(chartId);
+        }
+        m_chartOrder = reordered;
+        return true;
     }
 
     QByteArray AudioVisualizerContainer::saveSplitterState() const {
