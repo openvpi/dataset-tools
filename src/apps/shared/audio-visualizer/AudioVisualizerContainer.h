@@ -77,8 +77,15 @@ public:
 
     void setPlayWidget(dsfw::widgets::PlayWidget *playWidget);
 
+    /// Notify that boundary model data has changed (boundaries added/moved/removed,
+    /// tier structure changed). Refreshes overlay, tier label, and all chart widgets.
+    void invalidateBoundaryModel();
+
 signals:
     void chartOrderChanged(const QStringList &order);
+
+    /// Emitted after invalidateBoundaryModel() completes internal refresh.
+    void boundaryModelInvalidated();
 
 private:
     void rebuildChartLayout();

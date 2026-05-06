@@ -608,9 +608,7 @@ namespace dstools {
 
     void DsSlicerPage::refreshBoundaries() {
         m_boundaryModel->setSlicePoints(m_slicePoints);
-        m_waveformWidget->updateBoundaryOverlay();
-        m_spectrogramWidget->updateBoundaryOverlay();
-        m_container->tierLabelArea()->update();
+        m_container->invalidateBoundaryModel();
     }
 
     QMenuBar *DsSlicerPage::createMenuBar(QWidget *parent) {

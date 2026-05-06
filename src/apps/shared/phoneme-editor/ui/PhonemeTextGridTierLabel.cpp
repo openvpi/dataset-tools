@@ -159,6 +159,10 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     painter.drawLine(0, totalH - 1, w, totalH - 1);
 }
 
+void PhonemeTextGridTierLabel::onModelDataChanged() {
+    rebuildRadioButtons();
+}
+
 void PhonemeTextGridTierLabel::rebuildRadioButtons() {
     qDeleteAll(m_radioButtons);
     m_radioButtons.clear();

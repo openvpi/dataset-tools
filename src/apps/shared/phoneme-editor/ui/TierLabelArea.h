@@ -33,6 +33,11 @@ public:
 
     virtual QList<double> activeBoundaries() const;
 
+    /// Called when the underlying boundary model data has changed.
+    /// Default implementation calls update(). Subclasses may override
+    /// to rebuild UI (e.g. radio buttons for tier selection).
+    virtual void onModelDataChanged();
+
 signals:
     void activeTierChanged(int index);
 

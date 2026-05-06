@@ -444,8 +444,7 @@ void SlicerPage::onExportAudio() {
 
 void SlicerPage::refreshBoundaries() {
     m_boundaryModel->setSlicePoints(m_slicePoints);
-    m_waveformWidget->updateBoundaryOverlay();
-    m_spectrogramWidget->updateBoundaryOverlay();
+    m_container->invalidateBoundaryModel();
 }
 
 QMenuBar *SlicerPage::createMenuBar(QWidget *parent) {

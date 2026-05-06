@@ -190,6 +190,22 @@ void AudioVisualizerContainer::setPlayWidget(PlayWidget *playWidget) {
     m_playWidget = playWidget;
 }
 
+void AudioVisualizerContainer::invalidateBoundaryModel() {
+    if (m_boundaryOverlay)
+        m_boundaryOverlay->update();
+
+    if (m_tierLabelArea)
+        m_tierLabelArea->onModelDataChanged();
+
+    for (const auto &id : m_chartOrder) {
+        auto it = m_charts.find(id);
+        if (it != m_charts.end() && it->widget)
+            it->widget->update();
+    }
+
+    emit boundaryModelInvalidated();
+}
+
 void AudioVisualizerContainer::rebuildChartLayout() {
     while (m_chartSplitter->count() > 0) {
         auto *w = m_chartSplitter->widget(0);

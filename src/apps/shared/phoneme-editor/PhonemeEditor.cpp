@@ -271,6 +271,9 @@ void PhonemeEditor::buildLayout() {
 void PhonemeEditor::connectSignals() {
     // Document signals
     connect(m_document, &TextGridDocument::documentChanged, this, [this]() {
+        m_container->invalidateBoundaryModel();
+        m_tierEditWidget->rebuildTierViews();
+        m_entryListPanel->rebuildEntries();
         emit modificationChanged(m_document->isModified());
     });
 

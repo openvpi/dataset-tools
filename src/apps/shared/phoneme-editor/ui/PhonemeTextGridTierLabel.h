@@ -29,6 +29,8 @@ public:
 
     int tierRowHeight() const;
 
+    void onModelDataChanged() override;
+
 protected:
     void paintEvent(QPaintEvent *event) override;
 

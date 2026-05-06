@@ -80,4 +80,8 @@ int TierLabelArea::timeToX(double time) const {
     return static_cast<int>((time - m_viewStart) / viewDuration * width());
 }
 
+void TierLabelArea::onModelDataChanged() {
+    update();
+}
+
 } // namespace dstools
