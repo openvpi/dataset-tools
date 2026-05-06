@@ -43,10 +43,6 @@ struct FaLayerResult {
     std::vector<BindingGroup> groups;
 };
 
-static bool isSilenceWord(const HFA::Word &word) {
-    return word.text == "SP" || word.text == "AP";
-}
-
 static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     FaLayerResult r;
     r.graphemeLayer.name = QStringLiteral("grapheme");
@@ -56,10 +52,9 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
 
     int nextId = 1;
 
-    // Collect non-silence words and all their phones
+    // Include all words and phones from FA output (including SP/AP).
+    // SP/AP are part of the alignment result and should be preserved.
     for (const auto &word : words) {
-        if (isSilenceWord(word))
-            continue;
         if (word.phones.empty())
             continue;
 
@@ -74,8 +69,6 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         // Phoneme boundaries for each phone in this word
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
             const auto &phone = word.phones[pi];
-            if (phone.text == "SP" || phone.text == "AP")
-                continue;
 
             Boundary phoneB;
             phoneB.id = nextId++;
@@ -93,27 +86,18 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     }
 
     // Add end boundaries (closing the last interval)
-    if (!r.graphemeLayer.boundaries.empty()) {
-        // Find the last non-silence word's end time
-        TimePos lastEnd = 0;
-        for (auto it = words.end(); it != words.begin(); ) {
-            --it;
-            if (!isSilenceWord(*it)) {
-                lastEnd = secToUs(it->end);
-                break;
-            }
-        }
+    if (!r.graphemeLayer.boundaries.empty() && !words.empty()) {
         Boundary endG;
         endG.id = nextId++;
-        endG.pos = lastEnd;
+        endG.pos = secToUs(words.back().end);
         r.graphemeLayer.boundaries.push_back(std::move(endG));
     }
 
-    if (!r.phonemeLayer.boundaries.empty()) {
+    if (!r.phonemeLayer.boundaries.empty() && !words.empty()) {
         TimePos lastEnd = 0;
         for (auto it = words.end(); it != words.begin(); ) {
             --it;
-            if (!isSilenceWord(*it) && !it->phones.empty()) {
+            if (!it->phones.empty()) {
                 lastEnd = secToUs(it->phones.back().end);
                 break;
             }
