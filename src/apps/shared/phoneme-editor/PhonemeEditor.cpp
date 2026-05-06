@@ -229,7 +229,7 @@ void PhonemeEditor::buildLayout() {
     m_container->setTierLabelArea(m_tierLabel);
 
     m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_bindingManager, m_container);
-    m_container->addChart(QStringLiteral("tieredit"), m_tierEditWidget, 0, 0, 0);
+    m_container->setEditorWidget(m_tierEditWidget);
 
     m_waveformWidget = new WaveformWidget(m_viewport, m_container);
     m_waveformWidget->setBindingManager(m_bindingManager);

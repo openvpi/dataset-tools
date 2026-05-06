@@ -111,6 +111,37 @@ void AudioVisualizerContainer::setTierLabelArea(TierLabelArea *area) {
     m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
 }
 
+void AudioVisualizerContainer::setEditorWidget(QWidget *widget) {
+    if (!widget || widget == m_editorWidget)
+        return;
+
+    auto *layout = qobject_cast<QVBoxLayout *>(this->layout());
+    if (!layout)
+        return;
+
+    // If there's an existing editor widget, replace it
+    if (m_editorWidget) {
+        int oldIdx = layout->indexOf(m_editorWidget);
+        if (oldIdx >= 0) {
+            layout->removeWidget(m_editorWidget);
+            m_editorWidget->deleteLater();
+        }
+    }
+
+    m_editorWidget = widget;
+
+    // Insert editor widget before the chart splitter
+    int splitterIdx = layout->indexOf(m_chartSplitter);
+    if (splitterIdx >= 0) {
+        layout->insertWidget(splitterIdx, m_editorWidget);
+    } else {
+        layout->addWidget(m_editorWidget);
+    }
+
+    // Connect viewport to editor widget
+    connectViewportToWidget(m_editorWidget);
+}
+
 void AudioVisualizerContainer::setTotalDuration(double seconds) {
     m_viewport->setTotalDuration(seconds);
 }

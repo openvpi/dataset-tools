@@ -60,6 +60,12 @@ public:
 
     void setBoundaryModel(IBoundaryModel *model);
     void setTierLabelArea(TierLabelArea *area);
+
+    /// Set an editor widget to be placed between TierLabelArea and chartSplitter.
+    /// This is used for TierEditWidget (phoneme interval editing).
+    void setEditorWidget(QWidget *widget);
+    QWidget *editorWidget() const { return m_editorWidget; }
+
     void setTotalDuration(double seconds);
 
     void setAudioData(const std::vector<float> &samples, int sampleRate);
@@ -97,6 +103,7 @@ private:
     BoundaryOverlayWidget *m_boundaryOverlay = nullptr;
     TimeRulerWidget *m_timeRuler = nullptr;
     TierLabelArea *m_tierLabelArea = nullptr;
+    QWidget *m_editorWidget = nullptr;
     QSplitter *m_chartSplitter = nullptr;
     MiniMapScrollBar *m_miniMap = nullptr;
     dsfw::widgets::PlayWidget *m_playWidget = nullptr;
