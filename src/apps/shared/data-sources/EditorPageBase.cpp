@@ -3,6 +3,7 @@
 #include "ISettingsBackend.h"
 
 #include <dsfw/CommonKeys.h>
+#include <dsfw/Log.h>
 
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -80,6 +81,7 @@ void EditorPageBase::onSliceSelected(const QString &sliceId) {
         return;
 
     m_currentSliceId = sliceId;
+    DSFW_LOG_DEBUG("ui", ("Slice selected: " + sliceId.toStdString()).c_str());
     if (m_sliceList)
         m_sliceList->saveSelection(m_settings);
 

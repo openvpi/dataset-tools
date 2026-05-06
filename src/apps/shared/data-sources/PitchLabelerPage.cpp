@@ -5,6 +5,8 @@
 
 #include <dstools/IEditorDataSource.h>
 
+#include <dsfw/Log.h>
+
 #include <DSFile.h>
 
 #include <QHBoxLayout>
@@ -502,6 +504,7 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
     }
 
     m_inferRunning = true;
+    DSFW_LOG_INFO("infer", ("Pitch extraction started: " + sliceId.toStdString()).c_str());
     auto *rmvpe = m_rmvpe;
     QPointer<PitchLabelerPage> guard(this);
 
@@ -527,6 +530,8 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
                                      ? (1.0f / 16000.0f)
                                      : 0.005f;
                 guard->applyPitchResult(sliceId, f0Mhz, timestep);
+                DSFW_LOG_INFO("infer", ("Pitch extraction completed: " + sliceId.toStdString()
+                              + " - " + std::to_string(f0Mhz.size()) + " frames").c_str());
                 dsfw::widgets::ToastNotification::show(
                     guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("音高提取完成"), 3000);
@@ -551,6 +556,7 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
     }
 
     m_inferRunning = true;
+    DSFW_LOG_INFO("infer", ("MIDI transcription started: " + sliceId.toStdString()).c_str());
     auto *game = m_game;
     QPointer<PitchLabelerPage> guard(this);
 
@@ -568,7 +574,8 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
             guard->m_inferRunning = false;
             if (result) {
                 guard->applyMidiResult(sliceId, notes);
-                dsfw::widgets::ToastNotification::show(
+                DSFW_LOG_INFO("infer", ("MIDI transcription completed: " + sliceId.toStdString()
+                              + " - " + std::to_string(notes.size()) + " notes").c_str());
                     guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("MIDI 转录完成"), 3000);
             } else {

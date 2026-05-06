@@ -5,6 +5,8 @@
 
 #include <dstools/IEditorDataSource.h>
 
+#include <dsfw/Log.h>
+
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
@@ -487,9 +489,11 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     QString audioPath = source()->validatedAudioPath(sliceId);
     if (audioPath.isEmpty()) {
-        if (source()->audioPath(sliceId).isEmpty())
+        if (source()->audioPath(sliceId).isEmpty()) {
+            DSFW_LOG_WARN("infer", ("FA skipped: slice has no audio file - " + sliceId.toStdString()).c_str());
             QMessageBox::warning(this, QStringLiteral("强制对齐"),
                                  QStringLiteral("当前切片没有音频文件。"));
+        }
         return;
     }
 
@@ -513,12 +517,14 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     }
 
     if (graphemeTexts.isEmpty()) {
+        DSFW_LOG_WARN("infer", ("FA skipped: no grapheme layer data - " + sliceId.toStdString()).c_str());
         QMessageBox::information(this, QStringLiteral("强制对齐"),
                                  QStringLiteral("当前切片没有歌词数据，请先在歌词页标注。"));
         return;
     }
 
     m_faRunning = true;
+    DSFW_LOG_INFO("infer", ("FA started: " + sliceId.toStdString()).c_str());
     auto *hfa = m_hfa;
     QPointer<PhonemeLabelerPage> guard(this);
 
@@ -539,13 +545,14 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 return;
             guard->m_faRunning = false;
 
-            // Clear alignment indicator
             auto *tierLabel = guard->m_editor->findChild<PhonemeTextGridTierLabel *>();
             if (tierLabel)
                 tierLabel->setAlignmentRunning(false);
 
             if (result) {
                 auto faResult = buildFaLayers(words);
+                DSFW_LOG_INFO("infer", ("FA completed: " + sliceId.toStdString() + " - "
+                              + std::to_string(faResult.phonemeLayer.boundaries.size()) + " phonemes").c_str());
 
                 QList<IntervalLayer> layers;
                 layers.push_back(std::move(faResult.graphemeLayer));
@@ -556,6 +563,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                     guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("强制对齐完成"), 3000);
             } else {
+                DSFW_LOG_ERROR("infer", ("FA failed: " + sliceId.toStdString() + " - " + result.error()).c_str());
                 QMessageBox::warning(guard.data(), QStringLiteral("强制对齐"),
                                      QStringLiteral("强制对齐失败: %1")
                                          .arg(QString::fromStdString(result.error())));
@@ -645,12 +653,17 @@ void PhonemeLabelerPage::onBatchFA() {
 
     const auto ids = source()->sliceIds();
     if (ids.isEmpty()) {
+        DSFW_LOG_WARN("infer", "Batch FA skipped: no slices");
         QMessageBox::information(this, QStringLiteral("批量强制对齐"),
                                  QStringLiteral("没有可处理的切片。"));
         return;
     }
 
     m_faRunning = true;
+    {
+        std::string msg = "Batch FA started: " + std::to_string(ids.size()) + " slices";
+        DSFW_LOG_INFO("infer", msg.c_str());
+    }
     auto *hfa = m_hfa;
     auto *src = source();
     QPointer<PhonemeLabelerPage> guard(this);
@@ -712,6 +725,8 @@ void PhonemeLabelerPage::onBatchFA() {
             if (!guard)
                 return;
             guard->m_faRunning = false;
+            DSFW_LOG_INFO("infer", ("Batch FA completed: " + std::to_string(processed)
+                          + " processed, " + std::to_string(skipped) + " skipped").c_str());
             QString msg = QStringLiteral("批量强制对齐完成: %1 个切片").arg(processed);
             if (skipped > 0)
                 msg += QStringLiteral("，%1 个音频文件缺失已跳过").arg(skipped);

@@ -5,6 +5,8 @@
 
 #include <dstools/IEditorDataSource.h>
 
+#include <dsfw/Log.h>
+
 #include <QLabel>
 #include <QIcon>
 #include <QMenuBar>
@@ -363,6 +365,7 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
     }
 
     m_asrRunning = true;
+    DSFW_LOG_INFO("infer", ("ASR started: " + sliceId.toStdString()).c_str());
     auto *asr = m_asr;
     QPointer<MinLabelPage> guard(this);
 
@@ -382,10 +385,13 @@ void MinLabelPage::runAsrForSlice(const QString &sliceId) {
             guard->m_asrRunning = false;
             if (ok) {
                 guard->setAsrResult(sliceId, text);
+                DSFW_LOG_INFO("infer", ("ASR completed: " + sliceId.toStdString()
+                              + " - \"" + text.left(50).toStdString() + "\"").c_str());
                 dsfw::widgets::ToastNotification::show(
                     guard.data(), dsfw::widgets::ToastType::Info,
                     QStringLiteral("ASR 识别完成"), 3000);
             } else {
+                DSFW_LOG_ERROR("infer", ("ASR failed: " + sliceId.toStdString()).c_str());
                 QMessageBox::warning(guard.data(), QStringLiteral("ASR"),
                                      QStringLiteral("ASR 识别失败。"));
             }

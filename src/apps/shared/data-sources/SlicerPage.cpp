@@ -9,6 +9,8 @@
 #include <ui/SpectrogramWidget.h>
 #include <ui/SliceBoundaryModel.h>
 
+#include <dsfw/Log.h>
+
 #include <dsfw/widgets/FileProgressTracker.h>
 #include <dsfw/AppSettings.h>
 
@@ -322,6 +324,7 @@ void SlicerPage::onAutoSlice() {
     updateSlicerListPanel();
     saveCurrentSlicePoints();
     updateFileProgress();
+    DSFW_LOG_INFO("audio", ("Auto-slice completed: " + std::to_string(newPoints.size()) + " slice points").c_str());
 }
 
 void SlicerPage::onImportMarkers() {
@@ -825,6 +828,11 @@ void SlicerPage::loadAudioFile(const QString &filePath) {
     // their initial cache rebuild.
     m_viewport->setAudioParams(m_sampleRate, static_cast<int64_t>(m_samples.size()));
     m_container->fitToWindow();
+    {
+        double dur = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
+        DSFW_LOG_INFO("audio", ("Loaded audio: " + filePath.toStdString()
+                      + " (" + std::to_string(dur) + "s @ " + std::to_string(m_sampleRate) + "Hz)").c_str());
+    }
 
     m_waveformWidget->setAudioData(m_samples, m_sampleRate);
     m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
