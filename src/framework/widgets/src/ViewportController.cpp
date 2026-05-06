@@ -4,10 +4,11 @@
 
 namespace dsfw::widgets {
 
-// Logarithmic resolution steps (samples per pixel):
-// 10→15→20→30→40→60→80→100→150→200→300→400
+// Discrete resolution steps (samples per pixel).
+// All values are round numbers matching common zoom levels.
+// Zoom always snaps to the nearest entry — no continuous scaling.
 static const std::vector<int> kResolutionTable = {
-    10, 15, 20, 30, 40, 60, 80, 100, 150, 200, 300, 400
+    10, 20, 30, 40, 60, 80, 100, 150, 200, 300, 400
 };
 
 const std::vector<int> &ViewportController::resolutionTable() {
@@ -75,7 +76,9 @@ void ViewportController::zoomIn(double centerSec) {
     m_resolution = resolutionTable()[m_resolutionIndex];
     updatePPS();
 
-    double newDuration = oldDuration * resolutionTable()[m_resolutionIndex + 1] / static_cast<double>(m_resolution);
+    // Zoom in → resolution decreases → more PPS → visible duration shrinks
+    // newDuration = oldDuration * newRes / oldRes  = smaller when newRes < oldRes
+    double newDuration = oldDuration * static_cast<double>(m_resolution) / resolutionTable()[m_resolutionIndex + 1];
     m_state.startSec = centerSec - ratio * newDuration;
     m_state.endSec = m_state.startSec + newDuration;
     clampAndEmit();
@@ -90,9 +93,8 @@ void ViewportController::zoomOut(double centerSec) {
     m_resolution = resolutionTable()[m_resolutionIndex];
     updatePPS();
 
-    double newDuration = oldDuration * resolutionTable()[m_resolutionIndex - 1] / static_cast<double>(m_resolution);
-    // Fix: newDuration should be larger when zooming out
-    newDuration = oldDuration * static_cast<double>(m_resolution) / resolutionTable()[m_resolutionIndex - 1];
+    // Zoom out → resolution increases → fewer PPS → visible duration grows
+    double newDuration = oldDuration * static_cast<double>(m_resolution) / resolutionTable()[m_resolutionIndex - 1];
     m_state.startSec = centerSec - ratio * newDuration;
     m_state.endSec = m_state.startSec + newDuration;
     clampAndEmit();
