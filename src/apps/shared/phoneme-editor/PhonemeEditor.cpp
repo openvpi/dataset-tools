@@ -100,12 +100,12 @@ void PhonemeEditor::setSnapEnabled(bool enabled) {
 }
 
 void PhonemeEditor::setPowerVisible(bool visible) {
-    m_powerWidget->setVisible(visible);
+    m_container->setChartVisible(QStringLiteral("power"), visible);
     m_actTogglePower->setChecked(visible);
 }
 
 void PhonemeEditor::setSpectrogramVisible(bool visible) {
-    m_spectrogramWidget->setVisible(visible);
+    m_container->setChartVisible(QStringLiteral("spectrogram"), visible);
     m_actToggleSpectrogram->setChecked(visible);
 }
 
@@ -194,6 +194,7 @@ void PhonemeEditor::buildActions() {
     m_actTogglePower->setChecked(true);
     connect(m_actTogglePower, &QAction::triggered, this, [this]() {
         setPowerVisible(m_actTogglePower->isChecked());
+        m_container->saveChartVisibility();
     });
 
     m_actToggleSpectrogram = new QAction(tr("Show &Spectrogram"), this);
@@ -201,6 +202,7 @@ void PhonemeEditor::buildActions() {
     m_actToggleSpectrogram->setChecked(true);
     connect(m_actToggleSpectrogram, &QAction::triggered, this, [this]() {
         setSpectrogramVisible(m_actToggleSpectrogram->isChecked());
+        m_container->saveChartVisibility();
     });
 
     // Spectrogram color style submenu
