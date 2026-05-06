@@ -51,6 +51,22 @@
 **反例**：`resample_to_vio` 返回错误消息 `msg`，但调用者忽略它继续读空 VIO，报 "0 samples"。
 **正确做法**：检查 `msg` → 立即返回 `Err("Failed to resample: " + msg)`。
 
+### P-05：异常边界隔离
+
+**原则**：应用层逻辑使用 `Result<T>` 传播错误，**禁止抛出异常**。`try-catch` 仅用于第三方库边界（nlohmann/json、ONNX Runtime、FFmpeg 等），将外部异常转为 `Result<T>::Error()`。每个 `catch` 块必须记录日志或返回错误，禁止静默吞掉。禁止在业务逻辑中使用 `try-catch` 做流程控制。
+
+**来源**：吸收自 language-manager 项目的异常边界隔离原则。
+
+### P-06：接口稳定
+
+**原则**：公共头文件（`include/` 目录下的头文件）即契约。对外接口的变更需谨慎考虑向后兼容性。框架层（dsfw）的接口稳定性要求高于应用层。
+
+### P-07：简洁可靠
+
+**原则**：遇错直接返回，不设计重试或回滚（除有明确需求如 `BatchCheckpoint` 断点续处理外）。优先选择简单直接的方案，避免过度设计。
+
+**来源**：吸收自 language-manager 项目的"Write Once, Run Forever"设计理念。
+
 ---
 
 ## D-01：配置全部移出工程文件

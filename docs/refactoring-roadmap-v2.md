@@ -1,8 +1,70 @@
-# 重构路线图 — 剩余任务
+# 重构路线图
 
-> 2026-05-05
+> 2026-05-06
 >
-> 前置文档：[human-decisions.md](human-decisions.md)、[refactoring-v2.md](refactoring-v2.md)
+> 前置文档：[human-decisions.md](human-decisions.md)、[unified-app-design.md](unified-app-design.md)
+>
+> 架构参考：[framework-architecture.md](framework-architecture.md)
+
+---
+
+## 已完成的设计与架构
+
+### AudioVisualizerContainer — 统一可视化基类（✅ 已实现）
+
+设计详见 [unified-app-design.md §11](unified-app-design.md)。API：`addChart()` / `removeChart()` / `setBoundaryModel()` / `setTierLabelWidget()`。Slicer 和 PhonemeLabeler 均已迁移。
+
+### 配置架构（✅ 已实现）
+
+- 所有配置存 `dsfw::AppSettings`（QSettings），不存 `.dsproj`
+- `.dsproj` 仅保留工程数据（items、slicer、export）
+- `ModelManager::ensureLoaded()` 懒加载
+- splitter 比例 + 子图顺序跨工程持久化
+
+### 已完成的重构阶段
+
+Phase 0–N, M.1–M.5, P.B, Q, R, S, U 全部已完成。详见 git 历史。
+
+### 关键架构决策 (ADR)
+
+| ADR | 决策 | 状态 |
+|-----|------|------|
+| 8 | 单仓库模式 | 有效 |
+| 43 | int64 微秒时间精度 | 有效 |
+| 46 | LabelSuite + DsLabeler 两个 exe | 有效 |
+| 52 | IEditorDataSource 抽象数据源 | 有效 |
+| 57 | 层依赖 DAG + per-slice dirty 标记 | 有效 |
+| 62 | 右键直接播放，不弹菜单 | 有效 |
+| 65 | IBoundaryModel → AudioVisualizerContainer 扩展 | 有效 |
+| 66 | LabelSuite 底层统一 dstext | 有效 |
+| 69 | ISettingsBackend → 废弃 ProjectSettingsBackend | 有效 |
+| 70 | FileDataSource 内部 dstext + FormatAdapter | 有效 |
+
+---
+
+## 待实现功能（非 Bug 修复）
+
+### T.1 DsLabeler CSV 预览
+
+ExportPage 内部 TabWidget："导出设置" | "预览数据"
+- QTableView + QStandardItemModel（只读）
+- 点击"预览数据" tab 时调用 CsvAdapter 实时生成
+- 缺少前置数据的行标红
+
+### T.2 快捷键系统
+
+详见 [human-decisions.md](human-decisions.md) D-13。
+
+| 页面 | 快捷键 |
+|------|--------|
+| Slicer | S=自动切片, E=导出, I=导入切点, P=指针, K=切刀 |
+| PhonemeLabeler | F=FA, ←/→=切换切片 |
+| PitchLabeler | F=提取音高, M=MIDI, ←/→=切换切片 |
+| MinLabel | R=ASR, ←/→=切换切片 |
+
+### T.3 子图顺序配置 UI
+
+Settings 页面增加"图表顺序"可拖拽排序列表。
 
 ***
 
@@ -798,16 +860,26 @@ protected:
 
 #### Step 1：统一异步模型加载基础设施
 
+> **归属说明**：`loadEngineAsync` 将作为 Phase VI.1 `EditorPageBase` 的一部分实现，而非独立新建。VII.2/VII.3 的异步引擎设施合并到 VI.1 的 EditorPageBase 定义中。
+
 在 `EditorPageBase` 中提供通用的异步模型加载框架：
 
 ```cpp
 // EditorPageBase 新增 protected 方法
+// 注意：loadFunc 返回 Result<void> 而非 bool，确保失败时根因可追溯（P-04）
 void EditorPageBase::loadEngineAsync(const QString &taskKey,
-                                      std::function<bool()> loadFunc,
-                                      std::function<void()> onReady);
+                                      std::function<Result<void>()> loadFunc,
+                                      std::function<void()> onReady,
+                                      std::function<void(const QString &error)> onFailed = {});
 ```
 
-- [ ] `EditorPageBase` 新增 `loadEngineAsync()` 通用方法
+**错误处理（P-04 合规）**：
+- `loadFunc` 返回 `Result<void>`，失败时包含根因错误消息
+- 失败时回主线程调用 `onFailed(error)`，默认行为：`DSFW_LOG_ERROR("infer", error)` + Toast 通知用户
+- UI 层通过 Toast 或状态栏显示具体失败原因（如 "模型加载失败: 文件不存在 /path/to/model.onnx"）
+- 禁止静默失败或仅记日志不通知用户
+
+- [ ] `EditorPageBase` 新增 `loadEngineAsync()` 通用方法（含错误回调）
 - [ ] PhonemeLabelerPage `ensureHfaEngine()` → `ensureHfaEngineAsync()` + 回调触发自动 FA
 - [ ] PitchLabelerPage `ensureRmvpeEngine()` / `ensureGameEngine()` → 异步版本
 - [ ] MinLabelPage `ensureAsrEngine()` → 异步版本
@@ -1010,6 +1082,7 @@ void AudioVisualizerContainer::invalidateBoundaryModel() {
 
 - [ ] 实现 `invalidateBoundaryModel()`
 - [ ] `TierLabelArea` 新增 `virtual void onModelDataChanged()` { `update()`; }
+  > **命名说明**：`onModelDataChanged` 是容器内部的模板方法 hook（由 `invalidateBoundaryModel()` 调用），不是信号槽回调。这不违反 P-02（P-02 禁止的是在纯数据接口上加 QObject/信号，而非容器内部的虚方法 hook）。
 - [ ] `PhonemeTextGridTierLabel` override `onModelDataChanged()` → `rebuildRadioButtons()` + 调整高度
 
 #### Step 2：PhonemeEditor 连接
@@ -1061,17 +1134,47 @@ m_container->invalidateBoundaryModel();  // 替代原来的 3-4 行分散 update
 ## 执行顺序
 
 ```
-Phase V（已完成）:
-  V.1 ✅ V.2 ✅ V.3 ✅ V.4 ✅ V.5 ✅ V.6 ✅ V.7 ✅ V.8 ✅
+Phase V（设计完成，待实现）:
+  V.1 视口统一比例尺 ── 待实现（最大任务）
+  V.2 最右侧边界线   ── 待实现
+  V.3 Phoneme 空状态  ── 待实现
+  V.4 最近工程列表    ── 待实现
+  V.5 删除 SliceNumberLayer ── 待实现
+  V.6 音频有效性管理  ── 待实现
+  V.7 audioSource 路径 ── 待实现
+  V.8 dsproj 数据模型  ── 待实现
 
-Phase VI（已完成）:
-  VI.1 ✅ VI.2 ✅
+Phase VI（设计完成，待实现）:
+  VI.1 EditorPageBase 合并 ── 待实现（依赖 V.6）
+  VI.2 旧实现清理          ── 待实现（依赖 VI.1）
 
-Phase VII（可并行）:
-  VII.5 ──→ 紧急，优先执行
+Phase VII（可与 V 并行）:
+  VII.5 ──→ 紧急，优先执行（P-01/P-02 核心）
   VII.1 ──┐
   VII.2 ──┤ 可并行
-  VII.3 ──┤ VII.3 依赖 VII.2 的设计模式
+  VII.3 ──┤ VII.3 依赖 VII.2 的设计模式；loadEngineAsync 归入 VI.1 的 EditorPageBase
   VII.4 ──┘ 独立，随时可做
 ```
+
+### 执行优先级建议
+
+1. **VII.5** — 解决关键刷新 bug（PhonemeEditor FA 结果不刷新），且为 P-01/P-02 原则的核心实现
+2. **V.2** — 简单修复，影响用户体验
+3. **V.5** — 简单清理，减少代码噪音
+4. **V.3 + V.4** — 小型 UX 修复
+5. **V.6** — 中型重构，为 VI.1 铺路
+6. **VII.1** — 路径健壮性，修复中文路径 bug
+7. **VI.1 + VI.2** — 去重，依赖 V.6
+8. **VII.2 + VII.3** — 异步化，较大改动
+9. **V.1** — 最大任务，可独立进行
+10. **V.7 + V.8 + VII.4** — 低优先级修复
+
+---
+
+## 关联文档
+
+- [human-decisions.md](human-decisions.md) — 人工决策记录（最高优先级）
+- [unified-app-design.md](unified-app-design.md) — 应用设计方案
+- [framework-architecture.md](framework-architecture.md) — 项目架构
+- [conventions-and-standards.md](conventions-and-standards.md) — 编码规范
 
