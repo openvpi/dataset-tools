@@ -7,6 +7,7 @@
 
 #include <ui/WaveformWidget.h>
 #include <ui/SpectrogramWidget.h>
+#include <ui/PowerWidget.h>
 #include <ui/SliceBoundaryModel.h>
 
 #include <dsfw/Log.h>
@@ -174,6 +175,14 @@ void SlicerPage::buildLayout() {
     m_spectrogramWidget->setPlayWidget(m_playWidget);
     m_spectrogramWidget->setVisible(true);
     m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 1, 1, 5.0);
+
+    // Power chart: registered but hidden by default (D-30).
+    // Slicer users primarily need waveform + spectrogram; power can be
+    // toggled on via Settings if desired.
+    auto *powerWidget = new phonemelabeler::PowerWidget(m_viewport, m_container);
+    powerWidget->setBoundaryModel(m_boundaryModel);
+    m_container->addChart(QStringLiteral("power"), powerWidget, 2, 1, 3.0);
+    m_container->setChartVisible(QStringLiteral("power"), false);
 
     m_container->setBoundaryModel(m_boundaryModel);
 
@@ -505,6 +514,7 @@ void SlicerPage::onActivated() {
     if (!chartOrder.isEmpty())
         m_container->setChartOrder(chartOrder.split(QLatin1Char(','), Qt::SkipEmptyParts));
 
+    m_container->restoreChartVisibility();
     m_container->restoreResolution();
 }
 
@@ -516,6 +526,7 @@ bool SlicerPage::onDeactivating() {
     m_settings.set(kHSplitterState, QString::fromLatin1(m_hSplitter->saveState().toBase64()));
     m_settings.set(kSplitterState, QString::fromLatin1(m_container->saveSplitterState().toBase64()));
     m_settings.set(kChartOrder, m_container->chartOrder().join(QLatin1Char(',')));
+    m_container->saveChartVisibility();
     m_container->saveResolution();
     return true;
 }

@@ -141,6 +141,14 @@ void PhonemeEditor::restoreViewportResolution() {
     m_container->restoreResolution();
 }
 
+void PhonemeEditor::saveChartVisibility() {
+    m_container->saveChartVisibility();
+}
+
+void PhonemeEditor::restoreChartVisibility() {
+    m_container->restoreChartVisibility();
+}
+
 QList<QAction *> PhonemeEditor::viewActions() const {
     return {m_actZoomIn, m_actZoomOut, m_actZoomReset, nullptr,
             m_actToggleBinding, nullptr,

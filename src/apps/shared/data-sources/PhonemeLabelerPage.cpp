@@ -261,11 +261,13 @@ void PhonemeLabelerPage::restoreExtraSplitters() {
     auto state = settings().get(kEditorSplitterState);
     if (!state.isEmpty())
         m_editor->restoreSplitterState(QByteArray::fromBase64(state.toUtf8()));
+    m_editor->restoreChartVisibility();
 }
 
 void PhonemeLabelerPage::saveExtraSplitters() {
     static const dstools::SettingsKey<QString> kEditorSplitterState("Layout/editorSplitterState", "");
     settings().set(kEditorSplitterState, QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
+    m_editor->saveChartVisibility();
     m_editor->saveViewportResolution();
 }
 

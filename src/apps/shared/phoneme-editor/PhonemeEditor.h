@@ -150,6 +150,10 @@ namespace dstools {
             void saveViewportResolution();
             void restoreViewportResolution();
 
+            /// Save/restore chart visibility to AppSettings.
+            void saveChartVisibility();
+            void restoreChartVisibility();
+
         signals:
             void modificationChanged(bool modified);
             void positionChanged(double sec);
