@@ -154,7 +154,7 @@ void SlicerPage::buildLayout() {
     mainLayout->addWidget(paramsWidget);
 
     m_container = new AudioVisualizerContainer(QStringLiteral("Slicer"), contentWidget);
-    m_container->setDefaultResolution(1200);
+    m_container->setDefaultResolution(3000);
     m_viewport = m_container->viewport();
     m_container->setPlayWidget(m_playWidget);
 
@@ -501,6 +501,8 @@ void SlicerPage::onActivated() {
     auto chartOrder = m_settings.get(kChartOrder);
     if (!chartOrder.isEmpty())
         m_container->setChartOrder(chartOrder.split(QLatin1Char(','), Qt::SkipEmptyParts));
+
+    m_container->restoreResolution();
 }
 
 bool SlicerPage::onDeactivating() {

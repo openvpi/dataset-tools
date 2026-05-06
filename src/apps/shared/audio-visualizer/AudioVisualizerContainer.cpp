@@ -271,8 +271,9 @@ namespace dstools {
         }
         m_needsFitOnResize = false;
 
-        // Always use the configured default resolution for new audio
-        m_viewport->setResolution(m_defaultResolution);
+        // Use saved resolution if available, otherwise fall back to default
+        if (!restoreResolution())
+            m_viewport->setResolution(m_defaultResolution);
         updateViewRangeFromResolution();
     }
 
