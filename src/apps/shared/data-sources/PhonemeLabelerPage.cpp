@@ -72,7 +72,9 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
 
             Boundary phoneB;
             phoneB.id = nextId++;
-            phoneB.pos = secToUs(phone.start);
+            // For the first phone, use word.start to guarantee exact time match
+            // with the grapheme boundary (enables binding via time proximity).
+            phoneB.pos = (pi == 0) ? secToUs(word.start) : secToUs(phone.start);
             phoneB.text = QString::fromStdString(phone.text);
 
             // The first phone of each word shares its start time with the word
