@@ -421,7 +421,6 @@ void PhonemeEditor::connectSignals() {
         for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
             child->update();
         }
-        m_entryListPanel->rebuildEntries();
     });
     connect(m_document, &TextGridDocument::boundaryInserted, this, [this](int, int) {
         updateAllBoundaryOverlays();
@@ -478,15 +477,25 @@ void PhonemeEditor::connectSignals() {
     connect(m_spectrogramWidget, &SpectrogramWidget::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
 
-    // Drag started/finished → boundary overlay highlight
+    // Drag started/finished → boundary overlay highlight + real-time UI refresh
     auto *dragCtrl = m_container->dragController();
     connect(dragCtrl, &BoundaryDragController::dragStarted, this, [this](int, int boundaryIndex) {
         if (auto *bo = m_container->boundaryOverlay())
             bo->setDraggedBoundary(boundaryIndex);
     });
+    connect(dragCtrl, &BoundaryDragController::dragging, this,
+            [this](int, int, TimePos) {
+                m_container->invalidateBoundaryModel();
+                m_tierLabel->update();
+                m_tierEditWidget->update();
+                for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
+                    child->update();
+                }
+            });
     connect(dragCtrl, &BoundaryDragController::dragFinished, this, [this](int, int, TimePos) {
         if (auto *bo = m_container->boundaryOverlay())
             bo->setDraggedBoundary(-1);
+        m_entryListPanel->rebuildEntries();
     });
 }
 

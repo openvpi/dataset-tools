@@ -154,7 +154,7 @@
 
 ---
 
-### 9.4 Phoneme 拖动边界线时实时刷新所有 UI 组件
+### 9.4 Phoneme 拖动边界线时实时刷新所有 UI 组件 ✅
 
 **根因**：`BoundaryDragController::dragging` 信号没有连接到任何 UI 刷新逻辑。UI 刷新完全依赖 `TextGridDocument::boundaryMoved` 信号，该信号路径做了全量刷新（包括昂贵的 `entryListPanel.rebuildEntries()` 在每一帧拖拽中都触发）。
 
