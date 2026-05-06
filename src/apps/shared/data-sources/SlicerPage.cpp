@@ -180,7 +180,6 @@ void SlicerPage::buildLayout() {
     // Slicer users primarily need waveform + spectrogram; power can be
     // toggled on via Settings if desired.
     auto *powerWidget = new phonemelabeler::PowerWidget(m_viewport, m_container);
-    powerWidget->setBoundaryModel(m_boundaryModel);
     m_container->addChart(QStringLiteral("power"), powerWidget, 2, 1, 3.0);
     m_container->setChartVisible(QStringLiteral("power"), false);
 
