@@ -103,7 +103,7 @@ private:
     void drawBoundaryOverlay(QPainter &painter);         ///< Draws boundary lines.
     void rebuildMinMaxCache();                           ///< Rebuilds the min/max sample cache.
 
-    [[nodiscard]] int hitTestBoundary(int x) const;     ///< Returns boundary index at x, or -1.
+    [[nodiscard]] int hitTestBoundary(int x, int *outTier = nullptr) const; ///< Returns boundary index at x, or -1.
 
     /// @brief Finds the boundaries surrounding a time position.
     /// @param timeSec Time position in seconds.

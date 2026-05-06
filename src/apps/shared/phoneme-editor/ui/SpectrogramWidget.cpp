@@ -353,34 +353,38 @@ void SpectrogramWidget::updateBoundaryOverlay() {
     update();
 }
 
-int SpectrogramWidget::hitTestBoundary(int x) const {
+int SpectrogramWidget::hitTestBoundary(int x, int *outTier) const {
     if (!m_boundaryModel) return -1;
-    int activeTier = m_boundaryModel->activeTierIndex();
-    if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return -1;
 
-    int count = m_boundaryModel->boundaryCount(activeTier);
     int bestIdx = -1;
+    int bestTier = -1;
     int bestDist = kBoundaryHitWidth / 2 + 1;
 
-    for (int b = 0; b < count; ++b) {
-        int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(activeTier, b)));
-        int dist = std::abs(x - bx);
-        if (dist <= kBoundaryHitWidth / 2) {
-            if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
-                bestDist = dist;
-                bestIdx = b;
+    int tierCount = m_boundaryModel->tierCount();
+    for (int t = 0; t < tierCount; ++t) {
+        int count = m_boundaryModel->boundaryCount(t);
+        for (int b = 0; b < count; ++b) {
+            int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(t, b)));
+            int dist = std::abs(x - bx);
+            if (dist <= kBoundaryHitWidth / 2) {
+                if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
+                    bestDist = dist;
+                    bestIdx = b;
+                    bestTier = t;
+                }
             }
         }
     }
+    if (outTier) *outTier = bestTier;
     return bestIdx;
 }
 
 void SpectrogramWidget::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
-        int boundaryIdx = hitTestBoundary(event->pos().x());
-        if (boundaryIdx >= 0 && m_boundaryModel && m_dragController) {
-            int tier = m_boundaryModel->activeTierIndex();
-            m_dragController->startDrag(tier, boundaryIdx, m_boundaryModel);
+        int hitTier = -1;
+        int boundaryIdx = hitTestBoundary(event->pos().x(), &hitTier);
+        if (boundaryIdx >= 0 && hitTier >= 0 && m_boundaryModel && m_dragController) {
+            m_dragController->startDrag(hitTier, boundaryIdx, m_boundaryModel);
             setCursor(Qt::SizeHorCursor);
         } else {
             m_dragging = true;

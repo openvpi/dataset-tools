@@ -202,6 +202,10 @@ void SlicerPage::connectSignals() {
     connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
             m_spectrogramWidget, &phonemelabeler::SpectrogramWidget::setViewport);
 
+    // Playhead cursor
+    connect(m_playWidget, &dstools::widgets::PlayWidget::playheadChanged,
+            m_waveformWidget, &phonemelabeler::WaveformWidget::setPlayhead);
+
     connect(m_btnAutoSlice, &QPushButton::clicked, this, &SlicerPage::onAutoSlice);
     connect(m_btnReSlice, &QPushButton::clicked, this, &SlicerPage::onAutoSlice);
     connect(m_btnImportMarkers, &QPushButton::clicked, this, &SlicerPage::onImportMarkers);

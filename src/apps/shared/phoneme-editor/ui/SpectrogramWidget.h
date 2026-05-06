@@ -98,7 +98,7 @@ private:
 
     void drawBoundaryOverlay(QPainter &painter);        ///< Draws boundary lines.
 
-    [[nodiscard]] int hitTestBoundary(int x) const;     ///< Returns boundary index at x, or -1.
+    [[nodiscard]] int hitTestBoundary(int x, int *outTier = nullptr) const; ///< Returns boundary index at x, or -1.
 
     /// @brief Finds the boundaries surrounding a time position.
     void findSurroundingBoundaries(double timeSec, double &outStart, double &outEnd) const;

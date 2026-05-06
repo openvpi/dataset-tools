@@ -252,6 +252,8 @@ bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
 
 void AudioVisualizerContainer::setDefaultResolution(int resolution) {
     m_defaultResolution = std::clamp(resolution, 10, 44100);
+    // Apply immediately so TimeRuler/widgets show correct initial scale
+    m_viewport->setResolution(m_defaultResolution);
 }
 
 void AudioVisualizerContainer::saveResolution() {
@@ -281,10 +283,8 @@ void AudioVisualizerContainer::fitToWindow() {
     }
     m_needsFitOnResize = false;
 
-    // Try to restore previously saved resolution; fall back to default
-    if (!restoreResolution())
-        m_viewport->setResolution(m_defaultResolution);
-    // Compute and set the correct view range for this resolution + width
+    // Always use the configured default resolution for new audio
+    m_viewport->setResolution(m_defaultResolution);
     updateViewRangeFromResolution();
 }
 

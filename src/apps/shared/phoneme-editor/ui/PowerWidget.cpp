@@ -219,34 +219,38 @@ void PowerWidget::updateBoundaryOverlay() {
     update();
 }
 
-int PowerWidget::hitTestBoundary(int x) const {
+int PowerWidget::hitTestBoundary(int x, int *outTier) const {
     if (!m_document) return -1;
-    int activeTier = m_document->activeTierIndex();
-    if (activeTier < 0 || activeTier >= m_document->tierCount()) return -1;
 
-    int count = m_document->boundaryCount(activeTier);
     int bestIdx = -1;
+    int bestTier = -1;
     int bestDist = kBoundaryHitWidth / 2 + 1;
 
-    for (int b = 0; b < count; ++b) {
-        int bx = timeToX(usToSec(m_document->boundaryTime(activeTier, b)));
-        int dist = std::abs(x - bx);
-        if (dist <= kBoundaryHitWidth / 2) {
-            if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
-                bestDist = dist;
-                bestIdx = b;
+    int tierCount = m_document->tierCount();
+    for (int t = 0; t < tierCount; ++t) {
+        int count = m_document->boundaryCount(t);
+        for (int b = 0; b < count; ++b) {
+            int bx = timeToX(usToSec(m_document->boundaryTime(t, b)));
+            int dist = std::abs(x - bx);
+            if (dist <= kBoundaryHitWidth / 2) {
+                if (dist < bestDist || (dist == bestDist && b > bestIdx)) {
+                    bestDist = dist;
+                    bestIdx = b;
+                    bestTier = t;
+                }
             }
         }
     }
+    if (outTier) *outTier = bestTier;
     return bestIdx;
 }
 
 void PowerWidget::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
-        int boundaryIdx = hitTestBoundary(event->pos().x());
-        if (boundaryIdx >= 0 && m_document && m_dragController) {
-            int tier = m_document->activeTierIndex();
-            m_dragController->startDrag(tier, boundaryIdx, m_document);
+        int hitTier = -1;
+        int boundaryIdx = hitTestBoundary(event->pos().x(), &hitTier);
+        if (boundaryIdx >= 0 && hitTier >= 0 && m_document && m_dragController) {
+            m_dragController->startDrag(hitTier, boundaryIdx, m_document);
             setCursor(Qt::SizeHorCursor);
         } else {
             m_dragging = true;

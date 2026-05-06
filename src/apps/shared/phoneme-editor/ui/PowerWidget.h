@@ -84,7 +84,7 @@ private:
     void drawReferenceLines(QPainter &painter);         ///< Draws dB reference lines.
     void drawBoundaryOverlay(QPainter &painter);        ///< Draws boundary lines.
 
-    [[nodiscard]] int hitTestBoundary(int x) const;     ///< Returns boundary index at x, or -1.
+    [[nodiscard]] int hitTestBoundary(int x, int *outTier = nullptr) const; ///< Returns boundary index at x, or -1.
     void findSurroundingBoundaries(double time, double &start, double &end) const;
 
     [[nodiscard]] double xToTime(int x) const;          ///< Converts pixel x to time.
