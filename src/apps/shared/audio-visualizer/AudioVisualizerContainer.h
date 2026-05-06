@@ -9,6 +9,7 @@
 
 #include <QByteArray>
 #include <QMap>
+#include <QSet>
 #include <QSplitter>
 #include <QStringList>
 #include <QVBoxLayout>
@@ -94,6 +95,20 @@ public:
     QStringList chartOrder() const;
     void setChartOrder(const QStringList &order);
 
+    /// Set visibility of a chart widget by id.
+    /// Hidden charts are excluded from the splitter layout.
+    void setChartVisible(const QString &id, bool visible);
+
+    /// Return whether a chart is currently visible.
+    bool chartVisible(const QString &id) const;
+
+    /// Save current chart visibility state to per-page AppSettings.
+    void saveChartVisibility();
+
+    /// Restore chart visibility from per-page AppSettings.
+    /// Charts not listed in the saved state keep their current visibility.
+    void restoreChartVisibility();
+
     QByteArray saveSplitterState() const;
     void restoreSplitterState(const QByteArray &state);
 
@@ -115,6 +130,9 @@ public:
 
 signals:
     void chartOrderChanged(const QStringList &order);
+
+    /// Emitted when a chart's visibility changes.
+    void chartVisibilityChanged(const QString &id, bool visible);
 
     /// Emitted after invalidateBoundaryModel() completes internal refresh.
     void boundaryModelInvalidated();
@@ -144,6 +162,7 @@ private:
 
     QMap<QString, ChartEntry> m_charts;
     QStringList m_chartOrder;
+    QSet<QString> m_hiddenCharts; ///< Chart IDs that are currently hidden
 
     AppSettings m_settings;
     bool m_needsFitOnResize = false; ///< fitToWindow was deferred because width was 0

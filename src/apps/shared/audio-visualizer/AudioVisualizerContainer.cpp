@@ -364,6 +364,58 @@ namespace dstools {
         emit chartOrderChanged(order);
     }
 
+    void AudioVisualizerContainer::setChartVisible(const QString &id, bool visible) {
+        auto it = m_charts.find(id);
+        if (it == m_charts.end())
+            return;
+
+        if (visible)
+            m_hiddenCharts.remove(id);
+        else
+            m_hiddenCharts.insert(id);
+
+        it->widget->setVisible(visible);
+        rebuildChartLayout();
+        emit chartVisibilityChanged(id, visible);
+    }
+
+    bool AudioVisualizerContainer::chartVisible(const QString &id) const {
+        return !m_hiddenCharts.contains(id);
+    }
+
+    void AudioVisualizerContainer::saveChartVisibility() {
+        static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+        QStringList visible;
+        for (const auto &id : m_chartOrder) {
+            if (!m_hiddenCharts.contains(id))
+                visible.append(id);
+        }
+        m_settings.set(kChartVisible, visible.join(QLatin1Char(',')));
+    }
+
+    void AudioVisualizerContainer::restoreChartVisibility() {
+        static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+        QString saved = m_settings.get(kChartVisible);
+        if (saved.isEmpty())
+            return; // No saved state — keep defaults
+
+        QStringList visibleIds = saved.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        QSet<QString> visibleSet(visibleIds.begin(), visibleIds.end());
+
+        for (const auto &id : m_chartOrder) {
+            bool shouldBeVisible = visibleSet.contains(id);
+            if (shouldBeVisible)
+                m_hiddenCharts.remove(id);
+            else
+                m_hiddenCharts.insert(id);
+
+            auto it = m_charts.find(id);
+            if (it != m_charts.end())
+                it->widget->setVisible(shouldBeVisible);
+        }
+        rebuildChartLayout();
+    }
+
     QByteArray AudioVisualizerContainer::saveSplitterState() const {
         return m_chartSplitter->saveState();
     }
@@ -475,14 +527,20 @@ namespace dstools {
             w->setParent(nullptr);
         }
 
+        int splitterIndex = 0;
         for (int i = 0; i < m_chartOrder.size(); ++i) {
             const auto &id = m_chartOrder[i];
             auto it = m_charts.find(id);
             if (it == m_charts.end())
                 continue;
+            if (m_hiddenCharts.contains(id)) {
+                it->widget->hide();
+                continue;
+            }
             m_chartSplitter->addWidget(it->widget);
-            m_chartSplitter->setStretchFactor(i, it->stretchFactor);
+            m_chartSplitter->setStretchFactor(splitterIndex, it->stretchFactor);
             it->widget->show();
+            ++splitterIndex;
         }
 
         // Apply default height ratios — per-page state is restored externally
@@ -496,6 +554,8 @@ namespace dstools {
 
         double totalWeight = 0.0;
         for (const auto &id : m_chartOrder) {
+            if (m_hiddenCharts.contains(id))
+                continue;
             auto it = m_charts.find(id);
             if (it != m_charts.end())
                 totalWeight += it->heightWeight;
@@ -505,6 +565,8 @@ namespace dstools {
 
         QList<int> sizes;
         for (const auto &id : m_chartOrder) {
+            if (m_hiddenCharts.contains(id))
+                continue;
             auto it = m_charts.find(id);
             if (it != m_charts.end())
                 sizes.append(static_cast<int>(totalHeight * it->heightWeight / totalWeight));
