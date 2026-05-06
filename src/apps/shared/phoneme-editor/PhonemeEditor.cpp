@@ -56,7 +56,9 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
         // Set viewport duration from audio length (not document, which may be empty)
         double audioDuration = sampleRate > 0 ? static_cast<double>(samples.size()) / sampleRate : 0.0;
         if (audioDuration > 0.0) {
-            m_viewport->setTotalDuration(audioDuration);
+            // Use setAudioParams to propagate the actual sample rate,
+            // so resolution → PPS calculation is correct for this audio
+            m_viewport->setAudioParams(sampleRate, static_cast<int64_t>(samples.size()));
             m_viewport->setViewRange(0.0, audioDuration);
             // Fit to window so the waveform fills the available width
             m_container->fitToWindow();
