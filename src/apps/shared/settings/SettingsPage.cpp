@@ -488,9 +488,10 @@ QWidget *SettingsPage::createGeneralTab() {
     QString savedOrder = settings.value(QStringLiteral("AudioVisualizer/chartOrder")).toString();
     QString savedVisible = settings.value(QStringLiteral("ViewLayout/chartVisible")).toString();
     QSet<QString> visibleSet;
-    if (!savedVisible.isEmpty())
-        visibleSet = QSet(savedVisible.split(QLatin1Char(','), Qt::SkipEmptyParts).begin(),
-                           savedVisible.split(QLatin1Char(','), Qt::SkipEmptyParts).end());
+    if (!savedVisible.isEmpty()) {
+        const QStringList visibleIds = savedVisible.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        visibleSet = QSet<QString>(visibleIds.begin(), visibleIds.end());
+    }
 
     QStringList chartIds;
     if (!savedOrder.isEmpty()) {
