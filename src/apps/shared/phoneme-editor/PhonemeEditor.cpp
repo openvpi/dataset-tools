@@ -26,6 +26,9 @@ PhonemeEditor::PhonemeEditor(QWidget *parent)
       m_playWidget(new dstools::widgets::PlayWidget()),
       m_renderer(new WaveformRenderer(this))
 {
+    // Default: binding enabled (boundaries across tiers snap together)
+    m_bindingManager->setEnabled(true);
+
     buildActions();
     buildToolbar();
     buildLayout();
@@ -160,6 +163,7 @@ void PhonemeEditor::buildActions() {
 
     m_actToggleBinding = new QAction(tr("&Boundary Binding"), this);
     m_actToggleBinding->setCheckable(true);
+    m_actToggleBinding->setChecked(true); // default enabled
     connect(m_actToggleBinding, &QAction::triggered, this, [this]() {
         bool enabled = !m_bindingManager->isEnabled();
         setBindingEnabled(enabled);
@@ -207,11 +211,10 @@ void PhonemeEditor::buildToolbar() {
         setBindingEnabled(enabled);
     });
     m_actBindingToggle->setCheckable(true);
+    m_actBindingToggle->setChecked(m_bindingManager->isEnabled());
+    m_actBindingToggle->setToolTip(tr("边界绑定：拖动时同步其他层相同位置的边界"));
 
     m_toolbar->addSeparator();
-
-    // PlayWidget remains as internal backend but is not shown in toolbar
-    // (ADR-62: right-click plays directly, no visible player controls needed)
 }
 
 void PhonemeEditor::buildLayout() {
