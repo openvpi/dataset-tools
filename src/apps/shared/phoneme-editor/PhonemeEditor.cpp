@@ -204,13 +204,26 @@ void PhonemeEditor::buildToolbar() {
 
     m_toolbar->addSeparator();
 
-    m_actBindingToggle = m_toolbar->addAction(tr("Binding"), this, [this]() {
+    // Tier selection combo
+    m_tierCombo = new QComboBox(m_toolbar);
+    m_tierCombo->setToolTip(tr("选择活跃层级"));
+    m_tierCombo->setMinimumWidth(80);
+    m_toolbar->addWidget(m_tierCombo);
+    connect(m_tierCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int index) {
+        if (index >= 0 && m_document)
+            m_document->setActiveTierIndex(index);
+    });
+
+    m_toolbar->addSeparator();
+
+    m_actBindingToggle = m_toolbar->addAction(tr("Bind"), this, [this]() {
         bool enabled = !m_bindingManager->isEnabled();
         setBindingEnabled(enabled);
     });
     m_actBindingToggle->setCheckable(true);
     m_actBindingToggle->setChecked(m_bindingManager->isEnabled());
-    m_actBindingToggle->setToolTip(tr("边界绑定：拖动时同步其他层相同位置的边界"));
+    m_actBindingToggle->setToolTip(tr("绑定：拖动边界时同步其他层相同位置的边界"));
 
     m_toolbar->addSeparator();
 }
@@ -281,6 +294,19 @@ void PhonemeEditor::connectSignals() {
         m_tierEditWidget->rebuildTierViews();
         m_entryListPanel->rebuildEntries();
         emit modificationChanged(m_document->isModified());
+
+        // Rebuild tier combo when document structure changes
+        m_tierCombo->blockSignals(true);
+        m_tierCombo->clear();
+        for (int t = 0; t < m_document->tierCount(); ++t) {
+            QString name = m_document->tierName(t);
+            if (name.isEmpty())
+                name = QStringLiteral("Tier %1").arg(t + 1);
+            m_tierCombo->addItem(name);
+        }
+        if (m_document->activeTierIndex() >= 0 && m_document->activeTierIndex() < m_tierCombo->count())
+            m_tierCombo->setCurrentIndex(m_document->activeTierIndex());
+        m_tierCombo->blockSignals(false);
     });
 
     // Undo stack

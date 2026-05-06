@@ -4,7 +4,6 @@
 
 #include <dstools/TimePos.h>
 
-#include <QComboBox>
 #include <QPainter>
 #include <QPaintEvent>
 
@@ -12,24 +11,12 @@ namespace dstools {
 
 PhonemeTextGridTierLabel::PhonemeTextGridTierLabel(QWidget *parent)
     : TierLabelArea(parent) {
-    m_tierCombo = new QComboBox(this);
-    m_tierCombo->setFixedHeight(kTierRowHeight - 2);
-    m_tierCombo->setMinimumWidth(kComboWidth);
-    m_tierCombo->setMaximumWidth(160);
-    m_tierCombo->setToolTip(tr("选择活跃层级（该层的边界线贯穿全图）"));
-
-    connect(m_tierCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, [this](int index) {
-        if (index >= 0)
-            setActiveTierIndex(index);
-    });
-
     setFixedHeight(kTierRowHeight);
 }
 
 void PhonemeTextGridTierLabel::setBoundaryModel(IBoundaryModel *model) {
     TierLabelArea::setBoundaryModel(model);
-    rebuildComboBox();
+    update();
 }
 
 int PhonemeTextGridTierLabel::activeTierIndex() const {
@@ -39,8 +26,6 @@ int PhonemeTextGridTierLabel::activeTierIndex() const {
 void PhonemeTextGridTierLabel::setActiveTierIndex(int index) {
     if (m_activeTierIndex != index) {
         m_activeTierIndex = index;
-        if (m_tierCombo && index >= 0 && index < m_tierCombo->count())
-            m_tierCombo->setCurrentIndex(index);
         emit activeTierChanged(index);
         update();
     }
@@ -92,13 +77,12 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
             painter.setPen(QColor(100, 180, 255));
             painter.drawText(rect().adjusted(0, 2, -4, 0),
                              Qt::AlignTop | Qt::AlignRight,
-                             tr("对齐中..."));
+                             tr("Aligning..."));
         }
         return;
     }
 
-    // Draw boundary lines in the label area for ALL tiers.
-    // Active tier lines are solid; non-active are dashed.
+    // Draw boundary lines for all tiers in a single row
     int tiers = m_boundaryModel->tierCount();
     auto allBounds = allTierBoundaries();
 
@@ -128,22 +112,12 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
         painter.setPen(QColor(100, 180, 255));
         painter.drawText(rect().adjusted(0, 2, -4, 0),
                          Qt::AlignTop | Qt::AlignRight,
-                         tr("对齐中..."));
-    }
-}
-
-void PhonemeTextGridTierLabel::resizeEvent(QResizeEvent *event) {
-    TierLabelArea::resizeEvent(event);
-    // Position combo box at the left edge, vertically centered
-    if (m_tierCombo) {
-        int comboW = qMin(m_tierCombo->sizeHint().width(), 160);
-        int y = (height() - m_tierCombo->height()) / 2;
-        m_tierCombo->setGeometry(2, qMax(y, 1), comboW, m_tierCombo->height());
+                         tr("Aligning..."));
     }
 }
 
 void PhonemeTextGridTierLabel::onModelDataChanged() {
-    rebuildComboBox();
+    update();
 }
 
 void PhonemeTextGridTierLabel::setAlignmentRunning(bool running) {
@@ -151,47 +125,6 @@ void PhonemeTextGridTierLabel::setAlignmentRunning(bool running) {
         m_alignmentRunning = running;
         update();
     }
-}
-
-void PhonemeTextGridTierLabel::rebuildComboBox() {
-    if (!m_tierCombo)
-        return;
-
-    // Block signals to avoid triggering currentIndexChanged during rebuild
-    m_tierCombo->blockSignals(true);
-    m_tierCombo->clear();
-
-    if (!m_boundaryModel) {
-        m_tierCombo->blockSignals(false);
-        setFixedHeight(kTierRowHeight);
-        return;
-    }
-
-    int tiers = m_boundaryModel->tierCount();
-    setFixedHeight(kTierRowHeight);
-
-    for (int t = 0; t < tiers; ++t) {
-        QString name = m_boundaryModel->tierName(t);
-        if (name.isEmpty())
-            name = QStringLiteral("Tier %1").arg(t + 1);
-        m_tierCombo->addItem(name);
-    }
-
-    if (m_activeTierIndex >= 0 && m_activeTierIndex < tiers)
-        m_tierCombo->setCurrentIndex(m_activeTierIndex);
-    else if (tiers > 0)
-        m_tierCombo->setCurrentIndex(0);
-
-    m_tierCombo->blockSignals(false);
-    m_tierCombo->setVisible(tiers > 0);
-
-    // Trigger resize to reposition combo
-    if (auto *e = new QResizeEvent(size(), size())) {
-        resizeEvent(e);
-        delete e;
-    }
-
-    update();
 }
 
 } // namespace dstools

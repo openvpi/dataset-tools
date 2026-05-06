@@ -5,6 +5,7 @@
 
 #include <QAction>
 #include <QActionGroup>
+#include <QComboBox>
 #include <QMenu>
 #include <QSplitter>
 #include <QToolBar>
@@ -178,6 +179,7 @@ namespace dstools {
             EntryListPanel *m_entryListPanel = nullptr;
             PhonemeTextGridTierLabel *m_tierLabel = nullptr;
             QToolBar *m_toolbar = nullptr;
+            QComboBox *m_tierCombo = nullptr;
 
             // Actions
             QAction *m_actSave = nullptr;
