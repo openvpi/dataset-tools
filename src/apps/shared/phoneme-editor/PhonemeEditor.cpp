@@ -147,6 +147,8 @@ void PhonemeEditor::saveChartVisibility() {
 
 void PhonemeEditor::restoreChartVisibility() {
     m_container->restoreChartVisibility();
+    m_actTogglePower->setChecked(m_container->chartVisible(QStringLiteral("power")));
+    m_actToggleSpectrogram->setChecked(m_container->chartVisible(QStringLiteral("spectrogram")));
 }
 
 QList<QAction *> PhonemeEditor::viewActions() const {
@@ -394,6 +396,15 @@ void PhonemeEditor::connectSignals() {
         m_actToggleSpectrogram->setChecked(visible);
         emit spectrogramVisibilityChanged(visible);
     });
+
+    // Sync toggle actions when chart visibility changes via container API
+    connect(m_container, &AudioVisualizerContainer::chartVisibilityChanged, this,
+            [this](const QString &id, bool visible) {
+                if (id == QStringLiteral("power"))
+                    m_actTogglePower->setChecked(visible);
+                else if (id == QStringLiteral("spectrogram"))
+                    m_actToggleSpectrogram->setChecked(visible);
+            });
 
     // Active tier -> repaint boundary overlays
     connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int tier) {

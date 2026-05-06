@@ -64,7 +64,7 @@
 
 **文件**：`AudioVisualizerContainer.cpp`
 
-### 8.5 Phoneme 现有 toggle action 适配配置系统
+### 8.5 Phoneme 现有 toggle action 适配配置系统 ✅
 
 **需求**：`m_actTogglePower` / `m_actToggleSpectrogram` 改为读写统一 AppSettings 配置，而非独立 toggle。
 
