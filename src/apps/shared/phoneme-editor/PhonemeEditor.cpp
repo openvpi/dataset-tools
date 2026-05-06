@@ -282,6 +282,7 @@ void PhonemeEditor::buildLayout() {
     m_powerWidget = new PowerWidget(m_viewport, m_container);
     m_powerWidget->setDragController(m_container->dragController());
     m_powerWidget->setUndoStack(m_undoStack);
+    m_powerWidget->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("power"), m_powerWidget, 2, 1, 3.0);
 
     m_spectrogramWidget = new SpectrogramWidget(m_viewport, m_container);
