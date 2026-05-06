@@ -301,11 +301,11 @@ void PhonemeEditor::connectSignals() {
     }
 
     // Sync menu action checked state with widget visibility (for external visibility changes)
-    connect(m_powerWidget, &QWidget::visibleChanged, this, [this](bool visible) {
+    connect(m_powerWidget, &PowerWidget::visibleStateChanged, this, [this](bool visible) {
         m_actTogglePower->setChecked(visible);
         emit powerVisibilityChanged(visible);
     });
-    connect(m_spectrogramWidget, &QWidget::visibleChanged, this, [this](bool visible) {
+    connect(m_spectrogramWidget, &SpectrogramWidget::visibleStateChanged, this, [this](bool visible) {
         m_actToggleSpectrogram->setChecked(visible);
         emit spectrogramVisibilityChanged(visible);
     });

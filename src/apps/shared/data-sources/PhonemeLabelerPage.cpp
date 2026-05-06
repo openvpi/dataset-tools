@@ -31,8 +31,8 @@ namespace dstools {
 // Helper: filter out auto-added leading/trailing silence (SP/AP) phonemes
 // from HFA results, while preserving intentional mid-word silences.
 // ---------------------------------------------------------------------------
-static QList<Boundary> buildPhonemeBoundaries(const HFA::WordList &words, int &nextId) {
-    QList<Boundary> boundaries;
+static std::vector<Boundary> buildPhonemeBoundaries(const HFA::WordList &words, int &nextId) {
+    std::vector<Boundary> boundaries;
     int id = nextId;
 
     // First pass: collect all phoneme boundaries
@@ -47,19 +47,17 @@ static QList<Boundary> buildPhonemeBoundaries(const HFA::WordList &words, int &n
     }
 
     // Remove leading auto-SP/AP (algorithmically added silence at head)
-    while (!boundaries.isEmpty()) {
-        const auto &first = boundaries.first();
-        if (first.text == QStringLiteral("SP") || first.text == QStringLiteral("AP"))
-            boundaries.removeFirst();
+    while (!boundaries.empty()) {
+        if (boundaries.front().text == QStringLiteral("SP") || boundaries.front().text == QStringLiteral("AP"))
+            boundaries.erase(boundaries.begin());
         else
             break;
     }
 
     // Remove trailing auto-SP/AP (algorithmically added silence at tail)
-    while (!boundaries.isEmpty()) {
-        const auto &last = boundaries.last();
-        if (last.text == QStringLiteral("SP") || last.text == QStringLiteral("AP"))
-            boundaries.removeLast();
+    while (!boundaries.empty()) {
+        if (boundaries.back().text == QStringLiteral("SP") || boundaries.back().text == QStringLiteral("AP"))
+            boundaries.pop_back();
         else
             break;
     }

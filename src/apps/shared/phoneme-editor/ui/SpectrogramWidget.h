@@ -74,6 +74,7 @@ signals:
     void boundaryDragFinished(int tierIndex, int boundaryIndex, TimePos newTime); ///< Boundary drag ended.
     void hoveredBoundaryChanged(int boundaryIndex); ///< Hovered boundary changed.
     void entryScrollRequested(int delta);           ///< Scroll request from wheel event.
+    void visibleStateChanged(bool visible);         ///< Emitted when widget visibility changes externally.
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -83,6 +84,8 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
 
 private:
     void prepareSpectrogramParams();                    ///< Prepares FFT parameters without computing.

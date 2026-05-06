@@ -9,6 +9,8 @@
 #include <QMouseEvent>
 #include <QContextMenuEvent>
 #include <QResizeEvent>
+#include <QShowEvent>
+#include <QHideEvent>
 #include <QUndoStack>
 
 #include <cmath>
@@ -34,7 +36,6 @@ SpectrogramWidget::SpectrogramWidget(ViewportController *viewport, QWidget *pare
         m_viewEnd = m_viewport->state().endSec;
         m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
     }
-}
 }
 
 SpectrogramWidget::~SpectrogramWidget() = default;
@@ -531,6 +532,16 @@ void SpectrogramWidget::wheelEvent(QWheelEvent *event) {
 void SpectrogramWidget::resizeEvent(QResizeEvent *event) {
     rebuildViewImage();
     QWidget::resizeEvent(event);
+}
+
+void SpectrogramWidget::showEvent(QShowEvent *event) {
+    QWidget::showEvent(event);
+    emit visibleStateChanged(true);
+}
+
+void SpectrogramWidget::hideEvent(QHideEvent *event) {
+    QWidget::hideEvent(event);
+    emit visibleStateChanged(false);
 }
 
 void SpectrogramWidget::contextMenuEvent(QContextMenuEvent *event) {

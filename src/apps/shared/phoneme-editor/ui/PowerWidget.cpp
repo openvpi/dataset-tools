@@ -9,6 +9,8 @@
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QResizeEvent>
+#include <QShowEvent>
+#include <QHideEvent>
 #include <QContextMenuEvent>
 #include <QUndoStack>
 
@@ -431,6 +433,16 @@ void PowerWidget::findSurroundingBoundaries(double time, double &start, double &
 void PowerWidget::resizeEvent(QResizeEvent *event) {
     rebuildPowerCache();
     QWidget::resizeEvent(event);
+}
+
+void PowerWidget::showEvent(QShowEvent *event) {
+    QWidget::showEvent(event);
+    emit visibleStateChanged(true);
+}
+
+void PowerWidget::hideEvent(QHideEvent *event) {
+    QWidget::hideEvent(event);
+    emit visibleStateChanged(false);
 }
 
 } // namespace phonemelabeler
