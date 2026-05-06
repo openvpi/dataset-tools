@@ -175,12 +175,14 @@ void PhonemeEditor::buildActions() {
 
     m_actTogglePower = new QAction(tr("Show &Power"), this);
     m_actTogglePower->setCheckable(true);
+    m_actTogglePower->setChecked(true);
     connect(m_actTogglePower, &QAction::triggered, this, [this]() {
         setPowerVisible(m_actTogglePower->isChecked());
     });
 
     m_actToggleSpectrogram = new QAction(tr("Show &Spectrogram"), this);
     m_actToggleSpectrogram->setCheckable(true);
+    m_actToggleSpectrogram->setChecked(true);
     connect(m_actToggleSpectrogram, &QAction::triggered, this, [this]() {
         setSpectrogramVisible(m_actToggleSpectrogram->isChecked());
     });
