@@ -173,6 +173,7 @@ namespace dstools {
 
         // ── Main content splitter (vertical) ──────────────────────────────────
         m_container = new AudioVisualizerContainer(QStringLiteral("DsSlicerPage"), contentWidget);
+        m_container->setDefaultResolution(60);
         m_container->setBoundaryModel(m_boundaryModel);
         m_container->setPlayWidget(m_playWidget);
 
@@ -1222,8 +1223,8 @@ namespace dstools {
 
         double duration = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
         m_boundaryModel->setDuration(duration);
-        m_container->setTotalDuration(duration);
-        m_container->viewport()->setViewRange(0.0, duration);
+        m_container->viewport()->setAudioParams(m_sampleRate, static_cast<int64_t>(m_samples.size()));
+        m_container->fitToWindow();
     }
 
 } // namespace dstools
