@@ -445,6 +445,28 @@ BoundaryDragController
 
 ---
 
+## D-28：Active tier 只控制子图边界线显示，不限制拖动
+
+**决策**：
+- `activeTierIndex` 仅决定哪个层级的边界线在波形图/频谱图等子图中**贯穿显示**
+- 所有层级的边界线在标签区域、TierEditWidget 中始终可见且**均可拖动**
+- 子图中的 hit-test 搜索**所有层级**的边界（不只 active tier），返回距离最近的边界
+- 拖动某个层级的边界不需要先切换到该层级
+
+**影响**：`hitTestBoundary()` 改为遍历所有 tier 的边界。返回 `(tierIndex, boundaryIndex)` pair。
+
+---
+
+## D-29：低层级边界不得越出高层级区间（跨层 clamp）
+
+**决策**：
+- D-17 的**具体实现要求**：phoneme 层的某个边界 B 位于 grapheme 层区间 [Gstart, Gend] 内时，B 的拖动范围进一步收紧为 `[max(sameLayerLeft, Gstart), min(sameLayerRight, Gend)]`
+- 这个约束作用于 `clampBoundaryTime()` 的扩展，而非独立阶段——保持 clamp 的单一入口
+- tier index 越小 = 层级越高。tier 0 = 最高层（如 grapheme），不受任何层约束
+- 只约束**直接上层**（tier-1），不递归
+
+---
+
 ## ADR 冲突解决
 
 | 冲突项 | 旧决策 | 新决策（以此为准） |

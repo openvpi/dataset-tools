@@ -496,17 +496,98 @@ ExportPage 内部 TabWidget："导出设置" | "预览数据" → QTableView + Q
 
 ## 执行优先级
 
-1. **2.1** — 比例尺连续范围改造（当前最影响使用体验：zoom out 不够）
-2. **2.4** — Phoneme 标签 binding/snap 重设计（架构问题，越早改越少技术债）
-3. **1.1-1.5** — 显示与 UX 修复（紧急，影响用户直接体验）
-4. **3.1、3.2、3.4** — 简单边界/标签修复
-5. **5.1** — 刷新框架（关键 bug：FA 结果不刷新）
-6. **2.2、2.3** — 刻度查表法 + wheelEvent 统一（2.1 的后续）
-7. **3.5、3.6、3.7** — 数据健壮性
-8. **4.1、4.2** — 编辑器去重
-9. **5.2、5.3** — 推理异步化
-10. **6.1** — 路径管理
-11. **6.2-6.5、3.3** — 低优先级完善
+1. **2.1** — 比例尺连续范围改造 ✅ 已完成
+2. **2.4** — Phoneme 标签 binding/snap 重设计 ✅ 已完成
+3. **7.x** — 后续 Bug 修复批次（见下方）
+4. **1.1-1.5** — 显示与 UX 修复
+5. **3.1、3.2、3.4** — 简单边界/标签修复
+6. **5.1** — 刷新框架
+7. **2.2、2.3** — 刻度查表法 + wheelEvent 统一
+8. **3.5、3.6、3.7** — 数据健壮性
+9. **4.1、4.2** — 编辑器去重
+10. **5.2、5.3** — 推理异步化
+11. **6.1** — 路径管理
+12. **6.2-6.5、3.3** — 低优先级完善
+
+---
+
+## 7. 后续 Bug 修复批次
+
+### 7.1 Phoneme 刻度显示异常
+
+**问题**：PhonemeEditor 加载音频后，TimeRulerWidget 的刻度间距/标签不正确。
+
+**根因**：`TimeRulerWidget` 初始化时 `m_resolution=40, m_sampleRate=44100`（ViewportState 默认值）。音频加载后 `setAudioParams()` + `fitToWindow()` 更新 resolution=800，但 `syncStateFields()` 必须在 `setAudioParams()` 中被调用以确保 ViewportState.sampleRate 正确广播。检查 `ViewportController::setAudioParams()` 是否在更新 `m_sampleRate` 后调用了 `syncStateFields()`。
+
+**修复**：
+- [ ] 确认 `ViewportController::setAudioParams()` 中 `syncStateFields()` 在 `clampAndEmit()` 之前被调用（已有，需验证）
+- [ ] 确认 `fitToWindow()` 在 widget 尺寸 > 0 时被调用（可能延迟到 resizeEvent）
+- [ ] 验证：PhonemeEditor 加载音频后 TimeRuler 正确显示秒级刻度
+
+### 7.2 Slicer 右键播放无红色游标
+
+**问题**：SlicerPage 右键播放音频片段时没有显示红色竖线播放游标。
+
+**根因**：`WaveformWidget::drawPlayCursor()` 存在且正确。但 SlicerPage 中没有连接 `PlayWidget::playheadChanged` → `WaveformWidget::setPlayhead()`。PhonemeEditor 有此连接（PhonemeEditor::connectSignals 中），但 SlicerPage 是独立组装的，可能遗漏了此连接。
+
+**修复**：
+- [ ] `SlicerPage::connectSignals()` 新增 `connect(m_playWidget, &PlayWidget::playheadChanged, m_waveformWidget, &WaveformWidget::setPlayhead)`
+- [ ] 验证：右键播放时红色游标实时移动
+
+### 7.3 Phoneme 层级边界约束失效（跨层 clamp）
+
+**问题**：低层级（如 phoneme）的边界拖动时可以越过高层级（如 grapheme）的边界，违反 D-17 层级包含规则。
+
+**根因**：`TextGridDocument::clampBoundaryTime()` 只检查**同层**相邻边界。`BoundaryDragController::updateDrag()` 也只调用同层 clamp。没有任何地方实施跨层约束（高层边界作为低层边界的外包围）。
+
+**设计（D-17 天然支持）**：
+
+对于 tier hierarchy（tier 0 = 最高层如 grapheme，tier N = 最低层如 phoneme）：
+- 低层级的边界**不得超出**其所在的高层级区间的左右边界
+- 具体：phoneme tier 的某个边界 B，找到 grapheme tier 中包含 B 当前位置的区间 [Gstart, Gend]，B 的 clamp 范围进一步收紧为 max(sameLayerLeft, Gstart) ~ min(sameLayerRight, Gend)
+
+**修复**：
+- [ ] `IBoundaryModel` 新增 `clampToParentTier(tierIndex, boundaryIndex, proposedTime)` 虚方法（默认返回 proposedTime）
+- [ ] `TextGridDocument` 实现：对 tierIndex > 0 的层，找上层区间包围，收紧 clamp
+- [ ] `BoundaryDragController::updateDrag()` 在 `clampBoundaryTime()` 后再调用 `clampToParentTier()`
+- [ ] 验证：phoneme 层边界拖动到达 grapheme 边界时被阻挡
+
+### 7.4 选中词级时音素级边界不能拖动
+
+**问题**：当前 `activeTierIndex` 决定了 hit-test 的层级——只有 active tier 的边界才能被点中拖动。用户期望所有层的边界都可以拖动，`activeTierIndex` 只控制哪个层的边界线在子图中显示。
+
+**根因**：`WaveformWidget::hitTestBoundary()` 和所有 widget 的 `mousePressEvent` 中用 `m_boundaryModel->activeTierIndex()` 作为 hit-test 的唯一 tier。
+
+**修复**：
+- [ ] 修改 `hitTestBoundary()` 为搜索**所有层**的边界（不只 active tier），返回 `(tierIndex, boundaryIndex)` pair
+- [ ] `mousePressEvent` 使用搜索到的 tier 调用 `dragController->startDrag(tier, idx, model)`
+- [ ] BoundaryOverlayWidget 仍只绘制 active tier 的贯穿线，但所有层的边界在标签区域都可点击
+- [ ] 验证：选中 grapheme 层时仍可拖动 phoneme 层边界
+
+### 7.5 Slicer 默认比例尺仍过小
+
+**问题**：用户期望视口默认显示 ~2 分钟音频，但实际可能恢复了旧的保存值。
+
+**根因**：`fitToWindow()` 中 `restoreResolution()` 优先于默认值。如果之前保存了 resolution=60（旧默认值），会恢复到旧值。首次设置新默认值后应该清除旧存储或检测到默认值变更。
+
+**修复**：
+- [ ] `fitToWindow()` 改为：始终使用 `m_defaultResolution`（不 restore）
+- [ ] `AudioVisualizerContainer` 的 resolution restore 移到单独的 `restoreViewState()` 方法，由页面 `onActivated()` 主动调用（区分"新音频加载"和"页面重新激活"场景）
+- [ ] 新音频加载 → `fitToWindow()` 使用默认值
+- [ ] 页面重新激活 → `restoreViewState()` 恢复上次保存的值
+- [ ] 验证：Slicer 打开新 5 分钟音频 → 视口显示约 2 分钟
+
+### 7.6 PhonemeEditor 波形图缺失
+
+**问题**：PhonemeEditor 中波形图没有正常显示，Power 图和频谱图存在但波形图不可见。
+
+**根因**：可能是 `addChart()` 的 order/heightWeight 问题导致 waveform 在 splitter 中分配了 0 高度，或 `WaveformWidget::rebuildMinMaxCache()` 由于时序问题返回空数据。已在路线图 1.3 中记录但未修复。
+
+**修复**：
+- [ ] 检查 `PhonemeEditor::loadAudio()` 中 `m_waveformWidget->setAudioData()` 是否在 viewport 设置之后被调用
+- [ ] 检查 `rebuildMinMaxCache()` 的 guard 条件 `m_viewEnd <= m_viewStart` 是否在音频加载时为 true（导致 cache 为空）
+- [ ] 确保 `addChart("waveform", ..., heightWeight=2.0)` 分配了足够的初始高度
+- [ ] 验证：PhonemeEditor 加载音频后波形图正常渲染
 
 ---
 
