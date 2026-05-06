@@ -102,6 +102,7 @@ private:
     void refreshPreview();
     void onBrowseOutput();
     void onExport();
+    void continueExport(const QStringList &sliceIds, const QString &outputDir);
     void updateExportButton();
     void runValidation();
 

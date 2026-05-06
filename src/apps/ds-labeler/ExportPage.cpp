@@ -16,6 +16,8 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QPointer>
+#include <QtConcurrent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -569,7 +571,7 @@ void ExportPage::onExport() {
     const QString outputDir = m_outputDir->text().trimmed();
     QDir().mkpath(outputDir);
 
-    // Auto-complete missing steps if enabled
+    // Auto-complete missing steps if enabled (runs inference in background)
     if (m_chkAutoComplete->isChecked()) {
         ensureEngines();
 
@@ -578,17 +580,278 @@ void ExportPage::onExport() {
         m_statusLabel->setText(QStringLiteral("正在补全缺失步骤..."));
         m_btnExport->setEnabled(false);
 
-        int completed = 0;
-        for (const auto &sliceId : sliceIds) {
-            m_statusLabel->setText(QStringLiteral("补全: %1").arg(sliceId));
-            m_progressBar->setValue(++completed);
+        // Capture engine pointers and source for use in background thread.
+        // Engines are owned by ExportPage and persist until deactivation.
+        auto *hfa = m_hfa.get();
+        auto *rmvpe = m_rmvpe.get();
+        auto *game = m_game.get();
+        auto *phNumCalc = m_phNumCalc.get();
+        auto *src = m_source;
+        QPointer<ExportPage> guard(this);
 
-            autoCompleteSlice(sliceId);
-        }
+        // Run inference loop in background; save + continue export on main thread
+        (void) QtConcurrent::run([guard, hfa, rmvpe, game, phNumCalc, src, sliceIds,
+                                   outputDir]() {
+            // Map of sliceId → modified DsTextDocument (only non-empty docs saved)
+            std::map<QString, DsTextDocument> modifiedDocs;
 
-        m_progressBar->setVisible(false);
+            int processed = 0;
+            for (const auto &sliceId : sliceIds) {
+                if (!guard)
+                    return;
+
+                auto result = src->loadSlice(sliceId);
+                if (!result) {
+                    ++processed;
+                    QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+                        if (guard) {
+                            guard->m_progressBar->setValue(processed);
+                            guard->m_statusLabel->setText(QStringLiteral("补全: %1/%2")
+                                                              .arg(processed).arg(guard->m_progressBar->maximum()));
+                        }
+                    }, Qt::QueuedConnection);
+                    continue;
+                }
+
+                DsTextDocument doc = std::move(result.value());
+                bool modified = false;
+                bool hasPhoneme = false;
+                bool hasPhNum = false;
+                bool hasPitch = false;
+                bool hasMidi = false;
+                bool hasGrapheme = false;
+                QStringList graphemeTexts;
+                QStringList phonemeTexts;
+
+                for (const auto &layer : doc.layers) {
+                    if (layer.name == QStringLiteral("grapheme")) {
+                        hasGrapheme = true;
+                        for (const auto &b : layer.boundaries) {
+                            if (!b.text.isEmpty())
+                                graphemeTexts << b.text;
+                        }
+                    } else if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
+                        hasPhoneme = true;
+                        for (const auto &b : layer.boundaries) {
+                            if (!b.text.isEmpty())
+                                phonemeTexts << b.text;
+                        }
+                    } else if (layer.name == QStringLiteral("ph_num")) {
+                        hasPhNum = true;
+                    } else if (layer.name == QStringLiteral("midi")) {
+                        hasMidi = true;
+                    }
+                }
+
+                for (const auto &curve : doc.curves) {
+                    if (curve.name == QStringLiteral("pitch"))
+                        hasPitch = true;
+                }
+
+                QString audioPath = src->audioPath(sliceId);
+
+                // Run FA if missing phoneme layer
+                if (!hasPhoneme && hasGrapheme && hfa && hfa->isOpen() && !audioPath.isEmpty()) {
+                    HFA::WordList words;
+                    for (const auto &text : graphemeTexts) {
+                        HFA::Word word;
+                        word.text = text.toStdString();
+                        HFA::Phone p;
+                        p.text = text.toStdString();
+                        word.phones.push_back(p);
+                        words.push_back(word);
+                    }
+
+                    std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+                    auto faResult = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, words);
+                    if (faResult) {
+                        IntervalLayer phonemeLayer;
+                        phonemeLayer.name = QStringLiteral("phoneme");
+                        phonemeLayer.type = QStringLiteral("interval");
+                        int id = 1;
+                        for (const auto &word : words) {
+                            if (word.text == "SP" || word.text == "AP")
+                                continue;
+                            for (const auto &phone : word.phones) {
+                                if (phone.text == "SP" || phone.text == "AP")
+                                    continue;
+                                Boundary b;
+                                b.id = id++;
+                                b.pos = secToUs(phone.start);
+                                b.text = QString::fromStdString(phone.text);
+                                phonemeLayer.boundaries.push_back(std::move(b));
+                            }
+                        }
+                        if (!phonemeLayer.boundaries.empty()) {
+                            Boundary endB;
+                            endB.id = id;
+                            endB.pos = secToUs(words.back().phones.back().end);
+                            endB.text = QString();
+                            phonemeLayer.boundaries.push_back(std::move(endB));
+                        }
+
+                        bool replaced = false;
+                        for (auto &layer : doc.layers) {
+                            if (layer.name == QStringLiteral("phoneme")) {
+                                layer = std::move(phonemeLayer);
+                                replaced = true;
+                                break;
+                            }
+                        }
+                        if (!replaced)
+                            doc.layers.push_back(std::move(phonemeLayer));
+                        modified = true;
+                        hasPhoneme = true;
+
+                        phonemeTexts.clear();
+                        for (const auto &layer : doc.layers) {
+                            if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
+                                for (const auto &b : layer.boundaries) {
+                                    if (!b.text.isEmpty())
+                                        phonemeTexts << b.text;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Run add_ph_num if missing
+                if (hasPhoneme && !hasPhNum && !phonemeTexts.isEmpty() && phNumCalc) {
+                    QString phNumStr;
+                    QString error;
+                    if (phNumCalc->calculate(phonemeTexts.join(' '), phNumStr, error)) {
+                        IntervalLayer phNumLayer;
+                        phNumLayer.name = QStringLiteral("ph_num");
+                        phNumLayer.type = QStringLiteral("attribute");
+                        const auto parts = phNumStr.split(QChar(' '), Qt::SkipEmptyParts);
+                        int id = 1;
+                        for (const auto &part : parts) {
+                            Boundary b;
+                            b.id = id++;
+                            b.text = part;
+                            phNumLayer.boundaries.push_back(std::move(b));
+                        }
+
+                        bool replaced = false;
+                        for (auto &layer : doc.layers) {
+                            if (layer.name == QStringLiteral("ph_num")) {
+                                layer = std::move(phNumLayer);
+                                replaced = true;
+                                break;
+                            }
+                        }
+                        if (!replaced)
+                            doc.layers.push_back(std::move(phNumLayer));
+                        modified = true;
+                    }
+                }
+
+                // Run RMVPE if missing pitch
+                if (!hasPitch && rmvpe && rmvpe->is_open() && !audioPath.isEmpty()) {
+                    std::vector<Rmvpe::RmvpeRes> results;
+                    auto rmvpeResult = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
+                    if (rmvpeResult && !results.empty()) {
+                        const auto &res = results[0];
+                        std::vector<int32_t> f0Mhz(res.f0.size());
+                        for (size_t i = 0; i < res.f0.size(); ++i)
+                            f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
+
+                        float timestep = 0.005f;
+                        CurveLayer *pitchCurve = nullptr;
+                        for (auto &curve : doc.curves) {
+                            if (curve.name == QStringLiteral("pitch")) {
+                                pitchCurve = &curve;
+                                break;
+                            }
+                        }
+                        if (!pitchCurve) {
+                            doc.curves.push_back({});
+                            pitchCurve = &doc.curves.back();
+                            pitchCurve->name = QStringLiteral("pitch");
+                        }
+                        pitchCurve->values = std::move(f0Mhz);
+                        pitchCurve->timestep = timestep;
+                        modified = true;
+                    }
+                }
+
+                // Run GAME if missing midi
+                if (!hasMidi && game && game->isOpen() && !audioPath.isEmpty()) {
+                    std::vector<Game::GameNote> notes;
+                    auto gameResult = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+                    if (gameResult && !notes.empty()) {
+                        IntervalLayer *midiLayer = nullptr;
+                        for (auto &layer : doc.layers) {
+                            if (layer.name == QStringLiteral("midi")) {
+                                midiLayer = &layer;
+                                break;
+                            }
+                        }
+                        if (!midiLayer) {
+                            doc.layers.push_back({});
+                            midiLayer = &doc.layers.back();
+                            midiLayer->name = QStringLiteral("midi");
+                            midiLayer->type = QStringLiteral("note");
+                        }
+
+                        midiLayer->boundaries.clear();
+                        int id = 1;
+                        for (const auto &note : notes) {
+                            Boundary b;
+                            b.id = id++;
+                            b.pos = static_cast<int64_t>(note.onset * 1000000.0);
+                            int midiNote = static_cast<int>(note.pitch + 0.5);
+                            int octave = midiNote / 12 - 1;
+                            int pc = midiNote % 12;
+                            static const char *pcNames[] = {"C", "C#", "D", "D#", "E", "F",
+                                                             "F#", "G", "G#", "A", "A#", "B"};
+                            b.text = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
+                            midiLayer->boundaries.push_back(std::move(b));
+                        }
+                        modified = true;
+                    }
+                }
+
+                if (modified)
+                    modifiedDocs[sliceId] = std::move(doc);
+
+                ++processed;
+                // Update progress on main thread
+                QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+                    if (guard) {
+                        guard->m_progressBar->setValue(processed);
+                        guard->m_statusLabel->setText(QStringLiteral("补全: %1/%2")
+                                                          .arg(processed).arg(guard->m_progressBar->maximum()));
+                    }
+                }, Qt::QueuedConnection);
+            }
+
+            // All inference done — save results and continue export on main thread
+            QMetaObject::invokeMethod(guard.data(), [guard, modifiedDocs = std::move(modifiedDocs),
+                                                       sliceIds, outputDir]() mutable {
+                if (!guard)
+                    return;
+
+                // Save modified docs
+                for (auto &[sliceId, doc] : modifiedDocs)
+                    (void) guard->m_source->saveSlice(sliceId, doc);
+
+                guard->m_progressBar->setVisible(false);
+
+                // Continue with export
+                guard->continueExport(sliceIds, outputDir);
+            }, Qt::QueuedConnection);
+        });
+
+        // Return early — the rest of export continues via continueExport()
+        return;
     }
 
+    // If autoComplete is off, proceed directly to export
+    continueExport(sliceIds, outputDir);
+}
+
+void ExportPage::continueExport(const QStringList &sliceIds, const QString &outputDir) {
     m_progressBar->setVisible(true);
     m_progressBar->setRange(0, sliceIds.size());
     m_progressBar->setValue(0);
