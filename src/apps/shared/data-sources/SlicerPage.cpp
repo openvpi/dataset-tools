@@ -154,6 +154,7 @@ void SlicerPage::buildLayout() {
     mainLayout->addWidget(paramsWidget);
 
     m_container = new AudioVisualizerContainer(QStringLiteral("Slicer"), contentWidget);
+    m_container->setDefaultResolution(60); // ~735 PPS at 44100Hz — wider view for slicing
     m_viewport = m_container->viewport();
     m_container->setPlayWidget(m_playWidget);
 

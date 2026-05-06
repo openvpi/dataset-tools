@@ -72,6 +72,10 @@ public:
 
     void setAudioData(const std::vector<float> &samples, int sampleRate);
 
+    /// Set default resolution for this container (samples per pixel).
+    /// Called once during page setup. Default = 40.
+    void setDefaultResolution(int resolution);
+
     void fitToWindow();
 
     void addChart(const QString &id, QWidget *widget, int defaultOrder,
@@ -124,6 +128,7 @@ private:
 
     AppSettings m_settings;
     bool m_needsFitOnResize = false; ///< fitToWindow was deferred because width was 0
+    int m_defaultResolution = 40;
 };
 
 } // namespace dstools

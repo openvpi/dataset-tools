@@ -240,6 +240,10 @@ bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
     return QWidget::eventFilter(watched, event);
 }
 
+void AudioVisualizerContainer::setDefaultResolution(int resolution) {
+    m_defaultResolution = std::clamp(resolution, 10, 400);
+}
+
 void AudioVisualizerContainer::fitToWindow() {
     int64_t totalSamples = m_viewport->totalSamples();
     if (totalSamples <= 0)
@@ -250,9 +254,8 @@ void AudioVisualizerContainer::fitToWindow() {
         return;
     }
     m_needsFitOnResize = false;
-    int fitResolution = static_cast<int>(totalSamples / width());
-    fitResolution = std::clamp(fitResolution, 10, 400);
-    m_viewport->setResolution(fitResolution);
+    // Use the page's configured default resolution (not computed from width)
+    m_viewport->setResolution(m_defaultResolution);
     m_viewport->setViewRange(0, m_viewport->totalDuration());
 }
 

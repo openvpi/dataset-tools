@@ -226,6 +226,7 @@ void PhonemeEditor::buildLayout() {
     mainLayout->addWidget(m_mainSplitter);
 
     m_container = new AudioVisualizerContainer(QStringLiteral("PhonemeEditor"), this);
+    m_container->setDefaultResolution(40); // ~1102 PPS at 44100Hz — fine detail for phoneme editing
     m_viewport = m_container->viewport();
     m_container->setPlayWidget(m_playWidget);
 
