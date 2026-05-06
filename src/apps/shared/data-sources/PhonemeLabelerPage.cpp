@@ -76,6 +76,9 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     m_faAction = new QAction(QStringLiteral("强制对齐当前切片"), this);
     connect(m_faAction, &QAction::triggered, this, &PhonemeLabelerPage::onRunFA);
 
+    // Add FA button to the editor toolbar
+    m_editor->toolbar()->addAction(m_faAction);
+
     static const dstools::SettingsKey<QString> kShortcutSave("Shortcuts/save", "Ctrl+S");
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
     static const dstools::SettingsKey<QString> kShortcutRedo("Shortcuts/redo", "Ctrl+Y");
