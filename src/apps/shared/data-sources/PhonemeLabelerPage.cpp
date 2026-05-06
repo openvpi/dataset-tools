@@ -27,6 +27,47 @@
 
 namespace dstools {
 
+// ---------------------------------------------------------------------------
+// Helper: filter out auto-added leading/trailing silence (SP/AP) phonemes
+// from HFA results, while preserving intentional mid-word silences.
+// ---------------------------------------------------------------------------
+static QList<Boundary> buildPhonemeBoundaries(const HFA::WordList &words, int &nextId) {
+    QList<Boundary> boundaries;
+    int id = nextId;
+
+    // First pass: collect all phoneme boundaries
+    for (const auto &word : words) {
+        for (const auto &phone : word.phones) {
+            Boundary b;
+            b.id = id++;
+            b.pos = secToUs(phone.start);
+            b.text = QString::fromStdString(phone.text);
+            boundaries.push_back(std::move(b));
+        }
+    }
+
+    // Remove leading auto-SP/AP (algorithmically added silence at head)
+    while (!boundaries.isEmpty()) {
+        const auto &first = boundaries.first();
+        if (first.text == QStringLiteral("SP") || first.text == QStringLiteral("AP"))
+            boundaries.removeFirst();
+        else
+            break;
+    }
+
+    // Remove trailing auto-SP/AP (algorithmically added silence at tail)
+    while (!boundaries.isEmpty()) {
+        const auto &last = boundaries.last();
+        if (last.text == QStringLiteral("SP") || last.text == QStringLiteral("AP"))
+            boundaries.removeLast();
+        else
+            break;
+    }
+
+    nextId = id;
+    return boundaries;
+}
+
 PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     : EditorPageBase("PhonemeLabeler", parent) {
     m_editor = new phonemelabeler::PhonemeEditor(this);
@@ -449,14 +490,9 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 phonemeLayer.name = QStringLiteral("phoneme");
                 phonemeLayer.type = QStringLiteral("interval");
                 int id = 1;
-                for (const auto &word : words) {
-                    for (const auto &phone : word.phones) {
-                        Boundary b;
-                        b.id = id++;
-                        b.pos = secToUs(phone.start);
-                        b.text = QString::fromStdString(phone.text);
-                        phonemeLayer.boundaries.push_back(std::move(b));
-                    }
+                {
+                    auto boundaries = buildPhonemeBoundaries(words, id);
+                    phonemeLayer.boundaries = std::move(boundaries);
                 }
                 if (!phonemeLayer.boundaries.empty()) {
                     Boundary endB;
@@ -605,14 +641,9 @@ void PhonemeLabelerPage::onBatchFA() {
                 phonemeLayer.name = QStringLiteral("phoneme");
                 phonemeLayer.type = QStringLiteral("interval");
                 int id = 1;
-                for (const auto &word : words) {
-                    for (const auto &phone : word.phones) {
-                        Boundary b;
-                        b.id = id++;
-                        b.pos = secToUs(phone.start);
-                        b.text = QString::fromStdString(phone.text);
-                        phonemeLayer.boundaries.push_back(std::move(b));
-                    }
+                {
+                    auto boundaries = buildPhonemeBoundaries(words, id);
+                    phonemeLayer.boundaries = std::move(boundaries);
                 }
                 if (!phonemeLayer.boundaries.empty()) {
                     Boundary endB;
