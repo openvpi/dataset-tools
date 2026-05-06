@@ -89,6 +89,12 @@ void PhonemeEditor::setBindingToleranceMs(double ms) {
     m_bindingManager->setToleranceMs(ms);
 }
 
+void PhonemeEditor::setSnapEnabled(bool enabled) {
+    m_snapEnabled = enabled;
+    if (m_actSnapToggle)
+        m_actSnapToggle->setChecked(enabled);
+}
+
 void PhonemeEditor::setPixelsPerSecond(double pps) {
     m_viewport->setPixelsPerSecond(pps);
     emit zoomChanged(pps);
@@ -224,6 +230,13 @@ void PhonemeEditor::buildToolbar() {
     m_actBindingToggle->setCheckable(true);
     m_actBindingToggle->setChecked(m_bindingManager->isEnabled());
     m_actBindingToggle->setToolTip(tr("绑定：拖动边界时同步其他层相同位置的边界"));
+
+    m_actSnapToggle = m_toolbar->addAction(tr("Snap"), this, [this]() {
+        setSnapEnabled(!m_snapEnabled);
+    });
+    m_actSnapToggle->setCheckable(true);
+    m_actSnapToggle->setChecked(m_snapEnabled);
+    m_actSnapToggle->setToolTip(tr("吸附：释放边界时自动对齐到附近其他层的边界"));
 
     m_toolbar->addSeparator();
 }

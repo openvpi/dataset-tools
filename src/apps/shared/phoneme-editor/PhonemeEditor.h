@@ -135,11 +135,16 @@ namespace dstools {
 
             // --- Configuration ---
             void setBindingEnabled(bool enabled);
+            void setSnapEnabled(bool enabled);
             void setBindingToleranceMs(double ms);
             void setPixelsPerSecond(double pps);
             void setPowerVisible(bool visible);
             void setSpectrogramVisible(bool visible);
             void setSpectrogramColorStyle(const QString &styleName);
+
+            [[nodiscard]] bool isSnapEnabled() const { return m_snapEnabled; }
+            /// Snap threshold in pixels. Boundaries within this distance snap on release.
+            static constexpr int kSnapThresholdPx = 5;
 
             QByteArray saveSplitterState() const;
             void restoreSplitterState(const QByteArray &state);
@@ -199,6 +204,8 @@ namespace dstools {
             QAction *m_actPlayPause = nullptr;
             QAction *m_actStop = nullptr;
             QAction *m_actBindingToggle = nullptr;
+            QAction *m_actSnapToggle = nullptr;
+            bool m_snapEnabled = true;
 
             // Helpers
             void buildActions();
