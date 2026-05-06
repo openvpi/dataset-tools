@@ -10,7 +10,6 @@
 #include <dstools/ViewportController.h>
 #include <dstools/TimePos.h>
 #include "IBoundaryModel.h"
-#include "BoundaryBindingManager.h"
 
 #include <dstools/PlayWidget.h>
 
@@ -23,6 +22,8 @@ namespace phonemelabeler {
 
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
+
+class BoundaryDragController;
 
 /// @brief Renders audio waveform with min/max caching, playback cursor, boundary overlay,
 ///        and drag-based boundary editing.
@@ -49,8 +50,8 @@ public:
     /// @param model Boundary model (IBoundaryModel implementation).
     void setBoundaryModel(IBoundaryModel *model);
 
-    /// @brief Sets the boundary binding manager.
-    void setBindingManager(BoundaryBindingManager *mgr) { m_bindingMgr = mgr; }
+    /// @brief Sets the drag controller for boundary dragging.
+    void setDragController(BoundaryDragController *ctrl) { m_dragController = ctrl; }
 
     /// @brief Sets the undo stack for boundary edit commands.
     void setUndoStack(QUndoStack *stack) { m_undoStack = stack; }
@@ -103,9 +104,6 @@ private:
     void rebuildMinMaxCache();                           ///< Rebuilds the min/max sample cache.
 
     [[nodiscard]] int hitTestBoundary(int x) const;     ///< Returns boundary index at x, or -1.
-    void startBoundaryDrag(int boundaryIndex, TimePos time);   ///< Begins boundary drag.
-    void updateBoundaryDrag(TimePos currentTime);              ///< Updates drag position.
-    void endBoundaryDrag(TimePos finalTime);                   ///< Commits boundary drag.
 
     /// @brief Finds the boundaries surrounding a time position.
     /// @param timeSec Time position in seconds.
@@ -118,7 +116,7 @@ private:
 
     ViewportController *m_viewport = nullptr;           ///< Viewport controller.
     IBoundaryModel *m_boundaryModel = nullptr;          ///< Boundary model.
-    BoundaryBindingManager *m_bindingMgr = nullptr;     ///< Binding manager.
+    BoundaryDragController *m_dragController = nullptr; ///< Drag controller.
     QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
     dstools::widgets::PlayWidget *m_playWidget = nullptr; ///< Play widget for audio playback.
 
@@ -143,13 +141,6 @@ private:
     bool m_dragging = false;                            ///< Whether viewport is being scrolled.
     QPoint m_dragStartPos;                              ///< Mouse position at drag start.
     double m_dragStartTime = 0.0;                       ///< View start time at drag start.
-
-    bool m_boundaryDragging = false;                    ///< Whether a boundary is being dragged.
-    int m_draggedBoundary = -1;                         ///< Index of dragged boundary.
-    int m_draggedTier = -1;                             ///< Tier of dragged boundary.
-    TimePos m_boundaryDragStartTime = 0;               ///< Original time of dragged boundary.
-    std::vector<AlignedBoundary> m_dragAligned;          ///< Aligned boundaries during drag.
-    std::vector<TimePos> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
 
     static constexpr int kBoundaryHitWidth = 8;         ///< Hit-test width in pixels.
     int m_hoveredBoundary = -1;                         ///< Hovered boundary index, or -1.

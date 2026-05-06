@@ -22,13 +22,9 @@ PhonemeEditor::PhonemeEditor(QWidget *parent)
     : QWidget(parent),
       m_document(new TextGridDocument(this)),
       m_undoStack(new QUndoStack(this)),
-      m_bindingManager(new BoundaryBindingManager(m_document, this)),
       m_playWidget(new dstools::widgets::PlayWidget()),
       m_renderer(new WaveformRenderer(this))
 {
-    // Default: binding enabled (boundaries across tiers snap together)
-    m_bindingManager->setEnabled(true);
-
     buildActions();
     buildToolbar();
     buildLayout();
@@ -36,6 +32,10 @@ PhonemeEditor::PhonemeEditor(QWidget *parent)
 }
 
 // ---- Configuration ----
+
+BoundaryDragController *PhonemeEditor::dragController() const {
+    return m_container ? m_container->dragController() : nullptr;
+}
 
 void PhonemeEditor::setDocument(TextGridDocument *doc) {
     Q_UNUSED(doc)
@@ -78,18 +78,22 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
 }
 
 void PhonemeEditor::setBindingEnabled(bool enabled) {
-    m_bindingManager->setEnabled(enabled);
+    auto *ctrl = m_container->dragController();
+    if (ctrl) ctrl->setBindingEnabled(enabled);
     m_actToggleBinding->setChecked(enabled);
     if (m_actBindingToggle) m_actBindingToggle->setChecked(enabled);
     emit bindingChanged(enabled);
 }
 
 void PhonemeEditor::setBindingToleranceMs(double ms) {
-    m_bindingManager->setToleranceMs(ms);
+    auto *ctrl = m_container->dragController();
+    if (ctrl) ctrl->setToleranceUs(msToUs(ms));
 }
 
 void PhonemeEditor::setSnapEnabled(bool enabled) {
     m_snapEnabled = enabled;
+    auto *ctrl = m_container->dragController();
+    if (ctrl) ctrl->setSnapEnabled(enabled);
     if (m_actSnapToggle)
         m_actSnapToggle->setChecked(enabled);
 }
@@ -171,7 +175,8 @@ void PhonemeEditor::buildActions() {
     m_actToggleBinding->setCheckable(true);
     m_actToggleBinding->setChecked(true); // default enabled
     connect(m_actToggleBinding, &QAction::triggered, this, [this]() {
-        bool enabled = !m_bindingManager->isEnabled();
+        auto *ctrl = m_container->dragController();
+        bool enabled = ctrl ? !ctrl->isBindingEnabled() : false;
         setBindingEnabled(enabled);
     });
 
@@ -228,11 +233,12 @@ void PhonemeEditor::buildToolbar() {
     m_toolbar->addSeparator();
 
     m_actBindingToggle = m_toolbar->addAction(tr("Bind"), this, [this]() {
-        bool enabled = !m_bindingManager->isEnabled();
+        auto *ctrl = m_container->dragController();
+        bool enabled = ctrl ? !ctrl->isBindingEnabled() : false;
         setBindingEnabled(enabled);
     });
     m_actBindingToggle->setCheckable(true);
-    m_actBindingToggle->setChecked(m_bindingManager->isEnabled());
+    m_actBindingToggle->setChecked(true);
     m_actBindingToggle->setToolTip(tr("绑定：拖动边界时同步其他层相同位置的边界"));
 
     m_actSnapToggle = m_toolbar->addAction(tr("Snap"), this, [this]() {
@@ -264,22 +270,22 @@ void PhonemeEditor::buildLayout() {
     m_tierLabel->setViewportController(m_viewport);
     m_container->setTierLabelArea(m_tierLabel);
 
-    m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_bindingManager, m_container);
+    m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_container->dragController(), m_container);
     m_container->setEditorWidget(m_tierEditWidget);
 
     m_waveformWidget = new WaveformWidget(m_viewport, m_container);
-    m_waveformWidget->setBindingManager(m_bindingManager);
+    m_waveformWidget->setDragController(m_container->dragController());
     m_waveformWidget->setUndoStack(m_undoStack);
     m_waveformWidget->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 1, 1, 2.0);
 
     m_powerWidget = new PowerWidget(m_viewport, m_container);
-    m_powerWidget->setBindingManager(m_bindingManager);
+    m_powerWidget->setDragController(m_container->dragController());
     m_powerWidget->setUndoStack(m_undoStack);
     m_container->addChart(QStringLiteral("power"), m_powerWidget, 2, 1, 3.0);
 
     m_spectrogramWidget = new SpectrogramWidget(m_viewport, m_container);
-    m_spectrogramWidget->setBindingManager(m_bindingManager);
+    m_spectrogramWidget->setDragController(m_container->dragController());
     m_spectrogramWidget->setUndoStack(m_undoStack);
     m_spectrogramWidget->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 3, 1, 5.0);
@@ -444,23 +450,16 @@ void PhonemeEditor::connectSignals() {
     connect(m_spectrogramWidget, &SpectrogramWidget::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
 
-    // Drag started
-    auto onDragStarted = [this](int, int boundaryIndex) {
+    // Drag started/finished → boundary overlay highlight
+    auto *dragCtrl = m_container->dragController();
+    connect(dragCtrl, &BoundaryDragController::dragStarted, this, [this](int, int boundaryIndex) {
         if (auto *bo = m_container->boundaryOverlay())
             bo->setDraggedBoundary(boundaryIndex);
-    };
-    connect(m_waveformWidget, &WaveformWidget::boundaryDragStarted, this, onDragStarted);
-    connect(m_powerWidget, &PowerWidget::boundaryDragStarted, this, onDragStarted);
-    connect(m_spectrogramWidget, &SpectrogramWidget::boundaryDragStarted, this, onDragStarted);
-
-    // Drag finished
-    auto onDragFinished = [this](int, int, TimePos) {
+    });
+    connect(dragCtrl, &BoundaryDragController::dragFinished, this, [this](int, int, TimePos) {
         if (auto *bo = m_container->boundaryOverlay())
             bo->setDraggedBoundary(-1);
-    };
-    connect(m_waveformWidget, &WaveformWidget::boundaryDragFinished, this, onDragFinished);
-    connect(m_powerWidget, &PowerWidget::boundaryDragFinished, this, onDragFinished);
-    connect(m_spectrogramWidget, &SpectrogramWidget::boundaryDragFinished, this, onDragFinished);
+    });
 }
 
 void PhonemeEditor::updateAllBoundaryOverlays() {

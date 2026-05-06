@@ -2,7 +2,7 @@
 #include "IntervalTierView.h"
 #include "TextGridDocument.h"
 #include <dstools/ViewportController.h>
-#include "BoundaryBindingManager.h"
+#include "BoundaryDragController.h"
 
 #include <QVBoxLayout>
 #include <QScrollBar>
@@ -12,13 +12,13 @@ namespace dstools {
 namespace phonemelabeler {
 
 TierEditWidget::TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack,
-                               ViewportController *viewport, BoundaryBindingManager *bindingMgr,
+                               ViewportController *viewport, BoundaryDragController *dragController,
                                QWidget *parent)
     : QWidget(parent),
     m_document(doc),
     m_undoStack(undoStack),
     m_viewport(viewport),
-    m_bindingManager(bindingMgr),
+    m_dragController(dragController),
     m_layout(new QVBoxLayout(this))
 {
     m_layout->setContentsMargins(0, 0, 0, 0);
@@ -67,7 +67,7 @@ void TierEditWidget::rebuildTierViews() {
     for (int i = 0; i < count; ++i) {
         if (m_document->isIntervalTier(i)) {
             auto *view = new IntervalTierView(i, m_document, m_undoStack,
-                                              m_viewport, m_bindingManager, this);
+                                              m_viewport, m_dragController, this);
             view->setViewport({m_viewStart, m_viewEnd,
                                m_viewport ? m_viewport->resolution() : 40,
                                m_viewport ? m_viewport->sampleRate() : 44100});

@@ -1,6 +1,6 @@
 #include "IntervalTierView.h"
 #include "commands/BoundaryCommands.h"
-#include "BoundaryBindingManager.h"
+#include "BoundaryDragController.h"
 
 #include <QPainter>
 #include <QKeyEvent>
@@ -18,14 +18,14 @@ namespace phonemelabeler {
 
 IntervalTierView::IntervalTierView(int tierIndex, TextGridDocument *doc,
                                      QUndoStack *undoStack, ViewportController *viewport,
-                                     BoundaryBindingManager *bindingMgr,
+                                     BoundaryDragController *dragController,
                                      QWidget *parent)
     : QWidget(parent),
     m_tierIndex(tierIndex),
     m_doc(doc),
     m_undoStack(undoStack),
     m_viewport(viewport),
-    m_bindingMgr(bindingMgr)
+    m_dragController(dragController)
 {
     setMouseTracking(true);
     setMinimumHeight(40);
@@ -62,7 +62,7 @@ void IntervalTierView::paintEvent(QPaintEvent * /*event*/) {
     drawSelection(painter);
 
     // Draw binding lines if dragging with binding enabled
-    if (m_state == State::Dragging && m_bindingMgr && m_bindingMgr->isEnabled()) {
+    if (m_dragController && m_dragController->isDragging() && m_dragController->isBindingEnabled()) {
         drawBindingLines(painter);
     }
 }
@@ -96,7 +96,9 @@ void IntervalTierView::drawBoundaries(QPainter &painter) {
         int bx = timeToX(usToSec(m_doc->boundaryTime(m_tierIndex, b)));
 
         // Choose pen based on state
-        if (m_state == State::Dragging && b == m_draggedBoundary) {
+        if (m_dragController && m_dragController->isDragging()
+            && m_dragController->draggedTier() == m_tierIndex
+            && b == m_dragController->draggedBoundary()) {
             painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
         } else if (b == m_hoveredBoundary && m_hoveredBoundary >= 0) {
             painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
@@ -129,13 +131,8 @@ void IntervalTierView::drawLabels(QPainter &painter) {
 }
 
 void IntervalTierView::drawBindingLines(QPainter &painter) {
-    if (m_dragAligned.empty()) return;
-
-    painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryBindingLine, 1, Qt::DashLine));
-
-    // Draw vertical lines at aligned boundary positions in other tiers
-    // The parent widget (TierEditWidget) will handle cross-tier drawing
-    // by coordinating with other IntervalTierViews
+    Q_UNUSED(painter)
+    // TODO: draw cross-tier binding indicator lines during drag
 }
 
 int IntervalTierView::hitTestBoundary(int x) const {
@@ -180,8 +177,9 @@ void IntervalTierView::mousePressEvent(QMouseEvent *event) {
 
     if (event->button() == Qt::LeftButton) {
         int boundaryIdx = hitTestBoundary(event->pos().x());
-        if (boundaryIdx >= 0) {
-            startDrag(boundaryIdx, m_doc->boundaryTime(m_tierIndex, boundaryIdx));
+        if (boundaryIdx >= 0 && m_dragController) {
+            m_dragController->startDrag(m_tierIndex, boundaryIdx, m_doc);
+            setCursor(Qt::SizeHorCursor);
         }
     } else if (event->button() == Qt::RightButton) {
         // Context menu
@@ -213,9 +211,10 @@ void IntervalTierView::mousePressEvent(QMouseEvent *event) {
 }
 
 void IntervalTierView::mouseMoveEvent(QMouseEvent *event) {
-    if (m_state == State::Dragging) {
+    if (m_dragController && m_dragController->isDragging()) {
         TimePos currentTime = secToUs(xToTime(event->pos().x()));
-        updateDrag(currentTime);
+        m_dragController->updateDrag(currentTime);
+        update();
     } else {
         // Hover detection
         int boundaryIdx = hitTestBoundary(event->pos().x());
@@ -267,84 +266,12 @@ void IntervalTierView::leaveEvent(QEvent *event) {
     QWidget::leaveEvent(event);
 }
 
-void IntervalTierView::startDrag(int boundaryIndex, TimePos startTime) {
-    m_state = State::Dragging;
-    m_draggedBoundary = boundaryIndex;
-    m_dragStartTime = startTime;
-
-    // Get aligned boundaries if binding is enabled
-    if (m_bindingMgr && m_bindingMgr->isEnabled()) {
-        m_dragAligned = m_bindingMgr->findAlignedBoundaries(m_tierIndex, boundaryIndex);
-        m_dragAlignedStartTimes.clear();
-        for (const auto &ab : m_dragAligned) {
-            m_dragAlignedStartTimes.push_back(ab.time);
-        }
-    } else {
-        m_dragAligned.clear();
-        m_dragAlignedStartTimes.clear();
-    }
-
-    setCursor(Qt::SizeHorCursor);
-}
-
-void IntervalTierView::updateDrag(TimePos currentTime) {
-    if (m_state != State::Dragging) return;
-
-    TimePos clampedTime = m_doc->clampBoundaryTime(m_tierIndex, m_draggedBoundary, currentTime);
-    TimePos snappedTime = m_doc->snapToLowerTier(m_tierIndex, clampedTime, secToUs(0.01));
-
-    m_doc->moveBoundary(m_tierIndex, m_draggedBoundary, snappedTime);
-
-    TimePos delta = snappedTime - m_dragStartTime;
-    for (size_t i = 0; i < m_dragAligned.size(); ++i) {
-        TimePos alignedTime = m_dragAlignedStartTimes[i] + delta;
-        TimePos alignedClamped = m_doc->clampBoundaryTime(
-            m_dragAligned[i].tierIndex, m_dragAligned[i].boundaryIndex, alignedTime);
-        m_doc->moveBoundary(m_dragAligned[i].tierIndex,
-                            m_dragAligned[i].boundaryIndex,
-                            alignedClamped);
-    }
-
-    update();
-}
-
-void IntervalTierView::endDrag(TimePos finalTime) {
-    if (m_state != State::Dragging) return;
-
-    // Restore to start state, then create undo command
-    m_doc->moveBoundary(m_tierIndex, m_draggedBoundary, m_dragStartTime);
-    for (size_t i = 0; i < m_dragAligned.size(); ++i) {
-        m_doc->moveBoundary(m_dragAligned[i].tierIndex,
-                            m_dragAligned[i].boundaryIndex,
-                            m_dragAlignedStartTimes[i]);
-    }
-
-    // Create and push undo command
-    if (m_undoStack) {
-        if (!m_dragAligned.empty() && m_bindingMgr) {
-            // Use linked move command
-            auto *cmd = m_bindingMgr->createLinkedMoveCommand(
-                m_tierIndex, m_draggedBoundary, finalTime, m_doc);
-            m_undoStack->push(cmd);
-        } else {
-            m_undoStack->push(new MoveBoundaryCommand(
-                m_doc, m_tierIndex, m_draggedBoundary,
-                m_dragStartTime, finalTime));
-        }
-    }
-
-    m_state = State::Idle;
-    m_draggedBoundary = -1;
-    m_dragAligned.clear();
-    m_dragAlignedStartTimes.clear();
-    unsetCursor();
-    update();
-}
-
 void IntervalTierView::mouseReleaseEvent(QMouseEvent *event) {
-    if (event->button() == Qt::LeftButton && m_state == State::Dragging) {
+    if (event->button() == Qt::LeftButton && m_dragController && m_dragController->isDragging()) {
         TimePos finalTime = secToUs(xToTime(event->pos().x()));
-        endDrag(finalTime);
+        m_dragController->endDrag(finalTime, m_undoStack);
+        unsetCursor();
+        update();
     }
     QWidget::mouseReleaseEvent(event);
 }

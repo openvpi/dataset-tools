@@ -1,6 +1,6 @@
 #include "SpectrogramWidget.h"
 #include "IBoundaryModel.h"
-#include "BoundaryBindingManager.h"
+#include "BoundaryDragController.h"
 #include "commands/BoundaryCommands.h"
 
 #include <QPainter>
@@ -338,7 +338,7 @@ void SpectrogramWidget::drawBoundaryOverlay(QPainter &painter) {
         int x = timeToX(t);
         if (x < 0 || x > width()) continue;
 
-        if (m_boundaryDragging && b == m_draggedBoundary) {
+        if (m_dragController && m_dragController->isDragging() && b == m_dragController->draggedBoundary()) {
             painter.setPen(QPen(QColor(255, 200, 100), 2));
         } else if (b == m_hoveredBoundary) {
             painter.setPen(QPen(QColor(255, 255, 255), 2));
@@ -375,100 +375,13 @@ int SpectrogramWidget::hitTestBoundary(int x) const {
     return bestIdx;
 }
 
-void SpectrogramWidget::startBoundaryDrag(int boundaryIndex, TimePos time) {
-    if (!m_boundaryModel) return;
-    m_boundaryDragging = true;
-    m_draggedBoundary = boundaryIndex;
-    m_draggedTier = m_boundaryModel->activeTierIndex();
-    m_boundaryDragStartTime = time;
-
-    if (m_bindingMgr && m_bindingMgr->isEnabled()) {
-        m_dragAligned = m_bindingMgr->findAlignedBoundaries(m_draggedTier, boundaryIndex);
-        m_dragAlignedStartTimes.clear();
-        for (const auto &ab : m_dragAligned) {
-            m_dragAlignedStartTimes.push_back(ab.time);
-        }
-    } else {
-        m_dragAligned.clear();
-        m_dragAlignedStartTimes.clear();
-    }
-
-    setCursor(Qt::SizeHorCursor);
-    emit boundaryDragStarted(m_draggedTier, boundaryIndex);
-}
-
-void SpectrogramWidget::updateBoundaryDrag(TimePos currentTime) {
-    if (!m_boundaryDragging || !m_boundaryModel) return;
-
-    TimePos clampedTime = m_boundaryModel->clampBoundaryTime(m_draggedTier, m_draggedBoundary, currentTime);
-    TimePos snappedTime = m_boundaryModel->snapToLowerTier(m_draggedTier, clampedTime, secToUs(0.01));
-
-    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, snappedTime);
-
-    TimePos delta = snappedTime - m_boundaryDragStartTime;
-    for (size_t i = 0; i < m_dragAligned.size(); ++i) {
-        TimePos alignedTime = m_dragAlignedStartTimes[i] + delta;
-        TimePos alignedClamped = m_boundaryModel->clampBoundaryTime(
-            m_dragAligned[i].tierIndex, m_dragAligned[i].boundaryIndex, alignedTime);
-        m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
-                                 m_dragAligned[i].boundaryIndex,
-                                 alignedClamped);
-    }
-
-    emit boundaryDragging(m_draggedTier, m_draggedBoundary, snappedTime);
-}
-
-void SpectrogramWidget::endBoundaryDrag(TimePos finalTime) {
-    if (!m_boundaryDragging || !m_boundaryModel) return;
-
-    int draggedTier = m_draggedTier;
-    int draggedBoundary = m_draggedBoundary;
-
-    m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, m_boundaryDragStartTime);
-    for (size_t i = 0; i < m_dragAligned.size(); ++i) {
-        m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
-                                 m_dragAligned[i].boundaryIndex,
-                                 m_dragAlignedStartTimes[i]);
-    }
-
-    if (m_undoStack) {
-        if (!m_dragAligned.empty() && m_bindingMgr) {
-            auto *cmd = m_bindingMgr->createLinkedMoveCommand(
-                m_draggedTier, m_draggedBoundary, finalTime, m_boundaryModel);
-            m_undoStack->push(cmd);
-        } else {
-            m_undoStack->push(new MoveBoundaryCommand(
-                m_boundaryModel, m_draggedTier, m_draggedBoundary,
-                m_boundaryDragStartTime, finalTime));
-        }
-    } else {
-        // No undo stack: apply the move directly
-        m_boundaryModel->moveBoundary(m_draggedTier, m_draggedBoundary, finalTime);
-        TimePos delta = finalTime - m_boundaryDragStartTime;
-        for (size_t i = 0; i < m_dragAligned.size(); ++i) {
-            m_boundaryModel->moveBoundary(m_dragAligned[i].tierIndex,
-                                     m_dragAligned[i].boundaryIndex,
-                                     m_dragAlignedStartTimes[i] + delta);
-        }
-    }
-
-    m_boundaryDragging = false;
-    m_draggedBoundary = -1;
-    m_draggedTier = -1;
-    m_dragAligned.clear();
-    m_dragAlignedStartTimes.clear();
-    unsetCursor();
-    emit boundaryDragFinished(draggedTier, draggedBoundary, finalTime);
-    update();
-}
-
 void SpectrogramWidget::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         int boundaryIdx = hitTestBoundary(event->pos().x());
-        if (boundaryIdx >= 0 && m_boundaryModel) {
+        if (boundaryIdx >= 0 && m_boundaryModel && m_dragController) {
             int tier = m_boundaryModel->activeTierIndex();
-            TimePos t = m_boundaryModel->boundaryTime(tier, boundaryIdx);
-            startBoundaryDrag(boundaryIdx, t);
+            m_dragController->startDrag(tier, boundaryIdx, m_boundaryModel);
+            setCursor(Qt::SizeHorCursor);
         } else {
             m_dragging = true;
             m_dragStartPos = event->pos();
@@ -479,9 +392,9 @@ void SpectrogramWidget::mousePressEvent(QMouseEvent *event) {
 }
 
 void SpectrogramWidget::mouseMoveEvent(QMouseEvent *event) {
-    if (m_boundaryDragging) {
+    if (m_dragController && m_dragController->isDragging()) {
         TimePos currentTime = secToUs(xToTime(event->pos().x()));
-        updateBoundaryDrag(currentTime);
+        m_dragController->updateDrag(currentTime);
     } else if (m_dragging) {
         double deltaSec = xToTime(event->pos().x()) - m_dragStartTime;
         if (m_viewport) {
@@ -501,9 +414,10 @@ void SpectrogramWidget::mouseMoveEvent(QMouseEvent *event) {
 
 void SpectrogramWidget::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
-        if (m_boundaryDragging) {
+        if (m_dragController && m_dragController->isDragging()) {
             TimePos finalTime = secToUs(xToTime(event->pos().x()));
-            endBoundaryDrag(finalTime);
+            m_dragController->endDrag(finalTime, m_undoStack);
+            unsetCursor();
         }
         m_dragging = false;
     }

@@ -10,7 +10,6 @@
 #include <dstools/ViewportController.h>
 #include <dstools/TimePos.h>
 #include "TextGridDocument.h"
-#include "BoundaryBindingManager.h"
 
 class QPainter;
 class QUndoStack;
@@ -20,6 +19,8 @@ namespace phonemelabeler {
 
 using dstools::widgets::ViewportController;
 using dstools::widgets::ViewportState;
+
+class BoundaryDragController;
 
 /// @brief Renders a single TextGrid interval tier with boundary dragging,
 ///        interval selection, keyboard navigation, and binding-aware multi-tier editing.
@@ -36,7 +37,7 @@ public:
     /// @param parent Optional parent widget.
     explicit IntervalTierView(int tierIndex, TextGridDocument *doc,
                                QUndoStack *undoStack, ViewportController *viewport,
-                               BoundaryBindingManager *bindingMgr,
+                               BoundaryDragController *dragController,
                                QWidget *parent = nullptr);
     ~IntervalTierView() override = default;
 
@@ -109,29 +110,17 @@ private:
     void drawBindingLines(QPainter &painter);           ///< Draws cross-tier binding indicators.
     void drawSelection(QPainter &painter);              ///< Draws selection highlight.
 
-    void startDrag(int boundaryIndex, TimePos startTime);///< Begins boundary drag.
-    void updateDrag(TimePos currentTime);                ///< Updates drag position.
-    void endDrag(TimePos finalTime);                     ///< Commits boundary drag.
-
     int m_tierIndex;                                    ///< Tier index in the document.
     TextGridDocument *m_doc = nullptr;                  ///< Associated document.
     QUndoStack *m_undoStack = nullptr;                  ///< Undo stack for commands.
     ViewportController *m_viewport = nullptr;           ///< Viewport controller.
-    BoundaryBindingManager *m_bindingMgr = nullptr;     ///< Binding manager.
+    BoundaryDragController *m_dragController = nullptr; ///< Drag controller.
 
     double m_viewStart = 0.0;                           ///< Visible range start in seconds.
     double m_viewEnd = 10.0;                            ///< Visible range end in seconds.
 
-    /// @brief Interaction state machine.
-    enum class State { Idle, Hovering, Dragging };
-    State m_state = State::Idle;                        ///< Current interaction state.
     int m_hoveredBoundary = -1;                         ///< Hovered boundary index, or -1.
-    int m_draggedBoundary = -1;                         ///< Dragged boundary index, or -1.
     int m_selectedInterval = -1;                        ///< Selected interval for keyboard nav.
-
-    TimePos m_dragStartTime = 0;                         ///< Time at drag start.
-    std::vector<AlignedBoundary> m_dragAligned;          ///< Aligned boundaries during drag.
-    std::vector<TimePos> m_dragAlignedStartTimes;         ///< Original times of aligned boundaries.
 
     static constexpr int kBoundaryHitWidth = 6;         ///< Hit-test width in pixels.
     bool m_active = false;                              ///< Whether this tier is active.

@@ -2,6 +2,7 @@
 #include "MiniMapScrollBar.h"
 #include "TierLabelArea.h"
 
+#include <ui/BoundaryDragController.h>
 #include <ui/BoundaryOverlayWidget.h>
 #include <ui/IBoundaryModel.h>
 
@@ -24,6 +25,7 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString &settingsAppNam
                                                    QWidget *parent)
     : QWidget(parent), m_settings(settingsAppName) {
     m_viewport = new ViewportController(this);
+    m_dragController = new BoundaryDragController(this);
 
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -116,6 +118,10 @@ ViewportController *AudioVisualizerContainer::viewport() const {
 
 IBoundaryModel *AudioVisualizerContainer::boundaryModel() const {
     return m_boundaryModel;
+}
+
+BoundaryDragController *AudioVisualizerContainer::dragController() const {
+    return m_dragController;
 }
 
 TimeRulerWidget *AudioVisualizerContainer::timeRuler() const {

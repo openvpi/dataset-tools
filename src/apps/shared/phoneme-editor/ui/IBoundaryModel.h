@@ -60,13 +60,12 @@ public:
         return proposedTime;
     }
 
-    /// @brief Snap a boundary time to the nearest lower-tier boundary.
-    /// Used for tier hierarchy constraint (e.g., words must align with phones).
+    /// @brief Snap a boundary time to the nearest boundary in any other tier.
     /// @param tierIndex The tier index of the boundary being dragged.
     /// @param proposedTime The proposed new time (in microseconds).
     /// @param snapThreshold Maximum distance (in microseconds) for snapping.
     /// @return The snapped time, or the original time if no snap target found.
-    [[nodiscard]] virtual TimePos snapToLowerTier(int /*tierIndex*/, TimePos proposedTime, TimePos /*snapThreshold*/) const {
+    [[nodiscard]] virtual TimePos snapToNearestBoundary(int /*tierIndex*/, TimePos proposedTime, TimePos /*snapThreshold*/) const {
         return proposedTime;
     }
 };

@@ -27,10 +27,12 @@ namespace dstools {
 namespace phonemelabeler {
 class IBoundaryModel;
 class BoundaryOverlayWidget;
+class BoundaryDragController;
 } // namespace phonemelabeler
 
 using phonemelabeler::IBoundaryModel;
 using phonemelabeler::BoundaryOverlayWidget;
+using phonemelabeler::BoundaryDragController;
 using TimeRulerWidget = dsfw::widgets::TimeRulerWidget;
 
 class TierLabelArea;
@@ -54,6 +56,7 @@ public:
 
     widgets::ViewportController *viewport() const;
     IBoundaryModel *boundaryModel() const;
+    BoundaryDragController *dragController() const;
     TimeRulerWidget *timeRuler() const;
     BoundaryOverlayWidget *boundaryOverlay() const;
     TierLabelArea *tierLabelArea() const;
@@ -125,6 +128,7 @@ private:
 
     widgets::ViewportController *m_viewport = nullptr;
     IBoundaryModel *m_boundaryModel = nullptr;
+    BoundaryDragController *m_dragController = nullptr;
     BoundaryOverlayWidget *m_boundaryOverlay = nullptr;
     TimeRulerWidget *m_timeRuler = nullptr;
     TierLabelArea *m_tierLabelArea = nullptr;

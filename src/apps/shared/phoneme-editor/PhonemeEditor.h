@@ -15,7 +15,7 @@
 #include <dstools/PlayWidget.h>
 #include <dstools/ViewportController.h>
 
-#include "ui/BoundaryBindingManager.h"
+#include "ui/BoundaryDragController.h"
 #include "ui/BoundaryOverlayWidget.h"
 #include "ui/EntryListPanel.h"
 #include "ui/PowerWidget.h"
@@ -79,10 +79,8 @@ namespace dstools {
                 return m_toolbar;
             }
 
-            /// Access the boundary binding manager.
-            [[nodiscard]] BoundaryBindingManager *bindingManager() const {
-                return m_bindingManager;
-            }
+            /// Access the boundary drag controller.
+            [[nodiscard]] BoundaryDragController *dragController() const;
 
             /// Access the entry list panel.
             [[nodiscard]] EntryListPanel *entryListPanel() const {
@@ -171,7 +169,6 @@ namespace dstools {
             TextGridDocument *m_document = nullptr;
             QUndoStack *m_undoStack = nullptr;
             ViewportController *m_viewport = nullptr;
-            BoundaryBindingManager *m_bindingManager = nullptr;
 
             // Services
             dstools::widgets::PlayWidget *m_playWidget = nullptr;

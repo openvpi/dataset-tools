@@ -14,7 +14,6 @@ namespace phonemelabeler {
 
 class TextGridDocument;
 class IBoundaryModel;
-struct AlignedBoundary;
 
 // ─── MoveBoundaryCommand ──────────────────────────────────────────────────────
 
@@ -109,17 +108,6 @@ private:
     int m_tierIndex;
     int m_boundaryIndex;
     TimePos m_savedTime;
-};
-
-// ─── LinkedMoveBoundaryCommand ────────────────────────────────────────────────
-
-class LinkedMoveBoundaryCommand : public QUndoCommand {
-public:
-    LinkedMoveBoundaryCommand(TextGridDocument *doc,
-                              int sourceTierIndex, int sourceBoundaryIndex,
-                              TimePos oldTime, TimePos newTime,
-                              const std::vector<AlignedBoundary> &aligned,
-                              QUndoCommand *parent = nullptr);
 };
 
 } // namespace phonemelabeler

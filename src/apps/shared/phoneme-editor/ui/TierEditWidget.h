@@ -8,7 +8,6 @@
 #include <QVector>
 #include <QWidget>
 
-#include "BoundaryBindingManager.h"
 #include "TextGridDocument.h"
 #include <dstools/ViewportController.h>
 
@@ -20,6 +19,7 @@ namespace dstools {
         using dstools::widgets::ViewportController;
         using dstools::widgets::ViewportState;
 
+        class BoundaryDragController;
         class IntervalTierView;
 
         /// @brief Creates and lays out IntervalTierView widgets for each tier in the document,
@@ -35,7 +35,7 @@ namespace dstools {
             /// @param bindingMgr Boundary binding manager.
             /// @param parent Optional parent widget.
             TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack, ViewportController *viewport,
-                           BoundaryBindingManager *bindingMgr, QWidget *parent = nullptr);
+                           BoundaryDragController *dragController, QWidget *parent = nullptr);
             ~TierEditWidget() override;
 
             /// @brief Sets the TextGrid document and rebuilds tier views.
@@ -66,7 +66,7 @@ namespace dstools {
             TextGridDocument *m_document = nullptr;             ///< Associated document.
             QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
             ViewportController *m_viewport = nullptr;           ///< Viewport controller.
-            BoundaryBindingManager *m_bindingManager = nullptr; ///< Binding manager.
+            BoundaryDragController *m_dragController = nullptr; ///< Drag controller.
 
             QVBoxLayout *m_layout = nullptr;         ///< Layout for tier views.
             QVector<IntervalTierView *> m_tierViews; ///< List of tier view widgets.

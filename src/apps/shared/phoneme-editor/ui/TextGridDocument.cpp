@@ -344,8 +344,8 @@ TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, Ti
     return secToUs(clamped);
 }
 
-TimePos TextGridDocument::snapToLowerTier(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const {
-    if (tierIndex <= 0 || tierIndex >= tierCount()) return proposedTime;
+TimePos TextGridDocument::snapToNearestBoundary(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const {
+    if (tierCount() <= 1) return proposedTime;
 
     double proposedSec = usToSec(proposedTime);
     double thresholdSec = usToSec(snapThreshold);
@@ -353,7 +353,9 @@ TimePos TextGridDocument::snapToLowerTier(int tierIndex, TimePos proposedTime, T
     double bestDist = thresholdSec;
     double bestTime = proposedSec;
 
-    for (int t = 0; t < tierIndex; ++t) {
+    for (int t = 0; t < tierCount(); ++t) {
+        if (t == tierIndex) continue;
+
         const auto *tier = intervalTier(t);
         if (!tier) continue;
 

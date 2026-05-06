@@ -65,7 +65,7 @@ public:
     [[nodiscard]] bool supportsInsert() const override { return true; }
 
     [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const override;
-    [[nodiscard]] TimePos snapToLowerTier(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const override;
+    [[nodiscard]] TimePos snapToNearestBoundary(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const override;
 
     // ── Binding groups ──────────────────────────────────────────────────
 
