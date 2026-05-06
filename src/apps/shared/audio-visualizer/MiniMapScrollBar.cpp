@@ -38,8 +38,9 @@ void MiniMapScrollBar::setAudioData(const std::vector<float> &samples, int sampl
     m_sampleRate = sampleRate > 0 ? sampleRate : 44100;
     m_totalDuration = m_samples.empty() ? 0.0
                                         : static_cast<double>(m_samples.size()) / m_sampleRate;
-    if (m_viewport)
-        m_viewport->setTotalDuration(m_totalDuration);
+    // Note: do NOT call m_viewport->setTotalDuration() here — the caller
+    // (SlicerPage/PhonemeEditor) has already called setAudioParams() with the
+    // correct sample rate. Calling setTotalDuration() would reset it to default.
     rebuildPeakCache();
     update();
 }
