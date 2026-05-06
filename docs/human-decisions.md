@@ -467,6 +467,85 @@ BoundaryDragController
 
 ---
 
+## D-30：Slicer/Phoneme 统一视图组合系统（组件自由显隐+排序）
+
+**决策**：Slicer 和 Phoneme 不是"共享同一基类"——而是**使用完全相同的视图 UI 实例**，仅通过配置选择性地显示/隐藏不同组件。所有图表组件统一注册到 `AudioVisualizerContainer`，由配置决定哪些可见、以什么顺序排列。
+
+### 核心原则
+
+1. **同一套 UI，不是两套 UI**：SlicerPage 和 PhonemeEditor 使用完全相同的 `AudioVisualizerContainer` 实例化方式。差异仅在于：哪些 chart/widget 被注册、哪些默认可见、哪些默认隐藏。
+
+2. **所有组件平等注册**：所有支持的 chart 类型（Waveform、Spectrogram、Power、未来扩展的曲线图等）在 `AudioVisualizerContainer` 初始化时全部注册，但根据页面类型和用户配置选择性显示。
+
+3. **组件可见性由配置驱动**：每个 chart widget 的 `setVisible(bool)` 由配置控制。配置源优先级：页面级默认 > 用户设置覆盖。
+
+4. **组件顺序由配置驱动**：用户可在 Settings 页面通过拖拽列表自定义 chart 的显示顺序（持久化到用户配置目录，不存工程）。
+
+### 组件矩阵
+
+| 组件 | Slicer 默认 | Phoneme 默认 | 用户可配置 |
+|------|:-----------:|:------------:|:----------:|
+| MiniMapScrollBar | ✅ 显示 | ✅ 显示 | -（固定） |
+| TimeRuler | ✅ 显示 | ✅ 显示 | -（固定） |
+| TierLabelArea | ✅（SliceTierLabel） | ✅（PhonemeTextGridTierLabel） | -（固定） |
+| **WaveformWidget** | ✅ 显示 | ✅ 显示 | ✅ 显隐+顺序 |
+| **PowerWidget** | ❌ 隐藏 | ✅ 显示 | ✅ 显隐+顺序 |
+| **SpectrogramWidget** | ✅ 显示 | ✅ 显示 | ✅ 显隐+顺序 |
+| BoundaryOverlayWidget | ✅ 贯穿线 | ✅ 活跃层贯穿 | -（固定） |
+| TierEditWidget | ❌ | ✅ 显示 | -（页面决定） |
+
+> 注：`TierLabelArea` 实现不同（SliceTierLabel vs PhonemeTextGridTierLabel）是因为标签语义不同（单层编号 vs 多层 TextGrid），但位置和容器角色完全一致。这是合理差异，不作统一。
+
+### Settings 页面设计
+
+在 Settings 页面新增一个 **"视图布局"** 区域：
+
+```
+┌─────────────────────────────────────────────┐
+│  视图布局                                    │
+│                                             │
+│  ☑ 波形图          [═══ 拖拽排序 ═══]       │
+│  ☑ Power 图        [═══ 拖拽排序 ═══]       │
+│  ☑ Mel 频谱图      [═══ 拖拽排序 ═══]       │
+│                                             │
+│  [恢复默认]                                 │
+└─────────────────────────────────────────────┘
+```
+
+- 每个 chart 一行，包含：**Checkbox**（显隐控制）+ **Label**（chart 名称）+ 拖拽手柄（排序）
+- 使用 `QListWidget` + 自定义 item widget（checkbox + drag handle）
+- 排序结果即时保存到 `AppSettings`，通过 `chartOrderChanged` 信号通知所有容器
+- "恢复默认"按钮清除用户覆盖，回到页面默认配置
+
+### 持久化
+
+| Key | 位置 | 格式 |
+|-----|------|------|
+| `ViewLayout/chartOrder` | AppSettings | `"waveform,spectrogram,power"` |
+| `ViewLayout/chartVisible` | AppSettings | `"waveform,spectrogram"` (仅列出可见的) |
+| `ViewLayout/chartSplitterState` | AppSettings（per-page） | QSplitter::saveState() base64 |
+
+### 对现有代码的影响
+
+1. **`AudioVisualizerContainer`**：增加 `setChartVisible(id, bool)`、`chartVisible(id)` API。`addChart()` 不再立即 `widget->show()`，而是根据配置决定可见性。
+
+2. **`SlicerPage`**：移除参数面板在 container 上方的固定布局；slicer 专属参数面板移至页面级 toolbar 区域（已存在）。PowerWidget 默认添加但不显示。
+
+3. **`PhonemeEditor`**：PowerWidget、SpectrogramWidget 的可见性不再由单独的 action toggle 控制——改为由统一配置系统控制。现有的 `m_actTogglePower` / `m_actToggleSpectrogram` 改为切换配置。
+
+4. **Settings 页面**：新增 "视图布局" section，包含带 checkbox 的可拖拽列表。
+
+### 与 D-14 的关系
+
+D-14 提出了"共享 AudioVisualizerContainer 基类"的方向。本决策（D-30）在此基础上明确：
+- 不是"共享基类"而是"**同一套 UI 实例化方式**"
+- 组件显隐和顺序由配置系统统一管理，非硬编码
+- 用户可通过 Settings 页面自由定制
+
+**废弃**：D-14 中 "子图的顺序可在 Settings 页面中自定义" → 整合到 D-30 的具体设计中。
+
+---
+
 ## ADR 冲突解决
 
 | 冲突项 | 旧决策 | 新决策（以此为准） |
@@ -474,5 +553,6 @@ BoundaryDragController
 | Settings 持久化 | ADR-69：DsLabeler 用 ProjectSettingsBackend（.dsproj） | D-01：全部用 AppSettings（用户目录） |
 | Ctrl+滚轮行为 | 任务 17：Ctrl+滚轮 = 振幅缩放 | D-03：Ctrl+滚轮 = 横向缩放 |
 | .dsproj defaults 字段 | unified-app-design.md §9：含模型/设备/导出配置 | D-01：defaults 字段废弃 |
-| 可视化组件架构 | ADR-65：IBoundaryModel + phoneme-editor 组件复用 | D-14：AudioVisualizerContainer 统一基类 |
+| 可视化组件架构 | ADR-65：IBoundaryModel + phoneme-editor 组件复用 | D-14 + D-30：AudioVisualizerContainer 统一 UI + 组件自由显隐排序 |
 | 标签区域位置 | 旧设计中 TierEditWidget 在频谱图下方 | D-15：标签区域在刻度线下方、所有子图上方 |
+| 子图配置 | D-14：子图顺序可在 Settings 自定义 | D-30：显隐+顺序统一配置，checkbox 列表 + 拖拽排序 |

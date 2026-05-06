@@ -1,6 +1,6 @@
 # 重构路线图
 
-> 2026-05-06
+> 2026-05-06（更新）
 >
 > 前置文档：[human-decisions.md](human-decisions.md)、[unified-app-design.md](unified-app-design.md)
 >
@@ -22,6 +22,53 @@
 | 66 | LabelSuite 底层统一 dstext | 有效 |
 | 69 | ISettingsBackend → 废弃 ProjectSettingsBackend | 有效 |
 | 70 | FileDataSource 内部 dstext + FormatAdapter | 有效 |
+| 77 | Log 侧边栏全局化（AppShell 层） | 有效 |
+| 78 | Slicer/Phoneme 统一视图组合（D-30）：同一 UI + 组件自由显隐排序 | 有效 |
+
+---
+
+## 新任务：Slicer/Phoneme 统一视图组合系统
+
+> 设计依据：[human-decisions.md §D-30](human-decisions.md)
+
+### 8.1 AudioVisualizerContainer 添加 chart 显隐 API
+
+**需求**：container 增加 `setChartVisible(id, bool)` / `chartVisible(id)` 方法，chart 注册后不自动 show，由配置决定。
+
+**文件**：`AudioVisualizerContainer.h/cpp`
+
+### 8.2 Per-page 默认 chart 视图配置
+
+**需求**：
+- `SlicerPage`：waveform ✅、spectrogram ✅、power ❌（添加但不显示）
+- `PhonemeEditor`：waveform ✅、power ✅、spectrogram ✅
+
+**文件**：`SlicerPage.cpp`、`PhonemeEditor.cpp`
+
+### 8.3 Settings 页面"视图布局"区域
+
+**需求**：
+- 带 checkbox 的 chart 列表（☑ waveform / ☑ power / ☑ spectrogram）
+- 支持拖拽排序（QListWidget + DragDropMode）
+- 排序结果即时持久化到 AppSettings → 实时通知 container 刷新布局
+- "恢复默认"按钮清除用户覆盖
+
+**文件**：Settings 页面（label-suite 和 ds-labeler 各一份）
+
+### 8.4 chartOrder/chartVisible 全局配置持久化
+
+**需求**：
+- AppSettings key：`ViewLayout/chartOrder`（逗号分隔字符串）
+- AppSettings key：`ViewLayout/chartVisible`（仅列出可见 chart）
+- `AudioVisualizerContainer` 读取配置并应用 chart 显隐 + 顺序
+
+**文件**：`AudioVisualizerContainer.cpp`
+
+### 8.5 Phoneme 现有 toggle action 适配配置系统
+
+**需求**：`m_actTogglePower` / `m_actToggleSpectrogram` 改为读写统一 AppSettings 配置，而非独立 toggle。
+
+**文件**：`PhonemeEditor.cpp`
 
 ---
 
@@ -39,20 +86,57 @@
 
 **分析**：代码逻辑正确（`setAudioData` + `rebuildMinMaxCache` + deferred `fitToWindow`）。可能原因：(1) 保存的 splitter state 将 waveform 高度压为 0；(2) `fitToWindow` 延迟执行时序问题。需要清除 QSettings 中的 `Layout/editorSplitterState` 验证。
 
+### B-04 Slicer 默认比例尺 3000 未生效
+
+**问题**：`SlicerPage` 设置 `setDefaultResolution(3000)`，但刚打开仍显示 50 spx。
+
+**根因**：`fitToWindow()` 中 `restoreResolution()` 从 QSettings 恢复旧会话保存的 50（之前默认 40 快照为 50），覆盖了 `setDefaultResolution(3000)` 的设置。
+
+**流程分析**：
+1. 构造：`setDefaultResolution(3000)` → viewport = 3000 ✓
+2. `loadAudioFile()` → `fitToWindow()` → `restoreResolution()` 从 QSettings 加载旧值 50，**覆盖** 3000
+3. `onActivated()` → 再次 `restoreResolution()` 恢复旧值
+
+**修复方案**：
+- `fitToWindow()` 是新加载音频的入口，应使用默认分辨率；`restoreResolution()` 仅应在 `onActivated()`（页面切换回来）时调用
+- 或在 `restoreResolution()` 中增加版本标记：如果保存的分辨率来自旧默认版本，回退到新默认
+
+### B-05 Phoneme 右键播放未连接
+
+**问题**：PhonemeEditor 有 `playBoundarySegment()` 方法（按分段播放音频），但未连接任何触发信号。而 SlicerPage 中右键点击波形图可以触发切点操作。
+
+**分析**：ADR 62 规定"右键直接播放，不弹菜单"。`playBoundarySegment(double timeSec)` 已实现（PhonemeEditor.cpp:493-512），可根据当前时间计算所在分段的起止时间并播放。需要在 `connectSignals()` 中连接 `WaveformWidget::positionClicked` 或类似信号。
+
+**修复**：在 `PhonemeEditor::connectSignals()` 中添加右键播放连接：
+- `WaveformWidget` / `SpectrogramWidget` 右键 → `playBoundarySegment()`
+- 或通过 context menu action 触发
+
+### B-06 Phoneme Bind/Snap 按钮选中状态区分不明确
+
+**问题**：`PhonemeEditor` 工具栏中的 Bind 和 Snap 按钮使用默认 `QAction` + `setCheckable(true)`，在暗色主题下 checked/unchecked 视觉差异很小。
+
+**修复方案**：
+- 方案 A：添加显式 QSS 样式（`:checked` 状态下用醒目背景色/边框）
+- 方案 B：改为 `QPushButton` 并设置 `setCheckable(true)`，文本动态显示状态（如 "Bind: ON" / "Bind: OFF"）
+- 推荐方案 B：更直观且不依赖主题
+
 ### 6.3 快捷键系统（部分完成）
 
 | 页面 | 规划快捷键 | 实际状态 |
 |------|-----------|---------|
-| Slicer | S=自动切片, E=导出, I=导入切点, P=指针, K=切刀 | ⚠️ 只有 V=指针, C=切刀，缺少 S/E/I |
+| Slicer | S=自动切片, E=导出, I=导入切点, P=指针, K=切刀 | ⚠️ 只有 V=指针, C=切刀，缺少 S/E/I（DsSlicerPage 已补全 S/Ctrl+E/Ctrl+I） |
 | PhonemeLabeler | F=FA, ←/→=切换切片 | ✅ |
 | PitchLabeler | F=提取音高, M=MIDI, ←/→=切换切片 | ✅ |
 | MinLabel | R=ASR, ←/→=切换切片 | ✅ |
+
+> 注：LabelSuite 版 SlicerPage 缺少 S/E/I 快捷键；DsLabeler 版 DsSlicerPage 已通过 `createMenuBar()` 中的 `setShortcut()` 补全。
 
 ### 7.7 Slicer/Phoneme 界面行为不统一（部分完成）
 
 - ✅ playhead 连接已统一到 `setPlayWidget()`
 - ✅ splitter 状态延迟恢复已实现
 - ⬜ dragController 连接可进一步统一，减少 SlicerPage 组装代码
+- ⬜ Phoneme 缺少右键分段播放（见 B-05）
 
 ---
 
@@ -84,6 +168,7 @@
 | 6.2 | QTableView 主题 | dark.qss + light.qss 完整样式 |
 | 6.4 | 图表顺序 UI | SettingsPage QListWidget + 上下按钮 |
 | 6.5 | CSV 预览 | ExportPage QTabWidget "预览数据" |
+| 6.6 | Log 全局侧边栏 | LogPanelWidget + AppShell Ctrl+L 切换 |
 | 7.1 | TimeRuler 刻度 | `syncStateFields()` 在 `clampAndEmit()` 前 |
 | 7.2 | 播放游标 | `setPlayWidget()` 统一 playhead 连接 |
 | 7.3 | 跨层 clamp | D-29 已移除（拖动期间位置失效导致不可用） |
@@ -91,8 +176,9 @@
 | 7.5 | splitter 恢复 | 延迟到 resizeEvent |
 | 7.6 | 波形图缺失 | 同 7.5 |
 | B-01 | 绑定边界拖动 | 移除跨层 clamp；binding 使用 word.start 保证时间对齐 |
-| B-04 | Slicer 默认比例尺 | 默认 3000 + fitToWindow 尊重已保存值 + onActivated restoreResolution |
 | B-05 | FA SP 过滤 | 不再过滤 SP/AP，完整保留 FA 输出 |
+
+> 注：原 B-04（Slicer 默认比例尺）标记完成但实际未完全生效，已回退到待修复列表。
 
 ---
 
@@ -102,3 +188,4 @@
 - [unified-app-design.md](unified-app-design.md) — 应用设计方案
 - [framework-architecture.md](framework-architecture.md) — 项目架构
 - [conventions-and-standards.md](conventions-and-standards.md) — 编码规范
+- [log-and-i18n-design.md](log-and-i18n-design.md) — Log 系统与本地化设计
