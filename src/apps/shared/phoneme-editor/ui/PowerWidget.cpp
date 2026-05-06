@@ -26,10 +26,6 @@ PowerWidget::PowerWidget(ViewportController *viewport, QWidget *parent)
     setMinimumHeight(80);
 
     if (m_viewport) {
-        connect(m_viewport, &ViewportController::viewportChanged,
-                this, [this](const ViewportState &state) {
-                    setViewport(state);
-                });
         m_viewStart = m_viewport->state().startSec;
         m_viewEnd = m_viewport->state().endSec;
         m_pixelsPerSecond = m_viewport->state().pixelsPerSecond;
