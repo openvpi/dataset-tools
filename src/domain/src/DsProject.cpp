@@ -3,6 +3,7 @@
 #include <dstools/PathUtils.h>
 
 #include <filesystem>
+#include <QDebug>
 #include <QDir>
 
 namespace dstools {
@@ -130,6 +131,11 @@ DsProject DsProject::load(const QString &path, QString &error) {
     DsProject proj;
     error.clear();
 
+    if (path.isEmpty()) {
+        qWarning() << "DsProject::load: empty path, returning default project";
+        return proj;
+    }
+
     auto jsonResult = JsonHelper::loadFile(toFsPathLocal(path));
     if (!jsonResult) {
         error = fromStd(jsonResult.error());
@@ -149,11 +155,10 @@ DsProject DsProject::load(const QString &path, QString &error) {
     // Version check
     if (json.contains("version") && json["version"].is_string()) {
         std::string version = json["version"].get<std::string>();
-        // Major version must be 3; warn on unknown major versions
+        // Major version must be 3; warn on unknown major versions (backward compat)
         if (!version.empty() && version[0] != '3') {
-            error = QStringLiteral("不支持的工程文件版本: %1。本程序支持版本 3.x。")
-                        .arg(fromStd(version));
-            return proj;
+            qWarning() << QStringLiteral("DsProject::load: 不支持的工程文件版本: %1，尝试兼容加载。本程序支持版本 3.x。")
+                              .arg(fromStd(version));
         }
     }
 

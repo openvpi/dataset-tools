@@ -238,5 +238,5 @@ void TestDsProject::slicerStateRoundtrip() {
     QCOMPARE(ls.slicePoints.at(DsProject::fromPosixPath(QStringLiteral("audio/a.wav"))).size(), 3);
 }
 
-QTEST_MAIN(TestDsProject)
+QTEST_GUILESS_MAIN(TestDsProject)
 #include "TestDsProject.moc"
