@@ -81,17 +81,17 @@ namespace dstools {
         int resolution = m_viewport->resolution();
         int sampleRate = m_viewport->sampleRate();
 
-        // msPerDiv: time represented by ~80 pixels at current resolution
-        double msPerDiv = (sampleRate > 0) ? static_cast<double>(resolution) / sampleRate * 80.0 * 1000.0 : 0.0;
+        double visibleSec = (sampleRate > 0)
+            ? static_cast<double>(m_chartSplitter->width()) * resolution / sampleRate
+            : 0.0;
 
-        // Format: show time-per-division and resolution
         QString text;
-        if (msPerDiv >= 1000.0)
-            text = QStringLiteral("%1s/div  (%2 spx)").arg(msPerDiv / 1000.0, 0, 'f', 1).arg(resolution);
-        else if (msPerDiv >= 1.0)
-            text = QStringLiteral("%1ms/div  (%2 spx)").arg(msPerDiv, 0, 'f', 0).arg(resolution);
-        else
-            text = QStringLiteral("%1μs/div  (%2 spx)").arg(msPerDiv * 1000.0, 0, 'f', 0).arg(resolution);
+        if (visibleSec >= 60.0)
+            text = QStringLiteral("%1min visible  (%2 spx)").arg(visibleSec / 60.0, 0, 'f', 1).arg(resolution);
+        else if (visibleSec >= 1.0)
+            text = QStringLiteral("%1s visible  (%2 spx)").arg(visibleSec, 0, 'f', 1).arg(resolution);
+        else if (visibleSec > 0.0)
+            text = QStringLiteral("%1ms visible  (%2 spx)").arg(visibleSec * 1000.0, 0, 'f', 0).arg(resolution);
 
         m_scaleLabel->setText(text);
         m_scaleLabel->adjustSize();
