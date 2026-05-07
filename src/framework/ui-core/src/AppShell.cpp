@@ -88,7 +88,7 @@ namespace dsfw {
 
         setCentralWidget(central);
 
-        dstools::Logger::instance().addSink(dstools::Logger::ringBufferSink(500));
+        dstools::Logger::instance().addSink(dstools::Logger::ringBufferSink(2000));
         dstools::Logger::instance().addSink(dstools::LogNotifier::instance().sink());
         dstools::Logger::instance().addSink(dstools::Logger::qtMessageSink());
 

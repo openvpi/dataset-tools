@@ -60,7 +60,7 @@ LogPage::LogPage(QWidget *parent)
 
     layout->addLayout(toolbar);
 
-    auto entries = dstools::Logger::instance().recentEntries(500);
+    auto entries = dstools::Logger::instance().recentEntries(2000);
     for (const auto &entry : entries)
         appendEntry(entry);
 
@@ -132,7 +132,7 @@ void LogPage::applyCategoryFilter() {
         m_activeCategories.insert(cat);
 
     m_viewer->clear();
-    auto entries = dstools::Logger::instance().recentEntries(500);
+    auto entries = dstools::Logger::instance().recentEntries(2000);
     for (const auto &entry : entries) {
         QString ecat = QString::fromStdString(entry.category);
         if (!m_activeCategories.isEmpty() && !m_activeCategories.contains(ecat))
@@ -160,7 +160,7 @@ void LogPage::exportToFile() {
     }
 
     QTextStream stream(&file);
-    auto entries = dstools::Logger::instance().recentEntries(500);
+    auto entries = dstools::Logger::instance().recentEntries(2000);
     for (const auto &entry : entries)
         stream << QString::fromStdString(entry.toString()) << "\n";
 }
