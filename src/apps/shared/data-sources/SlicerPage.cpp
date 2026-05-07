@@ -527,6 +527,9 @@ bool SlicerPage::onDeactivating() {
     static const dstools::SettingsKey<QString> kSplitterState("Layout/containerSplitterState", "");
     static const dstools::SettingsKey<QString> kChartOrder("Layout/chartOrder", "");
 
+    if (m_playWidget)
+        m_playWidget->setPlaying(false);
+
     m_settings.set(kHSplitterState, QString::fromLatin1(m_hSplitter->saveState().toBase64()));
     m_settings.set(kSplitterState, QString::fromLatin1(m_container->saveSplitterState().toBase64()));
     m_settings.set(kChartOrder, m_container->chartOrder().join(QLatin1Char(',')));

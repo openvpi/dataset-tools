@@ -51,6 +51,7 @@ namespace dstools {
 
         // IPageLifecycle
         void onActivated() override;
+        bool onDeactivating() override;
 
     private:
         ProjectDataSource *m_dataSource = nullptr;

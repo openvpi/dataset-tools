@@ -1227,4 +1227,10 @@ namespace dstools {
         m_container->fitToWindow();
     }
 
+    bool DsSlicerPage::onDeactivating() {
+        if (m_playWidget)
+            m_playWidget->setPlaying(false);
+        return true;
+    }
+
 } // namespace dstools
