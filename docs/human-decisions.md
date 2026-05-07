@@ -711,6 +711,29 @@ void AudioVisualizerContainer::removeTierLabelArea();
 
 ---
 
+## D-39：状态栏信号连接生命周期由框架统一管理
+
+**决策**：`createStatusBarContent()` 返回的 widget 由 AppShell 持有并在页面切换时销毁重建，其内部子 widget 的信号连接必须以子 widget 自身为 context 对象，确保 widget 销毁时连接自动断开。框架层提供 `StatusBarBuilder` 工具类统一管理连接创建，消除各页面手动处理连接生命周期的风险。
+
+**问题根因**：
+- `AppShell::rebuildStatusBar()` 在页面切换时对旧状态栏 widget 调用 `deleteLater()`
+- 页面 `createStatusBarContent()` 中 `connect(sender, signal, this, [localWidgetPtr]...)` 使用 `this` 为 context，localWidget 被销毁后连接仍活跃
+- `m_editor` 发出信号时 lambda 访问已销毁的 widget → 崩溃
+
+**具体改造**：
+1. `EditorPageBase` 新增 `StatusBarBuilder` 内部类，封装状态栏 widget 创建和信号连接
+2. `StatusBarBuilder::connect()` 强制使用目标 widget 为 context 对象，从 API 层杜绝 context 不匹配
+3. 各页面 `createStatusBarContent()` 改用 `StatusBarBuilder` 创建连接
+4. `PhonemeLabelerPage` 已有的 `m_sliceLabelConn`/`m_posLabelConn` 手动管理方式废弃，统一迁移到 `StatusBarBuilder`
+
+**影响文件**：
+- `EditorPageBase.{h,cpp}` — 新增 `StatusBarBuilder` 嵌套类
+- `PitchLabelerPage.cpp` — 迁移到 `StatusBarBuilder`
+- `PhonemeLabelerPage.{h,cpp}` — 移除 `m_sliceLabelConn`/`m_posLabelConn`，迁移到 `StatusBarBuilder`
+- `MinLabelPage.cpp` — 迁移到 `StatusBarBuilder`
+
+---
+
 ## ADR 冲突解决
 
 | 冲突项 | 旧决策 | 新决策（以此为准） |

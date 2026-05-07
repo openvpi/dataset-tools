@@ -32,6 +32,7 @@
 | 85 | applyFaResult 不覆盖 grapheme 层，grapheme 保持为 minlabel 设置的输入源 | 有效 |
 | 86 | AudioVisualizerContainer 支持移除 TierLabelArea（D-37） | 有效 |
 | 87 | 文件列表面板分层设计，按钮风格统一（D-38） | 有效 |
+| 88 | 状态栏信号连接生命周期框架统一管理（D-39） | 有效 |
 
 ### 已完成任务
 
@@ -70,6 +71,11 @@
 | 33.1 Slicer 文件列表按钮修复（无文字显示） | 2026-05-07 |
 | 34.1 文件列表统一与分页面功能启用 | 2026-05-07 |
 | 35.1 Phoneme 刻度线显示修复 | 2026-05-07 |
+| 36.1 FA 操作完整输入输出日志 | 2026-05-08 |
+| 28.2 Phoneme 删除 TierLines 按钮 + activeTierOnly 功能 + PhonemeTextGridTierLabel 文件 | 2026-05-08 |
+| 28.3 Phoneme 层级下拉框过滤 raw_text | 2026-05-08 |
+| 37.1 PitchLabelerPage 状态栏连接 context 修复 | 2026-05-08 |
+| 37.2 StatusBarBuilder 框架统一管理 + 三页面迁移 | 2026-05-08 |
 
 ---
 
@@ -217,6 +223,73 @@
 
 ---
 
+## 任务 37：状态栏信号连接生命周期框架统一管理
+
+**需求**：页面切换时，状态栏 widget 被销毁重建，但 `connect(sender, signal, this, [localWidgetPtr]...)` 中 `this` 为 context 导致连接未断开，lambda 访问已销毁 widget 引发崩溃。
+
+**设计依据**：D-39
+
+**分析**：
+
+`AppShell::rebuildStatusBar()` 在页面切换时对旧状态栏 widget 调用 `deleteLater()`。各页面 `createStatusBarContent()` 中存在以下风险模式：
+
+| 风险模式 | 说明 |
+|----------|------|
+| `connect(sender, signal, this, [localWidget]...)` | context 是 `this`（页面），localWidget 销毁后连接仍活跃 |
+| `connect(sender, signal, localWidget, [localWidget]...)` | 安全：localWidget 销毁时 Qt 自动断开连接 |
+| 手动 `disconnect()` + `QPointer` guard | 安全但繁琐，每个页面需自行管理 |
+
+**当前各页面状态**：
+
+| 页面 | 状态 | 说明 |
+|------|------|------|
+| PitchLabelerPage | ✅ 已修复 (37.1) | 3 处 `this` context 改为 label context |
+| PhonemeLabelerPage | 部分安全 | `m_sliceLabelConn`/`m_posLabelConn` 手动 disconnect + QPointer，但 posLabel 仍用 `this` context |
+| MinLabelPage | 安全 | 仅 `sliceLabel` 连接，已用 `sliceLabel` 为 context |
+
+**方案**：
+
+### 37.1 PitchLabelerPage 状态栏连接 context 修复（已完成）
+
+将 `connect(m_editor, ..., this, [label]...)` 的 context 从 `this` 改为对应的 label widget。
+
+### 37.2 StatusBarBuilder 框架统一管理（已完成）
+
+在 `EditorPageBase` 中新增 `StatusBarBuilder` 嵌套类：
+
+```cpp
+class StatusBarBuilder {
+public:
+    explicit StatusBarBuilder(QWidget *container);
+
+    QLabel *addLabel(const QString &text, int stretch = 0);
+
+    // 强制使用 widget 为 context，从 API 层杜绝 context 不匹配
+    template<typename Sender, typename Signal, typename Widget, typename Func>
+    QMetaObject::Connection connect(Sender *sender, Signal signal,
+                                     Widget *widget, Func &&func);
+
+    QWidget *container() const;
+
+private:
+    QWidget *m_container;
+    QHBoxLayout *m_layout;
+};
+```
+
+关键设计：
+- `connect()` 模板方法强制要求传入目标 widget 作为 context，编译期保证安全性
+- 各页面 `createStatusBarContent()` 改用 `StatusBarBuilder` 创建 widget 和连接
+- `PhonemeLabelerPage` 的 `m_sliceLabelConn`/`m_posLabelConn` 手动管理方式废弃
+
+**文件**：
+- `src/apps/shared/data-sources/EditorPageBase.{h,cpp}` — 新增 `StatusBarBuilder`
+- `src/apps/shared/data-sources/PitchLabelerPage.cpp` — 迁移到 `StatusBarBuilder`
+- `src/apps/shared/data-sources/PhonemeLabelerPage.{h,cpp}` — 移除手动连接管理，迁移到 `StatusBarBuilder`
+- `src/apps/shared/data-sources/MinLabelPage.cpp` — 迁移到 `StatusBarBuilder`
+
+---
+
 ## 任务依赖关系
 
 ```
@@ -228,9 +301,10 @@
 33 (slicer按钮)        ── 独立，无依赖
 34 (文件列表统一)      ── 依赖 33（按钮改造前置）
 35 (刻度线显示)        ── 独立，无依赖
+37 (状态栏连接管理)    ── 独立，无依赖
 ```
 
-**执行顺序**：33 → 34, 其余 [28, 29, 30, 31, 32, 35] 并行。
+**执行顺序**：33 → 34, 其余 [28, 29, 30, 31, 32, 35, 37] 并行。
 
 ---
 
