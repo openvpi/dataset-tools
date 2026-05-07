@@ -16,6 +16,7 @@
 #include <QHBoxLayout>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMetaMethod>
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QShowEvent>
@@ -127,16 +128,12 @@ namespace dsfw {
     m_navBar->setVisible(m_pages.size() > 1);
 
     // Auto-connect PlayWidget signals to AudioPlaybackManager
-    for (auto *pw : page->findChildren<QWidget *>()) {
-        int sigIdx = pw->metaObject()->indexOfSignal("playRequested()");
-        if (sigIdx >= 0) {
-            auto *manager = m_audioManager;
-            connect(pw, SIGNAL(playRequested()), this, [manager, pw]() {
-                manager->requestPlay(pw);
-            });
-            connect(pw, SIGNAL(playStopped()), this, [manager, pw]() {
-                manager->releasePlay(pw);
-            });
+    // Use old-style SIGNAL/SLOT syntax to avoid circular dependency
+    // between ui-core and widgets modules.
+    for (auto *child : page->findChildren<QObject *>()) {
+        if (child->metaObject()->indexOfSignal("playRequested()") >= 0) {
+            connect(child, SIGNAL(playRequested()), this, SLOT(onChildPlayRequested()));
+            connect(child, SIGNAL(playStopped()), this, SLOT(onChildPlayStopped()));
         }
     }
 
@@ -379,6 +376,16 @@ namespace dsfw {
                     return true;
         }
         return false;
+    }
+
+    void AppShell::onChildPlayRequested() {
+        if (auto *w = qobject_cast<QWidget *>(sender()))
+            m_audioManager->requestPlay(w);
+    }
+
+    void AppShell::onChildPlayStopped() {
+        if (auto *w = qobject_cast<QWidget *>(sender()))
+            m_audioManager->releasePlay(w);
     }
 
     void AppShell::closeEvent(QCloseEvent *event) {

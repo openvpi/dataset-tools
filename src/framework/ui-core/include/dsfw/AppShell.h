@@ -99,6 +99,10 @@ public:
     /// @brief Return the audio playback arbitration manager.
     AudioPlaybackManager *audioPlaybackManager() const { return m_audioManager; }
 
+private slots:
+    void onChildPlayRequested();
+    void onChildPlayStopped();
+
 signals:
     /// @brief Emitted when the active page changes.
     /// @param index New page index.
