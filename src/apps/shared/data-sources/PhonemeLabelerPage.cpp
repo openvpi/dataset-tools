@@ -282,10 +282,12 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 }
 
 void PhonemeLabelerPage::onDeactivatedImpl() {
-    if (m_editor && m_editor->playWidget())
-        m_editor->playWidget()->setPlaying(false);
+    if (m_hfaAlive)
+        m_hfaAlive->store(false);
     m_hfaAlive.reset();
     m_hfa = nullptr;
+    if (m_editor && m_editor->playWidget())
+        m_editor->playWidget()->setPlaying(false);
 }
 
 void PhonemeLabelerPage::restoreExtraSplitters() {

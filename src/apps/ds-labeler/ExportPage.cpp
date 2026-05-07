@@ -116,8 +116,9 @@ void ExportPage::buildUi() {
 
     m_validationLabel = new QLabel(this);
     m_validationLabel->setWordWrap(true);
+    m_validationLabel->setObjectName(QStringLiteral("validationLabel"));
     m_validationLabel->setStyleSheet(
-        QStringLiteral("QLabel { padding: 8px; border-radius: 4px; }"));
+        QStringLiteral("#validationLabel { padding: 8px; border-radius: 4px; }"));
     settingsLayout->addWidget(m_validationLabel);
     settingsLayout->addSpacing(12);
 
@@ -137,7 +138,8 @@ void ExportPage::buildUi() {
 
     m_statusLabel = new QLabel(this);
     m_statusLabel->setAlignment(Qt::AlignCenter);
-    m_statusLabel->setStyleSheet(QStringLiteral("color: gray;"));
+    m_statusLabel->setObjectName(QStringLiteral("statusLabel"));
+    m_statusLabel->setStyleSheet(QStringLiteral("#statusLabel { color: palette(text); opacity: 0.6; }"));
     settingsLayout->addWidget(m_statusLabel);
 
     settingsLayout->addStretch();
@@ -1014,7 +1016,7 @@ void ExportPage::runValidation() {
     if (!m_source) {
         m_validationLabel->setText(QStringLiteral("请先打开工程。"));
         m_validationLabel->setStyleSheet(
-            QStringLiteral("QLabel { padding: 8px; border-radius: 4px; color: gray; }"));
+            QStringLiteral("#validationLabel { padding: 8px; border-radius: 4px; color: #6F737A; }"));
         return;
     }
 
@@ -1024,7 +1026,7 @@ void ExportPage::runValidation() {
     if (m_totalSlices == 0) {
         m_validationLabel->setText(QStringLiteral("没有活动切片。"));
         m_validationLabel->setStyleSheet(
-            QStringLiteral("QLabel { padding: 8px; border-radius: 4px; color: gray; }"));
+            QStringLiteral("#validationLabel { padding: 8px; border-radius: 4px; color: #6F737A; }"));
         return;
     }
 
@@ -1112,7 +1114,7 @@ void ExportPage::runValidation() {
 
     m_validationLabel->setText(lines.join(QStringLiteral("\n")));
     m_validationLabel->setStyleSheet(
-        QStringLiteral("QLabel { padding: 8px; border-radius: 4px; %1 }").arg(color));
+        QStringLiteral("#validationLabel { padding: 8px; border-radius: 4px; %1 }").arg(color));
 }
 
 } // namespace dstools
