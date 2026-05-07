@@ -359,12 +359,13 @@ QHeaderView::section {
 /* ---- Table view ---- */
 QTableView {
     background-color: #FFFFFF;
-    alternate-background-color: #F7F8FA;
+    alternate-background-color: #F0F2F5;
     color: #1E1F22;
-    gridline-color: #EBECF0;
+    gridline-color: #E0E3E8;
     selection-background-color: #D4E2FF;
     selection-color: #1E1F22;
     border: 1px solid #EBECF0;
+    outline: none;
 }
 
 QTableView::item {
@@ -378,6 +379,75 @@ QTableView::item:hover {
 
 QTableView::item:selected {
     background-color: #D4E2FF;
+}
+
+QHeaderView {
+    background-color: #F7F8FA;
+    border: none;
+}
+
+QHeaderView::section {
+    background-color: #F7F8FA;
+    border: none;
+    border-right: 1px solid #E0E3E8;
+    border-bottom: 2px solid #C9CCD6;
+    padding: 6px 10px;
+    color: #818594;
+    font-weight: bold;
+}
+
+QHeaderView::section:hover {
+    background-color: #EDF3FF;
+    color: #000000;
+}
+
+/* ---- Date/Time edits ---- */
+QDateEdit, QTimeEdit, QDateTimeEdit {
+    background-color: #FFFFFF;
+    border: 1px solid #C9CCD6;
+    border-radius: 6px;
+    padding: 3px 6px;
+    color: #000000;
+    selection-background-color: #D4E2FF;
+    selection-color: #000000;
+}
+
+QDateEdit:focus, QTimeEdit:focus, QDateTimeEdit:focus {
+    border-color: #3574F0;
+}
+
+QDateEdit:disabled, QTimeEdit:disabled, QDateTimeEdit:disabled {
+    background-color: #F7F8FA;
+    color: #A8ADBD;
+    border-color: #EBECF0;
+}
+
+QDateEdit::drop-down, QTimeEdit::drop-down, QDateTimeEdit::drop-down {
+    border: none;
+    width: 20px;
+}
+
+/* ---- Labels ---- */
+QLabel {
+    color: #000000;
+    background: transparent;
+}
+
+QLabel:disabled {
+    color: #A8ADBD;
+}
+
+/* ---- Dock widgets ---- */
+QDockWidget {
+    background-color: #FFFFFF;
+    border: 1px solid #EBECF0;
+}
+
+QDockWidget::title {
+    background-color: #F7F8FA;
+    border-bottom: 1px solid #EBECF0;
+    padding: 4px 8px;
+    color: #000000;
 }
 
 /* ---- Splitters ---- */
