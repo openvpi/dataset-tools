@@ -29,6 +29,7 @@ BatchProcessDialog::BatchProcessDialog(const QString &title, QWidget *parent)
     m_progressBar->setMinimum(0);
     m_progressBar->setMaximum(100);
     m_progressBar->setValue(0);
+    m_progressBar->setFormat(tr("%p%"));
     mainLayout->addWidget(m_progressBar);
 
     m_statusLabel = new QLabel(this);
@@ -57,6 +58,8 @@ BatchProcessDialog::BatchProcessDialog(const QString &title, QWidget *parent)
         m_cancelBtn->setEnabled(true);
         m_closeBtn->setEnabled(false);
         m_progressBar->setValue(0);
+        m_progressBar->setStyleSheet(QString());
+        m_progressBar->setFormat(tr("%p%"));
         m_logOutput->clear();
         m_statusLabel->setText(tr("Processing..."));
         emit started();
@@ -147,8 +150,10 @@ void BatchProcessDialog::appendLog(LogLevel level, const QString &message) {
 }
 
 void BatchProcessDialog::setProgress(int current, int total) {
-    if (total > 0)
+    if (total > 0) {
         m_progressBar->setValue(current * 100 / total);
+        m_progressBar->setFormat(tr("%p% (%1/%2)").arg(current).arg(total));
+    }
     m_statusLabel->setText(tr("Processing %1 / %2...").arg(current).arg(total));
 }
 
@@ -159,13 +164,29 @@ void BatchProcessDialog::finish(int processed, int skipped, int errors) {
     m_closeBtn->setEnabled(true);
     m_progressBar->setValue(100);
 
+    QString barStyle;
+    if (errors > 0) {
+        barStyle = QStringLiteral("QProgressBar::chunk { background-color: #CC0000; }");
+    } else if (skipped > 0) {
+        barStyle = QStringLiteral("QProgressBar::chunk { background-color: #B8860B; }");
+    } else {
+        barStyle = QStringLiteral("QProgressBar::chunk { background-color: #2E8B57; }");
+    }
+    m_progressBar->setStyleSheet(barStyle);
+
     QString msg = tr("Completed: %1 processed").arg(processed);
     if (skipped > 0)
         msg += tr(", %1 skipped").arg(skipped);
     if (errors > 0)
         msg += tr(", %1 errors").arg(errors);
     m_statusLabel->setText(msg);
-    appendLog(msg);
+
+    LogLevel summaryLevel = LogLevel::Info;
+    if (errors > 0)
+        summaryLevel = LogLevel::Error;
+    else if (skipped > 0)
+        summaryLevel = LogLevel::Warning;
+    appendLog(summaryLevel, msg);
 }
 
 bool BatchProcessDialog::isCancelled() const {
