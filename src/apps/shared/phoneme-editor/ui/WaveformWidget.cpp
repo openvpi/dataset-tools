@@ -319,7 +319,7 @@ void WaveformWidget::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 int WaveformWidget::hitTestBoundary(int x, int *outTier) const {
-    if (!m_boundaryModel || !m_boundaryOverlayEnabled) return -1;
+    if (!m_boundaryModel) return -1;
 
     struct Hit {
         int tier;
