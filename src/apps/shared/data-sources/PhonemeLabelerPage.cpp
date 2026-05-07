@@ -56,7 +56,6 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     r.phonemeLayer.type = QStringLiteral("interval");
 
     int nextId = 1;
-    int groupIdx = 0;
 
     for (const auto &word : words) {
         if (word.phones.empty())
@@ -64,102 +63,26 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
 
         Boundary graphemeB;
         graphemeB.id = nextId++;
-        graphemeB.pos = secToUs(word.start);
+        graphemeB.pos = secToUs(std::max(0.0f, word.start));
         graphemeB.text = QString::fromStdString(word.text);
         int graphemeBId = graphemeB.id;
-
-        DSFW_LOG_DEBUG("fa",
-            ("[tier=0/grapheme] id=" + std::to_string(graphemeB.id) +
-             " word='" + word.text + "' @ " +
-             std::to_string(word.start) + "s-" +
-             std::to_string(word.end) + "s").c_str());
-
         r.graphemeLayer.boundaries.push_back(std::move(graphemeB));
 
-        std::string containmentLog;
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
             const auto &phone = word.phones[pi];
 
             Boundary phoneB;
             phoneB.id = nextId++;
-            phoneB.pos = (pi == 0) ? secToUs(word.start) : secToUs(phone.start);
+            phoneB.pos = secToUs(std::max(0.0f, phone.start));
             phoneB.text = QString::fromStdString(phone.text);
-
-            DSFW_LOG_DEBUG("fa",
-                ("[tier=1/phoneme] id=" + std::to_string(phoneB.id) +
-                 " phone='" + phone.text + "' @ " +
-                 std::to_string(phone.start) + "s").c_str());
 
             if (pi == 0) {
                 r.groups.push_back({graphemeBId, phoneB.id});
-
-                DSFW_LOG_INFO("fa",
-                    ("[binding#" + std::to_string(groupIdx++) +
-                     "] tier0.id=" + std::to_string(graphemeBId) +
-                     " ↔ tier1.id=" + std::to_string(phoneB.id) +
-                     " @ " + std::to_string(word.start) + "s").c_str());
             }
-
-            if (pi > 0) containmentLog += ", ";
-            containmentLog += phone.text + " [" +
-                std::to_string(phone.start) + "-" +
-                std::to_string(phone.end) + "s]";
 
             r.phonemeLayer.boundaries.push_back(std::move(phoneB));
         }
-
-        DSFW_LOG_INFO("fa",
-            ("grapheme \"" + word.text + "\" [" +
-             std::to_string(word.start) + "-" +
-             std::to_string(word.end) + "s] → phones: " +
-             containmentLog).c_str());
     }
-
-    if (!r.graphemeLayer.boundaries.empty() && !words.empty()) {
-        Boundary endG;
-        endG.id = nextId++;
-        endG.pos = secToUs(words.back().end);
-        r.graphemeLayer.boundaries.push_back(std::move(endG));
-
-        DSFW_LOG_DEBUG("fa",
-            ("[tier=0/grapheme] id=" + std::to_string(endG.id) +
-             " END @ " + std::to_string(words.back().end) + "s").c_str());
-    }
-
-    if (!r.phonemeLayer.boundaries.empty() && !words.empty()) {
-        TimePos lastEnd = 0;
-        for (auto it = words.end(); it != words.begin(); ) {
-            --it;
-            if (!it->phones.empty()) {
-                lastEnd = secToUs(it->phones.back().end);
-                break;
-            }
-        }
-        Boundary endP;
-        endP.id = nextId++;
-        endP.pos = lastEnd;
-        endP.text = QStringLiteral("SP");
-        r.phonemeLayer.boundaries.push_back(std::move(endP));
-
-        r.groups.push_back({r.graphemeLayer.boundaries.back().id,
-                            r.phonemeLayer.boundaries.back().id});
-
-        DSFW_LOG_DEBUG("fa",
-            ("[tier=1/phoneme] id=" + std::to_string(endP.id) +
-             " END @ " + std::to_string(usToSec(lastEnd)) + "s").c_str());
-
-        DSFW_LOG_INFO("fa",
-            ("[binding#" + std::to_string(groupIdx++) +
-             "] tier0.id=" + std::to_string(r.graphemeLayer.boundaries.back().id) +
-             " ↔ tier1.id=" + std::to_string(r.phonemeLayer.boundaries.back().id) +
-             " @ " + std::to_string(usToSec(lastEnd)) + "s (end)").c_str());
-    }
-
-    DSFW_LOG_INFO("fa",
-        ("buildFaLayers: " +
-         std::to_string(r.graphemeLayer.boundaries.size()) + " grapheme boundaries, " +
-         std::to_string(r.phonemeLayer.boundaries.size()) + " phoneme boundaries, " +
-         std::to_string(r.groups.size()) + " binding groups").c_str());
 
     return r;
 }
