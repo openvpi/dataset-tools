@@ -38,13 +38,11 @@ namespace HFA {
             return result;
         }
 
-        // 计算帧数（如果wav_length有效）
-        int num_frames = static_cast<int>(cvnt_logits[0][0].size()); // 默认使用logits的长度
+        std::vector<std::vector<std::vector<float>>> adjusted_logits = cvnt_logits;
+        int num_frames = static_cast<int>(cvnt_logits[0][0].size());
         if (wav_length > 0) {
             num_frames =
                 static_cast<int>((wav_length * melspec_config_.sample_rate + 0.5f) / melspec_config_.hop_length);
-            // 调整logits大小
-            std::vector<std::vector<std::vector<float>>> adjusted_logits = cvnt_logits;
             if (!adjusted_logits.empty() && !adjusted_logits[0].empty()) {
                 for (auto &batch : adjusted_logits) {
                     for (auto &cls : batch) {
@@ -55,15 +53,13 @@ namespace HFA {
             }
         }
 
-        // 计算softmax概率（只处理第一个batch）
         cvnt_probs_.clear();
-        if (!cvnt_logits.empty() && !cvnt_logits[0].empty()) {
-            const std::vector<std::vector<float>> cvnt_logits_batch = cvnt_logits[0];
+        if (!adjusted_logits.empty() && !adjusted_logits[0].empty()) {
+            const std::vector<std::vector<float>> &cvnt_logits_batch = adjusted_logits[0];
             const int num_classes = static_cast<int>(cvnt_logits_batch.size());
 
             cvnt_probs_.resize(num_classes, std::vector<float>(num_frames, 0.0f));
 
-            // 逐帧计算softmax
             for (int t = 0; t < num_frames; ++t) {
                 std::vector<float> frame_logits(num_classes);
                 for (int c = 0; c < num_classes; ++c) {

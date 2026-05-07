@@ -123,17 +123,14 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
 
     if (!hasPhoneme && hasGrapheme && hfa && hfa->isOpen() && !audioPath.isEmpty()) {
         HFA::WordList words;
+        std::string lyricsText;
         for (const auto &text : graphemeTexts) {
-            HFA::Word word;
-            word.text = text.toStdString();
-            HFA::Phone p;
-            p.text = text.toStdString();
-            word.phones.push_back(p);
-            words.push_back(word);
+            if (!lyricsText.empty()) lyricsText += " ";
+            lyricsText += text.toStdString();
         }
 
         std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-        auto faResult = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, words);
+        auto faResult = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
         if (faResult) {
             IntervalLayer phonemeLayer;
             phonemeLayer.name = QStringLiteral("phoneme");

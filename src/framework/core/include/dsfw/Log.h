@@ -30,7 +30,11 @@ struct LogEntry {
     [[nodiscard]] std::string toString() const;
 };
 
+} // namespace dstools
+
 Q_DECLARE_METATYPE(dstools::LogEntry)
+
+namespace dstools {
 
 /// @brief Log severity to human-readable label.
 [[nodiscard]] const char *logLevelLabel(LogLevel level);
