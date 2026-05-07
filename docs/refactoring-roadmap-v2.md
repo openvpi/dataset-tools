@@ -52,6 +52,7 @@
 | 25.1 FA 输入源修正：读取 raw_text 层，G2P 中文后输入 HFA | 2026-05-07 |
 | 23.1 MinLabel ASR 结果回写目标修正 | 2026-05-07 |
 | 23.2 MinLabel 添加 LyricFA 匹配按钮 | 2026-05-07 |
+| 24.1 BatchProcessDialog 参数区域结构化 | 2026-05-07 |
 
 ---
 

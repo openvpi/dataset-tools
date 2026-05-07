@@ -3,11 +3,13 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace dstools {
@@ -68,6 +70,10 @@ BatchProcessDialog::~BatchProcessDialog() = default;
 
 void BatchProcessDialog::addParamWidget(QWidget *widget) {
     m_paramLayout->addWidget(widget);
+    auto *separator = new QFrame(this);
+    separator->setFrameShape(QFrame::HLine);
+    separator->setFrameShadow(QFrame::Sunken);
+    m_paramLayout->addWidget(separator);
 }
 
 void BatchProcessDialog::addParamRow(const QString &label, QWidget *widget) {
@@ -77,6 +83,37 @@ void BatchProcessDialog::addParamRow(const QString &label, QWidget *widget) {
     row->addWidget(lbl);
     row->addWidget(widget, 1);
     m_paramLayout->addLayout(row);
+    auto *separator = new QFrame(this);
+    separator->setFrameShape(QFrame::HLine);
+    separator->setFrameShadow(QFrame::Sunken);
+    m_paramLayout->addWidget(separator);
+}
+
+void BatchProcessDialog::addParamGroup(const QString &title) {
+    auto *content = new QWidget(this);
+    auto *contentLayout = new QVBoxLayout(content);
+    contentLayout->setContentsMargins(0, 0, 0, 0);
+
+    auto *toggleBtn = new QToolButton(this);
+    toggleBtn->setText(title);
+    toggleBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    toggleBtn->setArrowType(Qt::DownArrow);
+    toggleBtn->setCheckable(true);
+    toggleBtn->setChecked(true);
+    toggleBtn->setStyleSheet(QStringLiteral("QToolButton { border: none; font-weight: bold; }"));
+
+    m_paramLayout->addWidget(toggleBtn);
+    m_paramLayout->addWidget(content);
+
+    connect(toggleBtn, &QToolButton::clicked, this, [this, toggleBtn, content]() {
+        toggleParamGroup(toggleBtn, content);
+    });
+}
+
+void BatchProcessDialog::toggleParamGroup(QToolButton *toggleBtn, QWidget *content) {
+    bool expanded = toggleBtn->isChecked();
+    content->setVisible(expanded);
+    toggleBtn->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
 }
 
 void BatchProcessDialog::appendLog(const QString &message) {

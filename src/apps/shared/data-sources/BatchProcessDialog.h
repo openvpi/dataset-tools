@@ -9,6 +9,7 @@ class QPlainTextEdit;
 class QProgressBar;
 class QPushButton;
 class QVBoxLayout;
+class QToolButton;
 
 namespace dstools {
 
@@ -21,6 +22,7 @@ public:
 
     void addParamWidget(QWidget *widget);
     void addParamRow(const QString &label, QWidget *widget);
+    void addParamGroup(const QString &title);
 
     void appendLog(const QString &message);
     void setProgress(int current, int total);
@@ -35,6 +37,7 @@ signals:
 private:
     void onCancelClicked();
     void reject() override;
+    void toggleParamGroup(QToolButton *toggleBtn, QWidget *content);
 
     QPlainTextEdit *m_logOutput = nullptr;
     QProgressBar *m_progressBar = nullptr;
