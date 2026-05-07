@@ -102,7 +102,10 @@ namespace dsfw {
         FramelessHelper::apply(this);
     }
 
-    AppShell::~AppShell() = default;
+    AppShell::~AppShell() {
+        setMenuWidget(nullptr);
+        m_menuBar = nullptr;
+    }
 
     int AppShell::addPage(QWidget *page, const QString &id, const QIcon &icon, const QString &label) {
         if (!page)
