@@ -7,15 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **T-6.1.2** Merge duplicate Slicer implementations: removed Qt-wrapper `Slicer` class from `libs/slicer/`, `SliceJob` now uses `ISlicerService` via `ServiceLocator` instead of directly instantiating the Qt wrapper. Added `maxSilKept` parameter to `ISlicerService::slice()`. Registered `SlicerService` with `ServiceLocator` in pipeline and CLI apps.
-- **T-6.3.4** Thread-safety fix for `registerModelType()` and `registerDocumentFormat()`: added `std::mutex` to protect concurrent access to the internal registry. Created `IDocumentFormat` interface and `DocumentFormatId` registration pattern (matching `ModelTypeId`).
-
 ### Fixed
 
-- **Q.8** Overlapping boundaries in PhonemeLabeler could not be selected/dragged. `hitTestBoundary()` now uses best-match with tie-break to later index, allowing users to drag overlapping boundaries apart.
-- **Q.9** FA output had all phoneme boundaries at position 0 (no duration) due to missing `secToUs()` conversion from float seconds to int64 microseconds. Also fixed stale document data persisting when switching to unannoted slices.
+- **B-04** Audio system data race and cross-page playback conflict. `PlayWidget::initAudio()` no longer shares `IAudioPlayer` via `ServiceLocator` — each PlayWidget now owns its own `AudioPlayer`. Fixed 4 memory leaks from non-parented PlayWidgets, `WindowStateFilter` use-after-free in AppShell destructor, and `AppShell::rebuildMenuBar()` `deleteLater` race. Thread-safety: `AudioPlayer` now routes all decoder access through `AudioPlayback`'s mutex-guarded methods instead of calling `AudioDecoder` directly.
+- **B-05** Inference engine use-after-free in `QtConcurrent::run` lambdas. `ModelManager::invalidateModel()` now emits `modelInvalidated` before `unload()`, allowing pages to set cancellation flags before engine destruction. Added `std::shared_ptr<std::atomic<bool>>` engine-alive tokens to `PhonemeLabelerPage` (paves way for PitchLabelerPage/MinLabelPage/ExportPage to follow P-09 pattern).
+- **B-06** Added `Q_DECLARE_METATYPE(dstools::LogEntry)` for defensive cross-thread signal delivery.
+
+### Changed
+
+- **P-08** New design principle: per-page resource isolation (ServiceLocator misuse prevention).
+- **P-09** New design principle: async tasks must hold engine-alive tokens.
+- **D-31** Decision: PlayWidget audio player isolation (no ServiceLocator sharing).
+- **D-32** Decision: ModelManager invalidate signal-before-unload ordering.
 
 ## [0.5.0] - 2026-04-30
 

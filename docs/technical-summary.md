@@ -151,28 +151,34 @@ ViewportController (resolution: int, samples/pixel)
 | TD-03 | **Spectrogram 未做增量计算** | `computeSpectrogramRange` 对变化区域重新 FFT，但 `rebuildViewImage` 每次重绘完整 QImage | 缩放/滚动时 CPU 占用高 | 分块缓存 + 仅重绘可见区域差异部分 |
 | TD-04 | **PhonemeEditor 的 BoundaryOverlay 依赖 mapTo(parentWidget)** | `repositionOverSplitter()` 使用 `m_trackedWidget->mapTo(parentWidget(), ...)` 计算位置 | 嵌套布局变化时 overlay 位置错位 | 改为 eventFilter 监听所有祖先 widget 的 Move/Resize 事件，或使用 QWidget::stackUnder 机制 |
 | TD-05 | **WaveformWidget/SpectrogramWidget/PowerWidget 大量代码重复** | 三个 widget 各自实现 hitTestBoundary、startBoundaryDrag、updateBoundaryDrag、endBoundaryDrag (~150行/each) | 修改拖拽逻辑要改三处 | 提取 `BoundaryDragMixin` 基类或组合对象 |
+| TD-06 | ✅ **已修复: AudioPlayer 数据竞争 + 双重所有权** | `AudioPlayer` 直接访问 `AudioDecoder`（无锁），与 SDL 回调线程并发读写；`m_decoder` unique_ptr 与 `AudioPlayback::Impl::decoder` 共享同一裸指针 | 右键播放崩溃 (0xc0000005) | 2026-05-07 已修复: 移除 m_decoder，路由到 AudioPlayback 线程安全方法 |
+| TD-07 | ✅ **已修复: PlayWidget ServiceLocator 全局共享** | 第一个 PlayWidget 注册 IAudioPlayer 到 ServiceLocator，后续页面被追共享同一播放器 | 跨页面音频冲突 | 2026-05-07 已修复: 移除共享逻辑，每个 PlayWidget 自有 AudioPlayer (D-31) |
+| TD-08 | ✅ **已修复: 4 个 PlayWidget 无 parent 内存泄漏** | PhonemeEditor/MinLabelEditor/DsSlicerPage/SlicerPage 的 PlayWidget 未设置 QObject parent | AppShell 析构野指针崩溃 | 2026-05-07 已修复: 全部添加 this parent |
+| TD-09 | ✅ **已修复: WindowStateFilter 裸指针** | `WindowStateFilter` 持有 `TitleBar*` 裸指针，析构顺序不确定导致 use-after-free | AppShell 析构崩溃 | 2026-05-07 已修复: 改用 QPointer<TitleBar> |
+| TD-10 | ✅ **已修复: ModelManager invalidateModel 顺序** | `invalidateModel` 先 unload 再 emit signal，页面无法阻止后台任务使用已销毁引擎 | 推理引擎 use-after-free | 2026-05-07 已修复: 先 emit 再 unload (D-32) |
 
 ### 🟡 中优先级 (影响开发效率)
 
 | # | 债务 | 当前状态 | 影响 | 建议修复 |
 |---|------|---------|------|---------|
-| TD-06 | **SlicerPage 与 DsSlicerPage 功能重复** | SlicerPage (LabelSuite) 和 DsSlicerPage (DsLabeler) 约 60% 代码重复 | 修复 bug 需同改两处 | 将 DsSlicerPage 改为 SlicerPage 的子类，仅 override 工程保存逻辑 |
-| TD-07 | **PhonemeTextGridTierLabel 未使用 IBoundaryModel::tierName()** | 标签区域只显示序号不显示层名（如 "phoneme"、"grapheme"） | 用户难区分层 | 增加 `IBoundaryModel::tierName(int)` 接口，TierLabel 绘制时显示 |
-| TD-08 | **TextGridDocument 内部使用 textgrid.hpp 的 IntervalTier 指针** | 暴露第三方库内部类型到 UI 代码 | textgrid.hpp 升级时影响面大 | 包装为纯内部接口，UI 层只通过 IBoundaryModel 访问 |
-| TD-09 | **dstools namespace 用于框架和应用** | `dstools` 既是 domain 层又是 apps 层的命名空间 | 不清楚类归属 | domain→`dstools`, apps→`dstools::app`, framework→`dsfw` (已分) |
-| TD-10 | **ExportService 的 autoComplete 仍有遗留的 processEvents** | 虽然路线图标记已删除，但实际代码中可能残留 | UI 假死 | 全面审查并移入 QtConcurrent |
-| TD-11 | **MiniMapScrollBar::setAudioData 中调用 setTotalDuration** | 缩略图加载音频后会覆盖 viewport 的 totalDuration，即使 loadAudioFile 已通过 setAudioParams 设置 | 可能重置采样率配置 | 移除 MiniMapScrollBar 中的 setTotalDuration 调用 |
+| TD-11 | **SlicerPage 与 DsSlicerPage 功能重复** | SlicerPage (LabelSuite) 和 DsSlicerPage (DsLabeler) 约 60% 代码重复 | 修复 bug 需同改两处 | 将 DsSlicerPage 改为 SlicerPage 的子类，仅 override 工程保存逻辑 |
+| TD-12 | **PhonemeTextGridTierLabel 未使用 IBoundaryModel::tierName()** | 标签区域只显示序号不显示层名（如 "phoneme"、"grapheme"） | 用户难区分层 | 增加 `IBoundaryModel::tierName(int)` 接口，TierLabel 绘制时显示 |
+| TD-13 | **TextGridDocument 内部使用 textgrid.hpp 的 IntervalTier 指针** | 暴露第三方库内部类型到 UI 代码 | textgrid.hpp 升级时影响面大 | 包装为纯内部接口，UI 层只通过 IBoundaryModel 访问 |
+| TD-14 | **dstools namespace 用于框架和应用** | `dstools` 既是 domain 层又是 apps 层的命名空间 | 不清楚类归属 | domain→`dstools`, apps→`dstools::app`, framework→`dsfw` (已分) |
+| TD-15 | **ExportService 的 autoComplete 仍有遗留的 processEvents** | 虽然路线图标记已删除，但实际代码中可能残留 | UI 假死 | 全面审查并移入 QtConcurrent |
+| TD-16 | **MiniMapScrollBar::setAudioData 中调用 setTotalDuration** | 缩略图加载音频后会覆盖 viewport 的 totalDuration，即使 loadAudioFile 已通过 setAudioParams 设置 | 可能重置采样率配置 | 移除 MiniMapScrollBar 中的 setTotalDuration 调用 |
+| TD-17 | ⚠ **QtConcurrent::run 推理引擎悬空指针 (残留风险)** | PitchLabelerPage、MinLabelPage、ExportPage 尚未添加 engine-alive 令牌（PhonemeLabelerPage 已修复） | 模型卸载期间后台任务可能崩溃 | 遵循 P-09 模式，为所有推理页面添加 `std::shared_ptr<std::atomic<bool>>` 存活令牌 |
 
 ### 🟢 低优先级 (代码质量)
 
 | # | 债务 | 当前状态 | 建议 |
 |---|------|---------|------|
-| TD-12 | 未使用的 unused variable warnings (paddedSize, halfWindow, yBot) | 编译警告 | 清理或 `[[maybe_unused]]` |
-| TD-13 | `DsItemManager` 标记 deprecated 但仍在 DsSlicerPage 使用 | C4996 warning | 迁移到 PipelineContext |
-| TD-14 | QSettings 键名不统一 | 部分硬编码字符串，部分用 SettingsKey | 全部迁移到 SettingsKey |
-| TD-15 | 翻译文件 (.ts) 多数为空 | en.qm 全部 0 translations | 要么删除 en 翻译文件，要么补充英文翻译 |
-| TD-16 | `docs/refactoring-roadmap-v2.md` 未更新完成状态 | 多个已完成任务仍标为 `- [ ]` | 更新 checkbox 为 `- [x]` |
-| TD-17 | IntervalTierView 手动绝对定位 | 可能在 DPI 缩放时错位 | 使用 QGridLayout 或按 DPI 系数计算 |
+| TD-18 | 未使用的 unused variable warnings (paddedSize, halfWindow, yBot) | 编译警告 | 清理或 `[[maybe_unused]]` |
+| TD-19 | `DsItemManager` 标记 deprecated 但仍在 DsSlicerPage 使用 | C4996 warning | 迁移到 PipelineContext |
+| TD-20 | QSettings 键名不统一 | 部分硬编码字符串，部分用 SettingsKey | 全部迁移到 SettingsKey |
+| TD-21 | 翻译文件 (.ts) 多数为空 | en.qm 全部 0 translations | 要么删除 en 翻译文件，要么补充英文翻译 |
+| TD-22 | `docs/refactoring-roadmap-v2.md` 未更新完成状态 | 多个已完成任务仍标为 `- [ ]` | 更新 checkbox 为 `- [x]` |
+| TD-23 | IntervalTierView 手动绝对定位 | 可能在 DPI 缩放时错位 | 使用 QGridLayout 或按 DPI 系数计算 |
 
 ---
 

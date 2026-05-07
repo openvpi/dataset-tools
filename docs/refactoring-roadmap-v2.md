@@ -22,6 +22,27 @@
 | 66 | LabelSuite 底层统一 dstext | 有效 |
 | 69 | ISettingsBackend → 废弃 ProjectSettingsBackend | 有效 |
 | 70 | FileDataSource 内部 dstext + FormatAdapter | 有效 |
+| 79 | Log 侧边栏改为独立 LogPage | 有效 |
+| 78 | Slicer/Phoneme 统一视图组合（D-30） | 有效 |
+| **80** | **PlayWidget 禁止 ServiceLocator 共享 IAudioPlayer（D-31）** | **新** |
+| **81** | **invalidateModel 先发信号再卸载（D-32）** | **新** |
+
+---
+
+### 关键架构决策 (ADR)
+
+| ADR | 决策 | 状态 |
+|-----|------|------|
+| 8 | 单仓库模式 | 有效 |
+| 43 | int64 微秒时间精度 | 有效 |
+| 46 | LabelSuite + DsLabeler 两个 exe | 有效 |
+| 52 | IEditorDataSource 抽象数据源 | 有效 |
+| 57 | 层依赖 DAG + per-slice dirty 标记 | 有效 |
+| 62 | 右键直接播放，不弹菜单 | 有效 |
+| 65 | IBoundaryModel → AudioVisualizerContainer 扩展 | 有效 |
+| 66 | LabelSuite 底层统一 dstext | 有效 |
+| 69 | ISettingsBackend → 废弃 ProjectSettingsBackend | 有效 |
+| 70 | FileDataSource 内部 dstext + FormatAdapter | 有效 |
 | **79** | **Log 侧边栏改为独立 LogPage（与 ADR-77 替代）** | **新** |
 | 78 | Slicer/Phoneme 统一视图组合（D-30）：同一 UI + 组件自由显隐排序 | 有效 |
 
@@ -72,19 +93,42 @@
 
 ---
 
-## 待修复
+## 已修复：音频系统 + 并发安全 (2026-05-07)
 
-### B-02 Phoneme 非活跃层边界贯穿线显示 ✅
+### B-04 PlayWidget ServiceLocator 全局共享导致跨页面音频冲突 ✅
 
-**问题**：未选中的层级的边界线在下方图表（waveform/spectrogram/power）中也显示为贯穿线。
+**问题**：
+1. Slicer 页面先播放音频后，Phoneme 页面无法独立播放——因为两个页面的 PlayWidget 通过 ServiceLocator 共享同一个 AudioPlayer
+2. 4 个 PlayWidget 实例未设置 QObject parent，导致内存泄漏和析构崩溃（0xc0000005 at 0xffffffffffffffff）
+3. AudioPlayer 直接访问 AudioDecoder（无锁），与 SDL 音频回调线程产生数据竞争
 
-**分析**：代码审查显示 `BoundaryOverlayWidget` 的逻辑正确（非活跃层 `lineBottom = tiers * tierRowH` 止于 tierLabel 区域内）。chart widget 自身 `paintEvent` 不绘制边界线。需要实际运行验证是否为渲染时序或 geometry 问题。
+**修复**：
+- `PlayWidget::initAudio()` 移除 ServiceLocator 共享逻辑，每个 PlayWidget 创建自有 AudioPlayer（D-31）
+- 给 PhonemeEditor、MinLabelEditor、DsSlicerPage、SlicerPage 的 PlayWidget 添加 `this` parent
+- `AudioPlayer` 所有 decoder 访问改为通过 `AudioPlayback` 线程安全方法（decoderPosition/decoderSetPosition/decoderIsOpen 等）
+- `FramelessHelper::WindowStateFilter` 改用 `QPointer<TitleBar>` 防止析构顺序导致的野指针访问
+- `AppShell::rebuildMenuBar()` 中 `pageBar->deleteLater()` 改为 `delete pageBar;` 避免延迟删除与析构级联冲突
 
-### B-03 Phoneme 波形图不显示 ✅
+**文件**：`PlayWidget.cpp`、`AudioPlayer.{h,cpp}`、`PhonemeEditor.cpp`、`MinLabelEditor.cpp`、`DsSlicerPage.cpp`、`SlicerPage.cpp`、`FramelessHelper.cpp`、`AppShell.cpp`
 
-**问题**：PhonemeLabeler 页面加载切片后波形图没有显示。
+### B-05 推理引擎 QtConcurrent::run 数据竞争修复 ✅
 
-**分析**：代码逻辑正确（`setAudioData` + `rebuildMinMaxCache` + deferred `fitToWindow`）。可能原因：(1) 保存的 splitter state 将 waveform 高度压为 0；(2) `fitToWindow` 延迟执行时序问题。需要清除 QSettings 中的 `Layout/editorSplitterState` 验证。
+**问题**：`ModelManager::invalidateModel()` 先卸载引擎再发信号，导致后台任务的 QtConcurrent lambda 在引擎已销毁后仍持有原始指针。影响 PhonemeLabelerPage、PitchLabelerPage、MinLabelPage、ExportPage。
+
+**修复**：
+- `ModelManager::invalidateModel()` 改为先 `emit` 信号再 `unload()`（D-32）
+- PhonemeLabelerPage 增加 `std::shared_ptr<std::atomic<bool>> m_hfaAlive` 存活令牌，lambda 在使用引擎前检查令牌
+- 所有页面遵循 P-09（异步任务引擎存活令牌）模式
+
+**文件**：`ModelManager.cpp`、`PhonemeLabelerPage.{h,cpp}`
+
+### B-06 FA 分层日志修复 ✅
+
+**问题**：`dstools::LogEntry` 缺少 `Q_DECLARE_METATYPE` 注册，跨线程 queued connection 存在潜在风险。
+
+**修复**：在 `Log.h` 中添加 `Q_DECLARE_METATYPE(dstools::LogEntry)`。
+
+**文件**：`Log.h`
 
 ---
 

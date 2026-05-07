@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <cstdint>
+#include <QMetaType>
 
 namespace dstools {
 
@@ -28,6 +29,8 @@ struct LogEntry {
     /// @brief Convert log entry to a single-line display string.
     [[nodiscard]] std::string toString() const;
 };
+
+Q_DECLARE_METATYPE(dstools::LogEntry)
 
 /// @brief Log severity to human-readable label.
 [[nodiscard]] const char *logLevelLabel(LogLevel level);

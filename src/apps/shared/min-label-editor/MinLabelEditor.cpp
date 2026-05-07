@@ -6,7 +6,7 @@
 namespace Minlabel {
 
     MinLabelEditor::MinLabelEditor(QWidget *parent) : QWidget(parent) {
-        m_playWidget = new dstools::widgets::PlayWidget();
+        m_playWidget = new dstools::widgets::PlayWidget(this);
         m_playWidget->setObjectName("play-widget");
         m_playWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 

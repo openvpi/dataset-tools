@@ -171,8 +171,12 @@ void ModelManager::unloadModel(const QString &taskKey) {
 
 void ModelManager::invalidateModel(const QString &taskKey) {
     auto typeId = taskKeyToTypeId(taskKey);
-    unload(typeId);
+    // Emit BEFORE unloading so pages can null their raw engine pointers
+    // and set cancellation flags before the engine is destroyed.
+    // This prevents use-after-free when background tasks hold copies of the
+    // raw pointer (e.g. QtConcurrent::run lambdas).
     emit modelInvalidated(taskKey);
+    unload(typeId);
 }
 
 } // namespace dstools

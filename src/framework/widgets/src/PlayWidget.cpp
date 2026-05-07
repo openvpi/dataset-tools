@@ -1,7 +1,6 @@
 #include <dsfw/widgets/PlayWidget.h>
 #include <dstools/IAudioPlayer.h>
 #include <dstools/AudioPlayer.h>
-#include <dsfw/ServiceLocator.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -132,12 +131,6 @@ PlayWidget::~PlayWidget() {
 }
 
 void PlayWidget::initAudio() {
-    if (auto *shared = dstools::ServiceLocator::get<dstools::audio::IAudioPlayer>()) {
-        m_player = shared;
-        m_valid = true;
-        return;
-    }
-
     m_ownedPlayer = std::make_unique<dstools::audio::AudioPlayer>();
     m_player = m_ownedPlayer.get();
 
@@ -150,20 +143,13 @@ void PlayWidget::initAudio() {
         return;
     }
     m_valid = true;
-
-    dstools::ServiceLocator::set<dstools::audio::IAudioPlayer>(m_player);
 }
 
 void PlayWidget::uninitAudio() {
     if (m_player) {
         m_player->stop();
     }
-    if (m_ownedPlayer) {
-        if (dstools::ServiceLocator::get<dstools::audio::IAudioPlayer>() == m_player) {
-            dstools::ServiceLocator::reset<dstools::audio::IAudioPlayer>();
-        }
-        m_ownedPlayer.reset();
-    }
+    m_ownedPlayer.reset();
     m_player = nullptr;
 }
 

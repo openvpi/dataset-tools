@@ -276,7 +276,10 @@ namespace dsfw {
                     m_menuBar->addAction(srcAction);
                 }
             }
-            pageBar->deleteLater();
+            // pageBar is a child of |this| (AppShell). After all actions have
+            // been moved out, delete it immediately to prevent a deferred
+            // deleteLater() from racing with AppShell's own destruction cascade.
+            delete pageBar;
         }
     }
 

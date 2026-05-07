@@ -56,7 +56,7 @@ namespace dstools {
     DsSlicerPage::DsSlicerPage(QWidget *parent) : QWidget(parent) {
         m_undoStack = new QUndoStack(this);
         m_boundaryModel = new phonemelabeler::SliceBoundaryModel();
-        m_playWidget = new dstools::widgets::PlayWidget();
+        m_playWidget = new dstools::widgets::PlayWidget(this);
         buildLayout();
         connectSignals();
     }

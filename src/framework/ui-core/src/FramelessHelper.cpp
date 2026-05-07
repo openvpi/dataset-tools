@@ -7,6 +7,7 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QMenuBar>
+#include <QPointer>
 #include <QToolButton>
 #include <QDialog>
 
@@ -154,13 +155,15 @@ public:
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override {
-        if (event->type() == QEvent::WindowStateChange)
-            m_titleBar->updateMaximizeButton();
+        if (event->type() == QEvent::WindowStateChange) {
+            if (m_titleBar)
+                m_titleBar->updateMaximizeButton();
+        }
         return QObject::eventFilter(obj, event);
     }
 
 private:
-    TitleBar *m_titleBar;
+    QPointer<TitleBar> m_titleBar;
 };
 
 void FramelessHelper::apply(QMainWindow *window) {

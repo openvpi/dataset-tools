@@ -23,7 +23,7 @@ PhonemeEditor::PhonemeEditor(QWidget *parent)
     : QWidget(parent),
       m_document(new TextGridDocument(this)),
       m_undoStack(new QUndoStack(this)),
-      m_playWidget(new dstools::widgets::PlayWidget()),
+      m_playWidget(new dstools::widgets::PlayWidget(this)),
       m_renderer(new WaveformRenderer(this))
 {
     buildActions();

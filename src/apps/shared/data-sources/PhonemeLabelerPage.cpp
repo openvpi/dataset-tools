@@ -282,6 +282,7 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 }
 
 void PhonemeLabelerPage::onDeactivatedImpl() {
+    m_hfaAlive.reset();
     m_hfa = nullptr;
 }
 
@@ -456,13 +457,17 @@ void PhonemeLabelerPage::ensureHfaEngine() {
     auto typeId = registerModelType("phoneme_alignment");
     auto *provider = mm->provider(typeId);
     auto *hfaProvider = dynamic_cast<InferenceModelProvider<HFA::HFA> *>(provider);
-    if (hfaProvider && hfaProvider->engine().isOpen())
+    if (hfaProvider && hfaProvider->engine().isOpen()) {
         m_hfa = &hfaProvider->engine();
+        m_hfaAlive = std::make_shared<std::atomic<bool>>(true);
+    }
 }
 
 void PhonemeLabelerPage::onModelInvalidated(const QString &taskKey) {
-    if (taskKey == QStringLiteral("phoneme_alignment"))
+    if (taskKey == QStringLiteral("phoneme_alignment")) {
+        m_hfaAlive.reset();
         m_hfa = nullptr;
+    }
 }
 
 void PhonemeLabelerPage::ensureHfaEngineAsync(std::function<void()> onReady) {
@@ -558,12 +563,15 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     m_faRunning = true;
     DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString()).c_str());
     auto *hfa = m_hfa;
+    auto hfaAlive = m_hfaAlive;
     QPointer<PhonemeLabelerPage> guard(this);
 
     QString lyricsQStr = graphemeTexts.join(QStringLiteral(" "));
     std::string lyricsText = lyricsQStr.toStdString();
 
-    (void) QtConcurrent::run([hfa, audioPath, lyricsText, sliceId, guard]() {
+    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, sliceId, guard]() {
+        if (!hfaAlive || !*hfaAlive)
+            return;
         HFA::WordList words;
 
         std::vector<std::string> nonSpeechPh = {"AP", "SP"};
@@ -698,10 +706,13 @@ void PhonemeLabelerPage::onBatchFA() {
         DSFW_LOG_INFO("fa", msg.c_str());
     }
     auto *hfa = m_hfa;
+    auto hfaAlive = m_hfaAlive;
     auto *src = source();
     QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, src, ids, guard]() {
+    (void) QtConcurrent::run([hfa, hfaAlive, src, ids, guard]() {
+        if (!hfaAlive || !*hfaAlive)
+            return;
         int processed = 0;
         int skipped = 0;
         for (const auto &sliceId : ids) {

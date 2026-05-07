@@ -2,7 +2,9 @@
 
 #include "EditorPageBase.h"
 
+#include <atomic>
 #include <functional>
+#include <memory>
 
 #include <PhonemeEditor.h>
 
@@ -44,6 +46,7 @@ private:
 
     HFA::HFA *m_hfa = nullptr;
     bool m_faRunning = false;
+    std::shared_ptr<std::atomic<bool>> m_hfaAlive;
 
     void onRunFA();
     void onBatchFA();

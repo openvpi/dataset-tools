@@ -67,6 +67,54 @@
 
 **来源**：吸收自 language-manager 项目的"Write Once, Run Forever"设计理念。
 
+### P-08：每页独立资源，禁止全局共享（ServiceLocator 误用防护）
+
+**原则**：ServiceLocator 仅用于**真正的全局服务**（如 `IFileIOProvider`、`IModelManager`、`IG2PProvider`）。页面级资源（如 `IAudioPlayer`、widget 实例）不得通过 ServiceLocator 全局共享。
+
+**判断标准**：
+- ✅ 全局服务：所有页面共享同一实例有意义（文件存储、模型注册表、G2P 字典）
+- ❌ 页面资源：每个页面需要独立实例（音频播放器、widget 状态机）
+
+**禁止模式**（`PlayWidget::initAudio()` 旧代码）：
+```cpp
+// ❌ 第一个 PlayWidget 注册全局 IAudioPlayer，后续所有 PlayWidget 被迫共享
+if (auto *shared = ServiceLocator::get<IAudioPlayer>()) {
+    m_player = shared;  // 复用别人的 player
+    return;
+}
+ServiceLocator::set<IAudioPlayer>(m_player);
+```
+
+**正确做法**：每个 PlayWidget 创建自有的 AudioPlayer，不注册到 ServiceLocator。
+
+### P-09：异步任务必须持有引擎存活令牌（防止 use-after-free）
+
+**原则**：任何 `QtConcurrent::run` 中捕获到并在后台线程调用的原始指针对象，必须在页面中维护一个
+`std::shared_ptr<std::atomic<bool>>` "存活令牌"，lambda 在使用引擎前必须先检查令牌。
+
+**背景**：`ModelManager::invalidateModel()` 会销毁推理引擎，但后台线程可能仍持有原始指针副本。QPointer 只能保护 QObject 子类，不能保护原始指针。
+
+**实现模式**：
+```cpp
+// 页面成员：
+std::shared_ptr<std::atomic<bool>> m_engineAlive;
+
+// 引擎就绪时：
+m_engineAlive = std::make_shared<std::atomic<bool>>(true);
+
+// lambda 中：
+auto alive = m_engineAlive;  // shared_ptr 副本，延长令牌生命周期
+QtConcurrent::run([hfa, alive, ...]() {
+    if (!alive || !*alive) return;  // 引擎已销毁，安全退出
+    hfa->recognize(...);            // 仍存在 TOCTOU 间隙，需进一步重构
+});
+
+// 引擎失效时（onDeactivated / onModelInvalidated）：
+m_engineAlive.reset();  // 原子置 false 并释放引用
+```
+
+**注意**：此方案是**过渡性补救**，存在 TOCTOU（check-then-use）间隙。彻底解决需要引擎层自身提供 shared_ptr 所有权或线程安全的访问令牌。
+
 ---
 
 ## D-01：配置全部移出工程文件
@@ -543,6 +591,38 @@ D-14 提出了"共享 AudioVisualizerContainer 基类"的方向。本决策（D-
 - 用户可通过 Settings 页面自由定制
 
 **废弃**：D-14 中 "子图的顺序可在 Settings 页面中自定义" → 整合到 D-30 的具体设计中。
+
+---
+
+## D-31：每个 PlayWidget 拥有独立的 AudioPlayer（禁止 ServiceLocator 共享）
+
+**决策**：废弃原先 ServiceLocator 全局共享 `IAudioPlayer` 的设计。每个 PlayWidget 实例创建自有的 `AudioPlayer`，不注册到 ServiceLocator。
+
+**原因**：
+1. ServiceLocator 单槽位机制导致第一个创建 PlayWidget 的页面"抢占"全局音频资源，后续页面被迫共享同一播放器
+2. Slicer 页面播放音频后，Phoneme 页面无法独立播放——因为共享的 AudioPlayer 已被占用
+3. 非 parent 的 PlayWidget 发生内存泄漏，其 AudioPlayer 永远不会释放，导致 AppShell 析构时访问野指针崩溃（0xc0000005）
+
+**影响**：
+- `PlayWidget::initAudio()` 移除 ServiceLocator 共享逻辑，始终创建自有 `AudioPlayer`
+- `PlayWidget::uninitAudio()` 移除 ServiceLocator 注销逻辑
+- **所有** PlayWidget 必须设置 QObject parent（防止泄漏）
+- `AudioPlayer::position()` / `setPosition()` / `duration()` 等路由到 `AudioPlayback` 的线程安全方法
+
+**文件**：`PlayWidget.cpp`、`AudioPlayer.cpp`、`PhonemeEditor.cpp`、`MinLabelEditor.cpp`、`DsSlicerPage.cpp`、`SlicerPage.cpp`
+
+---
+
+## D-32：ModelManager::invalidateModel 先发信号再卸载（防止 use-after-free）
+
+**决策**：`ModelManager::invalidateModel()` 必须先 `emit modelInvalidated(taskKey)`，再 `unload(typeId)`。原始顺序（先 unload 再 emit）导致页面在收到信号时引擎已被销毁，无法保护已排队的后台任务。
+
+**影响**：
+- 页面 `onModelInvalidated` 槽在引擎销毁前执行，可设置取消标志、清空原始指针
+- 各推理页面增加 `std::shared_ptr<std::atomic<bool>>` 存活令牌（见 P-09）
+- PhonemeLabelerPage、PitchLabelerPage、MinLabelPage、ExportPage 需遵循 P-09 模式
+
+**文件**：`ModelManager.cpp`、`PhonemeLabelerPage.{h,cpp}`
 
 ---
 
