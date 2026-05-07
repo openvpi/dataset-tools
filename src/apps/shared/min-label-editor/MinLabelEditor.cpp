@@ -47,4 +47,8 @@ namespace Minlabel {
         m_fileProgress->setProgress(completed, total);
     }
 
+    void MinLabelEditor::autoG2P() {
+        m_textWidget->textToPronunciation(false);
+    }
+
 } // namespace Minlabel

@@ -25,6 +25,8 @@ namespace Minlabel {
         QLineEdit *wordsText;         ///< Single-line input for words.
         QPlainTextEdit *contentText;  ///< Multi-line pronunciation output.
 
+        void textToPronunciation(bool append = false) const;
+
     protected:
         QPushButton *replaceButton;
         QPushButton *appendButton;
@@ -53,8 +55,6 @@ namespace Minlabel {
 
     private:
         QString sentence() const;
-
-        void _q_textToPronunciation(const bool append = false) const;
 
         void _q_pasteButtonClicked() const;
         void _q_onLanguageComboIndexChanged();

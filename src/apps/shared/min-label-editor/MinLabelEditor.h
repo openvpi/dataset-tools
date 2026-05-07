@@ -46,6 +46,9 @@ namespace Minlabel {
         /// Access the embedded text widget (e.g. for external shortcut binding).
         [[nodiscard]] TextWidget *textWidget() const { return m_textWidget; }
 
+        /// Automatically run G2P on the current raw text and update contentText.
+        void autoG2P();
+
     signals:
         /// Emitted whenever the user edits label content or raw text.
         void dataChanged();

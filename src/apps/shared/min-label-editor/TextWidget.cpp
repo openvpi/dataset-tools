@@ -79,10 +79,9 @@ namespace Minlabel {
         setLayout(mainLayout);
 
         connect(pasteButton, &QPushButton::clicked, this, &TextWidget::_q_pasteButtonClicked);
-        connect(replaceButton, &QPushButton::clicked, this, &TextWidget::_q_textToPronunciation);
-        connect(replaceAction, &QAction::triggered, this, &TextWidget::_q_textToPronunciation);
-
-        connect(appendButton, &QPushButton::clicked, this, [this] { _q_textToPronunciation(true); });
+        connect(replaceButton, &QPushButton::clicked, this, [this] { textToPronunciation(false); });
+        connect(replaceAction, &QAction::triggered, this, [this] { textToPronunciation(false); });
+        connect(appendButton, &QPushButton::clicked, this, [this] { textToPronunciation(true); });
         connect(languageCombo, &QComboBox::currentTextChanged, this, &TextWidget::_q_onLanguageComboIndexChanged);
     }
 
@@ -102,7 +101,7 @@ namespace Minlabel {
         return result.replace(regex, "");
     }
 
-    void TextWidget::_q_textToPronunciation(const bool append) const {
+    void TextWidget::textToPronunciation(const bool append) const {
         QString str;
         const QString jpInput = removeSokuon->isChecked() ? filterSokuon(sentence()) : sentence();
         switch (languageCombo->currentIndex()) {

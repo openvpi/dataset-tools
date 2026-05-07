@@ -110,6 +110,33 @@ bool MinLabelPage::saveCurrentSlice() {
         }
     }
 
+    IntervalLayer *rawTextLayer = nullptr;
+    for (auto &layer : doc.layers) {
+        if (layer.name == QStringLiteral("raw_text")) {
+            rawTextLayer = &layer;
+            break;
+        }
+    }
+    if (!rawTextLayer) {
+        doc.layers.push_back({});
+        rawTextLayer = &doc.layers.back();
+        rawTextLayer->name = QStringLiteral("raw_text");
+        rawTextLayer->type = QStringLiteral("text");
+    }
+
+    rawTextLayer->boundaries.clear();
+    const QString raw = m_editor->rawText();
+    if (!raw.isEmpty()) {
+        const auto rawParts = raw.split(QChar(' '), Qt::SkipEmptyParts);
+        int rid = 1;
+        for (const auto &part : rawParts) {
+            Boundary b;
+            b.id = rid++;
+            b.text = part;
+            rawTextLayer->boundaries.push_back(std::move(b));
+        }
+    }
+
     auto saveResult = source()->saveSlice(currentSliceId(), doc);
     if (!saveResult) {
         QMessageBox::warning(this, tr("Save Failed"),
@@ -504,7 +531,8 @@ void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
     (void) source()->saveSlice(sliceId, doc);
 
     if (sliceId == currentSliceId()) {
-        m_editor->loadData(text, {});
+        m_editor->loadData({}, text);
+        m_editor->autoG2P();
         m_dirty = true;
     }
 
