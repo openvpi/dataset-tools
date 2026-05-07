@@ -282,6 +282,8 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 }
 
 void PhonemeLabelerPage::onDeactivatedImpl() {
+    if (m_editor && m_editor->playWidget())
+        m_editor->playWidget()->setPlaying(false);
     m_hfaAlive.reset();
     m_hfa = nullptr;
 }
@@ -405,6 +407,9 @@ QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
 }
 
 QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
+    disconnect(m_sliceLabelConn);
+    disconnect(m_posLabelConn);
+
     auto *container = new QWidget(parent);
     auto *layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -414,12 +419,15 @@ QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
     layout->addWidget(sliceLabel, 1);
     layout->addWidget(posLabel);
 
-    connect(this, &PhonemeLabelerPage::sliceChanged, sliceLabel, [this, sliceLabel](const QString &id) {
+    m_sliceLabelConn = connect(this, &PhonemeLabelerPage::sliceChanged, sliceLabel,
+                               [this, sliceLabel](const QString &id) {
         sliceLabel->setText(id.isEmpty() ? tr("No slice selected") : id);
     });
-    connect(m_editor, &phonemelabeler::PhonemeEditor::positionChanged,
-            this, [posLabel](double sec) {
-        posLabel->setText(QString::number(sec, 'f', 3) + "s");
+    QPointer<QLabel> posLabelGuard(posLabel);
+    m_posLabelConn = connect(m_editor, &phonemelabeler::PhonemeEditor::positionChanged,
+            this, [posLabelGuard](double sec) {
+        if (posLabelGuard)
+            posLabelGuard->setText(QString::number(sec, 'f', 3) + "s");
     });
 
     return container;

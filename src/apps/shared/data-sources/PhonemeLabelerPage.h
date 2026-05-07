@@ -48,6 +48,9 @@ private:
     bool m_faRunning = false;
     std::shared_ptr<std::atomic<bool>> m_hfaAlive;
 
+    QMetaObject::Connection m_posLabelConn;
+    QMetaObject::Connection m_sliceLabelConn;
+
     void onRunFA();
     void onBatchFA();
     void ensureHfaEngine();
