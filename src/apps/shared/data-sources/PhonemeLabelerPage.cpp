@@ -73,6 +73,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
 
         r.graphemeLayer.boundaries.push_back(std::move(graphemeB));
 
+        std::string containmentLog;
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
             const auto &phone = word.phones[pi];
 
@@ -96,8 +97,19 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
                      " @ " + std::to_string(word.start) + "s").c_str());
             }
 
+            if (pi > 0) containmentLog += ", ";
+            containmentLog += phone.text + " [" +
+                std::to_string(phone.start) + "-" +
+                std::to_string(phone.end) + "s]";
+
             r.phonemeLayer.boundaries.push_back(std::move(phoneB));
         }
+
+        DSFW_LOG_INFO("fa",
+            ("grapheme \"" + word.text + "\" [" +
+             std::to_string(word.start) + "-" +
+             std::to_string(word.end) + "s] → phones: " +
+             containmentLog).c_str());
     }
 
     if (!r.graphemeLayer.boundaries.empty() && !words.empty()) {
