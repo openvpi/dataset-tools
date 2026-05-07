@@ -70,6 +70,7 @@ private:
     void runAddPhNum(const QString &sliceId);
     void applyPitchResult(const QString &sliceId, const std::vector<int32_t> &f0, float timestep);
     void applyMidiResult(const QString &sliceId, const std::vector<Game::GameNote> &notes);
+    void updateProgress();
 };
 
 } // namespace dstools

@@ -59,6 +59,7 @@ private:
     void runFaForSlice(const QString &sliceId);
     void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers,
                        const std::vector<BindingGroup> &groups = {});
+    void updateProgress();
 };
 
 } // namespace dstools

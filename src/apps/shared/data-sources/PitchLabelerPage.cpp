@@ -390,7 +390,8 @@ void PitchLabelerPage::ensureGameEngineAsync(std::function<void()> onReady) {
 }
 
 void PitchLabelerPage::onAutoInfer() {
-    // Preload engines if configured
+    updateProgress();
+
     if (settingsBackend()) {
         auto settingsData = settingsBackend()->load();
         auto preload = settingsData["preload"].toObject();
@@ -843,6 +844,25 @@ void PitchLabelerPage::onBatchExtract() {
                 msg, 3000);
         }, Qt::QueuedConnection);
     });
+}
+
+void PitchLabelerPage::updateProgress() {
+    if (!source()) return;
+    const auto ids = source()->sliceIds();
+    int total = ids.size();
+    int completed = 0;
+    for (const auto &id : ids) {
+        auto result = source()->loadSlice(id);
+        if (result) {
+            for (const auto &layer : result.value().layers) {
+                if (layer.name == QStringLiteral("pitch") && !layer.boundaries.empty()) {
+                    ++completed;
+                    break;
+                }
+            }
+        }
+    }
+    sliceListPanel()->setProgress(completed, total);
 }
 
 } // namespace dstools
