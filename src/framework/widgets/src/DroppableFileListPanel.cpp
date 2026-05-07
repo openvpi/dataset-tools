@@ -10,8 +10,9 @@
 #include <QHBoxLayout>
 #include <QListWidget>
 #include <QMimeData>
-#include <QPushButton>
 #include <QRegularExpression>
+#include <QStyle>
+#include <QToolButton>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -28,19 +29,30 @@ DroppableFileListPanel::DroppableFileListPanel(QWidget *parent) : QWidget(parent
     auto *btnLayout = new QHBoxLayout;
     btnLayout->setContentsMargins(2, 2, 2, 2);
     btnLayout->setSpacing(2);
-    m_btnAddDir = new QPushButton(QStringLiteral("📁"), this);
-    m_btnAdd = new QPushButton(QStringLiteral("+"), this);
-    m_btnRemove = new QPushButton(QStringLiteral("−"), this);
-    m_btnDiscard = new QPushButton(QStringLiteral("Discard"), this);
-    m_btnClear = new QPushButton(QStringLiteral("Clear"), this);
+    m_btnAddDir = new QToolButton(this);
+    m_btnAddDir->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
     m_btnAddDir->setToolTip(tr("Add directory"));
+    m_btnAddDir->setAutoRaise(true);
+
+    m_btnAdd = new QToolButton(this);
+    m_btnAdd->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
     m_btnAdd->setToolTip(tr("Add files"));
+    m_btnAdd->setAutoRaise(true);
+
+    m_btnRemove = new QToolButton(this);
+    m_btnRemove->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
     m_btnRemove->setToolTip(tr("Remove selected"));
+    m_btnRemove->setAutoRaise(true);
+
+    m_btnDiscard = new QToolButton(this);
+    m_btnDiscard->setText(tr("Discard"));
     m_btnDiscard->setToolTip(tr("Discard selected (mark as skipped)"));
+    m_btnDiscard->setAutoRaise(true);
+
+    m_btnClear = new QToolButton(this);
+    m_btnClear->setText(tr("Clear"));
     m_btnClear->setToolTip(tr("Clear all files"));
-    m_btnAddDir->setFixedWidth(32);
-    m_btnAdd->setFixedWidth(32);
-    m_btnRemove->setFixedWidth(32);
+    m_btnClear->setAutoRaise(true);
     btnLayout->addWidget(m_btnAddDir);
     btnLayout->addWidget(m_btnAdd);
     btnLayout->addWidget(m_btnRemove);
@@ -58,11 +70,11 @@ DroppableFileListPanel::DroppableFileListPanel(QWidget *parent) : QWidget(parent
     m_progressTracker->setVisible(false);
     layout->addWidget(m_progressTracker);
 
-    connect(m_btnAdd, &QPushButton::clicked, this, &DroppableFileListPanel::onAddFiles);
-    connect(m_btnAddDir, &QPushButton::clicked, this, &DroppableFileListPanel::onAddDirectory);
-    connect(m_btnRemove, &QPushButton::clicked, this, &DroppableFileListPanel::onRemoveSelected);
-    connect(m_btnDiscard, &QPushButton::clicked, this, &DroppableFileListPanel::onDiscardSelected);
-    connect(m_btnClear, &QPushButton::clicked, this, &DroppableFileListPanel::onClearAll);
+    connect(m_btnAdd, &QToolButton::clicked, this, &DroppableFileListPanel::onAddFiles);
+    connect(m_btnAddDir, &QToolButton::clicked, this, &DroppableFileListPanel::onAddDirectory);
+    connect(m_btnRemove, &QToolButton::clicked, this, &DroppableFileListPanel::onRemoveSelected);
+    connect(m_btnDiscard, &QToolButton::clicked, this, &DroppableFileListPanel::onDiscardSelected);
+    connect(m_btnClear, &QToolButton::clicked, this, &DroppableFileListPanel::onClearAll);
     connect(m_listWidget, &QListWidget::currentRowChanged, this,
             &DroppableFileListPanel::onCurrentRowChanged);
     connect(m_listWidget, &QListWidget::itemSelectionChanged, this,
@@ -70,6 +82,22 @@ DroppableFileListPanel::DroppableFileListPanel(QWidget *parent) : QWidget(parent
 }
 
 DroppableFileListPanel::~DroppableFileListPanel() = default;
+
+void DroppableFileListPanel::setButtonVisible(const QString &name, bool visible) {
+    QToolButton *btn = nullptr;
+    if (name == QStringLiteral("addDir"))
+        btn = m_btnAddDir;
+    else if (name == QStringLiteral("add"))
+        btn = m_btnAdd;
+    else if (name == QStringLiteral("remove"))
+        btn = m_btnRemove;
+    else if (name == QStringLiteral("discard"))
+        btn = m_btnDiscard;
+    else if (name == QStringLiteral("clear"))
+        btn = m_btnClear;
+    if (btn)
+        btn->setVisible(visible);
+}
 
 void DroppableFileListPanel::setFileFilters(const QStringList &filters) {
     m_filters = filters;

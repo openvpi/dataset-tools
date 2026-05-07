@@ -11,6 +11,7 @@ namespace dstools {
 ///
 /// Pre-configured DroppableFileListPanel with audio file filters
 /// (wav, flac, mp3, m4a, ogg, opus, wma, aac).
+/// Hides the "addDir" button since slicer mode adds files differently.
 class AudioFileListPanel : public dsfw::widgets::DroppableFileListPanel {
     Q_OBJECT
 
@@ -27,6 +28,7 @@ public:
             QStringLiteral("*.wma"),
             QStringLiteral("*.aac"),
         });
+        setButtonVisible(QStringLiteral("addDir"), false);
     }
     ~AudioFileListPanel() override = default;
 };

@@ -8,7 +8,7 @@
 
 class QListWidget;
 class QListWidgetItem;
-class QPushButton;
+class QToolButton;
 
 namespace dsfw::widgets {
 
@@ -75,6 +75,10 @@ public:
     /// Access the internal list widget.
     [[nodiscard]] QListWidget *listWidget() const;
 
+    /// Show or hide a button by name.
+    /// Valid names: "addDir", "add", "remove", "discard", "clear".
+    void setButtonVisible(const QString &name, bool visible);
+
 signals:
     /// Emitted when a file is selected (by click).
     void fileSelected(const QString &filePath);
@@ -95,11 +99,11 @@ protected:
 
 private:
     QListWidget *m_listWidget = nullptr;
-    QPushButton *m_btnAdd = nullptr;
-    QPushButton *m_btnAddDir = nullptr;
-    QPushButton *m_btnRemove = nullptr;
-    QPushButton *m_btnDiscard = nullptr;
-    QPushButton *m_btnClear = nullptr;
+    QToolButton *m_btnAdd = nullptr;
+    QToolButton *m_btnAddDir = nullptr;
+    QToolButton *m_btnRemove = nullptr;
+    QToolButton *m_btnDiscard = nullptr;
+    QToolButton *m_btnClear = nullptr;
     FileProgressTracker *m_progressTracker = nullptr;
     QStringList m_filters;
 
