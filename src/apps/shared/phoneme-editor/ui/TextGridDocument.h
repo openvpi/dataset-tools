@@ -64,6 +64,9 @@ public:
     [[nodiscard]] bool supportsBinding() const override { return true; }
     [[nodiscard]] bool supportsInsert() const override { return true; }
 
+    [[nodiscard]] bool isTierReadOnly(int tierIndex) const;
+    void setTierReadOnly(int tierIndex, bool readOnly);
+
     [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const override;
     [[nodiscard]] TimePos snapToNearestBoundary(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const override;
 
@@ -104,6 +107,7 @@ private:
     // time position and must move together when dragged.
     // Populated from FA results or auto-detected on TextGrid load.
     std::vector<BindingGroup> m_groups;
+    std::vector<bool> m_tierReadOnly;
 };
 
 } // namespace phonemelabeler

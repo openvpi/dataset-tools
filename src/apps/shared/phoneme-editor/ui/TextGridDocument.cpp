@@ -184,6 +184,7 @@ void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, TimePos ne
 
 void TextGridDocument::setIntervalText(int tierIndex, int intervalIndex, const QString &text) {
     if (tierIndex < 0 || tierIndex >= tierCount()) return;
+    if (isTierReadOnly(tierIndex)) return;
 
     auto tier = m_textGrid.GetTierAs<textgrid::IntervalTier>(tierIndex);
     if (!tier) return;
@@ -201,6 +202,7 @@ void TextGridDocument::setIntervalText(int tierIndex, int intervalIndex, const Q
 
 void TextGridDocument::insertBoundary(int tierIndex, TimePos time) {
     if (tierIndex < 0 || tierIndex >= tierCount()) return;
+    if (isTierReadOnly(tierIndex)) return;
 
     auto tier = m_textGrid.GetTierAs<textgrid::IntervalTier>(tierIndex);
     if (!tier) return;
@@ -498,6 +500,19 @@ void TextGridDocument::autoDetectBindingGroups() {
             m_groups.push_back(std::move(ids));
         }
     }
+}
+
+bool TextGridDocument::isTierReadOnly(int tierIndex) const {
+    if (tierIndex < 0 || tierIndex >= static_cast<int>(m_tierReadOnly.size()))
+        return false;
+    return m_tierReadOnly[tierIndex];
+}
+
+void TextGridDocument::setTierReadOnly(int tierIndex, bool readOnly) {
+    if (tierIndex < 0) return;
+    if (tierIndex >= static_cast<int>(m_tierReadOnly.size()))
+        m_tierReadOnly.resize(tierIndex + 1, false);
+    m_tierReadOnly[tierIndex] = readOnly;
 }
 
 } // namespace phonemelabeler

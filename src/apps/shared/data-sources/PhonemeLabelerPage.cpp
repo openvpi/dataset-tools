@@ -274,6 +274,14 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
             m_editor->document()->setBindingGroups(doc.groups);
         else if (doc.layers.size() > 1)
             m_editor->document()->autoDetectBindingGroups();
+
+        // Mark phoneme tier as read-only (FA output should not be manually edited)
+        for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
+            if (doc.layers[i].name == QStringLiteral("phoneme")) {
+                m_editor->document()->setTierReadOnly(i, true);
+                break;
+            }
+        }
     } else {
         // No layers — load empty document with audio duration
         double audioDur = m_editor->viewport()->totalDuration();
@@ -702,6 +710,14 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
             m_editor->document()->setBindingGroups(doc.groups);
         else if (doc.layers.size() > 1)
             m_editor->document()->autoDetectBindingGroups();
+
+        // Mark phoneme tier as read-only (FA output should not be manually edited)
+        for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
+            if (doc.layers[i].name == QStringLiteral("phoneme")) {
+                m_editor->document()->setTierReadOnly(i, true);
+                break;
+            }
+        }
     }
 
     updateProgress();

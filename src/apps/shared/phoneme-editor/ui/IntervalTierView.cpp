@@ -206,7 +206,11 @@ void IntervalTierView::mousePressEvent(QMouseEvent *event) {
             setCursor(Qt::SizeHorCursor);
         }
     } else if (event->button() == Qt::RightButton) {
-        // Context menu
+        if (m_doc && m_doc->isTierReadOnly(m_tierIndex)) {
+            QWidget::mousePressEvent(event);
+            return;
+        }
+
         QMenu menu(this);
         int boundaryIdx = hitTestBoundary(event->pos().x());
 
@@ -257,6 +261,9 @@ void IntervalTierView::mouseMoveEvent(QMouseEvent *event) {
 
 void IntervalTierView::mouseDoubleClickEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
+        if (m_doc && m_doc->isTierReadOnly(m_tierIndex))
+            return;
+
         double clickTime = xToTime(event->pos().x());
 
         // Find which interval was clicked
