@@ -68,6 +68,8 @@ private:
     QSpinBox *m_pitchPreloadCount = nullptr;
 
     QComboBox *m_languageCombo = nullptr;
+    QCheckBox *m_autoSaveEnabled = nullptr;
+    QSpinBox *m_autoSaveInterval = nullptr;
 
     QListWidget *m_chartOrderList = nullptr;
     QPushButton *m_chartUpBtn = nullptr;

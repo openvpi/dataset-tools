@@ -9,6 +9,7 @@
 #include <QWidget>
 #include <QString>
 #include <QSet>
+#include <QTimer>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -148,6 +149,12 @@ protected:
     /// Update SliceListPanel dirty indicator for the current slice.
     void updateDirtyIndicator();
 
+    /// Start the auto-save timer (called from onActivated).
+    void startAutoSaveTimer();
+
+    /// Stop the auto-save timer (called from onDeactivated).
+    void stopAutoSaveTimer();
+
 private:
     SliceListPanel *m_sliceList = nullptr;
     QSplitter *m_splitter = nullptr;
@@ -162,6 +169,8 @@ private:
     QAction *m_nextAction = nullptr;
 
     QSet<QString> m_loadingEngines;
+
+    QTimer *m_autoSaveTimer = nullptr;
 
     void onSliceSelected(const QString &sliceId);
 };

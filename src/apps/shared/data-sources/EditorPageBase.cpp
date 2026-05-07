@@ -133,6 +133,8 @@ void EditorPageBase::onActivated() {
     if (m_currentSliceId.isEmpty() && m_sliceList)
         m_sliceList->ensureSelection(m_settings);
 
+    startAutoSaveTimer();
+
     onAutoInfer();
 }
 
@@ -147,6 +149,8 @@ bool EditorPageBase::onDeactivating() {
 }
 
 void EditorPageBase::onDeactivated() {
+    stopAutoSaveTimer();
+
     if (m_shortcutManager)
         m_shortcutManager->setEnabled(false);
 
@@ -193,6 +197,33 @@ bool EditorPageBase::autoSaveCurrentSlice() {
 void EditorPageBase::updateDirtyIndicator() {
     if (m_sliceList && !m_currentSliceId.isEmpty())
         m_sliceList->setSliceDirty(m_currentSliceId, isDirty());
+}
+
+void EditorPageBase::startAutoSaveTimer() {
+    if (!m_autoSaveTimer) {
+        m_autoSaveTimer = new QTimer(this);
+        connect(m_autoSaveTimer, &QTimer::timeout, this, [this]() {
+            if (isDirty())
+                autoSaveCurrentSlice();
+        });
+    }
+
+    static const dstools::SettingsKey<bool> kAutoSaveEnabled("General/autoSaveEnabled", true);
+    static const dstools::SettingsKey<int> kAutoSaveIntervalMs("General/autoSaveIntervalMs", 30000);
+    dstools::AppSettings appSettings("Editor");
+    appSettings.reload();
+
+    if (appSettings.get(kAutoSaveEnabled)) {
+        int intervalMs = appSettings.get(kAutoSaveIntervalMs);
+        m_autoSaveTimer->start(intervalMs);
+    } else {
+        m_autoSaveTimer->stop();
+    }
+}
+
+void EditorPageBase::stopAutoSaveTimer() {
+    if (m_autoSaveTimer)
+        m_autoSaveTimer->stop();
 }
 
 void EditorPageBase::loadEngineAsync(const QString &taskKey,

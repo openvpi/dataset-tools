@@ -187,6 +187,14 @@ void SettingsPage::applySettings() {
     m_backend->save(settingsData);
     m_dirty = false;
 
+    if (m_autoSaveEnabled) {
+        static const dstools::SettingsKey<bool> kAutoSaveEnabled("General/autoSaveEnabled", true);
+        static const dstools::SettingsKey<int> kAutoSaveIntervalMs("General/autoSaveIntervalMs", 30000);
+        static dstools::AppSettings s_editorSettings("Editor");
+        s_editorSettings.set(kAutoSaveEnabled, m_autoSaveEnabled->isChecked());
+        s_editorSettings.set(kAutoSaveIntervalMs, m_autoSaveInterval->value() * 1000);
+    }
+
     if (m_chartOrderList) {
         QStringList order;
         QStringList visible;
@@ -472,6 +480,39 @@ QWidget *SettingsPage::createGeneralTab() {
         settings.setValue(QStringLiteral("App/language"), lang);
         markDirty();
     });
+
+    layout->addItem(new QSpacerItem(0, 16, QSizePolicy::Minimum, QSizePolicy::Fixed));
+
+    auto *autoSaveGroup = new QGroupBox(QStringLiteral("自动保存"), w);
+    auto *autoSaveLayout = new QFormLayout(autoSaveGroup);
+
+    m_autoSaveEnabled = new QCheckBox(QStringLiteral("启用自动保存"), autoSaveGroup);
+    m_autoSaveEnabled->setChecked(true);
+    autoSaveLayout->addRow(m_autoSaveEnabled);
+
+    m_autoSaveInterval = new QSpinBox(autoSaveGroup);
+    m_autoSaveInterval->setRange(10, 300);
+    m_autoSaveInterval->setValue(30);
+    m_autoSaveInterval->setSuffix(QStringLiteral(" 秒"));
+    m_autoSaveInterval->setToolTip(QStringLiteral("自动保存间隔（10-300秒）"));
+    autoSaveLayout->addRow(QStringLiteral("间隔："), m_autoSaveInterval);
+
+    static const dstools::SettingsKey<bool> kAutoSaveEnabled("General/autoSaveEnabled", true);
+    static const dstools::SettingsKey<int> kAutoSaveIntervalMs("General/autoSaveIntervalMs", 30000);
+    dstools::AppSettings appSettings("Editor");
+    appSettings.reload();
+    m_autoSaveEnabled->setChecked(appSettings.get(kAutoSaveEnabled));
+    m_autoSaveInterval->setValue(appSettings.get(kAutoSaveIntervalMs) / 1000);
+
+    connect(m_autoSaveEnabled, &QCheckBox::toggled, this, [this]() {
+        m_autoSaveInterval->setEnabled(m_autoSaveEnabled->isChecked());
+        markDirty();
+    });
+    connect(m_autoSaveInterval, &QSpinBox::valueChanged, this, [this]() {
+        markDirty();
+    });
+
+    layout->addRow(autoSaveGroup);
 
     layout->addItem(new QSpacerItem(0, 16, QSizePolicy::Minimum, QSizePolicy::Fixed));
 
