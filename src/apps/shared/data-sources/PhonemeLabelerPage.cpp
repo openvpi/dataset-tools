@@ -284,10 +284,11 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 void PhonemeLabelerPage::onDeactivatedImpl() {
     if (m_hfaAlive)
         m_hfaAlive->store(false);
-    m_hfaAlive.reset();
     m_hfa = nullptr;
+    cancelAsyncTask(m_hfaAlive);
     if (m_editor && m_editor->playWidget())
         m_editor->playWidget()->setPlaying(false);
+    DSFW_LOG_WARN("fa", "FA task cancelled: page deactivated");
 }
 
 void PhonemeLabelerPage::restoreExtraSplitters() {
@@ -475,8 +476,11 @@ void PhonemeLabelerPage::ensureHfaEngine() {
 
 void PhonemeLabelerPage::onModelInvalidated(const QString &taskKey) {
     if (taskKey == QStringLiteral("phoneme_alignment")) {
-        m_hfaAlive.reset();
+        if (m_hfaAlive)
+            m_hfaAlive->store(false);
         m_hfa = nullptr;
+        cancelAsyncTask(m_hfaAlive);
+        DSFW_LOG_WARN("fa", "FA task cancelled: model invalidated");
     }
 }
 
@@ -581,6 +585,8 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, sliceId, guard]() {
         if (!hfaAlive || !*hfaAlive)
+            return;
+        if (!hfa)
             return;
         HFA::WordList words;
 
@@ -723,9 +729,13 @@ void PhonemeLabelerPage::onBatchFA() {
     (void) QtConcurrent::run([hfa, hfaAlive, src, ids, guard]() {
         if (!hfaAlive || !*hfaAlive)
             return;
+        if (!hfa)
+            return;
         int processed = 0;
         int skipped = 0;
         for (const auto &sliceId : ids) {
+            if (!*hfaAlive)
+                break;
             QString audioPath = src->validatedAudioPath(sliceId);
             if (audioPath.isEmpty()) {
                 ++skipped;

@@ -9,7 +9,9 @@
 #include <QWidget>
 #include <QString>
 #include <QSet>
+#include <atomic>
 #include <functional>
+#include <memory>
 
 class QAction;
 class QMenuBar;
@@ -126,6 +128,12 @@ protected:
 
     /// Check if an async engine load is in progress for the given task key.
     bool isEngineLoading(const QString &taskKey) const;
+
+    /// Cancel an async task by invalidating its alive token.
+    /// Sequence: store(false) → clear engine pointer → reset token.
+    /// This ordering ensures the background thread sees false before
+    /// the engine pointer is nulled, closing the TOCTOU gap (P-09).
+    static void cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveToken);
 
     // ── Common utility ──
 

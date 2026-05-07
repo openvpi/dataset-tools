@@ -626,6 +626,46 @@ D-14 提出了"共享 AudioVisualizerContainer 基类"的方向。本决策（D-
 
 ---
 
+## D-33：PhonemeLabelerPage 状态栏 connect 生命周期管理
+
+**决策**：`createStatusBarContent()` 每次调用创建的 widget 及其 signal-slot 连接，必须在下次调用前显式断开。使用 `QPointer` 守卫捕获的 widget 指针，防止 `deleteLater()` 后悬空指针被信号触发。
+
+**原因**：`AppShell::rebuildStatusBar()` 在页面切换时 `deleteLater()` 删除所有状态栏 widget，但旧的 connect 仍在，导致 `positionChanged` 信号访问已删除的 QLabel → 0xc0000005 崩溃。
+
+---
+
+## D-34：AudioPlaybackManager 应用级音频仲裁
+
+**决策**：引入 `AudioPlaybackManager`（QObject，由 AppShell 持有），作为音频播放的唯一仲裁者。所有 PlayWidget 在开始播放前必须向 Manager 请求许可，Manager 确保同一时刻只有一个 PlayWidget 在播放。
+
+**设计约束**：
+- 不使用 ServiceLocator（P-08），通过 AppShell 构造时注入
+- PlayWidget 保持自有 AudioPlayer（D-31 不变），Manager 仅做许可仲裁
+- Manager 不持有音频资源，不参与音频数据流
+- 新播放请求自动停止当前播放者（无需用户确认）
+
+---
+
+## D-35：贯穿线区域鼠标光标反馈
+
+**决策**：在子图 widget（Waveform/Spectrogram/Power）中，当 `hitTestBoundary()` 命中边界时，鼠标光标切换为 `Qt::SizeHorCursor`，离开边界区域时恢复默认光标。拖动过程中保持 `SizeHorCursor`。
+
+**原因**：当前贯穿线可拖动但无视觉反馈，用户无法感知"此处可拖动"。
+
+---
+
+## D-36：日志持久化 FileLogSink
+
+**决策**：新增 `FileLogSink`，将日志写入文件（`dsfw::AppPaths::logsDir()` / `dslabeler_YYYYMMDD.log`），自动 7 天轮转。在 AppShell 初始化时注册。
+
+**设计约束**：
+- FileLogSink 内部使用 `std::mutex` 保护文件写入
+- 文件 I/O 使用 `std::ofstream`，路径通过 `dstools::toFsPath()` 转换
+- 不引入新的第三方依赖
+- 日志格式：`[HH:mm:ss.zzz] [LEVEL] [category] message`
+
+---
+
 ## ADR 冲突解决
 
 | 冲突项 | 旧决策 | 新决策（以此为准） |

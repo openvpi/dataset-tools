@@ -22,227 +22,181 @@
 | 66 | LabelSuite 底层统一 dstext | 有效 |
 | 69 | ISettingsBackend → 废弃 ProjectSettingsBackend | 有效 |
 | 70 | FileDataSource 内部 dstext + FormatAdapter | 有效 |
-| 79 | Log 侧边栏改为独立 LogPage | 有效 |
 | 78 | Slicer/Phoneme 统一视图组合（D-30） | 有效 |
-| **80** | **PlayWidget 禁止 ServiceLocator 共享 IAudioPlayer（D-31）** | **新** |
-| **81** | **invalidateModel 先发信号再卸载（D-32）** | **新** |
+| 79 | Log 侧边栏改为独立 LogPage | 有效 |
+| 80 | PlayWidget 禁止 ServiceLocator 共享 IAudioPlayer（D-31） | 有效 |
+| 81 | invalidateModel 先发信号再卸载（D-32） | 有效 |
+| 82 | AudioPlaybackManager 应用级音频仲裁（D-34） | 新 |
+| 83 | 贯穿线鼠标光标反馈（D-35） | 新 |
+| 84 | 日志持久化 FileLogSink（D-36） | 新 |
 
 ---
 
-### 关键架构决策 (ADR)
+## 任务：FA 取消机制加固
 
-| ADR | 决策 | 状态 |
-|-----|------|------|
-| 8 | 单仓库模式 | 有效 |
-| 43 | int64 微秒时间精度 | 有效 |
-| 46 | LabelSuite + DsLabeler 两个 exe | 有效 |
-| 52 | IEditorDataSource 抽象数据源 | 有效 |
-| 57 | 层依赖 DAG + per-slice dirty 标记 | 有效 |
-| 62 | 右键直接播放，不弹菜单 | 有效 |
-| 65 | IBoundaryModel → AudioVisualizerContainer 扩展 | 有效 |
-| 66 | LabelSuite 底层统一 dstext | 有效 |
-| 69 | ISettingsBackend → 废弃 ProjectSettingsBackend | 有效 |
-| 70 | FileDataSource 内部 dstext + FormatAdapter | 有效 |
-| **79** | **Log 侧边栏改为独立 LogPage（与 ADR-77 替代）** | **新** |
-| 78 | Slicer/Phoneme 统一视图组合（D-30）：同一 UI + 组件自由显隐排序 | 有效 |
+> 设计依据：P-09（异步任务必须持有引擎存活令牌）
+> 审核优化：P-01 要求行为不分散——令牌操作顺序必须严格一致。
 
----
-
-## 新任务：Slicer/Phoneme 统一视图组合系统
-
-> 设计依据：[human-decisions.md §D-30](human-decisions.md)
-
-### 8.1 AudioVisualizerContainer 添加 chart 显隐 API ✅
-
-**需求**：container 增加 `setChartVisible(id, bool)` / `chartVisible(id)` 方法，chart 注册后不自动 show，由配置决定。
-
-**文件**：`AudioVisualizerContainer.h/cpp`
-
-### 8.2 Per-page 默认 chart 视图配置 ✅
-
-**需求**：
-- `SlicerPage`：waveform ✅、spectrogram ✅、power ❌（添加但不显示）
-- `PhonemeEditor`：waveform ✅、power ✅、spectrogram ✅
-
-**文件**：`SlicerPage.cpp`、`PhonemeEditor.cpp`
-
-### 8.3 Settings 页面"视图布局"区域 ✅
-
-**需求**：
-- 带 checkbox 的 chart 列表（☑ waveform / ☑ power / ☑ spectrogram）
-- 支持拖拽排序（QListWidget + DragDropMode）
-- 排序结果即时持久化到 AppSettings → 实时通知 container 刷新布局
-- "恢复默认"按钮清除用户覆盖
-
-**文件**：Settings 页面（label-suite 和 ds-labeler 各一份）
-
-### 8.4 chartOrder/chartVisible 全局配置持久化 ✅
-
-**需求**：
-- AppSettings key：`ViewLayout/chartOrder`（逗号分隔字符串）
-- AppSettings key：`ViewLayout/chartVisible`（仅列出可见 chart）
-- `AudioVisualizerContainer` 读取配置并应用 chart 显隐 + 顺序
-
-**文件**：`AudioVisualizerContainer.cpp`
-
-### 8.5 Phoneme 现有 toggle action 适配配置系统 ✅
-
-**需求**：`m_actTogglePower` / `m_actToggleSpectrogram` 改为读写统一 AppSettings 配置，而非独立 toggle。
-
-**文件**：`PhonemeEditor.cpp`
-
----
-
-## 已修复：音频系统 + 并发安全 (2026-05-07)
-
-### B-04 PlayWidget ServiceLocator 全局共享导致跨页面音频冲突 ✅
+### 14.1 FA 异步任务取消令牌加固
 
 **问题**：
-1. Slicer 页面先播放音频后，Phoneme 页面无法独立播放——因为两个页面的 PlayWidget 通过 ServiceLocator 共享同一个 AudioPlayer
-2. 4 个 PlayWidget 实例未设置 QObject parent，导致内存泄漏和析构崩溃（0xc0000005 at 0xffffffffffffffff）
-3. AudioPlayer 直接访问 AudioDecoder（无锁），与 SDL 音频回调线程产生数据竞争
-
-**修复**：
-- `PlayWidget::initAudio()` 移除 ServiceLocator 共享逻辑，每个 PlayWidget 创建自有 AudioPlayer（D-31）
-- 给 PhonemeEditor、MinLabelEditor、DsSlicerPage、SlicerPage 的 PlayWidget 添加 `this` parent
-- `AudioPlayer` 所有 decoder 访问改为通过 `AudioPlayback` 线程安全方法（decoderPosition/decoderSetPosition/decoderIsOpen 等）
-- `FramelessHelper::WindowStateFilter` 改用 `QPointer<TitleBar>` 防止析构顺序导致的野指针访问
-- `AppShell::rebuildMenuBar()` 中 `pageBar->deleteLater()` 改为 `delete pageBar;` 避免延迟删除与析构级联冲突
-
-**文件**：`PlayWidget.cpp`、`AudioPlayer.{h,cpp}`、`PhonemeEditor.cpp`、`MinLabelEditor.cpp`、`DsSlicerPage.cpp`、`SlicerPage.cpp`、`FramelessHelper.cpp`、`AppShell.cpp`
-
-### B-05 推理引擎 QtConcurrent::run 数据竞争修复 ✅
-
-**问题**：`ModelManager::invalidateModel()` 先卸载引擎再发信号，导致后台任务的 QtConcurrent lambda 在引擎已销毁后仍持有原始指针。影响 PhonemeLabelerPage、PitchLabelerPage、MinLabelPage、ExportPage。
-
-**修复**：
-- `ModelManager::invalidateModel()` 改为先 `emit` 信号再 `unload()`（D-32）
-- PhonemeLabelerPage 增加 `std::shared_ptr<std::atomic<bool>> m_hfaAlive` 存活令牌，lambda 在使用引擎前检查令牌
-- 所有页面遵循 P-09（异步任务引擎存活令牌）模式
-
-**文件**：`ModelManager.cpp`、`PhonemeLabelerPage.{h,cpp}`
-
-### B-06 FA 分层日志修复 ✅
-
-**问题**：`dstools::LogEntry` 缺少 `Q_DECLARE_METATYPE` 注册，跨线程 queued connection 存在潜在风险。
-
-**修复**：在 `Log.h` 中添加 `Q_DECLARE_METATYPE(dstools::LogEntry)`。
-
-**文件**：`Log.h`
-
----
-
-## 新任务：Log 系统升级 + Phoneme 边界修正（2026-05-07）
-
-> 范围：4 个子任务，覆盖 Log UI 重构、FA 分层日志、边界重叠方案、拖拽实时刷新。
-
-### 9.1 Log 侧边栏改为独立 LogPage（ADR-79） ✅
-
-**现状**：`LogPanelWidget` 是 AppShell 内部 QSplitter 右侧折叠面板，由一个 QToolButton（Ctrl+L）控制显隐。Sidebar 仅显示 Log toggle 按钮。
+- `PhonemeLabelerPage::onDeactivatedImpl()` 中 `m_hfaAlive->store(false)` 后立即 `m_hfaAlive.reset()`
+- `m_hfa = nullptr` 在 `reset()` 之后执行，后台线程在 `store(false)` 和 `m_hfa = nullptr` 之间可能访问 `m_hfa`（TOCTOU 间隙）
+- P-09 明确指出此方案是"过渡性补救"
 
 **需求**：
-- 新建 `LogPage`（实现 `IPageActions` + `IPageLifecycle`），作为独立页面注册到 AppShell 的图标导航栏
-- 移除 AppShell 中的 `m_logPanel`、`m_contentSplitter`、`m_toggleLogAction`、corner widget、`toggleLogPanel()`、`isLogPanelVisible()`
-- `LogPage` 复用现有 `LogViewer` + 筛选栏（category filter / clear / export）
-- 注册到 LabelSuite 和 DsLabeler 两个 main.cpp（与其他页面并列）
-- 保留 `Logger` / `LogNotifier` / ringBufferSink 基础设施不变
+- 调整操作顺序：`m_hfaAlive->store(false)` → `m_hfa = nullptr` → `m_hfaAlive.reset()`
+- 在 FA lambda 中增加双重检查：先检查 `alive`，再检查 `m_hfa != nullptr`
+- 添加 `DSFW_LOG_WARN` 日志记录取消事件
+
+**审核优化（P-01/P-07）**：
+- 令牌操作封装为 `EditorPageBase::cancelAsyncTask()` 模板方法，所有推理页面统一调用
+- 避免每个页面各写一份 `store(false) + nullptr + reset()` 序列
 
 **文件**：
-- 新建：`src/apps/shared/log-page/LogPage.h`、`LogPage.cpp`
-- 修改：`src/framework/ui-core/include/dsfw/AppShell.h`、`src/framework/ui-core/src/AppShell.cpp`
-- 修改：`src/apps/label-suite/main.cpp`、`src/apps/ds-labeler/main.cpp`
-- 可废弃：`src/framework/ui-core/include/dsfw/LogPanelWidget.h`、`src/framework/ui-core/src/LogPanelWidget.cpp`
-
-**ADR-79 生效后，ADR-77（Log 侧边栏全局化）视为废弃。**
+- 修改：`src/apps/shared/data-sources/EditorPageBase.h`（添加 `cancelAsyncTask` 保护方法）
+- 修改：`src/apps/shared/data-sources/EditorPageBase.cpp`
+- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.h`
+- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`
 
 ---
 
-### 9.2 FA 分层日志输出（层级从属信息追踪） ✅
+## 任务：贯穿线交互体验增强
 
-**现状**：`runFaForSlice()` 仅输出 "FA started/completed/failed" + sliceId + phoneme 总数。`buildFaLayers()` 静默构建 tier，无日志。
+> 设计依据：D-05（分割线纵向贯穿规则）、D-35（贯穿线鼠标光标反馈）
+> 审核优化：P-01 要求行为不分散——三个 widget 的光标逻辑应统一。
+
+### 11.1 贯穿线区域鼠标光标反馈
+
+**问题**：
+- 贯穿线在子图区域（WaveformWidget/SpectrogramWidget/PowerWidget）可拖动
+- 但鼠标悬停在贯穿线上时，光标仍为默认箭头，用户无法感知"此处可拖动"
+- 仅当鼠标在标签区域（IntervalTierView）内才显示 `SizeHorCursor`
 
 **需求**：
-- 新增 category `"fa"`，用于 FA 详细日志
-- FA 过程中输出层级从属关系：
-  - Grapheme：`"FA: [grapheme] word='你好' → [0.500s-1.200s]"`
-  - Phoneme：`"FA: [phoneme] phone='n-ix' @ 0.500s (id=3, tier=phoneme)"`
-  - Binding：`"FA: [bind] grapheme#2 ↔ phoneme#3 @ 0.500s"`
-- 错误追踪：记录 FA pipeline 哪一步出错（音频加载、grapheme 解析、HFA 推理、layer 构建）
-- 日志级别：grapheme/phoneme → Debug；binding → Trace；错误 → Error
+- 在子图 widget 的 `mouseMoveEvent` 中，当 `hitTestBoundary()` 命中边界时，设置 `setCursor(Qt::SizeHorCursor)`
+- 当鼠标离开边界区域时，恢复默认光标
+- 拖动过程中保持 `SizeHorCursor`
+- 三个子图 widget（Waveform/Spectrogram/Power）统一行为
 
-**文件**：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`
-
----
-
-### 9.3 Phoneme 多层边界重合时的拖拽激活方案 ✅
-
-**根因**：4 个 widget 的 `hitTestBoundary()` 函数（`WaveformWidget`、`PowerWidget`、`SpectrogramWidget`、`IntervalTierView`）在遍历所有 tier 时使用 `b > bestIdx` 作为同像素位置的 tiebreaker——但 `b` 和 `bestIdx` 是不同 tier 的 boundary 索引，比较无意义，导致选择结果随机。
-
-**需求**：实现基于"层级优先级 + 拖拽空间"的重叠边界选择方案：
-
-1. **Active tier 优先**：如果重叠的边界中有活跃层的边界，优先激活该边界
-2. **拖拽空间（drag-room）排第二**：计算每个重叠边界的可移动空间 `min(clamp右邻 - pos, pos - clamp左邻)`，选择空间最大的边界（最外侧的边界，方便向一侧拖动）
-3. **拖拽空间相同时**：优先选择左边界（便于向右拖动扩展）
-
-**适配范围**：
-- `WaveformWidget::hitTestBoundary()` — 需要返回 `(tierIndex, boundaryIndex)`，增加 active tier 判断
-- `PowerWidget::hitTestBoundary()` — 同上
-- `SpectrogramWidget::hitTestBoundary()` — 同上（当前 `drawBoundaryOverlay` 也仅绘制 active tier）
-- `IntervalTierView::hitTestBoundary()` — 单 tier 内部（同一 tier 的两个相邻边界可能在同一像素，同样需要处理）
+**审核优化（P-01）**：
+- 三个 widget 没有共同基类，提取基类是较大重构（违反 P-07 简洁可靠）
+- 当前方案：在三个 widget 中统一添加光标逻辑，保持代码结构一致
+- 后续路线：待 D-27（BoundaryDragController 统一拖动）实施后，光标逻辑随拖动逻辑一起集中到 controller
 
 **文件**：
-- `src/apps/shared/phoneme-editor/ui/WaveformWidget.h`、`WaveformWidget.cpp`
-- `src/apps/shared/phoneme-editor/ui/PowerWidget.h`、`PowerWidget.cpp`
-- `src/apps/shared/phoneme-editor/ui/SpectrogramWidget.h`、`SpectrogramWidget.cpp`
-- `src/apps/shared/phoneme-editor/ui/IntervalTierView.h`、`IntervalTierView.cpp`
+- 修改：`src/apps/shared/phoneme-editor/ui/WaveformWidget.cpp`
+- 修改：`src/apps/shared/phoneme-editor/ui/SpectrogramWidget.cpp`
+- 修改：`src/apps/shared/phoneme-editor/ui/PowerWidget.cpp`
 
 ---
 
-### 9.4 Phoneme 拖动边界线时实时刷新所有 UI 组件 ✅
+## 任务：日志系统持久化
 
-**根因**：`BoundaryDragController::dragging` 信号没有连接到任何 UI 刷新逻辑。UI 刷新完全依赖 `TextGridDocument::boundaryMoved` 信号，该信号路径做了全量刷新（包括昂贵的 `entryListPanel.rebuildEntries()` 在每一帧拖拽中都触发）。
+> 设计依据：log-and-i18n-design.md §1.2.2（FileLogSink）、D-36
+> 审核优化：P-02（被动接口+容器通知）——FileLogSink 是纯数据 sink，不需要信号。
+
+### 12.1 FileLogSink 日志文件持久化
+
+**问题**：
+- `dstools::Logger` 当前仅有 `qtMessageSink` 和 `ringBufferSink`
+- 应用崩溃或关闭后，ringBuffer 中的日志全部丢失
+- 无法事后排查用户报告的问题
 
 **需求**：
-1. 连接 `dragging` 信号到轻量级 UI 刷新路径（跳过 `rebuildEntries`），确保拖拽过程中 boundary overlay 和 chart overlay 实时响应
-2. 将 `rebuildEntries()` 从 `boundaryMoved` 回调移到 `dragFinished` 回调（仅在拖拽结束后重建 entry 列表）
-3. 使用 `AudioVisualizerContainer::invalidateBoundaryModel()` 统一驱动 UI 刷新，替代逐 widget 手动调用 `update()`
+- 新建 `FileLogSink`，将日志写入文件
+- 日志文件路径：`dsfw::AppPaths::logsDir()` / `dslabeler_YYYYMMDD.log`
+- 自动 7 天轮转：超过 7 天的日志文件自动删除
+- 日志格式：`[HH:mm:ss.zzz] [LEVEL] [category] message`
+- 在 AppShell 初始化时注册 FileLogSink
 
-**信号连接修改**（`PhonemeEditor::connectSignals()`）：
-```cpp
-// 新：拖拽过程中轻量刷新
-connect(dragCtrl, &BoundaryDragController::dragging, this,
-    [this](int, int, TimePos) {
-        updateAllBoundaryOverlays();  // overlay + chart overlay
-        m_tierLabel->update();        // tier name labels
-        m_tierEditWidget->update();   // interval tier views
-    });
+**设计约束**：
+- FileLogSink 内部使用 `std::mutex` 保护文件写入（Logger 已在内部线程安全）
+- 文件 I/O 使用 `std::ofstream`，路径通过 `dstools::toFsPath()` 转换（§12 路径 I/O 规范）
+- 不引入新的第三方依赖
+- FileLogSink 是纯 sink，不继承 QObject，不发出信号（P-02）
 
-// 修改：boundaryMoved 不再重建 entries
-connect(m_document, &TextGridDocument::boundaryMoved, this,
-    [this](int, int, TimePos) {
-        updateAllBoundaryOverlays();
-        m_tierLabel->update();
-    });
-
-// 新：拖拽结束后重建 entries
-connect(dragCtrl, &BoundaryDragController::dragFinished, this,
-    [this](int, int, TimePos) {
-        m_entryListPanel->rebuildEntries();
-    });
-```
-
-**文件**：`src/apps/shared/phoneme-editor/PhonemeEditor.cpp`
+**文件**：
+- 新建：`src/framework/core/include/dsfw/FileLogSink.h`、`src/framework/core/src/FileLogSink.cpp`
+- 修改：`src/framework/core/include/dsfw/Log.h`（添加 `fileSink()` 工厂方法）
+- 修改：`src/framework/core/src/Log.cpp`
+- 修改：`src/framework/ui-core/src/AppShell.cpp`（注册 FileLogSink）
 
 ---
 
-### 任务依赖关系
+## 任务：音频系统深度重构
+
+> 设计依据：D-31（每页独立 AudioPlayer）已实施，D-34（AudioPlaybackManager）引入应用级仲裁。
+> 审核优化：P-01（行为不分散）+ P-08（禁止 ServiceLocator 误用）。
+
+### 10.1 AudioPlaybackManager 应用级音频仲裁器
+
+**问题**：
+- 每个页面各自持有 `PlayWidget`（封装 AudioPlayer），D-31 已确保每页独立实例
+- 但页面切换时仅靠 `onDeactivating()` 主动停止播放，无强制仲裁
+- 如果 `onDeactivating()` 未被调用（异常路径），音频可能继续播放
+
+**需求**：
+- 新建 `AudioPlaybackManager`（QObject，由 AppShell 持有）
+- Manager 确保同一时刻只有一个 PlayWidget 在播放——新请求自动停止当前播放者
+- Manager 提供 `stopAll()` 方法，供 AppShell 在 `closeEvent` 中调用
+
+**审核优化（P-01/P-08）**：
+- PlayWidget 不直接依赖 AudioPlaybackManager——新增 `playRequested()` / `playStopped()` 信号
+- AppShell 在页面注册时连接 PlayWidget 信号到 Manager 槽
+- Manager 通过调用 `PlayWidget::setPlaying(false)` 停止当前播放者
+- 不使用 ServiceLocator，通过 AppShell 构造时建立连接
+
+**文件**：
+- 新建：`src/framework/audio/include/dstools/AudioPlaybackManager.h`、`src/framework/audio/src/AudioPlaybackManager.cpp`
+- 修改：`src/framework/widgets/include/dsfw/widgets/PlayWidget.h`（新增信号）
+- 修改：`src/framework/widgets/src/PlayWidget.cpp`（emit 信号）
+- 修改：`src/framework/ui-core/include/dsfw/AppShell.h`（持有 Manager）
+- 修改：`src/framework/ui-core/src/AppShell.cpp`（连接信号）
+
+---
+
+## 任务：QSS 主题变量化
+
+> 设计依据：P-06（接口稳定）、P-01（行为不分散）
+> 审核优化：P-07（简洁可靠）——占位符方案改动面大，先做最小改动。
+
+### 13.1 QSS 颜色变量提取与统一管理
+
+**问题**：
+- `dark.qss` 和 `light.qss` 中硬编码了 30+ 个颜色值
+- 修改一个颜色（如 accent）需要在多处查找替换
+- 与 `Theme::Palette` 中的颜色定义存在重复（Theme.cpp 和 QSS 各维护一份）
+
+**需求**：
+- 在 `Theme::applyTheme()` 中加载 QSS 后，用 `QString::replace()` 替换 `{{placeholder}}` 占位符为 Palette 中的实际颜色值
+- QSS 模板中使用 `{{accent}}`、`{{bgPrimary}}` 等占位符
+- `Theme::Palette` 中的颜色字段名与占位符名一一对应，Palette 成为唯一真相源
+
+**审核优化（P-07）**：
+- 不一次性替换所有硬编码颜色——先提取与 Palette 重复的核心颜色（bgPrimary, bgSecondary, bgSurface, accent, textPrimary, textSecondary, border, borderLight）
+- QSS 中仅 Palette 已定义的颜色使用占位符，其余控件特定颜色保留硬编码
+- 不引入 SCSS/Less 等预处理工具（保持构建系统简洁）
+
+**文件**：
+- 修改：`src/framework/ui-core/res/themes/dark.qss`（核心颜色替换为占位符）
+- 修改：`src/framework/ui-core/res/themes/light.qss`（同上）
+- 修改：`src/framework/ui-core/src/Theme.cpp`（添加占位符替换逻辑）
+
+---
+
+## 任务依赖关系
 
 ```
-9.1 (LogPage) ── 独立，无依赖
-9.2 (FA 日志) ── 依赖 LogPage 完成（提供日志展示页面）
-9.3 (边界重叠) ── 独立，与 9.4 可并行
-9.4 (拖拽刷新) ── 独立，与 9.3 可并行
+14.1 (FA取消加固) ── 独立，无依赖
+11.1 (贯穿线光标) ── 独立，无依赖
+12.1 (FileLogSink) ── 独立，无依赖
+10.1 (AudioPlaybackManager) ── 独立，无依赖
+13.1 (QSS变量化) ── 独立，无依赖
 ```
+
+**执行顺序**：14.1 → 11.1 → 12.1 → 10.1 → 13.1
+（先修bug再增强，先简单后复杂）
 
 ---
 

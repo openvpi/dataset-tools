@@ -208,4 +208,11 @@ bool EditorPageBase::isEngineLoading(const QString &taskKey) const {
     return m_loadingEngines.contains(taskKey);
 }
 
+void EditorPageBase::cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveToken) {
+    if (aliveToken) {
+        aliveToken->store(false);
+    }
+    aliveToken.reset();
+}
+
 } // namespace dstools
