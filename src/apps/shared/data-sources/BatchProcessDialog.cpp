@@ -6,9 +6,10 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QTextEdit>
+#include <QTime>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -33,9 +34,8 @@ BatchProcessDialog::BatchProcessDialog(const QString &title, QWidget *parent)
     m_statusLabel = new QLabel(this);
     mainLayout->addWidget(m_statusLabel);
 
-    m_logOutput = new QPlainTextEdit(this);
+    m_logOutput = new QTextEdit(this);
     m_logOutput->setReadOnly(true);
-    m_logOutput->setMaximumBlockCount(5000);
     mainLayout->addWidget(m_logOutput, 1);
 
     auto *btnLayout = new QHBoxLayout();
@@ -117,7 +117,33 @@ void BatchProcessDialog::toggleParamGroup(QToolButton *toggleBtn, QWidget *conte
 }
 
 void BatchProcessDialog::appendLog(const QString &message) {
-    m_logOutput->appendPlainText(message);
+    appendLog(LogLevel::Info, message);
+}
+
+void BatchProcessDialog::appendLog(LogLevel level, const QString &message) {
+    const QString timestamp = QTime::currentTime().toString(QStringLiteral("[HH:MM:SS]"));
+
+    QString levelStr;
+    QString color;
+    switch (level) {
+    case LogLevel::Warning:
+        levelStr = QStringLiteral("[WARN]");
+        color = QStringLiteral("#B8860B");
+        break;
+    case LogLevel::Error:
+        levelStr = QStringLiteral("[ERROR]");
+        color = QStringLiteral("#CC0000");
+        break;
+    case LogLevel::Info:
+    default:
+        levelStr = QStringLiteral("[INFO]");
+        color = QStringLiteral("#333333");
+        break;
+    }
+
+    const QString html = QStringLiteral("<span style=\"color:%1\">%2 %3 %4</span>")
+                             .arg(color, timestamp, levelStr, message.toHtmlEscaped());
+    m_logOutput->append(html);
 }
 
 void BatchProcessDialog::setProgress(int current, int total) {

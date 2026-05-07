@@ -5,7 +5,7 @@
 class QCheckBox;
 class QComboBox;
 class QLabel;
-class QPlainTextEdit;
+class QTextEdit;
 class QProgressBar;
 class QPushButton;
 class QVBoxLayout;
@@ -17,6 +17,12 @@ class BatchProcessDialog : public QDialog {
     Q_OBJECT
 
 public:
+    enum class LogLevel {
+        Info,
+        Warning,
+        Error
+    };
+
     explicit BatchProcessDialog(const QString &title, QWidget *parent = nullptr);
     ~BatchProcessDialog() override;
 
@@ -25,6 +31,7 @@ public:
     void addParamGroup(const QString &title);
 
     void appendLog(const QString &message);
+    void appendLog(LogLevel level, const QString &message);
     void setProgress(int current, int total);
     void finish(int processed, int skipped, int errors);
 
@@ -39,7 +46,7 @@ private:
     void reject() override;
     void toggleParamGroup(QToolButton *toggleBtn, QWidget *content);
 
-    QPlainTextEdit *m_logOutput = nullptr;
+    QTextEdit *m_logOutput = nullptr;
     QProgressBar *m_progressBar = nullptr;
     QPushButton *m_startBtn = nullptr;
     QPushButton *m_cancelBtn = nullptr;
