@@ -109,6 +109,22 @@ QPushButton:disabled {
     border: 1px solid {{border}};
 }
 
+QPushButton#play-button,
+QPushButton#stop-button,
+QPushButton#dev-button {
+    background-color: {{bgSurface}};
+    border: 1px solid {{borderLight}};
+    border-radius: 4px;
+    padding: 2px;
+}
+
+QPushButton#play-button:hover,
+QPushButton#stop-button:hover,
+QPushButton#dev-button:hover {
+    background-color: {{bgHover}};
+    border-color: {{accent}};
+}
+
 /* ---- Line edits ---- */
 QLineEdit {
     background-color: {{bgSecondary}};

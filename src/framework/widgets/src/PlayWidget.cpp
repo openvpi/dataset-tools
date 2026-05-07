@@ -35,12 +35,18 @@ PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
     m_playBtn = new QPushButton();
     m_playBtn->setObjectName("play-button");
     m_playBtn->setIcon(QIcon(":/icons/play.svg"));
+    m_playBtn->setIconSize(QSize(20, 20));
+    m_playBtn->setFixedSize(32, 28);
     m_stopBtn = new QPushButton();
     m_stopBtn->setObjectName("stop-button");
     m_stopBtn->setIcon(QIcon(":/icons/stop.svg"));
+    m_stopBtn->setIconSize(QSize(20, 20));
+    m_stopBtn->setFixedSize(32, 28);
     m_devBtn = new QPushButton();
     m_devBtn->setObjectName("dev-button");
     m_devBtn->setIcon(QIcon(":/icons/audio.svg"));
+    m_devBtn->setIconSize(QSize(20, 20));
+    m_devBtn->setFixedSize(32, 28);
 
     auto *buttonsLayout = new QHBoxLayout();
     buttonsLayout->addWidget(m_playBtn);
@@ -89,12 +95,18 @@ PlayWidget::PlayWidget(dstools::audio::IAudioPlayer *player, QWidget *parent) : 
     m_playBtn = new QPushButton();
     m_playBtn->setObjectName("play-button");
     m_playBtn->setIcon(QIcon(":/icons/play.svg"));
+    m_playBtn->setIconSize(QSize(20, 20));
+    m_playBtn->setFixedSize(32, 28);
     m_stopBtn = new QPushButton();
     m_stopBtn->setObjectName("stop-button");
     m_stopBtn->setIcon(QIcon(":/icons/stop.svg"));
+    m_stopBtn->setIconSize(QSize(20, 20));
+    m_stopBtn->setFixedSize(32, 28);
     m_devBtn = new QPushButton();
     m_devBtn->setObjectName("dev-button");
     m_devBtn->setIcon(QIcon(":/icons/audio.svg"));
+    m_devBtn->setIconSize(QSize(20, 20));
+    m_devBtn->setFixedSize(32, 28);
 
     auto *buttonsLayout = new QHBoxLayout();
     buttonsLayout->addWidget(m_playBtn);
