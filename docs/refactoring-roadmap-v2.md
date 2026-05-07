@@ -29,6 +29,7 @@
 | 82 | AudioPlaybackManager 应用级音频仲裁（D-34） | ✅ 已完成 |
 | 83 | 贯穿线鼠标光标反馈（D-35） | ✅ 已完成 |
 | 84 | 日志持久化 FileLogSink（D-36） | ✅ 已完成 |
+| 85 | applyFaResult 不覆盖 grapheme 层，grapheme 保持为 minlabel 设置的输入源 | 有效 |
 
 ### 已完成任务
 
@@ -39,276 +40,213 @@
 | 12.1 FileLogSink 日志文件持久化 | 2026-05-07 |
 | 10.1 AudioPlaybackManager 应用级音频仲裁器 | 2026-05-07 |
 | 13.1 QSS 颜色变量提取与统一管理 | 2026-05-07 |
+| 15.1 FA 多层标签从属关系日志 | 2026-05-07 |
+| 16.1 Phoneme 贯穿线在子图区域可拖动 | 2026-05-07 |
+| 17.1 FA 输出空标签内容 + phoneme 层静音区间默认值 | 2026-05-07 |
+| 18.1 文件列表脏状态视觉标记 | 2026-05-07 |
+| 18.2 切换条目时自动保存（不弹窗） | 2026-05-07 |
+| 19.1 设置页面添加自动保存配置 | 2026-05-07 |
+| 20.1 多页面文件列表行为统一 | 2026-05-07 |
+| 21.1 MinLabel 播放按钮 SVG 图标显示修复 | 2026-05-07 |
+| 22.1 波形图和 Power 图等子图间分割线颜色优化 | 2026-05-07 |
+| 25.1 FA 输入源修正：读取 raw_text 层，G2P 中文后输入 HFA | 2026-05-07 |
 
 ---
 
-## 任务 15：FA 多层标签从属关系日志
+## 任务 23：MinLabel ASR 回写流程修正 + LyricFA 集成
 
-> 设计依据：P-04（错误信息必须追溯到根因）、P-01（行为不分散）
-> 审核优化：日志应体现 grapheme→phoneme 的包含关系，便于排查 FA 对齐结果。
+> 设计依据：P-07（简洁可靠）——ASR 结果应进入输入框，由 autoG2P 转换到结果框。
 
-### 15.1 FA 导出时记录多层标签从属关系
+### 23.1 MinLabel ASR 结果回写目标修正
 
 **问题**：
-- `buildFaLayers()` 当前仅记录 binding group（边界对齐关系），不记录 grapheme 区间包含哪些 phoneme 区间的从属关系
-- 用户无法从日志中看到 FA 输出的层级包含结构（如 grapheme "shi" 包含 phoneme "sh" + "i"）
-- 排查 FA 对齐异常时缺少关键信息
+- `MinLabelPage::setAsrResult()` 调用 `loadData({}, text)` 将 ASR 文本写入 `contentText`（结果框）
+- 之后 `autoG2P()` 读取 `wordsText`（输入框，为空）产生空输出，覆盖了 ASR 结果
+- 正确流程：ASR → `wordsText` → autoG2P → `contentText`
 
 **需求**：
-- 在 `buildFaLayers()` 中，为每个 grapheme 区间记录其包含的 phoneme 区间列表
-- 日志格式：`[INFO] fa: grapheme "shi" [0.00-0.50s] → phones: sh [0.00-0.20s], i [0.20-0.50s]`
-- 在汇总日志中增加层级包含统计
-
-**审核优化（P-01）**：
-- 日志输出集中在 `buildFaLayers()` 中，不分散到其他函数
-- 保持现有的 binding group 日志不变，新增从属关系日志
+- ASR 结果写入 `wordsText`（输入框），不清空 `contentText`
+- 自动执行 G2P：读取 `wordsText` 内容，转换后写入 `contentText`
 
 **文件**：
-- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`（`buildFaLayers()` 函数）
+- 修改：`src/apps/shared/data-sources/MinLabelPage.cpp`（`setAsrResult()` 参数交换：`loadData(text, {})` → `loadData(QString(), text)`）
 
----
-
-## 任务 16：贯穿线拖动修复
-
-> 设计依据：D-05（分割线纵向贯穿规则）、D-28（Active tier 只控制子图边界线显示，不限制拖动）
-> 审核优化：P-01（行为不分散）——hit-test 逻辑应与 boundary model 设置一致。
-
-### 16.1 Phoneme 贯穿线在子图区域不可拖动
+### 23.2 MinLabel 添加 LyricFA 匹配按钮
 
 **问题**：
-- 标签区域（IntervalTierView）内边界线可正常拖动
-- 子图区域（WaveformWidget/SpectrogramWidget/PowerWidget）的贯穿线可见（由 BoundaryOverlayWidget 绘制）但不可拖动
-- 根因：子图 widget 的 `hitTestBoundary()` 检查 `m_boundaryOverlayEnabled`，但 PhonemeEditor 从未调用 `setBoundaryOverlayEnabled(true)`
-- BoundaryOverlayWidget 设置了 `WA_TransparentForMouseEvents`，鼠标事件穿透到子图 widget，但子图 widget 因 overlay 未启用而无法 hit-test
+- MinLabelPage 没有 LyricFA 按钮，无法使用歌词匹配功能
+- 用户需要 LyricFA 从输入框读取内容、匹配原文、覆盖输入框、自动 G2P
 
 **需求**：
-- 子图区域的贯穿线应可拖动，与标签区域行为一致
-- 拖动贯穿线时，BoundaryDragController 正常工作（含绑定伙伴同步移动）
+- 在菜单栏添加 "LyricFA" 菜单项（单条 + 批处理）
+- LyricFA 流程：从 `wordsText` 读取 → 匹配原文歌词库 → 覆盖 `wordsText` → autoG2P → `contentText`
 
 **方案**：
-- 将 `hitTestBoundary()` 中的 `m_boundaryOverlayEnabled` 检查移除，仅保留 `m_boundaryModel` 检查
-- `m_boundaryOverlayEnabled` 仅控制 `drawBoundaryOverlay()` 的绘制行为
-- 这样子图 widget 只要有 boundary model 就能 hit-test，绘制仍由 BoundaryOverlayWidget 统一负责
-
-**审核优化（P-01/P-07）**：
-- 不引入新的 flag，仅解耦 hit-test 与 draw 的条件判断
-- 三个子图 widget（Waveform/Spectrogram/Power）统一修改
+- 复用 `src/libs/lyric-fa/` 的 `MatchLyric` 和 `LyricMatcher` 组件
+- LyricFA 需要歌词库路径配置（在设置中配置或对话框选择）
 
 **文件**：
-- 修改：`src/apps/shared/phoneme-editor/ui/WaveformWidget.cpp`（`hitTestBoundary()` 移除 overlay 检查）
-- 修改：`src/apps/shared/phoneme-editor/ui/SpectrogramWidget.cpp`（同上）
-- 修改：`src/apps/shared/phoneme-editor/ui/PowerWidget.cpp`（同上）
+- 修改：`src/apps/shared/data-sources/MinLabelPage.h`（添加 LyricFA 相关成员）
+- 修改：`src/apps/shared/data-sources/MinLabelPage.cpp`（菜单、按钮、流程逻辑）
 
 ---
 
-## 任务 17：Phoneme 空标签修复
+## 任务 24：BatchProcessDialog 完善
 
-> 设计依据：P-04（错误信息必须追溯到根因）、D-27（标签层级包含规则）
-> 审核优化：P-07（简洁可靠）——空标签应统一替换为 SP，而非在各处分别处理。
+> 设计依据：P-01（行为不分散）——批量操作应统一使用改进的 BatchProcessDialog。
 
-### 17.1 FA 输出空标签内容 + phoneme 层静音区间默认值
-
-**问题**：
-- `buildFaLayers()` 末尾边界的 text 为空字符串，导致 phoneme 层末尾 interval 标签为 `""`
-- `TextGridDocument::loadFromDsText()` 中首段静音区间、空层、分割后右半 interval 均使用空字符串
-- FA 引擎（`WordList::add_SP()`）已在 word 间隙插入 SP word，但 `buildFaLayers()` 末尾边界未设置 SP
-- 空标签导致边界绑定失败（BoundaryDragController 的时间匹配可能将空标签区间误关联）
+### 24.1 BatchProcessDialog 参数区域结构化
 
 **需求**：
-- `buildFaLayers()` 中 phoneme 层末尾 interval 的 text 设为 `"SP"`
-- `TextGridDocument::loadFromDsText()` 中，phoneme 层的空文本 interval 自动替换为 `"SP"`
-- `TextGridDocument::insertBoundary()` 中，phoneme 层分割后右半 interval 默认为 `"SP"`
-- FA 逻辑不应输出空标签内容的 interval
+- 添加 `addParamGroup(title)` 方法创建分组标题
+- 支持分组折叠/展开
+- 参数间添加分隔线
 
-**审核优化（P-01）**：
-- phoneme 层空标签→SP 的逻辑集中在 `TextGridDocument::loadFromDsText()` 中处理
-- `buildFaLayers()` 作为数据源头也应正确设置 SP
-- 层名称判断：当层名为 `"phoneme"` 或层索引对应 phoneme 层时，空文本替换为 `"SP"`
+### 24.2 日志输出增强
+
+**需求**：
+- 每条日志前加时间戳 `[HH:MM:SS]`
+- 日志级别前缀 `[INFO]` / `[WARN]` / `[ERROR]`
+- 错误日志用红色显示
+
+### 24.3 进度可视化增强
+
+**需求**：
+- 添加 ETA 预估
+- 状态文本显示速度信息
 
 **文件**：
-- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`（`buildFaLayers()` 末尾边界 text 设为 "SP"）
-- 修改：`src/apps/shared/phoneme-editor/ui/TextGridDocument.cpp`（`loadFromDsText()` 和 `insertBoundary()` 空标签→SP）
+- 修改：`src/apps/shared/data-sources/BatchProcessDialog.h`
+- 修改：`src/apps/shared/data-sources/BatchProcessDialog.cpp`
 
 ---
 
-## 任务 18：文件列表脏状态与保存提醒优化
+## 任务 25：HubertFA 输入源修正 + 跨步骤污染审计
 
-> 设计依据：D-19（所有页面统一使用全功能文件/切片列表）、P-01（行为不分散）
-> 审核优化：P-07（简洁可靠）——切换条目时自动保存，仅在退出/切页时提醒。
+> 设计依据：SP 在 FA 流程中不可能经过 DictionaryG2P（SP 是算法后期插入的间隙标记）。
+> 每步只允许覆盖本步骤的输出层，不得逆工序修改上一步结果。
 
-### 18.1 文件列表体现未修改状态
-
-**问题**：
-- SliceListPanel 不显示切片的修改/未修改状态
-- 用户无法从列表中识别哪些切片已修改未保存
-
-**需求**：
-- SliceListPanel 中已修改的切片项显示视觉标记（如项目文字加粗或前缀 `*`）
-- 编辑器 `isDirty()` 变化时，SliceListPanel 对应项实时更新
-
-### 18.2 切换条目时不提醒未保存
+### 25.1 applyFaResult 保 grapheme + readFaInput 无回退（已完成）
 
 **问题**：
-- `EditorPageBase::onSliceSelected()` 调用 `maybeSave()` 弹出保存确认对话框
-- 频繁切换切片时，每次都弹窗打断工作流
+- `applyFaResult()` 用 `buildFaLayers()` 的输出（含 SP/AP）覆盖了 grapheme 层
+- 再次运行 FA 时，SP 随 grapheme 文本传入 `DictionaryG2P::convert()` → 报错
+- 根因：grapheme 层是上一步（minlabel）的输出，FA 逆工序修改了它
 
-**需求**：
-- 切换切片时自动保存当前切片（静默保存，不弹窗）
-- 仅在以下场景弹出未保存提醒：
-  - 页面失活（`onDeactivating()`）
-  - 应用关闭（`AppShell::closeEvent()`）
-- 移除 `onSliceSelected()` 中的 `maybeSave()` 调用，改为自动保存
+**正确流程**：
+- grapheme 层由 minlabel 步骤输出，是 FA 的唯一输入源（等价于 main 分支的 .lab 文件）
+- `readFaInput()` 只读取 grapheme 层，**没有任何回退**
+- `applyFaResult()` 写入时跳过 grapheme 层，仅保存 phoneme 层 + binding groups
+- buildFaLayers 不做任何过滤（SP/AP 仍是正确的算法输出）
 
-**审核优化（P-01/P-07）**：
-- 自动保存逻辑封装在 `EditorPageBase::autoSaveCurrentSlice()` 中
-- 子类只需实现 `saveCurrentSlice()`，自动保存由基类统一调用
-- SliceListPanel 的脏状态更新由 `EditorPageBase` 统一管理，不分散到各子类
+**修正**：
+- `applyFaResult()` 写入时跳过 grapheme 层，仅保存 phoneme 层
+- `readFaInput()` 只从 grapheme 层读取（已被保护，不含 SP），无回退逻辑
+- `runFaForSlice()` 和 `onBatchFA()` 统一使用 `readFaInput()`
 
 **文件**：
-- 修改：`src/apps/shared/data-sources/EditorPageBase.h`（添加 `autoSaveCurrentSlice()`、脏状态通知）
-- 修改：`src/apps/shared/data-sources/EditorPageBase.cpp`（`onSliceSelected()` 改为自动保存）
-- 修改：`src/apps/shared/data-sources/SliceListPanel.h`（添加 `setSliceDirty()` 方法）
-- 修改：`src/apps/shared/data-sources/SliceListPanel.cpp`（脏状态视觉标记）
+- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`
+
+### 25.2 ExportPage 使用 4-param recognize 从 .lab 文件读取（已完成）
+
+**问题**：
+- `ExportPage::doExportSlice()` 使用 4-param `recognize()` 从 `.lab` 文件读取输入
+- 构建的哑 `HFA::WordList` 被完全忽略，实际输入来自磁盘上的 `.lab` 文件
+- 重构版不应依赖 `.lab` 文件，应直接将 grapheme 文本作为 `lyricsText` 传入
+
+**修正**：
+- `ExportPage::doExportSlice()` 改为 5-param `recognize()`，传递 grapheme 层文本
+- `ExportService` 已正确使用 5-param，无需修改
+
+**文件**：
+- 修改：`src/apps/ds-labeler/ExportPage.cpp`
+
+### 25.3 跨步骤污染审计
+
+| 步骤 | 输出层 | 是否被后续步骤逆工序修改 | 状态 |
+|------|--------|------------------------|------|
+| Slicer | audio + slice 元数据 | 无步骤修改 | ✅ |
+| MinLabel | `grapheme` + `raw_text` | ~~FA 用 buildFaLayers 覆盖 grapheme~~ → 已修复 | ✅ 已修复 |
+| PhonemeLabeler (FA) | `phoneme` + binding groups | ExportPage 读取 phoneme（只读，不修改） | ✅ |
+| PitchLabeler | `pitch` curve | 无步骤修改 | ✅ |
+| Export | `ph_num` + pitch + phoneme（如缺失） | 只写入本步骤产出层，不修改其他层 | ✅ |
+
+**规则**：每一层只应由产生它的步骤写入。后续步骤只能读取，不能修改。违例情况：
+1. ~~`applyFaResult` 覆盖 grapheme 层~~ → 已修复（跳过 grapheme 写入）
+2. ~~`ExportPage` 使用 4-param `recognize()` 忽略 grapheme 文本~~ → 已修复（改用 5-param）
 
 ---
 
-## 任务 19：设置页面自动保存
+## 任务 26：Phoneme 层内容验证与过滤
 
-> 设计依据：D-01（配置全部移出工程文件）、P-07（简洁可靠）
-> 审核优化：自动保存是通用功能，应在 Settings 通用 tab 中配置。
-
-### 19.1 设置页面添加自动保存配置
+### 26.1 MinLabel 保存时验证 grapheme 层内容
 
 **问题**：
-- 当前无自动保存机制，用户修改后需手动保存
-- 异常退出时可能丢失大量编辑
+- 用户在 MinLabel 结果框（`contentText`）输入中文 → 保存为 `grapheme` 层边界
+- Phoneme 编辑器加载后显示中文标签
 
 **需求**：
-- SettingsPage "通用" tab 新增自动保存配置：
-  - ☑ 启用自动保存（默认启用）
-  - 间隔：[30] 秒（最小 10s，最大 300s）
-- 自动保存范围：当前活跃页面的当前切片（调用 `saveCurrentSlice()`）
-- 自动保存仅在页面有脏数据时触发
-- 配置持久化到 `AppSettings`：`General/autoSaveEnabled`、`General/autoSaveIntervalMs`
+- 保存时检查 `grapheme` 层内容是否含中文字符
+- 如果含中文，弹出警告
 
-**审核优化（P-01）**：
-- 自动保存定时器由 `EditorPageBase` 统一管理
-- 定时器在 `onActivated()` 时启动，`onDeactivated()` 时停止
-- 各子类无需关心自动保存逻辑
+### 26.2 Phoneme 加载时过滤非拼音内容
+
+**需求**：
+- `TextGridDocument::loadFromDsText()` 检测 grapheme 层边界文本是否包含 CJK 字符
+- 如果包含，将层名标记为 `"grapheme (含中文)"` 并记录警告日志
 
 **文件**：
-- 修改：`src/apps/shared/settings/SettingsPage.cpp`（通用 tab 新增自动保存配置）
-- 修改：`src/apps/shared/data-sources/EditorPageBase.h`（添加自动保存定时器）
-- 修改：`src/apps/shared/data-sources/EditorPageBase.cpp`（定时器逻辑）
+- 修改：`src/apps/shared/data-sources/MinLabelPage.cpp`（`saveCurrentSlice()` 添加内容验证）
+- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`（`onSliceSelectedImpl()` 添加内容过滤检测）
 
 ---
 
-## 任务 20：文件列表面板统一
+## 任务 27：Phoneme 标签区域多层级支持
 
-> 设计依据：D-19（所有页面统一使用全功能文件/切片列表）、P-01（行为不分散）
-> 审核优化：SliceListPanel 已有两种模式，需确保行为一致。
-
-### 20.1 多页面文件列表行为统一
-
-**问题**：
-- SliceListPanel 有 Editor 模式和 Slicer 模式，但各页面的使用方式不完全一致
-- MinLabelPage、PhonemeLabelerPage、PitchLabelerPage 均使用 Editor 模式，但功能开关不统一
-- SlicerPage/DsSlicerPage 使用 AudioFileListPanel（DroppableFileListPanel 子类），与 SliceListPanel 是完全不同的类
-- D-19 要求所有页面统一使用 SliceListPanel
+### 27.1 PhonemeTextGridTierLabel 多行层级显示
 
 **需求**：
-- 审查 SliceListPanel 的 Editor 模式在三个页面（MinLabel/Phoneme/Pitch）中的使用差异
-- 统一功能开关：进度条、右键菜单、丢弃/恢复等
-- SlicerPage/DsSlicerPage 的 AudioFileListPanel 保留（D-19 明确"AudioFileListPanel 仅在 Slicer 页面保留"）
-- 确保三个 Editor 页面的 SliceListPanel 实例行为完全一致
+- 标签区域改为多行显示，每行对应一个 tier
+- 高度 = `kTierRowHeight * tierCount()`
+- 层级按以下顺序排列：高层级在上方，低层级在下方
+- 活跃层高亮，点击行切换活跃层
 
-**审核优化（P-01）**：
-- SliceListPanel 通过构造参数或 setter 选择性开启功能
-- 功能列表：进度条、脏状态标记、右键菜单项、导航按钮
-- 各页面传入相同的功能配置
-
-**文件**：
-- 修改：`src/apps/shared/data-sources/SliceListPanel.h`（功能配置接口）
-- 修改：`src/apps/shared/data-sources/SliceListPanel.cpp`（功能开关实现）
-- 修改：`src/apps/shared/data-sources/MinLabelPage.cpp`（统一配置）
-- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`（统一配置）
-- 修改：`src/apps/shared/data-sources/PitchLabelerPage.cpp`（统一配置）
-
----
-
-## 任务 21：MinLabel 播放按钮图标修复
-
-> 设计依据：P-01（行为不分散）——PhonemeEditor 和 PitchEditor 已有动态图标切换。
-> 审核优化：P-07（简洁可靠）——参照已有实现，最小改动。
-
-### 21.1 MinLabel 音频播放按钮 SVG 图标不显示
-
-**问题**：
-- MinLabelEditor 内嵌的 PlayWidget 有 play/stop/dev 三个 QPushButton 并设置了 SVG 图标
-- 但在 MinLabel 页面中，这些按钮的图标不可见
-- 可能原因：QSS 中 `play-widget` 或 `play-button`/`stop-button`/`dev-button` 的样式覆盖了图标
+### 27.2 层级间关联辅助线
 
 **需求**：
-- 确保 PlayWidget 的播放/停止/设备按钮正确显示 SVG 图标
-- 播放状态切换时图标动态更新（play.svg ↔ pause.svg）
-- 行为与 PhonemeEditor/PitchEditor 一致
+- 当拖动某层边界时，其他层同一时间位置的边界显示关联标记
 
-**审核优化（P-01）**：
-- PlayWidget 内部已有 `reloadButtonStatus()` 做图标切换
-- 问题可能在 QSS 样式覆盖，需检查 dark.qss / light.qss 中相关选择器
-- 参照 PhonemeEditor 的工具栏 QAction 图标显示方式
-
-**文件**：
-- 修改：`src/framework/ui-core/res/themes/dark.qss`（检查/修复 play-button 样式）
-- 修改：`src/framework/ui-core/res/themes/light.qss`（同上）
-
----
-
-## 任务 22：图表分割线颜色优化
-
-> 设计依据：P-06（接口稳定）——仅调整颜色值，不改变 QSS 结构。
-> 审核优化：P-07（简洁可靠）——最小改动，仅调整 splitter handle 颜色。
-
-### 22.1 波形图和 Power 图等子图间分割线颜色不明显
-
-**问题**：
-- QSplitter handle 颜色使用 `{{border}}`（暗色 `#43454A`，亮色 `#EBECF0`）
-- 在深色波形图/频谱图背景上，分割线几乎不可见
-- 用户难以感知图表边界，拖动调整比例困难
+### 27.3 IntervalTierView 层级视图同步
 
 **需求**：
-- 图表区域的 QSplitter handle 使用更明显的颜色
-- 暗色主题：使用 `{{borderLight}}`（`#4E5157`）或稍亮的颜色
-- 亮色主题：使用 `{{borderLight}}`（`#C9CCD6`）或稍深的颜色
-- 可选：增大 handle 高度（从 2px → 3px）提升可拖动性
-
-**审核优化（P-07）**：
-- 不新增 Palette 字段，复用 `borderLight`
-- 仅修改 QSS 中 `QSplitter::handle` 的 `background-color`
-- 如果 chartSplitter 需要与其他 QSplitter 区分，可通过 objectName 设置专属样式
+- 每个 tier 的 IntervalTierView 行高与标签行高一致
+- 活跃层对应的 IntervalTierView 高亮
 
 **文件**：
-- 修改：`src/framework/ui-core/res/themes/dark.qss`（QSplitter::handle 颜色）
-- 修改：`src/framework/ui-core/res/themes/light.qss`（同上）
+- 修改：`src/apps/shared/phoneme-editor/ui/PhonemeTextGridTierLabel.h/cpp`
+- 修改：`src/apps/shared/phoneme-editor/ui/TierLabelArea.h/cpp`
+- 修改：`src/apps/shared/phoneme-editor/PhonemeEditor.cpp`
+- 修改：`src/apps/shared/phoneme-editor/ui/IntervalTierView.cpp`
 
 ---
 
 ## 任务依赖关系
 
 ```
-15.1 (FA从属关系日志) ── 独立，无依赖
-16.1 (贯穿线拖动修复) ── 独立，无依赖
-17.1 (空标签修复)     ── 独立，无依赖
-18.1 (文件列表脏状态) ── 独立，无依赖
-18.2 (切换不提醒保存) ── 依赖 18.1
-19.1 (自动保存设置)   ── 依赖 18.2
-20.1 (文件列表统一)   ── 依赖 18.1
-21.1 (播放按钮图标)   ── 独立，无依赖
-22.1 (分割线颜色)     ── 独立，无依赖
+23.1 (ASR回写修正)     ── 独立，无依赖
+23.2 (LyricFA按钮)     ── 依赖 23.1
+24.1 (参数区域结构化)  ── 独立，无依赖
+24.2 (日志输出增强)    ── 独立，无依赖
+24.3 (进度可视化增强)  ── 独立，无依赖
+25.1 (FA输入源修正)    ── ✅ 已完成
+26.1 (MinLabel内容验证) ── 依赖 23.1
+26.2 (Phoneme内容过滤) ── 独立，无依赖
+27.1 (标签区域多行)    ── 独立，无依赖
+27.2 (层级关联辅助线)  ── 依赖 27.1
+27.3 (层级视图同步)    ── 依赖 27.1
 ```
 
-**执行顺序**：15.1 → 16.1 → 17.1 → 21.1 → 22.1 → 18.1 → 18.2 → 20.1 → 19.1
-（先修 bug 再增强，先独立后依赖，先简单后复杂）
+**执行顺序**：23.1 → [23.2, 24.1, 24.2, 24.3, 27.1] → [26.1, 27.2, 27.3] → 26.2
 
 ---
 

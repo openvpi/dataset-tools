@@ -2,11 +2,14 @@
 #include "SliceListPanel.h"
 #include "ModelConfigHelper.h"
 #include "ISettingsBackend.h"
+#include "BatchProcessDialog.h"
 
 #include <dstools/IEditorDataSource.h>
 
 #include <dsfw/Log.h>
 
+#include <QCheckBox>
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
@@ -461,6 +464,27 @@ QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
     return container;
 }
 
+// ── Input helpers ──────────────────────────────────────────────────────────────
+
+/// Reads pinyin lyrics text from the grapheme layer, which is the direct
+/// output of the minlabel step (equivalent to .lab in main branch).
+/// applyFaResult preserves this layer, so it always remains the original
+/// minlabel output across FA re-runs.
+/// Returns empty string when grapheme layer is absent or empty.
+static QString readFaInput(const DsTextDocument &doc) {
+    QStringList parts;
+    for (const auto &layer : doc.layers) {
+        if (layer.name == QStringLiteral("grapheme")) {
+            for (const auto &b : layer.boundaries) {
+                if (!b.text.isEmpty())
+                    parts << b.text;
+            }
+            break;
+        }
+    }
+    return parts.join(QStringLiteral(" "));
+}
+
 // ── FA engine ─────────────────────────────────────────────────────────────────
 
 void PhonemeLabelerPage::ensureHfaEngine() {
@@ -582,18 +606,9 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     const auto &doc = loadResult.value();
 
-    QStringList graphemeTexts;
-    for (const auto &layer : doc.layers) {
-        if (layer.name == QStringLiteral("grapheme")) {
-            for (const auto &b : layer.boundaries) {
-                if (!b.text.isEmpty())
-                    graphemeTexts << b.text;
-            }
-        }
-    }
-
-    if (graphemeTexts.isEmpty()) {
-        DSFW_LOG_ERROR("fa", ("FA pipeline error [grapheme]: no grapheme layer data - " + sliceId.toStdString()).c_str());
+    QString lyricsQStr = readFaInput(doc);
+    if (lyricsQStr.isEmpty()) {
+        DSFW_LOG_ERROR("fa", ("FA pipeline error [input]: no lyrics data - " + sliceId.toStdString()).c_str());
         QMessageBox::information(this, tr("Force Align"),
                                  tr("Current slice has no lyrics data. Please label lyrics first."));
         return;
@@ -605,7 +620,6 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     auto hfaAlive = m_hfaAlive;
     QPointer<PhonemeLabelerPage> guard(this);
 
-    QString lyricsQStr = graphemeTexts.join(QStringLiteral(" "));
     std::string lyricsText = lyricsQStr.toStdString();
 
     (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, sliceId, guard]() {
@@ -666,6 +680,13 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         doc = std::move(result.value());
 
     for (const auto &newLayer : layers) {
+        // Preserve the original grapheme layer from minlabel — it is the
+        // authoritative input source for FA (equivalent to .lab in main branch).
+        // Overwriting it with FA output (which includes SP/AP markers) would
+        // contaminate subsequent FA runs.
+        if (newLayer.name == QStringLiteral("grapheme"))
+            continue;
+
         IntervalLayer *existing = nullptr;
         for (auto &layer : doc.layers) {
             if (layer.name == newLayer.name) {
@@ -751,86 +772,149 @@ void PhonemeLabelerPage::onBatchFA() {
         return;
     }
 
-    m_faRunning = true;
-    {
-        std::string msg = "Batch FA started: " + std::to_string(ids.size()) + " slices";
-        DSFW_LOG_INFO("fa", msg.c_str());
-    }
+    auto *dlg = new BatchProcessDialog(tr("Batch Force Align"), this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto *skipExisting = new QCheckBox(tr("Skip slices with existing phoneme alignment"), dlg);
+    skipExisting->setChecked(true);
+    dlg->addParamWidget(skipExisting);
+
+    auto *langCombo = new QComboBox(dlg);
+    langCombo->addItem(tr("Chinese"), QStringLiteral("zh"));
+    langCombo->addItem(tr("Japanese"), QStringLiteral("ja"));
+    langCombo->addItem(tr("English"), QStringLiteral("en"));
+    dlg->addParamRow(tr("Language:"), langCombo);
+
+    dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
+
     auto *hfa = m_hfa;
     auto hfaAlive = m_hfaAlive;
     auto *src = source();
     QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, hfaAlive, src, ids, guard]() {
-        if (!hfaAlive || !*hfaAlive)
+    connect(dlg, &BatchProcessDialog::started, this,
+            [dlg, hfa, hfaAlive, src, ids, guard, skipExisting, langCombo]() {
+        if (!guard) {
+            dlg->finish(0, 0, 0);
             return;
-        if (!hfa)
-            return;
-        int processed = 0;
-        int skipped = 0;
-        for (const auto &sliceId : ids) {
-            if (!*hfaAlive)
-                break;
-            QString audioPath = src->validatedAudioPath(sliceId);
-            if (audioPath.isEmpty()) {
-                ++skipped;
-                continue;
-            }
+        }
+        guard->m_faRunning = true;
+        bool skip = skipExisting->isChecked();
+        QString lang = langCombo->currentData().toString();
 
-            auto loadResult = src->loadSlice(sliceId);
-            if (!loadResult)
-                continue;
+        (void) QtConcurrent::run([dlg, hfa, hfaAlive, src, ids, guard, skip, lang]() {
+            if (!hfaAlive || !*hfaAlive)
+                return;
+            if (!hfa)
+                return;
+            int processed = 0;
+            int skipped = 0;
+            int errors = 0;
+            int idx = 0;
+            for (const auto &sliceId : ids) {
+                if (!*hfaAlive || dlg->isCancelled())
+                    break;
 
-            const auto &doc = loadResult.value();
-            QStringList graphemeTexts;
-            for (const auto &layer : doc.layers) {
-                if (layer.name == QStringLiteral("grapheme")) {
-                    for (const auto &b : layer.boundaries) {
-                        if (!b.text.isEmpty())
-                            graphemeTexts << b.text;
+                QMetaObject::invokeMethod(dlg, [dlg, idx, total = ids.size()]() {
+                    dlg->setProgress(idx, total);
+                }, Qt::QueuedConnection);
+
+                QString audioPath = src->validatedAudioPath(sliceId);
+                if (audioPath.isEmpty()) {
+                    ++skipped;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                        dlg->appendLog(tr("[SKIP] %1 (missing audio)").arg(sliceId));
+                    }, Qt::QueuedConnection);
+                    ++idx;
+                    continue;
+                }
+
+                auto loadResult = src->loadSlice(sliceId);
+                if (!loadResult) {
+                    ++errors;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                        dlg->appendLog(tr("[ERROR] %1 (load failed)").arg(sliceId));
+                    }, Qt::QueuedConnection);
+                    ++idx;
+                    continue;
+                }
+
+                const auto &doc = loadResult.value();
+
+                QString lyricsQStr = readFaInput(doc);
+                if (lyricsQStr.isEmpty()) {
+                    ++skipped;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                        dlg->appendLog(tr("[SKIP] %1 (no lyrics)").arg(sliceId));
+                    }, Qt::QueuedConnection);
+                    ++idx;
+                    continue;
+                }
+
+                if (skip) {
+                    bool hasPhoneme = false;
+                    for (const auto &layer : doc.layers) {
+                        if (layer.name == QStringLiteral("phoneme") && !layer.boundaries.empty()) {
+                            hasPhoneme = true;
+                            break;
+                        }
+                    }
+                    if (hasPhoneme) {
+                        ++skipped;
+                        QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                            dlg->appendLog(tr("[SKIP] %1 (existing alignment)").arg(sliceId));
+                        }, Qt::QueuedConnection);
+                        ++idx;
+                        continue;
                     }
                 }
+
+                HFA::WordList words;
+                std::string lyricsText = lyricsQStr.toStdString();
+
+                std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+                auto result = hfa->recognize(audioPath.toStdWString(), lang.toStdString(), nonSpeechPh, lyricsText, words);
+                if (result) {
+                    auto faResult = buildFaLayers(words);
+
+                    QList<IntervalLayer> layers;
+                    layers.push_back(std::move(faResult.graphemeLayer));
+                    layers.push_back(std::move(faResult.phonemeLayer));
+
+                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers, groups = std::move(faResult.groups)]() {
+                        if (guard)
+                            guard->applyFaResult(sliceId, layers, groups);
+                    }, Qt::QueuedConnection);
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId, phoneCount = faResult.phonemeLayer.boundaries.size()]() {
+                        dlg->appendLog(tr("[OK] %1: %2 phonemes").arg(sliceId).arg(phoneCount));
+                    }, Qt::QueuedConnection);
+                    ++processed;
+                } else {
+                    ++errors;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId, errMsg = result.error()]() {
+                        dlg->appendLog(tr("[ERROR] %1: %2").arg(sliceId, QString::fromStdString(errMsg)));
+                    }, Qt::QueuedConnection);
+                }
+                ++idx;
             }
-            if (graphemeTexts.isEmpty())
-                continue;
-
-            HFA::WordList words;
-            std::string lyricsText;
-            for (const auto &text : graphemeTexts) {
-                if (!lyricsText.empty()) lyricsText += " ";
-                lyricsText += text.toStdString();
-            }
-
-            std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-            auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
-            if (result) {
-                auto faResult = buildFaLayers(words);
-
-                QList<IntervalLayer> layers;
-                layers.push_back(std::move(faResult.graphemeLayer));
-                layers.push_back(std::move(faResult.phonemeLayer));
-
-                QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers, groups = std::move(faResult.groups)]() {
-                    if (guard)
-                        guard->applyFaResult(sliceId, layers, groups);
-                }, Qt::QueuedConnection);
-            }
-            ++processed;
-        }
-        QMetaObject::invokeMethod(guard.data(), [guard, processed, skipped]() {
-            if (!guard)
-                return;
-            guard->m_faRunning = false;
-            DSFW_LOG_INFO("fa", ("Batch FA completed: " + std::to_string(processed)
-                          + " processed, " + std::to_string(skipped) + " skipped").c_str());
-            QString msg = tr("Batch force align completed: %1 slices").arg(processed);
-            if (skipped > 0)
-                msg += tr(", %1 skipped (missing audio)").arg(skipped);
-            dsfw::widgets::ToastNotification::show(
-                guard.data(), dsfw::widgets::ToastType::Info,
-                msg, 3000);
-        }, Qt::QueuedConnection);
+            QMetaObject::invokeMethod(dlg, [dlg, processed, skipped, errors]() {
+                dlg->finish(processed, skipped, errors);
+            }, Qt::QueuedConnection);
+            QMetaObject::invokeMethod(guard.data(), [guard]() {
+                if (guard)
+                    guard->m_faRunning = false;
+            }, Qt::QueuedConnection);
+        });
     });
+
+    connect(dlg, &BatchProcessDialog::cancelled, this, [guard, hfaAlive]() {
+        if (hfaAlive)
+            hfaAlive->store(false);
+        if (guard)
+            guard->m_faRunning = false;
+    });
+
+    dlg->show();
 }
 
 void PhonemeLabelerPage::updateProgress() {
