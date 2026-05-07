@@ -30,6 +30,8 @@
 | 83 | 贯穿线鼠标光标反馈（D-35） | ✅ 已完成 |
 | 84 | 日志持久化 FileLogSink（D-36） | ✅ 已完成 |
 | 85 | applyFaResult 不覆盖 grapheme 层，grapheme 保持为 minlabel 设置的输入源 | 有效 |
+| 86 | AudioVisualizerContainer 支持移除 TierLabelArea（D-37） | 有效 |
+| 87 | 文件列表面板分层设计，按钮风格统一（D-38） | 有效 |
 
 ### 已完成任务
 
@@ -63,200 +65,164 @@
 
 ---
 
-## 任务 23：MinLabel ASR 回写流程修正 + LyricFA 集成
+## 任务 28：Phoneme 界面删除 tierline 区域
 
-> 设计依据：P-07（简洁可靠）——ASR 结果应进入输入框，由 autoG2P 转换到结果框。
+**需求**：phoneme 界面的 `PhonemeTextGridTierLabel` 层级标签区域应从框架中移除。
 
-### 23.1 MinLabel ASR 结果回写目标修正
-
-**问题**：
-- `MinLabelPage::setAsrResult()` 调用 `loadData({}, text)` 将 ASR 文本写入 `contentText`（结果框）
-- 之后 `autoG2P()` 读取 `wordsText`（输入框，为空）产生空输出，覆盖了 ASR 结果
-- 正确流程：ASR → `wordsText` → autoG2P → `contentText`
-
-**需求**：
-- ASR 结果写入 `wordsText`（输入框），不清空 `contentText`
-- 自动执行 G2P：读取 `wordsText` 内容，转换后写入 `contentText`
-
-**文件**：
-- 修改：`src/apps/shared/data-sources/MinLabelPage.cpp`（`setAsrResult()` 参数交换：`loadData(text, {})` → `loadData(QString(), text)`）
-
-### 23.2 MinLabel 添加 LyricFA 匹配按钮
-
-**问题**：
-- MinLabelPage 没有 LyricFA 按钮，无法使用歌词匹配功能
-- 用户需要 LyricFA 从输入框读取内容、匹配原文、覆盖输入框、自动 G2P
-
-**需求**：
-- 在菜单栏添加 "LyricFA" 菜单项（单条 + 批处理）
-- LyricFA 流程：从 `wordsText` 读取 → 匹配原文歌词库 → 覆盖 `wordsText` → autoG2P → `contentText`
+**设计依据**：D-37
 
 **方案**：
-- 复用 `src/libs/lyric-fa/` 的 `MatchLyric` 和 `LyricMatcher` 组件
-- LyricFA 需要歌词库路径配置（在设置中配置或对话框选择）
+- `AudioVisualizerContainer` 新增 `removeTierLabelArea()` 方法，从布局中移除 `m_tierLabelArea`
+- `PhonemeEditor::buildLayout()` 末尾调用 `removeTierLabelArea()`
+- `updateOverlayTopOffset()` 处理 `m_tierLabelArea == nullptr`
 
 **文件**：
-- 修改：`src/apps/shared/data-sources/MinLabelPage.h`（添加 LyricFA 相关成员）
-- 修改：`src/apps/shared/data-sources/MinLabelPage.cpp`（菜单、按钮、流程逻辑）
+- `src/apps/shared/audio-visualizer/AudioVisualizerContainer.{h,cpp}`
+- `src/apps/shared/phoneme-editor/PhonemeEditor.cpp`
 
 ---
 
-## 任务 24：BatchProcessDialog 完善
+## 任务 29：HFA 对齐结果修复——与 main 分支对齐
 
-> 设计依据：P-01（行为不分散）——批量操作应统一使用改进的 BatchProcessDialog。
+**需求**：HFA 对齐结果严重错误，参考 main 分支代码修复。数据处理过程、算法和模型推理部分要求完全一致。
 
-### 24.1 BatchProcessDialog 参数区域结构化
-
-**需求**：
-- 添加 `addParamGroup(title)` 方法创建分组标题
-- 支持分组折叠/展开
-- 参数间添加分隔线
-
-### 24.2 日志输出增强
-
-**需求**：
-- 每条日志前加时间戳 `[HH:MM:SS]`
-- 日志级别前缀 `[INFO]` / `[WARN]` / `[ERROR]`
-- 错误日志用红色显示
-
-### 24.3 进度可视化增强
-
-**需求**：
-- 添加 ETA 预估
-- 状态文本显示速度信息
+**分析**：
+- `hubert-infer` 核心算法（HfaModel → AlignmentDecoder → NonLexicalDecoder → 后处理）与 main 分支一致
+- 问题可能在 `buildFaLayers()` 对 `WordList` 边界解释方式，需逐函数对比验证
+- 需要确认 `AlignmentDecoder::decode()`、`NonLexicalDecoder::decode()`、`fill_small_gaps()`、`add_SP()` 与 main 分支完全一致
 
 **文件**：
-- 修改：`src/apps/shared/data-sources/BatchProcessDialog.h`
-- 修改：`src/apps/shared/data-sources/BatchProcessDialog.cpp`
+- `src/infer/hubert-infer/src/Hfa.cpp`
+- `src/infer/hubert-infer/src/AlignmentDecoder.cpp`
+- `src/infer/hubert-infer/src/NonLexicalDecoder.cpp`
+- `src/apps/shared/data-sources/PhonemeLabelerPage.cpp`（`buildFaLayers()`）
 
 ---
 
-## 任务 25：HubertFA 输入源修正 + 跨步骤污染审计
+## 任务 30：修复无边框窗口标题截断
 
-> 设计依据：SP 在 FA 流程中不可能经过 DictionaryG2P（SP 是算法后期插入的间隙标记）。
-> 每步只允许覆盖本步骤的输出层，不得逆工序修改上一步结果。
+**需求**：部分页面标题过长，无边框窗口不能显示完整标题，最前面几个字缺失。
 
-### 25.1 applyFaResult 保 grapheme + readFaInput 无回退（已完成）
+**根因**：`TitleBar::resizeEvent()` 中 `m_titleLabel->setGeometry(0, 0, width(), height())` 覆盖全宽，标题居中对齐后与左侧 menuBar 和右侧窗口按钮重叠。
+
+**方案**：在 `TitleBar::resizeEvent()` 中计算可用宽度：
+1. 获取 menuBar 的 `sizeHint().width()`（若存在）
+2. 获取右侧按钮总宽度（`m_minBtn + m_maxBtn + m_closeBtn` 各 46px）
+3. 标题居中在 `[menuBarEnd, buttonsStart]` 区域内
+
+**文件**：
+- `src/framework/ui-core/src/FramelessHelper.cpp`（`TitleBar` 类）
+
+---
+
+## 任务 31：音高页面无标注时也能播放音频
+
+**需求**：音高界面切换条目时，右侧一致显示"请打开文件"。无标注信息时、也应该能打开播放音频。
+
+**根因**：`PitchLabelerPage::onSliceSelectedImpl()` 中如果 `m_currentFile` 为空（无 pitch/MIDI 数据），虽然调用了 `m_editor->loadAudio()`，但音频加载逻辑受条件守卫限制。
+
+**方案**：确保 `loadAudio()` 在音频路径可用时无条件执行，不依赖 `m_currentFile` 状态。
+
+**文件**：
+- `src/apps/shared/data-sources/PitchLabelerPage.cpp`
+
+---
+
+## 任务 32：导出页面 CSV 预览深浅色主题修复
+
+**需求**：导出页面的 CSV 预览表格，浅色主题下是肉色背景 + 灰色文字，参考 CLion 样式修复深浅色主题。
 
 **问题**：
-- `applyFaResult()` 用 `buildFaLayers()` 的输出（含 SP/AP）覆盖了 grapheme 层
-- 再次运行 FA 时，SP 随 grapheme 文本传入 `DictionaryG2P::convert()` → 报错
-- 根因：grapheme 层是上一步（minlabel）的输出，FA 逆工序修改了它
+1. 全局 QSS 给 `QTableView` 的 `alternate-background-color: #F0F2F5` 在浅色主题下呈现肉色感
+2. 缺失数据行使用硬编码 `QColor(255, 200, 200)` 浅红，不跟随主题
 
-**正确流程**：
-- grapheme 层由 minlabel 步骤输出，是 FA 的唯一输入源（等价于 main 分支的 .lab 文件）
-- `readFaInput()` 只读取 grapheme 层，**没有任何回退**
-- `applyFaResult()` 写入时跳过 grapheme 层，仅保存 phoneme 层 + binding groups
-- buildFaLayers 不做任何过滤（SP/AP 仍是正确的算法输出）
-
-**修正**：
-- `applyFaResult()` 写入时跳过 grapheme 层，仅保存 phoneme 层
-- `readFaInput()` 只从 grapheme 层读取（已被保护，不含 SP），无回退逻辑
-- `runFaForSlice()` 和 `onBatchFA()` 统一使用 `readFaInput()`
+**方案**：
+- 为 `m_previewTable` 设置 `setObjectName("csvPreviewTable")`，在 QSS 中添加专属样式
+- 使用 `Theme::Palette` 的颜色变量替代硬编码
+- 参考 CLion 配色：深色 `#2B2B2B` + `#A9B7C6`，浅色 `#FFFFFF` + `#313131`
+- 缺失数据行改用 `palette.warning` 的半透明叠加
 
 **文件**：
-- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`
-
-### 25.2 ExportPage 使用 4-param recognize 从 .lab 文件读取（已完成）
-
-**问题**：
-- `ExportPage::doExportSlice()` 使用 4-param `recognize()` 从 `.lab` 文件读取输入
-- 构建的哑 `HFA::WordList` 被完全忽略，实际输入来自磁盘上的 `.lab` 文件
-- 重构版不应依赖 `.lab` 文件，应直接将 grapheme 文本作为 `lyricsText` 传入
-
-**修正**：
-- `ExportPage::doExportSlice()` 改为 5-param `recognize()`，传递 grapheme 层文本
-- `ExportService` 已正确使用 5-param，无需修改
-
-**文件**：
-- 修改：`src/apps/ds-labeler/ExportPage.cpp`
-
-### 25.3 跨步骤污染审计
-
-| 步骤 | 输出层 | 是否被后续步骤逆工序修改 | 状态 |
-|------|--------|------------------------|------|
-| Slicer | audio + slice 元数据 | 无步骤修改 | ✅ |
-| MinLabel | `grapheme` + `raw_text` | ~~FA 用 buildFaLayers 覆盖 grapheme~~ → 已修复 | ✅ 已修复 |
-| PhonemeLabeler (FA) | `phoneme` + binding groups | ExportPage 读取 phoneme（只读，不修改） | ✅ |
-| PitchLabeler | `pitch` curve | 无步骤修改 | ✅ |
-| Export | `ph_num` + pitch + phoneme（如缺失） | 只写入本步骤产出层，不修改其他层 | ✅ |
-
-**规则**：每一层只应由产生它的步骤写入。后续步骤只能读取，不能修改。违例情况：
-1. ~~`applyFaResult` 覆盖 grapheme 层~~ → 已修复（跳过 grapheme 写入）
-2. ~~`ExportPage` 使用 4-param `recognize()` 忽略 grapheme 文本~~ → 已修复（改用 5-param）
+- `src/apps/ds-labeler/ExportPage.cpp`
+- `src/framework/ui-core/res/themes/dark.qss`
+- `src/framework/ui-core/res/themes/light.qss`
 
 ---
 
-## 任务 26：Phoneme 层内容验证与过滤
+## 任务 33：Slicer 文件列表按钮修复（无文字显示）
 
-### 26.1 MinLabel 保存时验证 grapheme 层内容
+**需求**：slicer 文件列表上方按钮背后多了几个无文字显示的按钮。
 
-**问题**：
-- 用户在 MinLabel 结果框（`contentText`）输入中文 → 保存为 `grapheme` 层边界
-- Phoneme 编辑器加载后显示中文标签
+**根因**：`DroppableFileListPanel` 中 `m_btnAddDir` 使用 emoji "📁"、`m_btnRemove` 使用 "−" (U+2212)，在部分 Windows 字体/主题下不渲染。
 
-**需求**：
-- 保存时检查 `grapheme` 层内容是否含中文字符
-- 如果含中文，弹出警告
-
-### 26.2 Phoneme 加载时过滤非拼音内容
-
-**需求**：
-- `TextGridDocument::loadFromDsText()` 检测 grapheme 层边界文本是否包含 CJK 字符
-- 如果包含，将层名标记为 `"grapheme (含中文)"` 并记录警告日志
+**方案**：
+- `m_btnAddDir`、`m_btnAdd`、`m_btnRemove` 改为 `QToolButton`，加载 SVG 资源图标
+- `m_btnDiscard`/`m_btnClear` 保留文本，设为中文（"丢弃"/"清除"）
+- `AudioFileListPanel` 可重写按钮文本行为
 
 **文件**：
-- 修改：`src/apps/shared/data-sources/MinLabelPage.cpp`（`saveCurrentSlice()` 添加内容验证）
-- 修改：`src/apps/shared/data-sources/PhonemeLabelerPage.cpp`（`onSliceSelectedImpl()` 添加内容过滤检测）
+- `src/framework/widgets/src/DroppableFileListPanel.cpp`
+- `src/apps/shared/data-sources/AudioFileListPanel.h`
 
 ---
 
-## 任务 27：Phoneme 标签区域多层级支持
+## 任务 34：文件列表统一与分页面功能启用
 
-### 27.1 PhonemeTextGridTierLabel 多行层级显示
+**需求**：各页面的文件列表应该是一个类的不同实例，根据各页面特点启用部分功能。
 
-**需求**：
-- 标签区域改为多行显示，每行对应一个 tier
-- 高度 = `kTierRowHeight * tierCount()`
-- 层级按以下顺序排列：高层级在上方，低层级在下方
-- 活跃层高亮，点击行切换活跃层
+**设计依据**：D-38
 
-### 27.2 层级间关联辅助线
-
-**需求**：
-- 当拖动某层边界时，其他层同一时间位置的边界显示关联标记
-
-### 27.3 IntervalTierView 层级视图同步
-
-**需求**：
-- 每个 tier 的 IntervalTierView 行高与标签行高一致
-- 活跃层对应的 IntervalTierView 高亮
+**方案**：
+- `DroppableFileListPanel` 新增 `setButtonVisible(QString id, bool)` 控制各按钮显隐
+- `SliceListPanel` 是否启用按钮栏由模式参数控制
+- `AudioFileListPanel` 使用新图标按钮
 
 **文件**：
-- 修改：`src/apps/shared/phoneme-editor/ui/PhonemeTextGridTierLabel.h/cpp`
-- 修改：`src/apps/shared/phoneme-editor/ui/TierLabelArea.h/cpp`
-- 修改：`src/apps/shared/phoneme-editor/PhonemeEditor.cpp`
-- 修改：`src/apps/shared/phoneme-editor/ui/IntervalTierView.cpp`
+- `src/framework/widgets/include/dsfw/widgets/DroppableFileListPanel.h`
+- `src/framework/widgets/src/DroppableFileListPanel.cpp`
+- `src/apps/shared/data-sources/SliceListPanel.{h,cpp}`
+- `src/apps/shared/data-sources/AudioFileListPanel.h`
+
+---
+
+## 任务 35：Phoneme 刻度线显示修复
+
+**需求**：phoneme 页面的刻度线显示有问题，默认比例尺看不懂文字。要求 slicer 和 phoneme 在底层是同一个类的不同实例（已满足 D-30），为何行为不一致。
+
+**分析**：两者使用同一 `AudioVisualizerContainer` + 同一 `TimeRulerWidget` + 同一 `ViewportController`。差异点：
+- Slicer 默认 resolution = 3000 spx
+- PhonemeEditor 默认 resolution = 800 spx
+- `updateScaleIndicator()` 计算 `msPerDiv = resolution / sampleRate * 80 * 1000`
+
+**可能原因**：
+1. `TimeRulerWidget::findLevel()` 对 800 spx (44100Hz → ~55 PPS) 选择了不合适的刻度级别
+2. `updateScaleIndicator()` 的格式化输出（"ms/div" 数字看不懂）
+
+**方案**：
+- 检查 `TimeRulerWidget::kLevels[]` 刻度级别表是否覆盖 800 spx 场景
+- 调整 `kMinMinorStepPx` 阈值（当前 60px）或添加中间级别
+- `updateScaleIndicator()` 格式化增加更多精度或改用 "spx" 为主标注
+
+**文件**：
+- `src/framework/widgets/src/TimeRulerWidget.cpp`
+- `src/apps/shared/audio-visualizer/AudioVisualizerContainer.cpp`
 
 ---
 
 ## 任务依赖关系
 
 ```
-23.1 (ASR回写修正)     ── 独立，无依赖
-23.2 (LyricFA按钮)     ── 依赖 23.1
-24.1 (参数区域结构化)  ── 独立，无依赖
-24.2 (日志输出增强)    ── 独立，无依赖
-24.3 (进度可视化增强)  ── 独立，无依赖
-25.1 (FA输入源修正)    ── ✅ 已完成
-26.1 (MinLabel内容验证) ── 依赖 23.1
-26.2 (Phoneme内容过滤) ── 独立，无依赖
-27.1 (标签区域多行)    ── 独立，无依赖
-27.2 (层级关联辅助线)  ── 依赖 27.1
-27.3 (层级视图同步)    ── 依赖 27.1
+28 (tierline移除)     ── 独立，无依赖
+29 (HFA修复)          ── 独立，无依赖
+30 (标题截断)          ── 独立，无依赖
+31 (音高播放)          ── 独立，无依赖
+32 (CSV主题)           ── 独立，无依赖
+33 (slicer按钮)        ── 独立，无依赖
+34 (文件列表统一)      ── 依赖 33（按钮改造前置）
+35 (刻度线显示)        ── 独立，无依赖
 ```
 
-**执行顺序**：23.1 → [23.2, 24.1, 24.2, 24.3, 27.1] → [26.1, 27.2, 27.3] → 26.2
+**执行顺序**：33 → 34, 其余 [28, 29, 30, 31, 32, 35] 并行。
 
 ---
 
@@ -267,3 +233,4 @@
 - [framework-architecture.md](framework-architecture.md) — 项目架构
 - [conventions-and-standards.md](conventions-and-standards.md) — 编码规范
 - [log-and-i18n-design.md](log-and-i18n-design.md) — Log 系统与本地化设计
+- [refactoring-plan-v3.md](refactoring-plan-v3.md) — 本次重构详细方案

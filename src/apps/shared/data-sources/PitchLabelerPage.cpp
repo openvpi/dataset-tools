@@ -2,6 +2,7 @@
 #include "SliceListPanel.h"
 #include "ModelConfigHelper.h"
 #include "ISettingsBackend.h"
+#include "BatchProcessDialog.h"
 
 #include <dstools/IEditorDataSource.h>
 
@@ -9,6 +10,7 @@
 
 #include <DSFile.h>
 
+#include <QCheckBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
@@ -786,64 +788,143 @@ void PitchLabelerPage::onBatchExtract() {
         return;
     }
 
-    m_inferRunning = true;
+    auto *dlg = new BatchProcessDialog(QStringLiteral("批量提取音高 + MIDI"), this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto *extractPitch = new QCheckBox(QStringLiteral("提取音高 (RMVPE)"), dlg);
+    extractPitch->setChecked(hasRmvpe);
+    extractPitch->setEnabled(hasRmvpe);
+    dlg->addParamWidget(extractPitch);
+
+    auto *extractMidi = new QCheckBox(QStringLiteral("提取 MIDI (GAME)"), dlg);
+    extractMidi->setChecked(hasGame);
+    extractMidi->setEnabled(hasGame);
+    dlg->addParamWidget(extractMidi);
+
+    auto *skipExisting = new QCheckBox(QStringLiteral("跳过已有结果的切片"), dlg);
+    skipExisting->setChecked(true);
+    dlg->addParamWidget(skipExisting);
+
+    dlg->appendLog(QStringLiteral("总切片数: %1").arg(ids.size()));
+
     auto *rmvpe = m_rmvpe;
     auto *game = m_game;
     auto *src = source();
     QPointer<PitchLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([rmvpe, game, hasRmvpe, hasGame, src, ids, guard]() {
-        int processed = 0;
-        int skipped = 0;
-        for (const auto &sliceId : ids) {
-            QString audioPath = src->validatedAudioPath(sliceId);
-            if (audioPath.isEmpty()) {
-                ++skipped;
-                continue;
-            }
-
-            if (hasRmvpe) {
-                std::vector<Rmvpe::RmvpeRes> results;
-                auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
-                if (result && !results.empty()) {
-                    const auto &res = results[0];
-                    std::vector<int32_t> f0Mhz(res.f0.size());
-                    for (size_t i = 0; i < res.f0.size(); ++i) {
-                        f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
-                    }
-                    float timestep = 0.005f;
-                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, f0Mhz, timestep]() {
-                        if (guard)
-                            guard->applyPitchResult(sliceId, f0Mhz, timestep);
-                    }, Qt::QueuedConnection);
-                }
-            }
-
-            if (hasGame) {
-                std::vector<Game::GameNote> notes;
-                auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
-                if (result) {
-                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, notes = std::move(notes)]() {
-                        if (guard)
-                            guard->applyMidiResult(sliceId, notes);
-                    }, Qt::QueuedConnection);
-                }
-            }
-
-            ++processed;
+    connect(dlg, &BatchProcessDialog::started, this,
+            [dlg, rmvpe, game, src, ids, guard, extractPitch, extractMidi, skipExisting]() {
+        if (!guard) {
+            dlg->finish(0, 0, 0);
+            return;
         }
-        QMetaObject::invokeMethod(guard.data(), [guard, processed, skipped]() {
-            if (!guard)
-                return;
-            guard->m_inferRunning = false;
-            QString msg = QStringLiteral("批量提取完成: %1 个切片").arg(processed);
-            if (skipped > 0)
-                msg += QStringLiteral("，%1 个音频文件缺失已跳过").arg(skipped);
-            dsfw::widgets::ToastNotification::show(
-                guard.data(), dsfw::widgets::ToastType::Info,
-                msg, 3000);
-        }, Qt::QueuedConnection);
+        guard->m_inferRunning = true;
+        bool doPitch = extractPitch->isChecked();
+        bool doMidi = extractMidi->isChecked();
+        bool skip = skipExisting->isChecked();
+
+        (void) QtConcurrent::run([dlg, rmvpe, game, src, ids, guard, doPitch, doMidi, skip]() {
+            int processed = 0;
+            int skipped = 0;
+            int errors = 0;
+            int idx = 0;
+            for (const auto &sliceId : ids) {
+                if (dlg->isCancelled())
+                    break;
+
+                QMetaObject::invokeMethod(dlg, [dlg, idx, total = ids.size()]() {
+                    dlg->setProgress(idx, total);
+                }, Qt::QueuedConnection);
+
+                QString audioPath = src->validatedAudioPath(sliceId);
+                if (audioPath.isEmpty()) {
+                    ++skipped;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                        dlg->appendLog(QStringLiteral("[SKIP] %1 (missing audio)").arg(sliceId));
+                    }, Qt::QueuedConnection);
+                    ++idx;
+                    continue;
+                }
+
+                if (skip) {
+                    auto result = src->loadSlice(sliceId);
+                    if (result) {
+                        bool hasData = false;
+                        for (const auto &curve : result.value().curves) {
+                            if (curve.name == QStringLiteral("pitch") && !curve.values.empty()) {
+                                hasData = true;
+                                break;
+                            }
+                        }
+                        if (!hasData) {
+                            for (const auto &layer : result.value().layers) {
+                                if (layer.name == QStringLiteral("midi") && !layer.boundaries.empty()) {
+                                    hasData = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (hasData) {
+                            ++skipped;
+                            QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                                dlg->appendLog(QStringLiteral("[SKIP] %1 (existing data)").arg(sliceId));
+                            }, Qt::QueuedConnection);
+                            ++idx;
+                            continue;
+                        }
+                    }
+                }
+
+                if (doPitch && rmvpe) {
+                    std::vector<Rmvpe::RmvpeRes> results;
+                    auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
+                    if (result && !results.empty()) {
+                        const auto &res = results[0];
+                        std::vector<int32_t> f0Mhz(res.f0.size());
+                        for (size_t i = 0; i < res.f0.size(); ++i) {
+                            f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
+                        }
+                        float timestep = 0.005f;
+                        QMetaObject::invokeMethod(guard.data(), [guard, sliceId, f0Mhz, timestep]() {
+                            if (guard)
+                                guard->applyPitchResult(sliceId, f0Mhz, timestep);
+                        }, Qt::QueuedConnection);
+                    }
+                }
+
+                if (doMidi && game) {
+                    std::vector<Game::GameNote> notes;
+                    auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+                    if (result) {
+                        QMetaObject::invokeMethod(guard.data(), [guard, sliceId, notes = std::move(notes)]() {
+                            if (guard)
+                                guard->applyMidiResult(sliceId, notes);
+                        }, Qt::QueuedConnection);
+                    }
+                }
+
+                QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                    dlg->appendLog(QStringLiteral("[OK] %1").arg(sliceId));
+                }, Qt::QueuedConnection);
+                ++processed;
+                ++idx;
+            }
+            QMetaObject::invokeMethod(dlg, [dlg, processed, skipped, errors]() {
+                dlg->finish(processed, skipped, errors);
+            }, Qt::QueuedConnection);
+            QMetaObject::invokeMethod(guard.data(), [guard]() {
+                if (guard)
+                    guard->m_inferRunning = false;
+            }, Qt::QueuedConnection);
+        });
     });
+
+    connect(dlg, &BatchProcessDialog::cancelled, this, [guard]() {
+        if (guard)
+            guard->m_inferRunning = false;
+    });
+
+    dlg->show();
 }
 
 void PitchLabelerPage::updateProgress() {

@@ -1,0 +1,136 @@
+[DEBUG] 14:24:09.790 ui: Slice selected: 01_huanwulinglong_001
+[DEBUG] 14:24:09.803 ui: Slice selected: 01_huanwulinglong_001
+[DEBUG] 14:24:09.836 ui: Slice selected: 01_huanwulinglong_001
+[DEBUG] 14:24:11.919 ui: Slice selected: 01_huanwulinglong_001
+[WARN] 14:24:14.422 fa: FA task cancelled: page deactivated
+[DEBUG] 14:25:00.569 ui: Slice selected: 01_huanwulinglong_001
+[DEBUG] 14:25:11.353 audio: AudioPlaybackManager: play granted
+[DEBUG] 14:25:31.180 audio: AudioPlaybackManager: play granted
+[DEBUG] 14:25:48.532 audio: AudioPlaybackManager: play granted
+[DEBUG] 14:26:05.250 ui: Slice selected: 01_huanwulinglong_002
+[DEBUG] 14:26:08.316 audio: AudioPlaybackManager: play granted
+[DEBUG] 14:26:15.205 ui: Slice selected: 01_huanwulinglong_001
+[DEBUG] 14:26:19.358 ui: Slice selected: 01_huanwulinglong_002
+[DEBUG] 14:26:19.973 ui: Slice selected: 01_huanwulinglong_001
+[INFO] 14:26:24.199 fa: FA started: 01_huanwulinglong_001
+[DEBUG] 14:26:24.747 fa: [tier=0/grapheme] id=1 word='SP' @ 0.000000s-0.849976s
+[DEBUG] 14:26:24.747 fa: [tier=1/phoneme] id=2 phone='SP' @ 0.000000s
+[INFO] 14:26:24.748 fa: [binding#0] tier0.id=1 ↔ tier1.id=2 @ 0.000000s
+[INFO] 14:26:24.748 fa: grapheme "SP" [0.000000-0.849976s] → phones: SP [0.000000-0.849976s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=3 word='hua' @ 0.849976s-0.870010s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=4 phone='h' @ 0.849976s
+[INFO] 14:26:24.748 fa: [binding#1] tier0.id=3 ↔ tier1.id=4 @ 0.849976s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=5 phone='ua' @ 0.860042s
+[INFO] 14:26:24.748 fa: grapheme "hua" [0.849976-0.870010s] → phones: h [0.849976-0.860042s], ua [0.860042-0.870010s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=6 word='deng' @ 0.870010s-0.900056s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=7 phone='d' @ 0.870010s
+[INFO] 14:26:24.748 fa: [binding#2] tier0.id=6 ↔ tier1.id=7 @ 0.870010s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=8 phone='eng' @ 0.880004s
+[INFO] 14:26:24.748 fa: grapheme "deng" [0.870010-0.900056s] → phones: d [0.870010-0.880004s], eng [0.880004-0.900056s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=9 word='chu' @ 0.900056s-0.919990s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=10 phone='ch' @ 0.900056s
+[INFO] 14:26:24.748 fa: [binding#3] tier0.id=9 ↔ tier1.id=10 @ 0.900056s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=11 phone='u' @ 0.909973s
+[INFO] 14:26:24.748 fa: grapheme "chu" [0.900056-0.919990s] → phones: ch [0.900056-0.909973s], u [0.909973-0.919990s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=12 word='shang' @ 0.919990s-0.940040s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=13 phone='sh' @ 0.919990s
+[INFO] 14:26:24.748 fa: [binding#4] tier0.id=12 ↔ tier1.id=13 @ 0.919990s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=14 phone='ang' @ 0.929994s
+[INFO] 14:26:24.748 fa: grapheme "shang" [0.919990-0.940040s] → phones: sh [0.919990-0.929994s], ang [0.929994-0.940040s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=15 word='gong' @ 0.940040s-0.960004s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=16 phone='g' @ 0.940040s
+[INFO] 14:26:24.748 fa: [binding#5] tier0.id=15 ↔ tier1.id=16 @ 0.940040s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=17 phone='ong' @ 0.949995s
+[INFO] 14:26:24.748 fa: grapheme "gong" [0.940040-0.960004s] → phones: g [0.940040-0.949995s], ong [0.949995-0.960004s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=18 word='zhe' @ 0.960004s-0.980057s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=19 phone='zh' @ 0.960004s
+[INFO] 14:26:24.748 fa: [binding#6] tier0.id=18 ↔ tier1.id=19 @ 0.960004s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=20 phone='e' @ 0.969953s
+[INFO] 14:26:24.748 fa: grapheme "zhe" [0.960004-0.980057s] → phones: zh [0.960004-0.969953s], e [0.969953-0.980057s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=21 word='yi' @ 0.980057s-0.999992s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=22 phone='y' @ 0.980057s
+[INFO] 14:26:24.748 fa: [binding#7] tier0.id=21 ↔ tier1.id=22 @ 0.980057s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=23 phone='i' @ 0.989966s
+[INFO] 14:26:24.748 fa: grapheme "yi" [0.980057-0.999992s] → phones: y [0.980057-0.989966s], i [0.989966-0.999992s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=24 word='lun' @ 0.999992s-1.020037s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=25 phone='l' @ 0.999992s
+[INFO] 14:26:24.748 fa: [binding#8] tier0.id=24 ↔ tier1.id=25 @ 0.999992s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=26 phone='un' @ 1.009997s
+[INFO] 14:26:24.748 fa: grapheme "lun" [0.999992-1.020037s] → phones: l [0.999992-1.009997s], un [1.009997-1.020037s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=27 word='man' @ 1.020037s-1.040008s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=28 phone='m' @ 1.020037s
+[INFO] 14:26:24.748 fa: [binding#9] tier0.id=27 ↔ tier1.id=28 @ 1.020037s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=29 phone='an' @ 1.029988s
+[INFO] 14:26:24.748 fa: grapheme "man" [1.020037-1.040008s] → phones: m [1.020037-1.029988s], an [1.029988-1.040008s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=30 word='yue' @ 1.040008s-1.060055s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=31 phone='y0' @ 1.040008s
+[INFO] 14:26:24.748 fa: [binding#10] tier0.id=30 ↔ tier1.id=31 @ 1.040008s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=32 phone='ve' @ 1.049952s
+[INFO] 14:26:24.748 fa: grapheme "yue" [1.040008-1.060055s] → phones: y0 [1.040008-1.049952s], ve [1.049952-1.060055s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=33 word='wu' @ 1.060055s-1.079995s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=34 phone='w' @ 1.060055s
+[INFO] 14:26:24.748 fa: [binding#11] tier0.id=33 ↔ tier1.id=34 @ 1.060055s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=35 phone='u' @ 1.069971s
+[INFO] 14:26:24.748 fa: grapheme "wu" [1.060055-1.079995s] → phones: w [1.060055-1.069971s], u [1.069971-1.079995s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=36 word='tai' @ 1.079995s-1.100043s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=37 phone='t' @ 1.079995s
+[INFO] 14:26:24.748 fa: [binding#12] tier0.id=36 ↔ tier1.id=37 @ 1.079995s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=38 phone='ai' @ 1.089968s
+[INFO] 14:26:24.748 fa: grapheme "tai" [1.079995-1.100043s] → phones: t [1.079995-1.089968s], ai [1.089968-1.100043s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=39 word='shang' @ 1.100043s-1.120025s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=40 phone='sh' @ 1.100043s
+[INFO] 14:26:24.748 fa: [binding#13] tier0.id=39 ↔ tier1.id=40 @ 1.100043s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=41 phone='ang' @ 1.109983s
+[INFO] 14:26:24.748 fa: grapheme "shang" [1.100043-1.120025s] → phones: sh [1.100043-1.109983s], ang [1.109983-1.120025s]
+[DEBUG] 14:26:24.748 fa: [tier=0/grapheme] id=42 word='shan' @ 1.120025s-1.140015s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=43 phone='sh' @ 1.120025s
+[INFO] 14:26:24.748 fa: [binding#14] tier0.id=42 ↔ tier1.id=43 @ 1.120025s
+[DEBUG] 14:26:24.748 fa: [tier=1/phoneme] id=44 phone='an' @ 1.129962s
+[INFO] 14:26:24.748 fa: grapheme "shan" [1.120025-1.140015s] → phones: sh [1.120025-1.129962s], an [1.129962-1.140015s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=45 word='shuo' @ 1.140015s-1.160016s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=46 phone='sh' @ 1.140015s
+[INFO] 14:26:24.749 fa: [binding#15] tier0.id=45 ↔ tier1.id=46 @ 1.140015s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=47 phone='uo' @ 1.149985s
+[INFO] 14:26:24.749 fa: grapheme "shuo" [1.140015-1.160016s] → phones: sh [1.140015-1.149985s], uo [1.149985-1.160016s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=48 word='SP' @ 1.160016s-13.759984s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=49 phone='SP' @ 1.160016s
+[INFO] 14:26:24.749 fa: [binding#16] tier0.id=48 ↔ tier1.id=49 @ 1.160016s
+[INFO] 14:26:24.749 fa: grapheme "SP" [1.160016-13.759984s] → phones: SP [1.160016-13.759984s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=50 word='tiao' @ 13.759984s-13.780171s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=51 phone='t' @ 13.759984s
+[INFO] 14:26:24.749 fa: [binding#17] tier0.id=50 ↔ tier1.id=51 @ 13.759984s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=52 phone='iao' @ 13.770112s
+[INFO] 14:26:24.749 fa: grapheme "tiao" [13.759984-13.780171s] → phones: t [13.759984-13.770112s], iao [13.770112-13.780171s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=53 word='yue' @ 13.780171s-13.799929s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=54 phone='y0' @ 13.780171s
+[INFO] 14:26:24.749 fa: [binding#18] tier0.id=53 ↔ tier1.id=54 @ 13.780171s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=55 phone='ve' @ 13.789885s
+[INFO] 14:26:24.749 fa: grapheme "yue" [13.780171-13.799929s] → phones: y0 [13.780171-13.789885s], ve [13.789885-13.799929s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=56 word='yu' @ 13.799929s-13.819986s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=57 phone='y0' @ 13.799929s
+[INFO] 14:26:24.749 fa: [binding#19] tier0.id=56 ↔ tier1.id=57 @ 13.799929s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=58 phone='v' @ 13.810065s
+[INFO] 14:26:24.749 fa: grapheme "yu" [13.799929-13.819986s] → phones: y0 [13.799929-13.810065s], v [13.810065-13.819986s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=59 word='SP' @ 13.819986s-13.930008s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=60 phone='SP' @ 13.819986s
+[INFO] 14:26:24.749 fa: [binding#20] tier0.id=59 ↔ tier1.id=60 @ 13.819986s
+[INFO] 14:26:24.749 fa: grapheme "SP" [13.819986-13.930008s] → phones: SP [13.819986-13.930008s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=61 word='feng' @ 13.930008s-13.950324s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=62 phone='f' @ 13.930008s
+[INFO] 14:26:24.749 fa: [binding#21] tier0.id=61 ↔ tier1.id=62 @ 13.930008s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=63 phone='eng' @ 13.939915s
+[INFO] 14:26:24.749 fa: grapheme "feng" [13.930008-13.950324s] → phones: f [13.930008-13.939915s], eng [13.939915-13.950324s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=64 word='jian' @ 13.950324s-13.970453s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=65 phone='j' @ 13.950324s
+[INFO] 14:26:24.749 fa: [binding#22] tier0.id=64 ↔ tier1.id=65 @ 13.950324s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=66 phone='ian' @ 13.960000s
+[INFO] 14:26:24.749 fa: grapheme "jian" [13.950324-13.970453s] → phones: j [13.950324-13.960000s], ian [13.960000-13.970453s]
+[DEBUG] 14:26:24.749 fa: [tier=0/grapheme] id=67 END @ 13.970453s
+[DEBUG] 14:26:24.749 fa: [tier=1/phoneme] id=68 END @ 13.970453s
+[INFO] 14:26:24.749 fa: [binding#23] tier0.id=67 ↔ tier1.id=68 @ 13.970453s (end)
+[INFO] 14:26:24.749 fa: buildFaLayers: 24 grapheme boundaries, 44 phoneme boundaries, 24 binding groups
+[INFO] 14:26:24.749 fa: FA completed: 01_huanwulinglong_001 - 44 phonemes, 24 bindings
+[DEBUG] 14:26:32.484 audio: AudioPlaybackManager: stopping previous player
+[DEBUG] 14:26:32.484 audio: AudioPlaybackManager: play granted
+[DEBUG] 14:26:51.390 audio: AudioPlaybackManager: play granted
+[WARN] 14:26:53.974 fa: FA task cancelled: page deactivated

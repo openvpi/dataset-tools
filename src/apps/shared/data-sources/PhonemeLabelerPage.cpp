@@ -368,15 +368,8 @@ void PhonemeLabelerPage::onAutoInfer() {
         if (needAutoFA) {
             source()->clearDirtyLayers(currentSliceId(), {QStringLiteral("phoneme")});
 
-            // Use async engine loading so UI doesn't block during model init
-            auto *tierLabel = m_editor->document() ?
-                dynamic_cast<PhonemeTextGridTierLabel *>(
-                    m_editor->findChild<PhonemeTextGridTierLabel *>()) : nullptr;
-
-            ensureHfaEngineAsync([this, tierLabel]() {
+            ensureHfaEngineAsync([this]() {
                 if (m_hfa && m_hfa->isOpen() && !m_faRunning) {
-                    if (tierLabel)
-                        tierLabel->setAlignmentRunning(true);
                     dsfw::widgets::ToastNotification::show(
                         this, dsfw::widgets::ToastType::Info,
                         tr("Auto force-aligning..."), 3000);
@@ -639,10 +632,6 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
             if (!guard)
                 return;
             guard->m_faRunning = false;
-
-            auto *tierLabel = guard->m_editor->findChild<PhonemeTextGridTierLabel *>();
-            if (tierLabel)
-                tierLabel->setAlignmentRunning(false);
 
             if (result) {
                 auto faResult = buildFaLayers(words);

@@ -139,9 +139,11 @@ namespace dstools {
 
     void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel *model) {
         m_boundaryModel = model;
-        m_tierLabelArea->setBoundaryModel(model);
+        if (m_tierLabelArea)
+            m_tierLabelArea->setBoundaryModel(model);
         m_boundaryOverlay->setBoundaryModel(model);
-        m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+        int tierLabelH = m_tierLabelArea ? m_tierLabelArea->height() : 0;
+        m_boundaryOverlay->setTierLabelGeometry(tierLabelH, tierLabelH);
         updateOverlayTopOffset();
     }
 
@@ -167,6 +169,26 @@ namespace dstools {
             m_tierLabelArea->setBoundaryModel(m_boundaryModel);
         layout->insertWidget(idx, m_tierLabelArea);
         m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+        updateOverlayTopOffset();
+    }
+
+    void AudioVisualizerContainer::removeTierLabelArea() {
+        if (!m_tierLabelArea)
+            return;
+
+        auto *layout = qobject_cast<QVBoxLayout *>(this->layout());
+        if (layout) {
+            int idx = layout->indexOf(m_tierLabelArea);
+            if (idx >= 0)
+                layout->removeWidget(m_tierLabelArea);
+        }
+
+        m_tierLabelArea->removeEventFilter(this);
+        m_tierLabelArea->deleteLater();
+        m_tierLabelArea = nullptr;
+
+        if (m_boundaryOverlay)
+            m_boundaryOverlay->setTierLabelGeometry(0, 0);
         updateOverlayTopOffset();
     }
 
@@ -233,8 +255,6 @@ namespace dstools {
             if (watched == m_chartSplitter)
                 updateScaleIndicator();
         }
-        // When the tier label area resizes (e.g. after rebuildRadioButtons changes height),
-        // update the overlay geometry so boundary lines align correctly
         if (watched == m_tierLabelArea && event->type() == QEvent::Resize) {
             m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
             updateOverlayTopOffset();

@@ -25,8 +25,6 @@
 #include "ui/WaveformRenderer.h"
 #include "ui/WaveformWidget.h"
 
-#include "PhonemeTextGridTierLabel.h"
-
 namespace dstools {
     class AudioVisualizerContainer;
 
@@ -189,7 +187,6 @@ namespace dstools {
             PowerWidget *m_powerWidget = nullptr;
             SpectrogramWidget *m_spectrogramWidget = nullptr;
             EntryListPanel *m_entryListPanel = nullptr;
-            PhonemeTextGridTierLabel *m_tierLabel = nullptr;
             QToolBar *m_toolbar = nullptr;
             QComboBox *m_tierCombo = nullptr;
 

@@ -67,6 +67,10 @@ public:
     void setBoundaryModel(IBoundaryModel *model);
     void setTierLabelArea(TierLabelArea *area);
 
+    /// Remove and delete the tier label area from the layout.
+    /// Used by pages (e.g. PhonemeEditor) that don't need the tier label area.
+    void removeTierLabelArea();
+
     /// Set an editor widget to be placed between TierLabelArea and chartSplitter.
     /// This is used for TierEditWidget (phoneme interval editing).
     void setEditorWidget(QWidget *widget);

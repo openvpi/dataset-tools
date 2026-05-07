@@ -3,7 +3,7 @@
 > 本文档记录所有由用户明确给出的设计决策，供后续实施参考。
 > 与其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-05-06
+> 最后更新：2026-05-07
 
 ---
 
@@ -663,6 +663,51 @@ D-14 提出了"共享 AudioVisualizerContainer 基类"的方向。本决策（D-
 - 文件 I/O 使用 `std::ofstream`，路径通过 `dstools::toFsPath()` 转换
 - 不引入新的第三方依赖
 - 日志格式：`[HH:mm:ss.zzz] [LEVEL] [category] message`
+
+---
+
+---
+
+## D-37：AudioVisualizerContainer 支持移除 TierLabelArea
+
+**决策**：为 `AudioVisualizerContainer` 增加 `removeTierLabelArea()` 方法，允许 phoneme 页面移除 `PhonemeTextGridTierLabel` 层级标签区域。标签区域的高度回收给 `TimeRuler` 和 `TierEditWidget`/`chartSplitter` 使用。
+
+**接口**：
+```cpp
+void AudioVisualizerContainer::removeTierLabelArea();
+```
+
+**影响**：
+- `PhonemeEditor::buildLayout()` 在 `setupLayout` 完成后调用 `m_container->removeTierLabelArea()`
+- `updateOverlayTopOffset()` 需要处理 `m_tierLabelArea == nullptr`
+- `invalidateBoundaryModel()` 中的 `if (m_tierLabelArea) m_tierLabelArea->onModelDataChanged()` 保持 guard 不变
+- Slicer 不受影响
+
+**复核准则**：
+- ✅ P-01：新增行为收敛在 `AudioVisualizerContainer`，不扩散
+- ✅ D-15：标签区域设计不强制要求可见
+- ✅ D-30：同一容器不同配置
+
+---
+
+## D-38：文件列表面板分层设计（按钮风格统一，不强行合并数据模型）
+
+**决策**：保留两个面板的独立职责，但统一按钮布局和视觉风格：
+
+- **`DroppableFileListPanel`**（框架层）：通用文件列表，拖放+筛选+按钮栏+进度
+- **`SliceListPanel`**（应用层）：切片列表，数据源绑定+进度+脏状态
+
+两者**不强行合并**——因为数据模型不同（原始文件 vs 项目切片）。但按钮栏风格统一、进度条组件复用。
+
+**具体改造**：
+1. `AudioFileListPanel` 按钮从 emoji/ASCII 改为 QIcon（使用资源 SVG 图标）
+2. `SliceListPanel` 是否启用按钮栏取决于模式（editor/slicer），由参数控制
+3. 引入 `FileListButtonBar` 可复用类，统一按钮样式
+
+**影响文件**：
+- `DroppableFileListPanel.{h,cpp}` — 添加 `setButtonBarEnabled(bool)`、`setButtonVisible(id, bool)`
+- `AudioFileListPanel.h` — 使用新按钮图标
+- `SliceListPanel.{h,cpp}` — 可选启用按钮栏
 
 ---
 
