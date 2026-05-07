@@ -266,8 +266,24 @@ namespace dsfw {
         QString qssPath = dark ? QStringLiteral(":/themes/dark.qss") : QStringLiteral(":/themes/light.qss");
         QFile qssFile(qssPath);
         if (qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            m_app->setStyleSheet(QString::fromUtf8(qssFile.readAll()));
+            QString qss = QString::fromUtf8(qssFile.readAll());
             qssFile.close();
+
+            qss.replace(QStringLiteral("{{bgPrimary}}"), m_palette.bgPrimary.name());
+            qss.replace(QStringLiteral("{{bgSecondary}}"), m_palette.bgSecondary.name());
+            qss.replace(QStringLiteral("{{bgSurface}}"), m_palette.bgSurface.name());
+            qss.replace(QStringLiteral("{{bgHover}}"), m_palette.bgHover.name());
+            qss.replace(QStringLiteral("{{accent}}"), m_palette.accent.name());
+            qss.replace(QStringLiteral("{{textPrimary}}"), m_palette.textPrimary.name());
+            qss.replace(QStringLiteral("{{textSecondary}}"), m_palette.textSecondary.name());
+            qss.replace(QStringLiteral("{{textDisabled}}"), m_palette.textDisabled.name());
+            qss.replace(QStringLiteral("{{border}}"), m_palette.border.name());
+            qss.replace(QStringLiteral("{{borderLight}}"), m_palette.borderLight.name());
+            qss.replace(QStringLiteral("{{success}}"), m_palette.success.name());
+            qss.replace(QStringLiteral("{{error}}"), m_palette.error.name());
+            qss.replace(QStringLiteral("{{warning}}"), m_palette.warning.name());
+
+            m_app->setStyleSheet(qss);
         } else {
             qWarning() << "Theme: failed to load QSS from" << qssPath;
             m_app->setStyleSheet({});
