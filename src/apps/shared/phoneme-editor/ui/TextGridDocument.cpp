@@ -4,7 +4,10 @@
 #include <QFileInfo>
 #include <QDebug>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QStringDecoder>
+
+#include <dsfw/Log.h>
 
 #include <algorithm>
 #include <map>
@@ -384,8 +387,26 @@ void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePo
     m_textGrid.SetMaxTime(maxTime);
 
     for (const auto &layer : layers) {
+        QString tierName = layer.name;
+
+        static const QRegularExpression cjkRe(
+            QStringLiteral("[\\x{4E00}-\\x{9FFF}\\x{3400}-\\x{4DBF}\\x{F900}-\\x{FAFF}]"));
+        if (layer.name == QStringLiteral("grapheme")) {
+            bool hasCjk = false;
+            for (const auto &b : layer.boundaries) {
+                if (cjkRe.match(b.text).hasMatch()) {
+                    hasCjk = true;
+                    break;
+                }
+            }
+            if (hasCjk) {
+                tierName = QStringLiteral("grapheme (含中文)");
+                DSFW_LOG_WARN("data", ("Grapheme layer contains CJK characters in " + layer.name.toStdString()).c_str());
+            }
+        }
+
         auto tier = std::make_shared<textgrid::IntervalTier>(
-            layer.name.toStdString(), 0.0, maxTime);
+            tierName.toStdString(), 0.0, maxTime);
 
         bool isPhoneme = (layer.name == QStringLiteral("phoneme"));
         auto defaultText = [isPhoneme](const QString &text) -> std::string {
