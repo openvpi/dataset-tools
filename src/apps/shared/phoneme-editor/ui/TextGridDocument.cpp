@@ -205,13 +205,16 @@ void TextGridDocument::insertBoundary(int tierIndex, TimePos time) {
     auto tier = m_textGrid.GetTierAs<textgrid::IntervalTier>(tierIndex);
     if (!tier) return;
 
+    bool isPhoneme = (tierName(tierIndex) == QStringLiteral("phoneme"));
+    std::string rightText = isPhoneme ? "SP" : "";
+
     double timeSec = usToSec(time);
     const size_t count = tier->GetNumberOfIntervals();
     for (size_t i = 0; i < count; ++i) {
         const auto &interval = tier->GetInterval(i);
         if (timeSec > interval.min_time && timeSec < interval.max_time) {
             textgrid::Interval left(interval.min_time, timeSec, interval.text);
-            textgrid::Interval right(timeSec, interval.max_time, "");
+            textgrid::Interval right(timeSec, interval.max_time, rightText);
 
             tier->SetInterval(i, left);
             tier->InsertInterval(i + 1, right);
@@ -382,14 +385,15 @@ void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePo
         auto tier = std::make_shared<textgrid::IntervalTier>(
             layer.name.toStdString(), 0.0, maxTime);
 
-        // Build intervals from boundary positions.
-        // dstext boundaries represent interval starts; each boundary has .pos (start) and .text.
-        // We need to reconstruct intervals: [boundary[i].pos, boundary[i+1].pos) with boundary[i].text.
+        bool isPhoneme = (layer.name == QStringLiteral("phoneme"));
+        auto defaultText = [isPhoneme](const QString &text) -> std::string {
+            if (text.isEmpty() && isPhoneme) return "SP";
+            return text.toStdString();
+        };
+
         if (layer.boundaries.empty()) {
-            // Single interval covering entire duration
-            tier->AppendInterval(textgrid::Interval(0.0, maxTime, ""));
+            tier->AppendInterval(textgrid::Interval(0.0, maxTime, defaultText(QString())));
         } else {
-            // Sort boundaries by position (should already be sorted, but be safe)
             auto sorted = layer.boundaries;
             std::sort(sorted.begin(), sorted.end(), [](const Boundary &a, const Boundary &b) {
                 return a.pos < b.pos;
@@ -400,13 +404,12 @@ void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePo
                 double end = (i + 1 < sorted.size()) ? usToSec(sorted[i + 1].pos) : maxTime;
                 if (end <= start)
                     end = start + 0.001;
-                tier->AppendInterval(textgrid::Interval(start, end, sorted[i].text.toStdString()));
+                tier->AppendInterval(textgrid::Interval(start, end, defaultText(sorted[i].text)));
             }
 
-            // If first boundary doesn't start at 0, insert a silent interval before it
             double firstStart = usToSec(sorted[0].pos);
             if (firstStart > 0.001) {
-                tier->InsertInterval(0, textgrid::Interval(0.0, firstStart, ""));
+                tier->InsertInterval(0, textgrid::Interval(0.0, firstStart, defaultText(QString())));
             }
         }
 

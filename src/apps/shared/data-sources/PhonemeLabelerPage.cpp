@@ -135,6 +135,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         Boundary endP;
         endP.id = nextId++;
         endP.pos = lastEnd;
+        endP.text = QStringLiteral("SP");
         r.phonemeLayer.boundaries.push_back(std::move(endP));
 
         r.groups.push_back({r.graphemeLayer.boundaries.back().id,
