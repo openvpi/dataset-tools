@@ -92,4 +92,36 @@ namespace LyricFA {
         return true;
     }
 
+    bool MatchLyric::matchText(const QString &filename, const QString &asrText, QString &matchedText,
+                               QString &msg) const {
+        QString lyricName = filename;
+        const int lastUnderscore = filename.lastIndexOf('_');
+        if (lastUnderscore != -1) {
+            lyricName = filename.left(lastUnderscore);
+        }
+
+        if (!m_lyricDict.contains(lyricName)) {
+            msg = QString("Missing lyric file: %1.txt").arg(lyricName);
+            return false;
+        }
+
+        const auto &[text, pinyin] = m_lyricDict[lyricName];
+        auto [asr_text, asr_phonetic] = m_matcher->process_asr_content(asrText);
+
+        if (asr_phonetic.isEmpty()) {
+            msg = QString("ASR result empty for %1").arg(filename);
+            return false;
+        }
+
+        auto [matched_text, matched_phonetic, reason] = m_matcher->align_lyric_with_asr(asr_phonetic, text, pinyin);
+
+        if (matched_text.isEmpty()) {
+            msg = QString("No match found for %1: %2").arg(filename, reason);
+            return false;
+        }
+
+        matchedText = matched_text;
+        return true;
+    }
+
 } // namespace LyricFA

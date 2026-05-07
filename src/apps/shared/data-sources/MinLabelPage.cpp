@@ -9,6 +9,8 @@
 #include <dsfw/Log.h>
 
 #include <QCheckBox>
+#include <QDir>
+#include <QFileDialog>
 #include <QLabel>
 #include <QIcon>
 #include <QLineEdit>
@@ -22,6 +24,7 @@
 
 #include "AsrPipeline.h"
 #include "FunAsrModelProvider.h"
+#include "MatchLyric.h"
 
 #include <dsfw/IModelManager.h>
 #include <dsfw/IModelProvider.h>
@@ -46,13 +49,19 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     m_asrAction = new QAction(tr("ASR Recognize Current"), this);
     connect(m_asrAction, &QAction::triggered, this, &MinLabelPage::onRunAsr);
 
+    m_lyricFaAction = new QAction(tr("LyricFA Match Current"), this);
+    connect(m_lyricFaAction, &QAction::triggered, this, &MinLabelPage::onRunLyricFa);
+
     static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/play", "F5");
     static const dstools::SettingsKey<QString> kAsrRun("Shortcuts/asr", "R");
+    static const dstools::SettingsKey<QString> kLyricFaRun("Shortcuts/lyricfa", "L");
 
     shortcutManager()->bind(m_playAction, kPlaybackPlay,
                             tr("Play/Stop"), tr("Playback"));
     shortcutManager()->bind(m_asrAction, kAsrRun,
                             tr("ASR Recognize"), tr("Processing"));
+    shortcutManager()->bind(m_lyricFaAction, kLyricFaRun,
+                            tr("LyricFA Match"), tr("Processing"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
     shortcutManager()->setEnabled(false);
@@ -235,6 +244,9 @@ QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
     processMenu->addAction(m_asrAction);
     processMenu->addSeparator();
     processMenu->addAction(tr("Batch ASR..."), this, &MinLabelPage::onBatchAsr);
+    processMenu->addSeparator();
+    processMenu->addAction(m_lyricFaAction);
+    processMenu->addAction(tr("Batch LyricFA..."), this, &MinLabelPage::onBatchLyricFa);
 
     auto *viewMenu = bar->addMenu(tr("&View"));
     dsfw::Theme::instance().populateThemeMenu(viewMenu);
@@ -600,6 +612,234 @@ void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
         m_editor->textWidget()->wordsText->setText(text);
         m_editor->autoG2P();
         m_dirty = true;
+    }
+
+    updateProgress();
+}
+
+// ── LyricFA ──────────────────────────────────────────────────────────────────
+
+void MinLabelPage::ensureLyricLibrary() {
+    if (m_matchLyric && m_matchLyric->isInitialized())
+        return;
+
+    static const dstools::SettingsKey<QString> kLyricDir("LyricFA/libraryPath", {});
+    QString lyricDir = settings().get(kLyricDir);
+
+    if (lyricDir.isEmpty() || !QDir(lyricDir).exists()) {
+        lyricDir = QFileDialog::getExistingDirectory(
+            this, tr("Select Lyric Library Directory"), lyricDir);
+        if (lyricDir.isEmpty())
+            return;
+        settings().set(kLyricDir, lyricDir);
+    }
+
+    if (!m_matchLyric)
+        m_matchLyric = std::make_unique<LyricFA::MatchLyric>();
+
+    m_matchLyric->initLyric(lyricDir);
+
+    if (!m_matchLyric->isInitialized()) {
+        QMessageBox::warning(this, tr("LyricFA"),
+                             tr("No lyric files found in the selected directory."));
+        m_matchLyric.reset();
+    }
+}
+
+void MinLabelPage::onRunLyricFa() {
+    if (currentSliceId().isEmpty()) {
+        QMessageBox::information(this, tr("LyricFA"),
+                                 tr("Please select a slice first."));
+        return;
+    }
+
+    ensureLyricLibrary();
+    if (!m_matchLyric || !m_matchLyric->isInitialized())
+        return;
+
+    const QString asrText = m_editor->rawText();
+    if (asrText.isEmpty()) {
+        QMessageBox::information(this, tr("LyricFA"),
+                                 tr("No input text to match. Run ASR first."));
+        return;
+    }
+
+    QString matchedText;
+    QString msg;
+    if (m_matchLyric->matchText(currentSliceId(), asrText, matchedText, msg)) {
+        applyLyricFaResult(currentSliceId(), matchedText);
+        DSFW_LOG_INFO("infer", ("LyricFA matched: " + currentSliceId().toStdString()
+                      + " -> \"" + matchedText.left(50).toStdString() + "\"").c_str());
+        dsfw::widgets::ToastNotification::show(
+            this, dsfw::widgets::ToastType::Info,
+            tr("LyricFA match completed"), 3000);
+    } else {
+        DSFW_LOG_WARN("infer", ("LyricFA failed: " + currentSliceId().toStdString()
+                      + " - " + msg.toStdString()).c_str());
+        QMessageBox::warning(this, tr("LyricFA"),
+                             tr("LyricFA match failed: %1").arg(msg));
+    }
+}
+
+void MinLabelPage::onBatchLyricFa() {
+    if (!source()) {
+        QMessageBox::warning(this, tr("Batch LyricFA"),
+                             tr("Please open a project first."));
+        return;
+    }
+
+    ensureLyricLibrary();
+    if (!m_matchLyric || !m_matchLyric->isInitialized())
+        return;
+
+    const auto ids = source()->sliceIds();
+    if (ids.isEmpty()) {
+        QMessageBox::information(this, tr("Batch LyricFA"),
+                                 tr("No slices to process."));
+        return;
+    }
+
+    auto *dlg = new BatchProcessDialog(tr("Batch LyricFA"), this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto *skipExisting = new QCheckBox(tr("Skip slices with existing lyrics"), dlg);
+    skipExisting->setChecked(true);
+    dlg->addParamWidget(skipExisting);
+
+    dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
+
+    auto *matchLyric = m_matchLyric.get();
+    auto *src = source();
+    QPointer<MinLabelPage> guard(this);
+
+    connect(dlg, &BatchProcessDialog::started, this,
+            [dlg, matchLyric, src, ids, guard, skipExisting]() {
+        if (!guard) {
+            dlg->finish(0, 0, 0);
+            return;
+        }
+        bool skip = skipExisting->isChecked();
+
+        (void) QtConcurrent::run([dlg, matchLyric, src, ids, guard, skip]() {
+            int processed = 0;
+            int skipped = 0;
+            int errors = 0;
+            int idx = 0;
+            for (const auto &sliceId : ids) {
+                if (dlg->isCancelled())
+                    break;
+
+                QMetaObject::invokeMethod(dlg, [dlg, idx, total = ids.size()]() {
+                    dlg->setProgress(idx, total);
+                }, Qt::QueuedConnection);
+
+                QString asrText;
+                if (src) {
+                    auto result = src->loadSlice(sliceId);
+                    if (result) {
+                        for (const auto &layer : result.value().layers) {
+                            if (layer.name == QStringLiteral("raw_text")) {
+                                QStringList parts;
+                                for (const auto &b : layer.boundaries) {
+                                    if (!b.text.isEmpty())
+                                        parts << b.text;
+                                }
+                                asrText = parts.join(QStringLiteral(" "));
+                                break;
+                            }
+                        }
+                        if (skip) {
+                            for (const auto &layer : result.value().layers) {
+                                if (layer.name == QStringLiteral("grapheme")
+                                    && !layer.boundaries.empty()) {
+                                    asrText.clear();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (asrText.isEmpty()) {
+                    ++skipped;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                        dlg->appendLog(tr("[SKIP] %1 (no input text)").arg(sliceId));
+                    }, Qt::QueuedConnection);
+                    ++idx;
+                    continue;
+                }
+
+                QString matchedText;
+                QString msg;
+                if (matchLyric->matchText(sliceId, asrText, matchedText, msg)) {
+                    QMetaObject::invokeMethod(guard.data(),
+                                              [guard, sliceId, matchedText]() {
+                        if (guard)
+                            guard->applyLyricFaResult(sliceId, matchedText);
+                    }, Qt::QueuedConnection);
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId, matchedText]() {
+                        dlg->appendLog(
+                            tr("[OK] %1: \"%2\"").arg(sliceId, matchedText.left(80)));
+                    }, Qt::QueuedConnection);
+                    ++processed;
+                } else {
+                    ++errors;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId, msg]() {
+                        dlg->appendLog(
+                            tr("[ERROR] %1: %2").arg(sliceId, msg.left(80)));
+                    }, Qt::QueuedConnection);
+                }
+                ++idx;
+            }
+            QMetaObject::invokeMethod(dlg, [dlg, processed, skipped, errors]() {
+                dlg->finish(processed, skipped, errors);
+            }, Qt::QueuedConnection);
+        });
+    });
+
+    dlg->show();
+}
+
+void MinLabelPage::applyLyricFaResult(const QString &sliceId, const QString &matchedText) {
+    if (!source())
+        return;
+
+    auto result = source()->loadSlice(sliceId);
+    DsTextDocument doc;
+    if (result)
+        doc = std::move(result.value());
+
+    IntervalLayer *rawTextLayer = nullptr;
+    for (auto &layer : doc.layers) {
+        if (layer.name == QStringLiteral("raw_text")) {
+            rawTextLayer = &layer;
+            break;
+        }
+    }
+    if (!rawTextLayer) {
+        doc.layers.push_back({});
+        rawTextLayer = &doc.layers.back();
+        rawTextLayer->name = QStringLiteral("raw_text");
+        rawTextLayer->type = QStringLiteral("text");
+    }
+
+    rawTextLayer->boundaries.clear();
+    const auto parts = matchedText.split(QChar(' '), Qt::SkipEmptyParts);
+    int id = 1;
+    for (const auto &part : parts) {
+        Boundary b;
+        b.id = id++;
+        b.text = part;
+        rawTextLayer->boundaries.push_back(std::move(b));
+    }
+
+    (void) source()->saveSlice(sliceId, doc);
+
+    if (sliceId == currentSliceId()) {
+        m_editor->textWidget()->wordsText->setText(matchedText);
+        m_editor->autoG2P();
+        m_dirty = true;
+        updateDirtyIndicator();
     }
 
     updateProgress();

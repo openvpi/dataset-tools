@@ -27,6 +27,10 @@ namespace LyricFA {
         /// @return True if matching succeeded.
         bool match(const QString &filename, const QString &labPath, const QString &jsonPath, QString &msg) const;
 
+        bool matchText(const QString &filename, const QString &asrText, QString &matchedText, QString &msg) const;
+
+        bool isInitialized() const { return !m_lyricDict.isEmpty(); }
+
     private:
         /// @brief Cached lyric text and pinyin sequences.
         struct LyricInfo {

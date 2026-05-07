@@ -8,6 +8,7 @@
 
 namespace LyricFA {
 class Asr;
+class MatchLyric;
 }
 
 namespace dstools {
@@ -47,6 +48,9 @@ private:
 
     QAction *m_playAction = nullptr;
     QAction *m_asrAction = nullptr;
+    QAction *m_lyricFaAction = nullptr;
+
+    std::unique_ptr<LyricFA::MatchLyric> m_matchLyric;
 
     void onRunAsr();
     void onBatchAsr();
@@ -56,6 +60,10 @@ private:
     void onModelInvalidated(const QString &taskKey);
     void setAsrResult(const QString &sliceId, const QString &text);
     void updateProgress();
+    void onRunLyricFa();
+    void onBatchLyricFa();
+    void ensureLyricLibrary();
+    void applyLyricFaResult(const QString &sliceId, const QString &matchedText);
 };
 
 } // namespace dstools
