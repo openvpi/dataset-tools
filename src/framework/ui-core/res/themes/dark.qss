@@ -403,6 +403,13 @@ QTableView::item:selected {
     background-color: #2E436E;
 }
 
+#csvPreviewTable {
+    background-color: #2B2B2B;
+    alternate-background-color: #313335;
+    color: #A9B7C6;
+    gridline-color: #3C3F41;
+}
+
 QHeaderView {
     background-color: {{bgSecondary}};
     border: none;

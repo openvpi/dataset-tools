@@ -390,11 +390,11 @@ QHeaderView::section {
 /* ---- Table view ---- */
 QTableView {
     background-color: {{bgPrimary}};
-    alternate-background-color: #F0F2F5;
-    color: #1E1F22;
+    alternate-background-color: {{bgSecondary}};
+    color: #313131;
     gridline-color: #E0E3E8;
     selection-background-color: #D4E2FF;
-    selection-color: #1E1F22;
+    selection-color: #313131;
     border: 1px solid {{border}};
     outline: none;
 }
@@ -410,6 +410,13 @@ QTableView::item:hover {
 
 QTableView::item:selected {
     background-color: #D4E2FF;
+}
+
+#csvPreviewTable {
+    background-color: #FFFFFF;
+    alternate-background-color: #F7F8FA;
+    color: #313131;
+    gridline-color: #E0E3E8;
 }
 
 QHeaderView {

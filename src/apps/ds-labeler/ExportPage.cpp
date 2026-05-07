@@ -2,6 +2,7 @@
 #include "ProjectDataSource.h"
 
 #include <dsfw/PipelineContext.h>
+#include <dsfw/Theme.h>
 #include <dstools/DsDocument.h>
 #include <dstools/DsProject.h>
 #include <dstools/DsTextTypes.h>
@@ -166,6 +167,7 @@ void ExportPage::buildPreviewTab() {
 
     m_previewModel = new QStandardItemModel(this);
     m_previewTable = new QTableView(this);
+    m_previewTable->setObjectName(QStringLiteral("csvPreviewTable"));
     m_previewTable->setModel(m_previewModel);
     m_previewTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_previewTable->setAlternatingRowColors(true);
@@ -255,8 +257,10 @@ void ExportPage::refreshPreview() {
 
         bool hasMissing = phSeq.isEmpty() || phDur.isEmpty();
         if (hasMissing) {
+            auto warnColor = dsfw::Theme::instance().palette().warning;
+            warnColor.setAlpha(60);
             for (auto *item : items) {
-                item->setBackground(QColor(255, 200, 200));
+                item->setBackground(warnColor);
             }
         }
 
