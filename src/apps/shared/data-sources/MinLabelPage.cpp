@@ -2,13 +2,16 @@
 #include "SliceListPanel.h"
 #include "ModelConfigHelper.h"
 #include "ISettingsBackend.h"
+#include "BatchProcessDialog.h"
 
 #include <dstools/IEditorDataSource.h>
 
 #include <dsfw/Log.h>
 
+#include <QCheckBox>
 #include <QLabel>
 #include <QIcon>
+#include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
@@ -455,44 +458,107 @@ void MinLabelPage::onBatchAsr() {
         return;
     }
 
-    m_asrRunning = true;
+    auto *dlg = new BatchProcessDialog(tr("Batch ASR"), this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto *skipExisting = new QCheckBox(tr("Skip slices with existing lyrics"), dlg);
+    skipExisting->setChecked(true);
+    dlg->addParamWidget(skipExisting);
+
+    dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
+
     auto *asr = m_asr;
     auto *src = source();
     QPointer<MinLabelPage> guard(this);
 
-    (void) QtConcurrent::run([asr, src, ids, guard]() {
-        int processed = 0;
-        int skipped = 0;
-        for (const auto &sliceId : ids) {
-            QString audioPath = src->validatedAudioPath(sliceId);
-            if (audioPath.isEmpty()) {
-                ++skipped;
-                continue;
-            }
-
-            std::string msg;
-            bool ok = asr->recognize(audioPath.toStdWString(), msg);
-            if (ok) {
-                QString text = QString::fromUtf8(msg);
-                QMetaObject::invokeMethod(guard.data(), [guard, sliceId, text]() {
-                    if (guard)
-                        guard->setAsrResult(sliceId, text);
-                }, Qt::QueuedConnection);
-            }
-            ++processed;
+    connect(dlg, &BatchProcessDialog::started, this, [dlg, asr, src, ids, guard, skipExisting]() {
+        if (!guard) {
+            dlg->finish(0, 0, 0);
+            return;
         }
-        QMetaObject::invokeMethod(guard.data(), [guard, processed, skipped]() {
-            if (!guard)
-                return;
-            guard->m_asrRunning = false;
-            QString msg = tr("Batch ASR completed: %1 slices").arg(processed);
-            if (skipped > 0)
-                msg += tr(", %1 skipped (missing audio)").arg(skipped);
-            dsfw::widgets::ToastNotification::show(
-                guard.data(), dsfw::widgets::ToastType::Info,
-                msg, 3000);
-        }, Qt::QueuedConnection);
+        guard->m_asrRunning = true;
+        bool skip = skipExisting->isChecked();
+
+        (void) QtConcurrent::run([dlg, asr, src, ids, guard, skip]() {
+            int processed = 0;
+            int skipped = 0;
+            int errors = 0;
+            int idx = 0;
+            for (const auto &sliceId : ids) {
+                if (dlg->isCancelled())
+                    break;
+
+                QMetaObject::invokeMethod(dlg, [dlg, idx, total = ids.size()]() {
+                    dlg->setProgress(idx, total);
+                }, Qt::QueuedConnection);
+
+                QString audioPath = src->validatedAudioPath(sliceId);
+                if (audioPath.isEmpty()) {
+                    ++skipped;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                        dlg->appendLog(tr("[SKIP] %1 (missing audio)").arg(sliceId));
+                    }, Qt::QueuedConnection);
+                    ++idx;
+                    continue;
+                }
+
+                if (skip) {
+                    auto result = src->loadSlice(sliceId);
+                    if (result) {
+                        bool hasLyrics = false;
+                        for (const auto &layer : result.value().layers) {
+                            if (layer.name == QStringLiteral("grapheme") && !layer.boundaries.empty()) {
+                                hasLyrics = true;
+                                break;
+                            }
+                        }
+                        if (hasLyrics) {
+                            ++skipped;
+                            QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                                dlg->appendLog(tr("[SKIP] %1 (existing lyrics)").arg(sliceId));
+                            }, Qt::QueuedConnection);
+                            ++idx;
+                            continue;
+                        }
+                    }
+                }
+
+                std::string msg;
+                bool ok = asr->recognize(audioPath.toStdWString(), msg);
+                if (ok) {
+                    QString text = QString::fromUtf8(msg);
+                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, text]() {
+                        if (guard)
+                            guard->setAsrResult(sliceId, text);
+                    }, Qt::QueuedConnection);
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId, text]() {
+                        dlg->appendLog(tr("[OK] %1: \"%2\"").arg(sliceId, text.left(80)));
+                    }, Qt::QueuedConnection);
+                    ++processed;
+                } else {
+                    ++errors;
+                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                        dlg->appendLog(tr("[ERROR] %1: recognition failed").arg(sliceId));
+                    }, Qt::QueuedConnection);
+                }
+                ++idx;
+            }
+            QMetaObject::invokeMethod(dlg, [dlg, processed, skipped, errors]() {
+                dlg->finish(processed, skipped, errors);
+            }, Qt::QueuedConnection);
+            QMetaObject::invokeMethod(guard.data(), [guard]() {
+                if (guard)
+                    guard->m_asrRunning = false;
+            }, Qt::QueuedConnection);
+        });
     });
+
+    connect(dlg, &BatchProcessDialog::cancelled, this, [guard]() {
+        if (guard)
+            guard->m_asrRunning = false;
+    });
+
+    dlg->show();
 }
 
 void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
@@ -504,34 +570,34 @@ void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
     if (result)
         doc = std::move(result.value());
 
-    IntervalLayer *graphemeLayer = nullptr;
+    IntervalLayer *rawTextLayer = nullptr;
     for (auto &layer : doc.layers) {
-        if (layer.name == QStringLiteral("grapheme")) {
-            graphemeLayer = &layer;
+        if (layer.name == QStringLiteral("raw_text")) {
+            rawTextLayer = &layer;
             break;
         }
     }
-    if (!graphemeLayer) {
+    if (!rawTextLayer) {
         doc.layers.push_back({});
-        graphemeLayer = &doc.layers.back();
-        graphemeLayer->name = QStringLiteral("grapheme");
-        graphemeLayer->type = QStringLiteral("text");
+        rawTextLayer = &doc.layers.back();
+        rawTextLayer->name = QStringLiteral("raw_text");
+        rawTextLayer->type = QStringLiteral("text");
     }
 
-    graphemeLayer->boundaries.clear();
+    rawTextLayer->boundaries.clear();
     const auto parts = text.split(QChar(' '), Qt::SkipEmptyParts);
     int id = 1;
     for (const auto &part : parts) {
         Boundary b;
         b.id = id++;
         b.text = part;
-        graphemeLayer->boundaries.push_back(std::move(b));
+        rawTextLayer->boundaries.push_back(std::move(b));
     }
 
     (void) source()->saveSlice(sliceId, doc);
 
     if (sliceId == currentSliceId()) {
-        m_editor->loadData({}, text);
+        m_editor->textWidget()->wordsText->setText(text);
         m_editor->autoG2P();
         m_dirty = true;
     }
