@@ -1,6 +1,7 @@
 #include "PhonemeTextGridTierLabel.h"
 
 #include "IBoundaryModel.h"
+#include "BoundaryDragController.h"
 
 #include <dstools/TimePos.h>
 
@@ -19,6 +20,19 @@ void PhonemeTextGridTierLabel::setBoundaryModel(IBoundaryModel *model) {
     TierLabelArea::setBoundaryModel(model);
     updateHeight();
     update();
+}
+
+void PhonemeTextGridTierLabel::setDragController(
+    phonemelabeler::BoundaryDragController *controller) {
+    m_dragController = controller;
+    if (m_dragController) {
+        connect(m_dragController, &phonemelabeler::BoundaryDragController::dragStarted,
+                this, qOverload<>(&PhonemeTextGridTierLabel::update));
+        connect(m_dragController, &phonemelabeler::BoundaryDragController::dragging,
+                this, qOverload<>(&PhonemeTextGridTierLabel::update));
+        connect(m_dragController, &phonemelabeler::BoundaryDragController::dragFinished,
+                this, qOverload<>(&PhonemeTextGridTierLabel::update));
+    }
 }
 
 int PhonemeTextGridTierLabel::activeTierIndex() const {
@@ -131,6 +145,31 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
         painter.drawText(rect().adjusted(0, 2, -4, 0),
                          Qt::AlignTop | Qt::AlignRight,
                          tr("Aligning..."));
+    }
+
+    if (m_dragController && m_dragController->isDragging() && m_boundaryModel) {
+        int dragTier = m_dragController->draggedTier();
+        int dragBound = m_dragController->draggedBoundary();
+        if (dragTier >= 0 && dragTier < tiers && dragBound >= 0) {
+            double dragTime = usToSec(
+                m_boundaryModel->boundaryTime(dragTier, dragBound));
+            int dragX = timeToX(dragTime);
+
+            for (int t = 0; t < tiers; ++t) {
+                if (t == dragTier)
+                    continue;
+                int rowY = t * kTierRowHeight;
+                int rowMidY = rowY + kTierRowHeight / 2;
+
+                painter.setPen(QPen(QColor(100, 200, 255, 160), 1, Qt::DotLine));
+                painter.drawLine(dragX, rowY, dragX, rowY + kTierRowHeight);
+
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(QColor(100, 200, 255, 180));
+                painter.drawEllipse(QPoint(dragX, rowMidY), 3, 3);
+            }
+        }
+        painter.setBrush(Qt::NoBrush);
     }
 }
 

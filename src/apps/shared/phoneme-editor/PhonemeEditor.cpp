@@ -316,6 +316,7 @@ void PhonemeEditor::buildLayout() {
 
     m_tierLabel = new PhonemeTextGridTierLabel(m_container);
     m_tierLabel->setViewportController(m_viewport);
+    m_tierLabel->setDragController(m_container->dragController());
     m_container->setTierLabelArea(m_tierLabel);
 
     m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_container->dragController(), m_container);

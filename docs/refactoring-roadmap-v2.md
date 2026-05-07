@@ -57,6 +57,7 @@
 | 24.3 BatchProcessDialog 进度可视化增强 | 2026-05-07 |
 | 27.1 PhonemeTextGridTierLabel 多行层级显示 | 2026-05-07 |
 | 26.1 MinLabel 保存时验证 grapheme 层内容 | 2026-05-07 |
+| 27.2 层级间关联辅助线 | 2026-05-07 |
 
 ---
 

@@ -8,6 +8,7 @@ namespace dstools {
 
 namespace phonemelabeler {
 class IBoundaryModel;
+class BoundaryDragController;
 }
 
 class PhonemeTextGridTierLabel : public TierLabelArea {
@@ -18,6 +19,7 @@ public:
     ~PhonemeTextGridTierLabel() override = default;
 
     void setBoundaryModel(IBoundaryModel *model);
+    void setDragController(phonemelabeler::BoundaryDragController *controller);
 
     int activeTierIndex() const override;
     void setActiveTierIndex(int index) override;
@@ -42,6 +44,7 @@ private:
     static constexpr int kTierRowHeight = 24;
     static constexpr int kLabelWidth = 70;
     bool m_alignmentRunning = false;
+    phonemelabeler::BoundaryDragController *m_dragController = nullptr;
 };
 
 } // namespace dstools
