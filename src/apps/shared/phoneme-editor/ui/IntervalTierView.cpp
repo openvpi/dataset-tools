@@ -28,8 +28,7 @@ IntervalTierView::IntervalTierView(int tierIndex, TextGridDocument *doc,
     m_dragController(dragController)
 {
     setMouseTracking(true);
-    setMinimumHeight(40);
-    setMaximumHeight(60);
+    setFixedHeight(24);
 }
 
 void IntervalTierView::setViewport(const ViewportState &state) {
