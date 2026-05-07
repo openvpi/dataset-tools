@@ -11,7 +11,6 @@
 #include <QCheckBox>
 #include <QDir>
 #include <QFileDialog>
-#include <QLabel>
 #include <QIcon>
 #include <QLineEdit>
 #include <QMenuBar>
@@ -19,7 +18,6 @@
 #include <QRegularExpression>
 #include <QMimeData>
 #include <QPointer>
-#include <QHBoxLayout>
 #include <QTimer>
 #include <QtConcurrent>
 
@@ -45,7 +43,7 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     setupBaseLayout(m_editor);
     setupNavigationActions();
 
-    m_playAction = new QAction(tr("Play/Stop"), this);
+    m_playAction = new QAction(tr("Play/Pause"), this);
     m_playAction->setIcon(QIcon(QStringLiteral(":/icons/play.svg")));
     m_asrAction = new QAction(tr("ASR Recognize Current"), this);
     connect(m_asrAction, &QAction::triggered, this, &MinLabelPage::onRunAsr);
@@ -53,12 +51,12 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     m_lyricFaAction = new QAction(tr("LyricFA Match Current"), this);
     connect(m_lyricFaAction, &QAction::triggered, this, &MinLabelPage::onRunLyricFa);
 
-    static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/play", "F5");
+    static const dstools::SettingsKey<QString> kPlaybackPlay("Shortcuts/playPause", "Space");
     static const dstools::SettingsKey<QString> kAsrRun("Shortcuts/asr", "R");
     static const dstools::SettingsKey<QString> kLyricFaRun("Shortcuts/lyricfa", "L");
 
     shortcutManager()->bind(m_playAction, kPlaybackPlay,
-                            tr("Play/Stop"), tr("Playback"));
+                            tr("Play/Pause"), tr("Playback"));
     shortcutManager()->bind(m_asrAction, kAsrRun,
                             tr("ASR Recognize"), tr("Processing"));
     shortcutManager()->bind(m_lyricFaAction, kLyricFaRun,
@@ -269,15 +267,13 @@ QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
 
 QWidget *MinLabelPage::createStatusBarContent(QWidget *parent) {
     auto *container = new QWidget(parent);
-    auto *layout = new QHBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    StatusBarBuilder builder(container);
 
-    auto *sliceLabel = new QLabel(tr("No slice selected"), container);
-    auto *progressLabel = new QLabel(container);
-    layout->addWidget(sliceLabel, 1);
-    layout->addWidget(progressLabel);
+    auto *sliceLabel = builder.addLabel(tr("No slice selected"), 1);
+    builder.addLabel(QString());
 
-    connect(this, &MinLabelPage::sliceChanged, sliceLabel, [this, sliceLabel](const QString &id) {
+    builder.connect(this, &MinLabelPage::sliceChanged, sliceLabel,
+                    [this, sliceLabel](const QString &id) {
         sliceLabel->setText(id.isEmpty() ? tr("No slice selected") : id);
     });
 
