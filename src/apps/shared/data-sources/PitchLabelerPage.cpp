@@ -80,7 +80,9 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     shortcutManager()->setEnabled(false);
 
     connect(m_editor->saveAction(), &QAction::triggered,
-            this, [this]() { saveCurrentSlice(); });
+            this, [this]() { saveCurrentSlice(); updateDirtyIndicator(); });
+    connect(m_editor->undoStack(), &QUndoStack::cleanChanged,
+            this, [this]() { updateDirtyIndicator(); });
 }
 
 PitchLabelerPage::~PitchLabelerPage() = default;

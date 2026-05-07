@@ -32,6 +32,7 @@ public:
     [[nodiscard]] int sliceCount() const;
     void setProgress(int completed, int total);
     [[nodiscard]] dsfw::widgets::FileProgressTracker *progressTracker() const;
+    void setSliceDirty(const QString &sliceId, bool dirty);
 
     /// @brief Ensure a slice is selected. Tries to restore from settings,
     /// falls back to the first item. Emits sliceSelected if a selection is made.

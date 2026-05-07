@@ -77,9 +77,9 @@ void EditorPageBase::setDataSource(IEditorDataSource *source, ISettingsBackend *
 // ── Slice selection ───────────────────────────────────────────────────────────
 
 void EditorPageBase::onSliceSelected(const QString &sliceId) {
-    if (!maybeSave())
-        return;
+    autoSaveCurrentSlice();
 
+    QString prevSlice = m_currentSliceId;
     m_currentSliceId = sliceId;
     DSFW_LOG_DEBUG("ui", ("Slice selected: " + sliceId.toStdString()).c_str());
     if (m_sliceList)
@@ -171,11 +171,28 @@ bool EditorPageBase::maybeSave() {
         tr("Current slice has been modified. Save changes?"),
         QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
 
-    if (ret == QMessageBox::Save)
-        return saveCurrentSlice();
+    if (ret == QMessageBox::Save) {
+        bool ok = saveCurrentSlice();
+        if (ok) updateDirtyIndicator();
+        return ok;
+    }
     if (ret == QMessageBox::Discard)
         return true;
-    return false; // Cancel
+    return false;
+}
+
+bool EditorPageBase::autoSaveCurrentSlice() {
+    if (!isDirty())
+        return true;
+
+    bool ok = saveCurrentSlice();
+    if (ok) updateDirtyIndicator();
+    return ok;
+}
+
+void EditorPageBase::updateDirtyIndicator() {
+    if (m_sliceList && !m_currentSliceId.isEmpty())
+        m_sliceList->setSliceDirty(m_currentSliceId, isDirty());
 }
 
 void EditorPageBase::loadEngineAsync(const QString &taskKey,

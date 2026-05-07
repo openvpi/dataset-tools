@@ -134,6 +134,33 @@ dsfw::widgets::FileProgressTracker *SliceListPanel::progressTracker() const {
     return m_progressTracker;
 }
 
+void SliceListPanel::setSliceDirty(const QString &sliceId, bool dirty) {
+    for (int i = 0; i < m_listWidget->count(); ++i) {
+        auto *item = m_listWidget->item(i);
+        if (item->data(Qt::UserRole).toString() != sliceId)
+            continue;
+
+        QFont font = item->font();
+        font.setBold(dirty);
+        item->setFont(font);
+
+        QString baseText = item->data(Qt::UserRole + 1).toString();
+        if (baseText.isEmpty()) {
+            baseText = item->text();
+            if (baseText.startsWith(QStringLiteral("* ")))
+                baseText = baseText.mid(2);
+            item->setData(Qt::UserRole + 1, baseText);
+        }
+
+        if (dirty) {
+            item->setText(QStringLiteral("* ") + baseText);
+        } else {
+            item->setText(baseText);
+        }
+        break;
+    }
+}
+
 QString SliceListPanel::ensureSelection(AppSettings &settings) {
     static const dstools::SettingsKey<QString> kLastSlice("State/lastSlice", "");
 

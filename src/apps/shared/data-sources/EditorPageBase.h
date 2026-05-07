@@ -141,6 +141,13 @@ protected:
     /// Uses isDirty() to decide whether to show dialog.
     bool maybeSave();
 
+    /// Auto-save the current slice if dirty (no dialog).
+    /// Returns true if save succeeded or was not needed.
+    bool autoSaveCurrentSlice();
+
+    /// Update SliceListPanel dirty indicator for the current slice.
+    void updateDirtyIndicator();
+
 private:
     SliceListPanel *m_sliceList = nullptr;
     QSplitter *m_splitter = nullptr;

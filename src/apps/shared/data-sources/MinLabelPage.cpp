@@ -55,7 +55,7 @@ MinLabelPage::MinLabelPage(QWidget *parent)
     shortcutManager()->setEnabled(false);
 
     connect(m_editor, &Minlabel::MinLabelEditor::dataChanged,
-            this, [this]() { m_dirty = true; });
+            this, [this]() { m_dirty = true; updateDirtyIndicator(); });
     connect(m_playAction, &QAction::triggered, this, [this]() {
         if (m_editor->playWidget())
             m_editor->playWidget()->setPlaying(!m_editor->playWidget()->isPlaying());
@@ -118,6 +118,7 @@ bool MinLabelPage::saveCurrentSlice() {
     }
 
     m_dirty = false;
+    updateDirtyIndicator();
     return true;
 }
 
@@ -153,6 +154,7 @@ void MinLabelPage::onSliceSelectedImpl(const QString &sliceId) {
     m_editor->setAudioFile(audio.isEmpty() ? QString() : audio);
 
     m_dirty = false;
+    updateDirtyIndicator();
 }
 
 void MinLabelPage::onAutoInfer() {
