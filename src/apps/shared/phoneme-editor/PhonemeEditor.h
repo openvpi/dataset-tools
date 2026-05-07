@@ -129,6 +129,9 @@ namespace dstools {
             [[nodiscard]] QAction *stopAction() const {
                 return m_actStop;
             }
+            [[nodiscard]] QAction *activeTierBoundariesAction() const {
+                return m_actActiveTierBoundaries;
+            }
             [[nodiscard]] QList<QAction *> viewActions() const;
 
             // --- Configuration ---
@@ -209,6 +212,7 @@ namespace dstools {
             QAction *m_actStop = nullptr;
             QAction *m_actBindingToggle = nullptr;
             QAction *m_actSnapToggle = nullptr;
+            QAction *m_actActiveTierBoundaries = nullptr;
             bool m_snapEnabled = true;
 
             // Helpers

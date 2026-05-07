@@ -142,7 +142,7 @@ private:
     QPoint m_dragStartPos;                              ///< Mouse position at drag start.
     double m_dragStartTime = 0.0;                       ///< View start time at drag start.
 
-    static constexpr int kBoundaryHitWidth = 8;         ///< Hit-test width in pixels.
+    static constexpr int kBoundaryHitWidth = 12;         ///< Hit-test width in pixels.
     int m_hoveredBoundary = -1;                         ///< Hovered boundary index, or -1.
 };
 
