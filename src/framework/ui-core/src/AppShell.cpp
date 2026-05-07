@@ -1,4 +1,5 @@
 #include <dsfw/AppShell.h>
+#include <dsfw/AudioPlaybackManager.h>
 #include <dsfw/CommonKeys.h>
 #include <dsfw/FramelessHelper.h>
 #include <dsfw/IPageActions.h>
@@ -92,6 +93,8 @@ namespace dsfw {
         dstools::Logger::instance().addSink(dstools::LogNotifier::instance().sink());
         dstools::Logger::instance().addSink(dstools::Logger::qtMessageSink());
 
+        m_audioManager = new AudioPlaybackManager(this);
+
         m_navBar->hide();
 
         m_menuBar = new QMenuBar(this);
@@ -108,28 +111,42 @@ namespace dsfw {
     }
 
     int AppShell::addPage(QWidget *page, const QString &id, const QIcon &icon, const QString &label) {
-        if (!page)
-            return -1;
+    if (!page)
+        return -1;
 
-        // Verify page implements IPageActions
-        auto *actions = qobject_cast<dstools::labeler::IPageActions *>(page);
-        Q_UNUSED(actions); // Not required, but expected
+    // Verify page implements IPageActions
+    auto *actions = qobject_cast<dstools::labeler::IPageActions *>(page);
+    Q_UNUSED(actions); // Not required, but expected
 
-        const int idx = m_pages.size();
-        m_pages.append({page, id});
-        m_stack->addWidget(page);
-        m_navBar->addItem(icon, label);
+    const int idx = m_pages.size();
+    m_pages.append({page, id});
+    m_stack->addWidget(page);
+    m_navBar->addItem(icon, label);
 
-        // Show/hide nav bar based on page count
-        m_navBar->setVisible(m_pages.size() > 1);
+    // Show/hide nav bar based on page count
+    m_navBar->setVisible(m_pages.size() > 1);
 
-        // Auto-select first page
-        if (m_pages.size() == 1) {
-            setCurrentPage(0);
+    // Auto-connect PlayWidget signals to AudioPlaybackManager
+    for (auto *pw : page->findChildren<QWidget *>()) {
+        int sigIdx = pw->metaObject()->indexOfSignal("playRequested()");
+        if (sigIdx >= 0) {
+            auto *manager = m_audioManager;
+            connect(pw, SIGNAL(playRequested()), this, [manager, pw]() {
+                manager->requestPlay(pw);
+            });
+            connect(pw, SIGNAL(playStopped()), this, [manager, pw]() {
+                manager->releasePlay(pw);
+            });
         }
-
-        return idx;
     }
+
+    // Auto-select first page
+    if (m_pages.size() == 1) {
+        setCurrentPage(0);
+    }
+
+    return idx;
+}
 
     int AppShell::pageCount() const {
         return m_pages.size();
@@ -385,6 +402,10 @@ namespace dsfw {
                 return;
             }
         }
+
+        // Stop all audio playback before shutdown
+        if (m_audioManager)
+            m_audioManager->stopAll();
 
         // Dispatch shutdown to all pages
         for (const auto &entry : m_pages) {

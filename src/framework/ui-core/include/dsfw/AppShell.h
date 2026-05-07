@@ -24,6 +24,7 @@ class AppSettings;
 namespace dsfw {
 
 class IconNavBar;
+class AudioPlaybackManager;
 
 /// @brief Main application window with sidebar navigation and stacked page management.
 ///
@@ -95,6 +96,9 @@ public:
     void showToast(dsfw::widgets::ToastType type, const QString &message,
                    int timeoutMs = 3000);
 
+    /// @brief Return the audio playback arbitration manager.
+    AudioPlaybackManager *audioPlaybackManager() const { return m_audioManager; }
+
 signals:
     /// @brief Emitted when the active page changes.
     /// @param index New page index.
@@ -127,6 +131,7 @@ private:
     QString m_workingDir;
     QMenuBar *m_menuBar = nullptr;
     dstools::AppSettings *m_settings = nullptr;
+    AudioPlaybackManager *m_audioManager = nullptr;
     bool m_geometryRestored = false;
 };
 

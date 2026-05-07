@@ -71,6 +71,14 @@ signals:
     /// @param positionSec Current position in seconds.
     void playheadChanged(double positionSec);
 
+    /// @brief Emitted when this widget starts playing.
+    /// Connect to AudioPlaybackManager::requestPlay for arbitration.
+    void playRequested();
+
+    /// @brief Emitted when this widget stops playing (user stop or playback end).
+    /// Connect to AudioPlaybackManager::releasePlay for arbitration.
+    void playStopped();
+
 protected:
     void timerEvent(QTimerEvent *event) override;
 

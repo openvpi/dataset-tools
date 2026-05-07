@@ -183,6 +183,7 @@ bool PlayWidget::isPlaying() const {
 void PlayWidget::setPlaying(bool playing) {
     if (!m_valid) return;
     if (playing && !isPlaying()) {
+        emit playRequested();
         m_player->play();
         // Initialize time tracking from current player position (respects seek/range)
         if (m_player->isOpen()) {
@@ -195,6 +196,7 @@ void PlayWidget::setPlaying(bool playing) {
             m_notifyTimerId = startTimer(16);
     } else if (!playing && isPlaying()) {
         m_player->stop();
+        emit playStopped();
     }
     reloadButtonStatus();
 }
