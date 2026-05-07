@@ -483,7 +483,7 @@ QDockWidget::title {
 
 /* ---- Splitters ---- */
 QSplitter::handle {
-    background-color: {{border}};
+    background-color: {{borderLight}};
 }
 
 QSplitter::handle:horizontal {
@@ -491,7 +491,7 @@ QSplitter::handle:horizontal {
 }
 
 QSplitter::handle:vertical {
-    height: 2px;
+    height: 3px;
 }
 
 /* ---- Group boxes ---- */
