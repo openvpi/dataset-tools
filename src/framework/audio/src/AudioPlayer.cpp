@@ -6,17 +6,18 @@
 namespace dstools::audio {
 
 AudioPlayer::AudioPlayer(QObject *parent) : IAudioPlayer(parent) {
-    m_decoder = std::make_unique<AudioDecoder>();
     m_playback = new AudioPlayback(this);
 
     if (!m_playback->setup(44100, 2, 1024)) {
         delete m_playback;
         m_playback = nullptr;
-        m_decoder.reset();
         m_valid = false;
         return;
     }
-    m_playback->setDecoder(m_decoder.get());
+    // AudioPlayback::setDecoder takes ownership of the decoder.
+    // All subsequent decoder access MUST go through m_playback's thread-safe
+    // accessors to avoid data races with the SDL audio callback thread.
+    m_playback->setDecoder(new AudioDecoder());
     m_valid = true;
 
     connect(m_playback, &AudioPlayback::stateChanged,
@@ -35,43 +36,40 @@ AudioPlayer::~AudioPlayer() {
 bool AudioPlayer::open(const QString &path) {
     if (!m_valid) return false;
     m_playback->stop();
-    m_decoder->close();
-    if (m_decoder->open(path)) {
-        return true;
-    }
-    return false;
+    m_playback->closeFile();
+    return m_playback->openFile(path);
 }
 
 void AudioPlayer::close() {
     if (!m_valid) return;
     m_playback->stop();
-    m_decoder->close();
+    m_playback->closeFile();
 }
 
 bool AudioPlayer::isOpen() const {
-    return m_valid && m_decoder && m_decoder->isOpen();
+    return m_valid && m_playback && m_playback->decoderIsOpen();
 }
 
 double AudioPlayer::duration() const {
-    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return 0.0;
-    auto fmt = m_decoder->format();
+    if (!m_valid || !m_playback || !m_playback->decoderIsOpen()) return 0.0;
+    auto fmt = m_playback->decoderFormat();
     if (fmt.averageBytesPerSecond() <= 0) return 0.0;
-    return static_cast<double>(m_decoder->length()) / fmt.averageBytesPerSecond();
+    return static_cast<double>(m_playback->decoderLength()) / fmt.averageBytesPerSecond();
 }
 
 double AudioPlayer::position() const {
-    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return 0.0;
-    auto fmt = m_decoder->format();
+    if (!m_valid || !m_playback || !m_playback->decoderIsOpen()) return 0.0;
+    auto fmt = m_playback->decoderFormat();
     if (fmt.averageBytesPerSecond() <= 0) return 0.0;
-    return static_cast<double>(m_decoder->position()) / fmt.averageBytesPerSecond();
+    return static_cast<double>(m_playback->decoderPosition()) / fmt.averageBytesPerSecond();
 }
 
 void AudioPlayer::setPosition(double sec) {
-    if (!m_valid || !m_decoder || !m_decoder->isOpen()) return;
-    auto fmt = m_decoder->format();
+    if (!m_valid || !m_playback || !m_playback->decoderIsOpen()) return;
+    auto fmt = m_playback->decoderFormat();
     if (fmt.averageBytesPerSecond() <= 0) return;
     qint64 pos = static_cast<qint64>(sec * fmt.averageBytesPerSecond());
-    m_decoder->setPosition(pos);
+    m_playback->decoderSetPosition(pos);
 }
 
 void AudioPlayer::play() {

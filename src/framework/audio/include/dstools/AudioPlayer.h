@@ -3,11 +3,9 @@
 /// @brief Concrete IAudioPlayer implementation combining AudioDecoder and AudioPlayback.
 
 #include <dstools/IAudioPlayer.h>
-#include <memory>
 
 namespace dstools::audio {
 
-class AudioDecoder;
 class AudioPlayback;
 
 /// @brief Concrete audio player combining decoder and playback subsystems.
@@ -73,7 +71,6 @@ public:
     bool setup(int sampleRate, int channels, int bufferSize) override;
 
 private:
-    std::unique_ptr<AudioDecoder> m_decoder;
     AudioPlayback *m_playback = nullptr;
     bool m_valid = false;
 
