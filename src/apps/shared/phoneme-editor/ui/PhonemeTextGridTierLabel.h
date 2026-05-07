@@ -10,9 +10,6 @@ namespace phonemelabeler {
 class IBoundaryModel;
 }
 
-/// @brief Tier label area for PhonemeEditor.
-/// Draws boundary lines for all tiers (active = solid, non-active = dashed).
-/// Tier selection is handled by the toolbar combo box (not part of this widget).
 class PhonemeTextGridTierLabel : public TierLabelArea {
     Q_OBJECT
 
@@ -37,9 +34,13 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
+    void updateHeight();
+
     static constexpr int kTierRowHeight = 24;
+    static constexpr int kLabelWidth = 70;
     bool m_alignmentRunning = false;
 };
 

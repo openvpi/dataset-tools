@@ -4,6 +4,7 @@
 
 #include <dstools/TimePos.h>
 
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 
@@ -16,6 +17,7 @@ PhonemeTextGridTierLabel::PhonemeTextGridTierLabel(QWidget *parent)
 
 void PhonemeTextGridTierLabel::setBoundaryModel(IBoundaryModel *model) {
     TierLabelArea::setBoundaryModel(model);
+    updateHeight();
     update();
 }
 
@@ -63,10 +65,14 @@ int PhonemeTextGridTierLabel::tierRowHeight() const {
     return kTierRowHeight;
 }
 
+void PhonemeTextGridTierLabel::updateHeight() {
+    int tiers = tierCount();
+    setFixedHeight(tiers > 0 ? kTierRowHeight * tiers : kTierRowHeight);
+}
+
 void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
     int w = width();
-    int h = height();
 
     painter.fillRect(rect(), QColor(40, 40, 45));
 
@@ -82,14 +88,25 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
         return;
     }
 
-    // Draw boundary lines for all tiers in a single row
     int tiers = m_boundaryModel->tierCount();
     auto allBounds = allTierBoundaries();
 
     for (int t = 0; t < tiers; ++t) {
+        int rowY = t * kTierRowHeight;
         bool isActive = (t == m_activeTierIndex);
-        const auto &bounds = allBounds[t];
 
+        if (isActive) {
+            painter.fillRect(0, rowY, w, kTierRowHeight, QColor(55, 55, 65));
+        }
+
+        QString name = m_boundaryModel->tierName(t);
+        if (!name.isEmpty()) {
+            painter.setPen(isActive ? QColor(255, 200, 100) : QColor(160, 160, 170));
+            painter.drawText(QRect(2, rowY, kLabelWidth - 4, kTierRowHeight),
+                             Qt::AlignVCenter | Qt::AlignLeft, name);
+        }
+
+        const auto &bounds = allBounds[t];
         for (double bTime : bounds) {
             int x = timeToX(bTime);
             if (x < 0 || x > w)
@@ -100,13 +117,14 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
             } else {
                 painter.setPen(QPen(QColor(100, 100, 120), 1, Qt::DashLine));
             }
-            painter.drawLine(x, 0, x, h);
+            painter.drawLine(x, rowY, x, rowY + kTierRowHeight);
+        }
+
+        if (t < tiers - 1) {
+            painter.setPen(QPen(QColor(60, 60, 70), 1));
+            painter.drawLine(0, rowY + kTierRowHeight - 1, w, rowY + kTierRowHeight - 1);
         }
     }
-
-    // Bottom border
-    painter.setPen(QPen(QColor(80, 80, 100), 1));
-    painter.drawLine(0, h - 1, w, h - 1);
 
     if (m_alignmentRunning) {
         painter.setPen(QColor(100, 180, 255));
@@ -116,7 +134,18 @@ void PhonemeTextGridTierLabel::paintEvent(QPaintEvent * /*event*/) {
     }
 }
 
+void PhonemeTextGridTierLabel::mousePressEvent(QMouseEvent *event) {
+    if (event->button() == Qt::LeftButton && m_boundaryModel) {
+        int tierIdx = event->position().y() / kTierRowHeight;
+        if (tierIdx >= 0 && tierIdx < tierCount()) {
+            setActiveTierIndex(tierIdx);
+        }
+    }
+    QWidget::mousePressEvent(event);
+}
+
 void PhonemeTextGridTierLabel::onModelDataChanged() {
+    updateHeight();
     update();
 }
 

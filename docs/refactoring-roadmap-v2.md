@@ -55,6 +55,7 @@
 | 24.1 BatchProcessDialog 参数区域结构化 | 2026-05-07 |
 | 24.2 BatchProcessDialog 日志输出增强 | 2026-05-07 |
 | 24.3 BatchProcessDialog 进度可视化增强 | 2026-05-07 |
+| 27.1 PhonemeTextGridTierLabel 多行层级显示 | 2026-05-07 |
 
 ---
 
