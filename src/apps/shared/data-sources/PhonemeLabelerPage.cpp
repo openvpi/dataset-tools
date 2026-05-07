@@ -89,7 +89,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
             if (pi == 0) {
                 r.groups.push_back({graphemeBId, phoneB.id});
 
-                DSFW_LOG_DEBUG("fa",
+                DSFW_LOG_INFO("fa",
                     ("[binding#" + std::to_string(groupIdx++) +
                      "] tier0.id=" + std::to_string(graphemeBId) +
                      " ↔ tier1.id=" + std::to_string(phoneB.id) +
@@ -132,7 +132,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
             ("[tier=1/phoneme] id=" + std::to_string(endP.id) +
              " END @ " + std::to_string(usToSec(lastEnd)) + "s").c_str());
 
-        DSFW_LOG_DEBUG("fa",
+        DSFW_LOG_INFO("fa",
             ("[binding#" + std::to_string(groupIdx++) +
              "] tier0.id=" + std::to_string(r.graphemeLayer.boundaries.back().id) +
              " ↔ tier1.id=" + std::to_string(r.phonemeLayer.boundaries.back().id) +
