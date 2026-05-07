@@ -44,7 +44,7 @@ private:
     int m_resolution = 40;
     int m_sampleRate = 44100;
 
-    static constexpr double kMinMinorStepPx = 60.0;
+    static constexpr double kMinMinorStepPx = 25.0;
 };
 
 } // namespace dsfw::widgets

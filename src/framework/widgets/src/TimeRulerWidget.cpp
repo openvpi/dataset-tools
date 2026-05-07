@@ -14,9 +14,12 @@ static const TimeRulerWidget::TimescaleLevel kLevels[] = {
     {0.01,   0.005},    // 10ms / 5ms
     {0.05,   0.01},     // 50ms / 10ms
     {0.1,    0.05},     // 100ms / 50ms
+    {0.2,    0.1},      // 200ms / 100ms
     {0.5,    0.1},      // 500ms / 100ms
     {1.0,    0.5},      // 1s / 500ms
+    {2.0,    0.5},      // 2s / 500ms
     {5.0,    1.0},      // 5s / 1s
+    {10.0,   2.0},      // 10s / 2s
     {15.0,   5.0},      // 15s / 5s
     {30.0,   10.0},     // 30s / 10s
     {60.0,   15.0},     // 1min / 15s
@@ -96,7 +99,15 @@ QString TimeRulerWidget::formatTime(double timeSec, double intervalSec) {
 
 void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
     QPainter painter(this);
-    painter.fillRect(rect(), QColor(35, 35, 40));
+
+    bool darkMode = palette().window().color().lightness() < 128;
+    QColor bgColor = darkMode ? QColor(35, 35, 40) : QColor(245, 245, 248);
+    QColor minorTickColor = darkMode ? QColor(80, 80, 100) : QColor(180, 180, 195);
+    QColor majorTickColor = darkMode ? QColor(140, 140, 160) : QColor(100, 100, 120);
+    QColor labelColor = darkMode ? QColor(180, 180, 200) : QColor(60, 60, 80);
+    QColor borderColor = minorTickColor;
+
+    painter.fillRect(rect(), bgColor);
 
     double viewDuration = m_viewEnd - m_viewStart;
     if (viewDuration <= 0.0) return;
@@ -115,7 +126,7 @@ void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
 
     // Draw minor ticks (no fade — level is selected by findLevel to guarantee adequate spacing)
     {
-        QPen minorPen(QColor(80, 80, 100), 1);
+        QPen minorPen(minorTickColor, 1);
         painter.setPen(minorPen);
 
         double firstTick = std::floor(m_viewStart / level.minorSec) * level.minorSec;
@@ -128,10 +139,10 @@ void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
 
     // Draw major ticks + labels
     {
-        QPen majorPen(QColor(140, 140, 160), 1);
+        QPen majorPen(majorTickColor, 1);
         painter.setPen(majorPen);
 
-        QColor labelColor(180, 180, 200);
+        // labelColor already defined above
 
         double firstMajor = std::floor(m_viewStart / level.majorSec) * level.majorSec;
         for (double t = firstMajor; t <= m_viewEnd; t += level.majorSec) {
@@ -148,7 +159,7 @@ void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
     }
 
     // Bottom border
-    painter.setPen(QPen(QColor(80, 80, 100), 1));
+    painter.setPen(QPen(borderColor, 1));
     painter.drawLine(0, h - 1, width(), h - 1);
 }
 
