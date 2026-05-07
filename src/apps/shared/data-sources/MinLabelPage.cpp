@@ -16,6 +16,7 @@
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QMimeData>
 #include <QPointer>
 #include <QHBoxLayout>
@@ -112,6 +113,18 @@ bool MinLabelPage::saveCurrentSlice() {
     graphemeLayer->boundaries.clear();
     const QString lab = m_editor->labContent();
     if (!lab.isEmpty()) {
+        static const QRegularExpression cjkRe(
+            QStringLiteral("[\\x{4E00}-\\x{9FFF}\\x{3400}-\\x{4DBF}\\x{F900}-\\x{FAFF}]"));
+        if (cjkRe.match(lab).hasMatch()) {
+            auto btn = QMessageBox::warning(
+                this, tr("Content Warning"),
+                tr("The result contains Chinese characters, which may not be valid phonetic content. "
+                   "Save anyway?"),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (btn != QMessageBox::Yes)
+                return false;
+        }
+
         const auto parts = lab.split(QChar(' '), Qt::SkipEmptyParts);
         int id = 1;
         for (const auto &part : parts) {
