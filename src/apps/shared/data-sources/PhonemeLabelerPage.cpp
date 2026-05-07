@@ -531,21 +531,24 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     }
 
     m_faRunning = true;
-    DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString()).c_str());
+    std::string lyricsText = lyricsQStr.toStdString();
+    std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+    DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString()
+                          + " | audio: " + audioPath.toStdString()
+                          + " | language: zh"
+                          + " | nonSpeechPh: AP SP"
+                          + " | lyrics: " + lyricsText).c_str());
     auto *hfa = m_hfa;
     auto hfaAlive = m_hfaAlive;
     QPointer<PhonemeLabelerPage> guard(this);
 
-    std::string lyricsText = lyricsQStr.toStdString();
-
-    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, sliceId, guard]() {
+    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, nonSpeechPh, sliceId, guard]() {
         if (!hfaAlive || !*hfaAlive)
             return;
         if (!hfa)
             return;
         HFA::WordList words;
 
-        std::vector<std::string> nonSpeechPh = {"AP", "SP"};
         auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
 
         if (!guard)
@@ -558,9 +561,16 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
             if (result) {
                 auto faResult = buildFaLayers(words);
-                DSFW_LOG_INFO("fa", ("FA completed: " + sliceId.toStdString() + " - "
-                              + std::to_string(faResult.phonemeLayer.boundaries.size()) + " phonemes, "
-                              + std::to_string(faResult.groups.size()) + " bindings").c_str());
+
+                std::string phonemeDetail;
+                for (const auto &b : faResult.phonemeLayer.boundaries) {
+                    if (!phonemeDetail.empty()) phonemeDetail += ", ";
+                    phonemeDetail += b.text.toStdString() + "@" + std::to_string(usToSec(b.pos));
+                }
+                DSFW_LOG_INFO("fa", ("FA completed: " + sliceId.toStdString()
+                                      + " | phonemes: " + std::to_string(faResult.phonemeLayer.boundaries.size())
+                                      + " | bindings: " + std::to_string(faResult.groups.size())
+                                      + " | detail: [" + phonemeDetail + "]").c_str());
 
                 QList<IntervalLayer> layers;
                 layers.push_back(std::move(faResult.graphemeLayer));
@@ -785,9 +795,21 @@ void PhonemeLabelerPage::onBatchFA() {
                 std::string lyricsText = lyricsQStr.toStdString();
 
                 std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+                DSFW_LOG_INFO("fa", ("Batch FA started: " + sliceId.toStdString()
+                                      + " | language: " + lang.toStdString()
+                                      + " | lyrics: " + lyricsText).c_str());
                 auto result = hfa->recognize(audioPath.toStdWString(), lang.toStdString(), nonSpeechPh, lyricsText, words);
                 if (result) {
                     auto faResult = buildFaLayers(words);
+
+                    std::string phonemeDetail;
+                    for (const auto &b : faResult.phonemeLayer.boundaries) {
+                        if (!phonemeDetail.empty()) phonemeDetail += ", ";
+                        phonemeDetail += b.text.toStdString() + "@" + std::to_string(usToSec(b.pos));
+                    }
+                    DSFW_LOG_INFO("fa", ("Batch FA completed: " + sliceId.toStdString()
+                                          + " | phonemes: " + std::to_string(faResult.phonemeLayer.boundaries.size())
+                                          + " | detail: [" + phonemeDetail + "]").c_str());
 
                     QList<IntervalLayer> layers;
                     layers.push_back(std::move(faResult.graphemeLayer));
@@ -802,6 +824,7 @@ void PhonemeLabelerPage::onBatchFA() {
                     }, Qt::QueuedConnection);
                     ++processed;
                 } else {
+                    DSFW_LOG_ERROR("fa", ("Batch FA failed: " + sliceId.toStdString() + " - " + result.error()).c_str());
                     ++errors;
                     QMetaObject::invokeMethod(dlg, [dlg, sliceId, errMsg = result.error()]() {
                         dlg->appendLog(tr("[ERROR] %1: %2").arg(sliceId, QString::fromStdString(errMsg)));

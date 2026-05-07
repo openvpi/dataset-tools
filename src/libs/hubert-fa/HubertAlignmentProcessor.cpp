@@ -4,6 +4,7 @@
 
 #include <hubert-infer/Hfa.h>
 
+#include <dsfw/Log.h>
 #include <dsfw/PathUtils.h>
 #include <dsfw/TaskProcessorRegistry.h>
 #include <dstools/ExecutionProvider.h>
@@ -101,10 +102,14 @@ namespace dstools {
             return Result<TaskOutput>::Error("No grapheme/lyrics text provided for forced alignment");
         }
 
+        DSFW_LOG_INFO("fa", ("FA process started | language: " + language
+                              + " | lyrics: " + lyricsText).c_str());
+
         HFA::WordList words;
         auto recognizeResult =
             m_hfa->recognize(dstools::DsDocument::toFsPath(input.audioPath), language, nonSpeechPh, lyricsText, words);
         if (!recognizeResult) {
+            DSFW_LOG_ERROR("fa", ("FA process failed: " + recognizeResult.error()).c_str());
             return Result<TaskOutput>::Error(recognizeResult.error());
         }
 
@@ -119,6 +124,8 @@ namespace dstools {
                 });
             }
         }
+
+        DSFW_LOG_INFO("fa", ("FA process completed | phonemes: " + std::to_string(phonemeArray.size())).c_str());
 
         TaskOutput output;
         output.layers[QStringLiteral("phoneme")] = std::move(phonemeArray);
