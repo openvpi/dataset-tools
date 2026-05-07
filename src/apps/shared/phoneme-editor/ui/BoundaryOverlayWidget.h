@@ -25,8 +25,6 @@ public:
     void setTierLabelGeometry(int totalHeight, int rowHeight);
     void setExtraTopOffset(int pixels);
     void trackWidget(QWidget *widget);
-    void setActiveTierOnlyBoundaries(bool only);
-    [[nodiscard]] bool activeTierOnlyBoundaries() const { return m_activeTierOnly; }
 
 public slots:
     void setViewport(const ViewportState &state);
@@ -57,7 +55,6 @@ private:
     int m_tierLabelTotalHeight = 0;
     int m_tierLabelRowHeight = 24;
     int m_extraTopOffset = 0;
-    bool m_activeTierOnly = false;
 
     QTimer m_playheadHideTimer;
 };

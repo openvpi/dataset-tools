@@ -43,13 +43,6 @@ void BoundaryOverlayWidget::setBoundaryModel(IBoundaryModel *model) {
     update();
 }
 
-void BoundaryOverlayWidget::setActiveTierOnlyBoundaries(bool only) {
-    if (m_activeTierOnly != only) {
-        m_activeTierOnly = only;
-        update();
-    }
-}
-
 void BoundaryOverlayWidget::setTierLabelGeometry(int totalHeight, int rowHeight) {
     m_tierLabelTotalHeight = totalHeight;
     m_tierLabelRowHeight = rowHeight;
@@ -122,8 +115,6 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
 
     for (int t = 0; t < tiers; ++t) {
         bool isActive = (t == activeTier);
-        if (m_activeTierOnly && !isActive)
-            continue;
 
         int count = model->boundaryCount(t);
 
