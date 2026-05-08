@@ -56,8 +56,8 @@ private:
 class TitleBar : public QWidget {
     Q_OBJECT
 public:
-    explicit TitleBar(QMainWindow *window, QWidget *parent = nullptr)
-        : QWidget(parent), m_window(window) {
+    explicit TitleBar(QMainWindow *window, QMenuBar *menuBar = nullptr, QWidget *parent = nullptr)
+        : QWidget(parent), m_window(window), m_menuBar(menuBar) {
         auto *layout = new QHBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
@@ -114,8 +114,8 @@ protected:
         QWidget::resizeEvent(event);
 
         int menuBarWidth = 0;
-        if (auto *mb = m_window->menuBar())
-            menuBarWidth = mb->sizeHint().width();
+        if (m_menuBar)
+            menuBarWidth = m_menuBar->sizeHint().width();
 
         const int buttonsWidth = m_minBtn->width() + m_maxBtn->width() + m_closeBtn->width();
         const int availableWidth = width() - menuBarWidth - buttonsWidth;
@@ -154,6 +154,7 @@ private:
     }
 
     QMainWindow *m_window;
+    QMenuBar *m_menuBar;
     QLabel *m_titleLabel;
     TitleBarButton *m_minBtn;
     TitleBarButton *m_maxBtn;
@@ -192,9 +193,10 @@ void FramelessHelper::apply(QMainWindow *window) {
         return;
     }
 
-    auto *titleBar = new TitleBar(window);
+    auto *menuBar = window->menuBar();
+    auto *titleBar = new TitleBar(window, menuBar);
 
-    if (auto *menuBar = window->menuBar()) {
+    if (menuBar) {
         auto *layout = qobject_cast<QHBoxLayout *>(titleBar->layout());
         if (layout) {
             layout->insertWidget(0, menuBar);
