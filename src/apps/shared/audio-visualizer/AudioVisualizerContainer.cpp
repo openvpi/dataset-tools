@@ -197,6 +197,12 @@ namespace dstools {
         if (m_boundaryOverlay)
             m_boundaryOverlay->setTierLabelGeometry(0, 0);
         updateOverlayTopOffset();
+
+        QTimer::singleShot(0, this, [this]() {
+            updateOverlayTopOffset();
+            if (m_boundaryOverlay)
+                m_boundaryOverlay->forceReposition();
+        });
     }
 
     void AudioVisualizerContainer::setEditorWidget(QWidget *widget) {

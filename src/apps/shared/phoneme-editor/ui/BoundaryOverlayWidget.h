@@ -26,6 +26,10 @@ public:
     void setExtraTopOffset(int pixels);
     void trackWidget(QWidget *widget);
 
+    /// Force the overlay to recalculate its position over the tracked widget.
+    /// Call after layout changes that affect the tracked widget's geometry.
+    void forceReposition();
+
 public slots:
     void setViewport(const ViewportState &state);
     void setHoveredBoundary(int index);

@@ -321,6 +321,10 @@ void PhonemeEditor::buildLayout() {
 
     m_container->setBoundaryModel(m_document);
 
+    m_waveformWidget->setBoundaryModel(m_document);
+    m_powerWidget->setDocument(m_document);
+    m_spectrogramWidget->setBoundaryModel(m_document);
+
     auto *boundaryOverlay = m_container->boundaryOverlay();
     if (boundaryOverlay) {
         boundaryOverlay->setDocument(m_document);
@@ -339,6 +343,9 @@ void PhonemeEditor::buildLayout() {
     m_mainSplitter->setStretchFactor(1, 0);
 
     m_container->removeTierLabelArea();
+
+    if (auto *bo = m_container->boundaryOverlay())
+        bo->forceReposition();
 }
 
 void PhonemeEditor::connectSignals() {

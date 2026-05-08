@@ -56,6 +56,10 @@ void BoundaryOverlayWidget::setExtraTopOffset(int pixels) {
     }
 }
 
+void BoundaryOverlayWidget::forceReposition() {
+    repositionOverSplitter();
+}
+
 void BoundaryOverlayWidget::trackWidget(QWidget *widget) {
     if (m_trackedWidget) {
         m_trackedWidget->removeEventFilter(this);
