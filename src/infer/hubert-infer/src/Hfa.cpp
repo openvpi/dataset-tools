@@ -1,5 +1,6 @@
 #include <hubert-infer/Hfa.h>
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 
