@@ -565,6 +565,11 @@ void SlicerPage::updateSlicerListPanel() {
 }
 
 void SlicerPage::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_Space && m_playWidget) {
+        m_playWidget->setPlaying(!m_playWidget->isPlaying());
+        event->accept();
+        return;
+    }
     if (event->key() == Qt::Key_Delete && m_selectedBoundary >= 0 &&
         m_selectedBoundary < static_cast<int>(m_slicePoints.size())) {
         auto refreshFn = [this]() {

@@ -1,9 +1,9 @@
 #include "SlicerService.h"
 
+#include <audio-util/PathCompat.h>
 #include <audio-util/Slicer.h>
 
 #include <QFileInfo>
-#include <sndfile.hh>
 
 dstools::Result<dstools::SliceResult> SlicerService::slice(const QString &audioPath, double threshold, int minLength,
                                                            int minInterval, int hopSize, int maxSilKept) {
@@ -11,9 +11,10 @@ dstools::Result<dstools::SliceResult> SlicerService::slice(const QString &audioP
         return dstools::Result<dstools::SliceResult>::Error("Audio file does not exist: " + audioPath.toStdString());
     }
 
-    SndfileHandle sf(audioPath.toLocal8Bit().constData());
+    std::filesystem::path path = audioPath.toStdWString();
+    SndfileHandle sf = AudioUtil::openSndfile(path);
     if (sf.error()) {
-        return dstools::Result<dstools::SliceResult>::Error("Failed to open audio file: " + audioPath.toStdString());
+        return dstools::Result<dstools::SliceResult>::Error("Failed to open audio file: " + std::string(path.u8string().begin(), path.u8string().end()));
     }
 
     int sampleRate = sf.samplerate();
