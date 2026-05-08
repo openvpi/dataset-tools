@@ -33,8 +33,7 @@ namespace dstools::infer {
 
         Ort::SessionOptions options;
         options.SetInterOpNumThreads(interOpThreads);
-        options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
-
+ 
         switch (provider) {
 #ifdef ONNXRUNTIME_ENABLE_DML
             case ExecutionProvider::DML: {
