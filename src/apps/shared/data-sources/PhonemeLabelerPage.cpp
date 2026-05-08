@@ -39,7 +39,9 @@ namespace dstools {
 // phoneme-layer boundaries. Where a word start coincides with a phone start,
 // those two boundary IDs form a BindingGroup (they must move together).
 //
-// Leading/trailing auto-added SP/AP words are filtered out.
+// SP/AP words are included in the grapheme layer so that the grapheme and
+// phoneme layers have aligned dependency relationships. readFaInput()
+// filters out SP/AP text when building the lyrics string for re-running FA.
 // ---------------------------------------------------------------------------
 struct FaLayerResult {
     IntervalLayer graphemeLayer;
@@ -97,8 +99,8 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         }
 
         LayerDependency dep;
-        dep.parentLayerIndex = 0;
-        dep.childLayerIndex = 1;
+        dep.parentLayerName = QStringLiteral("grapheme");
+        dep.childLayerName = QStringLiteral("phoneme");
         dep.parentStartBoundaryId = graphemeStartId;
         dep.parentEndBoundaryId = graphemeEndId;
         if (!childBoundaryIds.empty()) {
@@ -208,8 +210,6 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
 
 void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     const QString audioPath = source()->validatedAudioPath(sliceId);
-    if (!audioPath.isEmpty())
-        m_editor->loadAudio(audioPath);
 
     auto result = source()->loadSlice(sliceId);
     if (result && !result.value().layers.empty()) {
@@ -222,11 +222,10 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
         }
 
         TimePos duration = 0;
-        if (doc.audio.out > doc.audio.in)
-            duration = doc.audio.out - doc.audio.in;
-
-        // Use audio file duration as fallback if document doesn't specify
-        if (duration <= 0) {
+        double durSec = audioDurationSec(doc);
+        if (durSec > 0.0) {
+            duration = secToUs(durSec);
+        } else {
             double audioDur = m_editor->viewport()->totalDuration();
             if (audioDur > 0.0)
                 duration = secToUs(audioDur);
@@ -237,13 +236,14 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
         else
             m_editor->document()->loadFromDsText(layers, secToUs(m_editor->viewport()->totalDuration()));
 
-        // Restore or auto-detect binding groups
+        if (!audioPath.isEmpty())
+            m_editor->loadAudio(audioPath);
+
         if (!doc.groups.empty())
             m_editor->document()->setBindingGroups(doc.groups);
         else if (doc.layers.size() > 1)
             m_editor->document()->autoDetectBindingGroups();
 
-        // Mark phoneme tier as read-only (FA output should not be manually edited)
         for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
             if (doc.layers[i].name == QStringLiteral("phoneme")) {
                 m_editor->document()->setTierReadOnly(i, true);
@@ -251,25 +251,25 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
             }
         }
     } else {
-        // No layers — load empty document with audio duration
-        double audioDur = m_editor->viewport()->totalDuration();
+        double durSec = result ? audioDurationSec(result.value()) : 0.0;
         TimePos duration = 0;
-        if (result && result.value().audio.out > result.value().audio.in)
-            duration = result.value().audio.out - result.value().audio.in;
-        if (duration <= 0 && audioDur > 0.0)
-            duration = secToUs(audioDur);
+        if (durSec > 0.0) {
+            duration = secToUs(durSec);
+        } else {
+            double audioDur = m_editor->viewport()->totalDuration();
+            if (audioDur > 0.0)
+                duration = secToUs(audioDur);
+        }
         if (duration > 0)
             m_editor->document()->loadFromDsText({}, duration);
+
+        if (!audioPath.isEmpty())
+            m_editor->loadAudio(audioPath);
     }
 
-    // Sync viewport to document duration (after loadFromDsText set the TextGrid maxTime)
     double docDuration = usToSec(m_editor->document()->totalDuration());
-    if (docDuration > 0.0) {
-        // setTotalDuration() internally calls clampAndEmit(), which clamps the
-        // view range to within the new total duration while preserving the current
-        // view position — no need to force setViewRange(0.0, docDuration).
+    if (docDuration > 0.0)
         m_editor->viewport()->setTotalDuration(docDuration);
-    }
 }
 
 void PhonemeLabelerPage::onDeactivatedImpl() {
@@ -432,13 +432,17 @@ static QString readFaInput(const DsTextDocument &doc) {
             phonemeLayer = &layer;
     }
     if (graphemeLayer) {
+        static const QStringList kNonSpeech = {QStringLiteral("SP"), QStringLiteral("AP")};
         for (const auto &b : graphemeLayer->boundaries) {
-            if (!b.text.isEmpty())
+            if (!b.text.isEmpty() && !kNonSpeech.contains(b.text))
                 parts << b.text;
         }
         if (graphemeLayer && phonemeLayer) {
             for (const auto &dep : doc.dependencies) {
-                if (dep.parentLayerIndex >= 0 && dep.childLayerIndex >= 0) {
+                bool valid = dep.parentLayerIndex >= 0 && dep.childLayerIndex >= 0;
+                if (!valid)
+                    valid = !dep.parentLayerName.isEmpty() && !dep.childLayerName.isEmpty();
+                if (valid) {
                     for (const auto &gb : graphemeLayer->boundaries) {
                         bool found = false;
                         for (const auto &pb : phonemeLayer->boundaries) {
@@ -664,46 +668,52 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         doc = std::move(result.value());
 
     for (const auto &newLayer : layers) {
-        if (newLayer.name == QStringLiteral("grapheme")) {
-            IntervalLayer *faGrapheme = nullptr;
-            for (auto &layer : doc.layers) {
-                if (layer.name == QStringLiteral("fa_grapheme")) {
-                    faGrapheme = &layer;
-                    break;
-                }
-            }
-            if (faGrapheme) {
-                faGrapheme->boundaries = newLayer.boundaries;
-                faGrapheme->type = newLayer.type;
-            } else {
-                IntervalLayer faLayer;
-                faLayer.name = QStringLiteral("fa_grapheme");
-                faLayer.type = newLayer.type;
-                faLayer.boundaries = newLayer.boundaries;
-                doc.layers.push_back(std::move(faLayer));
-            }
-        } else {
-            IntervalLayer *existing = nullptr;
-            for (auto &layer : doc.layers) {
-                if (layer.name == newLayer.name) {
-                    existing = &layer;
-                    break;
-                }
-            }
-            if (existing) {
-                existing->boundaries = newLayer.boundaries;
-                existing->type = newLayer.type;
-            } else {
-                doc.layers.push_back(newLayer);
+        IntervalLayer *existing = nullptr;
+        for (auto &layer : doc.layers) {
+            if (layer.name == newLayer.name) {
+                existing = &layer;
+                break;
             }
         }
+        if (existing) {
+            existing->boundaries = newLayer.boundaries;
+            existing->type = newLayer.type;
+        } else {
+            doc.layers.push_back(newLayer);
+        }
+    }
+
+    for (auto it = doc.layers.begin(); it != doc.layers.end();) {
+        if (it->name == QStringLiteral("fa_grapheme"))
+            it = doc.layers.erase(it);
+        else
+            ++it;
     }
 
     if (!groups.empty())
         doc.groups = groups;
 
-    if (!dependencies.empty())
+    if (!dependencies.empty()) {
         doc.dependencies = dependencies;
+        for (auto &dep : doc.dependencies) {
+            if (dep.parentLayerIndex < 0 && !dep.parentLayerName.isEmpty()) {
+                for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
+                    if (doc.layers[i].name == dep.parentLayerName) {
+                        dep.parentLayerIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (dep.childLayerIndex < 0 && !dep.childLayerName.isEmpty()) {
+                for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
+                    if (doc.layers[i].name == dep.childLayerName) {
+                        dep.childLayerIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     (void) source()->saveSlice(sliceId, doc);
 
@@ -716,9 +726,10 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         }
 
         TimePos duration = 0;
-        if (doc.audio.out > doc.audio.in)
-            duration = doc.audio.out - doc.audio.in;
-        if (duration <= 0) {
+        double durSec = audioDurationSec(doc);
+        if (durSec > 0.0) {
+            duration = secToUs(durSec);
+        } else {
             double audioDur = m_editor->viewport()->totalDuration();
             if (audioDur > 0.0)
                 duration = secToUs(audioDur);

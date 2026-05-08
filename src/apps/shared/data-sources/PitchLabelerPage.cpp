@@ -127,20 +127,7 @@ void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
         return;
     }
 
-    QString audioPath = source()->audioPath(sliceId);
-    if (audioPath.isEmpty()) {
-        DSFW_LOG_WARN("audio", "No audio path for slice: " + sliceId.toStdString());
-    } else if (!QFile::exists(audioPath)) {
-        auto validPath = source()->validatedAudioPath(sliceId);
-        if (validPath.isEmpty()) {
-            DSFW_LOG_WARN("audio", "Audio file not found: " + audioPath.toStdString());
-            dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Warning,
-                tr("音频文件未找到: %1").arg(audioPath));
-        } else {
-            audioPath = validPath;
-        }
-    }
+    const QString audioPath = source()->validatedAudioPath(sliceId);
 
     auto result = source()->loadSlice(sliceId);
     if (result) {
@@ -167,12 +154,12 @@ void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 
         m_currentFile = file;
         m_editor->loadDSFile(file);
+
+        if (!audioPath.isEmpty())
+            m_editor->loadAudio(audioPath, audioDurationSec(doc));
     } else if (!audioPath.isEmpty()) {
         m_currentFile = std::make_shared<pitchlabeler::DSFile>();
         m_editor->loadDSFile(m_currentFile);
-    }
-
-    if (!audioPath.isEmpty()) {
         m_editor->loadAudio(audioPath, 0.0);
     }
 }

@@ -90,6 +90,10 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
             LayerDependency dep;
             dep.parentLayerIndex = jd.value("parent", -1);
             dep.childLayerIndex = jd.value("child", -1);
+            if (jd.contains("parentName") && jd["parentName"].is_string())
+                dep.parentLayerName = QString::fromStdString(jd["parentName"].get<std::string>());
+            if (jd.contains("childName") && jd["childName"].is_string())
+                dep.childLayerName = QString::fromStdString(jd["childName"].get<std::string>());
             dep.parentStartBoundaryId = jd.value("parentStartBoundaryId", -1);
             dep.parentEndBoundaryId = jd.value("parentEndBoundaryId", -1);
             dep.childStartBoundaryId = jd.value("childStartBoundaryId", -1);
@@ -161,6 +165,10 @@ Result<void> DsTextDocument::save(const QString &path) const {
         auto jd = nlohmann::json::object();
         jd["parent"] = dep.parentLayerIndex;
         jd["child"] = dep.childLayerIndex;
+        if (!dep.parentLayerName.isEmpty())
+            jd["parentName"] = dep.parentLayerName.toStdString();
+        if (!dep.childLayerName.isEmpty())
+            jd["childName"] = dep.childLayerName.toStdString();
         if (dep.parentStartBoundaryId >= 0)
             jd["parentStartBoundaryId"] = dep.parentStartBoundaryId;
         if (dep.parentEndBoundaryId >= 0)

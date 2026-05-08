@@ -1,7 +1,7 @@
 # Bug 与 Issue 审计报告
 
 **审计日期**：2026-05-08
-**更新日期**：2026-05-08（BUG-20~BUG-23 已修复）
+**更新日期**：2026-05-08（BUG-20~BUG-23 已修复；BUG-24~BUG-26 已修复）
 **验证日期**：2026-05-08（已对照源码逐项验证）
 **审计范围**：src/ 全目录
 **参考文档**：conventions-and-standards.md、human-decisions.md
@@ -12,14 +12,16 @@
 
 | 严重度 | 未修复 | 已修复 |
 |--------|--------|--------|
-| 高 | 3 | 6 |
+| 高 | 3 | 9 |
 | 中 | 7 | 3 |
 | 低 | 1 | 0 |
-| **合计** | **11** | **9** |
+| **合计** | **11** | **12** |
 
 > 注：初版 BUG-17/18（ServiceLocator::get 未做空指针检查）经源码验证后发现已有空指针检查，已移除。
 > 
 > 新增 BUG-20~BUG-23（2026-05-08）：phoneme 贯穿线显示/拖动、FA 层级绑定、PitchLabel 工具栏。
+>
+> 新增 BUG-24~BUG-26（2026-05-08）：FA grapheme 层 SP 缺失/重复层级、PitchLabel 音频播放。
 > 
 > 已修复 BUG-01/02/03（存活令牌）、BUG-09（StatusBarBuilder）、BUG-20/21/22/23（贯穿线/FA层级/工具栏）（2026-05-08）。
 
@@ -370,6 +372,67 @@
 
 ---
 
+## BUG-24: ~~FA 结果缺少 SP 字级边界，grapheme/phoneme 从属关系错位~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | D-42（修订）、P-01 |
+| **影响文件** | PhonemeLabelerPage.cpp:buildFaLayers, applyFaResult, readFaInput |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：`applyFaResult()` 将 FA 对齐后的 grapheme 层保存为独立的 `fa_grapheme` 层，保留原始 minlabel 的 `grapheme` 层。原始 `grapheme` 层不含 SP 词边界，但 `phoneme` 层含 SP 音素，导致 grapheme 和 phoneme 之间的从属关系错位。用户在编辑器中看到 grapheme 层区间与 phoneme 层区间无法正确对应。
+
+**根因**：D-42 原设计将 FA grapheme 存为 `fa_grapheme` 以保留原始输入源，但这导致：
+1. 显示给用户的是不含 SP 的原始 grapheme 层，与含 SP 的 phoneme 层从属关系错位
+2. `readFaInput()` 从 `grapheme` 层读取歌词时未过滤 SP/AP 文本
+
+**修复方案**：
+1. `applyFaResult()` 直接替换 `grapheme` 层（而非创建 `fa_grapheme`），FA 结果包含 SP 词边界
+2. `readFaInput()` 过滤 SP/AP 文本，确保重跑 FA 时歌词输入正确
+3. 清除已存在的 `fa_grapheme` 层（向后兼容旧数据）
+
+---
+
+## BUG-25: ~~手动点击 FA 时标签层多出一层（出现两个字级）~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | D-42（修订） |
+| **影响文件** | PhonemeLabelerPage.cpp:applyFaResult |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：手动点击 FA 按钮后，编辑器标签区域显示两个字级层：原始 `grapheme` 和新增的 `fa_grapheme`。用户期望只看到一个字级层。
+
+**根因**：与 BUG-24 同根。`applyFaResult()` 为 FA grapheme 创建独立层 `fa_grapheme`，导致编辑器同时显示两个字级层。
+
+**修复方案**：同 BUG-24 修复。`applyFaResult()` 直接替换 `grapheme` 层，不再创建 `fa_grapheme`。
+
+---
+
+## BUG-26: ~~PitchLabelerPage 音频播放仅在提取 MIDI 后才正常~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | P-04、D-43 |
+| **影响文件** | PitchLabelerPage.cpp:onSliceSelectedImpl |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：PitchLabelerPage 选择切片后音频无法播放，必须先提取 MIDI 才能正常播放。
+
+**根因**：
+1. `onSliceSelectedImpl()` 使用 `source()->audioPath()` 获取路径（可能不存在），而非 `validatedAudioPath()`（保证文件存在）。当路径非空但文件不存在时，仍用无效路径调用 `loadAudio()`，`PlayWidget::openFile()` 失败
+2. `loadAudio(audioPath, 0.0)` 硬编码 `duration=0.0`，`PianoRollView::setAudioDuration()` 永远不被调用，视口总时长不正确
+3. MIDI 提取后 `loadDSFile()` 重新设置了进度条范围，看似"修复"了播放，实际音频文件仍未正确加载
+
+**修复方案**：
+1. 改用 `validatedAudioPath()`（与 PhonemeLabelerPage 一致），仅在文件确实存在时调用 `loadAudio()`
+2. 从 `doc.audio` 计算音频时长并传递给 `loadAudio()`
+
+---
+
 ## BUG-19: ExportPage 后台线程中推理调用无异常保护
 
 | 属性 | 值 |
@@ -405,6 +468,8 @@
 | ~~贯穿线显示/交互~~ | ~~2~~ 已修复 | ~~BUG-20, BUG-21~~ |
 | ~~FA 层级绑定~~ | ~~1~~ 已修复 | ~~BUG-22~~ |
 | ~~工具栏/音频播放~~ | ~~1~~ 已修复 | ~~BUG-23~~ |
+| ~~FA grapheme 层 SP/重复~~ | ~~2~~ 已修复 | ~~BUG-24, BUG-25~~ |
+| ~~PitchLabel 音频播放~~ | ~~1~~ 已修复 | ~~BUG-26~~ |
 
 ---
 

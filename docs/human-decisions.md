@@ -3,7 +3,7 @@
 > 本文档记录所有由用户明确给出的设计决策，供后续实施参考。
 > 与其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-05-08
+> 最后更新：2026-05-08（修订 D-42、D-43）
 
 ---
 
@@ -822,13 +822,14 @@ void AudioVisualizerContainer::removeTierLabelArea();
        std::vector<int> childBoundaryIds;  // 该 word 的所有 phone ID
    };
    ```
-3. `applyFaResult()` 将 FA 对齐后的 grapheme 层保存为新层（命名为 `fa_grapheme`），保留原始 minlabel grapheme 层作为 FA 输入源
-4. `readFaInput()` 始终从原始 minlabel `grapheme` 层读取（而不是 `fa_grapheme`）
+3. `applyFaResult()` 直接替换 `grapheme` 层（而非创建 `fa_grapheme`），FA 结果包含 SP 词边界。同时清除已存在的 `fa_grapheme` 层（向后兼容旧数据）
+4. `readFaInput()` 从 `grapheme` 层读取时过滤 SP/AP 文本，确保重跑 FA 时歌词输入正确
 5. `DsTextDocument` 新增 `dependencies` 字段持久化层级关系
 
 **影响范围**：
-- 原始 grapheme 层保留不变（FA 输入源一致性）
-- 新增的 fa_grapheme 层提供对齐后的精确边界位置
+- grapheme 层直接被 FA 结果替换（含 SP 词边界），grapheme/phoneme 从属关系正确对齐
+- 不再创建 `fa_grapheme` 层，消除重复字级层问题
+- `readFaInput()` 过滤 SP/AP 文本，重跑 FA 时歌词输入不受 SP 影响
 - LayerDependency 可用于跨层 clamp 的自动推导（D-17/D-29）
 - TextGridDocument 的 loadFromDsText 需解析 dependencies 设置跨层规则
 
@@ -855,23 +856,16 @@ void AudioVisualizerContainer::removeTierLabelArea();
 3. 修复音频加载：
    ```cpp
    void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
-       // ... 加载标注数据 ...
+       const QString audioPath = source()->validatedAudioPath(sliceId);
        
-       // 无条件加载音频
-       QString audioPath = source()->audioPath(sliceId);
-       if (audioPath.isEmpty()) {
-           DSFW_LOG_WARN("pitch", "No audio path for slice: " + sliceId);
-           return;
+       // 加载标注数据...
+       
+       if (!audioPath.isEmpty()) {
+           double duration = 0.0;
+           if (doc.audio.out > doc.audio.in)
+               duration = usToSec(doc.audio.out - doc.audio.in);
+           m_editor->loadAudio(audioPath, duration);
        }
-       if (!QFileInfo::exists(audioPath)) {
-           auto validPath = source()->validatedAudioPath(sliceId);
-           if (validPath.isEmpty()) {
-               DSFW_LOG_WARN("pitch", "Audio file not found: " + audioPath);
-               return;
-           }
-           audioPath = validPath;
-       }
-       m_editor->loadAudio(audioPath, 0.0);
    }
    ```
 4. 使用 `QToolButton` + 资源 SVG 图标，风格与 `PhonemeLabelerPage` 保持一致
@@ -895,5 +889,5 @@ void AudioVisualizerContainer::removeTierLabelArea();
 | 子图配置 | D-14：子图顺序可在 Settings 自定义 | D-30：显隐+顺序统一配置，checkbox 列表 + 拖拽排序 |
 | 贯穿线定位 | D-37：removeTierLabelArea 后贯穿线未正确延伸到子图区域 | D-40：移除后设置 m_extraTopOffset 确保贯穿线覆盖编辑区 |
 | Chart 边界绘制 | Chart widget 不绘制边界线，仅依赖透明 overlay | D-41：Chart widget paintEvent 调用 drawBoundaryOverlay |
-| FA 层级输出 | buildFaLayers 只输出 word.start 边界，applyFaResult 跳过 grapheme | D-42：输出完整 start/end 边界 + LayerDependency 结构 |
+| FA 层级输出 | buildFaLayers 只输出 word.start 边界，applyFaResult 跳过 grapheme | D-42：输出完整 start/end 边界 + LayerDependency 结构；applyFaResult 直接替换 grapheme 层（修订：不再创建 fa_grapheme） |
 | PitchLabel 工具栏 | PitchLabelerPage 仅有菜单栏，无工具栏 | D-43：添加 QToolBar 含 F0/GAME 按钮 |

@@ -1,7 +1,7 @@
 # 架构债审计报告
 
 **审计日期**：2026-05-08
-**验证日期**：2026-05-08（已对照源码逐项验证）
+**验证日期**：2026-05-08（已对照源码逐项验证；新增 ARCH-16~ARCH-17）
 **审计范围**：src/ 全目录
 **参考文档**：framework-architecture.md、human-decisions.md (P-01 ~ P-09)
 
@@ -376,6 +376,41 @@ SlicerPage 独有：`m_viewport` (ViewportController*)、`m_tierLabel` (SliceTie
 
 ---
 
+## ARCH-16: ~~DataSource 页面间音频加载逻辑不一致~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~中~~ — 已修复 |
+| **违反原则** | P-04（错误根因传播）、P-06（接口稳定） |
+| **验证状态** | ✅ 已修复 |
+| **影响文件** | EditorPageBase.h/cpp, PhonemeLabelerPage.cpp, PitchLabelerPage.cpp |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：PhonemeLabelerPage 和 PitchLabelerPage 的 `onSliceSelectedImpl()` 对音频路径的验证逻辑不一致，且音频加载顺序不同。
+
+**修复方案**：
+1. 添加 `EditorPageBase::audioDurationSec()` 公共辅助方法
+2. 所有页面统一使用 `validatedAudioPath()` + `audioDurationSec()`
+3. 统一加载顺序：先数据后音频
+
+---
+
+## ARCH-17: ~~LayerDependency 使用索引而非名称引用层~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~低~~ — 已修复 |
+| **违反原则** | P-06（接口稳定） |
+| **验证状态** | ✅ 已修复 |
+| **影响文件** | DsTextTypes.h, PhonemeLabelerPage.cpp, DsTextDocument.cpp |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：`LayerDependency` 使用 `parentLayerIndex`/`childLayerIndex` 整数索引来引用层。当层的顺序变化（如添加/删除层）时，这些索引可能指向错误的层。
+
+**修复方案**：在 `LayerDependency` 中添加 `parentLayerName`/`childLayerName` 字段，`applyFaResult()` 根据名称解析索引。序列化格式新增 `parentName`/`childName` 键，向后兼容。
+
+---
+
 ## 修复优先级建议
 
 ### 第一批（高优先级，解决层级违规和核心 P-01 问题）
@@ -395,9 +430,10 @@ SlicerPage 独有：`m_viewport` (ViewportController*)、`m_tierLabel` (SliceTie
 | ARCH-08 | 大 | data-sources 拆分 | 与 ARCH-01 联动 |
 
 ### 第三批（低优先级，改善代码质量）
-
 | ID | 工作量 | ROI | 说明 |
 |----|--------|-----|------|
 | ARCH-09/10 | 中 | God Class 拆分 | ARCH-07 完成后进行 |
 | ARCH-11/12/13 | 小 | 依赖注入改善 | |
 | ARCH-14/15 | 小 | 接口和目录结构优化 | |
+| ARCH-16 | 小 | 音频加载逻辑统一 | 与 TD-19/20 联动 |
+| ARCH-17 | 小 | LayerDependency 改用名称引用 | 与 TD-21 联动 |

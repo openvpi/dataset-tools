@@ -5,6 +5,7 @@
 #include <dsfw/AppSettings.h>
 #include <dstools/ShortcutManager.h>
 #include <dstools/IEditorDataSource.h>
+#include <dstools/DsTextTypes.h>
 
 #include <QWidget>
 #include <QString>
@@ -139,6 +140,10 @@ protected:
     static void cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveToken);
 
     // ── Common utility ──
+
+    /// Compute audio duration in seconds from a DsTextDocument.
+    /// Returns 0.0 if the document has no valid audio range.
+    static double audioDurationSec(const DsTextDocument &doc);
 
     /// Show Save/Discard/Cancel dialog and act accordingly.
     /// Uses isDirty() to decide whether to show dialog.

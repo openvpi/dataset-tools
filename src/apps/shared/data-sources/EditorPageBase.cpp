@@ -29,6 +29,12 @@ EditorPageBase::EditorPageBase(const QString &settingsGroup, QWidget *parent)
 
 EditorPageBase::~EditorPageBase() = default;
 
+double EditorPageBase::audioDurationSec(const DsTextDocument &doc) {
+    if (doc.audio.out > doc.audio.in)
+        return usToSec(doc.audio.out - doc.audio.in);
+    return 0.0;
+}
+
 // ── Setup helpers ─────────────────────────────────────────────────────────────
 
 void EditorPageBase::setupBaseLayout(QWidget *editorWidget) {

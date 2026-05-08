@@ -1,7 +1,7 @@
 # 技术债审计报告
 
 **审计日期**：2026-05-08
-**验证日期**：2026-05-08（已对照源码逐项验证）
+**验证日期**：2026-05-08（已对照源码逐项验证；新增 TD-19~TD-21）
 **审计范围**：src/apps/、src/framework/、src/domain/、src/libs/
 **参考文档**：conventions-and-standards.md、human-decisions.md
 
@@ -12,9 +12,9 @@
 | 严重度 | 未修复 | 已修复 |
 |--------|--------|--------|
 | 高 | 4 | 2 |
-| 中 | 7 | 1 |
+| 中 | 6 | 4 |
 | 低 | 4 | 0 |
-| **合计** | **15** | **3** |
+| **合计** | **14** | **6** |
 
 ---
 
@@ -352,6 +352,52 @@
 **原描述**：`JsonHelper` 的错误消息使用 `path.string()` 拼接，在 Windows 上遇到 CJK 路径会乱码。
 
 **修复验证**：JsonHelper.cpp 已移除所有 `path.string()` 调用，错误消息不再乱码。
+
+---
+
+## TD-19: ~~PitchLabelerPage::onSliceSelectedImpl 音频路径验证逻辑不一致~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~中~~ — 已修复 |
+| **违反原则** | P-04（错误根因传播） |
+| **验证状态** | ✅ 已修复（BUG-26 + ARCH-16 统一） |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：`onSliceSelectedImpl()` 使用 `audioPath()`（可能不存在）而非 `validatedAudioPath()`（保证文件存在），与 PhonemeLabelerPage 的做法不一致。
+
+**修复方案**：BUG-26 修复中改用 `validatedAudioPath()`；ARCH-16 统一了所有页面的音频加载模式。
+
+---
+
+## TD-20: ~~PitchEditor::loadAudio duration=0.0 导致 PianoRollView 视口总时长未设置~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~中~~ — 已修复 |
+| **违反原则** | P-04 |
+| **验证状态** | ✅ 已修复（BUG-26 + ARCH-16 统一） |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：`PitchLabelerPage::onSliceSelectedImpl()` 调用 `m_editor->loadAudio(audioPath, 0.0)` 硬编码 `duration=0.0`。`PitchEditor::loadAudio()` 中 `if (duration > 0) m_pianoRoll->setAudioDuration(duration)` 因此永远不执行。
+
+**修复方案**：BUG-26 修复中从 `doc.audio` 计算时长；ARCH-16 统一使用 `audioDurationSec()` 辅助方法。
+
+---
+
+## TD-21: ~~LayerDependency.parentLayerIndex/childLayerIndex 使用硬编码索引~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~中~~ — 已修复 |
+| **违反原则** | P-06（接口稳定） |
+| **验证状态** | ✅ 已修复 |
+| **影响文件** | PhonemeLabelerPage.cpp, DsTextTypes.h, DsTextDocument.cpp |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：`buildFaLayers()` 中 `LayerDependency` 的 `parentLayerIndex = 0` 和 `childLayerIndex = 1` 是硬编码值，假设 grapheme 层总是第一个、phoneme 层总是第二个。当文档中层的顺序变化（如存在 `raw_text` 层或其他层）时，这些索引可能指向错误的层。
+
+**修复方案**：在 `LayerDependency` 中添加 `parentLayerName`/`childLayerName` 字段，`buildFaLayers()` 设置名称而非索引，`applyFaResult()` 根据名称解析为实际索引。序列化格式新增 `parentName`/`childName` 键，向后兼容旧文件。
 
 ---
 

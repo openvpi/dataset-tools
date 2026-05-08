@@ -41,6 +41,8 @@ using BindingGroup = std::vector<int>;
 struct LayerDependency {
     int parentLayerIndex = -1;
     int childLayerIndex = -1;
+    QString parentLayerName;
+    QString childLayerName;
     int parentStartBoundaryId = -1;
     int parentEndBoundaryId = -1;
     int childStartBoundaryId = -1;
