@@ -9,12 +9,12 @@
 
 ## 汇总
 
-| 严重度 | 数量 |
-|--------|------|
-| 高 | 5 |
-| 中 | 9 |
-| 低 | 4 |
-| **合计** | **18** |
+| 严重度 | 未修复 | 已修复 |
+|--------|--------|--------|
+| 高 | 4 | 2 |
+| 中 | 7 | 1 |
+| 低 | 4 | 0 |
+| **合计** | **15** | **3** |
 
 ---
 
@@ -43,42 +43,34 @@
 
 ---
 
-## TD-02: PitchLabelerPage / MinLabelPage / ExportPage 原始指针缺少存活令牌
+## TD-02: ~~PitchLabelerPage / MinLabelPage / ExportPage 原始指针缺少存活令牌~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | **高** |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | PitchLabelerPage.cpp:L514/L566/L824, MinLabelPage.cpp:L418/L495/L728, ExportPage.cpp:L596 |
+| **严重度** | ~~高~~ — 已修复 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：根据 P-09 决策，所有 `QtConcurrent::run` 中捕获的原始指针必须配合 `std::shared_ptr<std::atomic<bool>>` 存活令牌使用。目前只有 `PhonemeLabelerPage` 正确实现了 `m_hfaAlive` 令牌模式（L446 初始化，L553-554 检查，L251 store(false) + cancelAsyncTask），其他三个页面均未实现。
+**原描述**：根据 P-09 决策，所有 `QtConcurrent::run` 中捕获的原始指针必须配合 `std::shared_ptr<std::atomic<bool>>` 存活令牌使用。目前只有 `PhonemeLabelerPage` 正确实现了 `m_hfaAlive` 令牌模式，其他三个页面均未实现。
 
-**验证补充**：
-- PitchLabelerPage.h：**没有** `m_rmvpeAlive` 或 `m_gameAlive` 成员，仅使用 `QPointer<PitchLabelerPage>` 作为 guard（只保护页面对象本身，不保护引擎指针有效性）
-- MinLabelPage.h：**没有** `m_asrAlive` 成员
-- ExportPage.h：**没有** alive token 成员
-
-**修复方案**：为 PitchLabelerPage 添加 `m_rmvpeAlive` / `m_gameAlive`，为 MinLabelPage 添加 `m_asrAlive`，为 ExportPage 添加 `m_hfaAlive` / `m_rmvpeAlive` / `m_gameAlive`。在 `onDeactivatedImpl()` / `onDeactivated()` 中 store(false)，在 `QtConcurrent::run` lambda 入口处检查 alive token。参考 PhonemeLabelerPage 的实现模式。
-
-**风险项**：
-- 修复后仍存在 TOCTOU 间隙（见 TD-17），但已大幅降低崩溃概率
-- 需要确保所有 `onModelInvalidated` 槽在引擎销毁前执行
+**修复验证**：
+- PitchLabelerPage.h:57-58：已添加 `m_rmvpeAlive` 和 `m_gameAlive`
+- MinLabelPage.h:45：已添加 `m_asrAlive`；MinLabelPage.h:57：已添加 `m_matchLyricAlive`
+- ExportPage.h:69：已添加 `m_enginesAlive`（统一 token 模式，功能等价）
 
 ---
 
-## TD-03: AudioPlaybackManager 持有裸 QWidget 指针 — 潜在 use-after-free
+## TD-03: ~~AudioPlaybackManager 持有裸 QWidget 指针 — 潜在 use-after-free~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | **高** |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | AudioPlaybackManager.h:L22, AudioPlaybackManager.cpp:L22-23/L38-39 |
+| **严重度** | ~~高~~ — 已修复 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`AudioPlaybackManager::m_currentPlayer` 是一个裸 `QWidget*`（L22），没有任何守卫。当 PlayWidget 被页面销毁（如页面切换时 `deleteLater()`），`m_currentPlayer` 变成悬空指针。后续 `requestPlay()` 或 `stopAll()` 调用 `QMetaObject::invokeMethod(m_currentPlayer, "setPlaying", ...)` 会访问已释放内存。
+**原描述**：`AudioPlaybackManager::m_currentPlayer` 是一个裸 `QWidget*`，没有任何守卫。当 PlayWidget 被页面销毁，`m_currentPlayer` 变成悬空指针。
 
-**修复方案**：将 `QWidget *m_currentPlayer` 改为 `QPointer<QWidget> m_currentPlayer`，在 `requestPlay()` 和 `stopAll()` 中检查 `if (!m_currentPlayer) return;`。同时考虑用接口替代 `QMetaObject::invokeMethod`（与 TD-13 联动）。
-
-**风险项**：低风险修复，但需确认 `stopAll()` 的调用时机。
+**修复验证**：AudioPlaybackManager.h:23 已改为 `QPointer<QWidget> m_currentPlayer`，悬空指针风险已消除。注意：AudioPlaybackManager.cpp 仍使用 `QMetaObject::invokeMethod(m_currentPlayer, "setPlaying", ...)` 字符串调用（属于 TD-13 范畴）。
 
 ---
 
@@ -130,32 +122,34 @@
 
 ---
 
-## TD-07: path.string() 在 Windows 上破坏 CJK 路径 — 违反 §12
+## TD-07: path.string() 在 Windows 上破坏 CJK 路径 — 违反 §12（部分修复）
 
 | 属性 | 值 |
 |------|-----|
 | **严重度** | **高** |
-| **验证状态** | ✅ 已确认（多处） |
-| **影响文件** | PathCompat.h:L29, Hfa.cpp:L60/L62/L89/L119/L127/L197, DictionaryG2P.cpp:L9/L11, GameModel.cpp:L40/L84, SlicerService.cpp:L14, JsonHelper.cpp:L10/L25/L29, JsonUtils.h:L47/L52/L58/L63/L66, PathUtils.cpp:L38, Util.cpp:L75 |
+| **验证状态** | ⚠️ 部分修复 |
+| **影响文件** | Hfa.cpp, DictionaryG2P.cpp, GameModel.cpp, JsonUtils.h, Util.cpp（仍存在）；~~SlicerService.cpp, JsonHelper.cpp~~（已修复） |
 
 **描述**：根据项目规范 §12，推理层代码中禁止使用 `path.string()` 进行文件 I/O（Windows 上会破坏 CJK 字符）。
 
-**验证补充**（按严重程度排序）：
-1. **Hfa.cpp:L62** — `DictionaryG2P(dict_path.string(), language)` 传给 DictionaryG2P 构造函数做文件 I/O，Windows 上 CJK 路径打开失败。DictionaryG2P 构造函数接收 `const std::string &dictionaryPath`（L9），内部 `std::ifstream file(dictionaryPath)`（L11）
-2. **SlicerService.cpp:L14** — `SndfileHandle sf(audioPath.toLocal8Bit().constData())` 打开音频，Windows 上 CJK 路径损坏
-3. **GameModel.cpp:L88-91** — ONNX Session 创建已正确使用 `model_path.wstring().c_str()` (Windows) / `model_path.c_str()` (非 Windows)，但错误消息（L40/L84）仍使用 `path.string()` 乱码
-4. **JsonHelper.cpp** — `std::ifstream file(path)` 和 `std::ofstream file(path)` 在 MSVC 上接受 `std::filesystem::path`，文件打开本身没问题，只是错误消息乱码
-5. **PathCompat.h** — 已有正确的跨平台实现 `openSndfile()`，Windows 上使用 `path.wstring().c_str()`
+**已修复**：
+- ~~SlicerService.cpp~~ — 已改用 `AudioUtil::openSndfile(path)`
+- ~~JsonHelper.cpp~~ — 已移除 `path.string()` 错误消息
+
+**仍存在**（按严重程度排序）：
+1. **Hfa.cpp** — `DictionaryG2P(dict_path.string(), language)` 传给 DictionaryG2P 构造函数做文件 I/O，Windows 上 CJK 路径打开失败
+2. **DictionaryG2P.cpp** — 构造函数接收 `const std::string &dictionaryPath`，内部 `std::ifstream file(dictionaryPath)` 打开文件
+3. **GameModel.cpp** — 错误消息仍使用 `path.string()` 乱码（ONNX Session 创建已正确使用 wstring）
+4. **JsonUtils.h** — 5 处 `path.string()` 拼接错误消息
+5. **Util.cpp** — `filepath.string()` 拼接错误消息
 
 **修复方案**：
 1. `DictionaryG2P` 构造函数参数改为 `std::filesystem::path`，内部用 `std::ifstream(path)` 打开。调用处改为 `DictionaryG2P(dict_path, language)`
-2. `SlicerService.cpp` 使用 `AudioUtil::openSndfile()` 替代直接构造 `SndfileHandle`
-3. 所有错误消息中使用 `PathUtils::fromStdPath()` 或 `path.u8string()` 转换
+2. 所有错误消息中使用 `PathUtils::fromStdPath()` 或 `path.u8string()` 转换
 
 **风险项**：
 - 需要区分 Windows 和 Unix 平台的路径转换逻辑
 - 修改 `DictionaryG2P` 接口可能影响其他调用者
-- 需要确认 `AudioUtil::openSndfile` 在 libs/slicer 中的可用性
 
 ---
 
@@ -347,25 +341,23 @@
 
 ---
 
-## TD-18: JsonHelper 错误消息 path.string() — CJK 乱码
+## TD-18: ~~JsonHelper 错误消息 path.string() — CJK 乱码~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | 中 |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | JsonHelper.cpp:L10/L25/L29 |
+| **严重度** | ~~中~~ — 已修复 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`JsonHelper` 的错误消息使用 `path.string()` 拼接，在 Windows 上遇到 CJK 路径会乱码。注意：`std::ifstream file(path)` 和 `std::ofstream file(path)` 在 MSVC 上接受 `std::filesystem::path`，文件打开本身没问题，只是错误消息乱码。
+**原描述**：`JsonHelper` 的错误消息使用 `path.string()` 拼接，在 Windows 上遇到 CJK 路径会乱码。
 
-**修复方案**：使用 `PathUtils::fromStdPath(path).toStdString()` 或 `path.u8string()` 构造错误消息，确保 CJK 路径正确显示。
-
-**风险项**：低风险修复，与 TD-07 联动。
+**修复验证**：JsonHelper.cpp 已移除所有 `path.string()` 调用，错误消息不再乱码。
 
 ---
 
 ## 优先修复建议
 
-1. **最优先**：TD-02（原始指针缺少 alive token）和 TD-14（后台线程调用非线程安全方法）— 可能导致用户数据损坏或应用崩溃
-2. **次优先**：TD-03（AudioPlaybackManager 裸指针）和 TD-07（path.string() CJK 路径）— 影响用户体验和平台兼容性
+1. **最优先**：TD-14（后台线程调用非线程安全方法）— 可能导致用户数据损坏或应用崩溃
+2. **次优先**：TD-07（path.string() CJK 路径 — 剩余 Hfa/DictionaryG2P/GameModel/JsonUtils/Util）— 影响平台兼容性
 3. **中期**：TD-01/TD-04/TD-13（QMetaMethod 反射替换为接口）和 TD-08（SpectrogramWidget 性能优化）— 架构改进
-4. **低优先级**：TD-09/TD-10/TD-11/TD-12/TD-15/TD-16/TD-18 — 规范对齐和代码清理
+4. **低优先级**：TD-05/TD-06/TD-09/TD-10/TD-11/TD-12/TD-15/TD-16/TD-17 — 规范对齐和代码清理

@@ -2,7 +2,7 @@
 
 > 2026-05-06
 >
-> 前置文档：[refactoring-roadmap-v2.md](refactoring-roadmap-v2.md)、[framework-architecture.md](framework-architecture.md)
+> 前置文档：[refactoring-plan.md](refactoring-plan.md)、[framework-architecture.md](framework-architecture.md)
 
 ---
 
@@ -246,5 +246,5 @@ SettingsPage           ← 独立 QWidget + IPageActions + IPageLifecycle
 
 ## 关联文档
 
-- [refactoring-roadmap-v2.md](refactoring-roadmap-v2.md) — 重构路线图
+- [refactoring-plan.md](refactoring-plan.md) — 重构方案
 - [framework-architecture.md](framework-architecture.md) — 项目架构

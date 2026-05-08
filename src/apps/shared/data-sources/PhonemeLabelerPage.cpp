@@ -61,12 +61,20 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         if (word.phones.empty())
             continue;
 
-        Boundary graphemeB;
-        graphemeB.id = nextId++;
-        graphemeB.pos = secToUs(std::max(0.0f, word.start));
-        graphemeB.text = QString::fromStdString(word.text);
-        int graphemeBId = graphemeB.id;
-        r.graphemeLayer.boundaries.push_back(std::move(graphemeB));
+        Boundary graphemeStart;
+        graphemeStart.id = nextId++;
+        graphemeStart.pos = secToUs(std::max(0.0f, word.start));
+        graphemeStart.text = QString::fromStdString(word.text);
+        int graphemeStartId = graphemeStart.id;
+        r.graphemeLayer.boundaries.push_back(std::move(graphemeStart));
+
+        Boundary graphemeEnd;
+        graphemeEnd.id = nextId++;
+        graphemeEnd.pos = secToUs(std::max(0.0f, word.end));
+        int graphemeEndId = graphemeEnd.id;
+        r.graphemeLayer.boundaries.push_back(std::move(graphemeEnd));
+
+        std::vector<int> childBoundaryIds;
 
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
             const auto &phone = word.phones[pi];
@@ -76,13 +84,30 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
             phoneB.pos = secToUs(std::max(0.0f, phone.start));
             phoneB.text = QString::fromStdString(phone.text);
 
-            r.groups.push_back({graphemeBId, phoneB.id});
+            childBoundaryIds.push_back(phoneB.id);
+
+            if (pi == 0)
+                r.groups.push_back({graphemeStartId, phoneB.id});
 
             r.phonemeLayer.boundaries.push_back(std::move(phoneB));
         }
-    }
 
-    r.dependencies.push_back({0, 1});
+        if (!word.phones.empty()) {
+            r.groups.push_back({graphemeEndId, r.phonemeLayer.boundaries.back().id});
+        }
+
+        LayerDependency dep;
+        dep.parentLayerIndex = 0;
+        dep.childLayerIndex = 1;
+        dep.parentStartBoundaryId = graphemeStartId;
+        dep.parentEndBoundaryId = graphemeEndId;
+        if (!childBoundaryIds.empty()) {
+            dep.childStartBoundaryId = childBoundaryIds.front();
+            dep.childEndBoundaryId = childBoundaryIds.back();
+        }
+        dep.childBoundaryIds = std::move(childBoundaryIds);
+        r.dependencies.push_back(std::move(dep));
+    }
 
     return r;
 }
@@ -639,32 +664,44 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         doc = std::move(result.value());
 
     for (const auto &newLayer : layers) {
-        IntervalLayer *existing = nullptr;
-        for (auto &layer : doc.layers) {
-            if (layer.name == newLayer.name) {
-                existing = &layer;
-                break;
-            }
-        }
-        if (existing) {
-            if (newLayer.name == QStringLiteral("grapheme")) {
-                for (size_t i = 0; i < newLayer.boundaries.size() && i < existing->boundaries.size(); ++i) {
-                    existing->boundaries[i].pos = newLayer.boundaries[i].pos;
+        if (newLayer.name == QStringLiteral("grapheme")) {
+            IntervalLayer *faGrapheme = nullptr;
+            for (auto &layer : doc.layers) {
+                if (layer.name == QStringLiteral("fa_grapheme")) {
+                    faGrapheme = &layer;
+                    break;
                 }
+            }
+            if (faGrapheme) {
+                faGrapheme->boundaries = newLayer.boundaries;
+                faGrapheme->type = newLayer.type;
             } else {
-                existing->boundaries = newLayer.boundaries;
-                existing->type = newLayer.type;
+                IntervalLayer faLayer;
+                faLayer.name = QStringLiteral("fa_grapheme");
+                faLayer.type = newLayer.type;
+                faLayer.boundaries = newLayer.boundaries;
+                doc.layers.push_back(std::move(faLayer));
             }
         } else {
-            doc.layers.push_back(newLayer);
+            IntervalLayer *existing = nullptr;
+            for (auto &layer : doc.layers) {
+                if (layer.name == newLayer.name) {
+                    existing = &layer;
+                    break;
+                }
+            }
+            if (existing) {
+                existing->boundaries = newLayer.boundaries;
+                existing->type = newLayer.type;
+            } else {
+                doc.layers.push_back(newLayer);
+            }
         }
     }
 
-    // Save binding groups from FA (grapheme↔phoneme boundary associations)
     if (!groups.empty())
         doc.groups = groups;
 
-    // Save layer dependencies from FA (grapheme→phoneme parent-child)
     if (!dependencies.empty())
         doc.dependencies = dependencies;
 
@@ -678,7 +715,6 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
             allLayers.append(layer);
         }
 
-        // Use document's audio duration, falling back to viewport's audio duration
         TimePos duration = 0;
         if (doc.audio.out > doc.audio.in)
             duration = doc.audio.out - doc.audio.in;
@@ -691,13 +727,11 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         if (duration > 0)
             m_editor->document()->loadFromDsText(allLayers, duration);
 
-        // Restore binding groups from the saved document
         if (!doc.groups.empty())
             m_editor->document()->setBindingGroups(doc.groups);
         else if (doc.layers.size() > 1)
             m_editor->document()->autoDetectBindingGroups();
 
-        // Mark phoneme tier as read-only (FA output should not be manually edited)
         for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
             if (doc.layers[i].name == QStringLiteral("phoneme")) {
                 m_editor->document()->setTierReadOnly(i, true);

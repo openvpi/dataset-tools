@@ -177,7 +177,7 @@ ViewportController (resolution: int, samples/pixel)
 | TD-19 | `DsItemManager` 标记 deprecated 但仍在 DsSlicerPage 使用 | C4996 warning | 迁移到 PipelineContext |
 | TD-20 | QSettings 键名不统一 | 部分硬编码字符串，部分用 SettingsKey | 全部迁移到 SettingsKey |
 | TD-21 | 翻译文件 (.ts) 多数为空 | en.qm 全部 0 translations | 要么删除 en 翻译文件，要么补充英文翻译 |
-| TD-22 | `docs/refactoring-roadmap-v2.md` 未更新完成状态 | 多个已完成任务仍标为 `- [ ]` | 更新 checkbox 为 `- [x]` |
+| TD-22 | ~~`docs/refactoring-roadmap-v2.md` 未更新完成状态~~ | 已合并到 refactoring-plan.md | 已完成 |
 | TD-23 | IntervalTierView 手动绝对定位 | 可能在 DPI 缩放时错位 | 使用 QGridLayout 或按 DPI 系数计算 |
 
 ---

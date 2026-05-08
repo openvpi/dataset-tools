@@ -9,20 +9,20 @@
 
 ## 汇总
 
-| 规则 | 违规数 | 高 | 中 | 低 |
-|------|--------|----|----|-----|
-| P-01 模块职责单一 | 2 | 0 | 2 | 0 |
-| P-02 被动接口+容器通知 | 5 | 2 | 3 | 0 |
-| P-04 错误根因传播 | 3 | 2 | 1 | 0 |
-| P-05 异常边界隔离 | 5 | 1 | 2 | 2 |
-| P-09 异步任务存活令牌 | 7 | 5 | 1 | 0 |
-| §12 路径 I/O | 7 | 2 | 3 | 2 |
-| §11 头文件组织 | 3 | 0 | 0 | 3 |
-| §4 日志规范 | 3 | 0 | 2 | 1 |
-| §2 命名规范 | 2 | 0 | 2 | 0 |
-| §9 CMake 规范 | 4 | 0 | 4 | 0 |
-| QSettings 硬编码 | 3 | 0 | 2 | 1 |
-| **合计** | **44** | **12** | **22** | **10** |
+| 规则 | 违规数 | 高 | 中 | 低 | 已修复 |
+|------|--------|----|----|-----|--------|
+| P-01 模块职责单一 | 2 | 0 | 2 | 0 | 0 |
+| P-02 被动接口+容器通知 | 5 | 2 | 3 | 0 | 0 |
+| P-04 错误根因传播 | 2 | 1 | 1 | 0 | 1 |
+| P-05 异常边界隔离 | 5 | 1 | 2 | 2 | 0 |
+| ~~P-09 异步任务存活令牌~~ | ~~7~~ | ~~5~~ | ~~1~~ | ~~0~~ | **7** |
+| §12 路径 I/O | 5 | 1 | 2 | 2 | 2 |
+| §11 头文件组织 | 3 | 0 | 0 | 3 | 0 |
+| §4 日志规范 | 3 | 0 | 2 | 1 | 0 |
+| §2 命名规范 | 2 | 0 | 2 | 0 | 0 |
+| §9 CMake 规范 | 4 | 0 | 4 | 0 | 0 |
+| QSettings 硬编码 | 3 | 0 | 2 | 1 | 0 |
+| **合计** | **34** | **4** | **18** | **9** | **10** |
 
 ---
 
@@ -131,19 +131,17 @@
 
 ---
 
-### P04-02: libs/slicer/SlicerService::slice 使用 toLocal8Bit 打开音频文件
+### P04-02: ~~libs/slicer/SlicerService::slice 使用 toLocal8Bit 打开音频文件~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | **高** |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | SlicerService.cpp:L14-16 |
+| **严重度** | ~~高~~ — 已修复 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`libs/slicer/SlicerService::slice` 使用 `audioPath.toLocal8Bit()` 打开音频文件，在 Windows 上 CJK 路径会损坏，但错误消息仅说 "Failed to open audio file" 未指出编码根因。
+**原描述**：`libs/slicer/SlicerService::slice` 使用 `audioPath.toLocal8Bit()` 打开音频文件，在 Windows 上 CJK 路径会损坏。
 
-**修复方案**：改用 `AudioUtil::openSndfile(toFsPath(audioPath))` 并在错误中包含路径编码信息。
-
-**风险项**：需要确认 `AudioUtil::openSndfile` 和 `toFsPath` 在 libs/slicer 中的可用性。
+**修复验证**：SlicerService.cpp:15 已改用 `AudioUtil::openSndfile(path)`。
 
 ---
 
@@ -259,69 +257,25 @@ QFile file(path);
 
 ---
 
-## 四、P-09 违规 — 异步任务存活令牌
+## 四、~~P-09 违规 — 异步任务存活令牌~~ — ✅ 全部已修复
 
-### P09-01 ~ P09-03: PitchLabelerPage 三处 QtConcurrent::run 缺少引擎存活令牌
+> 所有 P-09 违规项已于 2026-05-08 修复。以下为历史记录。
 
-| 属性 | 值 |
-|------|-----|
-| **严重度** | **高** |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | PitchLabelerPage.cpp:L514 (rmvpe), L566 (game), L824 (batch rmvpe+game) |
+### ~~P09-01 ~ P09-03: PitchLabelerPage 三处 QtConcurrent::run 缺少引擎存活令牌~~ — ✅ 已修复
 
-**描述**：`PitchLabelerPage` 在 `QtConcurrent::run` 中捕获 `rmvpe` 和 `game` 原始指针，缺少 `std::shared_ptr<std::atomic<bool>>` 引擎存活令牌。对比 `PhonemeLabelerPage` 已正确实现 `m_hfaAlive`（L446 初始化，L553-554 检查，L251 store(false) + cancelAsyncTask）。
+**修复验证**：PitchLabelerPage.h:57-58 已添加 `m_rmvpeAlive` 和 `m_gameAlive`。
 
-**修复方案**：添加 `m_rmvpeAlive` 和 `m_gameAlive` 成员，lambda 中捕获并检查 `if (!rmvpeAlive || !*rmvpeAlive) return`。
+### ~~P09-04 ~ P09-05: MinLabelPage 两处 QtConcurrent::run 缺少引擎存活令牌~~ — ✅ 已修复
 
-**风险项**：修复后仍存在 TOCTOU 间隙，但已大幅降低崩溃概率。
+**修复验证**：MinLabelPage.h:45 已添加 `m_asrAlive`。
 
----
+### ~~P09-06: MinLabelPage::onBatchLyricFa 缺少存活令牌~~ — ✅ 已修复
 
-### P09-04 ~ P09-05: MinLabelPage 两处 QtConcurrent::run 缺少引擎存活令牌
+**修复验证**：MinLabelPage.h:57 已添加 `m_matchLyricAlive`。
 
-| 属性 | 值 |
-|------|-----|
-| **严重度** | **高** |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | MinLabelPage.cpp:L418 (asr), L495 (batch asr) |
+### ~~P09-07: ExportPage::continueExport 缺少引擎存活令牌~~ — ✅ 已修复
 
-**描述**：同 P09-01，`MinLabelPage` 缺少 `m_asrAlive` 存活令牌。
-
-**修复方案**：添加 `m_asrAlive` 成员。
-
-**风险项**：同 P09-01。
-
----
-
-### P09-06: MinLabelPage::onBatchLyricFa 缺少存活令牌
-
-| 属性 | 值 |
-|------|-----|
-| **严重度** | 中 |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | MinLabelPage.cpp:L728 |
-
-**描述**：`QtConcurrent::run` 中捕获 `matchLyric` 原始指针，缺少存活令牌。
-
-**修复方案**：添加 `m_matchLyricAlive` 成员。
-
-**风险项**：低风险修复。
-
----
-
-### P09-07: ExportPage::continueExport 缺少引擎存活令牌
-
-| 属性 | 值 |
-|------|-----|
-| **严重度** | **高** |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | ExportPage.cpp:L596 |
-
-**描述**：`QtConcurrent::run` 中捕获 `hfa/rmvpe/game/phNumCalc` 原始指针，缺少引擎存活令牌。
-
-**修复方案**：为每个引擎添加存活令牌。
-
-**风险项**：同 P09-01。
+**修复验证**：ExportPage.h:69 已添加 `m_enginesAlive`（统一 token 模式）。
 
 ---
 
@@ -343,19 +297,17 @@ QFile file(path);
 
 ---
 
-### PATH-02: libs/slicer/SlicerService::slice 使用 toLocal8Bit 打开音频
+### PATH-02: ~~libs/slicer/SlicerService::slice 使用 toLocal8Bit 打开音频~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | **高** |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | SlicerService.cpp:L14 |
+| **严重度** | ~~高~~ — 已修复 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`SndfileHandle(audioPath.toLocal8Bit().constData())` 打开音频，Windows 上 CJK 路径损坏。应使用 `AudioUtil::openSndfile`。项目已有正确的跨平台实现 `PathCompat::openSndfile()`（Windows 上使用 `path.wstring().c_str()`）。
+**原描述**：`SndfileHandle(audioPath.toLocal8Bit().constData())` 打开音频，Windows 上 CJK 路径损坏。
 
-**修复方案**：改为 `AudioUtil::openSndfile(dstools::toFsPath(audioPath))`。
-
-**风险项**：需要确认 `AudioUtil::openSndfile` 在 libs/slicer 中的可用性。
+**修复验证**：SlicerService.cpp:15 已改用 `AudioUtil::openSndfile(path)`。
 
 ---
 
@@ -375,19 +327,17 @@ QFile file(path);
 
 ---
 
-### PATH-04: JsonHelper.cpp 多处使用 path.string() 拼接错误消息
+### PATH-04: ~~JsonHelper.cpp 多处使用 path.string() 拼接错误消息~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | 中 |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | JsonHelper.cpp:L10, L25, L29 |
+| **严重度** | ~~中~~ — 已修复 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`path.string()` 拼接错误消息，Windows 上 CJK 路径显示乱码。注意：`std::ifstream file(path)` 和 `std::ofstream file(path)` 在 MSVC 上接受 `std::filesystem::path`，文件打开本身没问题。
+**原描述**：`path.string()` 拼接错误消息，Windows 上 CJK 路径显示乱码。
 
-**修复方案**：使用 `PathUtils::fromStdPath(path).toStdString()` 或 `path.u8string()`。
-
-**风险项**：低风险修复。
+**修复验证**：JsonHelper.cpp 已移除所有 `path.string()` 调用。
 
 ---
 
@@ -743,10 +693,9 @@ QFile file(path);
 
 | ID | 描述 | 工作量 |
 |----|------|--------|
-| P09-01~07 | 7 处 QtConcurrent::run 缺少引擎存活令牌 | 中 |
-| PATH-01~02 | 2 处路径 I/O 在 Windows 上损坏 CJK 字符 | 中 |
-| P04-01~02 | 2 处错误缺少根因传播 | 小 |
+| PATH-01 | HFA 字典加载 path.string() 导致 CJK 路径失败 | 中 |
 | P02-01~02 | 2 处核心数据接口违反被动接口原则 | 大 |
+| P04-01 | MinLabelPage ASR 失败时错误消息缺少根因 | 小 |
 
 ### 中等优先级（中严重度，架构/规范问题）
 

@@ -1,6 +1,7 @@
 # Bug 与 Issue 审计报告
 
 **审计日期**：2026-05-08
+**更新日期**：2026-05-08（BUG-20~BUG-23 已修复）
 **验证日期**：2026-05-08（已对照源码逐项验证）
 **审计范围**：src/ 全目录
 **参考文档**：conventions-and-standards.md、human-decisions.md
@@ -9,75 +10,63 @@
 
 ## 汇总
 
-| 严重度 | 数量 |
-|--------|------|
-| 高 | 6 |
-| 中 | 8 |
-| 低 | 2 |
-| **合计** | **16** |
+| 严重度 | 未修复 | 已修复 |
+|--------|--------|--------|
+| 高 | 3 | 6 |
+| 中 | 7 | 3 |
+| 低 | 1 | 0 |
+| **合计** | **11** | **9** |
 
 > 注：初版 BUG-17/18（ServiceLocator::get 未做空指针检查）经源码验证后发现已有空指针检查，已移除。
+> 
+> 新增 BUG-20~BUG-23（2026-05-08）：phoneme 贯穿线显示/拖动、FA 层级绑定、PitchLabel 工具栏。
+> 
+> 已修复 BUG-01/02/03（存活令牌）、BUG-09（StatusBarBuilder）、BUG-20/21/22/23（贯穿线/FA层级/工具栏）（2026-05-08）。
 
 ---
 
-## BUG-01: PitchLabelerPage 缺少推理引擎存活令牌（Use-After-Free）
+## BUG-01: ~~PitchLabelerPage 缺少推理引擎存活令牌（Use-After-Free）~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | **高** |
+| **严重度** | ~~高~~ — 已修复 |
 | **违反原则** | P-09 |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | PitchLabelerPage.cpp:L514/L566/L824, PitchLabelerPage.h:L53-54 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`PitchLabelerPage` 在 `QtConcurrent::run` 的 lambda 中捕获了 `m_rmvpe` 和 `m_game` 的原始指针副本，但没有对应的存活令牌（对比 `PhonemeLabelerPage` 已正确实现 `m_hfaAlive`：L446 初始化，L553-554 检查，L251 store(false) + cancelAsyncTask）。仅使用 `QPointer<PitchLabelerPage>` 作为 guard，但这只保护页面对象本身，不保护引擎指针有效性。
+**原描述**：`PitchLabelerPage` 在 `QtConcurrent::run` 的 lambda 中捕获了 `m_rmvpe` 和 `m_game` 的原始指针副本，但没有对应的存活令牌。
 
-**复现场景**：在 PitchLabelerPage 执行音高提取时，切换到 Settings 页面更改模型配置触发 `modelInvalidated` 信号，后台线程继续使用已销毁的引擎。
-
-**修复方案**：为 `m_rmvpe` 和 `m_game` 各添加 `std::shared_ptr<std::atomic<bool>>` 存活令牌，在 `onModelInvalidated` 中置 false 并 reset，在 lambda 中检查令牌后再使用引擎。
-
-**风险项**：
-- 修复后仍存在 TOCTOU 间隙（见 TD-17），但已大幅降低崩溃概率
-- 需要确保 `onModelInvalidated` 槽在引擎销毁前执行
+**修复验证**：PitchLabelerPage.h:57-58 已添加 `m_rmvpeAlive` 和 `m_gameAlive` 存活令牌。
 
 ---
 
-## BUG-02: MinLabelPage 缺少 ASR 引擎存活令牌（Use-After-Free）
+## BUG-02: ~~MinLabelPage 缺少 ASR 引擎存活令牌（Use-After-Free）~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | **高** |
+| **严重度** | ~~高~~ — 已修复 |
 | **违反原则** | P-09 |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | MinLabelPage.cpp:L418/L495/L728, MinLabelPage.h:L42 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：与 BUG-01 相同的问题。`MinLabelPage` 在 `QtConcurrent::run` 中捕获 `m_asr` 原始指针，但没有存活令牌。`onModelInvalidated` 仅设置 `m_asr = nullptr`，不会阻止后台线程使用已销毁的 ASR 引擎。
+**原描述**：`MinLabelPage` 在 `QtConcurrent::run` 中捕获 `m_asr` 原始指针，但没有存活令牌。
 
-**复现场景**：批量 ASR 运行期间，切换到 Settings 页面更改模型配置。
-
-**修复方案**：同 BUG-01，添加 `m_asrAlive` 存活令牌。
-
-**风险项**：同 BUG-01。
+**修复验证**：MinLabelPage.h:45 已添加 `m_asrAlive`，MinLabelPage.h:57 已添加 `m_matchLyricAlive`。
 
 ---
 
-## BUG-03: ExportPage 后台任务持有引擎原始指针，onDeactivated 直接销毁引擎（Use-After-Free）
+## BUG-03: ~~ExportPage 后台任务持有引擎原始指针，onDeactivated 直接销毁引擎（Use-After-Free）~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | **高** |
+| **严重度** | ~~高~~ — 已修复 |
 | **违反原则** | P-09 |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | ExportPage.cpp:L588-596, L997-1002 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`ExportPage::onExport()` 在 `QtConcurrent::run` 中捕获 `m_hfa.get()`、`m_rmvpe.get()`、`m_game.get()` 的原始指针。但 `onDeactivated()` 直接 `m_hfa.reset()` / `m_rmvpe.reset()` / `m_game.reset()` 销毁引擎。注释"Engines are owned by ExportPage and persist until deactivation"说明了设计意图，但并未保证后台任务在 deactivation 前完成。
+**原描述**：`ExportPage::onExport()` 在 `QtConcurrent::run` 中捕获引擎原始指针，但 `onDeactivated()` 直接销毁引擎。
 
-**复现场景**：导出页面勾选"自动补全"开始导出，立即切换到其他页面，触发 `onDeactivated()`。
-
-**修复方案**：添加存活令牌；或在 `onDeactivated` 中等待后台任务完成后再销毁引擎；或使用 `QPointer` 守卫 + 原子标志。
-
-**风险项**：
-- 等待后台任务完成可能导致页面切换卡顿
-- 需要设计取消机制
+**修复验证**：ExportPage.h:69 已添加 `m_enginesAlive` 统一存活令牌。
 
 ---
 
@@ -173,20 +162,18 @@
 
 ---
 
-## BUG-09: MinLabelPage::createStatusBarContent 未使用 StatusBarBuilder
+## BUG-09: ~~MinLabelPage::createStatusBarContent 未使用 StatusBarBuilder~~ — ✅ 已修复
 
 | 属性 | 值 |
 |------|-----|
-| **严重度** | 中 |
+| **严重度** | ~~中~~ — 已修复 |
 | **违反原则** | D-39 |
-| **验证状态** | ✅ 已确认 |
-| **影响文件** | MinLabelPage.cpp:L270-285 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
 
-**描述**：`MinLabelPage::createStatusBarContent()` 手动创建布局和标签，并使用裸 `connect()` 而非 `StatusBarBuilder`，不符合 D-39 规定。
+**原描述**：`MinLabelPage::createStatusBarContent()` 手动创建布局和标签，并使用裸 `connect()` 而非 `StatusBarBuilder`。
 
-**修复方案**：迁移到 `StatusBarBuilder` 模式。
-
-**风险项**：低风险修复。
+**修复验证**：MinLabelPage.cpp:270-282 已迁移到 `StatusBarBuilder` 模式。
 
 ---
 
@@ -301,6 +288,88 @@
 
 ---
 
+## BUG-20: ~~Phoneme 激活层贯穿线未在子图区域显示~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **影响文件** | BoundaryOverlayWidget.cpp, AudioVisualizerContainer.cpp, PhonemeEditor.cpp |
+| **关联决策** | D-40 |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：移除 TierLabelArea（任务 28）后，active tier 的贯穿线未正确显示在子图区域。`removeTierLabelArea()` 设置 `m_tierLabelTotalHeight = 0`，但未同步更新 `BoundaryOverlayWidget` 的 `m_extraTopOffset` 以匹配编辑区高度。`repositionOverSplitter()` 使用 `totalTopOffset = 0`，导致 overlay 定位偏移，贯穿线可能被截断或不可见。
+
+**复现场景**：打开 PhonemeLabelerPage，加载有 grapheme+phoneme 层的音频，观察 active tier 的贯穿线是否贯穿 Waveform/Power/Spectrogram 子图。
+
+**修复方案**：见 D-40。
+
+---
+
+## BUG-21: ~~Phoneme 贯穿线在子图区域拖动变为滚动全图~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | D-28、D-35 |
+| **影响文件** | WaveformWidget.cpp, PowerWidget.cpp, SpectrogramWidget.cpp |
+| **关联决策** | D-41 |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：在 Phoneme 页面的子图区域（Waveform/Power/Spectrogram）点击贯穿线并拖动时，触发的是视口滚动（拖动整个图），而非边界线拖动。
+1. Chart widget 的 `paintEvent()` 未调用 `drawBoundaryOverlay()`，chart 自身不绘制边界线
+2. `BoundaryOverlayWidget` 设置 `WA_TransparentForMouseEvents`，鼠标事件穿透到 chart widget
+3. Chart widget 的 `hitTestBoundary()` 可能因 `m_boundaryModel` 状态或阈值问题返回 -1
+4. `mousePressEvent` 的 else 分支触发 `m_dragging = true`，`mouseMoveEvent` 调用 `m_viewport->scrollBy()` 滚动全图
+
+**复现场景**：在 PhonemeLabelerPage 加载音频后，点击 Waveform 区域显示的贯穿线并拖动——期望拖动边界线，实际拖动全图。
+
+**修复方案**：见 D-41。
+
+---
+
+## BUG-22: ~~Grapheme 层未正确获取 FA 对齐结果且边界未绑定其他层级~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | D-17、D-29 |
+| **影响文件** | PhonemeLabelerPage.cpp, TextGridDocument.cpp, DsTextTypes.h |
+| **关联决策** | D-42 |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：
+1. `buildFaLayers()` 只输出 word.start 作为 grapheme 边界，缺少 word.end，导致 grapheme 层区间不连续
+2. `applyFaResult()` 跳过 grapheme 层（`if (newLayer.name == "grapheme") continue;`），FA 产生的精确对齐边界被丢弃
+3. BindingGroup 只在 word.start == phone[0].start 时建立，word.end 与最后一个 phone 无绑定
+4. 拖动 grapheme 边界时只有部分边界同步移动，缺乏完整层级从属关系
+
+**复现场景**：执行 FA 后，grapheme 层边界未正确对齐音频内容；拖动 grapheme 边界时 phoneme 层对应边界不同步。
+
+**修复方案**：见 D-42。
+
+---
+
+## BUG-23: ~~PitchLabeler 工具栏缺失 GAME 和 F0 按钮 + 音频播放异常~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~中~~ — 已修复 |
+| **影响文件** | PitchLabelerPage.cpp |
+| **关联决策** | D-43 |
+| **修复日期** | 2026-05-08 |
+
+**原描述**：
+1. **工具栏缺失**：`PitchLabelerPage` 仅有 `createMenuBar()` 菜单栏，将"提取音高"和"提取 MIDI"置于 Processing 菜单中。用户期望在界面工具栏中直接看到这些按钮
+2. **音频播放异常**：`onSliceSelectedImpl()` 中 `loadAudio()` 仅在 `validatedAudioPath()` 返回非空时调用。如果路径验证失败（如工程文件中存储的路径已变更），即使音频实际存在也无法加载播放
+
+**复现场景**：
+1. 进入 PitchLabelerPage，期望在顶部工具栏看到"提取 F0"和"GAME"按钮——未找到
+2. 打开有音频的切片，音频无法播放（validatedAudioPath 返回空）
+
+**修复方案**：见 D-43。
+
+---
+
 ## BUG-19: ExportPage 后台线程中推理调用无异常保护
 
 | 属性 | 值 |
@@ -324,21 +393,26 @@
 
 | 类别 | 数量 | ID 列表 |
 |------|------|---------|
-| Use-After-Free / 悬空指针 | 3 | BUG-01, BUG-02, BUG-03 |
+| ~~Use-After-Free / 悬空指针~~ | ~~3~~ 已修复 | ~~BUG-01, BUG-02, BUG-03~~ |
 | Windows CJK 路径问题 | 3 | BUG-04, BUG-05, BUG-06 |
 | 竞态条件 / 线程安全 | 2 | BUG-11, BUG-19 |
 | 边界计算 / 行为不一致 | 2 | BUG-07, BUG-08 |
 | 错误传播 / 异常处理 | 3 | BUG-12, BUG-16, BUG-19 |
-| 生命周期 / 信号连接 | 1 | BUG-09 |
+| ~~生命周期 / 信号连接~~ | ~~1~~ 已修复 | ~~BUG-09~~ |
 | 异步规范违反 | 1 | BUG-13 |
 | 数据一致性 | 1 | BUG-14 |
 | 性能 / 设计问题 | 1 | BUG-15 |
+| ~~贯穿线显示/交互~~ | ~~2~~ 已修复 | ~~BUG-20, BUG-21~~ |
+| ~~FA 层级绑定~~ | ~~1~~ 已修复 | ~~BUG-22~~ |
+| ~~工具栏/音频播放~~ | ~~1~~ 已修复 | ~~BUG-23~~ |
 
 ---
 
 ## 优先修复建议
 
-1. **最紧急**：BUG-01, BUG-02, BUG-03（use-after-free，可能导致 0xC0000005 崩溃）
-2. **次紧急**：BUG-04, BUG-05（Windows CJK 路径，功能性缺陷，中文用户完全无法使用 HFA）
-3. **重要**：BUG-11, BUG-19（线程安全，批量操作场景下易触发）
-4. **改善**：BUG-07, BUG-12, BUG-13, BUG-16（错误处理和异步规范）
+1. **最紧急**：BUG-04, BUG-05（Windows CJK 路径，功能性缺陷，中文用户完全无法使用 HFA）
+2. **重要**：BUG-11, BUG-19（线程安全，批量操作场景下易触发）
+3. **高影响 UX**：BUG-20, BUG-21（phoneme 贯穿线显示和拖动，核心编辑功能异常）
+4. **功能完整性**：BUG-22（FA 层级绑定，影响 phoneme 编辑体验）
+5. **改善**：BUG-07, BUG-12, BUG-13, BUG-16（错误处理和异步规范）
+6. **便利性**：BUG-23（PitchLabel 工具栏和音频播放）

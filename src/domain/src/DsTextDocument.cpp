@@ -90,6 +90,14 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
             LayerDependency dep;
             dep.parentLayerIndex = jd.value("parent", -1);
             dep.childLayerIndex = jd.value("child", -1);
+            dep.parentStartBoundaryId = jd.value("parentStartBoundaryId", -1);
+            dep.parentEndBoundaryId = jd.value("parentEndBoundaryId", -1);
+            dep.childStartBoundaryId = jd.value("childStartBoundaryId", -1);
+            dep.childEndBoundaryId = jd.value("childEndBoundaryId", -1);
+            if (jd.contains("childBoundaryIds") && jd["childBoundaryIds"].is_array()) {
+                for (const auto &id : jd["childBoundaryIds"])
+                    dep.childBoundaryIds.push_back(id.get<int>());
+            }
             doc.dependencies.push_back(dep);
         }
     }
@@ -150,10 +158,20 @@ Result<void> DsTextDocument::save(const QString &path) const {
 
     j["dependencies"] = nlohmann::json::array();
     for (const auto &dep : dependencies) {
-        j["dependencies"].push_back({
-            {"parent", dep.parentLayerIndex},
-            {"child",  dep.childLayerIndex}
-        });
+        auto jd = nlohmann::json::object();
+        jd["parent"] = dep.parentLayerIndex;
+        jd["child"] = dep.childLayerIndex;
+        if (dep.parentStartBoundaryId >= 0)
+            jd["parentStartBoundaryId"] = dep.parentStartBoundaryId;
+        if (dep.parentEndBoundaryId >= 0)
+            jd["parentEndBoundaryId"] = dep.parentEndBoundaryId;
+        if (dep.childStartBoundaryId >= 0)
+            jd["childStartBoundaryId"] = dep.childStartBoundaryId;
+        if (dep.childEndBoundaryId >= 0)
+            jd["childEndBoundaryId"] = dep.childEndBoundaryId;
+        if (!dep.childBoundaryIds.empty())
+            jd["childBoundaryIds"] = dep.childBoundaryIds;
+        j["dependencies"].push_back(jd);
     }
 
     if (!meta.editedSteps.isEmpty()) {

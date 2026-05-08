@@ -327,7 +327,7 @@ dstools_add_library(my-lib STATIC
 - macOS HFS+ 使用 NFD（分解形式）Unicode，需通过 `dsfw::PathUtils::normalize()` 做 NFC 标准化
 - 路径比较前必须经过 normalize
 
-> 详见 [refactoring-roadmap-v2.md](refactoring-roadmap-v2.md) VII.1 统一路径管理模块。
+> 详见 PathUtils 的设计文档。
 
 ---
 

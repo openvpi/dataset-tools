@@ -47,8 +47,15 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     connect(m_extractPitchAction, &QAction::triggered, this, &PitchLabelerPage::onExtractPitch);
     connect(m_extractMidiAction, &QAction::triggered, this, &PitchLabelerPage::onExtractMidi);
 
-    m_editor->toolbar()->addAction(m_extractPitchAction);
-    m_editor->toolbar()->addAction(m_extractMidiAction);
+    auto *tb = m_editor->toolbar();
+    tb->addSeparator();
+    tb->addAction(m_extractPitchAction);
+    tb->addAction(m_extractMidiAction);
+    tb->addSeparator();
+    tb->addAction(m_editor->saveAction());
+    tb->addSeparator();
+    tb->addAction(m_editor->zoomInAction());
+    tb->addAction(m_editor->zoomOutAction());
 
     static const dstools::SettingsKey<QString> kShortcutSave("Shortcuts/save", "Ctrl+S");
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
@@ -120,7 +127,20 @@ void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
         return;
     }
 
-    const QString audioPath = source()->validatedAudioPath(sliceId);
+    QString audioPath = source()->audioPath(sliceId);
+    if (audioPath.isEmpty()) {
+        DSFW_LOG_WARN("audio", "No audio path for slice: " + sliceId.toStdString());
+    } else if (!QFile::exists(audioPath)) {
+        auto validPath = source()->validatedAudioPath(sliceId);
+        if (validPath.isEmpty()) {
+            DSFW_LOG_WARN("audio", "Audio file not found: " + audioPath.toStdString());
+            dsfw::widgets::ToastNotification::show(
+                this, dsfw::widgets::ToastType::Warning,
+                tr("音频文件未找到: %1").arg(audioPath));
+        } else {
+            audioPath = validPath;
+        }
+    }
 
     auto result = source()->loadSlice(sliceId);
     if (result) {

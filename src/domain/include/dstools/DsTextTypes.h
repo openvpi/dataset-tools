@@ -41,6 +41,11 @@ using BindingGroup = std::vector<int>;
 struct LayerDependency {
     int parentLayerIndex = -1;
     int childLayerIndex = -1;
+    int parentStartBoundaryId = -1;
+    int parentEndBoundaryId = -1;
+    int childStartBoundaryId = -1;
+    int childEndBoundaryId = -1;
+    std::vector<int> childBoundaryIds;
 };
 
 struct DsTextMeta {

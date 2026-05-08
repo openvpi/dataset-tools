@@ -3,7 +3,7 @@
 > 本文档记录所有由用户明确给出的设计决策，供后续实施参考。
 > 与其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-05-07
+> 最后更新：2026-05-08
 
 ---
 
@@ -734,6 +734,155 @@ void AudioVisualizerContainer::removeTierLabelArea();
 
 ---
 
+## D-40：移除 TierLabelArea 后贯穿线定位修复
+
+**决策**：`AudioVisualizerContainer::removeTierLabelArea()` 后，必须确保 `BoundaryOverlayWidget` 正确覆盖编辑区顶部位置，使 active tier 的贯穿线从编辑区顶部贯穿所有子图到底部。
+
+**根因**：`removeTierLabelArea()` 将 `TierLabelArea` 从布局中移除并设置 `m_tierLabelTotalHeight = 0`、`m_tierLabelRowHeight = 0`。但 `BoundaryOverlayWidget` 的 `repositionOverSplitter()` 使用 `totalTopOffset = m_tierLabelTotalHeight + m_extraTopOffset` 计算偏移——在 tier label 被移除后 `totalTopOffset` 可能为 0，导致 overlay 未正确覆盖到编辑区顶部。
+
+**具体修复**：
+1. `AudioVisualizerContainer::removeTierLabelArea()` 在移除 label area 后，应设置 `m_extraTopOffset = m_tierEditWidget ? m_tierEditWidget->height() : 0`（即编辑区高度）
+2. `BoundaryOverlayWidget::repositionOverSplitter()` 中，当 `m_tierLabelTotalHeight == 0` 时，确保 overlay 至少覆盖从编辑区顶部到底部的区域
+3. `PhonemeEditor::buildLayout()` 在 `removeTierLabelArea()` 后，调用 `m_container->boundaryOverlay()->repositionOverSplitter()` 强制刷新
+
+**影响范围**：
+- Slicer 不受影响（不调用 removeTierLabelArea）
+- PhonemeLabelerPage 的贯穿线显示恢复
+
+---
+
+## D-41：Chart widget 绘制边界线并正确响应拖拽
+
+**决策**：三个 chart widget（WaveformWidget、PowerWidget、SpectrogramWidget）的 `paintEvent()` 中必须调用 `drawBoundaryOverlay()`，使贯穿线在 chart 区域内有实际像素绘制（而非仅由透明 overlay 绘制），从而让鼠标事件能正确触发 `hitTestBoundary()`。
+
+**根因**：
+- `BoundaryOverlayWidget` 设置 `WA_TransparentForMouseEvents`，鼠标事件穿透到 chart widget
+- Chart widget 的 `paintEvent()` 未调用 `drawBoundaryOverlay()`，chart 自身无边界线
+- `hitTestBoundary()` 依赖 `m_boundaryModel` 搜索边界——虽然理论上可通过 model 找到边界，但由于无视觉反馈，用户感知为"点击贯穿线但没有反应"
+- 此外，`hitTestBoundary()` 可能在 active tier 索引无效（-1）或 `m_boundaryModel` 为 nullptr 时返回 -1，导致鼠标事件进入"滚动全图"分支
+
+**具体修改**：
+1. 在每个 chart widget 的 `paintEvent()` 末尾添加 `drawBoundaryOverlay(painter)`：
+   ```cpp
+   void WaveformWidget::paintEvent(QPaintEvent *) {
+       // ... 现有绘制代码 ...
+       if (m_boundaryOverlayEnabled && m_boundaryModel)
+           drawBoundaryOverlay(painter);
+   }
+   ```
+2. 将 `m_boundaryModel` 的设置从 `loadAudio()` 提前到 `buildLayout()` 或 widget 构造后
+3. 在 `mousePressEvent` 中增加 fallback：当 `hitTestBoundary()` 返回 -1 时，扫描所有层级边界计算到点击位置的距离，若最近边界在扩展命中区内则选择它
+4. 确保 D-28 原则贯彻实现——hit-test 搜索所有层级边界
+
+**影响范围**：
+- Chart widget 绘制性能增加极小开销（边界线条数通常 < 200）
+- Slicer 的贯穿线行为不受影响（Slicer 使用 SliceBoundaryModel）
+- PhonemeLabelerPage 和 LabelSuite 的 Phoneme 页面均受益
+
+---
+
+## D-42：FA 原生输出完整层级从属关系
+
+**决策**：`buildFaLayers()` 必须输出每个 word 的完整边界（同时包含 start 和 end），并为 word.end ↔ phone[end].end 建立 BindingGroup。新增 `LayerDependency` 数据结构保存 word→phone 的完整映射。`applyFaResult()` 不再跳过 grapheme 层，而是保存 FA 对齐后的 grapheme 边界。
+
+**根因**：
+- `buildFaLayers()` 当前只输出 word.start 作为 grapheme 边界，缺少 word.end
+- `applyFaResult()` 跳过 grapheme 层（`if (newLayer.name == "grapheme") continue;`），FA 对齐后的精确边界被丢弃
+- BindingGroup 只在 word.start == phone[0].start 时建立，word.end 与最后一个 phone 无绑定
+- 用户期望：FA 输出完整的层级依赖关系，grapheme 和 phoneme 的边界能绑定同步拖动
+
+**具体修改**：
+1. `buildFaLayers()` 为每个 word 输出两个 grapheme 边界（start 和 end）：
+   ```cpp
+   Boundary graphemeStart;
+   graphemeStart.pos = secToUs(word.start);
+   graphemeStart.text = QString::fromStdString(word.text);
+   
+   Boundary graphemeEnd;
+   graphemeEnd.pos = secToUs(word.end);
+   graphemeEnd.text.clear();  // end marker
+   
+   r.graphemeLayer.boundaries.push_back(graphemeStart);
+   r.graphemeLayer.boundaries.push_back(graphemeEnd);
+   
+   // 绑定 word.start ↔ phone[0].start
+   r.groups.push_back({graphemeStart.id, phone[0].id});
+   // 绑定 word.end ↔ phone[n].end
+   r.groups.push_back({graphemeEnd.id, phone[n].id});
+   ```
+2. 新增 `LayerDependency` 数据结构：
+   ```cpp
+   struct LayerDependency {
+       QString parentLayer;       // "grapheme"
+       QString childLayer;        // "phoneme"
+       int parentStartBoundaryId;
+       int parentEndBoundaryId;
+       int childStartBoundaryId;
+       int childEndBoundaryId;
+       std::vector<int> childBoundaryIds;  // 该 word 的所有 phone ID
+   };
+   ```
+3. `applyFaResult()` 将 FA 对齐后的 grapheme 层保存为新层（命名为 `fa_grapheme`），保留原始 minlabel grapheme 层作为 FA 输入源
+4. `readFaInput()` 始终从原始 minlabel `grapheme` 层读取（而不是 `fa_grapheme`）
+5. `DsTextDocument` 新增 `dependencies` 字段持久化层级关系
+
+**影响范围**：
+- 原始 grapheme 层保留不变（FA 输入源一致性）
+- 新增的 fa_grapheme 层提供对齐后的精确边界位置
+- LayerDependency 可用于跨层 clamp 的自动推导（D-17/D-29）
+- TextGridDocument 的 loadFromDsText 需解析 dependencies 设置跨层规则
+
+---
+
+## D-43：PitchLabelerPage 添加工具栏 + 音频播放修复
+
+**决策**：为 `PitchLabelerPage` 添加独立 `QToolBar`，包含提取 F0（RMVPE）、提取 MIDI（GAME）等按钮。同时修复 `onSliceSelectedImpl()` 中音频加载逻辑，确保有效音频路径能被无条件加载。
+
+**根因**：
+- 工具栏缺失：`PitchLabelerPage` 仅有 `createMenuBar()` 菜单栏，无 `QToolBar`
+- 音频播放问题：`onSliceSelectedImpl()` 中 `loadAudio()` 受 `audioPath.isEmpty()` 条件保护，`validatedAudioPath()` 返回空时跳过加载
+
+**具体修改**：
+1. 在 `PitchLabelerPage` 中创建 `QToolBar`，包含：
+   - 播放/暂停、停止按钮
+   - 分隔符
+   - 提取音高 F0 (RMVPE) 按钮
+   - 提取 MIDI (GAME) 按钮
+   - 分隔符
+   - 保存按钮
+   - Zoom In / Zoom Out
+2. 工具栏按钮使用 `m_extractPitchAction` 和 `m_extractMidiAction` 等已有 action
+3. 修复音频加载：
+   ```cpp
+   void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
+       // ... 加载标注数据 ...
+       
+       // 无条件加载音频
+       QString audioPath = source()->audioPath(sliceId);
+       if (audioPath.isEmpty()) {
+           DSFW_LOG_WARN("pitch", "No audio path for slice: " + sliceId);
+           return;
+       }
+       if (!QFileInfo::exists(audioPath)) {
+           auto validPath = source()->validatedAudioPath(sliceId);
+           if (validPath.isEmpty()) {
+               DSFW_LOG_WARN("pitch", "Audio file not found: " + audioPath);
+               return;
+           }
+           audioPath = validPath;
+       }
+       m_editor->loadAudio(audioPath, 0.0);
+   }
+   ```
+4. 使用 `QToolButton` + 资源 SVG 图标，风格与 `PhonemeLabelerPage` 保持一致
+
+**影响范围**：
+- 菜单栏 actions 不受影响（工具栏映射到同一 action，状态自动同步）
+- ShortcutManager 快捷键继续有效
+- PhonemeLabelerPage 的工具栏实现可作为参考模板
+
+---
+
 ## ADR 冲突解决
 
 | 冲突项 | 旧决策 | 新决策（以此为准） |
@@ -744,3 +893,7 @@ void AudioVisualizerContainer::removeTierLabelArea();
 | 可视化组件架构 | ADR-65：IBoundaryModel + phoneme-editor 组件复用 | D-14 + D-30：AudioVisualizerContainer 统一 UI + 组件自由显隐排序 |
 | 标签区域位置 | 旧设计中 TierEditWidget 在频谱图下方 | D-15：标签区域在刻度线下方、所有子图上方 |
 | 子图配置 | D-14：子图顺序可在 Settings 自定义 | D-30：显隐+顺序统一配置，checkbox 列表 + 拖拽排序 |
+| 贯穿线定位 | D-37：removeTierLabelArea 后贯穿线未正确延伸到子图区域 | D-40：移除后设置 m_extraTopOffset 确保贯穿线覆盖编辑区 |
+| Chart 边界绘制 | Chart widget 不绘制边界线，仅依赖透明 overlay | D-41：Chart widget paintEvent 调用 drawBoundaryOverlay |
+| FA 层级输出 | buildFaLayers 只输出 word.start 边界，applyFaResult 跳过 grapheme | D-42：输出完整 start/end 边界 + LayerDependency 结构 |
+| PitchLabel 工具栏 | PitchLabelerPage 仅有菜单栏，无工具栏 | D-43：添加 QToolBar 含 F0/GAME 按钮 |
