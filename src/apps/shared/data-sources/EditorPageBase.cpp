@@ -7,6 +7,8 @@
 
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
@@ -261,6 +263,20 @@ void EditorPageBase::cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveTo
         aliveToken->store(false);
     }
     aliveToken.reset();
+}
+
+// ── StatusBarBuilder ──────────────────────────────────────────────────────────
+
+EditorPageBase::StatusBarBuilder::StatusBarBuilder(QWidget *container)
+    : m_container(container) {
+    m_layout = new QHBoxLayout(container);
+    m_layout->setContentsMargins(0, 0, 0, 0);
+}
+
+QLabel *EditorPageBase::StatusBarBuilder::addLabel(const QString &text, int stretch) {
+    auto *label = new QLabel(text, m_container);
+    m_layout->addWidget(label, stretch);
+    return label;
 }
 
 } // namespace dstools

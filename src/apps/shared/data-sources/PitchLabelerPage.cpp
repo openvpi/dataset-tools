@@ -11,8 +11,6 @@
 #include <DSFile.h>
 
 #include <QCheckBox>
-#include <QHBoxLayout>
-#include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSplitter>
@@ -58,6 +56,7 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutABCompare("Shortcuts/abCompare", "Ctrl+B");
     static const dstools::SettingsKey<QString> kShortcutExtractPitch("Shortcuts/extractPitch", "F");
     static const dstools::SettingsKey<QString> kShortcutExtractMidi("Shortcuts/extractMidi", "M");
+    static const dstools::SettingsKey<QString> kShortcutPlayPause("Shortcuts/playPause", "Space");
 
     shortcutManager()->bind(m_editor->saveAction(), kShortcutSave,
                             tr("Save"), tr("File"));
@@ -77,6 +76,8 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
                             tr("Extract Pitch"), tr("Processing"));
     shortcutManager()->bind(m_extractMidiAction, kShortcutExtractMidi,
                             tr("Extract MIDI"), tr("Processing"));
+    shortcutManager()->bind(m_editor->playPauseAction(), kShortcutPlayPause,
+                            tr("Play/Pause"), tr("Playback"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
     shortcutManager()->setEnabled(false);
@@ -98,8 +99,14 @@ bool PitchLabelerPage::isDirty() const {
 }
 
 void PitchLabelerPage::onDeactivatedImpl() {
+    if (m_rmvpeAlive)
+        m_rmvpeAlive->store(false);
+    if (m_gameAlive)
+        m_gameAlive->store(false);
     m_rmvpe = nullptr;
     m_game = nullptr;
+    cancelAsyncTask(m_rmvpeAlive);
+    cancelAsyncTask(m_gameAlive);
 }
 
 void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
@@ -255,34 +262,30 @@ QMenuBar *PitchLabelerPage::createMenuBar(QWidget *parent) {
 
 QWidget *PitchLabelerPage::createStatusBarContent(QWidget *parent) {
     auto *container = new QWidget(parent);
-    auto *layout = new QHBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    StatusBarBuilder builder(container);
 
-    auto *sliceLabel = new QLabel(QStringLiteral("未选择切片"), container);
-    auto *posLabel = new QLabel(QStringLiteral("00:00.000"), container);
-    auto *zoomLabel = new QLabel(QStringLiteral("100%"), container);
-    auto *noteLabel = new QLabel(QStringLiteral("音符: 0"), container);
-    layout->addWidget(sliceLabel, 1);
-    layout->addWidget(posLabel);
-    layout->addWidget(zoomLabel);
-    layout->addWidget(noteLabel);
+    auto *sliceLabel = builder.addLabel(QStringLiteral("未选择切片"), 1);
+    auto *posLabel = builder.addLabel(QStringLiteral("00:00.000"));
+    auto *zoomLabel = builder.addLabel(QStringLiteral("100%"));
+    auto *noteLabel = builder.addLabel(QStringLiteral("音符: 0"));
 
-    connect(this, &PitchLabelerPage::sliceChanged, sliceLabel, [sliceLabel](const QString &id) {
+    builder.connect(this, &PitchLabelerPage::sliceChanged, sliceLabel,
+                    [sliceLabel](const QString &id) {
         sliceLabel->setText(id.isEmpty() ? QStringLiteral("未选择切片") : id);
     });
-    connect(m_editor, &pitchlabeler::PitchEditor::positionChanged,
-            this, [posLabel](double sec) {
+    builder.connect(m_editor, &pitchlabeler::PitchEditor::positionChanged, posLabel,
+                    [posLabel](double sec) {
         int minutes = static_cast<int>(sec) / 60;
         double seconds = sec - minutes * 60;
         posLabel->setText(QString("%1:%2").arg(minutes, 2, 10, QChar('0'))
                                           .arg(seconds, 6, 'f', 3, QChar('0')));
     });
-    connect(m_editor, &pitchlabeler::PitchEditor::zoomChanged,
-            this, [zoomLabel](int percent) {
+    builder.connect(m_editor, &pitchlabeler::PitchEditor::zoomChanged, zoomLabel,
+                    [zoomLabel](int percent) {
         zoomLabel->setText(QString::number(percent) + "%");
     });
-    connect(m_editor, &pitchlabeler::PitchEditor::noteCountChanged,
-            this, [noteLabel](int count) {
+    builder.connect(m_editor, &pitchlabeler::PitchEditor::noteCountChanged, noteLabel,
+                    [noteLabel](int count) {
         noteLabel->setText(QStringLiteral("音符: %1").arg(count));
     });
 
@@ -319,8 +322,10 @@ void PitchLabelerPage::ensureRmvpeEngine() {
     auto typeId = registerModelType("pitch_extraction");
     auto *provider = mm->provider(typeId);
     auto *rmvpeProvider = dynamic_cast<InferenceModelProvider<Rmvpe::Rmvpe> *>(provider);
-    if (rmvpeProvider && rmvpeProvider->engine().is_open())
+    if (rmvpeProvider && rmvpeProvider->engine().is_open()) {
         m_rmvpe = &rmvpeProvider->engine();
+        m_rmvpeAlive = std::make_shared<std::atomic<bool>>(true);
+    }
 }
 
 void PitchLabelerPage::ensureGameEngine() {
@@ -353,15 +358,26 @@ void PitchLabelerPage::ensureGameEngine() {
     auto typeId = registerModelType("midi_transcription");
     auto *provider = mm->provider(typeId);
     auto *gameProvider = dynamic_cast<InferenceModelProvider<Game::Game> *>(provider);
-    if (gameProvider && gameProvider->engine().isOpen())
+    if (gameProvider && gameProvider->engine().isOpen()) {
         m_game = &gameProvider->engine();
+        m_gameAlive = std::make_shared<std::atomic<bool>>(true);
+    }
 }
 
 void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
-    if (taskKey == QStringLiteral("pitch_extraction"))
+    if (taskKey == QStringLiteral("pitch_extraction")) {
+        if (m_rmvpeAlive)
+            m_rmvpeAlive->store(false);
         m_rmvpe = nullptr;
-    else if (taskKey == QStringLiteral("midi_transcription"))
+        cancelAsyncTask(m_rmvpeAlive);
+        DSFW_LOG_WARN("infer", "Pitch extraction task cancelled: model invalidated");
+    } else if (taskKey == QStringLiteral("midi_transcription")) {
+        if (m_gameAlive)
+            m_gameAlive->store(false);
         m_game = nullptr;
+        cancelAsyncTask(m_gameAlive);
+        DSFW_LOG_WARN("infer", "MIDI transcription task cancelled: model invalidated");
+    }
 }
 
 void PitchLabelerPage::ensureRmvpeEngineAsync(std::function<void()> onReady) {
@@ -512,9 +528,14 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
     m_inferRunning = true;
     DSFW_LOG_INFO("infer", ("Pitch extraction started: " + sliceId.toStdString()).c_str());
     auto *rmvpe = m_rmvpe;
+    auto rmvpeAlive = m_rmvpeAlive;
     QPointer<PitchLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([rmvpe, audioPath, sliceId, guard]() {
+    (void) QtConcurrent::run([rmvpe, rmvpeAlive, audioPath, sliceId, guard]() {
+        if (!rmvpeAlive || !*rmvpeAlive)
+            return;
+        if (!rmvpe)
+            return;
         std::vector<Rmvpe::RmvpeRes> results;
         auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
 
@@ -564,9 +585,14 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
     m_inferRunning = true;
     DSFW_LOG_INFO("infer", ("MIDI transcription started: " + sliceId.toStdString()).c_str());
     auto *game = m_game;
+    auto gameAlive = m_gameAlive;
     QPointer<PitchLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([game, audioPath, sliceId, guard]() {
+    (void) QtConcurrent::run([game, gameAlive, audioPath, sliceId, guard]() {
+        if (!gameAlive || !*gameAlive)
+            return;
+        if (!game)
+            return;
         std::vector<Game::GameNote> notes;
         auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
 
@@ -810,11 +836,13 @@ void PitchLabelerPage::onBatchExtract() {
 
     auto *rmvpe = m_rmvpe;
     auto *game = m_game;
+    auto rmvpeAlive = m_rmvpeAlive;
+    auto gameAlive = m_gameAlive;
     auto *src = source();
     QPointer<PitchLabelerPage> guard(this);
 
     connect(dlg, &BatchProcessDialog::started, this,
-            [dlg, rmvpe, game, src, ids, guard, extractPitch, extractMidi, skipExisting]() {
+            [dlg, rmvpe, game, rmvpeAlive, gameAlive, src, ids, guard, extractPitch, extractMidi, skipExisting]() {
         if (!guard) {
             dlg->finish(0, 0, 0);
             return;
@@ -824,13 +852,16 @@ void PitchLabelerPage::onBatchExtract() {
         bool doMidi = extractMidi->isChecked();
         bool skip = skipExisting->isChecked();
 
-        (void) QtConcurrent::run([dlg, rmvpe, game, src, ids, guard, doPitch, doMidi, skip]() {
+        (void) QtConcurrent::run([dlg, rmvpe, game, rmvpeAlive, gameAlive, src, ids, guard, doPitch, doMidi, skip]() {
             int processed = 0;
             int skipped = 0;
             int errors = 0;
             int idx = 0;
             for (const auto &sliceId : ids) {
                 if (dlg->isCancelled())
+                    break;
+                if ((doPitch && (!rmvpeAlive || !*rmvpeAlive)) ||
+                    (doMidi && (!gameAlive || !*gameAlive)))
                     break;
 
                 QMetaObject::invokeMethod(dlg, [dlg, idx, total = ids.size()]() {

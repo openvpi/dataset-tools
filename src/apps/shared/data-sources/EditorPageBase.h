@@ -17,6 +17,8 @@
 class QAction;
 class QMenuBar;
 class QSplitter;
+class QLabel;
+class QHBoxLayout;
 
 namespace dstools {
 
@@ -154,6 +156,31 @@ protected:
 
     /// Stop the auto-save timer (called from onDeactivated).
     void stopAutoSaveTimer();
+
+    // ── Status bar builder ──
+
+    /// Helper for building status bar content in createStatusBarContent().
+    /// Ensures all signal connections use the target widget as context,
+    /// so connections are automatically broken when the widget is destroyed
+    /// during page switches (AppShell::rebuildStatusBar calls deleteLater).
+    class StatusBarBuilder {
+    public:
+        explicit StatusBarBuilder(QWidget *container);
+
+        QLabel *addLabel(const QString &text, int stretch = 0);
+
+        template<typename Sender, typename Signal, typename Widget, typename Func>
+        QMetaObject::Connection connect(Sender *sender, Signal signal,
+                                         Widget *widget, Func &&func) {
+            return QObject::connect(sender, signal, widget, std::forward<Func>(func));
+        }
+
+        QWidget *container() const { return m_container; }
+
+    private:
+        QWidget *m_container;
+        QHBoxLayout *m_layout;
+    };
 
 private:
     SliceListPanel *m_sliceList = nullptr;

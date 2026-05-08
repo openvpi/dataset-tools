@@ -78,6 +78,8 @@ public:
     [[nodiscard]] QAction *zoomOutAction() const { return m_actZoomOut; }
     [[nodiscard]] QAction *zoomResetAction() const { return m_actZoomReset; }
     [[nodiscard]] QAction *abCompareAction() const { return m_actABCompare; }
+    [[nodiscard]] QAction *playPauseAction() const { return m_actPlayPause; }
+    [[nodiscard]] QAction *stopAction() const { return m_actStop; }
 
     // --- A/B comparison ---
     void setOriginalF0(const std::vector<int32_t> &f0);

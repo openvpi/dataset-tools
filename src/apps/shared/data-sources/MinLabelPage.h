@@ -2,7 +2,9 @@
 
 #include "EditorPageBase.h"
 
+#include <atomic>
 #include <functional>
+#include <memory>
 
 #include <MinLabelEditor.h>
 
@@ -40,6 +42,7 @@ protected:
 
 private:
     LyricFA::Asr *m_asr = nullptr;
+    std::shared_ptr<std::atomic<bool>> m_asrAlive;
     IModelManager *m_modelManager = nullptr;
 
     Minlabel::MinLabelEditor *m_editor = nullptr;
@@ -51,6 +54,7 @@ private:
     QAction *m_lyricFaAction = nullptr;
 
     std::unique_ptr<LyricFA::MatchLyric> m_matchLyric;
+    std::shared_ptr<std::atomic<bool>> m_matchLyricAlive;
 
     void onRunAsr();
     void onBatchAsr();

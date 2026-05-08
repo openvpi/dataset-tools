@@ -10,7 +10,6 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -104,6 +103,7 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
     static const dstools::SettingsKey<QString> kShortcutRedo("Shortcuts/redo", "Ctrl+Y");
     static const dstools::SettingsKey<QString> kShortcutFA("Shortcuts/fa", "F");
+    static const dstools::SettingsKey<QString> kShortcutPlayPause("Shortcuts/playPause", "Space");
 
     shortcutManager()->bind(m_editor->saveAction(), kShortcutSave,
                             tr("Save"), tr("File"));
@@ -113,6 +113,8 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
                             tr("Redo"), tr("Edit"));
     shortcutManager()->bind(m_faAction, kShortcutFA,
                             tr("Force Align"), tr("Processing"));
+    shortcutManager()->bind(m_editor->playPauseAction(), kShortcutPlayPause,
+                            tr("Play/Pause"), tr("Playback"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
     shortcutManager()->setEnabled(false);
@@ -149,10 +151,21 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
     if (result)
         dstext = std::move(result.value());
 
+    IntervalLayer rawTextLayer;
+    for (const auto &layer : dstext.layers) {
+        if (layer.name == QStringLiteral("raw_text")) {
+            rawTextLayer = layer;
+            break;
+        }
+    }
+
     auto layers = doc->toDsText();
     dstext.layers.clear();
     for (const auto &layer : layers)
         dstext.layers.push_back(layer);
+
+    if (!rawTextLayer.name.isEmpty())
+        dstext.layers.push_back(std::move(rawTextLayer));
 
     // Preserve binding groups from the current document
     dstext.groups = doc->bindingGroups();
@@ -176,8 +189,11 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     if (result && !result.value().layers.empty()) {
         const auto &doc = result.value();
         QList<IntervalLayer> layers;
-        for (const auto &layer : doc.layers)
+        for (const auto &layer : doc.layers) {
+            if (layer.name == QStringLiteral("raw_text"))
+                continue;
             layers.append(layer);
+        }
 
         TimePos duration = 0;
         if (doc.audio.out > doc.audio.in)
@@ -354,27 +370,19 @@ QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
 }
 
 QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
-    disconnect(m_sliceLabelConn);
-    disconnect(m_posLabelConn);
-
     auto *container = new QWidget(parent);
-    auto *layout = new QHBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    StatusBarBuilder builder(container);
 
-    auto *sliceLabel = new QLabel(tr("No slice selected"), container);
-    auto *posLabel = new QLabel(QStringLiteral("0.000s"), container);
-    layout->addWidget(sliceLabel, 1);
-    layout->addWidget(posLabel);
+    auto *sliceLabel = builder.addLabel(tr("No slice selected"), 1);
+    auto *posLabel = builder.addLabel(QStringLiteral("0.000s"));
 
-    m_sliceLabelConn = connect(this, &PhonemeLabelerPage::sliceChanged, sliceLabel,
-                               [this, sliceLabel](const QString &id) {
+    builder.connect(this, &PhonemeLabelerPage::sliceChanged, sliceLabel,
+                    [this, sliceLabel](const QString &id) {
         sliceLabel->setText(id.isEmpty() ? tr("No slice selected") : id);
     });
-    QPointer<QLabel> posLabelGuard(posLabel);
-    m_posLabelConn = connect(m_editor, &phonemelabeler::PhonemeEditor::positionChanged,
-            this, [posLabelGuard](double sec) {
-        if (posLabelGuard)
-            posLabelGuard->setText(QString::number(sec, 'f', 3) + "s");
+    builder.connect(m_editor, &phonemelabeler::PhonemeEditor::positionChanged, posLabel,
+                    [posLabel](double sec) {
+        posLabel->setText(QString::number(sec, 'f', 3) + "s");
     });
 
     return container;
@@ -632,8 +640,11 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
 
     if (sliceId == currentSliceId()) {
         QList<IntervalLayer> allLayers;
-        for (const auto &layer : doc.layers)
+        for (const auto &layer : doc.layers) {
+            if (layer.name == QStringLiteral("raw_text"))
+                continue;
             allLayers.append(layer);
+        }
 
         // Use document's audio duration, falling back to viewport's audio duration
         TimePos duration = 0;

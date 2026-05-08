@@ -3,7 +3,9 @@
 #include "EditorPageBase.h"
 #include <dstools/PhNumCalculator.h>
 
+#include <atomic>
 #include <functional>
+#include <memory>
 
 #include <PitchEditor.h>
 
@@ -52,6 +54,8 @@ private:
 
     Rmvpe::Rmvpe *m_rmvpe = nullptr;
     Game::Game *m_game = nullptr;
+    std::shared_ptr<std::atomic<bool>> m_rmvpeAlive;
+    std::shared_ptr<std::atomic<bool>> m_gameAlive;
     PhNumCalculator m_phNumCalc;
     bool m_inferRunning = false;
 
