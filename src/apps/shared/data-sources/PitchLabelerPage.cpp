@@ -47,6 +47,9 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
     connect(m_extractPitchAction, &QAction::triggered, this, &PitchLabelerPage::onExtractPitch);
     connect(m_extractMidiAction, &QAction::triggered, this, &PitchLabelerPage::onExtractMidi);
 
+    m_editor->toolbar()->addAction(m_extractPitchAction);
+    m_editor->toolbar()->addAction(m_extractMidiAction);
+
     static const dstools::SettingsKey<QString> kShortcutSave("Shortcuts/save", "Ctrl+S");
     static const dstools::SettingsKey<QString> kShortcutUndo("Shortcuts/undo", "Ctrl+Z");
     static const dstools::SettingsKey<QString> kShortcutRedo("Shortcuts/redo", "Ctrl+Y");

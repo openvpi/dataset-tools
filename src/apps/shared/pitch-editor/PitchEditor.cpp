@@ -185,11 +185,11 @@ void PitchEditor::buildLayout() {
     contentLayout->setSpacing(0);
 
     // Toolbar
-    auto *toolbar = new QToolBar();
-    toolbar->setMovable(false);
-    toolbar->setFloatable(false);
-    toolbar->setIconSize(QSize(18, 18));
-    toolbar->setStyleSheet(
+    m_toolbar = new QToolBar();
+    m_toolbar->setMovable(false);
+    m_toolbar->setFloatable(false);
+    m_toolbar->setIconSize(QSize(18, 18));
+    m_toolbar->setStyleSheet(
         "QToolBar { background: #2A2A36; border-bottom: 1px solid #33333E; spacing: 4px; padding: 2px 6px; }");
 
     static const QString toolBtnStyle = QStringLiteral(
@@ -203,51 +203,51 @@ void PitchEditor::buildLayout() {
     m_btnToolSelect->setCheckable(true);
     m_btnToolSelect->setChecked(true);
     m_btnToolSelect->setStyleSheet(toolBtnStyle);
-    toolbar->addWidget(m_btnToolSelect);
+    m_toolbar->addWidget(m_btnToolSelect);
 
     m_btnToolModulation = new QToolButton();
     m_btnToolModulation->setText(QStringLiteral("≡ 颤音调制"));
     m_btnToolModulation->setToolTip(QStringLiteral("颤音调制工具 (M)"));
     m_btnToolModulation->setCheckable(true);
     m_btnToolModulation->setStyleSheet(toolBtnStyle);
-    toolbar->addWidget(m_btnToolModulation);
+    m_toolbar->addWidget(m_btnToolModulation);
 
     m_btnToolDrift = new QToolButton();
     m_btnToolDrift->setText(QStringLiteral("↕ 音高偏移"));
     m_btnToolDrift->setToolTip(QStringLiteral("音高偏移工具 (D)"));
     m_btnToolDrift->setCheckable(true);
     m_btnToolDrift->setStyleSheet(toolBtnStyle);
-    toolbar->addWidget(m_btnToolDrift);
+    m_toolbar->addWidget(m_btnToolDrift);
 
     m_btnToolAudition = new QToolButton();
     m_btnToolAudition->setText(QStringLiteral("✎ 试听"));
     m_btnToolAudition->setToolTip(QStringLiteral("试听工具"));
     m_btnToolAudition->setCheckable(true);
     m_btnToolAudition->setStyleSheet(toolBtnStyle);
-    toolbar->addWidget(m_btnToolAudition);
+    m_toolbar->addWidget(m_btnToolAudition);
 
     auto *toolbarSpacer = new QWidget();
     toolbarSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    toolbar->addWidget(toolbarSpacer);
+    m_toolbar->addWidget(toolbarSpacer);
 
     m_actPlayPause = new QAction(this);
     m_actPlayPause->setIcon(QIcon(":/icons/play.svg"));
     m_actPlayPause->setStatusTip(QStringLiteral("播放/暂停 (Space)"));
-    toolbar->addAction(m_actPlayPause);
+    m_toolbar->addAction(m_actPlayPause);
 
     m_actStop = new QAction(this);
     m_actStop->setIcon(QIcon(":/icons/stop.svg"));
     m_actStop->setStatusTip(QStringLiteral("停止 (Escape)"));
-    toolbar->addAction(m_actStop);
+    m_toolbar->addAction(m_actStop);
 
-    toolbar->addSeparator();
+    m_toolbar->addSeparator();
 
     m_btnWaveformToggle = new QToolButton();
     m_btnWaveformToggle->setIcon(QIcon(":/icons/audio.svg"));
     m_btnWaveformToggle->setToolTip(QStringLiteral("切换波形显示"));
     m_btnWaveformToggle->setCheckable(true);
     m_btnWaveformToggle->setChecked(true);
-    toolbar->addWidget(m_btnWaveformToggle);
+    m_toolbar->addWidget(m_btnWaveformToggle);
 
     m_volumeSlider = new QSlider(Qt::Horizontal);
     m_volumeSlider->setRange(0, 100);
@@ -257,11 +257,11 @@ void PitchEditor::buildLayout() {
         "QSlider { margin: 0 4px; }"
         "QSlider::groove:horizontal { background: #33333E; height: 4px; border-radius: 2px; }"
         "QSlider::handle:horizontal { background: #4A90D9; width: 10px; margin: -3px 0; border-radius: 5px; }");
-    toolbar->addWidget(m_volumeSlider);
+    m_toolbar->addWidget(m_volumeSlider);
 
     m_volumeLabel = new QLabel(QStringLiteral("100%"));
     m_volumeLabel->setStyleSheet("color: #9898A8; font-size: 11px; margin-left: 2px;");
-    toolbar->addWidget(m_volumeLabel);
+    m_toolbar->addWidget(m_volumeLabel);
 
     connect(m_volumeSlider, &QSlider::valueChanged, this, [this](int value) {
         m_volumeLabel->setText(QString::number(value) + QStringLiteral("%"));
@@ -287,7 +287,7 @@ void PitchEditor::buildLayout() {
         setToolMode(ui::ToolDrift);
     });
 
-    contentLayout->addWidget(toolbar);
+    contentLayout->addWidget(m_toolbar);
 
     // Playback progress
     m_playbackProgressWidget = new QWidget();
@@ -429,6 +429,8 @@ void PitchEditor::connectSignals() {
     connect(m_actPlayPause, &QAction::triggered, this, &PitchEditor::onPlayPause);
     connect(m_actStop, &QAction::triggered, this, &PitchEditor::onStop);
     connect(m_playWidget, &dstools::widgets::PlayWidget::playheadChanged, this, &PitchEditor::updatePlayheadPosition);
+    connect(m_playWidget, &dstools::widgets::PlayWidget::playRequested, this, &PitchEditor::updatePlaybackState);
+    connect(m_playWidget, &dstools::widgets::PlayWidget::playStopped, this, &PitchEditor::updatePlaybackState);
 
     // Seek via progress slider
     connect(m_playbackProgressSlider, &QSlider::valueChanged, this, [this](int value) {

@@ -11,6 +11,7 @@
 #include <QSlider>
 #include <QSplitter>
 #include <QStackedWidget>
+#include <QToolBar>
 #include <QToolButton>
 #include <QUndoStack>
 #include <QWidget>
@@ -62,6 +63,9 @@ public:
 
     /// Access the play widget.
     [[nodiscard]] dstools::widgets::PlayWidget *playWidget() const { return m_playWidget; }
+
+    /// Access the toolbar (for embedding page-level actions).
+    [[nodiscard]] QToolBar *toolbar() const { return m_toolbar; }
 
     /// Access the piano roll view.
     [[nodiscard]] ui::PianoRollView *pianoRoll() const { return m_pianoRoll; }
@@ -117,6 +121,7 @@ private:
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
 
     // UI Components
+    QToolBar *m_toolbar = nullptr;
     QStackedWidget *m_mainStack = nullptr;
     QWidget *m_emptyPage = nullptr;
     QSplitter *m_rightSplitter = nullptr;
