@@ -260,18 +260,6 @@ void PhonemeEditor::buildToolbar() {
     m_actSnapToggle->setChecked(m_snapEnabled);
     m_actSnapToggle->setToolTip(tr("吸附：释放边界时自动对齐到附近其他层的边界"));
 
-    m_actActiveTierBoundaries = m_toolbar->addAction(tr("TierLines"), this, [this]() {
-        auto *overlay = m_container->boundaryOverlay();
-        if (overlay) {
-            bool current = overlay->activeTierOnlyBoundaries();
-            overlay->setActiveTierOnlyBoundaries(!current);
-            m_actActiveTierBoundaries->setChecked(!current);
-        }
-    });
-    m_actActiveTierBoundaries->setCheckable(true);
-    m_actActiveTierBoundaries->setChecked(false);
-    m_actActiveTierBoundaries->setToolTip(tr("仅显示活跃层贯穿线：开启后仅活跃层边界线贯穿所有子图"));
-
     // Apply distinct styling to Bind/Snap toggle buttons
     static const QString kToggleStyle = QStringLiteral(
         "QToolButton:checked {"
@@ -349,6 +337,8 @@ void PhonemeEditor::buildLayout() {
 
     m_mainSplitter->setStretchFactor(0, 1);
     m_mainSplitter->setStretchFactor(1, 0);
+
+    m_container->removeTierLabelArea();
 }
 
 void PhonemeEditor::connectSignals() {
@@ -366,6 +356,8 @@ void PhonemeEditor::connectSignals() {
             QString name = m_document->tierName(t);
             if (name.isEmpty())
                 name = QStringLiteral("Tier %1").arg(t + 1);
+            if (name == QStringLiteral("raw_text"))
+                continue;
             m_tierCombo->addItem(name);
         }
         if (m_document->activeTierIndex() >= 0 && m_document->activeTierIndex() < m_tierCombo->count())

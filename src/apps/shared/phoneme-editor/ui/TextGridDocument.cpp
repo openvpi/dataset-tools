@@ -37,7 +37,7 @@ bool TextGridDocument::load(const QString &path) {
         static_cast<unsigned char>(data[0]) == 0xFF &&
         static_cast<unsigned char>(data[1]) == 0xFE) {
         // UTF-16 LE BOM
-        qWarning() << "TextGrid file has UTF-16 LE encoding, converting to UTF-8:" << path;
+        DSFW_LOG_WARN("io", ("TextGrid file has UTF-16 LE encoding, converting to UTF-8: " + path.toStdString()).c_str());
         auto decoder = QStringDecoder(QStringDecoder::Utf16LE);
         QString text = decoder(data.mid(2));
         utf8Content = text.toStdString();
@@ -45,7 +45,7 @@ bool TextGridDocument::load(const QString &path) {
                static_cast<unsigned char>(data[0]) == 0xFE &&
                static_cast<unsigned char>(data[1]) == 0xFF) {
         // UTF-16 BE BOM
-        qWarning() << "TextGrid file has UTF-16 BE encoding, converting to UTF-8:" << path;
+        DSFW_LOG_WARN("io", ("TextGrid file has UTF-16 BE encoding, converting to UTF-8: " + path.toStdString()).c_str());
         auto decoder = QStringDecoder(QStringDecoder::Utf16BE);
         QString text = decoder(data.mid(2));
         utf8Content = text.toStdString();
@@ -54,7 +54,7 @@ bool TextGridDocument::load(const QString &path) {
                static_cast<unsigned char>(data[1]) == 0xBB &&
                static_cast<unsigned char>(data[2]) == 0xBF) {
         // UTF-8 BOM — strip it
-        qWarning() << "TextGrid file has UTF-8 BOM, stripping:" << path;
+        DSFW_LOG_WARN("io", ("TextGrid file has UTF-8 BOM, stripping: " + path.toStdString()).c_str());
         utf8Content = std::string(data.constData() + 3, data.size() - 3);
     } else if (data.size() >= 4) {
         // Check for UTF-16 without BOM by looking for null byte patterns
@@ -62,12 +62,12 @@ bool TextGridDocument::load(const QString &path) {
         // ASCII text in UTF-16BE: 0x00, char, 0x00, char
         const auto *bytes = reinterpret_cast<const unsigned char *>(data.constData());
         if (bytes[0] != 0 && bytes[1] == 0 && bytes[2] != 0 && bytes[3] == 0) {
-            qWarning() << "TextGrid file appears to be UTF-16 LE (no BOM), converting to UTF-8:" << path;
+            DSFW_LOG_WARN("io", ("TextGrid file appears to be UTF-16 LE (no BOM), converting to UTF-8: " + path.toStdString()).c_str());
             auto decoder = QStringDecoder(QStringDecoder::Utf16LE);
             QString text = decoder(data);
             utf8Content = text.toStdString();
         } else if (bytes[0] == 0 && bytes[1] != 0 && bytes[2] == 0 && bytes[3] != 0) {
-            qWarning() << "TextGrid file appears to be UTF-16 BE (no BOM), converting to UTF-8:" << path;
+            DSFW_LOG_WARN("io", ("TextGrid file appears to be UTF-16 BE (no BOM), converting to UTF-8: " + path.toStdString()).c_str());
             auto decoder = QStringDecoder(QStringDecoder::Utf16BE);
             QString text = decoder(data);
             utf8Content = text.toStdString();
@@ -85,7 +85,7 @@ bool TextGridDocument::load(const QString &path) {
         textgrid::Parser parser(iss);
         m_textGrid = parser.Parse();
     } catch (const std::exception &e) {
-        qWarning() << "Failed to parse TextGrid:" << e.what();
+        DSFW_LOG_ERROR("io", ("Failed to parse TextGrid: " + std::string(e.what())).c_str());
         return false;
     }
 
@@ -99,27 +99,28 @@ bool TextGridDocument::load(const QString &path) {
 }
 
 bool TextGridDocument::save(const QString &path) {
+    std::string content;
     try {
         std::ostringstream oss;
         oss << m_textGrid;
-        const std::string content = oss.str();
-
-        QFile file(path);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QMessageBox::warning(nullptr, tr("Error"), tr("Failed to save file: %1").arg(file.errorString()));
-            return false;
-        }
-        file.write(QByteArray::fromStdString(content));
-        file.close();
-
-        m_filePath = path;
-        m_modified = false;
-        emit modifiedChanged(false);
-        return true;
+        content = oss.str();
     } catch (const std::exception &e) {
-        qWarning() << "Failed to save TextGrid:" << e.what();
+        DSFW_LOG_ERROR("io", ("Failed to serialize TextGrid: " + std::string(e.what())).c_str());
         return false;
     }
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(nullptr, tr("Error"), tr("Failed to save file: %1").arg(file.errorString()));
+        return false;
+    }
+    file.write(QByteArray::fromStdString(content));
+    file.close();
+
+    m_filePath = path;
+    m_modified = false;
+    emit modifiedChanged(false);
+    return true;
 }
 
 int TextGridDocument::tierCount() const {
@@ -399,7 +400,7 @@ void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePo
             }
             if (hasCjk) {
                 tierName = QStringLiteral("grapheme (含中文)");
-                DSFW_LOG_WARN("data", ("Grapheme layer contains CJK characters in " + layer.name.toStdString()).c_str());
+                DSFW_LOG_WARN("io", ("Grapheme layer contains CJK characters in " + layer.name.toStdString()).c_str());
             }
         }
 

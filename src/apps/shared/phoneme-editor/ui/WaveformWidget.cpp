@@ -2,6 +2,7 @@
 #include "IBoundaryModel.h"
 #include "BoundaryDragController.h"
 #include "commands/BoundaryCommands.h"
+#include <dsfw/Log.h>
 
 #include <QPainter>
 #include <QPaintEvent>
@@ -51,7 +52,7 @@ void WaveformWidget::setAudioData(const std::vector<float> &samples, int sampleR
 void WaveformWidget::loadAudio(const QString &path) {
     dstools::audio::AudioDecoder decoder;
     if (!decoder.open(path)) {
-        qWarning() << "Failed to open audio file:" << path;
+        DSFW_LOG_WARN("audio", ("Failed to open audio file: " + path.toStdString()).c_str());
         return;
     }
 
