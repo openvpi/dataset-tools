@@ -1,6 +1,7 @@
 #include "ExportPage.h"
 #include "ProjectDataSource.h"
 
+#include <dsfw/Log.h>
 #include <dsfw/PipelineContext.h>
 #include <dsfw/Theme.h>
 #include <dstools/DsDocument.h>
@@ -308,6 +309,8 @@ void ExportPage::ensureEngines() {
 
     const auto &defaults = m_source->project()->defaults();
 
+    bool anyEngineLoaded = false;
+
     // HubertFA
     if (!m_hfa) {
         auto it = defaults.taskModels.find(QStringLiteral("phoneme_alignment"));
@@ -321,7 +324,11 @@ void ExportPage::ensureEngines() {
             auto result = m_hfa->load(it->second.modelPath.toStdWString(), provider, it->second.deviceId);
             if (!result)
                 m_hfa.reset();
+            else
+                anyEngineLoaded = true;
         }
+    } else {
+        anyEngineLoaded = true;
     }
 
     // RMVPE
@@ -337,7 +344,11 @@ void ExportPage::ensureEngines() {
             auto result = m_rmvpe->load(it->second.modelPath.toStdWString(), provider, it->second.deviceId);
             if (!result)
                 m_rmvpe.reset();
+            else
+                anyEngineLoaded = true;
         }
+    } else {
+        anyEngineLoaded = true;
     }
 
     // GAME
@@ -353,8 +364,15 @@ void ExportPage::ensureEngines() {
             auto result = m_game->loadModel(it->second.modelPath.toStdWString(), provider, it->second.deviceId);
             if (!result)
                 m_game.reset();
+            else
+                anyEngineLoaded = true;
         }
+    } else {
+        anyEngineLoaded = true;
     }
+
+    if (anyEngineLoaded && !m_enginesAlive)
+        m_enginesAlive = std::make_shared<std::atomic<bool>>(true);
 }
 
 void ExportPage::autoCompleteSlice(const QString &sliceId) {
@@ -589,11 +607,12 @@ void ExportPage::onExport() {
         auto *rmvpe = m_rmvpe.get();
         auto *game = m_game.get();
         auto *phNumCalc = m_phNumCalc.get();
+        auto enginesAlive = m_enginesAlive;
         auto *src = m_source;
         QPointer<ExportPage> guard(this);
 
         // Run inference loop in background; save + continue export on main thread
-        (void) QtConcurrent::run([guard, hfa, rmvpe, game, phNumCalc, src, sliceIds,
+        (void) QtConcurrent::run([guard, hfa, rmvpe, game, phNumCalc, enginesAlive, src, sliceIds,
                                    outputDir]() {
             // Map of sliceId → modified DsTextDocument (only non-empty docs saved)
             std::map<QString, DsTextDocument> modifiedDocs;
@@ -602,7 +621,10 @@ void ExportPage::onExport() {
             for (const auto &sliceId : sliceIds) {
                 if (!guard)
                     return;
+                if (!enginesAlive || !*enginesAlive)
+                    return;
 
+                try {
                 auto result = src->loadSlice(sliceId);
                 if (!result) {
                     ++processed;
@@ -824,6 +846,15 @@ void ExportPage::onExport() {
                                                           .arg(processed).arg(guard->m_progressBar->maximum()));
                     }
                 }, Qt::QueuedConnection);
+                } catch (const std::exception &e) {
+                    DSFW_LOG_ERROR("infer", ("Inference failed for " + sliceId.toStdString() + ": " + e.what()).c_str());
+                    ++processed;
+                    QMetaObject::invokeMethod(guard.data(), [guard, processed]() {
+                        if (guard) {
+                            guard->m_progressBar->setValue(processed);
+                        }
+                    }, Qt::QueuedConnection);
+                }
             }
 
             // All inference done — save results and continue export on main thread
@@ -995,10 +1026,13 @@ void ExportPage::onActivated() {
 }
 
 void ExportPage::onDeactivated() {
+    if (m_enginesAlive)
+        m_enginesAlive->store(false);
     m_hfa.reset();
     m_rmvpe.reset();
     m_game.reset();
     m_phNumCalc.reset();
+    m_enginesAlive.reset();
 }
 
 void ExportPage::runValidation() {
