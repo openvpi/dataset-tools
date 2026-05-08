@@ -17,6 +17,7 @@
 #include <QWidget>
 
 #include <memory>
+#include <atomic>
 
 namespace HFA {
 class HFA;
@@ -65,6 +66,7 @@ private:
     std::unique_ptr<Rmvpe::Rmvpe> m_rmvpe;
     std::unique_ptr<Game::Game> m_game;
     std::unique_ptr<PhNumCalculator> m_phNumCalc;
+    std::shared_ptr<std::atomic<bool>> m_enginesAlive;
 
     // UI
     QTabWidget *m_tabWidget = nullptr;
