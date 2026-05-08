@@ -38,6 +38,11 @@ struct DsTextAudio {
 
 using BindingGroup = std::vector<int>;
 
+struct LayerDependency {
+    int parentLayerIndex = -1;
+    int childLayerIndex = -1;
+};
+
 struct DsTextMeta {
     QStringList editedSteps;
 };
@@ -48,6 +53,7 @@ struct DsTextDocument {
     std::vector<IntervalLayer> layers;
     std::vector<CurveLayer> curves;
     std::vector<BindingGroup> groups;
+    std::vector<LayerDependency> dependencies;
     DsTextMeta meta;
 
     static Result<DsTextDocument> load(const QString &path);

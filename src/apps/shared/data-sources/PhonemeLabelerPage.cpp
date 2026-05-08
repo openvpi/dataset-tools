@@ -45,6 +45,7 @@ struct FaLayerResult {
     IntervalLayer graphemeLayer;
     IntervalLayer phonemeLayer;
     std::vector<BindingGroup> groups;
+    std::vector<LayerDependency> dependencies;
 };
 
 static FaLayerResult buildFaLayers(const HFA::WordList &words) {
@@ -75,13 +76,13 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
             phoneB.pos = secToUs(std::max(0.0f, phone.start));
             phoneB.text = QString::fromStdString(phone.text);
 
-            if (pi == 0) {
-                r.groups.push_back({graphemeBId, phoneB.id});
-            }
+            r.groups.push_back({graphemeBId, phoneB.id});
 
             r.phonemeLayer.boundaries.push_back(std::move(phoneB));
         }
     }
+
+    r.dependencies.push_back({0, 1});
 
     return r;
 }
@@ -397,13 +398,40 @@ QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
 /// Returns empty string when grapheme layer is absent or empty.
 static QString readFaInput(const DsTextDocument &doc) {
     QStringList parts;
+    const IntervalLayer *graphemeLayer = nullptr;
+    const IntervalLayer *phonemeLayer = nullptr;
     for (const auto &layer : doc.layers) {
-        if (layer.name == QStringLiteral("grapheme")) {
-            for (const auto &b : layer.boundaries) {
-                if (!b.text.isEmpty())
-                    parts << b.text;
+        if (layer.name == QStringLiteral("grapheme"))
+            graphemeLayer = &layer;
+        else if (layer.name == QStringLiteral("phoneme"))
+            phonemeLayer = &layer;
+    }
+    if (graphemeLayer) {
+        for (const auto &b : graphemeLayer->boundaries) {
+            if (!b.text.isEmpty())
+                parts << b.text;
+        }
+        if (graphemeLayer && phonemeLayer) {
+            for (const auto &dep : doc.dependencies) {
+                if (dep.parentLayerIndex >= 0 && dep.childLayerIndex >= 0) {
+                    for (const auto &gb : graphemeLayer->boundaries) {
+                        bool found = false;
+                        for (const auto &pb : phonemeLayer->boundaries) {
+                            if (gb.pos == pb.pos) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            DSFW_LOG_WARN("fa",
+                                ("Grapheme boundary '" + gb.text.toStdString()
+                                 + "' pos=" + std::to_string(gb.pos)
+                                 + " not aligned with any phoneme boundary").c_str());
+                        }
+                    }
+                    break;
+                }
             }
-            break;
         }
     }
     return parts.join(QStringLiteral(" "));
@@ -584,7 +612,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 layers.push_back(std::move(faResult.graphemeLayer));
                 layers.push_back(std::move(faResult.phonemeLayer));
 
-                guard->applyFaResult(sliceId, layers, faResult.groups);
+                guard->applyFaResult(sliceId, layers, faResult.groups, faResult.dependencies);
                 dsfw::widgets::ToastNotification::show(
                     guard.data(), dsfw::widgets::ToastType::Info,
                     tr("Force alignment completed"), 3000);
@@ -600,7 +628,8 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
 void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
                                         const QList<IntervalLayer> &layers,
-                                        const std::vector<BindingGroup> &groups) {
+                                        const std::vector<BindingGroup> &groups,
+                                        const std::vector<LayerDependency> &dependencies) {
     if (!source())
         return;
 
@@ -610,13 +639,6 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
         doc = std::move(result.value());
 
     for (const auto &newLayer : layers) {
-        // Preserve the original grapheme layer from minlabel — it is the
-        // authoritative input source for FA (equivalent to .lab in main branch).
-        // Overwriting it with FA output (which includes SP/AP markers) would
-        // contaminate subsequent FA runs.
-        if (newLayer.name == QStringLiteral("grapheme"))
-            continue;
-
         IntervalLayer *existing = nullptr;
         for (auto &layer : doc.layers) {
             if (layer.name == newLayer.name) {
@@ -625,8 +647,14 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
             }
         }
         if (existing) {
-            existing->boundaries = newLayer.boundaries;
-            existing->type = newLayer.type;
+            if (newLayer.name == QStringLiteral("grapheme")) {
+                for (size_t i = 0; i < newLayer.boundaries.size() && i < existing->boundaries.size(); ++i) {
+                    existing->boundaries[i].pos = newLayer.boundaries[i].pos;
+                }
+            } else {
+                existing->boundaries = newLayer.boundaries;
+                existing->type = newLayer.type;
+            }
         } else {
             doc.layers.push_back(newLayer);
         }
@@ -635,6 +663,10 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
     // Save binding groups from FA (grapheme↔phoneme boundary associations)
     if (!groups.empty())
         doc.groups = groups;
+
+    // Save layer dependencies from FA (grapheme→phoneme parent-child)
+    if (!dependencies.empty())
+        doc.dependencies = dependencies;
 
     (void) source()->saveSlice(sliceId, doc);
 
@@ -826,9 +858,9 @@ void PhonemeLabelerPage::onBatchFA() {
                     layers.push_back(std::move(faResult.graphemeLayer));
                     layers.push_back(std::move(faResult.phonemeLayer));
 
-                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers, groups = std::move(faResult.groups)]() {
+                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers, groups = std::move(faResult.groups), deps = std::move(faResult.dependencies)]() {
                         if (guard)
-                            guard->applyFaResult(sliceId, layers, groups);
+                            guard->applyFaResult(sliceId, layers, groups, deps);
                     }, Qt::QueuedConnection);
                     QMetaObject::invokeMethod(dlg, [dlg, sliceId, phoneCount = faResult.phonemeLayer.boundaries.size()]() {
                         dlg->appendLog(tr("[OK] %1: %2 phonemes").arg(sliceId).arg(phoneCount));

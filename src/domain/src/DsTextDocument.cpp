@@ -85,6 +85,15 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
         }
     }
 
+    if (j.contains("dependencies")) {
+        for (const auto &jd : j["dependencies"]) {
+            LayerDependency dep;
+            dep.parentLayerIndex = jd.value("parent", -1);
+            dep.childLayerIndex = jd.value("child", -1);
+            doc.dependencies.push_back(dep);
+        }
+    }
+
     if (j.contains("meta") && j["meta"].is_object()) {
         const auto &m = j["meta"];
         if (m.contains("editedSteps") && m["editedSteps"].is_array()) {
@@ -137,6 +146,14 @@ Result<void> DsTextDocument::save(const QString &path) const {
     j["groups"] = nlohmann::json::array();
     for (const auto &g : groups) {
         j["groups"].push_back(g);
+    }
+
+    j["dependencies"] = nlohmann::json::array();
+    for (const auto &dep : dependencies) {
+        j["dependencies"].push_back({
+            {"parent", dep.parentLayerIndex},
+            {"child",  dep.childLayerIndex}
+        });
     }
 
     if (!meta.editedSteps.isEmpty()) {

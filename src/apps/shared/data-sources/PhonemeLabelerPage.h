@@ -55,7 +55,8 @@ private:
     void onModelInvalidated(const QString &taskKey);
     void runFaForSlice(const QString &sliceId);
     void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers,
-                       const std::vector<BindingGroup> &groups = {});
+                       const std::vector<BindingGroup> &groups = {},
+                       const std::vector<LayerDependency> &dependencies = {});
     void updateProgress();
 };
 
