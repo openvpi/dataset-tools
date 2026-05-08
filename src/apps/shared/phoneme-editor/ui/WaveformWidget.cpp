@@ -123,6 +123,7 @@ void WaveformWidget::paintEvent(QPaintEvent * /*event*/) {
     drawWaveform(painter);
     drawDbAxis(painter);
     drawPlayCursor(painter);
+    drawBoundaryOverlay(painter);
 }
 
 void WaveformWidget::drawWaveform(QPainter &painter) {

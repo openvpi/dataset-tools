@@ -62,6 +62,7 @@ void PowerWidget::paintEvent(QPaintEvent *event) {
 
     drawReferenceLines(painter);
     drawPower(painter);
+    drawBoundaryOverlay(painter);
 }
 
 void PowerWidget::drawReferenceLines(QPainter & /*painter*/) {
