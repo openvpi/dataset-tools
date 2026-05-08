@@ -338,11 +338,9 @@ TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, Ti
         nextBoundary = tier->GetMaxTime();
     }
 
-    constexpr double kEpsilon = 0.000001;
-    double minClamp = prevBoundary;
-    double maxClamp = nextBoundary;
-    if (boundaryIndex < count)
-        maxClamp = nextBoundary - kEpsilon;
+    constexpr double kMinInterval = 0.001;
+    double minClamp = prevBoundary + kMinInterval;
+    double maxClamp = nextBoundary - kMinInterval;
 
     double clamped = std::clamp(proposedSec, minClamp, maxClamp);
     return secToUs(clamped);
