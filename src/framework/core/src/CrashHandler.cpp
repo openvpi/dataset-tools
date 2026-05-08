@@ -42,7 +42,7 @@ static LONG WINAPI unhandledExceptionFilter(EXCEPTION_POINTERS *exceptionInfo) {
 
         CloseHandle(hFile);
 
-        DSFW_LOG_ERROR("CrashHandler", ("Crash dump written to: " + dumpFileName.toStdString()).c_str());
+        DSFW_LOG_ERROR("app", ("Crash dump written to: " + dumpFileName.toStdString()).c_str());
     }
 
     handler.invokeCrashCallback(dumpFileName);
@@ -106,7 +106,7 @@ void CrashHandler::install() {
 
 #ifdef Q_OS_WIN
     SetUnhandledExceptionFilter(unhandledExceptionFilter);
-    DSFW_LOG_INFO("CrashHandler", "Windows crash handler installed");
+    DSFW_LOG_INFO("app", "Windows crash handler installed");
 #elif defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
     struct sigaction sa;
     sa.sa_handler = unixSignalHandler;
@@ -115,7 +115,7 @@ void CrashHandler::install() {
     sigaction(SIGSEGV, &sa, nullptr);
     sigaction(SIGABRT, &sa, nullptr);
     sigaction(SIGFPE, &sa, nullptr);
-    DSFW_LOG_INFO("CrashHandler", "Unix signal handler installed");
+    DSFW_LOG_INFO("app", "Unix signal handler installed");
 #endif
 
     m_installed = true;

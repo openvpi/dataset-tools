@@ -1,5 +1,7 @@
 #include <dstools/AudioDecoder.h>
 
+#include <iostream>
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -115,19 +117,19 @@ bool AudioDecoder::open(const QString &path) {
     std::string pathStr = path.toUtf8().toStdString();
 
     if (avformat_open_input(&d->fmtCtx, pathStr.c_str(), nullptr, nullptr) < 0) {
-        qWarning() << "AudioDecoder: Failed to open" << path;
+        std::cerr << "AudioDecoder: Failed to open " << path.toStdString() << std::endl;
         return false;
     }
 
     if (avformat_find_stream_info(d->fmtCtx, nullptr) < 0) {
-        qWarning() << "AudioDecoder: Failed to find stream info";
+        std::cerr << "AudioDecoder: Failed to find stream info" << std::endl;
         d->cleanup();
         return false;
     }
 
     d->audioStreamIdx = av_find_best_stream(d->fmtCtx, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
     if (d->audioStreamIdx < 0) {
-        qWarning() << "AudioDecoder: No audio stream found";
+        std::cerr << "AudioDecoder: No audio stream found" << std::endl;
         d->cleanup();
         return false;
     }
@@ -135,7 +137,7 @@ bool AudioDecoder::open(const QString &path) {
     auto *codecPar = d->fmtCtx->streams[d->audioStreamIdx]->codecpar;
     const AVCodec *codec = avcodec_find_decoder(codecPar->codec_id);
     if (!codec) {
-        qWarning() << "AudioDecoder: Unsupported codec";
+        std::cerr << "AudioDecoder: Unsupported codec" << std::endl;
         d->cleanup();
         return false;
     }
@@ -143,7 +145,7 @@ bool AudioDecoder::open(const QString &path) {
     d->codecCtx = avcodec_alloc_context3(codec);
     avcodec_parameters_to_context(d->codecCtx, codecPar);
     if (avcodec_open2(d->codecCtx, codec, nullptr) < 0) {
-        qWarning() << "AudioDecoder: Failed to open codec";
+        std::cerr << "AudioDecoder: Failed to open codec" << std::endl;
         d->cleanup();
         return false;
     }
@@ -156,7 +158,7 @@ bool AudioDecoder::open(const QString &path) {
                                    &d->codecCtx->ch_layout, d->codecCtx->sample_fmt,
                                    d->codecCtx->sample_rate, 0, nullptr);
     if (ret < 0 || swr_init(d->swrCtx) < 0) {
-        qWarning() << "AudioDecoder: Failed to init resampler";
+        std::cerr << "AudioDecoder: Failed to init resampler" << std::endl;
         d->cleanup();
         return false;
     }
@@ -165,7 +167,7 @@ bool AudioDecoder::open(const QString &path) {
     d->frame = av_frame_alloc();
 
     if (!d->decodeAll()) {
-        qWarning() << "AudioDecoder: Failed to decode audio data";
+        std::cerr << "AudioDecoder: Failed to decode audio data" << std::endl;
         d->cleanup();
         return false;
     }

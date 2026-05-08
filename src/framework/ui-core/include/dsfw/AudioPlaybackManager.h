@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QPointer>
 #include <QObject>
 
 class QWidget;
@@ -19,7 +20,7 @@ public:
     QWidget *currentPlayer() const { return m_currentPlayer; }
 
 private:
-    QWidget *m_currentPlayer = nullptr;
+    QPointer<QWidget> m_currentPlayer;
 };
 
 } // namespace dsfw

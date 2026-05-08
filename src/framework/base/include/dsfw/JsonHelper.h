@@ -3,6 +3,7 @@
 #include <dstools/Result.h>
 
 #include <filesystem>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -27,7 +28,11 @@ public:
         if (j.contains(key) && !j[key].is_null()) {
             try {
                 return j[key].get<T>();
+            } catch (const std::exception &e) {
+                std::cerr << "WARN [json] JsonHelper::get failed for key '" << key << "': " << e.what() << std::endl;
+                return defaultValue;
             } catch (...) {
+                std::cerr << "WARN [json] JsonHelper::get failed for key '" << key << "': unknown exception" << std::endl;
                 return defaultValue;
             }
         }

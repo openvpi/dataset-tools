@@ -1,6 +1,7 @@
 #include <dsfw/widgets/PlayWidget.h>
 #include <dstools/IAudioPlayer.h>
 #include <dstools/AudioPlayer.h>
+#include <dsfw/Log.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -175,7 +176,7 @@ void PlayWidget::openFile(const QString &path) {
         m_fileLabel->setText(QFileInfo(path).fileName());
         reloadSliderStatus();
     } else {
-        qWarning() << "PlayWidget: Failed to open audio file:" << path;
+        DSFW_LOG_WARN("audio", ("PlayWidget: Failed to open audio file: " + path.toStdString()).c_str());
     }
 }
 

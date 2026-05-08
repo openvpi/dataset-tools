@@ -1,8 +1,8 @@
 #include <dsfw/AppSettings.h>
 #include <dsfw/AppPaths.h>
 #include <dsfw/JsonHelper.h>
+#include <dsfw/Log.h>
 
-#include <QDebug>
 #include <QSaveFile>
 
 namespace dstools {
@@ -35,13 +35,13 @@ void AppSettings::loadFromDisk() {
 
     auto loadResult = JsonHelper::loadFile(path);
     if (!loadResult) {
-        qWarning() << "AppSettings:" << QString::fromStdString(loadResult.error());
+        DSFW_LOG_WARN("app", ("AppSettings: " + loadResult.error()).c_str());
         m_data = nlohmann::json::object();
     } else {
         m_data = std::move(loadResult.value());
     }
     if (!m_data.is_object()) {
-        qWarning() << "AppSettings: root is not a JSON object in" << m_filePath;
+        DSFW_LOG_WARN("app", ("AppSettings: root is not a JSON object in " + m_filePath.toStdString()).c_str());
         m_data = nlohmann::json::object();
     }
 }
@@ -49,7 +49,7 @@ void AppSettings::loadFromDisk() {
 bool AppSettings::saveToDisk() {
     QSaveFile file(m_filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "AppSettings: cannot open" << m_filePath << "for writing";
+        DSFW_LOG_WARN("io", ("AppSettings: cannot open " + m_filePath.toStdString() + " for writing").c_str());
         return false;
     }
 
@@ -58,7 +58,7 @@ bool AppSettings::saveToDisk() {
     file.write("\n", 1);
 
     if (!file.commit()) {
-        qWarning() << "AppSettings: failed to commit (atomic write)" << m_filePath;
+        DSFW_LOG_WARN("io", ("AppSettings: failed to commit (atomic write) " + m_filePath.toStdString()).c_str());
         return false;
     }
     return true;

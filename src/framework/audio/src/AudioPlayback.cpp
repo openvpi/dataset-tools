@@ -1,6 +1,7 @@
 #include <dstools/AudioPlayback.h>
 #include <dstools/AudioDecoder.h>
 
+#include <iostream>
 #include <SDL2/SDL.h>
 
 #include <QDebug>
@@ -53,7 +54,7 @@ AudioPlayback::~AudioPlayback() {
 bool AudioPlayback::setup(int sampleRate, int channels, int bufferSize) {
     if (!d->sdlInitialized) {
         if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-            qWarning() << "AudioPlayback: SDL_Init failed:" << SDL_GetError();
+            std::cerr << "ERROR [audio] AudioPlayback: SDL_Init failed: " << SDL_GetError() << std::endl;
             return false;
         }
         d->sdlInitialized = true;
@@ -115,7 +116,7 @@ void AudioPlayback::play() {
                                   : devNameUtf8.constData();
         d->deviceId = SDL_OpenAudioDevice(devName, 0, &desired, &obtained, 0);
         if (!d->deviceId) {
-            qWarning() << "AudioPlayback: Failed to open audio device:" << SDL_GetError();
+            std::cerr << "ERROR [audio] AudioPlayback: Failed to open audio device: " << SDL_GetError() << std::endl;
             return;
         }
     }

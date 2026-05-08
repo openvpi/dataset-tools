@@ -1,5 +1,6 @@
 #include <dsfw/FramelessHelper.h>
 #include <dsfw/Theme.h>
+#include <dsfw/Log.h>
 
 #include <QEvent>
 #include <QHBoxLayout>
@@ -175,7 +176,7 @@ void FramelessHelper::apply(QMainWindow *window) {
     auto *agent = new QWK::WidgetWindowAgent(window);
     if (!agent->setup(window)) {
         // QWindowKit setup failed — fall back to native title bar so the window still shows
-        qWarning() << "FramelessHelper: QWindowKit setup failed, falling back to native frame";
+        DSFW_LOG_WARN("ui", "FramelessHelper: QWindowKit setup failed, falling back to native frame");
         delete agent;
         return;
     }
@@ -268,7 +269,7 @@ void FramelessHelper::applyToDialog(QDialog *dialog) {
 
     auto *agent = new QWK::WidgetWindowAgent(dialog);
     if (!agent->setup(dialog)) {
-        qWarning() << "FramelessHelper: QWindowKit setup failed for dialog, falling back to native frame";
+        DSFW_LOG_WARN("ui", "FramelessHelper: QWindowKit setup failed for dialog, falling back to native frame");
         delete agent;
         return;
     }

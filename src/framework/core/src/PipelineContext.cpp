@@ -91,6 +91,7 @@ nlohmann::json PipelineContext::toJson() const {
 }
 
 Result<PipelineContext> PipelineContext::fromJson(const nlohmann::json &j) {
+    try {
     if (!j.contains("audioPath") || !j.contains("itemId"))
         return Result<PipelineContext>::Error("Missing required fields");
 
@@ -147,6 +148,11 @@ Result<PipelineContext> PipelineContext::fromJson(const nlohmann::json &j) {
     }
 
     return Result<PipelineContext>::Ok(std::move(ctx));
+    } catch (const std::exception &e) {
+        return Result<PipelineContext>::Error(std::string("PipelineContext::fromJson failed: ") + e.what());
+    } catch (...) {
+        return Result<PipelineContext>::Error("PipelineContext::fromJson failed: unknown exception");
+    }
 }
 
 QStringList PipelineContext::completedSteps() const {

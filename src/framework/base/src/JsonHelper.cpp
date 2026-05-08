@@ -4,10 +4,15 @@
 
 namespace dstools {
 
+    static std::string pathToUtf8(const std::filesystem::path &p) {
+        auto u8 = p.u8string();
+        return std::string(u8.begin(), u8.end());
+    }
+
     Result<nlohmann::json> JsonHelper::loadFile(const std::filesystem::path &path) {
         std::ifstream file(path);
         if (!file.is_open()) {
-            return Err<nlohmann::json>("Cannot open file: " + path.string());
+            return Err<nlohmann::json>("Cannot open file: " + pathToUtf8(path));
         }
         try {
             nlohmann::json data = nlohmann::json::parse(file);
@@ -22,11 +27,11 @@ namespace dstools {
     Result<void> JsonHelper::saveFile(const std::filesystem::path &path, const nlohmann::json &data, const int indent) {
         std::ofstream file(path);
         if (!file.is_open()) {
-            return Err("Cannot open file for writing: " + path.string());
+            return Err("Cannot open file for writing: " + pathToUtf8(path));
         }
         file << data.dump(indent);
         if (!file.good()) {
-            return Err("Failed to write JSON file: " + path.string());
+            return Err("Failed to write JSON file: " + pathToUtf8(path));
         }
         return Ok();
     }

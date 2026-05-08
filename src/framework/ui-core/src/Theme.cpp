@@ -1,9 +1,9 @@
 #include <dsfw/Theme.h>
 
 #include <dsfw/AppSettings.h>
+#include <dsfw/Log.h>
 
 #include <QActionGroup>
-#include <QDebug>
 #include <QFile>
 #include <QGuiApplication>
 #include <QMenu>
@@ -285,7 +285,7 @@ namespace dsfw {
 
             m_app->setStyleSheet(qss);
         } else {
-            qWarning() << "Theme: failed to load QSS from" << qssPath;
+            DSFW_LOG_WARN("ui", ("Theme: failed to load QSS from " + qssPath.toStdString()).c_str());
             m_app->setStyleSheet({});
         }
 
