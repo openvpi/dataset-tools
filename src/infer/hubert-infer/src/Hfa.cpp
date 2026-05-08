@@ -58,9 +58,10 @@ namespace HFA {
                     fs::path dict_path = model_folder / dict_path_str;
 
                     if (!fs::exists(dict_path)) {
-                        std::cerr << dict_path.string() << " does not exist" << std::endl;
+                        auto u8path = dict_path.u8string();
+                        std::cerr << std::string(u8path.begin(), u8path.end()) << " does not exist" << std::endl;
                     } else {
-                        m_dictG2p[language] = std::make_unique<DictionaryG2P>(dict_path.string(), language);
+                        m_dictG2p[language] = std::make_unique<DictionaryG2P>(dict_path, language);
                     }
                 }
             }
@@ -87,7 +88,7 @@ namespace HFA {
             m_nonLexicalDecoder = std::make_unique<NonLexicalDecoder>(non_lexical_phonemes, mel_spec_config);
         } catch (const std::exception &e) {
             unload();
-            return dstools::Err("Failed to load HFA model from " + model_folder.string() + ": " + e.what());
+            return dstools::Err("Failed to load HFA model from " + std::string(model_folder.u8string().begin(), model_folder.u8string().end()) + ": " + e.what());
         }
 
         if (!m_hfa) {
@@ -117,7 +118,11 @@ namespace HFA {
 
         if (lyricsText.empty()) {
             return dstools::Err("Empty lyrics text provided for forced alignment"
-                " (audio: " + wavPath.string() + ")");
+                " (audio: " + std::string(wavPath.u8string().begin(), wavPath.u8string().end()) + ")");
+        }
+        if (!fs::exists(wavPath)) {
+            return dstools::Err("Empty lyrics text provided for forced alignment"
+                " (audio: " + std::string(wavPath.u8string().begin(), wavPath.u8string().end()) + ")");
         }
 
         std::string msg;

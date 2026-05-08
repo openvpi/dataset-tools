@@ -4,6 +4,7 @@
 #pragma once
 #include <hubert-infer/HubertInferGlobal.h>
 
+#include <filesystem>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -18,7 +19,7 @@ namespace HFA {
         /// @brief Constructs the G2P converter from a dictionary file.
         /// @param dictionaryPath Path to the pronunciation dictionary.
         /// @param language Default language identifier.
-        DictionaryG2P(const std::string &dictionaryPath, const std::string &language);
+        DictionaryG2P(const std::filesystem::path &dictionaryPath, const std::string &language);
 
         /// @brief Converts input text to phoneme and word sequences.
         /// @param inputText Text to convert.

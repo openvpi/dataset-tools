@@ -81,7 +81,8 @@ namespace Game
         {
             const std::filesystem::path model_path = modelDir / name;
             if (!std::filesystem::exists(model_path)) {
-                msg = model_path.string() + " not exist!";
+                auto u8path = model_path.u8string();
+                msg = std::string(u8path.begin(), u8path.end()) + " not exist!";
                 return false;
             }
             try {

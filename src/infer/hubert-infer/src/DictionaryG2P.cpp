@@ -6,11 +6,11 @@
 
 namespace HFA {
 
-    DictionaryG2P::DictionaryG2P(const std::string &dictionaryPath, const std::string &language) : language_(language) {
+    DictionaryG2P::DictionaryG2P(const std::filesystem::path &dictionaryPath, const std::string &language) : language_(language) {
 
         std::ifstream file(dictionaryPath);
         if (!file.is_open()) {
-            throw std::runtime_error("Failed to open dictionary file: " + dictionaryPath);
+            throw std::runtime_error("Failed to open dictionary file: " + dictionaryPath.string());
         }
 
         if (dictionary_.find(language) == dictionary_.end()) {
