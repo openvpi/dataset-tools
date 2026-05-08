@@ -112,8 +112,19 @@ public:
 protected:
     void resizeEvent(QResizeEvent *event) override {
         QWidget::resizeEvent(event);
-        m_titleLabel->setGeometry(0, 0, width(), height());
-        m_titleLabel->lower(); // keep behind menuBar and buttons
+
+        int menuBarWidth = 0;
+        if (auto *mb = m_window->menuBar())
+            menuBarWidth = mb->sizeHint().width();
+
+        const int buttonsWidth = m_minBtn->width() + m_maxBtn->width() + m_closeBtn->width();
+        const int availableWidth = width() - menuBarWidth - buttonsWidth;
+        if (availableWidth > 0) {
+            m_titleLabel->setGeometry(menuBarWidth, 0, availableWidth, height());
+        } else {
+            m_titleLabel->setGeometry(0, 0, width(), height());
+        }
+        m_titleLabel->lower();
     }
 
 private:
