@@ -158,9 +158,11 @@ private:
     void connectViewportToWidget(QWidget *widget);
     void applyDefaultHeightRatios();
     void updateOverlayTopOffset();
+    double xToTimeGlobal(qreal globalX) const;
+    void installDragEventFilters();
+    void removeDragEventFilters();
     void resizeEvent(QResizeEvent *event) override;
 
-    // eventFilter: track editor widget resize
     bool eventFilter(QObject *watched, QEvent *event) override;
 
     widgets::ViewportController *m_viewport = nullptr;

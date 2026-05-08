@@ -7,9 +7,11 @@
 #include <ui/IBoundaryModel.h>
 
 #include <dsfw/widgets/PlayWidget.h>
+#include <dstools/TimePos.h>
 
 #include <QLabel>
 #include <QMetaMethod>
+#include <QMouseEvent>
 #include <QPointer>
 #include <QResizeEvent>
 #include <QTimer>
@@ -72,6 +74,11 @@ namespace dstools {
         connect(m_viewport, &ViewportController::viewportChanged, m_miniMap, &MiniMapScrollBar::setViewport);
         connect(m_viewport, &ViewportController::viewportChanged, this,
                 &AudioVisualizerContainer::updateScaleIndicator);
+
+        connect(m_dragController, &BoundaryDragController::dragStarted, this,
+                [this]() { installDragEventFilters(); });
+        connect(m_dragController, &BoundaryDragController::dragFinished, this,
+                [this]() { removeDragEventFilters(); });
     }
 
     void AudioVisualizerContainer::updateScaleIndicator() {
@@ -247,20 +254,38 @@ namespace dstools {
     }
 
     bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
-        if (watched == m_editorWidget && event->type() == QEvent::Resize) {
-            updateOverlayTopOffset();
+    if (m_dragController && m_dragController->isDragging()) {
+        if (event->type() == QEvent::MouseMove) {
+            auto *me = static_cast<QMouseEvent *>(event);
+            double time = xToTimeGlobal(me->globalPosition().x());
+            m_dragController->updateDrag(secToUs(time));
+            invalidateBoundaryModel();
+            return true;
         }
-        if (event->type() == QEvent::Resize) {
-            // Update scale label and overlay position on any resize
-            if (watched == m_chartSplitter)
-                updateScaleIndicator();
+        if (event->type() == QEvent::MouseButtonRelease) {
+            auto *me = static_cast<QMouseEvent *>(event);
+            if (me->button() == Qt::LeftButton) {
+                double time = xToTimeGlobal(me->globalPosition().x());
+                m_dragController->endDrag(secToUs(time), nullptr);
+                invalidateBoundaryModel();
+                return true;
+            }
         }
-        if (watched == m_tierLabelArea && event->type() == QEvent::Resize) {
-            m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
-            updateOverlayTopOffset();
-        }
-        return QWidget::eventFilter(watched, event);
     }
+
+    if (watched == m_editorWidget && event->type() == QEvent::Resize) {
+        updateOverlayTopOffset();
+    }
+    if (event->type() == QEvent::Resize) {
+        if (watched == m_chartSplitter)
+            updateScaleIndicator();
+    }
+    if (watched == m_tierLabelArea && event->type() == QEvent::Resize) {
+        m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+        updateOverlayTopOffset();
+    }
+    return QWidget::eventFilter(watched, event);
+}
 
     void AudioVisualizerContainer::setDefaultResolution(int resolution) {
         m_defaultResolution = std::clamp(resolution, 10, 44100);
@@ -657,6 +682,34 @@ namespace dstools {
                 }
             }
         });
+    }
+
+    double AudioVisualizerContainer::xToTimeGlobal(qreal globalX) const {
+        if (!m_chartSplitter)
+            return 0.0;
+        qreal localX = globalX - m_chartSplitter->mapToGlobal(QPoint(0, 0)).x();
+        double viewDuration = m_viewport->endSec() - m_viewport->startSec();
+        if (viewDuration <= 0.0 || m_chartSplitter->width() <= 0)
+            return m_viewport->startSec();
+        return m_viewport->startSec() + viewDuration * localX / m_chartSplitter->width();
+    }
+
+    void AudioVisualizerContainer::installDragEventFilters() {
+        if (m_tierLabelArea)
+            m_tierLabelArea->installEventFilter(this);
+        if (m_editorWidget)
+            m_editorWidget->installEventFilter(this);
+        for (int i = 0; i < m_chartSplitter->count(); ++i)
+            m_chartSplitter->widget(i)->installEventFilter(this);
+    }
+
+    void AudioVisualizerContainer::removeDragEventFilters() {
+        if (m_tierLabelArea)
+            m_tierLabelArea->removeEventFilter(this);
+        if (m_editorWidget)
+            m_editorWidget->removeEventFilter(this);
+        for (int i = 0; i < m_chartSplitter->count(); ++i)
+            m_chartSplitter->widget(i)->removeEventFilter(this);
     }
 
 } // namespace dstools
