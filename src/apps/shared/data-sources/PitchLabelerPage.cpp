@@ -636,9 +636,7 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
                 for (size_t i = 0; i < res.f0.size(); ++i) {
                     f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
                 }
-                float timestep = res.f0.size() > 1 && res.offset >= 0
-                                     ? (1.0f / 16000.0f)
-                                     : 0.005f;
+                float timestep = 0.01f;
                 guard->applyPitchResult(sliceId, f0Mhz, timestep);
                 DSFW_LOG_INFO("infer", ("Pitch extraction completed: " + sliceId.toStdString()
                               + " - " + std::to_string(f0Mhz.size()) + " frames").c_str());
@@ -1048,7 +1046,7 @@ void PitchLabelerPage::onBatchExtract() {
                         for (size_t i = 0; i < res.f0.size(); ++i) {
                             f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
                         }
-                        float timestep = 0.005f;
+                        float timestep = 0.01f;
                         QMetaObject::invokeMethod(guard.data(), [guard, sliceId, f0Mhz, timestep]() {
                             if (guard)
                                 guard->applyPitchResult(sliceId, f0Mhz, timestep);
