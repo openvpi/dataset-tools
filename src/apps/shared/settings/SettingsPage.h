@@ -91,6 +91,8 @@ private:
 
     QWidget *createModelConfigRow(const QString &label, QLineEdit *&pathEdit, QCheckBox *&forceCpu,
                                   QPushButton *&testBtn);
+    QWidget *createOnnxModelConfigRow(const QString &label, QLineEdit *&pathEdit, QCheckBox *&forceCpu,
+                                      QPushButton *&testBtn);
 
     void loadFromBackend();
     void markDirty();

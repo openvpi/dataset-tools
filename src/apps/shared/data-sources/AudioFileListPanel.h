@@ -28,7 +28,9 @@ public:
             QStringLiteral("*.wma"),
             QStringLiteral("*.aac"),
         });
-        setButtonVisible(QStringLiteral("addDir"), false);
+        setButtonVisible(QStringLiteral("remove"), false);
+        setButtonVisible(QStringLiteral("discard"), false);
+        setButtonVisible(QStringLiteral("clear"), false);
     }
     ~AudioFileListPanel() override = default;
 };

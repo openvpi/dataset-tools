@@ -30,6 +30,8 @@ PhonemeEditor::PhonemeEditor(QWidget *parent)
     buildToolbar();
     buildLayout();
     connectSignals();
+
+    m_playWidget->hide();
 }
 
 // ---- Configuration ----

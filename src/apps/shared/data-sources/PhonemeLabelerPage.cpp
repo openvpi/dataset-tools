@@ -268,11 +268,11 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 
         if (!doc.groups.empty())
             m_editor->document()->setBindingGroups(doc.groups);
-        else if (doc.layers.size() > 1)
+        else if (layers.size() > 1)
             m_editor->document()->autoDetectBindingGroups();
 
-        for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
-            if (doc.layers[i].name == QStringLiteral("phoneme")) {
+        for (int i = 0; i < layers.size(); ++i) {
+            if (layers[i].name == QStringLiteral("phoneme")) {
                 m_editor->document()->setTierReadOnly(i, true);
                 break;
             }
@@ -781,11 +781,11 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
 
         if (!doc.groups.empty())
             m_editor->document()->setBindingGroups(doc.groups);
-        else if (doc.layers.size() > 1)
+        else if (allLayers.size() > 1)
             m_editor->document()->autoDetectBindingGroups();
 
-        for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
-            if (doc.layers[i].name == QStringLiteral("phoneme")) {
+        for (int i = 0; i < allLayers.size(); ++i) {
+            if (allLayers[i].name == QStringLiteral("phoneme")) {
                 m_editor->document()->setTierReadOnly(i, true);
                 break;
             }

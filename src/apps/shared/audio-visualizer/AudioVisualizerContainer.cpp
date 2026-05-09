@@ -149,6 +149,19 @@ namespace dstools {
         if (m_tierLabelArea)
             m_tierLabelArea->setBoundaryModel(model);
         m_boundaryOverlay->setBoundaryModel(model);
+
+        for (auto &entry : m_charts) {
+            const QMetaObject *mo = entry.widget->metaObject();
+            for (int i = 0; i < mo->methodCount(); ++i) {
+                QMetaMethod method = mo->method(i);
+                if (method.name() == "setBoundaryModel" && method.parameterCount() == 1) {
+                    method.invoke(entry.widget, Qt::DirectConnection,
+                                  Q_ARG(IBoundaryModel*, model));
+                    break;
+                }
+            }
+        }
+
         int tierLabelH = m_tierLabelArea ? m_tierLabelArea->height() : 0;
         m_boundaryOverlay->setTierLabelGeometry(tierLabelH, tierLabelH);
         updateOverlayTopOffset();
@@ -255,6 +268,7 @@ namespace dstools {
 
     void AudioVisualizerContainer::setTotalDuration(double seconds) {
         m_viewport->setTotalDuration(seconds);
+        updateViewRangeFromResolution();
     }
 
     void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, int sampleRate) {
@@ -401,6 +415,18 @@ namespace dstools {
             if (method.name() == "setDragController" && method.parameterCount() == 1) {
                 method.invoke(widget, Qt::DirectConnection,
                               Q_ARG(BoundaryDragController*, m_dragController));
+                break;
+            }
+        }
+    }
+
+    if (m_boundaryModel) {
+        const QMetaObject *mo = widget->metaObject();
+        for (int i = 0; i < mo->methodCount(); ++i) {
+            QMetaMethod method = mo->method(i);
+            if (method.name() == "setBoundaryModel" && method.parameterCount() == 1) {
+                method.invoke(widget, Qt::DirectConnection,
+                              Q_ARG(IBoundaryModel*, m_boundaryModel));
                 break;
             }
         }

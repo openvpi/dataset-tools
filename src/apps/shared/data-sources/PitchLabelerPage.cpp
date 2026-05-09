@@ -219,11 +219,17 @@ bool PitchLabelerPage::saveCurrentSlice() {
     midiLayer->boundaries.clear();
     int id = 1;
     for (const auto &note : m_currentFile->notes) {
-        Boundary b;
-        b.id = id++;
-        b.pos = note.start;
-        b.text = note.name;
-        midiLayer->boundaries.push_back(std::move(b));
+        Boundary startB;
+        startB.id = id++;
+        startB.pos = note.start;
+        startB.text = note.name;
+        midiLayer->boundaries.push_back(std::move(startB));
+
+        Boundary endB;
+        endB.id = id++;
+        endB.pos = note.start + note.duration;
+        endB.text.clear();
+        midiLayer->boundaries.push_back(std::move(endB));
     }
 
     if (!doc.meta.editedSteps.contains(QStringLiteral("pitch_review")))

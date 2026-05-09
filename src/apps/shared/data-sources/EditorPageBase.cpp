@@ -1,6 +1,5 @@
 #include "EditorPageBase.h"
 #include "SliceListPanel.h"
-#include "AudioFileListPanel.h"
 #include "ISettingsBackend.h"
 #include "BatchProcessDialog.h"
 
@@ -16,7 +15,6 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPointer>
-#include <QSet>
 #include <QSplitter>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -42,25 +40,12 @@ double EditorPageBase::audioDurationSec(const DsTextDocument &doc) {
 // ── Setup helpers ─────────────────────────────────────────────────────────────
 
 void EditorPageBase::setupBaseLayout(QWidget *editorWidget) {
-    auto *leftPanel = new QWidget(this);
-    auto *leftLayout = new QVBoxLayout(leftPanel);
-    leftLayout->setContentsMargins(0, 0, 0, 0);
-    leftLayout->setSpacing(0);
-
-    m_audioFileList = new AudioFileListPanel(leftPanel);
-    m_audioFileList->setMinimumWidth(160);
-    m_audioFileList->setMaximumWidth(280);
-    m_audioFileList->setMaximumHeight(180);
-    m_audioFileList->setShowProgress(true);
-    leftLayout->addWidget(m_audioFileList);
-
-    m_sliceList = new SliceListPanel(leftPanel);
+    m_sliceList = new SliceListPanel(this);
     m_sliceList->setMinimumWidth(160);
     m_sliceList->setMaximumWidth(280);
-    leftLayout->addWidget(m_sliceList, 1);
 
     m_splitter = new QSplitter(Qt::Horizontal, this);
-    m_splitter->addWidget(leftPanel);
+    m_splitter->addWidget(m_sliceList);
     m_splitter->addWidget(editorWidget);
     m_splitter->setStretchFactor(0, 0);
     m_splitter->setStretchFactor(1, 1);
@@ -97,7 +82,6 @@ void EditorPageBase::setDataSource(IEditorDataSource *source, ISettingsBackend *
     m_settingsBackend = settingsBackend;
     if (m_sliceList)
         m_sliceList->setDataSource(source);
-    refreshFileList();
 }
 
 // ── Slice selection ───────────────────────────────────────────────────────────
@@ -116,23 +100,6 @@ void EditorPageBase::onSliceSelected(const QString &sliceId) {
 
     onSliceSelectedImpl(sliceId);
     emit sliceChanged(sliceId);
-}
-
-void EditorPageBase::refreshFileList() {
-    if (!m_audioFileList || !m_source)
-        return;
-
-    QStringList sliceIds = m_source->sliceIds();
-    QSet<QString> uniqueFiles;
-    for (const auto &sid : sliceIds) {
-        QString audioPath = m_source->validatedAudioPath(sid);
-        if (!audioPath.isEmpty())
-            uniqueFiles.insert(audioPath);
-    }
-    QStringList files(uniqueFiles.begin(), uniqueFiles.end());
-    std::sort(files.begin(), files.end());
-    m_audioFileList->clear();
-    m_audioFileList->addFiles(files);
 }
 
 // ── IPageActions ──────────────────────────────────────────────────────────────

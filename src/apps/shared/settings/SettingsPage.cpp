@@ -6,6 +6,7 @@
 
 #include <QAbstractItemModel>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QDir>
 #include <QFile>
 #include <QFormLayout>
@@ -402,12 +403,64 @@ QWidget *SettingsPage::createModelConfigRow(const QString &label, QLineEdit *&pa
     return group;
 }
 
+QWidget *SettingsPage::createOnnxModelConfigRow(const QString &label, QLineEdit *&pathEdit,
+                                                 QCheckBox *&forceCpu, QPushButton *&testBtn) {
+    auto *group = new QGroupBox(label);
+    auto *layout = new QVBoxLayout(group);
+
+    auto *pathLayout = new QHBoxLayout;
+    pathEdit = new QLineEdit(group);
+    auto *browseBtn = new QPushButton(QStringLiteral("浏览..."), group);
+    testBtn = new QPushButton(QStringLiteral("Test"), group);
+    testBtn->setFixedWidth(50);
+    testBtn->setToolTip(QStringLiteral("测试加载模型"));
+    pathLayout->addWidget(pathEdit, 1);
+    pathLayout->addWidget(browseBtn);
+    pathLayout->addWidget(testBtn);
+    layout->addLayout(pathLayout);
+
+    forceCpu = new QCheckBox(QStringLiteral("CPU 强制（此模型在 CPU 上运行）"), group);
+    layout->addWidget(forceCpu);
+
+    connect(browseBtn, &QPushButton::clicked, this, [this, pathEdit]() {
+        const QString path =
+            QFileDialog::getOpenFileName(this, QStringLiteral("选择 ONNX 模型文件"),
+                                         QString(), QStringLiteral("ONNX 文件 (*.onnx);;所有文件 (*)"));
+        if (!path.isEmpty())
+            pathEdit->setText(path);
+    });
+
+    return group;
+}
+
 void SettingsPage::onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCheckBox *forceCpu) {
     Q_UNUSED(modelKey)
     QString modelPath = pathEdit->text().trimmed();
     if (modelPath.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("测试加载"),
                              QStringLiteral("请先设置模型路径。"));
+        return;
+    }
+
+    QFileInfo fileInfo(modelPath);
+    bool isOnnxFile = fileInfo.isFile() && modelPath.endsWith(QStringLiteral(".onnx"), Qt::CaseInsensitive);
+
+    if (isOnnxFile) {
+        if (!fileInfo.exists()) {
+            QMessageBox::critical(this, QStringLiteral("测试加载"),
+                                  QStringLiteral("✗ 模型文件不存在:\n%1").arg(modelPath));
+            return;
+        }
+
+        QString providerStr = effectiveProvider(forceCpu);
+        QMessageBox::information(this, QStringLiteral("测试加载"),
+                                 QStringLiteral("✓ 模型文件验证通过\n\n"
+                                                "文件: %1\n"
+                                                "推理提供者: %2\n"
+                                                "设备: %3")
+                                     .arg(fileInfo.fileName())
+                                     .arg(providerStr)
+                                     .arg(m_deviceCombo->currentText()));
         return;
     }
 
@@ -789,7 +842,7 @@ QWidget *SettingsPage::createPitchTab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
 
-    layout->addWidget(createModelConfigRow(QStringLiteral("F0 提取模型 (RMVPE)"),
+    layout->addWidget(createOnnxModelConfigRow(QStringLiteral("F0 提取模型 (RMVPE)"),
                                            m_pitchModelPath, m_pitchForceCpu, m_pitchTestBtn));
     layout->addWidget(createModelConfigRow(QStringLiteral("MIDI 转录模型 (GAME)"),
                                            m_midiModelPath, m_midiForceCpu, m_midiTestBtn));
