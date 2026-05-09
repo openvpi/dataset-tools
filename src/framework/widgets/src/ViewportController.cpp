@@ -78,18 +78,18 @@ void ViewportController::zoomIn(double centerSec) {
 }
 
 void ViewportController::zoomOut(double centerSec) {
-    if (!canZoomOut()) return;
+    if (canZoomOut()) {
+        int oldRes = m_resolution;
+        m_resolutionIndex++;
+        m_resolution = resolutionTable()[m_resolutionIndex];
+        syncStateFields();
 
-    int oldRes = m_resolution;
-    m_resolutionIndex++;
-    m_resolution = resolutionTable()[m_resolutionIndex];
-    syncStateFields();
-
-    double oldDuration = m_state.endSec - m_state.startSec;
-    double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
-    double newDuration = oldDuration * static_cast<double>(m_resolution) / oldRes;
-    m_state.startSec = centerSec - ratio * newDuration;
-    m_state.endSec = m_state.startSec + newDuration;
+        double oldDuration = m_state.endSec - m_state.startSec;
+        double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
+        double newDuration = oldDuration * static_cast<double>(m_resolution) / oldRes;
+        m_state.startSec = centerSec - ratio * newDuration;
+        m_state.endSec = m_state.startSec + newDuration;
+    }
     clampAndEmit();
 }
 
@@ -147,6 +147,15 @@ void ViewportController::clampAndEmit() {
         m_state.startSec -= diff;
         if (m_state.startSec < 0.0) m_state.startSec = 0.0;
     }
+
+    // When at max resolution but viewport still shorter than total duration,
+    // expand to show the full audio.
+    if (!canZoomOut() && totalDur > 0.0 &&
+        (m_state.endSec - m_state.startSec) < totalDur) {
+        m_state.startSec = 0.0;
+        m_state.endSec = totalDur;
+    }
+
     // Ensure state fields are in sync before emitting
     m_state.resolution = m_resolution;
     m_state.sampleRate = m_sampleRate;
