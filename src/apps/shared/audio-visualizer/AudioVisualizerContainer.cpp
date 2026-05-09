@@ -280,7 +280,6 @@ namespace dstools {
             else if (delta < 0)
                 m_viewport->zoomOut(m_viewport->viewCenter());
             event->accept();
-            updateViewRangeFromResolution();
             return;
         }
         QWidget::wheelEvent(event);
@@ -306,7 +305,7 @@ namespace dstools {
                         }
                     }
                     if (bestIdx >= 0) {
-                        m_dragController->startDrag(tier, bestIdx, nullptr);
+                        m_dragController->startDrag(tier, bestIdx, m_boundaryModel);
                         return true;
                     }
                 }
@@ -405,6 +404,30 @@ namespace dstools {
             if (startSec < 0.0)
                 startSec = 0.0;
         }
+
+        m_viewport->setViewRange(startSec, endSec);
+    }
+
+    void AudioVisualizerContainer::adjustViewRangeToResolution() {
+        int w = m_chartSplitter ? m_chartSplitter->width() : width();
+        if (w <= 0 || m_viewport->sampleRate() <= 0)
+            return;
+
+        double visibleDuration = static_cast<double>(w) * m_viewport->resolution() / m_viewport->sampleRate();
+        double totalDur = m_viewport->totalDuration();
+        double centerSec = m_viewport->viewCenter();
+
+        double startSec = centerSec - visibleDuration / 2.0;
+        double endSec = startSec + visibleDuration;
+
+        if (totalDur > 0.0 && endSec > totalDur) {
+            endSec = totalDur;
+            startSec = endSec - visibleDuration;
+            if (startSec < 0.0)
+                startSec = 0.0;
+        }
+        if (startSec < 0.0)
+            startSec = 0.0;
 
         m_viewport->setViewRange(startSec, endSec);
     }

@@ -384,16 +384,10 @@ void PhonemeEditor::connectSignals() {
         m_actRedo->setText(tr("&Redo") + (text.isEmpty() ? QString() : (" (" + text + ")")));
     });
 
-    // Viewport
-    connect(m_viewport, &ViewportController::viewportChanged, m_waveformWidget, &WaveformWidget::setViewport);
-    connect(m_viewport, &ViewportController::viewportChanged, m_tierEditWidget, &TierEditWidget::setViewport);
-    connect(m_viewport, &ViewportController::viewportChanged, m_powerWidget, &PowerWidget::setViewport);
-    connect(m_viewport, &ViewportController::viewportChanged, m_spectrogramWidget, &SpectrogramWidget::setViewport);
-
-    auto *boundaryOverlay = m_container->boundaryOverlay();
-    if (boundaryOverlay) {
-        connect(m_viewport, &ViewportController::viewportChanged, boundaryOverlay, &BoundaryOverlayWidget::setViewport);
-    }
+    // Viewport connections are managed by AudioVisualizerContainer via
+    // connectViewportToWidget (called by addChart/setEditorWidget) and
+    // the constructor (TimeRuler, BoundaryOverlay, MiniMapScrollBar).
+    // Direct connections here would cause duplicate setViewport() calls.
 
     // Sync menu action checked state with widget visibility (for external visibility changes)
     connect(m_powerWidget, &PowerWidget::visibleStateChanged, this, [this](bool visible) {

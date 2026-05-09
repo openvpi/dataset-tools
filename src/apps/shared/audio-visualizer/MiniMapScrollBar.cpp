@@ -216,6 +216,11 @@ void MiniMapScrollBar::mouseMoveEvent(QMouseEvent *event) {
         if (newStart >= m_dragStartViewEnd - 0.01)
             newStart = m_dragStartViewEnd - 0.01;
         m_viewport->setViewRange(newStart, m_dragStartViewEnd);
+        double viewDur = m_dragStartViewEnd - newStart;
+        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
+            int newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
+            m_viewport->setResolution(newRes);
+        }
         break;
     }
     case DragMode::ZoomRight: {
@@ -225,6 +230,11 @@ void MiniMapScrollBar::mouseMoveEvent(QMouseEvent *event) {
         if (newEnd <= m_dragStartViewStart + 0.01)
             newEnd = m_dragStartViewStart + 0.01;
         m_viewport->setViewRange(m_dragStartViewStart, newEnd);
+        double viewDur = newEnd - m_dragStartViewStart;
+        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
+            int newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
+            m_viewport->setResolution(newRes);
+        }
         break;
     }
     case DragMode::None:
