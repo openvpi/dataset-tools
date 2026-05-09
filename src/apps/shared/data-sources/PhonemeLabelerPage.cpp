@@ -59,26 +59,25 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     r.phonemeLayer.name = QStringLiteral("phoneme");
     r.phonemeLayer.type = QStringLiteral("interval");
 
+    struct WordIds {
+        int graphemeStartId = 0;
+        std::vector<int> phoneBoundaryIds;
+    };
+    std::vector<WordIds> wordIdList;
     int nextId = 1;
 
     for (const auto &word : words) {
         if (word.phones.empty())
             continue;
 
+        WordIds ids;
+
         Boundary graphemeStart;
         graphemeStart.id = nextId++;
         graphemeStart.pos = secToUs(std::max(0.0f, word.start));
         graphemeStart.text = QString::fromStdString(word.text);
-        int graphemeStartId = graphemeStart.id;
+        ids.graphemeStartId = graphemeStart.id;
         r.graphemeLayer.boundaries.push_back(std::move(graphemeStart));
-
-        Boundary graphemeEnd;
-        graphemeEnd.id = nextId++;
-        graphemeEnd.pos = secToUs(std::max(0.0f, word.end));
-        int graphemeEndId = graphemeEnd.id;
-        r.graphemeLayer.boundaries.push_back(std::move(graphemeEnd));
-
-        std::vector<int> childBoundaryIds;
 
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
             const auto &phone = word.phones[pi];
@@ -88,28 +87,34 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
             phoneB.pos = secToUs(std::max(0.0f, phone.start));
             phoneB.text = QString::fromStdString(phone.text);
 
-            childBoundaryIds.push_back(phoneB.id);
+            ids.phoneBoundaryIds.push_back(phoneB.id);
 
             if (pi == 0)
-                r.groups.push_back({graphemeStartId, phoneB.id});
+                r.groups.push_back({ids.graphemeStartId, phoneB.id});
 
             r.phonemeLayer.boundaries.push_back(std::move(phoneB));
         }
 
-        if (!word.phones.empty()) {
-            r.groups.push_back({graphemeEndId, r.phonemeLayer.boundaries.back().id});
-        }
+        wordIdList.push_back(std::move(ids));
+    }
+
+    for (size_t wi = 0; wi < wordIdList.size(); ++wi) {
+        const auto &ids = wordIdList[wi];
 
         LayerDependency dep;
         dep.parentLayerName = QStringLiteral("grapheme");
         dep.childLayerName = QStringLiteral("phoneme");
-        dep.parentStartBoundaryId = graphemeStartId;
-        dep.parentEndBoundaryId = graphemeEndId;
-        if (!childBoundaryIds.empty()) {
-            dep.childStartBoundaryId = childBoundaryIds.front();
-            dep.childEndBoundaryId = childBoundaryIds.back();
+        dep.parentStartBoundaryId = ids.graphemeStartId;
+        dep.parentEndBoundaryId = (wi + 1 < wordIdList.size())
+                                      ? wordIdList[wi + 1].graphemeStartId
+                                      : ids.graphemeStartId;
+
+        if (!ids.phoneBoundaryIds.empty()) {
+            dep.childStartBoundaryId = ids.phoneBoundaryIds.front();
+            dep.childEndBoundaryId = ids.phoneBoundaryIds.back();
+            dep.childBoundaryIds = ids.phoneBoundaryIds;
         }
-        dep.childBoundaryIds = std::move(childBoundaryIds);
+
         r.dependencies.push_back(std::move(dep));
     }
 
@@ -625,7 +630,6 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     }
     if (nonSpeechPh.empty())
         nonSpeechPh = {"AP", "SP"};
-    float wavLen = static_cast<float>(audioDurationSec(doc));
     DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString()
                           + " | audio: " + audioPath.toStdString()
                           + " | language: zh"
@@ -635,7 +639,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     auto hfaAlive = m_hfaAlive;
     QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, nonSpeechPh, sliceId, guard, wavLen]() {
+    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, nonSpeechPh, sliceId, guard]() {
         if (!hfaAlive || !*hfaAlive)
             return;
         if (!hfa)
@@ -648,11 +652,6 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
         } catch (const std::exception &e) {
             DSFW_LOG_ERROR("infer", ("FA inference exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
             result = Err(std::string("Exception: ") + e.what());
-        }
-
-        if (result) {
-            words.fill_small_gaps(wavLen, 0.1f);
-            words.add_SP(wavLen, "SP");
         }
 
         if (!guard)
@@ -929,14 +928,11 @@ void PhonemeLabelerPage::onBatchFA() {
                 HFA::WordList words;
                 std::string lyricsText = lyricsQStr.toStdString();
 
-                float wavLen = static_cast<float>(audioDurationSec(doc));
                 DSFW_LOG_INFO("fa", ("Batch FA started: " + sliceId.toStdString()
                                       + " | language: " + lang.toStdString()
                                       + " | lyrics: " + lyricsText).c_str());
                 auto result = hfa->recognize(audioPath.toStdWString(), lang.toStdString(), nonSpeechPh, lyricsText, words);
                 if (result) {
-                    words.fill_small_gaps(wavLen, 0.1f);
-                    words.add_SP(wavLen, "SP");
                     auto faResult = buildFaLayers(words);
 
                     std::string phonemeDetail;
