@@ -1,7 +1,7 @@
 # Bug 与 Issue 审计报告
 
 **审计日期**：2026-05-08
-**更新日期**：2026-05-08（BUG-20~BUG-23 已修复；BUG-24~BUG-26 已修复）
+**更新日期**：2026-05-08（BUG-20~BUG-23 已修复；BUG-24~BUG-27 已修复；BUG-32 已修复；新增 BUG-28~BUG-31）
 **验证日期**：2026-05-08（已对照源码逐项验证）
 **审计范围**：src/ 全目录
 **参考文档**：conventions-and-standards.md、human-decisions.md
@@ -12,10 +12,10 @@
 
 | 严重度 | 未修复 | 已修复 |
 |--------|--------|--------|
-| 高 | 3 | 9 |
-| 中 | 7 | 3 |
+| 高 | 4 | 11 |
+| 中 | 10 | 3 |
 | 低 | 1 | 0 |
-| **合计** | **11** | **12** |
+| **合计** | **15** | **14** |
 
 > 注：初版 BUG-17/18（ServiceLocator::get 未做空指针检查）经源码验证后发现已有空指针检查，已移除。
 > 
@@ -452,14 +452,163 @@
 
 ---
 
+## BUG-27: ~~QtConcurrent::run lambda 中推理调用无 try-catch — 异常致崩溃~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | P-05 |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
+| **影响文件** | PitchLabelerPage.cpp, PhonemeLabelerPage.cpp, MinLabelPage.cpp, EditorPageBase.cpp |
+
+**描述**：与 BUG-19 同类但范围更广。多个页面的 `QtConcurrent::run` lambda 中直接调用推理方法（`rmvpe->get_f0()`、`game->getNotes()`、`hfa->recognize()`、`asr->recognize()`），lambda 没有 try-catch 保护。BUG-19 仅记录了 ExportPage，但其他页面的推理 lambda 同样存在此问题。若异常逃逸出 lambda，`QtConcurrent::run` 将导致 `std::terminate()` 崩溃。
+
+**复现场景**：模型文件损坏或 GPU 内存不足时，ONNX Runtime 抛出异常，应用直接崩溃无任何错误提示。
+
+**修复方案**：在所有推理 lambda 外层添加 try-catch，捕获异常后通过 `QMetaObject::invokeMethod` 在主线程显示错误消息。参照 ExportPage.cpp:627 的正确做法。
+
+**风险项**：需逐一修改约 9 处 lambda。
+
+---
+
+## BUG-28: PitchLabelerPage 后台线程调用 loadSlice — 线程安全风险
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | **高** |
+| **违反原则** | 线程安全 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | PitchLabelerPage.cpp:L892 |
+
+**描述**：BUG-11 记录了 ExportPage 和 MinLabelPage 的后台线程 `loadSlice` 调用，但遗漏了 PitchLabelerPage。`PitchLabelerPage::onBatchExtractAll()` 的 `QtConcurrent::run` lambda 中 `src->loadSlice(sliceId)` 在后台线程执行，与主线程可能同时访问 `IEditorDataSource` 的内部数据结构。
+
+**修复方案**：同 BUG-11，通过 `QMetaObject::invokeMethod` 回到主线程执行 `loadSlice()`。
+
+**风险项**：同 BUG-11。
+
+---
+
+## BUG-29: ExportService::autoCompleteSlice 从后台线程调用 loadSlice — 线程安全风险
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | **高** |
+| **违反原则** | 线程安全 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | ExportService.cpp:L83 |
+
+**描述**：`ExportService::autoCompleteSlice()` 被 ExportPage 从后台线程调用，其内部 `source->loadSlice(sliceId)` 在后台线程执行。与 BUG-11 同类问题。
+
+**修复方案**：同 BUG-11。
+
+**风险项**：同 BUG-11。
+
+---
+
+## BUG-30: MinLabelPage 后台线程批量 ASR 中 loadSlice 遗漏 — 线程安全风险
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **违反原则** | 线程安全 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | MinLabelPage.cpp:L540 |
+
+**描述**：BUG-11 记录了 MinLabelPage.cpp:L742 的 `loadSlice` 调用，但遗漏了 L540（批量 ASR 的 skip 检查中 `src->loadSlice(sliceId)`）。
+
+**修复方案**：同 BUG-11。
+
+**风险项**：同 BUG-11。
+
+---
+
+## BUG-31: ExportFormats.cpp 错误消息使用 path.string() — CJK 乱码
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **违反原则** | §12 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | ExportFormats.cpp:L69 |
+
+**描述**：`SinsyXmlExportFormat::exportItem()` 中 `return Err("Cannot open output file: " + outputPath.string())` 使用 `path.string()` 构造错误消息，Windows CJK 路径下会乱码。与 BUG-05/06 同类。
+
+**修复方案**：使用 `outputPath.u8string()` 或 `PathUtils::fromStdPath(outputPath)` 构造错误消息。
+
+**风险项**：低风险修复。
+
+---
+
+## BUG-32: ~~Phoneme 标签区域出现三层（grapheme (含中文) + grapheme + phoneme）~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | P-01（模块职责单一，行为不得分散重复） |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
+| **影响文件** | TextGridDocument.cpp:loadFromDsText(L393-405) |
+
+**描述**：Phoneme 页面标签区域出现三层：`grapheme (含中文)`、`grapheme`、`phoneme`，而正确流程只应有两层（`grapheme` + `phoneme`）。
+
+**根因**：`loadFromDsText()` 在检测到 grapheme 层含 CJK 字符时，将 tier 名称从 `"grapheme"` 改为 `"grapheme (含中文)"`（L402）。这个重命名仅存在于 TextGrid 内部显示名，但通过 `toDsText()` 回写时会将 `"grapheme (含中文)"` 作为 `layer.name` 持久化到 `.dstext` 文件。后续 `applyFaResult()` 按名称 `"grapheme"` 查找已有层（L673），无法匹配 `"grapheme (含中文)"`，于是将新的 `"grapheme"` 层 `push_back` 到 `doc.layers`，导致文档中同时存在 `"grapheme (含中文)"` 和 `"grapheme"` 两个层，加上 `"phoneme"` 共三层。
+
+**完整触发路径**：
+1. MinLabel 保存 `grapheme` 层（含中文歌词）+ `raw_text` 层
+2. PhonemeLabeler 加载 → `loadFromDsText()` 将 tier 重命名为 `"grapheme (含中文)"`
+3. 用户保存 → `toDsText()` 将 `"grapheme (含中文)"` 写入 `.dstext`
+4. 执行 FA → `applyFaResult()` 查找 `"grapheme"` 未果 → 新增 `"grapheme"` 层
+5. 结果：`doc.layers` = `["grapheme (含中文)", "grapheme", "phoneme"]` = 三层
+
+**修复方案**：
+
+方案 A（推荐）：**移除 `loadFromDsText()` 中的 CJK 重命名逻辑**。该重命名仅用于日志警告（L403），不应修改 tier 名称。改为仅在日志中输出警告，保持 `layer.name` 不变。
+
+修改 `TextGridDocument::loadFromDsText()` L393-405：
+```cpp
+// 修改前：
+if (layer.name == QStringLiteral("grapheme")) {
+    bool hasCjk = false;
+    for (const auto &b : layer.boundaries) {
+        if (cjkRe.match(b.text).hasMatch()) {
+            hasCjk = true;
+            break;
+        }
+    }
+    if (hasCjk) {
+        tierName = QStringLiteral("grapheme (含中文)");
+        DSFW_LOG_WARN("io", ...);
+    }
+}
+
+// 修改后：
+if (layer.name == QStringLiteral("grapheme")) {
+    for (const auto &b : layer.boundaries) {
+        if (cjkRe.match(b.text).hasMatch()) {
+            DSFW_LOG_WARN("io", ("Grapheme layer contains CJK characters in " + layer.name.toStdString()).c_str());
+            break;
+        }
+    }
+}
+// tierName 保持 layer.name 不变，不再重命名
+```
+
+方案 B（备选）：**在 `applyFaResult()` 中增加对 `"grapheme (含中文)"` 的兼容查找**。此方案治标不治本，且增加名称耦合。
+
+**风险项**：方案 A 无风险，仅移除一个不必要的显示名修改，不影响功能。CJK 检测日志警告仍然保留。
+
+---
+
 ## 按类别汇总
 
 | 类别 | 数量 | ID 列表 |
 |------|------|---------|
 | ~~Use-After-Free / 悬空指针~~ | ~~3~~ 已修复 | ~~BUG-01, BUG-02, BUG-03~~ |
-| Windows CJK 路径问题 | 3 | BUG-04, BUG-05, BUG-06 |
-| 竞态条件 / 线程安全 | 2 | BUG-11, BUG-19 |
+| Windows CJK 路径问题 | 4 | BUG-04, BUG-05, BUG-06, BUG-31 |
+| 竞态条件 / 线程安全 | 5 | BUG-11, BUG-28, BUG-29, BUG-30, BUG-19 |
 | 边界计算 / 行为不一致 | 2 | BUG-07, BUG-08 |
+| ~~错误传播 / 异常处理~~ | ~~1~~ 已修复 | ~~BUG-27~~ |
 | 错误传播 / 异常处理 | 3 | BUG-12, BUG-16, BUG-19 |
 | ~~生命周期 / 信号连接~~ | ~~1~~ 已修复 | ~~BUG-09~~ |
 | 异步规范违反 | 1 | BUG-13 |
@@ -470,14 +619,14 @@
 | ~~工具栏/音频播放~~ | ~~1~~ 已修复 | ~~BUG-23~~ |
 | ~~FA grapheme 层 SP/重复~~ | ~~2~~ 已修复 | ~~BUG-24, BUG-25~~ |
 | ~~PitchLabel 音频播放~~ | ~~1~~ 已修复 | ~~BUG-26~~ |
+| ~~层名称重命名导致三层~~ | ~~1~~ 已修复 | ~~BUG-32~~ |
 
 ---
 
 ## 优先修复建议
 
 1. **最紧急**：BUG-04, BUG-05（Windows CJK 路径，功能性缺陷，中文用户完全无法使用 HFA）
-2. **重要**：BUG-11, BUG-19（线程安全，批量操作场景下易触发）
-3. **高影响 UX**：BUG-20, BUG-21（phoneme 贯穿线显示和拖动，核心编辑功能异常）
-4. **功能完整性**：BUG-22（FA 层级绑定，影响 phoneme 编辑体验）
-5. **改善**：BUG-07, BUG-12, BUG-13, BUG-16（错误处理和异步规范）
-6. **便利性**：BUG-23（PitchLabel 工具栏和音频播放）
+2. **重要**：BUG-11, BUG-28, BUG-29, BUG-30（线程安全，批量操作场景下易触发）
+3. **高影响 UX**：BUG-07, BUG-08（边界计算不一致）
+4. **改善**：BUG-12, BUG-13, BUG-16（错误处理和异步规范）
+5. **便利性**：BUG-31（ExportFormats CJK 路径错误消息）

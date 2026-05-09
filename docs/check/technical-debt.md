@@ -1,7 +1,7 @@
 # 技术债审计报告
 
 **审计日期**：2026-05-08
-**验证日期**：2026-05-08（已对照源码逐项验证；新增 TD-19~TD-21）
+**验证日期**：2026-05-08（已对照源码逐项验证；新增 TD-19~TD-26）
 **审计范围**：src/apps/、src/framework/、src/domain/、src/libs/
 **参考文档**：conventions-and-standards.md、human-decisions.md
 
@@ -11,10 +11,10 @@
 
 | 严重度 | 未修复 | 已修复 |
 |--------|--------|--------|
-| 高 | 4 | 2 |
-| 中 | 6 | 4 |
-| 低 | 4 | 0 |
-| **合计** | **14** | **6** |
+| 高 | 5 | 3 |
+| 中 | 10 | 4 |
+| 低 | 5 | 0 |
+| **合计** | **20** | **7** |
 
 ---
 
@@ -401,9 +401,119 @@
 
 ---
 
+## TD-22: ~~QtConcurrent::run lambda 中推理调用无 try-catch 保护 — 异常致崩溃~~ — ✅ 已修复
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | ~~高~~ — 已修复 |
+| **违反原则** | P-05（异常边界隔离） |
+| **验证状态** | ✅ 已修复 |
+| **修复日期** | 2026-05-08 |
+| **影响文件** | PitchLabelerPage.cpp, PhonemeLabelerPage.cpp, MinLabelPage.cpp, EditorPageBase.cpp |
+
+**描述**：多个页面的 `QtConcurrent::run` lambda 中直接调用推理方法（`rmvpe->get_f0()`、`game->getNotes()`、`hfa->recognize()`、`asr->recognize()`、`matchLyric->matchText()`），这些方法内部可能抛出 `Ort::Exception` 或 `std::exception`。lambda 没有 try-catch 保护，如果异常逃逸出 lambda，`QtConcurrent::run` 将导致 `std::terminate()` 崩溃。
+
+**对比**：ExportPage.cpp:627 的 lambda 已有 try-catch 保护（`catch (const std::exception &e)` + `DSFW_LOG_ERROR`），是正确做法。
+
+**修复方案**：在所有推理 lambda 外层添加 try-catch，参照 ExportPage 的模式：
+
+```cpp
+QtConcurrent::run([engine, alive, ...]() {
+    try {
+        if (!alive || !*alive) return;
+        auto result = engine->infer(...);
+        // ...
+    } catch (const Ort::Exception &e) {
+        DSFW_LOG_ERROR("infer", e.what());
+    } catch (const std::exception &e) {
+        DSFW_LOG_ERROR("infer", e.what());
+    }
+});
+```
+
+**风险项**：
+- 需要逐一修改约 9 处 lambda
+- 需要确保所有推理调用都在 try-catch 保护下
+- EditorPageBase::loadEngineAsync 的 `loadFunc()` 也需要保护
+
+---
+
+## TD-23: ExportFormats.cpp 错误消息使用 path.string() — CJK 乱码
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **违反原则** | §12（路径 I/O 规范） |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | ExportFormats.cpp:L69 |
+
+**描述**：`SinsyXmlExportFormat::exportItem()` 中 `return Err("Cannot open output file: " + outputPath.string())` 使用 `path.string()` 构造错误消息，Windows CJK 路径下会乱码。
+
+**修复方案**：使用 `outputPath.u8string()` 或 `PathUtils::fromStdPath(outputPath)` 构造错误消息。
+
+**风险项**：低风险修复。
+
+---
+
+## TD-24: 硬编码中文字符串未使用 tr() 包裹 — i18n 缺陷（TD-09 大幅扩展）
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **违反原则** | §4 日志规范、i18n 规范 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | PitchLabelerPage.cpp (~45处), SlicerPage.cpp (~30处), DsSlicerPage.cpp (~30处), ExportPage.cpp (~40处), PitchEditor.cpp (~20处), PianoRollView.cpp (~20处), PropertyPanel.cpp (~15处), SettingsPage.cpp (~60处), SliceListPanel.cpp (~5处), TextGridDocument.cpp (1处), DsLabeler/main.cpp (~15处) |
+
+**描述**：TD-09 仅记录了 PitchLabelerPage.cpp 的 4 处 `QStringLiteral` 硬编码中文，但实际范围远大于此。全文搜索发现约 **250+ 处** `QStringLiteral` 硬编码中文字符串未使用 `tr()` 包裹，涉及 11 个文件。这意味着这些字符串无法被 Qt Linguist 提取翻译，应用无法支持多语言。
+
+**修复方案**：将所有 `QStringLiteral("中文...")` 替换为 `tr("中文...")`，并更新 `.ts` 翻译文件。建议按页面逐步迁移，优先迁移用户可见的对话框和菜单文本。
+
+**风险项**：
+- 工作量较大（250+ 处）
+- 需要确保所有包含 tr() 的类都继承 QObject 并有 Q_OBJECT 宏
+- 需要更新翻译文件
+
+---
+
+## TD-25: domain 层 catch 块缺少 DSFW_LOG 日志记录
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 低 |
+| **违反原则** | P-05（异常边界隔离） |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | DsTextDocument.cpp:L34, QualityMetrics.cpp:L29/L48, ExportFormats.cpp:L35/L53/L85/L106, DsItemManager.cpp:L37/L113 |
+
+**描述**：domain 层多个 catch 块仅返回 `Result::Error()` 但不记录 DSFW_LOG 日志。虽然通过 `Result<T>` 传播错误不违反 P-05，但缺少日志记录不利于生产环境调试——FileLogSink 不会记录这些错误。
+
+**修复方案**：在 catch 块中添加 `DSFW_LOG_ERROR("io", ...)` 日志记录。
+
+**风险项**：低风险修复。
+
+---
+
+## TD-26: 多处使用 qWarning/qDebug 而非 DSFW_LOG — 日志绕过
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 低 |
+| **违反原则** | §4 日志规范 |
+| **验证状态** | ✅ 已确认（9 处新增） |
+| **影响文件** | AsrPipeline.cpp:L39, MatchLyric.cpp:L30, ProjectDataSource.cpp:L204/L210/L219, DsDocument.cpp:L45, BatchCheckpoint.cpp:L89, AppPaths.cpp:L63/L65 |
+
+**描述**：LOG-03 已记录了 15+ 处 qWarning/qDebug/qCritical 使用，本次排查新增 9 处。这些日志绕过统一日志系统，不会写入 FileLogSink，无法在生产环境中追溯。
+
+**修复方案**：统一替换为 `DSFW_LOG_WARN/DEBUG/ERROR` 宏，使用正确的分类字符串。
+
+**风险项**：低风险修复，工作量较小。
+
+---
+
 ## 优先修复建议
 
-1. **最优先**：TD-14（后台线程调用非线程安全方法）— 可能导致用户数据损坏或应用崩溃
-2. **次优先**：TD-07（path.string() CJK 路径 — 剩余 Hfa/DictionaryG2P/GameModel/JsonUtils/Util）— 影响平台兼容性
-3. **中期**：TD-01/TD-04/TD-13（QMetaMethod 反射替换为接口）和 TD-08（SpectrogramWidget 性能优化）— 架构改进
-4. **低优先级**：TD-05/TD-06/TD-09/TD-10/TD-11/TD-12/TD-15/TD-16/TD-17 — 规范对齐和代码清理
+1. **最优先**：TD-22（QtConcurrent::run lambda 无 try-catch）— 模型加载失败或 GPU OOM 时直接崩溃，无任何错误提示
+2. **次优先**：TD-14/BUG-11（后台线程调用非线程安全方法）— 可能导致用户数据损坏或应用崩溃；新增 PitchLabelerPage:892、MinLabelPage:540、ExportService:83 遗漏调用点
+3. **重要**：TD-07（path.string() CJK 路径 — 剩余 Hfa/DictionaryG2P/GameModel/JsonUtils/Util/ExportFormats）— 影响平台兼容性
+4. **中期**：TD-01/TD-04/TD-13（QMetaMethod 反射替换为接口）和 TD-08（SpectrogramWidget 性能优化）— 架构改进
+5. **中期**：TD-24（硬编码中文 tr() 迁移）— 250+ 处，建议按页面逐步迁移
+6. **低优先级**：TD-05/TD-06/TD-09/TD-10/TD-11/TD-12/TD-15/TD-16/TD-17/TD-23/TD-25/TD-26 — 规范对齐和代码清理

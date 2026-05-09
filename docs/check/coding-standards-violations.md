@@ -1,7 +1,7 @@
 # 编码规范违规审计报告
 
 **审计日期**：2026-05-08
-**验证日期**：2026-05-08（已对照源码逐项验证）
+**验证日期**：2026-05-08（已对照源码逐项验证；新增 CMAKE-05, NAME-03~05, LOG-04~05）
 **审计范围**：src/ 全目录
 **参考文档**：conventions-and-standards.md (P-01 ~ P-09, §1-§12)、human-decisions.md
 
@@ -16,13 +16,13 @@
 | P-04 错误根因传播 | 2 | 1 | 1 | 0 | 1 |
 | P-05 异常边界隔离 | 5 | 1 | 2 | 2 | 0 |
 | ~~P-09 异步任务存活令牌~~ | ~~7~~ | ~~5~~ | ~~1~~ | ~~0~~ | **7** |
-| §12 路径 I/O | 5 | 1 | 2 | 2 | 2 |
+| §12 路径 I/O | 6 | 1 | 3 | 2 | 2 |
 | §11 头文件组织 | 3 | 0 | 0 | 3 | 0 |
-| §4 日志规范 | 3 | 0 | 2 | 1 | 0 |
-| §2 命名规范 | 2 | 0 | 2 | 0 | 0 |
-| §9 CMake 规范 | 4 | 0 | 4 | 0 | 0 |
+| §4 日志规范 | 5 | 0 | 3 | 2 | 0 |
+| §2 命名规范 | 5 | 0 | 3 | 2 | 0 |
+| §9 CMake 规范 | 5 | 0 | 5 | 0 | 0 |
 | QSettings 硬编码 | 3 | 0 | 2 | 1 | 0 |
-| **合计** | **34** | **4** | **18** | **9** | **10** |
+| **合计** | **42** | **4** | **22** | **12** | **10** |
 
 ---
 
@@ -671,6 +671,144 @@ QFile file(path);
 
 ---
 
+### P01-03: MinLabelPage 通过 dynamic_cast 绕过 IModelProvider 抽象
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | MinLabelPage.cpp:L361 |
+
+**描述**：`MinLabelPage::ensureAsrEngine()` 中通过 `dynamic_cast<FunAsrModelProvider*>(provider)` 将 `IModelProvider*` 下转为具体实现类，再通过 `asr()` 获取底层 `LyricFA::Asr*`。这完全绕过了 `IModelProvider` 抽象接口，违反了"接口驱动"原则。如果 ASR 实现更换（如从 FunAsr 换为 Whisper），MinLabelPage 代码必须修改。
+
+**修复方案**：在 `IModelProvider` 接口中增加推理调用方法，各 Page 通过接口调用推理，而非获取底层引擎指针。
+
+**风险项**：需要设计通用的推理结果类型。
+
+---
+
+## 十二、路径 I/O 违规补充 (§12)
+
+### PATH-08: ExportFormats.cpp 使用 path.string() 构造错误消息
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | ExportFormats.cpp:L69 |
+
+**描述**：`SinsyXmlExportFormat::exportItem()` 中 `return Err("Cannot open output file: " + outputPath.string())` 使用 `path.string()` 构造错误消息，Windows CJK 路径下会乱码。
+
+**修复方案**：使用 `outputPath.u8string()` 或 `PathUtils::fromStdPath(outputPath)` 构造错误消息。
+
+**风险项**：低风险修复。
+
+---
+
+## 十三、命名规范违规补充 (§2)
+
+### NAME-03: framework/core 公共头文件使用 \<dstools/\> 引用 types/infer-common 类型
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | framework/core/include/dsfw/ 下 13 个公共头文件 (15 处引用) |
+
+**描述**：`dsfw-core` 的 13 个公共头文件使用 `<dstools/>` 前缀引用 `dstools-types`（Result.h、ExecutionProvider.h、TimePos.h）和 `dstools-infer-common`（IInferenceEngine.h）中的类型。其中 `<dstools/Result.h>` 等来自 `src/types/` 包，使用 `<dstools/>` 前缀本身合理（types 不属于 framework），但导致 framework 层 include 风格不一致。`<dstools/IInferenceEngine.h>` 来自 `src/framework/infer/`（framework 模块），应使用 `<dsfw/>` 前缀。
+
+**具体位置**：InferenceModelProvider.h:L7-8, PipelineContext.h:L4-5, ITaskProcessor.h:L7, IFormatAdapter.h:L4, IAudioPreprocessor.h:L4, IQualityMetrics.h:L7, IModelDownloader.h:L7, IG2PProvider.h:L7, IExportFormat.h:L7, IDocument.h:L6, IModelProvider.h:L14, ISlicerService.h:L8, IFileIOProvider.h:L11
+
+**修复方案**：与 NAME-01、NAME-02 一并修复。当 `dstools-infer-common` 迁移到 `<dsfw/>` 前缀后，`InferenceModelProvider.h` 中的引用也应同步更新。对于 `dstools-types` 的类型，可考虑在 `dsfw-core` 中提供 `<dsfw/Result.h>` 等转发头文件以保持一致性。
+
+**风险项**：需要修改 13 个头文件的 include 语句。
+
+---
+
+### NAME-04: framework/base 公共头文件使用 \<dstools/\> 引用 types
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 低 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | JsonHelper.h:L3 |
+
+**描述**：`dsfw-base` 的 `JsonHelper.h` 使用 `#include <dstools/Result.h>` 引用 `dstools-types` 中的类型。
+
+**修复方案**：同 NAME-03。
+
+**风险项**：低风险修复。
+
+---
+
+### NAME-05: framework/widgets 源文件使用 \<dstools/\> 引用 audio 模块
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 低 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | PlayWidget.cpp:L2-3 |
+
+**描述**：`dsfw-widgets` 的 `PlayWidget.cpp` 使用 `#include <dstools/IAudioPlayer.h>` 和 `#include <dstools/AudioPlayer.h>` 引用 `dstools-audio` 模块。这是 NAME-01 的下游影响。
+
+**修复方案**：与 NAME-01 一并修复。当 `dstools-audio` 迁移到 `<dsfw/>` 前缀后，此处引用应同步更新。
+
+**风险项**：低风险修复。
+
+---
+
+## 十四、日志规范违规补充 (§4)
+
+### LOG-04: libs 层使用 qWarning/qDebug 而非 DSFW_LOG
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | AsrPipeline.cpp:L39, MatchLyric.cpp:L30 |
+
+**描述**：`libs/lyric-fa/` 下的 `AsrPipeline.cpp` 和 `MatchLyric.cpp` 使用 `qDebug()`/`qWarning()` 而非 `DSFW_LOG`，绕过统一日志系统。
+
+**修复方案**：替换为 `DSFW_LOG_ERROR("infer", ...)` 和 `DSFW_LOG_WARN("infer", ...)`。
+
+**风险项**：libs 层可能未链接 dsfw-core，需确认 DSFW_LOG 宏可用。
+
+---
+
+### LOG-05: apps/domain 层新增 qWarning 使用
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 低 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | ProjectDataSource.cpp:L204/L210/L219, DsDocument.cpp:L45, BatchCheckpoint.cpp:L89, AppPaths.cpp:L63/L65 |
+
+**描述**：LOG-03 已记录了 15+ 处 qWarning/qDebug/qCritical 使用，本次排查新增 7 处。这些日志绕过统一日志系统，不会写入 FileLogSink。
+
+**修复方案**：统一替换为 `DSFW_LOG_WARN/DEBUG/ERROR` 宏，使用正确的分类字符串。
+
+**风险项**：低风险修复。
+
+---
+
+## 十五、CMake 规范违规补充 (§9)
+
+### CMAKE-05: FunAsr 将未使用的编译定义声明为 PUBLIC
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | FunAsr/src/CMakeLists.txt:L28 |
+
+**描述**：`target_compile_definitions(${PROJECT_NAME} PUBLIC -D_RPASR_API_EXPORT)` 将 `_RPASR_API_EXPORT` 宏以 PUBLIC 方式传播给所有消费者。但搜索整个 FunAsr 代码，该宏从未被使用（无任何 `#ifdef _RPASR_API_EXPORT` 或导出宏引用），属于残留定义。PUBLIC 编译定义会污染消费者的编译环境。
+
+**修复方案**：删除该行，或改为 PRIVATE（如果确实需要内部使用）。
+
+**风险项**：极低风险，删除未使用的定义。
+
+---
+
 ### P01-02: 混音逻辑在两处重复实现
 
 | 属性 | 值 |
@@ -702,10 +840,12 @@ QFile file(path);
 | ID | 描述 | 工作量 |
 |----|------|--------|
 | P05-01~03 | 3 处业务逻辑中的 try-catch | 中 |
-| NAME-01~02 | 框架模块使用错误的 include 前缀 | 中 |
-| LOG-01~03 | 日志分类和 API 使用不规范 | 中 |
-| CMAKE-01~04 | 依赖可见性声明不当 | 小 |
+| NAME-01~03 | 框架模块使用错误的 include 前缀 | 中 |
+| LOG-01~04 | 日志分类和 API 使用不规范 | 中 |
+| CMAKE-01~05 | 依赖可见性声明不当 | 小 |
 | QSET-01~02 | QSettings 硬编码 key | 小 |
+| P01-03 | MinLabelPage dynamic_cast 绕过抽象 | 中 |
+| PATH-08 | ExportFormats path.string() CJK 乱码 | 小 |
 
 ### 低优先级（低严重度，风格/一致性问题）
 
@@ -714,3 +854,5 @@ QFile file(path);
 | HDR-01~03 | FunAsr 头文件守卫风格不统一 | 小 |
 | PATH-06~07 | 错误消息中 path.string() 显示问题 | 小 |
 | P05-04~05 | JsonUtils 异常处理改进 | 小 |
+| NAME-04~05 | framework/base/widgets 引用前缀不一致 | 小 |
+| LOG-05 | apps/domain 层 qWarning 新增 | 小 |

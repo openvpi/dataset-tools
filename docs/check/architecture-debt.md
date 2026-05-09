@@ -1,7 +1,7 @@
 # 架构债审计报告
 
 **审计日期**：2026-05-08
-**验证日期**：2026-05-08（已对照源码逐项验证；新增 ARCH-16~ARCH-17）
+**验证日期**：2026-05-08（已对照源码逐项验证；新增 ARCH-16~ARCH-23）
 **审计范围**：src/ 全目录
 **参考文档**：framework-architecture.md、human-decisions.md (P-01 ~ P-09)
 
@@ -9,12 +9,12 @@
 
 ## 汇总
 
-| 严重度 | 数量 |
-|--------|------|
-| 高 | 5 |
-| 中 | 6 |
-| 低 | 4 |
-| **合计** | **15** |
+| 严重度 | 未修复 | 已修复 |
+|--------|--------|--------|
+| 高 | 7 | 0 |
+| 中 | 9 | 2 |
+| 低 | 5 | 0 |
+| **合计** | **21** | **2** |
 
 ---
 
@@ -25,23 +25,29 @@
 | **严重度** | **高** |
 | **违反准则** | 分层架构（framework-architecture.md §6） |
 | **验证状态** | ✅ 已确认 |
-| **影响文件** | PhonemeLabelerPage.cpp:L20, PitchLabelerPage.cpp:L22-23, ExportService.cpp:L9-11, ExportPage.cpp:L14-16, SettingsPage.cpp:L25, ModelProviderInit.cpp:L9-11, PitchExtractionService.cpp:L3-4 |
+| **影响文件** | PhonemeLabelerPage.cpp:L20, PitchLabelerPage.cpp:L22-23, ExportService.cpp:L9-11, ExportPage.cpp:L14-16, SettingsPage.cpp:L25, ModelProviderInit.cpp:L8-11, PitchExtractionService.cpp:L3-4, SlicerPage.cpp:L20, DsSlicerPage.cpp:L26, SlicerService.cpp:L5, hfa-cli/main.cpp:L1/L3, MinLabelPage.cpp:L25 |
 
-**描述**：项目设计要求 `apps → libs → infer` 三层依赖，apps 层不应直接 include infer 层头文件。但实际代码中，7 个 apps/shared 文件直接 `#include <hubert-infer/Hfa.h>`、`<rmvpe-infer/Rmvpe.h>`、`<game-infer/Game.h>`。
+**描述**：项目设计要求 `apps → libs → infer` 三层依赖，apps 层不应直接 include infer 层头文件。但实际代码中，12 个文件直接 `#include` 了 infer 层头文件（`<hubert-infer/Hfa.h>`、`<rmvpe-infer/Rmvpe.h>`、`<game-infer/Game.h>`、`<audio-util/Slicer.h>`、`<audio-util/Util.h>`、`<FunAsrModelProvider.h>`）。
 
-`LayerAudit.cmake` 已定义了检查逻辑（L7-12），将 `hubert-infer/`、`rmvpe-infer/`、`game-infer/`、`audio-util/` 列为禁止 include，但当前仅输出 WARNING 而不阻断编译。
+`LayerAudit.cmake` 已定义了检查逻辑（L7-12），将 `hubert-infer/`、`rmvpe-infer/`、`game-infer/`、`audio-util/` 列为禁止 include，但当前仅输出 WARNING 而不阻断编译。且 `FORBIDDEN_INCLUDES` 列表缺少 `"FunAsr/"` 项，无法捕获对 FunAsr 的违规 include。
 
 **补充发现**：
 - `ModelProviderInit.cpp` 是"注册工厂"，职责是将具体 infer 实现绑定到 `IModelManager`，这种依赖在某种程度上是合理的（工厂模式需要知道具体类型），但按分层原则应位于 libs 层而非 apps 层
 - `PitchExtractionService.cpp` 直接调用 `Rmvpe::get_f0()` 和 `Game` 的方法，是典型的业务逻辑绕过抽象层直接使用底层实现
 - `ExportService.cpp` 和 `ExportPage.cpp` 直接使用 infer 层类型做验证/推理，而非通过 `IModelProvider` 抽象接口
+- `SlicerPage.cpp`/`DsSlicerPage.cpp`/`SlicerService.cpp` 直接 include `<audio-util/Slicer.h>`，初版遗漏
+- `hfa-cli/main.cpp` 直接 include `<hubert-infer/Hfa.h>` 和 `<audio-util/Util.h>`，初版遗漏
+- `MinLabelPage.cpp:L25` include `FunAsrModelProvider.h` 并通过 `dynamic_cast<FunAsrModelProvider*>` 绕过 `IModelProvider` 抽象接口直接获取 `LyricFA::Asr*`，是层级违规与抽象绕过的结合
+- `ModelProviderInit.cpp:L8` include `FunAsrModelProvider.h`，初版仅记录 L9-11
 
 **修复方案**：
 1. **ModelProviderInit.cpp**：移到 libs 层（如新建 `model-registry` 库），apps 层通过 `IModelManager` 间接使用
 2. **PitchExtractionService.cpp**：改为通过 `IModelProvider` 接口调用推理，而非直接持有 `Rmvpe*` / `Game*`
 3. **ExportService.cpp / ExportPage.cpp**：同上，通过 `IModelProvider` 获取推理结果
 4. **SettingsPage.cpp**：`DictionaryG2P` 的配置项应通过 libs 层封装暴露，而非直接 include infer 层头文件
-5. **LayerAudit.cmake**：将 WARNING 升级为 FATAL_ERROR，强制阻断违规编译
+5. **LayerAudit.cmake**：将 WARNING 升级为 FATAL_ERROR，强制阻断违规编译；补充 `"FunAsr/"` 到 FORBIDDEN_INCLUDES 列表
+6. **SlicerPage/DsSlicerPage/SlicerService**：通过 `ISlicerService` 接口间接调用，而非直接 include `<audio-util/Slicer.h>`
+7. **MinLabelPage**：移除 `dynamic_cast<FunAsrModelProvider*>` 绕过抽象层的代码，改为通过 `IModelProvider` 接口获取 ASR 能力
 
 **风险项**：
 - 修复工作量较大，涉及多个 Page 类的重构
@@ -411,23 +417,164 @@ SlicerPage 独有：`m_viewport` (ViewportController*)、`m_tierLabel` (SliceTie
 
 ---
 
+## ARCH-18: ExportPage 是 God Class (1152行) — 单一职责违规
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | **高** |
+| **违反准则** | 单一职责 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | ExportPage.cpp |
+
+**描述**：ExportPage 承担了至少 **6 种不同职责**：UI 构建（设备选择/导出配置/验证标签）、推理引擎管理（HFA/RMVPE/GAME 加载与存活令牌）、批量推理调用、数据验证、WAV/DS 文件导出、进度管理。同时直接 include 3 个 infer 层头文件（L15-17），是 ARCH-01 和 God Class 的双重违规。
+
+**修复方案**：
+1. 推理调用逻辑通过 libs 层 Facade 封装（与 ARCH-01 联动）
+2. 导出逻辑提取到 `ExportService`（已有部分实现，但 ExportPage 仍内联大量推理代码）
+3. 数据验证逻辑提取到 `QualityMetrics` 服务
+
+**风险项**：与 ARCH-01 联动，需先解决层级违规再拆分。
+
+---
+
+## ARCH-19: SettingsPage 是 God Class (903行) — 单一职责违规
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | **高** |
+| **违反准则** | 单一职责 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | SettingsPage.cpp |
+
+**描述**：SettingsPage 混合了 GPU 枚举（DXGI API 直接调用）、模型路径配置、G2P 配置（直接 include `<hubert-infer/DictionaryG2P.h>`）、音频设备配置、FA/Pitch/通用设置等多个职责。903 行中约 200 行是 DXGI GPU 枚举代码，约 100 行是 G2P 测试代码。
+
+**修复方案**：
+1. GPU 枚举逻辑提取到 `GpuInfoProvider` 类（dsfw-core 或 dsfw-ui-core）
+2. G2P 测试逻辑通过 `IG2PProvider` 接口调用，而非直接构造 `DictionaryG2P`
+3. 各设置 Tab 的 UI 构建逻辑提取到独立的 Builder 类
+
+**风险项**：DXGI 枚举涉及 Windows API，提取时需注意平台兼容性。
+
+---
+
+## ARCH-20: libs 层对 infer 层的 PUBLIC 依赖导致层级泄漏 — ARCH-01 根因
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | **高** |
+| **违反准则** | 分层架构 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | hubertfa-lib/CMakeLists.txt:L7, rmvpepitch-lib/CMakeLists.txt:L7, gameinfer-lib/CMakeLists.txt:L7, lyricfa-lib/CMakeLists.txt:L11-14 |
+
+**描述**：libs 层（hubertfa-lib、rmvpepitch-lib、gameinfer-lib）对 infer 层使用 PUBLIC 依赖，导致 infer 层头文件路径传递到 apps 层。这是 ARCH-01 的根本原因——即使 apps 层代码不直接 include infer 头文件，CMake 的 PUBLIC 依赖传播也使得这种违规成为可能。
+
+**修复方案**：将 libs 层对 infer 层的依赖从 `PUBLIC` 降为 `PRIVATE`，使 infer 层头文件不会传递到 apps 层。这是解决 ARCH-01 的根本措施。
+
+**风险项**：
+- 改为 PRIVATE 后，apps 层现有的违规 include 将编译失败，需同步修复
+- 需要确认 libs 层的公共头文件不暴露 infer 层类型
+
+---
+
+## ARCH-21: data-sources 所有依赖均为 PUBLIC — 依赖磁铁放大器
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | **高** |
+| **违反准则** | 模块低耦合、CMake 依赖可见性（§9） |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | data-sources/CMakeLists.txt |
+
+**描述**：ARCH-08 已指出 data-sources 是"依赖磁铁"，但未强调 **PUBLIC 可见性** 是放大该问题的核心原因。data-sources 的 13 个内部库依赖全部声明为 PUBLIC，这意味着任何依赖 data-sources 的模块都会传递性地获得全部 13 个库的头文件和链接。特别是 infer 层库（hubertfa-lib, rmvpepitch-lib, gameinfer-lib, lyricfa-lib, audio-util）的 PUBLIC 传递，使得 DsLabeler 和 LabelSuite 可以直接 include infer 层头文件。
+
+**修复方案**：将 infer 层和编辑器模块的依赖降为 PRIVATE：
+
+| 依赖 | 当前可见性 | 建议可见性 | 理由 |
+|------|-----------|-----------|------|
+| dstools-domain | PUBLIC | PUBLIC | 公共 API 暴露了 domain 类型 |
+| dsfw-core | PUBLIC | PUBLIC | 同上 |
+| dsfw-widgets | PUBLIC | PRIVATE | 内部使用 Widget，公共 API 不暴露 |
+| settings-page | PUBLIC | PRIVATE | 内部使用设置 |
+| phoneme-editor | PUBLIC | PRIVATE | 仅内部创建编辑器实例 |
+| pitch-editor | PUBLIC | PRIVATE | 同上 |
+| min-label-editor | PUBLIC | PRIVATE | 同上 |
+| audio-visualizer | PUBLIC | PRIVATE | 同上 |
+| lyricfa-lib | PUBLIC | PRIVATE | 应通过 IModelProvider 接口 |
+| hubertfa-lib | PUBLIC | PRIVATE | 同上 |
+| rmvpepitch-lib | PUBLIC | PRIVATE | 同上 |
+| gameinfer-lib | PUBLIC | PRIVATE | 同上 |
+| audio-util | PUBLIC | PRIVATE | 同上 |
+
+将 infer 层和编辑器模块的依赖降为 PRIVATE 后，apps 层将无法再直接 include infer 层头文件，从编译层面强制执行分层架构。
+
+**风险项**：
+- 改为 PRIVATE 后，apps 层现有的违规 include 将编译失败，需同步修复
+- 需要逐一确认 data-sources 的公共头文件不暴露这些依赖的类型
+
+---
+
+## ARCH-22: DsLabeler 直接显式依赖 infer 层 libs — 冗余且违规
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **违反准则** | 分层架构 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | DsLabeler/CMakeLists.txt:L11-18 |
+
+**描述**：DsLabeler 已通过 `data-sources` 传递性地获得了 infer 层 libs 的依赖，额外显式声明 `lyricfa-lib hubertfa-lib rmvpepitch-lib gameinfer-lib` 是冗余的，且为 DsLabeler 代码直接使用 infer 层类型开了口子。对比 LabelSuite/CMakeLists.txt 则没有直接依赖 infer 层 libs。
+
+**修复方案**：移除 DsLabeler/CMakeLists.txt 中对 infer 层 libs 的直接依赖，仅保留通过 data-sources 的传递依赖。配合 ARCH-21 将 data-sources 的 infer 依赖降为 PRIVATE 后，这些依赖将自动不可用。
+
+**风险项**：低风险，纯 CMake 修改。
+
+---
+
+## ARCH-23: MinLabelPage 通过 dynamic_cast 绕过 IModelProvider 抽象 — 抽象泄漏
+
+| 属性 | 值 |
+|------|-----|
+| **严重度** | 中 |
+| **违反准则** | P-02（被动接口 + 容器通知）、接口驱动 |
+| **验证状态** | ✅ 已确认 |
+| **影响文件** | MinLabelPage.cpp:L361 |
+
+**描述**：`MinLabelPage::ensureAsrEngine()` 中通过 `dynamic_cast<FunAsrModelProvider*>(provider)` 将 `IModelProvider*` 下转为具体实现类，再通过 `asr()` 获取底层 `LyricFA::Asr*`。这完全绕过了 `IModelProvider` 抽象接口，是 ServiceLocator 误用与层级违规的结合。类似模式可能存在于其他 Page 中（如 PitchLabelerPage 对 RMVPE/GAME 的使用）。
+
+**修复方案**：
+1. 在 `IModelProvider` 接口中增加推理调用方法（如 `virtual Result<AsrResult> recognize(const std::wstring &audioPath, const std::string &msg) = 0`）
+2. 各 Page 通过 `IModelProvider` 接口调用推理，而非获取底层引擎指针
+3. 移除所有 `dynamic_cast` 到具体 Provider 类型的代码
+
+**风险项**：
+- 需要设计通用的推理结果类型
+- 部分推理方法参数差异较大（HFA 需要 lyrics，RMVPE 不需要），接口设计需仔细考虑
+
+---
+
 ## 修复优先级建议
 
 ### 第一批（高优先级，解决层级违规和核心 P-01 问题）
 
 | ID | 工作量 | ROI | 前置依赖 |
 |----|--------|-----|---------|
+| ARCH-20 | 中 | 从编译层面强制分层，ARCH-01 根因 | 无 |
+| ARCH-21 | 中 | data-sources 依赖降级，配合 ARCH-20 | 无 |
 | ARCH-06 | 小 | PowerWidget 接口一致性，为 ARCH-02 铺路 | 无 |
 | ARCH-02 | 中 | 消除 260 行重复代码 | ARCH-06 |
-| ARCH-01 | 大 | 恢复分层架构，减少编译依赖 | 无 |
+| ARCH-01 | 大 | 恢复分层架构，减少编译依赖 | ARCH-20, ARCH-21 |
 | ARCH-07 | 大 | 消除 SlicerPage/DsSlicerPage 重复（600-800行） | 无 |
 
-### 第二批（中优先级，消除 Widget 层重复代码）
+### 第二批（中优先级，消除 Widget 层重复代码和 God Class）
 
 | ID | 工作量 | ROI | 说明 |
 |----|--------|-----|------|
 | ARCH-03/04/05 | 中 | 一次性解决 Widget 层所有重复 | 建议合并为 AudioChartWidget 基类提取 |
-| ARCH-08 | 大 | data-sources 拆分 | 与 ARCH-01 联动 |
+| ARCH-08 | 大 | data-sources 拆分 | 与 ARCH-01/21 联动 |
+| ARCH-18 | 大 | ExportPage God Class 拆分 | 与 ARCH-01 联动 |
+| ARCH-19 | 中 | SettingsPage God Class 拆分 | |
+| ARCH-22 | 小 | DsLabeler 冗余依赖清理 | 配合 ARCH-21 |
+| ARCH-23 | 中 | 移除 dynamic_cast 抽象绕过 | 与 ARCH-01 联动 |
 
 ### 第三批（低优先级，改善代码质量）
 | ID | 工作量 | ROI | 说明 |

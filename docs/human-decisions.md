@@ -3,7 +3,7 @@
 > 本文档记录所有由用户明确给出的设计决策，供后续实施参考。
 > 与其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-05-08（修订 D-42、D-43）
+> 最后更新：2026-05-09（新增 P-10/P-11/P-12）
 
 ---
 
@@ -114,6 +114,52 @@ m_engineAlive.reset();  // 原子置 false 并释放引用
 ```
 
 **注意**：此方案是**过渡性补救**，存在 TOCTOU（check-then-use）间隙。彻底解决需要引擎层自身提供 shared_ptr 所有权或线程安全的访问令牌。
+
+### P-10：统一路径库，禁止各处自行拼接
+
+**原则**：基于 `std::filesystem` 设计跨平台路径库（`dsfw::PathUtils`），路径拼接、编码转换、输出到 debug 信息等均使用此库，禁止各处自行拼接路径或实现编码转换。
+
+**理由**：
+- 当前代码中路径拼接散落各处（`path / "config.json"`、`dir + "/" + filename` 等），风格不统一
+- 编码转换有 3 处重复实现：`dstools::toFsPath()`（domain）、`dsfw::PathUtils::toStdPath()`（framework）、`DsDocument::toFsPath()`（domain），行为完全相同
+- `path.string()` 在 Windows 上产生 ANSI 乱码，但仍有 20+ 处使用（BUG-04/05/06/31，PATH-01~08）
+- 缺少 `path → UTF-8 string` 的统一方法，各处自行用 `u8string()` + `std::string(begin, end)` 转换
+
+**实现要求**：
+1. `dsfw::PathUtils` 新增 `join()`、`toUtf8()`、`toWide()` 方法
+2. 废弃 `dstools::toFsPath()` 和 `DsDocument::toFsPath()`，统一使用 `dsfw::PathUtils::toStdPath()`
+3. 所有 `path.string()` 替换为 `PathUtils::toUtf8(path)`（用于错误消息/日志）或 `PathUtils::toWide(path)`（用于 Windows API）
+4. 所有手动路径拼接替换为 `PathUtils::join()` 或 `std::filesystem::path::operator/`
+
+### P-11：多线程安全优先
+
+**原则**：批处理和多页面设计必须考虑多线程竞争问题。共享可变状态必须通过锁（`std::mutex`）或原子操作（`std::atomic`）保护。
+
+**理由**：
+- 当前 `QtConcurrent::run` 中的推理调用与主线程的模型卸载存在竞争（P-09 仅是过渡方案）
+- 批量处理（MinLabelPage/PhonemeLabelerPage/PitchLabelerPage/ExportPage）的进度回调和取消逻辑缺少统一保护
+- 多页面同时活跃时，共享引擎的并发访问需要 mutex 保护（已部分实现于 GameModel/CancellableOnnxModel）
+
+**实现要求**：
+1. 所有推理引擎的 `process()` 方法必须受 `std::mutex` 保护（已部分实现）
+2. 批量处理任务的取消标志必须使用 `std::atomic<bool>`
+3. 异步回调中访问页面成员前必须检查存活令牌（P-09）
+4. 新增共享资源时必须同步考虑线程安全策略
+
+### P-12：相似模块统一设计
+
+**原则**：相似模块使用相似的设计思路。大部分功能相同的模块尽量使用同一个类、不同实例按需开启部分功能，而非创建多个高度相似的类。
+
+**理由**：
+- SlicerPage 和 DsSlicerPage 约 60% 代码重复（TD-11）
+- WaveformWidget/SpectrogramWidget/PowerWidget 各自实现 ~150 行拖拽逻辑（TD-05）
+- MinLabelPage/PhonemeLabelerPage/PitchLabelerPage 的批量处理模式几乎相同但各自实现
+- 修复 bug 时需要同改多处，维护成本高
+
+**判断标准**：
+- 两个类有 >60% 相同代码 → 合并为同一类 + 配置开关
+- 两个类有 30%~60% 相同代码 → 提取共同基类，差异通过虚方法/配置实现
+- 两个类有 <30% 相同代码 → 可独立实现，但接口风格应保持一致
 
 ---
 
