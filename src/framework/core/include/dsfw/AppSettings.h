@@ -301,6 +301,9 @@ private:
 
     void loadFromDisk();
     bool saveToDisk();
+    void migrateIfNeeded();
+    void saveRaw(const char *path, const nlohmann::json &value);
+    nlohmann::json getRaw(const char *path, const nlohmann::json &fallback) const;
 
     QString m_filePath;
     nlohmann::json m_data;

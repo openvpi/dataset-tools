@@ -17,4 +17,11 @@ namespace dsfw::CommonKeys {
     inline const dstools::SettingsKey<QString> WindowGeometry("General/windowGeometry", "");    ///< Base64-encoded window geometry.
     inline const dstools::SettingsKey<QString> WindowState("General/windowState", "");          ///< Base64-encoded window state.
     inline const dstools::SettingsKey<QString> Language("General/language", "");                ///< UI language ("" = system, "zh_CN", "en").
+
+    inline const dstools::SettingsKey<QString> AudioSplitter("General/splitter/audio", "");     ///< AudioVisualizerContainer splitter state.
+    inline const dstools::SettingsKey<QString> PitchSplitter("General/splitter/pitch", "");     ///< PitchLabelerPage splitter state.
+    inline const dstools::SettingsKey<QString> MinSplitter("General/splitter/minlabel", "");    ///< MinLabelPage splitter state.
+    inline const dstools::SettingsKey<QString> HomeSplitter("General/splitter/home", "");       ///< HomePage splitter state.
+
+    inline const dstools::SettingsKey<int> SettingsVersion("General/settingsVersion", 1);
 }

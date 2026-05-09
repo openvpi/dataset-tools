@@ -12,6 +12,8 @@ AppSettings::AppSettings(const QString &appName, QObject *parent)
     const QString configDir = dsfw::AppPaths::configDir();
     m_filePath = configDir + QStringLiteral("/") + appName + QStringLiteral(".json");
     loadFromDisk();
+    migrateIfNeeded();
+    saveToDisk();
 
     m_saveTimer = new QTimer(this);
     m_saveTimer->setSingleShot(true);
@@ -23,6 +25,45 @@ AppSettings::AppSettings(const QString &appName, QObject *parent)
             m_dirty = false;
         }
     });
+}
+
+void AppSettings::migrateIfNeeded() {
+    // Current settings format version
+    constexpr int kCurrentVersion = 1;
+
+    // Check stored version — if absent, it's version 0 (pre-versioning)
+    int storedVersion = 0;
+    if (const auto *node = JsonHelper::resolve(m_data, "General/settingsVersion")) {
+        if (node->is_number_integer()) {
+            storedVersion = node->get<int>();
+        }
+    }
+
+    if (storedVersion >= kCurrentVersion)
+        return;
+
+    if (storedVersion < 1) {
+        // Migration from v0 to v1: previous settings format is the same,
+        // just write the version tag for future compatibility.
+    }
+
+    // Write current version
+    detail::assign(m_data, "General/settingsVersion", nlohmann::json(kCurrentVersion));
+}
+
+void AppSettings::saveRaw(const char *path, const nlohmann::json &value) {
+    std::lock_guard lock(m_mutex);
+    detail::assign(m_data, path, value);
+    m_dirty = true;
+    QMetaObject::invokeMethod(m_saveTimer, qOverload<>(&QTimer::start), Qt::QueuedConnection);
+    emit keyChanged(QString::fromUtf8(path));
+}
+
+nlohmann::json AppSettings::getRaw(const char *path, const nlohmann::json &fallback) const {
+    std::lock_guard lock(m_mutex);
+    if (const auto *node = JsonHelper::resolve(m_data, path))
+        return *node;
+    return fallback;
 }
 
 void AppSettings::loadFromDisk() {
