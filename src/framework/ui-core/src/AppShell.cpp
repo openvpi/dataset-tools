@@ -16,8 +16,8 @@
 #include <QHBoxLayout>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMetaMethod>
 #include <QMessageBox>
+#include <QMetaMethod>
 #include <QRegularExpression>
 #include <QShowEvent>
 #include <QStackedWidget>
@@ -25,7 +25,7 @@
 #include <QTimer>
 
 #ifdef Q_OS_WIN
-#  include <windows.h>
+#    include <windows.h>
 #endif
 
 namespace dsfw {
@@ -60,10 +60,8 @@ namespace dsfw {
                     menu->raise();
                     menu->activateWindow();
                     if (auto hwnd = reinterpret_cast<HWND>(menu->winId())) {
-                        ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-                        ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-                                       SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                        ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                        ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
                     }
                 });
             });
@@ -112,38 +110,38 @@ namespace dsfw {
     }
 
     int AppShell::addPage(QWidget *page, const QString &id, const QIcon &icon, const QString &label) {
-    if (!page)
-        return -1;
+        if (!page)
+            return -1;
 
-    // Verify page implements IPageActions
-    auto *actions = qobject_cast<dstools::labeler::IPageActions *>(page);
-    Q_UNUSED(actions); // Not required, but expected
+        // Verify page implements IPageActions
+        auto *actions = qobject_cast<dstools::labeler::IPageActions *>(page);
+        Q_UNUSED(actions); // Not required, but expected
 
-    const int idx = m_pages.size();
-    m_pages.append({page, id});
-    m_stack->addWidget(page);
-    m_navBar->addItem(icon, label);
+        const int idx = m_pages.size();
+        m_pages.append({page, id});
+        m_stack->addWidget(page);
+        m_navBar->addItem(icon, label);
 
-    // Show/hide nav bar based on page count
-    m_navBar->setVisible(m_pages.size() > 1);
+        // Show/hide nav bar based on page count
+        m_navBar->setVisible(m_pages.size() > 1);
 
-    // Auto-connect PlayWidget signals to AudioPlaybackManager
-    // Use old-style SIGNAL/SLOT syntax to avoid circular dependency
-    // between ui-core and widgets modules.
-    for (auto *child : page->findChildren<QObject *>()) {
-        if (child->metaObject()->indexOfSignal("playRequested()") >= 0) {
-            connect(child, SIGNAL(playRequested()), this, SLOT(onChildPlayRequested()));
-            connect(child, SIGNAL(playStopped()), this, SLOT(onChildPlayStopped()));
+        // Auto-connect PlayWidget signals to AudioPlaybackManager
+        // Use old-style SIGNAL/SLOT syntax to avoid circular dependency
+        // between ui-core and widgets modules.
+        for (auto *child : page->findChildren<QObject *>()) {
+            if (child->metaObject()->indexOfSignal("playRequested()") >= 0) {
+                connect(child, SIGNAL(playRequested()), this, SLOT(onChildPlayRequested()));
+                connect(child, SIGNAL(playStopped()), this, SLOT(onChildPlayStopped()));
+            }
         }
-    }
 
-    // Auto-select first page
-    if (m_pages.size() == 1) {
-        setCurrentPage(0);
-    }
+        // Auto-select first page
+        if (m_pages.size() == 1) {
+            setCurrentPage(0);
+        }
 
-    return idx;
-}
+        return idx;
+    }
 
     int AppShell::pageCount() const {
         return m_pages.size();
@@ -267,38 +265,38 @@ namespace dsfw {
         auto *page = m_stack->currentWidget();
         auto *actions = page ? qobject_cast<dstools::labeler::IPageActions *>(page) : nullptr;
 
-    // Let the current page populate menus
-    if (actions) {
-        if (auto *pageBar = actions->createMenuBar(this)) {
-            // Transfer menus from the temporary bar into our persistent bar.
-            // We create new QMenu wrappers on the persistent bar and steal
-            // the actions from the page's menus.  This avoids calling
-            // QMenu::setParent() which resets Qt::Popup window flags and
-            // breaks popup z-order on frameless (QWK) windows.
-            for (auto *srcAction : pageBar->actions()) {
-                if (auto *srcMenu = srcAction->menu()) {
-                    auto *dstMenu = m_menuBar->addMenu(srcMenu->title());
-                    // Move all actions (including sub-menus) from srcMenu → dstMenu.
-                    // Re-parent each action so it survives pageBar deletion.
-                    const auto srcActions = srcMenu->actions();
-                    for (auto *a : srcActions) {
-                        srcMenu->removeAction(a);
-                        a->setParent(dstMenu);
-                        dstMenu->addAction(a);
+        // Let the current page populate menus
+        if (actions) {
+            if (auto *pageBar = actions->createMenuBar(this)) {
+                // Transfer menus from the temporary bar into our persistent bar.
+                // We create new QMenu wrappers on the persistent bar and steal
+                // the actions from the page's menus.  This avoids calling
+                // QMenu::setParent() which resets Qt::Popup window flags and
+                // breaks popup z-order on frameless (QWK) windows.
+                for (auto *srcAction : pageBar->actions()) {
+                    if (auto *srcMenu = srcAction->menu()) {
+                        auto *dstMenu = m_menuBar->addMenu(srcMenu->title());
+                        // Move all actions (including sub-menus) from srcMenu → dstMenu.
+                        // Re-parent each action so it survives pageBar deletion.
+                        const auto srcActions = srcMenu->actions();
+                        for (auto *a : srcActions) {
+                            srcMenu->removeAction(a);
+                            a->setParent(dstMenu);
+                            dstMenu->addAction(a);
+                        }
+                    } else if (srcAction->isSeparator()) {
+                        m_menuBar->addSeparator();
+                    } else {
+                        srcAction->setParent(m_menuBar);
+                        m_menuBar->addAction(srcAction);
                     }
-                } else if (srcAction->isSeparator()) {
-                    m_menuBar->addSeparator();
-                } else {
-                    srcAction->setParent(m_menuBar);
-                    m_menuBar->addAction(srcAction);
                 }
+                // pageBar is a child of |this| (AppShell). After all actions have
+                // been moved out, delete it immediately to prevent a deferred
+                // deleteLater() from racing with AppShell's own destruction cascade.
+                delete pageBar;
             }
-            // pageBar is a child of |this| (AppShell). After all actions have
-            // been moved out, delete it immediately to prevent a deferred
-            // deleteLater() from racing with AppShell's own destruction cascade.
-            delete pageBar;
         }
-    }
 
         // Merge global actions into page menus.
         // If a global action owns a QMenu whose title matches a page menu (e.g. both
@@ -312,9 +310,7 @@ namespace dsfw {
                     pageMenuByTitle.insert(menuTitleKey(a->menu()->title()), a);
             }
 
-            QAction *firstAction = m_menuBar->actions().isEmpty()
-                                       ? nullptr
-                                       : m_menuBar->actions().first();
+            QAction *firstAction = m_menuBar->actions().isEmpty() ? nullptr : m_menuBar->actions().first();
 
             for (auto *ga : m_globalActions) {
                 auto *globalMenu = ga->menu();
@@ -422,10 +418,8 @@ namespace dsfw {
 
         // Save window geometry and state
         if (m_settings) {
-            m_settings->set(dsfw::CommonKeys::WindowGeometry,
-                            QString::fromLatin1(saveGeometry().toBase64()));
-            m_settings->set(dsfw::CommonKeys::WindowState,
-                            QString::fromLatin1(saveState().toBase64()));
+            m_settings->set(dsfw::CommonKeys::WindowGeometry, QString::fromLatin1(saveGeometry().toBase64()));
+            m_settings->set(dsfw::CommonKeys::WindowState, QString::fromLatin1(saveState().toBase64()));
             m_settings->flush();
         }
 
@@ -456,8 +450,7 @@ namespace dsfw {
         event->ignore();
     }
 
-    void AppShell::showToast(dsfw::widgets::ToastType type, const QString &message,
-                             int timeoutMs) {
+    void AppShell::showToast(widgets::ToastType type, const QString &message, int timeoutMs) {
         widgets::ToastNotification::show(this, type, message, timeoutMs);
     }
 

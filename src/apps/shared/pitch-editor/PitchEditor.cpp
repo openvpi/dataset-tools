@@ -368,6 +368,13 @@ void PitchEditor::connectSignals() {
     connect(m_actZoomOut, &QAction::triggered, this, &PitchEditor::onZoomOut);
     connect(m_actZoomReset, &QAction::triggered, this, &PitchEditor::onZoomReset);
 
+    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+            this, [this](const dstools::widgets::ViewportState &) {
+                int z = m_pianoRoll->getZoomPercent();
+                m_actZoomIn->setEnabled(z < 5000);
+                m_actZoomOut->setEnabled(z > 2);
+            });
+
     // A/B compare
     connect(m_actABCompare, &QAction::toggled, this, [this](bool checked) {
         setABComparisonActive(checked);
@@ -481,16 +488,21 @@ void PitchEditor::updateUndoRedoState() {
 void PitchEditor::onZoomIn() {
     m_pianoRoll->zoomIn();
     updateZoomStatus();
+    m_actZoomIn->setEnabled(m_pianoRoll->getZoomPercent() < 5000);
 }
 
 void PitchEditor::onZoomOut() {
     m_pianoRoll->zoomOut();
     updateZoomStatus();
+    int zoom = m_pianoRoll->getZoomPercent();
+    m_actZoomOut->setEnabled(zoom > 2);
 }
 
 void PitchEditor::onZoomReset() {
     m_pianoRoll->resetZoom();
     updateZoomStatus();
+    m_actZoomIn->setEnabled(true);
+    m_actZoomOut->setEnabled(true);
 }
 
 void PitchEditor::updateZoomStatus() {

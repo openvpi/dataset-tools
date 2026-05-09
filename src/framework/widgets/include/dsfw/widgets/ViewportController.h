@@ -87,7 +87,7 @@ namespace dsfw::widgets {
         [[nodiscard]] bool canZoomIn() const;
 
         /// @brief Check if further zoom out is possible.
-        [[nodiscard]] bool canZoomOut() const;
+        [[nodiscard]] bool canZoomOut();
 
         /// @brief Zoom in or out centered on a time position (convenience wrapper).
         /// @param centerSec Center time for zooming.
@@ -143,11 +143,11 @@ namespace dsfw::widgets {
     signals:
         /// @brief Emitted when the viewport range or zoom changes.
         /// @param state Updated viewport state.
-        void viewportChanged(const dsfw::widgets::ViewportState &state);
+        void viewportChanged(const ViewportState &state);
 
         /// Logarithmic resolution step table (round numbers).
         /// Public so containers can compute resolution-to-viewport consistency.
-        const std::vector<int> &resolutionTable();
+        std::vector<int> resolutionTable();
 
     private:
         ViewportState m_state;
@@ -156,7 +156,7 @@ namespace dsfw::widgets {
         int m_resolution = 40; ///< Samples per pixel.
 
         /// Find the index of the closest resolution in the table.
-        int findResolutionIndex(int res) const;
+        int findResolutionIndex(int res);
 
         /// Current index in resolution table.
         int m_resolutionIndex = -1;

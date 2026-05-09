@@ -408,6 +408,13 @@ void PhonemeEditor::connectSignals() {
                     m_actToggleSpectrogram->setChecked(visible);
             });
 
+    // Keep zoom button enabled states in sync (Ctrl+wheel bypasses menu actions)
+    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
+            this, [this](const dstools::widgets::ViewportState &) {
+                m_actZoomIn->setEnabled(m_viewport->canZoomIn());
+                m_actZoomOut->setEnabled(m_viewport->canZoomOut());
+            });
+
     // Active tier -> repaint boundary overlays
     connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int tier) {
         updateAllBoundaryOverlays();
@@ -501,17 +508,23 @@ void PhonemeEditor::updateAllBoundaryOverlays() {
 
 void PhonemeEditor::onZoomIn() {
     m_viewport->zoomIn(m_viewport->viewCenter());
+    m_actZoomIn->setEnabled(m_viewport->canZoomIn());
+    m_actZoomOut->setEnabled(m_viewport->canZoomOut());
     emit zoomChanged(m_viewport->resolution());
 }
 
 void PhonemeEditor::onZoomOut() {
     m_viewport->zoomOut(m_viewport->viewCenter());
+    m_actZoomIn->setEnabled(m_viewport->canZoomIn());
+    m_actZoomOut->setEnabled(m_viewport->canZoomOut());
     emit zoomChanged(m_viewport->resolution());
 }
 
 void PhonemeEditor::onZoomReset() {
-    m_viewport->setResolution(800); // default resolution for phoneme editing
+    m_viewport->setResolution(800);
     m_container->updateViewRangeFromResolution();
+    m_actZoomIn->setEnabled(m_viewport->canZoomIn());
+    m_actZoomOut->setEnabled(m_viewport->canZoomOut());
     emit zoomChanged(m_viewport->resolution());
 }
 
