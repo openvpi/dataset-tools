@@ -21,6 +21,45 @@ using dstools::midiToFreq;
 using dstools::freqToMidi;
 
 // ============================================================================
+// Timescale level table (mirrors TimeRulerWidget's kLevels + findLevel)
+// ============================================================================
+
+struct RulerLevel {
+    double majorSec;
+    double minorSec;
+};
+
+static const RulerLevel kRulerLevels[] = {
+    {0.001,  0.0005},   // 1ms / 0.5ms
+    {0.005,  0.001},    // 5ms / 1ms
+    {0.01,   0.005},    // 10ms / 5ms
+    {0.05,   0.01},     // 50ms / 10ms
+    {0.1,    0.05},     // 100ms / 50ms
+    {0.2,    0.1},      // 200ms / 100ms
+    {0.5,    0.1},      // 500ms / 100ms
+    {1.0,    0.5},      // 1s / 500ms
+    {2.0,    0.5},      // 2s / 500ms
+    {5.0,    1.0},      // 5s / 1s
+    {10.0,   2.0},      // 10s / 2s
+    {15.0,   5.0},      // 15s / 5s
+    {30.0,   10.0},     // 30s / 10s
+    {60.0,   15.0},     // 1min / 15s
+    {300.0,  60.0},     // 5min / 1min
+    {900.0,  300.0},    // 15min / 5min
+    {3600.0, 900.0},    // 1h / 15min
+};
+static constexpr int kRulerLevelCount = static_cast<int>(std::size(kRulerLevels));
+static constexpr double kRulerMinMinorStepPx = 25.0;
+
+static const RulerLevel &findRulerLevel(double pps) {
+    for (int i = 0; i < kRulerLevelCount; ++i) {
+        if (kRulerLevels[i].minorSec * pps >= kRulerMinMinorStepPx)
+            return kRulerLevels[i];
+    }
+    return kRulerLevels[kRulerLevelCount - 1];
+}
+
+// ============================================================================
 // Grid
 // ============================================================================
 
@@ -114,22 +153,28 @@ void PianoRollRenderer::drawRuler(QPainter &p, int w, const RenderState &s) {
     double tRight = s.xToTime(s.widgetXToScene(w));
     tLeft = qMax(0.0, tLeft);
 
-    double interval = (s.hScale > 200) ? 0.5 : (s.hScale > 50 ? 1.0 : 5.0);
+    const auto &level = findRulerLevel(s.hScale);
 
     QFont font("Consolas", 9);
     p.setFont(font);
 
-    double t = std::floor(tLeft / interval) * interval;
-    while (t <= tRight + interval) {
+    // Minor ticks
+    double t = std::floor(tLeft / level.minorSec) * level.minorSec;
+    int tickH = RenderState::RulerHeight;
+    while (t <= tRight + level.minorSec) {
         if (t >= 0) {
             double sceneX = s.timeToX(t);
             int wx = s.sceneXToWidget(sceneX);
-            p.setPen(QPen(Colors::RulerTick));
-            p.drawLine(wx, RenderState::RulerHeight - 6, wx, RenderState::RulerHeight);
-            p.setPen(Colors::RulerText);
-            p.drawText(wx + 2, 14, QString::number(t, 'f', 1));
+            bool isMajor = std::fmod(t, level.majorSec) < level.minorSec * 0.5;
+            p.setPen(QPen(isMajor ? Colors::RulerText : Colors::RulerTick));
+            int hTick = isMajor ? tickH - 6 : tickH - 3;
+            p.drawLine(wx, hTick, wx, tickH);
+            if (isMajor) {
+                p.setPen(Colors::RulerText);
+                p.drawText(wx + 2, 14, QString::number(t, 'f', 1));
+            }
         }
-        t += interval;
+        t += level.minorSec;
     }
 
     p.restore();
