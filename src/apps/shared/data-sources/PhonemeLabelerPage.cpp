@@ -231,21 +231,11 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     if (result && !result.value().layers.empty()) {
         const auto &doc = result.value();
 
-        bool hasFaGrapheme = false;
-        for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("fa_grapheme")) {
-                hasFaGrapheme = true;
-                break;
-            }
-        }
-
         QList<IntervalLayer> layers;
         for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("raw_text"))
-                continue;
-            if (hasFaGrapheme && layer.name == QStringLiteral("grapheme"))
-                continue;
-            layers.append(layer);
+            if (layer.name == QStringLiteral("fa_grapheme")
+                || layer.name == QStringLiteral("phoneme"))
+                layers.append(layer);
         }
 
         TimePos duration = 0;
@@ -749,21 +739,11 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
     (void) source()->saveSlice(sliceId, doc);
 
     if (sliceId == currentSliceId()) {
-        bool hasFaGrapheme = false;
-        for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("fa_grapheme")) {
-                hasFaGrapheme = true;
-                break;
-            }
-        }
-
         QList<IntervalLayer> allLayers;
         for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("raw_text"))
-                continue;
-            if (hasFaGrapheme && layer.name == QStringLiteral("grapheme"))
-                continue;
-            allLayers.append(layer);
+            if (layer.name == QStringLiteral("fa_grapheme")
+                || layer.name == QStringLiteral("phoneme"))
+                allLayers.append(layer);
         }
 
         TimePos duration = 0;

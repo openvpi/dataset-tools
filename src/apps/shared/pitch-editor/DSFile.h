@@ -60,12 +60,14 @@ public:
     TimePos getTotalDuration() const;
 
     QString filePath() const;
+    void setFilePath(const QString &path);
 
 private:
     void loadFromJson(const nlohmann::json &data);
     void writeBackToJson(nlohmann::json &obj) const;
 
     DsDocument m_doc;
+    QString m_filePath;
 };
 
 } // namespace pitchlabeler

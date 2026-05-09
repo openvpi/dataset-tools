@@ -162,7 +162,7 @@ private:
     void installDragEventFilters();
     void removeDragEventFilters();
     void resizeEvent(QResizeEvent *event) override;
-
+    void wheelEvent(QWheelEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
     widgets::ViewportController *m_viewport = nullptr;

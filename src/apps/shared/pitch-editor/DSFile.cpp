@@ -156,7 +156,14 @@ TimePos DSFile::getTotalDuration() const {
 }
 
 QString DSFile::filePath() const {
-    return m_doc.filePath();
+    QString docPath = m_doc.filePath();
+    if (!docPath.isEmpty())
+        return docPath;
+    return m_filePath;
+}
+
+void DSFile::setFilePath(const QString &path) {
+    m_filePath = path;
 }
 
 } // namespace pitchlabeler

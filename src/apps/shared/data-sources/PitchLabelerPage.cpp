@@ -167,6 +167,9 @@ void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
             }
         }
 
+        if (!audioPath.isEmpty())
+            file->setFilePath(audioPath);
+
         m_currentFile = file;
         m_editor->loadDSFile(file);
 
@@ -174,6 +177,7 @@ void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
             m_editor->loadAudio(audioPath, audioDurationSec(doc));
     } else if (!audioPath.isEmpty()) {
         m_currentFile = std::make_shared<pitchlabeler::DSFile>();
+        m_currentFile->setFilePath(audioPath);
         m_editor->loadDSFile(m_currentFile);
         m_editor->loadAudio(audioPath, 0.0);
     }

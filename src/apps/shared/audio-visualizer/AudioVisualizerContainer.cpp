@@ -15,6 +15,7 @@
 #include <QPointer>
 #include <QResizeEvent>
 #include <QTimer>
+#include <QWheelEvent>
 #include <algorithm>
 
 namespace dstools {
@@ -273,6 +274,20 @@ namespace dstools {
 
     void AudioVisualizerContainer::setAudioData(const std::vector<float> &samples, int sampleRate) {
         m_miniMap->setAudioData(samples, sampleRate);
+    }
+
+    void AudioVisualizerContainer::wheelEvent(QWheelEvent *event) {
+        if (event->modifiers() & Qt::ControlModifier) {
+            const int delta = event->angleDelta().y();
+            if (delta > 0)
+                m_viewport->zoomIn(m_viewport->viewCenter());
+            else if (delta < 0)
+                m_viewport->zoomOut(m_viewport->viewCenter());
+            event->accept();
+            updateViewRangeFromResolution();
+            return;
+        }
+        QWidget::wheelEvent(event);
     }
 
     bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {

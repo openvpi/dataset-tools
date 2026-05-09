@@ -78,6 +78,9 @@ void PitchEditor::loadAudio(const QString &path, double duration) {
     if (duration <= 0.0 && m_currentFile) {
         duration = usToSec(m_currentFile->getTotalDuration());
     }
+    if (duration <= 0.0) {
+        duration = m_playWidget->duration();
+    }
     if (m_pianoRoll && duration > 0) {
         m_pianoRoll->setAudioDuration(duration);
         m_playbackProgressSlider->setRange(0, static_cast<int>(duration * 1000));
