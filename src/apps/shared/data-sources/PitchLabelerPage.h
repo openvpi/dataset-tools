@@ -16,6 +16,7 @@ class Rmvpe;
 namespace Game {
 class Game;
 struct GameNote;
+struct AlignInput;
 }
 
 namespace dstools {
@@ -77,7 +78,7 @@ private:
     void ensureGameEngineAsync(std::function<void()> onReady = {});
     void onModelInvalidated(const QString &taskKey);
     void runPitchExtraction(const QString &sliceId);
-    void runMidiTranscription(const QString &sliceId);
+    void runMidiTranscription(const QString &sliceId, const Game::AlignInput *alignInput = nullptr);
     void runAddPhNum(const QString &sliceId);
     void applyPitchResult(const QString &sliceId, const std::vector<int32_t> &f0, float timestep);
     void applyMidiResult(const QString &sliceId, const std::vector<Game::GameNote> &notes);
