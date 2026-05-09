@@ -117,37 +117,41 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
 
     int fullBottom = h;
 
-    for (int t = 0; t < tiers; ++t) {
-        bool isActive = (t == activeTier);
+    for (int p = 0; p < 2; ++p) {
+        for (int t = 0; t < tiers; ++t) {
+            bool isActive = (t == activeTier);
+            if (p == 0 && isActive) continue;
+            if (p == 1 && !isActive) continue;
 
-        int count = model->boundaryCount(t);
+            int count = model->boundaryCount(t);
 
-        int lineTop = t * tierRowH;
-        int lineBottom;
-
-        if (isActive) {
-            lineBottom = fullBottom;
-        } else {
-            lineBottom = std::min(tiers * tierRowH, tierLabelH);
-        }
-
-        for (int b = 0; b < count; ++b) {
-            double tSec = usToSec(model->boundaryTime(t, b));
-            int x = timeToX(tSec);
-            if (x < 0 || x > w) continue;
+            int lineTop = t * tierRowH;
+            int lineBottom;
 
             if (isActive) {
-                if (b == m_draggedBoundary) {
-                    painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
-                } else if (b == m_hoveredBoundary) {
-                    painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
-                } else {
-                    painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
-                }
+                lineBottom = fullBottom;
             } else {
-                painter.setPen(QPen(QColor(100, 100, 120, 120), 1, Qt::DashLine));
+                lineBottom = std::min(tiers * tierRowH, tierLabelH);
             }
-            painter.drawLine(x, lineTop, x, lineBottom);
+
+            for (int b = 0; b < count; ++b) {
+                double tSec = usToSec(model->boundaryTime(t, b));
+                int x = timeToX(tSec);
+                if (x < 0 || x > w) continue;
+
+                if (isActive) {
+                    if (b == m_draggedBoundary) {
+                        painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryDragged, 2));
+                    } else if (b == m_hoveredBoundary) {
+                        painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryHovered, 2));
+                    } else {
+                        painter.setPen(QPen(dsfw::Theme::instance().palette().phonemeEditor.boundaryNormal, 1, Qt::SolidLine));
+                    }
+                } else {
+                    painter.setPen(QPen(QColor(100, 100, 120, 120), 1, Qt::DashLine));
+                }
+                painter.drawLine(x, lineTop, x, lineBottom);
+            }
         }
     }
 

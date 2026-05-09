@@ -598,6 +598,8 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
     }
 
     m_inferRunning = true;
+    m_extractPitchAction->setEnabled(false);
+    m_extractMidiAction->setEnabled(false);
     DSFW_LOG_INFO("infer", ("Pitch extraction started: " + sliceId.toStdString()).c_str());
     auto *rmvpe = m_rmvpe;
     auto rmvpeAlive = m_rmvpeAlive;
@@ -626,6 +628,8 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
             if (!guard)
                 return;
             guard->m_inferRunning = false;
+            guard->m_extractPitchAction->setEnabled(true);
+            guard->m_extractMidiAction->setEnabled(true);
             if (result && !results.empty()) {
                 const auto &res = results[0];
                 std::vector<int32_t> f0Mhz(res.f0.size());
@@ -663,6 +667,8 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId,
     }
 
     m_inferRunning = true;
+    m_extractPitchAction->setEnabled(false);
+    m_extractMidiAction->setEnabled(false);
     DSFW_LOG_INFO("infer", ("MIDI transcription started: " + sliceId.toStdString() + (alignInput ? " (align)" : "")).c_str());
     auto *game = m_game;
     auto gameAlive = m_gameAlive;
@@ -718,6 +724,8 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId,
             if (!guard)
                 return;
             guard->m_inferRunning = false;
+            guard->m_extractPitchAction->setEnabled(true);
+            guard->m_extractMidiAction->setEnabled(true);
             if (result) {
                 guard->applyMidiResult(sliceId, notes);
                 DSFW_LOG_INFO("infer", ("MIDI transcription completed: " + sliceId.toStdString()
@@ -969,6 +977,8 @@ void PitchLabelerPage::onBatchExtract() {
             return;
         }
         guard->m_inferRunning = true;
+        guard->m_extractPitchAction->setEnabled(false);
+        guard->m_extractMidiAction->setEnabled(false);
         bool doPitch = extractPitch->isChecked();
         bool doMidi = extractMidi->isChecked();
         bool skip = skipExisting->isChecked();
@@ -1073,15 +1083,21 @@ void PitchLabelerPage::onBatchExtract() {
                 dlg->finish(processed, skipped, errors);
             }, Qt::QueuedConnection);
             QMetaObject::invokeMethod(guard.data(), [guard]() {
-                if (guard)
+                if (guard) {
                     guard->m_inferRunning = false;
+                    guard->m_extractPitchAction->setEnabled(true);
+                    guard->m_extractMidiAction->setEnabled(true);
+                }
             }, Qt::QueuedConnection);
         });
     });
 
     connect(dlg, &BatchProcessDialog::cancelled, this, [guard]() {
-        if (guard)
+        if (guard) {
             guard->m_inferRunning = false;
+            guard->m_extractPitchAction->setEnabled(true);
+            guard->m_extractMidiAction->setEnabled(true);
+        }
     });
 
     dlg->show();

@@ -76,10 +76,8 @@ namespace dstools {
         connect(m_viewport, &ViewportController::viewportChanged, this,
                 &AudioVisualizerContainer::updateScaleIndicator);
 
-        connect(m_dragController, &BoundaryDragController::dragStarted, this,
-                [this]() { installDragEventFilters(); });
-        connect(m_dragController, &BoundaryDragController::dragFinished, this,
-                [this]() { removeDragEventFilters(); });
+        connect(m_dragController, &BoundaryDragController::dragStarted, this, [this]() { installDragEventFilters(); });
+        connect(m_dragController, &BoundaryDragController::dragFinished, this, [this]() { removeDragEventFilters(); });
     }
 
     void AudioVisualizerContainer::updateScaleIndicator() {
@@ -89,9 +87,8 @@ namespace dstools {
         int resolution = m_viewport->resolution();
         int sampleRate = m_viewport->sampleRate();
 
-        double visibleSec = (sampleRate > 0)
-            ? static_cast<double>(m_chartSplitter->width()) * resolution / sampleRate
-            : 0.0;
+        double visibleSec =
+            (sampleRate > 0) ? static_cast<double>(m_chartSplitter->width()) * resolution / sampleRate : 0.0;
 
         QString text;
         if (visibleSec >= 60.0)
@@ -156,8 +153,7 @@ namespace dstools {
             for (int i = 0; i < mo->methodCount(); ++i) {
                 QMetaMethod method = mo->method(i);
                 if (method.name() == "setBoundaryModel" && method.parameterCount() == 1) {
-                    method.invoke(entry.widget, Qt::DirectConnection,
-                                  Q_ARG(IBoundaryModel*, model));
+                    method.invoke(entry.widget, Qt::DirectConnection, Q_ARG(IBoundaryModel *, model));
                     break;
                 }
             }
@@ -291,38 +287,64 @@ namespace dstools {
     }
 
     bool AudioVisualizerContainer::eventFilter(QObject *watched, QEvent *event) {
-    if (m_dragController && m_dragController->isDragging()) {
-        if (event->type() == QEvent::MouseMove) {
-            auto *me = static_cast<QMouseEvent *>(event);
-            double time = xToTimeGlobal(me->globalPosition().x());
-            m_dragController->updateDrag(secToUs(time));
-            invalidateBoundaryModel();
-            return true;
-        }
-        if (event->type() == QEvent::MouseButtonRelease) {
+        if (event->type() == QEvent::MouseButtonPress && m_dragController && !m_dragController->isDragging()) {
             auto *me = static_cast<QMouseEvent *>(event);
             if (me->button() == Qt::LeftButton) {
+                int tier = m_boundaryModel ? m_boundaryModel->activeTierIndex() : -1;
+                if (tier >= 0) {
+                    double time = xToTimeGlobal(me->globalPosition().x());
+                    TimePos targetTime = secToUs(time);
+                    TimePos kSnapThreshold = secToUs(0.03);
+                    int count = m_boundaryModel->boundaryCount(tier);
+                    int bestIdx = -1;
+                    TimePos bestDist = kSnapThreshold;
+                    for (int b = 0; b < count; ++b) {
+                        TimePos dist = std::abs(m_boundaryModel->boundaryTime(tier, b) - targetTime);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestIdx = b;
+                        }
+                    }
+                    if (bestIdx >= 0) {
+                        m_dragController->startDrag(tier, bestIdx, nullptr);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (m_dragController && m_dragController->isDragging()) {
+            if (event->type() == QEvent::MouseMove) {
+                auto *me = static_cast<QMouseEvent *>(event);
                 double time = xToTimeGlobal(me->globalPosition().x());
-                m_dragController->endDrag(secToUs(time), nullptr);
+                m_dragController->updateDrag(secToUs(time));
                 invalidateBoundaryModel();
                 return true;
             }
+            if (event->type() == QEvent::MouseButtonRelease) {
+                auto *me = static_cast<QMouseEvent *>(event);
+                if (me->button() == Qt::LeftButton) {
+                    double time = xToTimeGlobal(me->globalPosition().x());
+                    m_dragController->endDrag(secToUs(time), nullptr);
+                    invalidateBoundaryModel();
+                    return true;
+                }
+            }
         }
-    }
 
-    if (watched == m_editorWidget && event->type() == QEvent::Resize) {
-        updateOverlayTopOffset();
+        if (watched == m_editorWidget && event->type() == QEvent::Resize) {
+            updateOverlayTopOffset();
+        }
+        if (event->type() == QEvent::Resize) {
+            if (watched == m_chartSplitter)
+                updateScaleIndicator();
+        }
+        if (watched == m_tierLabelArea && event->type() == QEvent::Resize) {
+            m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
+            updateOverlayTopOffset();
+        }
+        return QWidget::eventFilter(watched, event);
     }
-    if (event->type() == QEvent::Resize) {
-        if (watched == m_chartSplitter)
-            updateScaleIndicator();
-    }
-    if (watched == m_tierLabelArea && event->type() == QEvent::Resize) {
-        m_boundaryOverlay->setTierLabelGeometry(m_tierLabelArea->height(), m_tierLabelArea->height());
-        updateOverlayTopOffset();
-    }
-    return QWidget::eventFilter(watched, event);
-}
 
     void AudioVisualizerContainer::setDefaultResolution(int resolution) {
         m_defaultResolution = std::clamp(resolution, 10, 44100);
@@ -419,35 +441,35 @@ namespace dstools {
         if (!m_chartOrder.contains(id))
             m_chartOrder.append(id);
 
-    connectViewportToWidget(widget);
+        connectViewportToWidget(widget);
 
-    // Auto-set drag controller on chart widgets that support it (reduces boilerplate
-    // in page assembly code; see refactoring-roadmap-v2.md §7.7).
-    if (m_dragController) {
-        const QMetaObject *mo = widget->metaObject();
-        for (int i = 0; i < mo->methodCount(); ++i) {
-            QMetaMethod method = mo->method(i);
-            if (method.name() == "setDragController" && method.parameterCount() == 1) {
-                method.invoke(widget, Qt::DirectConnection,
-                              Q_ARG(BoundaryDragController*, m_dragController));
-                break;
+        // Auto-set drag controller on chart widgets that support it (reduces boilerplate
+        // in page assembly code; see refactoring-roadmap-v2.md §7.7).
+        if (m_dragController) {
+            const QMetaObject *mo = widget->metaObject();
+            for (int i = 0; i < mo->methodCount(); ++i) {
+                QMetaMethod method = mo->method(i);
+                if (method.name() == "setDragController" && method.parameterCount() == 1) {
+                    method.invoke(widget, Qt::DirectConnection, Q_ARG(BoundaryDragController *, m_dragController));
+                    break;
+                }
             }
         }
-    }
 
-    if (m_boundaryModel) {
-        const QMetaObject *mo = widget->metaObject();
-        for (int i = 0; i < mo->methodCount(); ++i) {
-            QMetaMethod method = mo->method(i);
-            if (method.name() == "setBoundaryModel" && method.parameterCount() == 1) {
-                method.invoke(widget, Qt::DirectConnection,
-                              Q_ARG(IBoundaryModel*, m_boundaryModel));
-                break;
+        if (m_boundaryModel) {
+            const QMetaObject *mo = widget->metaObject();
+            for (int i = 0; i < mo->methodCount(); ++i) {
+                QMetaMethod method = mo->method(i);
+                if (method.name() == "setBoundaryModel" && method.parameterCount() == 1) {
+                    method.invoke(widget, Qt::DirectConnection, Q_ARG(IBoundaryModel *, m_boundaryModel));
+                    break;
+                }
             }
         }
-    }
 
-    restoreChartOrder();
+        widget->installEventFilter(this);
+
+        restoreChartOrder();
 
         rebuildChartLayout();
     }
@@ -744,21 +766,13 @@ namespace dstools {
     }
 
     void AudioVisualizerContainer::installDragEventFilters() {
-        if (m_tierLabelArea)
-            m_tierLabelArea->installEventFilter(this);
         if (m_editorWidget)
             m_editorWidget->installEventFilter(this);
-        for (int i = 0; i < m_chartSplitter->count(); ++i)
-            m_chartSplitter->widget(i)->installEventFilter(this);
     }
 
     void AudioVisualizerContainer::removeDragEventFilters() {
-        if (m_tierLabelArea)
-            m_tierLabelArea->removeEventFilter(this);
         if (m_editorWidget)
             m_editorWidget->removeEventFilter(this);
-        for (int i = 0; i < m_chartSplitter->count(); ++i)
-            m_chartSplitter->widget(i)->removeEventFilter(this);
     }
 
 } // namespace dstools
