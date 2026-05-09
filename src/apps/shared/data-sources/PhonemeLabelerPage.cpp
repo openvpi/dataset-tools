@@ -614,7 +614,18 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
 
     m_faRunning = true;
     std::string lyricsText = lyricsQStr.toStdString();
-    std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+    std::vector<std::string> nonSpeechPh;
+    if (settingsBackend()) {
+        auto cfg = settingsBackend()->load()["faConfig"].toObject();
+        QString nsStr = cfg.contains("nonSpeechPh") && cfg["nonSpeechPh"].isString()
+            ? cfg["nonSpeechPh"].toString() : QStringLiteral("AP, SP");
+        const auto parts = nsStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (const auto &p : parts)
+            nonSpeechPh.push_back(p.trimmed().toStdString());
+    }
+    if (nonSpeechPh.empty())
+        nonSpeechPh = {"AP", "SP"};
+    float wavLen = static_cast<float>(audioDurationSec(doc));
     DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString()
                           + " | audio: " + audioPath.toStdString()
                           + " | language: zh"
@@ -624,7 +635,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     auto hfaAlive = m_hfaAlive;
     QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, nonSpeechPh, sliceId, guard]() {
+    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, nonSpeechPh, sliceId, guard, wavLen]() {
         if (!hfaAlive || !*hfaAlive)
             return;
         if (!hfa)
@@ -637,6 +648,11 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
         } catch (const std::exception &e) {
             DSFW_LOG_ERROR("infer", ("FA inference exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
             result = Err(std::string("Exception: ") + e.what());
+        }
+
+        if (result) {
+            words.fill_small_gaps(wavLen, 0.1f);
+            words.add_SP(wavLen, "SP");
         }
 
         if (!guard)
@@ -824,7 +840,7 @@ void PhonemeLabelerPage::onBatchFA() {
     QPointer<PhonemeLabelerPage> guard(this);
 
     connect(dlg, &BatchProcessDialog::started, this,
-            [dlg, hfa, hfaAlive, src, ids, guard, skipExisting, langCombo]() {
+            [dlg, hfa, hfaAlive, src, ids, guard, skipExisting, langCombo, this]() {
         if (!guard) {
             dlg->finish(0, 0, 0);
             return;
@@ -832,8 +848,18 @@ void PhonemeLabelerPage::onBatchFA() {
         guard->m_faRunning = true;
         bool skip = skipExisting->isChecked();
         QString lang = langCombo->currentData().toString();
+        std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+        if (settingsBackend()) {
+            auto cfg = settingsBackend()->load()["faConfig"].toObject();
+            QString nsStr = cfg.contains("nonSpeechPh") && cfg["nonSpeechPh"].isString()
+                ? cfg["nonSpeechPh"].toString() : QStringLiteral("AP, SP");
+            const auto parts = nsStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
+            nonSpeechPh.clear();
+            for (const auto &p : parts)
+                nonSpeechPh.push_back(p.trimmed().toStdString());
+        }
 
-        (void) QtConcurrent::run([dlg, hfa, hfaAlive, src, ids, guard, skip, lang]() {
+        (void) QtConcurrent::run([dlg, hfa, hfaAlive, src, ids, guard, skip, lang, nonSpeechPh]() {
             if (!hfaAlive || !*hfaAlive)
                 return;
             if (!hfa)
@@ -903,12 +929,14 @@ void PhonemeLabelerPage::onBatchFA() {
                 HFA::WordList words;
                 std::string lyricsText = lyricsQStr.toStdString();
 
-                std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+                float wavLen = static_cast<float>(audioDurationSec(doc));
                 DSFW_LOG_INFO("fa", ("Batch FA started: " + sliceId.toStdString()
                                       + " | language: " + lang.toStdString()
                                       + " | lyrics: " + lyricsText).c_str());
                 auto result = hfa->recognize(audioPath.toStdWString(), lang.toStdString(), nonSpeechPh, lyricsText, words);
                 if (result) {
+                    words.fill_small_gaps(wavLen, 0.1f);
+                    words.add_SP(wavLen, "SP");
                     auto faResult = buildFaLayers(words);
 
                     std::string phonemeDetail;
