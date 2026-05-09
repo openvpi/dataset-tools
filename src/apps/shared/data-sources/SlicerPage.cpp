@@ -204,14 +204,9 @@ void SlicerPage::buildLayout() {
 }
 
 void SlicerPage::connectSignals() {
-    // Connect viewport to chart widgets for zoom/scroll sync
-    // (AudioVisualizerContainer::addChart also connects via QMetaMethod,
-    //  but explicit typed connections are more reliable)
-    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-            m_waveformWidget, &phonemelabeler::WaveformWidget::setViewport);
-    connect(m_viewport, &dstools::widgets::ViewportController::viewportChanged,
-            m_spectrogramWidget, &phonemelabeler::SpectrogramWidget::setViewport);
-
+    // Viewport connections are managed by AudioVisualizerContainer via
+    // connectViewportToWidget (called by addChart). Direct connections
+    // here would cause duplicate setViewport() calls.
     connect(m_btnAutoSlice, &QPushButton::clicked, this, &SlicerPage::onAutoSlice);
     connect(m_btnReSlice, &QPushButton::clicked, this, &SlicerPage::onAutoSlice);
     connect(m_btnImportMarkers, &QPushButton::clicked, this, &SlicerPage::onImportMarkers);

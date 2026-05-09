@@ -230,11 +230,9 @@ namespace dstools {
             m_toolMode = ToolMode::Knife;
         });
 
-        // Viewport → sync charts (container handles timeRuler, miniMap, tierLabel, overlay)
-        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged, m_waveformWidget,
-                &phonemelabeler::WaveformWidget::setViewport);
-        connect(m_container->viewport(), &dstools::widgets::ViewportController::viewportChanged, m_spectrogramWidget,
-                &phonemelabeler::SpectrogramWidget::setViewport);
+        // Viewport connections are managed by AudioVisualizerContainer via
+        // connectViewportToWidget (called by addChart). Direct connections
+        // here would cause duplicate setViewport() calls.
 
         // Left sidebar: audio file selection → load audio for slicing
         connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {

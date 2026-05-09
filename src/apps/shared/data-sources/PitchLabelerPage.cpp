@@ -615,7 +615,7 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
         dstools::Result<void> result = Err("Not executed");
 
         try {
-            result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
+            result = rmvpe->get_f0(audioPath.toStdWString(), 0.01f, results, nullptr);
         } catch (const std::exception &e) {
             DSFW_LOG_ERROR("infer", ("Pitch extraction exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
             result = Err(std::string("Exception: ") + e.what());
@@ -1064,7 +1064,7 @@ void PitchLabelerPage::onBatchExtract() {
 
                 if (doPitch && rmvpe) {
                     std::vector<Rmvpe::RmvpeRes> results;
-                    auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
+                    auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.01f, results, nullptr);
                     if (result && !results.empty()) {
                         const auto &res = results[0];
                         std::vector<int32_t> f0Mhz(res.f0.size());

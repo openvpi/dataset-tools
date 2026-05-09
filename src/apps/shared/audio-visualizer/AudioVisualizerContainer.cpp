@@ -275,10 +275,13 @@ namespace dstools {
     void AudioVisualizerContainer::wheelEvent(QWheelEvent *event) {
         if (event->modifiers() & Qt::ControlModifier) {
             const int delta = event->angleDelta().y();
+            m_viewport->blockSignals(true);
             if (delta > 0)
                 m_viewport->zoomIn(m_viewport->viewCenter());
             else if (delta < 0)
                 m_viewport->zoomOut(m_viewport->viewCenter());
+            m_viewport->blockSignals(false);
+            updateViewRangeFromResolution();
             event->accept();
             return;
         }
@@ -391,12 +394,24 @@ namespace dstools {
         if (w <= 0 || m_viewport->sampleRate() <= 0)
             return;
 
-        // visibleDuration = widgetWidth * resolution / sampleRate
-        double visibleDuration = static_cast<double>(w) * m_viewport->resolution() / m_viewport->sampleRate();
         double totalDur = m_viewport->totalDuration();
-        double startSec = m_viewport->startSec();
+        double visibleDuration = static_cast<double>(w) * m_viewport->resolution() / m_viewport->sampleRate();
 
-        // Clamp: don't exceed audio end
+        if (totalDur > 0.0 && visibleDuration > totalDur) {
+            double maxRes = totalDur * m_viewport->sampleRate() / w;
+            const auto &table = ViewportController::resolutionTable();
+            int bestRes = table[0];
+            for (int r : table) {
+                if (r <= static_cast<int>(maxRes))
+                    bestRes = r;
+                else
+                    break;
+            }
+            m_viewport->setResolution(bestRes);
+            visibleDuration = static_cast<double>(w) * m_viewport->resolution() / m_viewport->sampleRate();
+        }
+
+        double startSec = m_viewport->startSec();
         double endSec = startSec + visibleDuration;
         if (totalDur > 0.0 && endSec > totalDur) {
             endSec = totalDur;
