@@ -25,6 +25,7 @@ namespace dstools {
 
 class ISettingsBackend;
 class SliceListPanel;
+class AudioFileListPanel;
 class BatchProcessDialog;
 
 struct BatchSliceResult {
@@ -76,6 +77,7 @@ signals:
 protected:
     // ── Accessors for subclass use ──
     SliceListPanel *sliceListPanel() const { return m_sliceList; }
+    AudioFileListPanel *audioFileListPanel() const { return m_audioFileList; }
     QSplitter *splitter() const { return m_splitter; }
     dstools::AppSettings &settings() { return m_settings; }
     const dstools::AppSettings &settings() const { return m_settings; }
@@ -87,9 +89,12 @@ protected:
 
     // ── Setup helpers (call from subclass constructor) ──
 
-    /// Set up the standard SliceListPanel + QSplitter + editor layout.
+    /// Set up the standard SliceListPanel + AudioFileListPanel + QSplitter + editor layout.
     /// @param editorWidget The main editor widget to place in the splitter's right pane.
     void setupBaseLayout(QWidget *editorWidget);
+
+    /// Refresh the AudioFileListPanel from the data source's slice list.
+    void refreshFileList();
 
     /// Create prev/next navigation actions and bind them to the shortcut manager.
     void setupNavigationActions();
@@ -214,6 +219,7 @@ protected:
 
 private:
     SliceListPanel *m_sliceList = nullptr;
+    AudioFileListPanel *m_audioFileList = nullptr;
     QSplitter *m_splitter = nullptr;
     IEditorDataSource *m_source = nullptr;
     ISettingsBackend *m_settingsBackend = nullptr;
