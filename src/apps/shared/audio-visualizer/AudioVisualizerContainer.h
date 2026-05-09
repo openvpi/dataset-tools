@@ -144,6 +144,11 @@ public:
     /// Call after setResolution() or zoom changes to keep the viewport consistent.
     void updateViewRangeFromResolution();
 
+    /// Adjust view range to match current resolution, preserving the view center.
+    /// Unlike updateViewRangeFromResolution (preserves startSec), this keeps the
+    /// time-center stable so zoom operations don't "snap back" to the full view.
+    void adjustViewRangeToResolution();
+
 signals:
     void chartOrderChanged(const QStringList &order);
 
