@@ -23,6 +23,15 @@ namespace dstools {
 /// resolution. Editors interact exclusively through this interface so that
 /// the same widget code can serve both LabelSuite (single-file mode) and
 /// DsLabeler (project mode).
+///
+/// Thread safety (P-11):
+/// - `sliceIds()`, `audioPath()`, `validatedAudioPath()`, `audioExists()`,
+///   `sliceDuration()`, `dirtyLayers()` are const and may be called from
+///   background threads as long as no concurrent mutation occurs.
+/// - `loadSlice()` is read-only in practice but not marked const (some
+///   implementations may cache). Callers must ensure no concurrent write.
+/// - `saveSlice()`, `clearDirtyLayers()` are mutating and must only be
+///   called from the main thread.
 class IEditorDataSource : public QObject {
     Q_OBJECT
 

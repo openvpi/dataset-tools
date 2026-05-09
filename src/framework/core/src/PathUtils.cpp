@@ -1,15 +1,8 @@
 #include <dsfw/PathUtils.h>
+#include <dstools/PathEncoding.h>
 
 #include <QDir>
 #include <QFileInfo>
-
-#ifdef Q_OS_WIN
-#include <windows.h>
-#endif
-
-#ifdef Q_OS_MAC
-#include <QString>
-#endif
 
 namespace dsfw {
 
@@ -23,11 +16,9 @@ std::filesystem::path PathUtils::toStdPath(const QString &path) {
 
 std::string PathUtils::toNarrowPath(const QString &path) {
 #ifdef Q_OS_WIN
-    // On Windows, use local 8-bit encoding for compatibility with legacy APIs.
-    // Note: prefer toStdPath() + wide-char APIs where possible.
     return path.toLocal8Bit().toStdString();
 #else
-    return path.toStdString(); // UTF-8 on Unix
+    return path.toStdString();
 #endif
 }
 
@@ -39,11 +30,33 @@ QString PathUtils::fromStdPath(const std::filesystem::path &path) {
 #endif
 }
 
+std::string PathUtils::toUtf8(const std::filesystem::path &path) {
+    return dstools::pathToUtf8(path);
+}
+
+std::wstring PathUtils::toWide(const std::filesystem::path &path) {
+    return dstools::pathToWide(path);
+}
+
+std::filesystem::path PathUtils::join(const std::filesystem::path &base,
+                                       const std::filesystem::path &relative) {
+    return base / relative;
+}
+
+std::filesystem::path PathUtils::join(const std::filesystem::path &base,
+                                       const std::string &relative) {
+    return base / relative;
+}
+
+std::filesystem::path PathUtils::join(const std::filesystem::path &base,
+                                       const char *relative) {
+    return base / relative;
+}
+
 QString PathUtils::normalize(const QString &path) {
     QString result = QDir::cleanPath(path);
 
 #ifdef Q_OS_MAC
-    // macOS HFS+ uses NFD (decomposed Unicode). Normalize to NFC for consistent comparison.
     result = result.normalized(QString::NormalizationForm_C);
 #endif
 
@@ -52,7 +65,6 @@ QString PathUtils::normalize(const QString &path) {
 
 FILE *PathUtils::openFile(const QString &path, const char *mode) {
 #ifdef Q_OS_WIN
-    // Use _wfopen for safe Unicode path handling on Windows
     std::wstring wPath = path.toStdWString();
     std::wstring wMode;
     while (*mode) {

@@ -1,13 +1,12 @@
 #include <dstools/AudioFileResolver.h>
 #include <dstools/ProjectPaths.h>
+#include <dsfw/PathUtils.h>
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 
 namespace dstools {
-
-// ─── AudioFileResolver ────────────────────────────────────────────────────────
 
 QStringList AudioFileResolver::audioExtensions() {
     return {"wav", "mp3", "m4a", "flac", "ogg"};
@@ -18,32 +17,35 @@ QString AudioFileResolver::audioToDataFile(const QString &audioPath, const QStri
     QString audioSuffix = info.suffix().toLower();
     QString fileName = info.fileName();
     QString baseName = fileName.mid(0, fileName.size() - audioSuffix.size() - 1);
-    // Non-wav audio: encode original suffix into filename
     if (audioSuffix != "wav")
         baseName += "_" + audioSuffix;
-    return info.absolutePath() + "/" + baseName + "." + suffix;
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(info.absolutePath()),
+                               (baseName + "." + suffix).toStdString()));
 }
 
 QString AudioFileResolver::findAudioFile(const QString &dataFilePath) {
     QFileInfo fi(dataFilePath);
     QString dir = fi.absolutePath();
-    QString baseName = fi.completeBaseName(); // e.g. "song" or "song_mp3"
+    QString baseName = fi.completeBaseName();
 
     auto exts = audioExtensions();
 
-    // 1. Simple same-name: try baseName.wav, baseName.mp3, ...
     for (const QString &ext : exts) {
-        QString testPath = dir + "/" + baseName + "." + ext;
+        QString testPath = dsfw::PathUtils::fromStdPath(
+            dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(dir),
+                                   (baseName + "." + ext).toStdString()));
         if (QFile::exists(testPath))
             return testPath;
     }
 
-    // 2. Suffix-encoded: "song_mp3" → try "song.mp3"
     for (const QString &ext : exts) {
         QString encodedSuffix = "_" + ext;
         if (baseName.endsWith(encodedSuffix, Qt::CaseInsensitive)) {
             QString realBase = baseName.mid(0, baseName.size() - encodedSuffix.size());
-            QString testPath = dir + "/" + realBase + "." + ext;
+            QString testPath = dsfw::PathUtils::fromStdPath(
+                dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(dir),
+                                       (realBase + "." + ext).toStdString()));
             if (QFile::exists(testPath))
                 return testPath;
         }
@@ -52,66 +54,83 @@ QString AudioFileResolver::findAudioFile(const QString &dataFilePath) {
     return {};
 }
 
-// ─── ProjectPaths ─────────────────────────────────────────────────────────────
-
 QString ProjectPaths::dsItemsDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/dsitems");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/dsitems"));
 }
 
 QString ProjectPaths::slicesDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/slices");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/slices"));
 }
 
 QString ProjectPaths::contextsDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/contexts");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/contexts"));
 }
 
 QString ProjectPaths::dstextDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/dstext");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/dstext"));
 }
 
 QString ProjectPaths::alignmentReviewDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/alignment_review");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/alignment_review"));
 }
 
 QString ProjectPaths::buildCsvDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/build_csv");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/build_csv"));
 }
 
 QString ProjectPaths::transcriptionsCsvPath(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/build_csv/transcriptions.csv");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/build_csv/transcriptions.csv"));
 }
 
 QString ProjectPaths::buildDsDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/build_ds");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/build_ds"));
 }
 
 QString ProjectPaths::slicerOutputDir(const QString &workingDir) {
-    return workingDir + QStringLiteral("/dstemp/slicer_output");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(workingDir), "dstemp/slicer_output"));
 }
 
 QString ProjectPaths::wavsDir(const QString &outputDir) {
-    return outputDir + QStringLiteral("/wavs");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(outputDir), "wavs"));
 }
 
 QString ProjectPaths::dsDir(const QString &outputDir) {
-    return outputDir + QStringLiteral("/ds");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(outputDir), "ds"));
 }
 
 QString ProjectPaths::sliceAudioPath(const QString &workingDir, const QString &sliceId) {
-    return slicesDir(workingDir) + QStringLiteral("/") + sliceId + QStringLiteral(".wav");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(slicesDir(workingDir)),
+                               (sliceId + ".wav").toStdString()));
 }
 
 QString ProjectPaths::sliceContextPath(const QString &workingDir, const QString &sliceId) {
-    return contextsDir(workingDir) + QStringLiteral("/") + sliceId + QStringLiteral(".json");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(contextsDir(workingDir)),
+                               (sliceId + ".json").toStdString()));
 }
 
 QString ProjectPaths::sliceDstextPath(const QString &workingDir, const QString &sliceId) {
-    return dstextDir(workingDir) + QStringLiteral("/") + sliceId + QStringLiteral(".dstext");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(dstextDir(workingDir)),
+                               (sliceId + ".dstext").toStdString()));
 }
 
 QString ProjectPaths::slicerOutputAudioPath(const QString &workingDir, const QString &name) {
-    return slicerOutputDir(workingDir) + QStringLiteral("/") + name + QStringLiteral(".wav");
+    return dsfw::PathUtils::fromStdPath(
+        dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(slicerOutputDir(workingDir)),
+                               (name + ".wav").toStdString()));
 }
 
 } // namespace dstools

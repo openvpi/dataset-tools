@@ -1,6 +1,5 @@
 project(dsfw-base)
 
-# Standalone build guards — only activate when targets are not already defined
 if(NOT TARGET dstools-types::dstools-types)
     find_package(dstools-types CONFIG REQUIRED)
 endif()

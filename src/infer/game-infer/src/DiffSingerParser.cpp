@@ -1,4 +1,5 @@
 #include <game-infer/DiffSingerParser.h>
+#include <dstools/PathEncoding.h>
 
 #include <algorithm>
 #include <fstream>
@@ -92,13 +93,13 @@ namespace Game
                                                     const std::vector<std::string> &audioExtensions) {
         std::ifstream file(csvPath, std::ios::in);
         if (!file.is_open()) {
-            throw std::runtime_error("Cannot open CSV file: " + csvPath.string());
+            throw std::runtime_error("Cannot open CSV file: " + dstools::pathToUtf8(csvPath));
         }
 
         // Read header
         std::string headerLine;
         if (!std::getline(file, headerLine)) {
-            throw std::runtime_error("Empty CSV file: " + csvPath.string());
+            throw std::runtime_error("Empty CSV file: " + dstools::pathToUtf8(csvPath));
         }
         // Strip BOM if present
         if (headerLine.size() >= 3 && headerLine[0] == '\xEF' && headerLine[1] == '\xBB' && headerLine[2] == '\xBF') {
@@ -125,13 +126,13 @@ namespace Game
         }
 
         if (nameIdx < 0)
-            throw std::runtime_error("CSV missing 'name' column: " + csvPath.string());
+            throw std::runtime_error("CSV missing 'name' column: " + dstools::pathToUtf8(csvPath));
         if (phSeqIdx < 0)
-            throw std::runtime_error("CSV missing 'ph_seq' column: " + csvPath.string());
+            throw std::runtime_error("CSV missing 'ph_seq' column: " + dstools::pathToUtf8(csvPath));
         if (phDurIdx < 0)
-            throw std::runtime_error("CSV missing 'ph_dur' column: " + csvPath.string());
+            throw std::runtime_error("CSV missing 'ph_dur' column: " + dstools::pathToUtf8(csvPath));
         if (phNumIdx < 0)
-            throw std::runtime_error("CSV missing 'ph_num' column: " + csvPath.string());
+            throw std::runtime_error("CSV missing 'ph_num' column: " + dstools::pathToUtf8(csvPath));
 
         const auto parentDir = csvPath.parent_path();
 
@@ -170,14 +171,14 @@ namespace Game
             }
             if (!found) {
                 throw std::runtime_error("Waveform file not found for item '" + item.name + "' in " +
-                                         csvPath.string());
+                                         dstools::pathToUtf8(csvPath));
             }
 
             items.push_back(std::move(item));
         }
 
         if (items.empty()) {
-            throw std::runtime_error("No items found in CSV: " + csvPath.string());
+            throw std::runtime_error("No items found in CSV: " + dstools::pathToUtf8(csvPath));
         }
 
         return items;
@@ -215,7 +216,7 @@ namespace Game
 
         std::ofstream file(csvPath, std::ios::out | std::ios::trunc);
         if (!file.is_open()) {
-            throw std::runtime_error("Cannot open output CSV: " + csvPath.string());
+            throw std::runtime_error("Cannot open output CSV: " + dstools::pathToUtf8(csvPath));
         }
 
         // Write header

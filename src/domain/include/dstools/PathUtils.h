@@ -1,7 +1,6 @@
 #pragma once
 
-/// @file PathUtils.h
-/// @brief Cross-platform path encoding utilities.
+#include <dsfw/PathUtils.h>
 
 #include <QString>
 
@@ -9,14 +8,9 @@
 
 namespace dstools {
 
-/// Convert QString to std::filesystem::path with correct encoding.
-/// Uses wstring on Windows to handle Unicode paths safely.
+[[deprecated("Use dsfw::PathUtils::toStdPath() instead")]]
 inline std::filesystem::path toFsPath(const QString &qpath) {
-#ifdef _WIN32
-    return std::filesystem::path(qpath.toStdWString());
-#else
-    return std::filesystem::path(qpath.toStdString());
-#endif
+    return dsfw::PathUtils::toStdPath(qpath);
 }
 
 } // namespace dstools

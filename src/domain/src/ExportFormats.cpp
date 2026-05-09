@@ -1,5 +1,6 @@
 #include <dstools/ExportFormats.h>
 #include <dsfw/JsonHelper.h>
+#include <dstools/PathEncoding.h>
 
 #include <fstream>
 #include <filesystem>
@@ -19,7 +20,7 @@ namespace dstools {
         const auto &j = jsonResult.value();
         std::ofstream out(outputPath);
         if (!out.is_open()) {
-            return Err("Cannot open output file: " + outputPath.string());
+            return Err("Cannot open output file: " + dstools::pathToUtf8(outputPath));
         }
 
         (void)workingDir;

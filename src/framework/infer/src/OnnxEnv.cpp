@@ -1,5 +1,6 @@
 #include <dstools/OnnxEnv.h>
 #include <dstools/OnnxModelBase.h>
+#include <dstools/PathEncoding.h>
 
 #include <onnxruntime_cxx_api.h>
 
@@ -70,20 +71,17 @@ namespace dstools::infer {
                     const char *values[] = {deviceIdStr.c_str(), "DEFAULT"};
                     OrtStatusPtr updateStatus = ortApi.UpdateCUDAProviderOptions(cudaOptions.get(), keys, values, 2);
                     if (updateStatus) {
-                        std::cerr << "Warning: CUDA UpdateCUDAProviderOptions failed: "
-                                  << ortApi.GetErrorMessage(updateStatus) << std::endl;
+                        DSFW_LOG_WARN("infer", ("CUDA UpdateCUDAProviderOptions failed: " + std::string(ortApi.GetErrorMessage(updateStatus))).c_str());
                         ortApi.ReleaseStatus(updateStatus);
                     }
                     OrtStatusPtr appendStatus = ortApi.SessionOptionsAppendExecutionProvider_CUDA_V2(options, cudaOptions.get());
                     if (appendStatus) {
-                        std::cerr << "Warning: Failed to enable CUDA execution provider: "
-                                  << ortApi.GetErrorMessage(appendStatus) << std::endl;
-                        std::cerr << "Falling back to CPU. Performance may be significantly reduced." << std::endl;
+                        DSFW_LOG_WARN("infer", ("Failed to enable CUDA execution provider: " + std::string(ortApi.GetErrorMessage(appendStatus))).c_str());
+                        DSFW_LOG_WARN("infer", "Falling back to CPU. Performance may be significantly reduced.");
                         ortApi.ReleaseStatus(appendStatus);
                     }
                 } else {
-                    std::cerr << "Warning: CreateCUDAProviderOptions failed: "
-                              << createStatus.GetErrorMessage() << std::endl;
+                    DSFW_LOG_WARN("infer", ("CreateCUDAProviderOptions failed: " + std::string(createStatus.GetErrorMessage())).c_str());
                 }
                 break;
             }
@@ -112,7 +110,7 @@ namespace dstools::infer {
 #ifdef _WIN32
             auto session = std::make_unique<Ort::Session>(env(), modelPath.c_str(), options);
 #else
-            auto modelPathStr = std::filesystem::path(modelPath).string();
+            auto modelPathStr = dstools::pathToUtf8(std::filesystem::path(modelPath));
             auto session = std::make_unique<Ort::Session>(env(), modelPathStr.c_str(), options);
 #endif
             return session;

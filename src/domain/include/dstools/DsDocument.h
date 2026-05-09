@@ -101,8 +101,7 @@ public:
 
     // ── Path encoding ─────────────────────────────────────────────────
 
-    /// Convert QString to std::filesystem::path with correct encoding.
-    /// Uses wstring on Windows to handle Unicode paths safely.
+    [[deprecated("Use dsfw::PathUtils::toStdPath() instead")]]
     static std::filesystem::path toFsPath(const QString &qpath);
 
 private:

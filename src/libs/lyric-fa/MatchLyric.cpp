@@ -1,4 +1,6 @@
 #include "MatchLyric.h"
+#include <dsfw/Log.h>
+
 #include <QApplication>
 #include <QDir>
 #include <QFile>
@@ -27,7 +29,7 @@ namespace LyricFA {
                 const LyricData data = m_matcher->process_lyric_file(fi.absoluteFilePath());
                 m_lyricDict[name] = {data.text_list, data.phonetic_list};
             } catch (const std::exception &e) {
-                qWarning() << "Error processing lyric" << name << ":" << e.what();
+                DSFW_LOG_ERROR("lyric", ("Error processing lyric " + name.toStdString() + ": " + e.what()).c_str());
             }
         }
     }

@@ -1,4 +1,5 @@
 #include <rmvpe-infer/Rmvpe.h>
+#include <dstools/PathEncoding.h>
 
 #include <sndfile.hh>
 
@@ -159,7 +160,7 @@ namespace Rmvpe
             m_rmvpe = std::make_unique<RmvpeModel>(modelPath, provider, deviceId);
             if (!m_rmvpe->is_open()) {
                 m_rmvpe.reset();
-                return dstools::Err("Cannot load RMVPE Model from " + modelPath.string());
+                return dstools::Err("Cannot load RMVPE Model from " + dstools::pathToUtf8(modelPath));
             }
             return dstools::Ok();
         } catch (const std::exception &e) {

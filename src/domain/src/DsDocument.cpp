@@ -1,15 +1,13 @@
 #include <dstools/DsDocument.h>
 #include <dsfw/JsonHelper.h>
-#include <dstools/PathUtils.h>
+#include <dsfw/PathUtils.h>
 
 #include <QDebug>
 
 namespace dstools {
 
-// ── Path encoding ─────────────────────────────────────────────────────
-
 std::filesystem::path DsDocument::toFsPath(const QString &qpath) {
-    return dstools::toFsPath(qpath);
+    return dsfw::PathUtils::toStdPath(qpath);
 }
 
 // ── File I/O ──────────────────────────────────────────────────────────
@@ -18,7 +16,7 @@ DsDocument DsDocument::load(const QString &path, QString &error) {
     DsDocument doc;
     error.clear();
 
-    auto jsonResult = JsonHelper::loadFile(toFsPath(path));
+    auto jsonResult = JsonHelper::loadFile(dsfw::PathUtils::toStdPath(path));
     if (!jsonResult) {
         error = QString::fromStdString(jsonResult.error());
         return doc;
@@ -70,7 +68,7 @@ bool DsDocument::save(const QString &path, QString &error) const {
         arr.push_back(s);
     }
 
-    auto saveResult = JsonHelper::saveFile(toFsPath(targetPath), arr);
+    auto saveResult = JsonHelper::saveFile(dsfw::PathUtils::toStdPath(targetPath), arr);
     if (!saveResult) {
         error = QString::fromStdString(saveResult.error());
         return false;

@@ -1,6 +1,8 @@
 #include "AsrPipeline.h"
 
 #include <Model.h>
+#include <dstools/PathEncoding.h>
+#include <dsfw/Log.h>
 
 #include <QApplication>
 #include <QBuffer>
@@ -36,7 +38,7 @@ namespace LyricFA {
             FunAsr::create_model(modelPath.toUtf8().toStdString().c_str(), 4, provider, deviceId));
 
         if (!m_asrHandle) {
-            qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";
+            DSFW_LOG_ERROR("asr", "Cannot load ASR Model, there must be files model.onnx and vocab.txt");
         }
     }
 
@@ -168,7 +170,7 @@ bool FunAsrAdapter::load(const std::filesystem::path &modelPath,
 
     auto *raw = FunAsr::create_model(modelPath, 4, provider, deviceId);
     if (!raw) {
-        errorMsg = "Failed to load FunASR model from: " + modelPath.string();
+        errorMsg = "Failed to load FunASR model from: " + dstools::pathToUtf8(modelPath);
         return false;
     }
 

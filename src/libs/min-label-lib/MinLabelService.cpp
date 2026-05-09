@@ -1,5 +1,7 @@
 #include "MinLabelService.h"
 
+#include <dsfw/PathUtils.h>
+
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -79,8 +81,9 @@ dstools::Result<ConvertResult> MinLabelService::convertLabToJson(const QString &
             continue;
 
         QString name = fileInfo.fileName();
-        QString jsonFilePath =
-            fileInfo.absolutePath() + "/" + name.mid(0, name.size() - suffix.size() - 1) + ".json";
+        QString jsonFilePath = dsfw::PathUtils::fromStdPath(
+            dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(fileInfo.absolutePath()),
+                                   (name.mid(0, name.size() - suffix.size() - 1) + ".json").toStdString()));
 
         if (QFile::exists(jsonFilePath))
             continue;

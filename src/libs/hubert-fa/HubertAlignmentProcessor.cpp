@@ -1,7 +1,5 @@
 #include "HubertAlignmentProcessor.h"
 
-#include "../../domain/include/dstools/DsDocument.h"
-
 #include <hubert-infer/Hfa.h>
 
 #include <dsfw/Log.h>
@@ -107,7 +105,7 @@ namespace dstools {
 
         HFA::WordList words;
         auto recognizeResult =
-            m_hfa->recognize(dstools::DsDocument::toFsPath(input.audioPath), language, nonSpeechPh, lyricsText, words);
+            m_hfa->recognize(dsfw::PathUtils::toStdPath(input.audioPath), language, nonSpeechPh, lyricsText, words);
         if (!recognizeResult) {
             DSFW_LOG_ERROR("fa", ("FA process failed: " + recognizeResult.error()).c_str());
             return Result<TaskOutput>::Error(recognizeResult.error());

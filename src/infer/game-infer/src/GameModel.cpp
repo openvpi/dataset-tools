@@ -1,4 +1,5 @@
 #include <game-infer/GameModel.h>
+#include <dstools/PathEncoding.h>
 
 #include <cmath>
 #include <cstring>
@@ -37,7 +38,7 @@ namespace Game
         modelDir = modelPath;
         std::ifstream configFile(modelPath / "config.json");
         if (!configFile.is_open()) {
-            msg = "Could not open config.json: " + (modelPath / "config.json").string();
+            msg = "Could not open config.json: " + dstools::pathToUtf8(modelPath / "config.json");
             return false;
         }
         nlohmann::json config;
@@ -81,8 +82,7 @@ namespace Game
         {
             const std::filesystem::path model_path = modelDir / name;
             if (!std::filesystem::exists(model_path)) {
-                auto u8path = model_path.u8string();
-                msg = std::string(u8path.begin(), u8path.end()) + " not exist!";
+                msg = dstools::pathToUtf8(model_path) + " not exist!";
                 return false;
             }
             try {

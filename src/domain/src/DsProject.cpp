@@ -1,17 +1,15 @@
 #include <dstools/DsProject.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/Log.h>
-#include <dstools/PathUtils.h>
+#include <dsfw/PathUtils.h>
 
 #include <filesystem>
 #include <QDir>
 
 namespace dstools {
 
-// ── helpers ───────────────────────────────────────────────────────────
-
 static std::filesystem::path toFsPathLocal(const QString &qpath) {
-    return dstools::toFsPath(qpath);
+    return dsfw::PathUtils::toStdPath(qpath);
 }
 
 static std::string qstr(const QString &s) {

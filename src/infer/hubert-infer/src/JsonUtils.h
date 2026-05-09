@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <dstools/PathEncoding.h>
+
 #include <nlohmann/json.hpp>
 
 #include <filesystem>
@@ -44,26 +46,26 @@ public:
     static nlohmann::json loadFile(const std::filesystem::path &path, std::string &error) {
         error.clear();
         if (!std::filesystem::exists(path)) {
-            error = "file does not exist: " + path.string();
+            error = "file does not exist: " + dstools::pathToUtf8(path);
             return nlohmann::json::object();
         }
         std::ifstream stream(path);
         if (!stream.is_open()) {
-            error = "cannot open file: " + path.string();
+            error = "cannot open file: " + dstools::pathToUtf8(path);
             return nlohmann::json::object();
         }
         try {
             auto data = nlohmann::json::parse(stream);
             if (!data.is_object() && !data.is_array()) {
-                error = "JSON root is not an object or array: " + path.string();
+                error = "JSON root is not an object or array: " + dstools::pathToUtf8(path);
                 return nlohmann::json::object();
             }
             return data;
         } catch (const nlohmann::json::parse_error &e) {
-            error = std::string("JSON parse error in ") + path.string() + ": " + e.what();
+            error = std::string("JSON parse error in ") + dstools::pathToUtf8(path) + ": " + e.what();
             return nlohmann::json::object();
         } catch (const std::exception &e) {
-            error = std::string("error reading ") + path.string() + ": " + e.what();
+            error = std::string("error reading ") + dstools::pathToUtf8(path) + ": " + e.what();
             return nlohmann::json::object();
         }
     }

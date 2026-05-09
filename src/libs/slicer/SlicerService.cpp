@@ -2,6 +2,7 @@
 
 #include <audio-util/PathCompat.h>
 #include <audio-util/Slicer.h>
+#include <dstools/PathEncoding.h>
 
 #include <QFileInfo>
 
@@ -14,7 +15,7 @@ dstools::Result<dstools::SliceResult> SlicerService::slice(const QString &audioP
     std::filesystem::path path = audioPath.toStdWString();
     SndfileHandle sf = AudioUtil::openSndfile(path);
     if (sf.error()) {
-        return dstools::Result<dstools::SliceResult>::Error("Failed to open audio file: " + std::string(path.u8string().begin(), path.u8string().end()));
+        return dstools::Result<dstools::SliceResult>::Error("Failed to open audio file: " + dstools::pathToUtf8(path));
     }
 
     int sampleRate = sf.samplerate();

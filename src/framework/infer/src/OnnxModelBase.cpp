@@ -1,4 +1,5 @@
 #include <dstools/OnnxModelBase.h>
+#include <dstools/PathEncoding.h>
 
 #include <fstream>
 
@@ -7,29 +8,29 @@ namespace dstools::infer {
     Result<void> OnnxModelBase::validateModelFile(const std::filesystem::path &modelPath) {
         std::error_code ec;
         if (!std::filesystem::exists(modelPath, ec) || ec) {
-            return Err("Model file does not exist: " + modelPath.string());
+            return Err("Model file does not exist: " + dstools::pathToUtf8(modelPath));
         }
 
         const auto fileSize = std::filesystem::file_size(modelPath, ec);
         if (ec) {
-            return Err("Cannot read model file size: " + modelPath.string());
+            return Err("Cannot read model file size: " + dstools::pathToUtf8(modelPath));
         }
         if (fileSize == 0) {
-            return Err("Model file is empty: " + modelPath.string());
+            return Err("Model file is empty: " + dstools::pathToUtf8(modelPath));
         }
         if (fileSize < 16) {
             return Err("Model file is too small to be a valid ONNX model (" +
-                       std::to_string(fileSize) + " bytes): " + modelPath.string());
+                       std::to_string(fileSize) + " bytes): " + dstools::pathToUtf8(modelPath));
         }
 
         std::ifstream file(modelPath, std::ios::binary);
         if (!file.is_open()) {
-            return Err("Cannot open model file for reading: " + modelPath.string());
+            return Err("Cannot open model file for reading: " + dstools::pathToUtf8(modelPath));
         }
 
         char header[4] = {};
         if (!file.read(header, 4)) {
-            return Err("Cannot read model file header: " + modelPath.string());
+            return Err("Cannot read model file header: " + dstools::pathToUtf8(modelPath));
         }
 
         static constexpr char onnxMagic[] = {0x08, 0x07};
@@ -39,7 +40,7 @@ namespace dstools::infer {
 
         if (header[0] == '{' || header[0] == '[') {
             return Err("Model file appears to be JSON/text format, not a binary ONNX model: " +
-                       modelPath.string());
+                       dstools::pathToUtf8(modelPath));
         }
 
         return Ok();
@@ -80,7 +81,7 @@ namespace dstools::infer {
         const auto configPath = modelDir / "config.json";
         std::ifstream file(configPath);
         if (!file.is_open()) {
-            return Err<nlohmann::json>("Cannot open config.json in " + modelDir.string());
+            return Err<nlohmann::json>("Cannot open config.json in " + dstools::pathToUtf8(modelDir));
         }
         try {
             nlohmann::json config = nlohmann::json::parse(file);

@@ -1,5 +1,6 @@
 #include <game-infer/Game.h>
 
+#include <dstools/PathEncoding.h>
 #include <sndfile.hh>
 
 #include <algorithm>
@@ -347,7 +348,7 @@ namespace Game
         std::string audioMsg;
         auto sfVio = AudioUtil::resample_to_vio(input.wavPath, audioMsg, 1, tarSr);
         if (!audioMsg.empty() && sfVio.data.byteArray.empty()) {
-            return dstools::Err("Failed to load audio '" + input.wavPath.string() + "': " + audioMsg);
+            return dstools::Err("Failed to load audio '" + dstools::pathToUtf8(input.wavPath) + "': " + audioMsg);
         }
 
         SndfileHandle sf(sfVio.vio, &sfVio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sfVio.info.channels,
@@ -437,7 +438,7 @@ namespace Game
         }
 
         if (!overwrite && std::filesystem::exists(outputPath)) {
-            return dstools::Err("Output file already exists: " + outputPath.string());
+            return dstools::Err("Output file already exists: " + dstools::pathToUtf8(outputPath));
         }
 
         std::vector<std::vector<AlignedNote>> allResults;

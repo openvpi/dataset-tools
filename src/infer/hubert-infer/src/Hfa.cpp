@@ -1,13 +1,15 @@
+#include <dstools/PathEncoding.h>
 #include <hubert-infer/Hfa.h>
 
 #include <algorithm>
 #include <fstream>
-#include <iostream>
 
 #include <vector>
 
-#include <audio-util/Util.h>
 #include "JsonUtils.h"
+#include <audio-util/Util.h>
+
+#include <iostream>
 
 
 namespace fs = std::filesystem;
@@ -23,7 +25,8 @@ namespace HFA {
 
     HFA::~HFA() = default;
 
-    dstools::Result<void> HFA::load(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id) {
+    dstools::Result<void> HFA::load(const std::filesystem::path &model_folder, ExecutionProvider provider,
+                                    int device_id) {
         unload();
 
         try {
@@ -88,7 +91,7 @@ namespace HFA {
             m_nonLexicalDecoder = std::make_unique<NonLexicalDecoder>(non_lexical_phonemes, mel_spec_config);
         } catch (const std::exception &e) {
             unload();
-            return dstools::Err("Failed to load HFA model from " + std::string(model_folder.u8string().begin(), model_folder.u8string().end()) + ": " + e.what());
+            return dstools::Err("Failed to load HFA model from " + dstools::pathToUtf8(model_folder) + ": " + e.what());
         }
 
         if (!m_hfa) {
@@ -110,40 +113,43 @@ namespace HFA {
     }
 
     dstools::Result<void> HFA::recognize(const std::filesystem::path &wavPath, const std::string &language,
-                                          const std::vector<std::string> &non_speech_ph,
-                                          const std::string &lyricsText, WordList &words) const {
+                                         const std::vector<std::string> &non_speech_ph, const std::string &lyricsText,
+                                         WordList &words) const {
         if (!m_hfa) {
             return dstools::Err("HFA model not loaded");
         }
 
         if (lyricsText.empty()) {
             return dstools::Err("Empty lyrics text provided for forced alignment"
-                " (audio: " + std::string(wavPath.u8string().begin(), wavPath.u8string().end()) + ")");
+                                " (audio: " +
+                                dstools::pathToUtf8(wavPath) + ")");
         }
         if (!fs::exists(wavPath)) {
             return dstools::Err("Empty lyrics text provided for forced alignment"
-                " (audio: " + std::string(wavPath.u8string().begin(), wavPath.u8string().end()) + ")");
+                                " (audio: " +
+                                dstools::pathToUtf8(wavPath) + ")");
         }
 
         std::string msg;
         auto sf_vio = AudioUtil::resample_to_vio(wavPath, msg, 1, hfa_input_sample_rate);
 
         if (!msg.empty()) {
-            return dstools::Err("Failed to resample audio: " + msg
-                + " (path: " + wavPath.string() + ")");
+            return dstools::Err("Failed to resample audio: " + msg + " (path: " + dstools::pathToUtf8(wavPath) + ")");
         }
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
                          hfa_input_sample_rate);
         if (!sf) {
             return dstools::Err("Failed to open resampled audio for HFA"
-                " (path: " + wavPath.string() + ")");
+                                " (path: " +
+                                dstools::pathToUtf8(wavPath) + ")");
         }
         const auto totalSize = sf.frames();
 
         if (totalSize == 0) {
             return dstools::Err("Audio file contains 0 samples after resampling, cannot run forced alignment"
-                " (path: " + wavPath.string() + ")");
+                                " (path: " +
+                                dstools::pathToUtf8(wavPath) + ")");
         }
 
         std::vector<float> audio(totalSize);
@@ -153,8 +159,9 @@ namespace HFA {
         const float wav_length = static_cast<float>(sf.frames()) / hfa_input_sample_rate;
 
         if (wav_length > 60) {
-            return dstools::Err("The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
-                  "segment and rerun the recognition program.");
+            return dstools::Err(
+                "The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
+                "segment and rerun the recognition program.");
         }
 
         std::string modelMsg;
@@ -197,15 +204,15 @@ namespace HFA {
     }
 
     dstools::Result<void> HFA::recognize(std::filesystem::path wavPath, const std::string &language,
-                                          const std::vector<std::string> &non_speech_ph, WordList &words) const {
+                                         const std::vector<std::string> &non_speech_ph, WordList &words) const {
         const auto labPath = std::filesystem::path(wavPath).replace_extension(".lab");
         if (!fs::exists(labPath)) {
-            return dstools::Err("Lab does not exist: " + labPath.string());
+            return dstools::Err("Lab does not exist: " + dstools::pathToUtf8(labPath));
         }
 
         std::ifstream labFile(labPath);
         if (!labFile.is_open()) {
-            return dstools::Err("Failed to open lab file: " + labPath.string());
+            return dstools::Err("Failed to open lab file: " + dstools::pathToUtf8(labPath));
         }
         std::string labContent((std::istreambuf_iterator<char>(labFile)), std::istreambuf_iterator<char>());
         labFile.close();
