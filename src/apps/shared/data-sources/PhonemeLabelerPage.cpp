@@ -32,16 +32,16 @@
 namespace dstools {
 
 // ---------------------------------------------------------------------------
-// Build fa_grapheme + phoneme layers with BindingGroups from HFA WordList.
+// Build grapheme + phoneme layers with BindingGroups from HFA WordList.
 //
 // The FA system accepts grapheme input (from original grapheme layer) and
-// produces Word→Phone mapping. FA output is stored in a fa_grapheme layer
+// produces Word→Phone mapping. FA output is stored in a grapheme layer
 // (word-level boundaries from FA alignment) and a phoneme layer (phone-level).
 // Where a word start coincides with a phone start, those two boundary IDs
 // form a BindingGroup (they must move together). The original grapheme layer
 // (G2P output) is preserved as reference for re-running FA.
 //
-// SP/AP words are included in fa_grapheme so that fa_grapheme and phoneme
+// SP/AP words are included in grapheme so that grapheme and phoneme
 // layers have aligned dependency relationships. readFaInput() reads from the
 // original grapheme layer and filters out SP/AP text.
 // ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ struct FaLayerResult {
 
 static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     FaLayerResult r;
-    r.graphemeLayer.name = QStringLiteral("fa_grapheme");
+    r.graphemeLayer.name = QStringLiteral("grapheme");
     r.graphemeLayer.type = QStringLiteral("interval");
     r.phonemeLayer.name = QStringLiteral("phoneme");
     r.phonemeLayer.type = QStringLiteral("interval");
@@ -101,7 +101,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         }
 
         LayerDependency dep;
-        dep.parentLayerName = QStringLiteral("fa_grapheme");
+        dep.parentLayerName = QStringLiteral("grapheme");
         dep.childLayerName = QStringLiteral("phoneme");
         dep.parentStartBoundaryId = graphemeStartId;
         dep.parentEndBoundaryId = graphemeEndId;
@@ -233,7 +233,7 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 
         QList<IntervalLayer> layers;
         for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("fa_grapheme")
+            if (layer.name == QStringLiteral("grapheme")
                 || layer.name == QStringLiteral("phoneme"))
                 layers.append(layer);
         }
@@ -435,7 +435,7 @@ QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
 
 /// Reads pinyin lyrics text from the original grapheme layer, which is the
 /// direct output of the minlabel step (equivalent to .lab in main branch).
-/// applyFaResult now creates a separate fa_grapheme layer, preserving the
+/// applyFaResult now creates a separate grapheme layer, preserving the
 /// original grapheme for re-running FA.
 /// Returns empty string when grapheme layer is absent or empty.
 static QString readFaInput(const DsTextDocument &doc) {
@@ -707,7 +707,7 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
     }
 
     // Preserve the original grapheme layer (G2P output) alongside
-    // the FA-aligned fa_grapheme layer. fa_grapheme contains the
+    // the FA-aligned grapheme layer. grapheme contains the
     // FA result with word-level boundaries; grapheme retains the
     // original input for re-running FA.
 
@@ -741,7 +741,7 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
     if (sliceId == currentSliceId()) {
         QList<IntervalLayer> allLayers;
         for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("fa_grapheme")
+            if (layer.name == QStringLiteral("grapheme")
                 || layer.name == QStringLiteral("phoneme"))
                 allLayers.append(layer);
         }
