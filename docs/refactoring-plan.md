@@ -48,37 +48,20 @@
 | FA grapheme 层替换（不再创建 fa_grapheme） | BUG-24, BUG-25, D-42 修订 | 2026-05-08 |
 | PitchLabeler 音频播放修复 | BUG-26, D-43 修订 | 2026-05-08 |
 | 移除 loadFromDsText 中 CJK 重命名逻辑 | BUG-32 | 2026-05-08 |
-| PathUtils 新增 join/toUtf8/toWide 方法 | P-10, ADR-97 | 2026-05-09 |
-| 废弃 dstools::toFsPath / DsDocument::toFsPath | P-10, ADR-98 | 2026-05-09 |
-| JsonHelper 内部 pathToUtf8 改用 PathUtils::toUtf8 | P-10, ADR-99 | 2026-05-09 |
+| PathUtils 新增 join/toUtf8/toWide 方法 | P-10, ADR-97 | `4c72815` |
+| 废弃 dstools::toFsPath / DsDocument::toFsPath | P-10, ADR-98 | `4c72815` |
+| JsonHelper 内部 pathToUtf8 改用 PathUtils::toUtf8 | P-10, ADR-99 | `4c72815` |
+| T-P10-1~8: P-10 统一路径库（8 个子任务） | BUG-04/05/06/31, PATH-01~08, §4 | `4c72815` |
+| T-P11-1: `m_xxxRunning` 改为 `std::atomic<bool>` | P-11 | `9738f0f` |
+| T-P11-2: 线程安全文档 + source() 保护 | P-11 | `9738f0f` + `4c72815` |
+| T-P12-1: 批量处理模板提取到 EditorPageBase | P-12, TD-05 | `9738f0f` |
+| T-P12-2: AudioChartWidget 共同基类提取 | P-12, TD-05 | `2e1756b` |
 
-### 待执行 — P-10 统一路径库
+### 待执行
 
-| 任务 | 关联 | 优先级 | 状态 |
-|------|------|--------|------|
-| T-P10-1: 替换推理层 `path.string()` 为 `PathUtils::toUtf8()` | BUG-04/05/06/31, PATH-01~08 | 高 | ✅ 已完成 |
-| T-P10-2: 替换 `path.u8string()` 手动转换为 `dstools::pathToUtf8()` | P-10 | 高 | ✅ 已完成 |
-| T-P10-3: 替换 PathResolvers.cpp 手动路径拼接为 `PathUtils::join()` | P-10 | 中 | ✅ 已完成 |
-| T-P10-4: 替换 MinLabelService.cpp 手动路径拼接 | P-10 | 中 | ✅ 已完成 |
-| T-P10-5: 替换 HubertAlignmentProcessor.cpp 中 `DsDocument::toFsPath` 调用 | P-10 | 高 | ✅ 已完成 |
-| T-P10-6: 替换 DsDocument.cpp 内部 `toFsPath` 调用为 `PathUtils::toStdPath` | P-10 | 高 | ✅ 已完成 |
-| T-P10-7: 替换 `qWarning()`/`qDebug()`/`std::cerr` 为 `DSFW_LOG_*`（推理层） | P-10, §4 | 中 | ✅ 已完成 |
-| T-P10-8: 替换 `qWarning()`/`qDebug()`/`std::cerr` 为 `DSFW_LOG_*`（框架层） | P-10, §4 | 中 | ✅ 已完成 |
-
-### 待执行 — P-11 多线程安全
-
-| 任务 | 关联 | 优先级 | 状态 |
-|------|------|--------|------|
-| T-P11-1: MinLabelPage/PitchLabelerPage/PhonemeLabelerPage 的 `m_xxxRunning` 改为 `std::atomic<bool>` | P-11 | 中 | ✅ 已完成 |
-| T-P11-2: 后台线程访问 `source()` 方法时添加线程安全保护 | P-11 | 中 | ✅ 已完成 |
-
-### 待执行 — P-12 相似模块统一
-
-| 任务 | 关联 | 优先级 | 状态 |
-|------|------|--------|------|
-| T-P12-1: 提取批量处理模板到 EditorPageBase | P-12, TD-05 | 中 | ✅ 已完成（模板已实现，子类迁移待后续） |
-| T-P12-2: 提取 chart widget 鼠标交互逻辑到共同基类 | P-12, TD-05 | 中 | ✅ 已完成（AudioChartWidget 基类已创建，WaveformWidget 已迁移，SpectrogramWidget/PowerWidget 待后续迁移） |
-| T-P12-3: DsSlicerPage 继承 SlicerPage | P-12, TD-11 | 低 | 待执行 |
+| 任务 | 关联 | 优先级 |
+|------|------|--------|
+| T-P12-3: DsSlicerPage 继承 SlicerPage | P-12, TD-11 | 低 |
 
 ### 已废弃
 
