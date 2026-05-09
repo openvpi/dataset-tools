@@ -71,6 +71,7 @@ private:
     void ensureAsrEngineAsync(std::function<void()> onReady = {});
     void onModelInvalidated(const QString &taskKey);
     void setAsrResult(const QString &sliceId, const QString &text);
+    void batchG2P(const QString &sliceId);
     void updateProgress();
     void onRunLyricFa();
     void onBatchLyricFa();
