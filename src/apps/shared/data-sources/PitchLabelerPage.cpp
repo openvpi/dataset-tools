@@ -759,7 +759,7 @@ void PitchLabelerPage::applyPitchResult(const QString &sliceId,
         pitchCurve->name = QStringLiteral("pitch");
     }
     pitchCurve->values = f0;
-    pitchCurve->timestep = timestep;
+    pitchCurve->timestep = secToUs(static_cast<double>(timestep));
 
     (void) source()->saveSlice(sliceId, doc);
 
@@ -767,7 +767,7 @@ void PitchLabelerPage::applyPitchResult(const QString &sliceId,
         if (!m_currentFile)
             m_currentFile = std::make_shared<pitchlabeler::DSFile>();
         m_currentFile->f0.values = f0;
-        m_currentFile->f0.timestep = timestep;
+        m_currentFile->f0.timestep = secToUs(static_cast<double>(timestep));
         m_editor->loadDSFile(m_currentFile);
     }
 }
