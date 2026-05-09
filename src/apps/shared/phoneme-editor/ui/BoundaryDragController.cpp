@@ -36,6 +36,9 @@ void BoundaryDragController::setToleranceUs(TimePos toleranceUs) {
 
 void BoundaryDragController::startDrag(int tierIndex, int boundaryIndex,
                                         IBoundaryModel *model) {
+    if (!model)
+        return;
+
     if (m_dragging)
         cancelDrag();
 
