@@ -49,6 +49,11 @@ void PowerWidget::setViewport(const ViewportState &state) {
     update();
 }
 
+void PowerWidget::setDocument(TextGridDocument *doc) {
+    m_document = doc;
+    update();
+}
+
 void PowerWidget::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event);
     QPainter painter(this);

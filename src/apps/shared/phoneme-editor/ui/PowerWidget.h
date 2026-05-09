@@ -45,7 +45,7 @@ public:
     void setViewport(const ViewportState &state);
 
     /// @brief Sets the TextGrid document for boundary display.
-    void setDocument(TextGridDocument *doc) { m_document = doc; }
+    void setDocument(TextGridDocument *doc);
 
     /// @brief Sets the drag controller for boundary dragging.
     void setDragController(BoundaryDragController *ctrl) { m_dragController = ctrl; }

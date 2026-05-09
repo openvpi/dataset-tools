@@ -48,7 +48,7 @@ public:
     void setViewport(const ViewportState &state);
 
     /// @brief Sets the boundary model for boundary display.
-    void setBoundaryModel(IBoundaryModel *model) { m_boundaryModel = model; }
+    void setBoundaryModel(IBoundaryModel *model);
 
     /// @brief Sets the drag controller for boundary dragging.
     void setDragController(BoundaryDragController *ctrl) { m_dragController = ctrl; }

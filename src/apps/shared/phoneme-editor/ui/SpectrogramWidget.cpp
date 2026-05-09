@@ -54,6 +54,11 @@ void SpectrogramWidget::setViewport(const ViewportState &state) {
     update();
 }
 
+void SpectrogramWidget::setBoundaryModel(IBoundaryModel *model) {
+    m_boundaryModel = model;
+    update();
+}
+
 std::vector<double> SpectrogramWidget::makeBlackmanHarrisWindow(int N) {
     std::vector<double> w(N);
     for (int n = 0; n < N; ++n) {

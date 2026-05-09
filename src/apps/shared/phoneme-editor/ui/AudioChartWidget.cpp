@@ -21,8 +21,9 @@ namespace dstools {
         AudioChartWidget::~AudioChartWidget() = default;
 
         void AudioChartWidget::setBoundaryModel(IBoundaryModel *model) {
-            m_boundaryModel = model;
-        }
+    m_boundaryModel = model;
+    update();
+}
 
         void AudioChartWidget::setDragController(BoundaryDragController *ctrl) {
             m_dragController = ctrl;
@@ -237,25 +238,23 @@ namespace dstools {
             if (!m_boundaryModel)
                 return;
 
-            int tierCount = m_boundaryModel->tierCount();
             int activeTier = m_boundaryModel->activeTierIndex();
+            if (activeTier < 0)
+                return;
 
-            for (int t = 0; t < tierCount; ++t) {
-                bool isActive = (t == activeTier);
-                int count = m_boundaryModel->boundaryCount(t);
-                for (int b = 0; b < count; ++b) {
-                    int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(t, b)));
-                    if (bx < 0 || bx > width())
-                        continue;
+            int count = m_boundaryModel->boundaryCount(activeTier);
+            for (int b = 0; b < count; ++b) {
+                int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(activeTier, b)));
+                if (bx < 0 || bx > width())
+                    continue;
 
-                    QColor color = isActive ? QColor(255, 165, 0, 200) : QColor(128, 128, 128, 100);
-                    if (b == m_hoveredBoundary && isActive) {
-                        color = QColor(255, 255, 0, 255);
-                    }
-
-                    painter.setPen(QPen(color, isActive ? 2 : 1));
-                    painter.drawLine(bx, 0, bx, height());
+                QColor color = QColor(255, 165, 0, 200);
+                if (b == m_hoveredBoundary) {
+                    color = QColor(255, 255, 0, 255);
                 }
+
+                painter.setPen(QPen(color, 2));
+                painter.drawLine(bx, 0, bx, height());
             }
         }
 
