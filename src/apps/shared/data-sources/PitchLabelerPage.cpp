@@ -157,10 +157,11 @@ void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 
         for (const auto &layer : doc.layers) {
             if (layer.name == QStringLiteral("midi")) {
-                for (const auto &b : layer.boundaries) {
+                for (size_t i = 0; i + 1 < layer.boundaries.size(); i += 2) {
                     pitchlabeler::Note note;
-                    note.start = b.pos;
-                    note.name = b.text;
+                    note.start = layer.boundaries[i].pos;
+                    note.name = layer.boundaries[i].text;
+                    note.duration = layer.boundaries[i + 1].pos - layer.boundaries[i].pos;
                     file->notes.push_back(std::move(note));
                 }
             }
@@ -788,16 +789,22 @@ void PitchLabelerPage::applyMidiResult(const QString &sliceId,
     midiLayer->boundaries.clear();
     int id = 1;
     for (const auto &note : notes) {
-        Boundary b;
-        b.id = id++;
-        b.pos = static_cast<int64_t>(note.onset * 1000000.0);
+        Boundary startB;
+        startB.id = id++;
+        startB.pos = static_cast<int64_t>(note.onset * 1000000.0);
         int midiNote = static_cast<int>(note.pitch + 0.5);
         int octave = midiNote / 12 - 1;
         int pc = midiNote % 12;
         static const char *pcNames[] = {"C", "C#", "D", "D#", "E", "F",
                                          "F#", "G", "G#", "A", "A#", "B"};
-        b.text = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
-        midiLayer->boundaries.push_back(std::move(b));
+        startB.text = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
+        midiLayer->boundaries.push_back(std::move(startB));
+
+        Boundary endB;
+        endB.id = id++;
+        endB.pos = static_cast<int64_t>((note.onset + note.duration) * 1000000.0);
+        endB.text.clear();
+        midiLayer->boundaries.push_back(std::move(endB));
     }
 
     (void) source()->saveSlice(sliceId, doc);
@@ -809,6 +816,7 @@ void PitchLabelerPage::applyMidiResult(const QString &sliceId,
         for (const auto &note : notes) {
             pitchlabeler::Note n;
             n.start = static_cast<int64_t>(note.onset * 1000000.0);
+            n.duration = static_cast<int64_t>(note.duration * 1000000.0);
             int midiNote = static_cast<int>(note.pitch + 0.5);
             int octave = midiNote / 12 - 1;
             int pc = midiNote % 12;

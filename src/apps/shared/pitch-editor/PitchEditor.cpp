@@ -75,8 +75,17 @@ void PitchEditor::loadDSFile(std::shared_ptr<DSFile> file) {
 
 void PitchEditor::loadAudio(const QString &path, double duration) {
     m_playWidget->openFile(path);
+    if (duration <= 0.0 && m_currentFile) {
+        duration = usToSec(m_currentFile->getTotalDuration());
+    }
     if (m_pianoRoll && duration > 0) {
         m_pianoRoll->setAudioDuration(duration);
+        m_playbackProgressSlider->setRange(0, static_cast<int>(duration * 1000));
+        m_playbackProgressSlider->setValue(0);
+        m_progressCurrentTime->setText("00:00.000");
+        int totalMin = static_cast<int>(duration) / 60;
+        double totalSec = duration - totalMin * 60;
+        m_progressTotalTime->setText(QString("%1:%2").arg(totalMin, 2, 10, QChar('0')).arg(totalSec, 6, 'f', 3, QChar('0')));
     }
 }
 
