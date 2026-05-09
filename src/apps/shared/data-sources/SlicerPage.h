@@ -26,8 +26,9 @@ namespace dstools {
 class AudioFileListPanel;
 
 namespace phonemelabeler {
-class WaveformWidget;
-class SpectrogramWidget;
+class WaveformChartPanel;
+class SpectrogramChartPanel;
+class PowerChartPanel;
 } // namespace phonemelabeler
 
 class SliceListPanel;
@@ -61,8 +62,8 @@ private:
 
     AudioFileListPanel *m_audioFileList = nullptr;
     QSplitter *m_hSplitter = nullptr;
-    phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
-    phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
+    phonemelabeler::WaveformChartPanel *m_waveformChartPanel = nullptr;
+    phonemelabeler::SpectrogramChartPanel *m_spectrogramChartPanel = nullptr;
     SliceListPanel *m_sliceListPanel = nullptr;
 
     std::vector<float> m_samples;

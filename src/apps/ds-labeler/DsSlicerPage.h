@@ -29,8 +29,8 @@ namespace dstools {
     class AudioFileListPanel;
 
     namespace phonemelabeler {
-        class WaveformWidget;
-        class SpectrogramWidget;
+        class WaveformChartPanel;
+        class SpectrogramChartPanel;
     } // namespace phonemelabeler
 
     class SliceListPanel;
@@ -68,8 +68,8 @@ namespace dstools {
 
         // UI components
         AudioFileListPanel *m_audioFileList = nullptr;
-        phonemelabeler::WaveformWidget *m_waveformWidget = nullptr;
-        phonemelabeler::SpectrogramWidget *m_spectrogramWidget = nullptr;
+        phonemelabeler::WaveformChartPanel *m_waveformWidget = nullptr;
+        phonemelabeler::SpectrogramChartPanel *m_spectrogramWidget = nullptr;
         SliceListPanel *m_sliceListPanel = nullptr;
 
         // Audio data

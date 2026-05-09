@@ -71,6 +71,7 @@ private:
     void onExtractMidi();
     void onBatchExtract();
     void onAddPhNum();
+    void loadPhNumCalculator();
 
     void ensureRmvpeEngine();
     void ensureGameEngine();

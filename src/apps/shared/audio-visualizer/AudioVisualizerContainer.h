@@ -38,6 +38,7 @@ using TimeRulerWidget = dsfw::widgets::TimeRulerWidget;
 
 class TierLabelArea;
 class MiniMapScrollBar;
+class PlayCursorOverlay;
 
 struct ChartEntry {
     QString id;
@@ -182,6 +183,7 @@ private:
     QLabel *m_scaleLabel = nullptr;
     dsfw::widgets::PlayWidget *m_playWidget = nullptr;
     QTimer *m_playheadTimer = nullptr;
+    PlayCursorOverlay *m_playCursorOverlay = nullptr;
 
     QMap<QString, ChartEntry> m_charts;
     QStringList m_chartOrder;

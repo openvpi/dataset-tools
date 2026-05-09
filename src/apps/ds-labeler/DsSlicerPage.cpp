@@ -15,8 +15,8 @@
 
 #include <QCheckBox>
 #include <ui/SliceBoundaryModel.h>
-#include <ui/SpectrogramWidget.h>
-#include <ui/WaveformWidget.h>
+#include <ui/SpectrogramChartPanel.h>
+#include <ui/WaveformChartPanel.h>
 
 #include <dsfw/widgets/FileProgressTracker.h>
 
@@ -181,12 +181,12 @@ namespace dstools {
         tierLabel->setBoundaryModel(m_boundaryModel);
         m_container->setTierLabelArea(tierLabel);
 
-        m_waveformWidget = new phonemelabeler::WaveformWidget(m_container->viewport(), m_container);
+        m_waveformWidget = new phonemelabeler::WaveformChartPanel(m_container->viewport(), m_container);
         m_waveformWidget->setBoundaryModel(m_boundaryModel);
         m_waveformWidget->setPlayWidget(m_playWidget);
         m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 0, 2, 1.0);
 
-        m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_container->viewport(), m_container);
+        m_spectrogramWidget = new phonemelabeler::SpectrogramChartPanel(m_container->viewport(), m_container);
         m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
         m_spectrogramWidget->setPlayWidget(m_playWidget);
         m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 1, 5, 0.75);
@@ -263,7 +263,7 @@ namespace dstools {
         });
 
         // Knife mode: left-click on waveform → add slice point
-        connect(m_waveformWidget, &phonemelabeler::WaveformWidget::positionClicked, this, [this](double sec) {
+        connect(m_waveformWidget, &phonemelabeler::WaveformChartPanel::positionClicked, this, [this](double sec) {
             if (m_toolMode == ToolMode::Knife) {
                 auto refreshFn = [this]() {
                     refreshBoundaries();
@@ -274,7 +274,7 @@ namespace dstools {
         });
 
         // Boundary drag finished → create undo command for the move
-        connect(m_waveformWidget, &phonemelabeler::WaveformWidget::boundaryDragFinished, this,
+        connect(m_waveformWidget, &phonemelabeler::WaveformChartPanel::boundaryDragFinished, this,
                 [this](int /*tierIndex*/, int boundaryIndex) {
                     if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
                         // The model was already updated by the widget (no-undo-stack path).

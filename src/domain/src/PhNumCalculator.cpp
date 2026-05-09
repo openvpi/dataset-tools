@@ -62,6 +62,44 @@ bool PhNumCalculator::loadDictionary(const QString &dictPath, QString &error) {
     return true;
 }
 
+bool PhNumCalculator::loadVowelsFromFile(const QString &path, QString &error) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        error = QStringLiteral("Cannot open vowels file: ") + path;
+        return false;
+    }
+
+    QTextStream in(&file);
+    in.setEncoding(QStringConverter::Utf8);
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty())
+            continue;
+        m_vowels.insert(line);
+    }
+    m_loaded = true;
+    return true;
+}
+
+bool PhNumCalculator::loadConsonantsFromFile(const QString &path, QString &error) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        error = QStringLiteral("Cannot open consonants file: ") + path;
+        return false;
+    }
+
+    QTextStream in(&file);
+    in.setEncoding(QStringConverter::Utf8);
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty())
+            continue;
+        m_consonants.insert(line);
+    }
+    m_loaded = true;
+    return true;
+}
+
 void PhNumCalculator::setVowels(const QSet<QString> &vowels) {
     m_vowels = vowels;
 }

@@ -10,6 +10,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QTableWidget>
 #include <QTabWidget>
 #include <QWidget>
 
@@ -84,6 +85,10 @@ private:
     QPushButton *m_g2pTestBtn = nullptr;
     QLabel *m_g2pTestResult = nullptr;
 
+    QTableWidget *m_phNumTable = nullptr;
+    QPushButton *m_phNumAddBtn = nullptr;
+    QPushButton *m_phNumRemoveBtn = nullptr;
+
     QWidget *createDeviceTab();
     QWidget *createGeneralTab();
     QWidget *createAsrTab();
@@ -91,6 +96,7 @@ private:
     QWidget *createFATab();
     QWidget *createPitchTab();
     QWidget *createPreprocessTab();
+    QWidget *createPhNumTab();
 
     QWidget *createModelConfigRow(const QString &label, QLineEdit *&pathEdit, QCheckBox *&forceCpu,
                                   QPushButton *&testBtn);

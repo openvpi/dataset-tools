@@ -5,9 +5,9 @@
 #include "SliceExportDialog.h"
 #include "SliceListPanel.h"
 
-#include <ui/WaveformWidget.h>
-#include <ui/SpectrogramWidget.h>
-#include <ui/PowerWidget.h>
+#include <ui/WaveformChartPanel.h>
+#include <ui/SpectrogramChartPanel.h>
+#include <ui/PowerChartPanel.h>
 #include <ui/SliceBoundaryModel.h>
 
 #include <dsfw/Log.h>
@@ -165,22 +165,22 @@ void SlicerPage::buildLayout() {
     m_tierLabel->setViewportController(m_viewport);
     m_container->setTierLabelArea(m_tierLabel);
 
-    m_waveformWidget = new phonemelabeler::WaveformWidget(m_viewport, m_container);
-    m_waveformWidget->setBoundaryModel(m_boundaryModel);
-    m_waveformWidget->setPlayWidget(m_playWidget);
-    m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 0, 1, 2.0);
+    m_waveformChartPanel = new phonemelabeler::WaveformChartPanel(m_viewport, m_container);
+    m_waveformChartPanel->setBoundaryModel(m_boundaryModel);
+    m_waveformChartPanel->setPlayWidget(m_playWidget);
+    m_container->addChart(QStringLiteral("waveform"), m_waveformChartPanel, 0, 1, 2.0);
 
-    m_spectrogramWidget = new phonemelabeler::SpectrogramWidget(m_viewport, m_container);
-    m_spectrogramWidget->setBoundaryModel(m_boundaryModel);
-    m_spectrogramWidget->setPlayWidget(m_playWidget);
-    m_spectrogramWidget->setVisible(true);
-    m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 1, 1, 5.0);
+    m_spectrogramChartPanel = new phonemelabeler::SpectrogramChartPanel(m_viewport, m_container);
+    m_spectrogramChartPanel->setBoundaryModel(m_boundaryModel);
+    m_spectrogramChartPanel->setPlayWidget(m_playWidget);
+    m_spectrogramChartPanel->setVisible(true);
+    m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramChartPanel, 1, 1, 5.0);
 
     // Power chart: registered but hidden by default (D-30).
     // Slicer users primarily need waveform + spectrogram; power can be
     // toggled on via Settings if desired.
-    auto *powerWidget = new phonemelabeler::PowerWidget(m_viewport, m_container);
-    m_container->addChart(QStringLiteral("power"), powerWidget, 2, 1, 3.0);
+    auto *powerChartPanel = new phonemelabeler::PowerChartPanel(m_viewport, m_container);
+    m_container->addChart(QStringLiteral("power"), powerChartPanel, 2, 1, 3.0);
     m_container->setChartVisible(QStringLiteral("power"), false);
 
     m_container->setBoundaryModel(m_boundaryModel);
@@ -244,7 +244,7 @@ void SlicerPage::connectSignals() {
             [this](const QStringList &paths) { autoSliceFiles(paths); });
     connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); });
 
-    connect(m_waveformWidget, &phonemelabeler::WaveformWidget::positionClicked, this, [this](double sec) {
+    connect(m_waveformChartPanel, &phonemelabeler::WaveformChartPanel::positionClicked, this, [this](double sec) {
         if (m_toolMode == ToolMode::Knife) {
             auto refreshFn = [this]() {
                 refreshBoundaries();
@@ -254,7 +254,7 @@ void SlicerPage::connectSignals() {
         }
     });
 
-    connect(m_waveformWidget, &phonemelabeler::WaveformWidget::boundaryDragFinished,
+    connect(m_waveformChartPanel, &phonemelabeler::WaveformChartPanel::boundaryDragFinished,
             this, [this](int, int boundaryIndex, dstools::TimePos) {
         if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
             m_slicePoints = m_boundaryModel->slicePointsSec();
@@ -852,8 +852,8 @@ void SlicerPage::loadAudioFile(const QString &filePath) {
                       + " (" + std::to_string(dur) + "s @ " + std::to_string(m_sampleRate) + "Hz)").c_str());
     }
 
-    m_waveformWidget->setAudioData(m_samples, m_sampleRate);
-    m_spectrogramWidget->setAudioData(m_samples, m_sampleRate);
+    m_waveformChartPanel->setAudioData(m_samples, m_sampleRate);
+    m_spectrogramChartPanel->setAudioData(m_samples, m_sampleRate);
     m_container->setAudioData(m_samples, m_sampleRate);
 }
 

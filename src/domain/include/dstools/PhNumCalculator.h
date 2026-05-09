@@ -24,6 +24,12 @@ public:
     /// Default vowels {SP, AP, EP, GS, um} are always included.
     bool loadDictionary(const QString &dictPath, QString &error);
 
+    /// Load vowels from a file (one phoneme per line).
+    bool loadVowelsFromFile(const QString &path, QString &error);
+
+    /// Load consonants from a file (one phoneme per line).
+    bool loadConsonantsFromFile(const QString &path, QString &error);
+
     /// Manually set vowel/consonant sets.
     void setVowels(const QSet<QString> &vowels);
     void setConsonants(const QSet<QString> &consonants);

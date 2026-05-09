@@ -18,12 +18,13 @@
 #include "ui/BoundaryDragController.h"
 #include "ui/BoundaryOverlayWidget.h"
 #include "ui/EntryListPanel.h"
-#include "ui/PowerWidget.h"
-#include "ui/SpectrogramWidget.h"
+#include "ui/PowerChartPanel.h"
+#include "ui/SpectrogramChartPanel.h"
 #include "ui/TextGridDocument.h"
 #include "ui/TierEditWidget.h"
+#include "ui/TierLabelPanel.h"
 #include "ui/WaveformRenderer.h"
-#include "ui/WaveformWidget.h"
+#include "ui/WaveformChartPanel.h"
 
 namespace dstools {
     class AudioVisualizerContainer;
@@ -182,10 +183,11 @@ namespace dstools {
             // UI Components
             QSplitter *m_mainSplitter = nullptr;
             AudioVisualizerContainer *m_container = nullptr;
-            WaveformWidget *m_waveformWidget = nullptr;
+            WaveformChartPanel *m_waveformChartPanel = nullptr;
             TierEditWidget *m_tierEditWidget = nullptr;
-            PowerWidget *m_powerWidget = nullptr;
-            SpectrogramWidget *m_spectrogramWidget = nullptr;
+TierLabelPanel *m_tierLabelPanel = nullptr;
+            PowerChartPanel *m_powerChartPanel = nullptr;
+SpectrogramChartPanel *m_spectrogramChartPanel = nullptr;
             EntryListPanel *m_entryListPanel = nullptr;
             QToolBar *m_toolbar = nullptr;
             QComboBox *m_tierCombo = nullptr;

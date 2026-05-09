@@ -184,7 +184,7 @@ namespace dstools {
 
         QStringList headers = {
             QStringLiteral("name"),   QStringLiteral("ph_seq"), QStringLiteral("ph_dur"),
-            QStringLiteral("ph_num"), QStringLiteral("f0_seq"), QStringLiteral("input_type"),
+            QStringLiteral("ph_num"), QStringLiteral("input_type"),
         };
         m_previewModel->setHorizontalHeaderLabels(headers);
 
@@ -200,12 +200,10 @@ namespace dstools {
             auto *nameItem = new QStandardItem(sliceId);
             items.append(nameItem);
 
-            QString phSeq, phDur, phNum, f0Seq, inputType;
+            QString phSeq, phDur, phNum, inputType;
 
-            // Read from PipelineContext layers first, fall back to DsTextDocument
             bool hasPhoneme = ctx.layers.contains("phoneme");
             bool hasPhNum = ctx.layers.contains("ph_num");
-            bool hasPitch = ctx.layers.contains("pitch");
 
             if (hasPhoneme) {
                 const auto &phonemeLayer = ctx.layers.at("phoneme");
@@ -238,20 +236,10 @@ namespace dstools {
                 }
             }
 
-            if (hasPitch) {
-                const auto &pitchLayer = ctx.layers.at("pitch");
-                if (pitchLayer.contains("values") && pitchLayer["values"].is_array()) {
-                    QStringList f0s;
-                    for (const auto &v : pitchLayer["values"])
-                        f0s.append(QString::number(v.get<double>(), 'f', 1));
-                    f0Seq = f0s.join(' ');
-                }
-            }
-
             inputType = ctx.layers.contains("phoneme") ? "phoneme" : "grapheme";
 
             // Fall back to DsTextDocument data if ctx.layers is incomplete
-            if ((!hasPhoneme || phSeq.isEmpty()) || !hasPhNum || !hasPitch) {
+            if ((!hasPhoneme || phSeq.isEmpty()) || !hasPhNum) {
                 auto docResult = m_source->loadSlice(sliceId);
                 if (docResult) {
                     const auto &doc = docResult.value();
@@ -283,7 +271,6 @@ namespace dstools {
             items.append(new QStandardItem(phSeq));
             items.append(new QStandardItem(phDur));
             items.append(new QStandardItem(phNum));
-            items.append(new QStandardItem(f0Seq));
             items.append(new QStandardItem(inputType));
 
             bool hasMissing = phSeq.isEmpty() || phDur.isEmpty();

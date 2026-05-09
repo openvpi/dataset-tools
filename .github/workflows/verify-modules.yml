@@ -217,6 +217,6 @@ jobs:
         run: |
           cmake -B tests/test-find-package/build -S tests/test-find-package -G Ninja \
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
-            -DCMAKE_PREFIX_PATH="${{github.workspace}}/deploy;${{env.QT_DIR}}/lib/cmake/Qt6/" \
-            -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+            -DCMAKE_PREFIX_PATH="${GH_WORKSPACE}/deploy;${QT_DIR}/lib/cmake/Qt6/" \
+            -DCMAKE_TOOLCHAIN_FILE="${GH_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake"
           cmake --build tests/test-find-package/build

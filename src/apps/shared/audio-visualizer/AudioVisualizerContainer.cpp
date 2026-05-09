@@ -1,10 +1,12 @@
 #include "AudioVisualizerContainer.h"
 #include "MiniMapScrollBar.h"
+#include "PlayCursorOverlay.h"
 #include "TierLabelArea.h"
 
 #include <ui/BoundaryDragController.h>
 #include <ui/BoundaryOverlayWidget.h>
 #include <ui/IBoundaryModel.h>
+#include <ui/ViewportManager.h>
 
 #include <dsfw/widgets/PlayWidget.h>
 #include <dstools/TimePos.h>
@@ -50,11 +52,15 @@ namespace dstools {
         mainLayout->addWidget(m_tierLabelArea);
 
         m_chartSplitter = new QSplitter(Qt::Vertical, this);
+        m_chartSplitter->setHandleWidth(4);
+        m_chartSplitter->setStyleSheet(QStringLiteral("QSplitter::handle { background-color: transparent; }"));
         m_chartSplitter->installEventFilter(this);
         mainLayout->addWidget(m_chartSplitter, 1);
 
         m_boundaryOverlay = new BoundaryOverlayWidget(m_viewport, this);
         m_boundaryOverlay->trackWidget(m_chartSplitter);
+
+        m_playCursorOverlay = new PlayCursorOverlay(this);
 
         // Scale indicator at the bottom-right of the chart area
         m_scaleLabel = new QLabel(this);
@@ -78,6 +84,14 @@ namespace dstools {
 
         connect(m_dragController, &BoundaryDragController::dragStarted, this, [this]() { installDragEventFilters(); });
         connect(m_dragController, &BoundaryDragController::dragFinished, this, [this]() { removeDragEventFilters(); });
+
+        connect(m_viewport, &ViewportController::viewportChanged, this, [this](const ViewportState &state) {
+            if (m_playCursorOverlay) {
+                m_playCursorOverlay->setViewStart(state.startSec);
+                m_playCursorOverlay->setViewEnd(state.endSec);
+                m_playCursorOverlay->setPixelWidth(m_chartSplitter ? m_chartSplitter->width() : width());
+            }
+        });
     }
 
     void AudioVisualizerContainer::updateScaleIndicator() {
@@ -149,14 +163,8 @@ namespace dstools {
         m_boundaryOverlay->setBoundaryModel(model);
 
         for (auto &entry : m_charts) {
-            const QMetaObject *mo = entry.widget->metaObject();
-            for (int i = 0; i < mo->methodCount(); ++i) {
-                QMetaMethod method = mo->method(i);
-                if (method.name() == "setBoundaryModel" && method.parameterCount() == 1) {
-                    method.invoke(entry.widget, Qt::DirectConnection, Q_ARG(IBoundaryModel *, model));
-                    break;
-                }
-            }
+            if (auto *panel = dynamic_cast<phonemelabeler::IChartPanel *>(entry.widget))
+                panel->setBoundaryModel(model);
         }
 
         int tierLabelH = m_tierLabelArea ? m_tierLabelArea->height() : 0;
@@ -205,8 +213,7 @@ namespace dstools {
         m_tierLabelArea = nullptr;
 
         if (m_boundaryOverlay) {
-            int editH = m_editorWidget ? m_editorWidget->height() : 0;
-            m_boundaryOverlay->setTierLabelGeometry(editH, editH);
+            m_boundaryOverlay->setTierLabelGeometry(0, 0);
         }
         updateOverlayTopOffset();
 
@@ -256,9 +263,7 @@ namespace dstools {
     }
 
     void AudioVisualizerContainer::updateOverlayTopOffset() {
-        int extraHeight = 0;
-        if (m_editorWidget && m_tierLabelArea)
-            extraHeight = m_editorWidget->height();
+        int extraHeight = m_editorWidget ? m_editorWidget->height() : 0;
         if (m_boundaryOverlay)
             m_boundaryOverlay->setExtraTopOffset(extraHeight);
     }
@@ -281,7 +286,7 @@ namespace dstools {
             else if (delta < 0)
                 m_viewport->zoomOut(m_viewport->viewCenter());
             m_viewport->blockSignals(false);
-            updateViewRangeFromResolution();
+            adjustViewRangeToResolution();
             event->accept();
             return;
         }
@@ -381,11 +386,20 @@ namespace dstools {
         }
         m_needsFitOnResize = false;
 
-        // fitToWindow is called when new audio is loaded — always use the
-        // page's default resolution so the initial view matches design intent.
-        // Saved per-page resolution is restored separately in onActivated()
-        // (page re-entry), not here.
-        m_viewport->setResolution(m_defaultResolution);
+        double totalDur = static_cast<double>(totalSamples) / m_viewport->sampleRate();
+        double fitResolution = totalDur * m_viewport->sampleRate() / w;
+
+        const auto &table = ViewportController::resolutionTable();
+        int bestRes = table[0];
+        for (int r : table) {
+            if (r <= static_cast<int>(fitResolution))
+                bestRes = r;
+            else
+                break;
+        }
+        int finalRes = std::min(bestRes, m_defaultResolution);
+
+        m_viewport->setResolution(finalRes);
         updateViewRangeFromResolution();
     }
 
@@ -469,6 +483,15 @@ namespace dstools {
                 applyDefaultHeightRatios();
         }
         updateScaleIndicator();
+        if (m_playCursorOverlay) {
+            QPoint chartPos = m_chartSplitter->pos();
+            m_playCursorOverlay->setGeometry(chartPos.x(), chartPos.y(),
+                                             m_chartSplitter->width(), m_chartSplitter->height());
+            m_playCursorOverlay->raise();
+        }
+        if (m_boundaryOverlay) {
+            m_boundaryOverlay->forceReposition();
+        }
     }
 
     void AudioVisualizerContainer::addChart(const QString &id, QWidget *widget, int defaultOrder, int stretchFactor,
@@ -484,25 +507,13 @@ namespace dstools {
         // Auto-set drag controller on chart widgets that support it (reduces boilerplate
         // in page assembly code; see refactoring-roadmap-v2.md §7.7).
         if (m_dragController) {
-            const QMetaObject *mo = widget->metaObject();
-            for (int i = 0; i < mo->methodCount(); ++i) {
-                QMetaMethod method = mo->method(i);
-                if (method.name() == "setDragController" && method.parameterCount() == 1) {
-                    method.invoke(widget, Qt::DirectConnection, Q_ARG(BoundaryDragController *, m_dragController));
-                    break;
-                }
-            }
+            if (auto *panel = dynamic_cast<phonemelabeler::IChartPanel *>(widget))
+                panel->setDragController(m_dragController);
         }
 
         if (m_boundaryModel) {
-            const QMetaObject *mo = widget->metaObject();
-            for (int i = 0; i < mo->methodCount(); ++i) {
-                QMetaMethod method = mo->method(i);
-                if (method.name() == "setBoundaryModel" && method.parameterCount() == 1) {
-                    method.invoke(widget, Qt::DirectConnection, Q_ARG(IBoundaryModel *, m_boundaryModel));
-                    break;
-                }
-            }
+            if (auto *panel = dynamic_cast<phonemelabeler::IChartPanel *>(widget))
+                panel->setBoundaryModel(m_boundaryModel);
         }
 
         widget->installEventFilter(this);
@@ -671,6 +682,9 @@ namespace dstools {
             // Also forward to boundary overlay
             if (m_boundaryOverlay)
                 m_boundaryOverlay->setPlayhead(sec);
+            // Forward to play cursor overlay
+            if (m_playCursorOverlay)
+                m_playCursorOverlay->setPlayheadPosition(sec);
             // Reset auto-clear timer
             if (m_playheadTimer)
                 m_playheadTimer->start();
@@ -694,6 +708,8 @@ namespace dstools {
             }
             if (m_boundaryOverlay)
                 m_boundaryOverlay->setPlayhead(-1.0);
+            if (m_playCursorOverlay)
+                m_playCursorOverlay->setPlayheadPosition(-1.0);
         });
     }
 
@@ -781,14 +797,10 @@ namespace dstools {
         connect(m_viewport, &ViewportController::viewportChanged, this, [safeWidget](const ViewportState &state) {
             if (!safeWidget)
                 return;
-            const QMetaObject *mo = safeWidget->metaObject();
-            for (int i = 0; i < mo->methodCount(); ++i) {
-                QMetaMethod method = mo->method(i);
-                if (method.name() == "setViewport" && method.parameterCount() == 1) {
-                    method.invoke(safeWidget.data(), Qt::DirectConnection,
-                                  QGenericArgument(method.parameterTypes().at(0).constData(), &state));
-                    break;
-                }
+            if (auto *panel = dynamic_cast<phonemelabeler::IChartPanel *>(safeWidget.data())) {
+                phonemelabeler::CoordinateTransformer xf;
+                xf.updateFromState(state, safeWidget->width());
+                panel->onViewportUpdate(xf);
             }
         });
     }

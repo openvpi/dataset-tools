@@ -140,14 +140,14 @@ namespace dsfw::widgets {
             return static_cast<double>(m_totalSamples) / m_resolution;
         }
 
+        /// Logarithmic resolution step table (round numbers).
+        /// Public so containers can compute resolution-to-viewport consistency.
+        static std::vector<int> resolutionTable();
+
     signals:
         /// @brief Emitted when the viewport range or zoom changes.
         /// @param state Updated viewport state.
         void viewportChanged(const ViewportState &state);
-
-        /// Logarithmic resolution step table (round numbers).
-        /// Public so containers can compute resolution-to-viewport consistency.
-        std::vector<int> resolutionTable();
 
     private:
         ViewportState m_state;

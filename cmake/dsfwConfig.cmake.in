@@ -17,8 +17,8 @@ include("${CMAKE_CURRENT_LIST_DIR}/dsfwTargets.cmake")
 # Since the resource objects are already archived into the static .lib/.a files,
 # we strip these references from the imported targets' interface properties.
 set(_dsfw_resource_fixup_pairs
-    "dsfw::dsfw-core;dsfw-core_resources_1"
-    "dsfw::dsfw-ui-core;dsfw-ui-core_resources_1"
+    "dsfw::dsfw-core\;dsfw-core_resources_1"
+    "dsfw::dsfw-ui-core\;dsfw-ui-core_resources_1"
 )
 foreach(_dsfw_pair IN LISTS _dsfw_resource_fixup_pairs)
     list(GET _dsfw_pair 0 _dsfw_parent)

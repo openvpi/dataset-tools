@@ -115,6 +115,7 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
     if (tiers > 1 && tierLabelH > 0)
         tierRowH = tierLabelH / tiers;
 
+    bool hasLabelArea = (tierLabelH > 0);
     int fullBottom = h;
 
     for (int p = 0; p < 2; ++p) {
@@ -128,7 +129,7 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
             int lineTop = t * tierRowH;
             int lineBottom;
 
-            if (isActive) {
+            if (isActive || !hasLabelArea) {
                 lineBottom = fullBottom;
             } else {
                 lineBottom = std::min(tiers * tierRowH, tierLabelH);
@@ -156,11 +157,9 @@ void BoundaryOverlayWidget::paintEvent(QPaintEvent * /*event*/) {
     }
 
     if (m_playhead >= 0.0) {
-        int px = timeToX(m_playhead);
-        if (px >= 0 && px <= w) {
-            painter.setPen(QPen(QColor(255, 80, 80), 2));
-            painter.drawLine(px, 0, px, fullBottom);
-        }
+        int px = std::clamp(timeToX(m_playhead), 0, w);
+        painter.setPen(QPen(QColor(255, 80, 80), 2));
+        painter.drawLine(px, 0, px, fullBottom);
     }
 }
 

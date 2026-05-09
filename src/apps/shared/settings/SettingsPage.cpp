@@ -5,14 +5,15 @@
 #include <dsfw/AppSettings.h>
 
 #include <QAbstractItemModel>
-#include <QFileDialog>
-#include <QFileInfo>
 #include <QDir>
 #include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -96,6 +97,7 @@ SettingsPage::SettingsPage(ISettingsBackend *backend, QWidget *parent) : QWidget
     m_tabWidget->addTab(createDictTab(), QStringLiteral("词典/G2P"));
     m_tabWidget->addTab(createFATab(), QStringLiteral("强制对齐"));
     m_tabWidget->addTab(createPitchTab(), QStringLiteral("音高/MIDI"));
+    m_tabWidget->addTab(createPhNumTab(), QStringLiteral("ph_num"));
     m_tabWidget->addTab(createPreprocessTab(), QStringLiteral("预处理"));
     m_tabWidget->addTab(createGeneralTab(), QStringLiteral("通用"));
 
@@ -195,6 +197,28 @@ void SettingsPage::applySettings() {
         ? m_uvVocab->placeholderText() : m_uvVocab->text().trimmed();
     pitchConfig["uvWordCond"] = m_uvWordCondCombo->currentData().toInt();
     settingsData["pitchConfig"] = pitchConfig;
+
+    QJsonObject phNumConfig;
+    QJsonObject phNumLangs;
+    for (int r = 0; r < m_phNumTable->rowCount(); ++r) {
+        auto *langItem = m_phNumTable->item(r, 0);
+        if (!langItem || langItem->text().trimmed().isEmpty())
+            continue;
+        QString lang = langItem->text().trimmed();
+        QJsonObject langCfg;
+        auto *cellWidget1 = m_phNumTable->cellWidget(r, 1);
+        if (auto *le = qobject_cast<QLineEdit *>(cellWidget1))
+            langCfg["dictPath"] = le->text().trimmed();
+        auto *cellWidget2 = m_phNumTable->cellWidget(r, 2);
+        if (auto *le = qobject_cast<QLineEdit *>(cellWidget2))
+            langCfg["vowelsPath"] = le->text().trimmed();
+        auto *cellWidget3 = m_phNumTable->cellWidget(r, 3);
+        if (auto *le = qobject_cast<QLineEdit *>(cellWidget3))
+            langCfg["consonantsPath"] = le->text().trimmed();
+        phNumLangs[lang] = langCfg;
+    }
+    phNumConfig["languages"] = phNumLangs;
+    settingsData["phNumConfig"] = phNumConfig;
 
     m_backend->save(settingsData);
     m_dirty = false;
@@ -333,6 +357,31 @@ void SettingsPage::loadFromBackend() {
                 break;
             }
         }
+    }
+
+    const QJsonObject phNumConfig = settingsData["phNumConfig"].toObject();
+    const QJsonObject phNumLangs = phNumConfig["languages"].toObject();
+    m_phNumTable->setRowCount(0);
+    for (auto it = phNumLangs.begin(); it != phNumLangs.end(); ++it) {
+        QString lang = it.key();
+        QJsonObject langCfg = it.value().toObject();
+        QString dictPath = readString(langCfg, "dictPath");
+        QString vowelsPath = readString(langCfg, "vowelsPath");
+        QString consonantsPath = readString(langCfg, "consonantsPath");
+        m_phNumTable->insertRow(m_phNumTable->rowCount());
+        int r = m_phNumTable->rowCount() - 1;
+        auto *langItem = new QTableWidgetItem(lang);
+        m_phNumTable->setItem(r, 0, langItem);
+        m_phNumTable->setCellWidget(r, 1, new QLineEdit(dictPath));
+        m_phNumTable->setCellWidget(r, 2, new QLineEdit(vowelsPath));
+        m_phNumTable->setCellWidget(r, 3, new QLineEdit(consonantsPath));
+    }
+    if (m_phNumTable->rowCount() == 0) {
+        m_phNumTable->insertRow(0);
+        m_phNumTable->setItem(0, 0, new QTableWidgetItem(QStringLiteral("zh")));
+        m_phNumTable->setCellWidget(0, 1, new QLineEdit);
+        m_phNumTable->setCellWidget(0, 2, new QLineEdit);
+        m_phNumTable->setCellWidget(0, 3, new QLineEdit);
     }
 }
 
@@ -918,6 +967,72 @@ QWidget *SettingsPage::createPitchTab() {
     uvLayout->addRow(QStringLiteral("UV 词条件:"), m_uvWordCondCombo);
 
     layout->addWidget(uvGroup);
+
+    layout->addStretch();
+    return w;
+}
+
+QWidget *SettingsPage::createPhNumTab() {
+    auto *w = new QWidget(this);
+    auto *layout = new QVBoxLayout(w);
+
+    auto *desc = new QLabel(QStringLiteral("按语种配置 ph_num 词典。\n"
+                                           "留空使用内置默认音素分类（基于 ds-zh-pinyin-lite.txt）。\n"
+                                           "词典格式: 每行「音节\\t音素1 音素2」，1个音素=元音，2个音素=辅音+元音。"),
+                            w);
+    desc->setWordWrap(true);
+    desc->setStyleSheet(QStringLiteral("color: gray; font-style: italic; margin-bottom: 8px;"));
+    layout->addWidget(desc);
+
+    m_phNumTable = new QTableWidget(w);
+    m_phNumTable->setColumnCount(4);
+    m_phNumTable->setHorizontalHeaderLabels({
+        QStringLiteral("语言代码"), QStringLiteral("词典路径"),
+        QStringLiteral("元音文件"), QStringLiteral("辅音文件")
+    });
+    m_phNumTable->horizontalHeader()->setStretchLastSection(true);
+    m_phNumTable->setMinimumHeight(120);
+
+    m_phNumTable->insertRow(0);
+    m_phNumTable->setItem(0, 0, new QTableWidgetItem(QStringLiteral("zh")));
+    m_phNumTable->setCellWidget(0, 1, new QLineEdit);
+    m_phNumTable->setCellWidget(0, 2, new QLineEdit);
+    m_phNumTable->setCellWidget(0, 3, new QLineEdit);
+
+    layout->addWidget(m_phNumTable);
+
+    auto *btnRow = new QHBoxLayout;
+    m_phNumAddBtn = new QPushButton(QStringLiteral("添加语言"), w);
+    m_phNumRemoveBtn = new QPushButton(QStringLiteral("移除所选"), w);
+    btnRow->addWidget(m_phNumAddBtn);
+    btnRow->addWidget(m_phNumRemoveBtn);
+    btnRow->addStretch();
+    layout->addLayout(btnRow);
+
+    auto *note = new QLabel(QStringLiteral("注: 如果设置词典路径，则优先使用词典；否则依次尝试元音文件+辅音文件。\n"
+                                            "元音/辅音文件每行一个音素，用于指定固定的元音和辅音集合。"),
+                            w);
+    note->setWordWrap(true);
+    note->setStyleSheet(QStringLiteral("color: gray; font-style: italic; margin-top: 8px;"));
+    layout->addWidget(note);
+
+    connect(m_phNumAddBtn, &QPushButton::clicked, this, [this]() {
+        int r = m_phNumTable->rowCount();
+        m_phNumTable->insertRow(r);
+        m_phNumTable->setItem(r, 0, new QTableWidgetItem({}));
+        m_phNumTable->setCellWidget(r, 1, new QLineEdit);
+        m_phNumTable->setCellWidget(r, 2, new QLineEdit);
+        m_phNumTable->setCellWidget(r, 3, new QLineEdit);
+        markDirty();
+    });
+    connect(m_phNumRemoveBtn, &QPushButton::clicked, this, [this]() {
+        auto sel = m_phNumTable->selectionModel()->selectedRows();
+        for (int i = sel.size() - 1; i >= 0; --i)
+            m_phNumTable->removeRow(sel[i].row());
+        markDirty();
+    });
+
+    connect(m_phNumTable, &QTableWidget::cellChanged, this, &SettingsPage::markDirty);
 
     layout->addStretch();
     return w;

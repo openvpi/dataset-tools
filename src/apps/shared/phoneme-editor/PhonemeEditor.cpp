@@ -62,18 +62,18 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
             m_container->fitToWindow();
         }
 
-        m_waveformWidget->setAudioData(samples, sampleRate);
-        m_powerWidget->setAudioData(samples, sampleRate);
-        m_spectrogramWidget->setAudioData(samples, sampleRate);
+        m_waveformChartPanel->setAudioData(samples, sampleRate);
+        m_powerChartPanel->setAudioData(samples, sampleRate);
+        m_spectrogramChartPanel->setAudioData(samples, sampleRate);
         m_container->setAudioData(samples, sampleRate);
     }
 
     m_playWidget->openFile(audioPath);
 
-    m_waveformWidget->setBoundaryModel(m_document);
+    m_waveformChartPanel->setBoundaryModel(m_document);
     m_tierEditWidget->setDocument(m_document);
-    m_powerWidget->setDocument(m_document);
-    m_spectrogramWidget->setBoundaryModel(m_document);
+    m_powerChartPanel->setBoundaryModel(m_document);
+    m_spectrogramChartPanel->setBoundaryModel(m_document);
     m_entryListPanel->setDocument(m_document);
 
     emit documentLoaded();
@@ -111,7 +111,7 @@ void PhonemeEditor::setSpectrogramVisible(bool visible) {
 }
 
 void PhonemeEditor::setSpectrogramColorStyle(const QString &styleName) {
-    m_spectrogramWidget->setColorPalette(SpectrogramColorPalette::fromName(styleName));
+    m_spectrogramChartPanel->setColorPalette(SpectrogramColorPalette::fromName(styleName));
 }
 
 QByteArray PhonemeEditor::saveSplitterState() const {
@@ -306,31 +306,54 @@ void PhonemeEditor::buildLayout() {
     m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_container->dragController(), m_container);
     m_container->setEditorWidget(m_tierEditWidget);
 
-    m_waveformWidget = new WaveformWidget(m_viewport, m_container);
-    m_waveformWidget->setUndoStack(m_undoStack);
-    m_waveformWidget->setPlayWidget(m_playWidget);
-    m_container->addChart(QStringLiteral("waveform"), m_waveformWidget, 1, 1, 2.0);
+    m_waveformChartPanel = new WaveformChartPanel(m_viewport, m_container);
+    m_waveformChartPanel->setUndoStack(m_undoStack);
+    m_waveformChartPanel->setPlayWidget(m_playWidget);
+    m_container->addChart(QStringLiteral("waveform"), m_waveformChartPanel, 1, 1, 2.0);
 
-    m_powerWidget = new PowerWidget(m_viewport, m_container);
-    m_powerWidget->setUndoStack(m_undoStack);
-    m_powerWidget->setPlayWidget(m_playWidget);
-    m_container->addChart(QStringLiteral("power"), m_powerWidget, 2, 1, 3.0);
+    m_powerChartPanel = new PowerChartPanel(m_viewport, m_container);
+    m_powerChartPanel->setUndoStack(m_undoStack);
+    m_powerChartPanel->setPlayWidget(m_playWidget);
+    m_container->addChart(QStringLiteral("power"), m_powerChartPanel, 2, 1, 3.0);
 
-    m_spectrogramWidget = new SpectrogramWidget(m_viewport, m_container);
-    m_spectrogramWidget->setUndoStack(m_undoStack);
-    m_spectrogramWidget->setPlayWidget(m_playWidget);
-    m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramWidget, 3, 1, 5.0);
+    m_spectrogramChartPanel = new SpectrogramChartPanel(m_viewport, m_container);
+    m_spectrogramChartPanel->setUndoStack(m_undoStack);
+    m_spectrogramChartPanel->setPlayWidget(m_playWidget);
+    m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramChartPanel, 3, 1, 5.0);
 
     m_container->setBoundaryModel(m_document);
 
-    m_waveformWidget->setBoundaryModel(m_document);
-    m_powerWidget->setDocument(m_document);
-    m_spectrogramWidget->setBoundaryModel(m_document);
+    m_tierLabelPanel = new TierLabelPanel(m_viewport, m_container);
+    m_tierLabelPanel->setBoundaryModel(m_document);
+    {
+        std::vector<TierLabelRow> rows;
+        for (int t = 0; t < m_document->tierCount(); ++t) {
+            TierLabelRow row;
+            row.tierIndex = t;
+            row.labelY = 20.0 + t * 28.0;
+            row.rowHeight = 24.0;
+            row.textColor = (t == m_document->activeTierIndex())
+                ? QColor(255, 220, 100) : QColor(180, 180, 200);
+            row.bgColor = QColor(40, 40, 45, 200);
+            QFont f = font();
+            f.setPixelSize(12);
+            row.font = f;
+            rows.push_back(row);
+        }
+        m_tierLabelPanel->setRows(rows);
+    }
+    m_tierLabelPanel->setViewportState(m_viewport->state());
+    m_tierLabelPanel->setPixelWidth(m_container->width());
+    m_tierLabelPanel->hide();
+
+    m_waveformChartPanel->setBoundaryModel(m_document);
+    m_powerChartPanel->setBoundaryModel(m_document);
+    m_spectrogramChartPanel->setBoundaryModel(m_document);
 
     auto *boundaryOverlay = m_container->boundaryOverlay();
     if (boundaryOverlay) {
         boundaryOverlay->setDocument(m_document);
-        boundaryOverlay->setTierLabelGeometry(0, 0);
+        boundaryOverlay->setTierLabelGeometry(0, 24);
     }
 
     m_mainSplitter->addWidget(m_container);
@@ -344,6 +367,11 @@ void PhonemeEditor::buildLayout() {
     m_mainSplitter->setStretchFactor(0, 1);
     m_mainSplitter->setStretchFactor(1, 0);
 
+    int editorHeight = m_document->tierCount() * 24;
+    if (boundaryOverlay) {
+        boundaryOverlay->setExtraTopOffset(editorHeight);
+    }
+
     m_container->removeTierLabelArea();
 
     if (auto *bo = m_container->boundaryOverlay())
@@ -356,6 +384,23 @@ void PhonemeEditor::connectSignals() {
         m_container->invalidateBoundaryModel();
         m_tierEditWidget->rebuildTierViews();
         m_entryListPanel->rebuildEntries();
+        if (m_tierLabelPanel) {
+            std::vector<TierLabelRow> rows;
+            for (int t = 0; t < m_document->tierCount(); ++t) {
+                TierLabelRow row;
+                row.tierIndex = t;
+                row.labelY = 20.0 + t * 28.0;
+                row.rowHeight = 24.0;
+                row.textColor = (t == m_document->activeTierIndex())
+                    ? QColor(255, 220, 100) : QColor(180, 180, 200);
+                row.bgColor = QColor(40, 40, 45, 200);
+                QFont f = m_tierLabelPanel->font();
+                f.setPixelSize(12);
+                row.font = f;
+                rows.push_back(row);
+            }
+            m_tierLabelPanel->setRows(rows);
+        }
         emit modificationChanged(m_document->isModified());
 
         // Rebuild tier combo when document structure changes
@@ -390,11 +435,11 @@ void PhonemeEditor::connectSignals() {
     // Direct connections here would cause duplicate setViewport() calls.
 
     // Sync menu action checked state with widget visibility (for external visibility changes)
-    connect(m_powerWidget, &PowerWidget::visibleStateChanged, this, [this](bool visible) {
+    connect(m_powerChartPanel, &PowerChartPanel::visibleStateChanged, this, [this](bool visible) {
         m_actTogglePower->setChecked(visible);
         emit powerVisibilityChanged(visible);
     });
-    connect(m_spectrogramWidget, &SpectrogramWidget::visibleStateChanged, this, [this](bool visible) {
+    connect(m_spectrogramChartPanel, &SpectrogramChartPanel::visibleStateChanged, this, [this](bool visible) {
         m_actToggleSpectrogram->setChecked(visible);
         emit spectrogramVisibilityChanged(visible);
     });
@@ -419,7 +464,7 @@ void PhonemeEditor::connectSignals() {
     connect(m_document, &TextGridDocument::activeTierChanged, this, [this](int tier) {
         updateAllBoundaryOverlays();
         if (auto *bo = m_container->boundaryOverlay()) {
-            bo->setTierLabelGeometry(0, 0);
+            bo->setTierLabelGeometry(0, 24);
         }
     });
     connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, TimePos) {
@@ -463,18 +508,18 @@ void PhonemeEditor::connectSignals() {
         if (newIndex < 0) newIndex = 0;
         m_entryListPanel->selectEntry(newIndex);
     };
-    connect(m_waveformWidget, &WaveformWidget::entryScrollRequested, this, scrollEntry);
-    connect(m_powerWidget, &PowerWidget::entryScrollRequested, this, scrollEntry);
-    connect(m_spectrogramWidget, &SpectrogramWidget::entryScrollRequested, this, scrollEntry);
+    connect(m_waveformChartPanel, &WaveformChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_powerChartPanel, &PowerChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_spectrogramChartPanel, &SpectrogramChartPanel::entryScrollRequested, this, scrollEntry);
 
     auto *boundaryOverlay2 = m_container->boundaryOverlay();
 
     // Hover/drag state → boundary overlay
-    connect(m_waveformWidget, &WaveformWidget::hoveredBoundaryChanged,
+    connect(m_waveformChartPanel, &WaveformChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
-    connect(m_powerWidget, &PowerWidget::hoveredBoundaryChanged,
+    connect(m_powerChartPanel, &PowerChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
-    connect(m_spectrogramWidget, &SpectrogramWidget::hoveredBoundaryChanged,
+    connect(m_spectrogramChartPanel, &SpectrogramChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
 
     // Drag started/finished → boundary overlay highlight + real-time UI refresh
@@ -499,15 +544,16 @@ void PhonemeEditor::connectSignals() {
 }
 
 void PhonemeEditor::updateAllBoundaryOverlays() {
-    m_waveformWidget->updateBoundaryOverlay();
-    m_powerWidget->updateBoundaryOverlay();
-    m_spectrogramWidget->updateBoundaryOverlay();
+    m_waveformChartPanel->update();
+    m_powerChartPanel->update();
+    m_spectrogramChartPanel->update();
     if (auto *bo = m_container->boundaryOverlay())
         bo->update();
 }
 
 void PhonemeEditor::onZoomIn() {
     m_viewport->zoomIn(m_viewport->viewCenter());
+    m_container->adjustViewRangeToResolution();
     m_actZoomIn->setEnabled(m_viewport->canZoomIn());
     m_actZoomOut->setEnabled(m_viewport->canZoomOut());
     emit zoomChanged(m_viewport->resolution());
@@ -515,6 +561,7 @@ void PhonemeEditor::onZoomIn() {
 
 void PhonemeEditor::onZoomOut() {
     m_viewport->zoomOut(m_viewport->viewCenter());
+    m_container->adjustViewRangeToResolution();
     m_actZoomIn->setEnabled(m_viewport->canZoomIn());
     m_actZoomOut->setEnabled(m_viewport->canZoomOut());
     emit zoomChanged(m_viewport->resolution());
