@@ -194,8 +194,10 @@ namespace dstools {
         m_tierLabelArea->deleteLater();
         m_tierLabelArea = nullptr;
 
-        if (m_boundaryOverlay)
-            m_boundaryOverlay->setTierLabelGeometry(0, 0);
+        if (m_boundaryOverlay) {
+            int editH = m_editorWidget ? m_editorWidget->height() : 0;
+            m_boundaryOverlay->setTierLabelGeometry(editH, editH);
+        }
         updateOverlayTopOffset();
 
         QTimer::singleShot(0, this, [this]() {
@@ -245,7 +247,7 @@ namespace dstools {
 
     void AudioVisualizerContainer::updateOverlayTopOffset() {
         int extraHeight = 0;
-        if (m_editorWidget)
+        if (m_editorWidget && m_tierLabelArea)
             extraHeight = m_editorWidget->height();
         if (m_boundaryOverlay)
             m_boundaryOverlay->setExtraTopOffset(extraHeight);
