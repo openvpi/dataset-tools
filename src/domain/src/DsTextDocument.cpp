@@ -71,7 +71,19 @@ Result<DsTextDocument> DsTextDocument::load(const QString &path) {
             CurveLayer curve;
             curve.name = QString::fromStdString(jc.value("name", ""));
             curve.type = QString::fromStdString(jc.value("type", "curve"));
-            curve.timestep = jc.value("timestep", int64_t(0));
+            if (jc.contains("timestep")) {
+                if (jc["timestep"].is_number_float()) {
+                    double ts = jc["timestep"].get<double>();
+                    if (ts < 1.0) {
+                        // Old format: seconds → microseconds
+                        curve.timestep = static_cast<int64_t>(ts * 1000000.0);
+                    } else {
+                        curve.timestep = static_cast<int64_t>(ts);
+                    }
+                } else {
+                    curve.timestep = jc.value("timestep", int64_t(0));
+                }
+            }
             if (jc.contains("values")) {
                 curve.values = jc["values"].get<std::vector<int32_t>>();
             }
