@@ -1,12 +1,12 @@
 # 项目架构
 
-> 编码规范见 [conventions-and-standards.md](conventions-and-standards.md)。测试架构见 [test-design.md](test-design.md)。设计准则与决策记录见 [human-decisions.md](human-decisions.md)。
+> 编码规范见 [conventions-and-standards.md](../guides/conventions-and-standards.md)。测试架构见 [test-design.md](test-design.md)。设计准则与决策记录见 [human-decisions.md](../human-decisions.md)。
 
 ---
 
 ## 1. 设计准则（最高优先级）
 
-以下准则约束所有框架和应用层代码，详见 [human-decisions.md](human-decisions.md) P-01 ~ P-17 和 [conventions-and-standards.md](conventions-and-standards.md)。
+以下准则约束所有框架和应用层代码，详见 [human-decisions.md](../human-decisions.md) P-01 ~ P-17 和 [conventions-and-standards.md](../guides/conventions-and-standards.md)。
 
 | 编号 | 准则 | 要求 |
 |---|---|---|

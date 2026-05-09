@@ -2,7 +2,7 @@
 
 **版本**：1.0  
 **日期**：2026-05-06  
-**关联规范**：[conventions-and-standards.md](conventions-and-standards.md)
+**关联规范**：[conventions-and-standards.md](../guides/conventions-and-standards.md)
 
 ---
 

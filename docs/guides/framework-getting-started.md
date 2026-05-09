@@ -250,5 +250,5 @@ Safe `nlohmann::json` wrapper. Slash-delimited path queries (`"Audio/sampleRate"
 
 ## 7. Next Steps
 
-- **[Framework Architecture](framework-architecture.md)** — Deep dive into the six-layer architecture, interface-driven design, plugin system, and migration strategy.
+- **[Framework Architecture](../design/framework-architecture.md)** — Deep dive into the six-layer architecture, interface-driven design, plugin system, and migration strategy.
 - Browse the header files under `include/dsfw/` for full API documentation (Doxygen comments on all public methods).
