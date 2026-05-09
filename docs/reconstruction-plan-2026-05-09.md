@@ -1,6 +1,6 @@
 # 重构方案：Phoneme/PitchLabel 控件刷新与交互修复
 
-> 版本：1.0 | 日期：2026-05-09 | 基于用户8项需求整理
+> 版本：1.1 | 日期：2026-05-09 | 基于用户8+5项需求整理
 
 ---
 
@@ -202,3 +202,80 @@
 | T-24 | AudioChartWidget.cpp | setBoundaryModel 补 update() |
 | T-24 | SpectrogramWidget.h/cpp | setBoundaryModel 移出内联，补 update() |
 | T-24 | PowerWidget.h/cpp | setDocument 移出内联，补 update() |
+
+---
+
+## 六、新增任务（2026-05-09 第二轮）
+
+| # | 需求 | 状态 | 对应提交 |
+|---|------|------|----------|
+| 9 | 一切失败的任务都要在log留下详细报错 | ✅ 已完成 | Task-1 |
+| 10 | phoneme有时长的条目在pitch页面提取midi时显示转录失败（align模式输入时长） | ✅ 已完成 | Task-2 |
+| 11 | 窗口放大缩小、工作区调整比例持久化到用户目录（带版本，向后兼容） | ✅ 已完成 | Task-3 |
+| 12 | minlabel的batchasr加个选项，自动g2p到结果 | ✅ 已完成 | Task-4 |
+| 13 | dstext音高曲线无法正常显示（timestep float/int兼容） | ✅ 已完成 | Task-5 |
+| 14 | 整理以上问题，更新到文档 | 📋 当前 | Task-6 |
+
+### 6.1 失败任务详细日志（任务9）
+
+**问题**：PipelineRunner、PitchLabelerPage 批量提取、MinLabelPage 批量 ASR 失败时仅设置状态/弹窗，不记录日志。
+
+**修复**：
+- [PipelineRunner.cpp](file:///d:/projects/dataset-tools/src/framework/core/src/PipelineRunner.cpp): import/buildInput/process 失败点均增加 DSFW_LOG_ERROR
+- [PitchLabelerPage.cpp](file:///d:/projects/dataset-tools/src/apps/shared/data-sources/PitchLabelerPage.cpp): 批量 pitch/MIDI 提取失败增加 DSFW_LOG_ERROR + 对话框显示实际错误
+- [MinLabelPage.cpp](file:///d:/projects/dataset-tools/src/apps/shared/data-sources/MinLabelPage.cpp): 批量 ASR 失败将 msg 写入日志和对话框
+
+### 6.2 MIDI提取align模式修复（任务10）
+
+**问题**：phoenme有时长的条目在pitch页面提取MIDI时显示"转录失败"。
+
+**根因**：批量 MIDI 提取仅使用 `game->getNotes()`（非对齐模式），未利用已有的 phoneme 时长数据。
+
+**修复**：
+- [PitchLabelerPage.cpp](file:///d:/projects/dataset-tools/src/apps/shared/data-sources/PitchLabelerPage.cpp): 批量提取循环中优先检测 phoneme 层数据，存在时构建 AlignInput 并使用 `game->align()` 对齐模式
+- 对齐失败时回退到 `game->getNotes()` 非对齐模式
+- 错误消息显示实际错误原因
+
+### 6.3 窗口/工作区持久化 + 版本化存储（任务11）
+
+**问题**：窗口大小、分割器状态等未统一持久化，不同版本设置文件可能不兼容。
+
+**修复**：
+- [CommonKeys.h](file:///d:/projects/dataset-tools/src/framework/core/include/dsfw/CommonKeys.h): 新增 SettingsVersion（版本号）、AudioSplitter/PitchSplitter/MinSplitter/HomeSplitter 分割器状态 key
+- [AppSettings.h/cpp](file:///d:/projects/dataset-tools/src/framework/core): 新增 `migrateIfNeeded()` 方法，加载后自动执行版本迁移（v0→v1 标记当前版本号）
+- [AppShell.cpp](file:///d:/projects/dataset-tools/src/framework/ui-core/src/AppShell.cpp): WindowGeometry/WindowState 已在 closeEvent/showEvent 持久化（已有代码）
+
+**迁移兼容**：version 0（无版本号的旧设置）→ version 1（标记版本）。未来可通过 `migrateIfNeeded()` 处理跨版本迁移。
+
+### 6.4 MinLabel batch ASR 自动 G2P（任务12）
+
+**问题**：批量 ASR 后需手动逐条执行 G2P 转换，效率低。
+
+**修复**：
+- [MinLabelPage.h/cpp](file:///d:/projects/dataset-tools/src/apps/shared/data-sources): 新增 `batchG2P()` 方法，使用 cpp-pinyin 库进行汉字→拼音转换
+- 批量 ASR 对话框新增「自动 G2P (拼音) 到结果」复选框
+- 后台线程中 ASR 完成后自动调用 `batchG2P()` 生成 grapheme 层并保存
+
+### 6.5 dstext音高曲线无法显示（任务13）
+
+**问题**：特定 dstext 文件（如 `01_huanwulinglong_001.dstext`）音高曲线不显示。
+
+**根因**：`DsTextDocument::load()` 中 `timestep` 字段使用 `nlohmann::json.value<int64_t>()` 读取，但旧版本文件可能以 float（秒）格式存储 timestep（如 `"timestep": 0.005`）。JSON 解析 float→int64_t 失败返回默认值 0，PianoRollRenderer 检查 `timestep <= 0` 时跳过绘制。
+
+**修复**：
+- [DsTextDocument.cpp](file:///d:/projects/dataset-tools/src/domain/src/DsTextDocument.cpp): 增加双重格式兼容：
+  - float 格式且值 < 1.0：视为旧版秒格式，自动转换为微秒（`ts * 1000000`）
+  - float 格式且值 ≥ 1.0 或 integer 格式：直接作为微秒读取
+
+### 6.6 变更文件清单（第二轮）
+
+| 提交 | 文件 | 变更说明 |
+|------|------|----------|
+| Task-1 | PipelineRunner.cpp | import/buildInput/process 失败增加 DSFW_LOG_ERROR |
+| Task-1 | PitchLabelerPage.cpp | 批量提取失败日志 + 对话框显示实际错误 |
+| Task-1 | MinLabelPage.cpp | 批量 ASR 失败日志含错误消息 |
+| Task-2 | PitchLabelerPage.cpp | 批量 MIDI 提取使用 align 模式（有 phoneme 时） |
+| Task-3 | CommonKeys.h | 新增版本号、分割器状态 SettingsKey |
+| Task-3 | AppSettings.h/cpp | migrateIfNeeded() 版本迁移机制 |
+| Task-4 | MinLabelPage.h/cpp | batchG2P() + 批量 ASR 自动 G2P 复选框 |
+| Task-5 | DsTextDocument.cpp | timestep 读取兼容 float(秒)/int64(微秒) 双格式 |
