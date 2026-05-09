@@ -25,14 +25,20 @@ namespace dstools {
 
 class ISettingsBackend;
 class SliceListPanel;
+class BatchProcessDialog;
 
-/// @brief Base class for shared editor pages (MinLabel, Phoneme, Pitch).
-///
-/// Extracts common boilerplate: SliceListPanel + QSplitter layout,
-/// setDataSource, navigation actions, lifecycle (splitter save/restore,
-/// ensureSelection), and slice change bookkeeping.
-///
-/// Subclasses implement domain-specific logic via virtual hooks.
+struct BatchSliceResult {
+    enum Status { Processed, Skipped, Error };
+    Status status = Error;
+    QString logMessage;
+};
+
+struct BatchConfig {
+    QString dialogTitle;
+    bool defaultSkipExisting = true;
+    QString skipExistingLabel;
+};
+
 class EditorPageBase : public QWidget,
                        public labeler::IPageActions,
                        public labeler::IPageLifecycle {
@@ -118,6 +124,25 @@ protected:
 
     /// Called during onShutdown() for final save (e.g. shortcut persistence).
     virtual void onShutdownImpl() {}
+
+    // ── Batch processing template (P-12) ──
+
+    virtual bool hasExistingResult(const QString &sliceId) const;
+
+    virtual bool prepareSliceInput(const QString &sliceId, QString &skipReason);
+
+    virtual BatchSliceResult processSlice(const QString &sliceId);
+
+    virtual void applyBatchResult(const QString &sliceId, const BatchSliceResult &result);
+
+    virtual bool isBatchRunning() const = 0;
+    virtual void setBatchRunning(bool running) = 0;
+
+    virtual std::shared_ptr<std::atomic<bool>> batchAliveToken() const = 0;
+
+    void runBatchProcess(const BatchConfig &config,
+                         const QStringList &sliceIds,
+                         std::function<void(BatchProcessDialog *)> addExtraParams = {});
 
     // ── Async engine loading ──
 

@@ -44,6 +44,11 @@ protected:
     void onAutoInfer() override;
     void onDeactivatedImpl() override;
 
+    // Batch processing (P-12 template)
+    bool isBatchRunning() const override;
+    void setBatchRunning(bool running) override;
+    std::shared_ptr<std::atomic<bool>> batchAliveToken() const override;
+
 private:
     pitchlabeler::PitchEditor *m_editor = nullptr;
     IModelManager *m_modelManager = nullptr;
@@ -57,7 +62,9 @@ private:
     std::shared_ptr<std::atomic<bool>> m_rmvpeAlive;
     std::shared_ptr<std::atomic<bool>> m_gameAlive;
     PhNumCalculator m_phNumCalc;
-    bool m_inferRunning = false;
+    std::atomic<bool> m_inferRunning{false};
+    std::atomic<bool> m_batchRunning{false};
+    std::shared_ptr<std::atomic<bool>> m_batchAlive;
 
     void onExtractPitch();
     void onExtractMidi();

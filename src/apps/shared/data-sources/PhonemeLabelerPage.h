@@ -38,6 +38,11 @@ protected:
     void saveExtraSplitters() override;
     void onDeactivatedImpl() override;
 
+    // Batch processing (P-12 template)
+    bool isBatchRunning() const override;
+    void setBatchRunning(bool running) override;
+    std::shared_ptr<std::atomic<bool>> batchAliveToken() const override;
+
 private:
     phonemelabeler::PhonemeEditor *m_editor = nullptr;
     IModelManager *m_modelManager = nullptr;
@@ -45,8 +50,10 @@ private:
     QAction *m_faAction = nullptr;
 
     HFA::HFA *m_hfa = nullptr;
-    bool m_faRunning = false;
+    std::atomic<bool> m_faRunning{false};
     std::shared_ptr<std::atomic<bool>> m_hfaAlive;
+    std::atomic<bool> m_batchRunning{false};
+    std::shared_ptr<std::atomic<bool>> m_batchAlive;
 
     void onRunFA();
     void onBatchFA();

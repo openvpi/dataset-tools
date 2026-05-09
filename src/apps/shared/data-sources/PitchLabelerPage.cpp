@@ -100,6 +100,20 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent)
 
 PitchLabelerPage::~PitchLabelerPage() = default;
 
+// ── Batch processing (P-12 template) ──────────────────────────────────────────
+
+bool PitchLabelerPage::isBatchRunning() const {
+    return m_batchRunning;
+}
+
+void PitchLabelerPage::setBatchRunning(bool running) {
+    m_batchRunning = running;
+}
+
+std::shared_ptr<std::atomic<bool>> PitchLabelerPage::batchAliveToken() const {
+    return m_batchAlive;
+}
+
 QString PitchLabelerPage::windowTitlePrefix() const {
     return tr("Pitch Labeling");
 }
@@ -547,7 +561,14 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
         if (!rmvpe)
             return;
         std::vector<Rmvpe::RmvpeRes> results;
-        auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
+        dstools::Result<void> result = Err("Not executed");
+
+        try {
+            result = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
+        } catch (const std::exception &e) {
+            DSFW_LOG_ERROR("infer", ("Pitch extraction exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
+            result = Err(std::string("Exception: ") + e.what());
+        }
 
         if (!guard)
             return;
@@ -604,7 +625,14 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId) {
         if (!game)
             return;
         std::vector<Game::GameNote> notes;
-        auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+        dstools::Result<void> result = Err("Not executed");
+
+        try {
+            result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+        } catch (const std::exception &e) {
+            DSFW_LOG_ERROR("infer", ("MIDI transcription exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
+            result = Err(std::string("Exception: ") + e.what());
+        }
 
         if (!guard)
             return;
@@ -867,6 +895,7 @@ void PitchLabelerPage::onBatchExtract() {
             int skipped = 0;
             int errors = 0;
             int idx = 0;
+            try {
             for (const auto &sliceId : ids) {
                 if (dlg->isCancelled())
                     break;
@@ -950,6 +979,12 @@ void PitchLabelerPage::onBatchExtract() {
                 }, Qt::QueuedConnection);
                 ++processed;
                 ++idx;
+            }
+            } catch (const std::exception &e) {
+                DSFW_LOG_ERROR("infer", ("Batch pitch/MIDI exception: " + std::string(e.what())).c_str());
+                QMetaObject::invokeMethod(dlg, [dlg, eMsg = std::string(e.what())]() {
+                    dlg->appendLog(QStringLiteral("[ERROR] Exception: %1").arg(QString::fromStdString(eMsg)));
+                }, Qt::QueuedConnection);
             }
             QMetaObject::invokeMethod(dlg, [dlg, processed, skipped, errors]() {
                 dlg->finish(processed, skipped, errors);

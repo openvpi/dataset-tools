@@ -40,6 +40,11 @@ protected:
     void onAutoInfer() override;
     void onDeactivatedImpl() override;
 
+    // Batch processing (P-12 template)
+    bool isBatchRunning() const override;
+    void setBatchRunning(bool running) override;
+    std::shared_ptr<std::atomic<bool>> batchAliveToken() const override;
+
 private:
     LyricFA::Asr *m_asr = nullptr;
     std::shared_ptr<std::atomic<bool>> m_asrAlive;
@@ -47,11 +52,14 @@ private:
 
     Minlabel::MinLabelEditor *m_editor = nullptr;
     bool m_dirty = false;
-    bool m_asrRunning = false;
+    std::atomic<bool> m_asrRunning{false};
 
     QAction *m_playAction = nullptr;
     QAction *m_asrAction = nullptr;
     QAction *m_lyricFaAction = nullptr;
+
+    std::atomic<bool> m_batchRunning{false};
+    std::shared_ptr<std::atomic<bool>> m_batchAlive;
 
     std::unique_ptr<LyricFA::MatchLyric> m_matchLyric;
     std::shared_ptr<std::atomic<bool>> m_matchLyricAlive;

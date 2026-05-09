@@ -1,12 +1,14 @@
 #include "EditorPageBase.h"
 #include "SliceListPanel.h"
 #include "ISettingsBackend.h"
+#include "BatchProcessDialog.h"
 
 #include <dsfw/CommonKeys.h>
 #include <dsfw/Log.h>
 
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QCheckBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
@@ -246,8 +248,13 @@ void EditorPageBase::loadEngineAsync(const QString &taskKey,
     (void) QtConcurrent::run([guard, taskKey, loadFunc = std::move(loadFunc),
                               onReady = std::move(onReady)]() {
         bool success = false;
-        if (loadFunc)
-            success = loadFunc();
+        try {
+            if (loadFunc)
+                success = loadFunc();
+        } catch (const std::exception &e) {
+            DSFW_LOG_ERROR("infer", ("Engine load exception: " + taskKey.toStdString() + " - " + e.what()).c_str());
+            success = false;
+        }
 
         QMetaObject::invokeMethod(guard.data(), [guard, taskKey, success,
                                                   onReady = std::move(onReady)]() {
@@ -283,6 +290,140 @@ QLabel *EditorPageBase::StatusBarBuilder::addLabel(const QString &text, int stre
     auto *label = new QLabel(text, m_container);
     m_layout->addWidget(label, stretch);
     return label;
+}
+
+bool EditorPageBase::hasExistingResult(const QString &sliceId) const {
+    Q_UNUSED(sliceId)
+    return false;
+}
+
+bool EditorPageBase::prepareSliceInput(const QString &sliceId, QString &skipReason) {
+    Q_UNUSED(sliceId)
+    Q_UNUSED(skipReason)
+    return true;
+}
+
+BatchSliceResult EditorPageBase::processSlice(const QString &sliceId) {
+    Q_UNUSED(sliceId)
+    return {BatchSliceResult::Error, "processSlice not implemented"};
+}
+
+void EditorPageBase::applyBatchResult(const QString &sliceId, const BatchSliceResult &result) {
+    Q_UNUSED(sliceId)
+    Q_UNUSED(result)
+}
+
+void EditorPageBase::runBatchProcess(
+    const BatchConfig &config,
+    const QStringList &sliceIds,
+    std::function<void(BatchProcessDialog *)> addExtraParams)
+{
+    auto *dlg = new BatchProcessDialog(config.dialogTitle, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto *skipExisting = new QCheckBox(config.skipExistingLabel, dlg);
+    skipExisting->setChecked(config.defaultSkipExisting);
+    dlg->addParamWidget(skipExisting);
+
+    if (addExtraParams)
+        addExtraParams(dlg);
+
+    dlg->appendLog(tr("Total slices: %1").arg(sliceIds.size()));
+
+    auto aliveToken = batchAliveToken();
+    auto *src = source();
+    QPointer<EditorPageBase> guard(this);
+
+    connect(dlg, &BatchProcessDialog::started, this,
+        [dlg, src, ids = sliceIds, guard, skipExisting, aliveToken]() {
+        if (!guard) {
+            dlg->finish(0, 0, 0);
+            return;
+        }
+        guard->setBatchRunning(true);
+        bool skip = skipExisting->isChecked();
+
+        (void) QtConcurrent::run([dlg, src, ids, guard, skip, aliveToken]() {
+            int processed = 0, skipped = 0, errors = 0;
+            int idx = 0;
+            try {
+                for (const auto &sliceId : ids) {
+                    if (dlg->isCancelled()) break;
+                    if (aliveToken && !*aliveToken) break;
+
+                    QMetaObject::invokeMethod(dlg,
+                        [dlg, idx, total = ids.size()]() { dlg->setProgress(idx, total); },
+                        Qt::QueuedConnection);
+
+                    QString audioPath = src->validatedAudioPath(sliceId);
+                    if (audioPath.isEmpty()) {
+                        ++skipped;
+                        QMetaObject::invokeMethod(dlg,
+                            [dlg, sliceId]() { dlg->appendLog(tr("[SKIP] %1 (missing audio)").arg(sliceId)); },
+                            Qt::QueuedConnection);
+                        ++idx;
+                        continue;
+                    }
+
+                    if (skip && guard->hasExistingResult(sliceId)) {
+                        ++skipped;
+                        QMetaObject::invokeMethod(dlg,
+                            [dlg, sliceId]() { dlg->appendLog(tr("[SKIP] %1 (existing result)").arg(sliceId)); },
+                            Qt::QueuedConnection);
+                        ++idx;
+                        continue;
+                    }
+
+                    QString skipReason;
+                    if (!guard->prepareSliceInput(sliceId, skipReason)) {
+                        ++skipped;
+                        QMetaObject::invokeMethod(dlg,
+                            [dlg, sliceId, skipReason]() { dlg->appendLog(tr("[SKIP] %1 (%2)").arg(sliceId, skipReason)); },
+                            Qt::QueuedConnection);
+                        ++idx;
+                        continue;
+                    }
+
+                    auto result = guard->processSlice(sliceId);
+
+                    if (result.status == BatchSliceResult::Processed) {
+                        QMetaObject::invokeMethod(guard.data(),
+                            [guard, sliceId, result]() { guard->applyBatchResult(sliceId, result); },
+                            Qt::QueuedConnection);
+                        ++processed;
+                    } else if (result.status == BatchSliceResult::Skipped) {
+                        ++skipped;
+                    } else {
+                        ++errors;
+                    }
+                    QMetaObject::invokeMethod(dlg,
+                        [dlg, msg = result.logMessage]() { dlg->appendLog(msg); },
+                        Qt::QueuedConnection);
+
+                    ++idx;
+                }
+            } catch (const std::exception &e) {
+                QMetaObject::invokeMethod(dlg,
+                    [dlg, eMsg = std::string(e.what())]() {
+                        dlg->appendLog(tr("[ERROR] Exception: %1").arg(QString::fromStdString(eMsg)));
+                    }, Qt::QueuedConnection);
+            }
+
+            QMetaObject::invokeMethod(dlg,
+                [dlg, processed, skipped, errors]() { dlg->finish(processed, skipped, errors); },
+                Qt::QueuedConnection);
+            QMetaObject::invokeMethod(guard.data(),
+                [guard]() { if (guard) guard->setBatchRunning(false); },
+                Qt::QueuedConnection);
+        });
+    });
+
+    connect(dlg, &BatchProcessDialog::cancelled, this, [guard, aliveToken]() {
+        if (aliveToken) aliveToken->store(false);
+        if (guard) guard->setBatchRunning(false);
+    });
+
+    dlg->show();
 }
 
 } // namespace dstools

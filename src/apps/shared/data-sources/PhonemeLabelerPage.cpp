@@ -155,6 +155,20 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
 
 PhonemeLabelerPage::~PhonemeLabelerPage() = default;
 
+// ── Batch processing (P-12 template) ──────────────────────────────────────────
+
+bool PhonemeLabelerPage::isBatchRunning() const {
+    return m_batchRunning;
+}
+
+void PhonemeLabelerPage::setBatchRunning(bool running) {
+    m_batchRunning = running;
+}
+
+std::shared_ptr<std::atomic<bool>> PhonemeLabelerPage::batchAliveToken() const {
+    return m_batchAlive;
+}
+
 // ── EditorPageBase hooks ──────────────────────────────────────────────────────
 
 QString PhonemeLabelerPage::windowTitlePrefix() const {
@@ -613,8 +627,14 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
         if (!hfa)
             return;
         HFA::WordList words;
+        dstools::Result<void> result = Err("Not executed");
 
-        auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
+        try {
+            result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
+        } catch (const std::exception &e) {
+            DSFW_LOG_ERROR("infer", ("FA inference exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
+            result = Err(std::string("Exception: ") + e.what());
+        }
 
         if (!guard)
             return;

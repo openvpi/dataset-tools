@@ -74,6 +74,20 @@ namespace dstools {
 
     MinLabelPage::~MinLabelPage() = default;
 
+    // ── Batch processing (P-12 template) ─────────────────────────────────────
+
+    bool MinLabelPage::isBatchRunning() const {
+        return m_batchRunning;
+    }
+
+    void MinLabelPage::setBatchRunning(bool running) {
+        m_batchRunning = running;
+    }
+
+    std::shared_ptr<std::atomic<bool>> MinLabelPage::batchAliveToken() const {
+        return m_batchAlive;
+    }
+
     // ── EditorPageBase hooks ──────────────────────────────────────────────────────
 
     QString MinLabelPage::windowTitlePrefix() const {
@@ -435,7 +449,15 @@ namespace dstools {
             if (!asr)
                 return;
             std::string msg;
-            bool ok = asr->recognize(audioPath.toStdWString(), msg);
+            bool ok = false;
+
+            try {
+                ok = asr->recognize(audioPath.toStdWString(), msg);
+            } catch (const std::exception &e) {
+                DSFW_LOG_ERROR("infer", ("ASR exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
+                msg = std::string("Exception: ") + e.what();
+            }
+
             QString text;
             if (ok)
                 text = QString::fromUtf8(msg);
@@ -517,6 +539,7 @@ namespace dstools {
                 int skipped = 0;
                 int errors = 0;
                 int idx = 0;
+                try {
                 for (const auto &sliceId : ids) {
                     if (dlg->isCancelled())
                         break;
@@ -586,6 +609,14 @@ namespace dstools {
                             Qt::QueuedConnection);
                     }
                     ++idx;
+                }
+                } catch (const std::exception &e) {
+                    DSFW_LOG_ERROR("infer", ("Batch ASR exception: " + std::string(e.what())).c_str());
+                    QMetaObject::invokeMethod(
+                        dlg, [dlg, eMsg = std::string(e.what())]() {
+                            dlg->appendLog(tr("[ERROR] Exception: %1").arg(QString::fromStdString(eMsg)));
+                        },
+                        Qt::QueuedConnection);
                 }
                 QMetaObject::invokeMethod(
                     dlg, [dlg, processed, skipped, errors]() { dlg->finish(processed, skipped, errors); },
@@ -756,6 +787,7 @@ namespace dstools {
                 int skipped = 0;
                 int errors = 0;
                 int idx = 0;
+                try {
                 for (const auto &sliceId : ids) {
                     if (dlg->isCancelled())
                         break;
@@ -825,6 +857,14 @@ namespace dstools {
                             Qt::QueuedConnection);
                     }
                     ++idx;
+                }
+                } catch (const std::exception &e) {
+                    DSFW_LOG_ERROR("infer", ("Batch lyric FA exception: " + std::string(e.what())).c_str());
+                    QMetaObject::invokeMethod(
+                        dlg, [dlg, eMsg = std::string(e.what())]() {
+                            dlg->appendLog(tr("[ERROR] Exception: %1").arg(QString::fromStdString(eMsg)));
+                        },
+                        Qt::QueuedConnection);
                 }
                 QMetaObject::invokeMethod(
                     dlg, [dlg, processed, skipped, errors]() { dlg->finish(processed, skipped, errors); },
