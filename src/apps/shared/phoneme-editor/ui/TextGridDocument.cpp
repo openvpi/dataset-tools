@@ -391,16 +391,12 @@ void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePo
         static const QRegularExpression cjkRe(
             QStringLiteral("[\\x{4E00}-\\x{9FFF}\\x{3400}-\\x{4DBF}\\x{F900}-\\x{FAFF}]"));
         if (layer.name == QStringLiteral("grapheme")) {
-            bool hasCjk = false;
             for (const auto &b : layer.boundaries) {
                 if (cjkRe.match(b.text).hasMatch()) {
-                    hasCjk = true;
+                    DSFW_LOG_WARN("io",
+                        ("Grapheme layer contains CJK characters in " + layer.name.toStdString()).c_str());
                     break;
                 }
-            }
-            if (hasCjk) {
-                tierName = QStringLiteral("grapheme (含中文)");
-                DSFW_LOG_WARN("io", ("Grapheme layer contains CJK characters in " + layer.name.toStdString()).c_str());
             }
         }
 
