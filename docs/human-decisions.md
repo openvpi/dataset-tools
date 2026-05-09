@@ -3,7 +3,7 @@
 > 本文档记录所有由用户明确给出的设计决策，供后续实施参考。
 > 与其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-05-09（新增 P-10/P-11/P-12）
+> 最后更新：2026-05-09（新增 P-13/P-14/P-15/P-16/P-17：吸收 C++ Core Guidelines、Qt API 设计原则、LLVM/KDE 大型项目设计准则 + 适配器隔离原则）
 
 ---
 
@@ -160,6 +160,108 @@ m_engineAlive.reset();  // 原子置 false 并释放引用
 - 两个类有 >60% 相同代码 → 合并为同一类 + 配置开关
 - 两个类有 30%~60% 相同代码 → 提取共同基类，差异通过虚方法/配置实现
 - 两个类有 <30% 相同代码 → 可独立实现，但接口风格应保持一致
+
+### P-13：RAII 资源管理
+
+**原则**：所有资源（内存、文件句柄、锁、推理引擎句柄）的生命周期必须绑定到拥有对象的作用域。使用 C++ 标准库的 RAII 包装（`std::unique_ptr`、`std::shared_ptr`、`std::lock_guard`、`std::scoped_lock`）管理资源。
+
+**理由**：
+- 手动 `new`/`delete` 容易导致内存泄漏和 double-free
+- 异常安全需要 RAII 保证——异常抛出时栈展开自动释放资源
+- 大型项目中资源所有权的追踪成本随代码量指数增长
+
+**禁止**：
+- 裸露 `new`/`delete`（应使用 `std::make_unique`/`std::make_shared`）
+- 手动 `mutex.lock()`/`unlock()`（应使用 `std::lock_guard` 或 `std::scoped_lock`）
+- 文件句柄不包装在 RAII 类型中（如 `std::ifstream` 裸对象非 RAII 场景需注意）
+- 推理引擎裸指针在多线程间传递（P-09 是过渡方案，长期应改为 shared_ptr 所有权）
+
+**来源**：吸收自 C++ Core Guidelines (R: Resource Management)、Qt API Design Principles、LLVM 编码规范。
+
+### P-14：组合优于继承
+
+**原则**：优先通过组合/委托复用功能，而非构建深的继承层次。接口继承（纯虚类）是好的设计，实现继承需谨慎——只有在"is-a"关系明确且基类行为无需大幅修改时才使用。
+
+**理由**：
+- 深层继承导致"脆弱的基类问题"——修改基类可能意外破坏所有子类
+- 组合更灵活——可在运行时替换被组合的对象（策略模式）
+- 多重继承（尤其是菱形继承）增加复杂性和歧义
+- KDE Frameworks 明确建议在可组合优于继承的场景使用组合
+
+**判断标准**：
+- "is-a" 关系 + 行为可复用 → 公共基类（如 `EditorPageBase`）
+- "has-a" 关系 + 行为复用 → 组合/委托（如 `BoundaryDragController` 被 widget 持有，而非 widget 继承自它）
+- 仅需部分行为 → 策略模式 / 配置开关（如 P-12 的 Config 结构体）
+
+**来源**：吸收自 C++ Core Guidelines (C: Classes and class hierarchies)、KDE Frameworks Policies、Qt API Design Principles。
+
+### P-15：依赖倒置（面向接口编程）
+
+**原则**：高层模块不应依赖低层模块，二者都应依赖抽象（纯虚接口）。具体实现通过 `ServiceLocator` 注入（全局服务）或构造函数注入（局部依赖）。
+
+**理由**：
+- 降低耦合——更换底层实现时高层代码无需修改
+- 便于单元测试——可注入 mock 实现
+- 与 P-06（接口稳定）互补：P-06 强调接口的价值，本原则强调依赖的方向
+
+**实现要求**：
+- 框架层定义纯虚接口（`IFileIOProvider`、`IModelProvider`、`IG2PProvider`、`IFormatAdapter`）
+- 应用层提供具体实现，通过 `ServiceLocator` 或构造函数注入
+- 页面/业务逻辑代码只依赖接口，不直接依赖具体类
+- 新增功能优先考虑新增接口 + 实现，而非在现有类上打补丁
+
+**来源**：吸收自 SOLID 原则（Dependency Inversion Principle）、C++ Core Guidelines (I: Interfaces)、LLVM 库分层设计。
+
+### P-16：开闭原则（对扩展开放，对修改关闭）
+
+**原则**：新增功能应通过新增类/模块/插件实现，而非修改已稳定的现有代码核心逻辑。
+
+**理由**：
+- 修改已稳定代码引入回归风险
+- 新增适配器/插件不影响现有功能
+- LLVM 的 Pass 注册机制、Qt 的插件系统都是此原则的经典实践
+
+**实践方式**：
+- 新文件格式 → 新增 `IFormatAdapter` 子类，注册到 `FormatAdapterRegistry`，不修改 registry 核心调度逻辑
+- 新推理引擎 → 新增 `IModelProvider` 实现，不修改 `ModelManager` 核心流程
+- 新页面 → 新增 Page 类实现 `IPageLifecycle`/`IPageActions`，不修改 `AppShell` 核心
+- 新导出格式 → 新增 `IExportFormat` 实现
+
+**来源**：吸收自 SOLID 原则（Open-Closed Principle）、Qt Plugin System、LLVM Pass Registry。
+
+### P-17：内部文档模型 + 适配器隔离
+
+**原则**：本项目维护统一的内部文档模型（`DsDocument`、`TextGridDocument` 等），所有具体文件格式（CSV、TextGrid、Lab、ds、json 等）**一律通过 IFormatAdapter 适配器**对接内部模型，**不得在业务代码中直接操作文件**。
+
+**核心要求**：
+
+1. **内部文档模型是唯一的真相源**：所有页面、处理流程、推理引擎只与内部模型交互（如 `DsDocument`、`TextGridDocument`），不感知底层文件格式。
+
+2. **文件 I/O 必须经过适配器**：格式读取/写入通过 `IFormatAdapter` 子类实现，适配器负责格式 ↔ 内部模型的转换。适配器内部可使用 `IFileIOProvider` 进行底层文件读写，但业务代码不得绕过适配器直接调用 `IFileIOProvider` 读写格式文件。
+
+3. **迁移模块必须重构为适配器模式**：从其他项目迁移进来的模块，如果其原生代码直接操作文件（如 `game-infer/` 的 DiffSingerParser 直接读文件），必须重构：提取出内部模型 + 适配器，业务代码只与内部模型交互。
+
+4. **禁止模式**：
+   - 业务代码中调用 `QFile`、`std::ifstream`、`IFileIOProvider` 直接读写格式文件
+   - 页面加载切片时直接 `nlohmann::json::parse(file)` 然后手动塞入 UI 控件
+   - 导出功能中自己拼 CSV 字符串写入文件
+
+5. **正确模式**：
+   ```
+   业务代码                                适配器层                      文件系统
+   ────────                              ────────                      ────────
+   DsDocument.load(path)         →     DsFileAdapter.read()       →   IFileIOProvider
+   TextGridDocument.loadFromDsText()  →  TextGridAdapter.read()  →   IFileIOProvider
+   exportService.export(doc, fmt)     →  CsvAdapter.write()       →   IFileIOProvider
+   ```
+
+**理由**：
+- 新增文件格式只需新增适配器，业务代码零改动（P-16 的具体实践）
+- 内部模型可在不触及文件格式的情况下演进
+- 便于单元测试——可注入 mock 适配器和 mock IFileIOProvider
+- 文件 I/O 路径统一，便于统一错误处理、编码转换、日志记录
+
+**来源**：吸收自 Qt Model/View 架构、Hexagonal Architecture（端口-适配器模式）、C++ Core Guidelines (A: Architectural Ideas)。
 
 ---
 
@@ -937,3 +1039,202 @@ void AudioVisualizerContainer::removeTierLabelArea();
 | Chart 边界绘制 | Chart widget 不绘制边界线，仅依赖透明 overlay | D-41：Chart widget paintEvent 调用 drawBoundaryOverlay |
 | FA 层级输出 | buildFaLayers 只输出 word.start 边界，applyFaResult 跳过 grapheme | D-42：输出完整 start/end 边界 + LayerDependency 结构；applyFaResult 直接替换 grapheme 层（修订：不再创建 fa_grapheme） |
 | PitchLabel 工具栏 | PitchLabelerPage 仅有菜单栏，无工具栏 | D-43：添加 QToolBar 含 F0/GAME 按钮 |
+
+---
+
+## D-44：fa_grapheme 层改名为 grapheme
+
+**决策**：`buildFaLayers()` 创建的层名从 `"fa_grapheme"` 改为 `"grapheme"`。LayerDependency 中的 `parentLayerName` 同步改为 `"grapheme"`。
+
+**理由**：
+- 该层的来源是 FA 结果，但层名称不应带 `fa_` 前缀（用户指定）
+- 当前其他地方已经统一使用 `"grapheme"` 作为 grapheme 层名称
+- 所有筛选 `"fa_grapheme"` 的代码改为筛选 `"grapheme"`
+
+**影响文件**：
+- `PhonemeLabelerPage.cpp`：`buildFaLayers()` L57, L104；`onSliceSelectedImpl()` L236, L744；`applyFaResult()` L744 等
+
+---
+
+## D-45：HFA 结果使用 fill_small_gaps + add_SP 填充微小空隙
+
+**决策**：FA 推理完成后，调用 `WordList::fill_small_gaps()` 和 `WordList::add_SP()` 填充词间微小空隙（参考 main 分支 hfa 代码），再调用 `buildFaLayers()` 构建层级数据。
+
+**理由**：
+- main 分支的 HFA 处理流程在导出 TextGrid 前会调用这两个方法，确保词间无微小间隙
+- `fill_small_gaps()` 将词间 ≤0.1s 的空隙合并到相邻词中
+- `add_SP()` 在剩余空隙处插入 SP（静音）词
+- 这样产生的 grapheme 和 phoneme 层边界更完整
+
+**实现要求**：
+```cpp
+// 在 runFaForSlice() / batch FA 中，recognize 成功后：
+float wavLen = static_cast<float>(audioLengthSec);
+words.fill_small_gaps(wavLen, 0.1f);
+words.add_SP(wavLen, "SP");
+auto faResult = buildFaLayers(words);
+```
+
+**影响文件**：
+- `PhonemeLabelerPage.cpp`：`runFaForSlice()` 和 batch FA 的 lambda
+
+---
+
+## D-46：刻度条系统绑定 ViewportController resolution
+
+**决策**：`TimeRulerWidget` 的刻度级别选择不再使用独立的 PPS 计算，改为直接使用 ViewportController 提供的 `resolution` 和 `sampleRate` 计算像素间距。刻度线只能和波形图等子图同步缩放——不允许其他子图单独缩放到极限后刻度仍可缩放。
+
+**根因分析**：
+- 当前 `findLevel()` 使用 `m_sampleRate / m_resolution` 计算 PPS（正确），但 `kLevels` 表的最小级别是 `{0.001, 0.0005}`（1ms/0.5ms），当 resolution=10 时 PPS=4410，0.5ms × 4410 = 2.2px < kMinMinorStepPx=4，所以会自动选到下一级别
+- 实际上当前的行为在 ViewportController 的 resolution 范围内（10-44100）是正常的
+- 真正的问题是：PianoRollView 使用自己的 `m_hScale` 独立管理缩放，没有正确受 ViewportController 约束
+
+**具体修改**：
+1. `TimeRulerWidget` 确认使用 `state.resolution` 和 `state.sampleRate` 计算 PPS（已正确实现），确保 `kMinMinorStepPx` 足够大（从 4 提升到 8 防止过密）
+2. `PianoRollView` 的刻度（`PianoRollRenderer::drawRuler`）不再使用简单的 `interval` 判断（`s.hScale > 200 ? 0.5`），改为使用与 TimeRulerWidget 相同级别的查表法
+3. 确保所有子图（Waveform/Spectrogram/Power）通过 ViewportController 统一缩放
+
+**影响文件**：
+- `TimeRulerWidget.cpp`：调整 `kMinMinorStepPx`
+- `PianoRollRenderer.cpp`：`drawRuler()` 改为查表法
+- `PianoRollView.cpp`：确认缩放通过 ViewportController
+
+---
+
+## D-47：PitchLabel 缩放限制最大长度
+
+**决策**：`PianoRollView` 缩放到极限（zoomOut）时，视口范围不能超过音频总时长。即当 resolution 达到表中最大值（44100 spx）时，如果视口宽度对应的时长仍小于音频时长，则以音频时长为视口范围。
+
+**根因**：当前 `PianoRollView::zoomOut()` 和 `resetZoom()` 调用 `m_viewport->zoomAt()`。ViewportController 的 resolution 最大为 44100 spx（≈1 px/s @44100Hz），对于 1200px 宽视口最多显示 20 分钟音频——对大多数切片足够了。但如果音频超过 20 分钟，缩放到极限后视口范围仍小于音频时长。
+
+**实现要求**：
+1. `PianoRollView::setAudioDuration()` 和 `resizeEvent()` 中，计算 `maxResolution = audioDuration * sampleRate / drawWidth`，确保视口至少能容纳全部音频
+2. ViewportController 的 `zoomOut()` 在达到表末但仍未覆盖全部时长时，允许设置更大的 resolution（使用计算值而非查表值）
+3. 或者：在 `clampAndEmit()` 中增加检查——如果 `endSec - startSec < totalDuration` 且 resolution 已到最大，则强制视口 = 全时长
+
+**影响文件**：
+- `PianoRollView.cpp`：`setAudioDuration()`, `resizeEvent()`
+- `ViewportController.cpp`：`zoomOut()` 或 `clampAndEmit()`
+
+---
+
+## D-48：修复音高线 F0Curve timestep 单位转换导致不显示（BUG-33）
+
+**决策**：`applyPitchResult()` 中 `float timestep`（秒）必须转换为 `TimePos`（微秒）再赋值给 `F0Curve::timestep`。
+
+**根因**：
+- `runPitchExtraction()` 计算 `float timestep = 0.005f`（5ms，秒为单位）
+- `applyPitchResult()` 将 `float timestep` 直接赋值给 `pitchCurve->timestep`（`TimePos` = `int64_t` 微秒）→ 0.005f → 0（截断为整数）
+- `onSliceSelectedImpl()` 加载时 `file->f0.timestep = curve.timestep`（此处正确，因 curve.timestep 已为 TimePos）
+- `PianoRollRenderer::drawF0Curve()` 检查 `s.dsFile->f0.timestep <= 0` → true → 直接 return，不绘制
+
+**修复**：
+```cpp
+// applyPitchResult() 中：
+pitchCurve->timestep = secToUs(static_cast<double>(timestep));
+m_currentFile->f0.timestep = secToUs(static_cast<double>(timestep));
+```
+
+**影响文件**：
+- `PitchLabelerPage.cpp`：`applyPitchResult()` L761-762
+
+---
+
+## D-49：PitchLabel MIDI 优先 align 模式，无 ph_dur 时弹窗降级
+
+**决策**：`PitchLabelerPage::onExtractMidi()` 和 `runMidiTranscription()` 优先使用 GAME 的 `align()` 方法（需要 ph_dur 输入）。如果当前切片的 phoneme 层不存在（即上一步 FA 未完成），弹窗提示用户选择："是否强制提取（使用非 align 模式）？"
+
+**详细流程**：
+1. 用户点击 "Extract MIDI"
+2. 加载当前切片数据，查找 phoneme 层
+3. 如果 phoneme 层存在：提取 phSeq, phDur, phNum，调用 `game->align(AlignInput{...}, options, notes)`
+4. 如果 phoneme 层不存在：弹出 QMessageBox：
+   - "当前切片无音素对齐数据（FA 未完成）。是否使用非对齐模式强制提取 MIDI？"
+   - 按钮：Yes（强制提取，使用 getNotes()）/ No（取消）
+5. `AlignOptions` 中的 `uvVocab` 从用户设置读取（见 D-50）
+
+**影响文件**：
+- `PitchLabelerPage.cpp`：`onExtractMidi()`, `runMidiTranscription()`
+- 设置页面：新增 uvVocab 配置项（见 D-50）
+
+---
+
+## D-50：各步骤特殊关键字在设置页面体现
+
+**决策**：在设置页面的各 tab 中增加对应步骤的特殊关键字配置项。
+
+| Tab | 配置项 | 默认值 | 用途 |
+|-----|--------|--------|------|
+| 强制对齐 (FA) | Non-speech 音素 | `AP, SP`（逗号分隔） | FA `nonSpeechPh` 参数 |
+| 音高/MIDI | 无声音素词汇 (uvVocab) | `AP, SP, br, sil`（逗号分隔） | GAME `AlignOptions.uvVocab` |
+| 音高/MIDI | UV 词条件 | Lead / All / None | GAME `AlignOptions.uvWordCond` |
+| 导出 | 导出格式选项 | （各格式参数） | 导出时使用的关键字/格式选项 |
+
+**实现要求**：
+1. `createFATab()` 增加 `m_faNonSpeechPh` QLineEdit
+2. `createPitchTab()` 增加 `m_uvVocab` QLineEdit 和 `m_uvWordCond` QComboBox
+3. `loadFromBackend()` 和 `applySettings()` 读写这些配置
+4. 各页面从 settings 读取关键字而非硬编码
+
+**影响文件**：
+- `SettingsPage.h/cpp`：新增成员和 UI
+- `PhonemeLabelerPage.cpp`：`runFaForSlice()` 从设置读取 nonSpeechPh
+- `PitchLabelerPage.cpp`：`runMidiTranscription()` 从设置读取 uvVocab/uvWordCond
+
+---
+
+## D-51：分析修复各应用控件实时刷新问题
+
+**决策**：对各应用页面进行逐页审查，检查在操作完成后控件是否实时刷新。
+
+**检查清单**：
+| 检查项 | 当前状态 | 需修复 |
+|--------|---------|--------|
+| 工具栏按钮状态（enabled/checked） | - | 待审查 |
+| 状态栏标签更新（切片名/位置/缩放） | Pitch/Phoneme 已使用 StatusBarBuilder ✅ | - |
+| Chart widget 重绘（数据变更后） | 部分页面未显式调用 update() | 待审查 |
+| 切片列表进度条更新 | `updateProgress()` 已实现 ✅ | - |
+| dirty 指示器更新 | `updateDirtyIndicator()` 已有 ❓ | 待验证 |
+| 保存后 undo stack clean 状态 | `undoStack()->cleanChanged` 信号连接 ✅ | - |
+| 缩放后 zoom 指示器更新 | - | 待审查 |
+| 音符数量/状态更新 | `noteCountChanged` 信号 ✅ | - |
+| A/B 比较状态刷新 | - | 待审查 |
+
+**影响范围**：待审查结果确定
+
+---
+
+## D-52：整理归纳文档
+
+**决策**：对 `docs/` 目录进行整理，删除过时的已完成内容，按以下结构重新分类：
+
+```
+docs/
+├── README.md                        # 文档索引（新增）
+├── human-decisions.md               # 人工决策记录（保留）
+├── refactoring-plan.md              # 重构方案（保留）
+├── design/                          # 设计文档
+│   ├── framework-architecture.md
+│   ├── task-processor-design.md
+│   ├── unified-app-design.md
+│   ├── ds-format.md
+│   ├── log-and-i18n-design.md
+│   └── test-design.md
+├── guides/                          # 指南
+│   ├── build.md
+│   ├── framework-getting-started.md
+│   ├── conventions-and-standards.md
+│   └── migration-guide.md
+├── reports/                         # 审计报告
+│   ├── technical-summary.md
+│   └── check/
+│       ├── architecture-debt.md
+│       ├── bugs-and-issues.md
+│       ├── coding-standards-violations.md
+│       └── technical-debt.md
+```
+
+**清理内容**：
+- 删除重复/过时的已修复 bug 描述（已整合到 `bugs-and-issues.md` 中标记为"已修复"的可以保留）
+- 将各文档头部的时间戳统一更新为 2026-05-09
+- `refactoring-plan.md` 中已完成的旧任务压缩到折叠区域

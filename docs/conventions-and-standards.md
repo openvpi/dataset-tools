@@ -230,6 +230,11 @@ auto *g2p = ServiceLocator::get<IG2PProvider>();
 | P-10 | 统一路径库 | 基于 `std::filesystem` 的跨平台路径库，路径拼接、编码转换、debug 输出均使用此库，禁止各处自行拼接 |
 | P-11 | 多线程安全优先 | 批处理和多页面设计必须考虑多线程竞争，共享资源必须加锁或使用原子操作 |
 | P-12 | 相似模块统一设计 | 相似模块使用相似的设计思路；大部分功能相同的模块尽量使用同一个类、不同实例按需开启部分功能 |
+| P-13 | RAII 资源管理 | 所有资源（内存、文件、锁、引擎）通过 RAII 包装管理生命周期；禁止裸 new/delete、手动 lock/unlock |
+| P-14 | 组合优于继承 | 优先组合/委托复用功能，接口继承优于实现继承；仅 "is-a" 且行为稳定时使用实现继承 |
+| P-15 | 依赖倒置 | 高层模块依赖抽象接口而非具体实现；通过 ServiceLocator 或构造函数注入 |
+| P-16 | 开闭原则 | 新增功能通过新增类/模块/插件实现，不修改已稳定代码核心逻辑 |
+| P-17 | 文档模型 + 适配器隔离 | 维护内部文档模型，所有文件格式通过 IFormatAdapter 对接；业务代码禁止直接操作文件 |
 
 ---
 
@@ -466,5 +471,170 @@ public:
 
 ---
 
-**文档版本**: 1.2  
+## §16 文档模型与适配器隔离规范（P-17）
+
+### 基本原则
+
+本项目维护统一的内部文档模型（`DsDocument`、`TextGridDocument` 等），所有具体文件格式（CSV、TextGrid、Lab、ds 等）**一律通过 `IFormatAdapter` 适配器**对接内部模型。**业务代码禁止直接操作文件**。
+
+### 架构模式
+
+```
+业务代码层                    适配器层                    I/O 抽象层
+──────────                   ──────────                  ──────────
+EditorPageBase              IFormatAdapter              IFileIOProvider
+  ├── DsDocument (内部模型)    ├── CsvAdapter              ├── LocalFileIOProvider
+  ├── TextGridDocument         ├── DsFileAdapter            │     ├── readFile(path)
+  ├── ExportService            ├── TextGridAdapter          │     ├── writeFile(path, data)
+  └── ITaskProcessor           ├── LabAdapter               │     └── exists(path)
+                               └── FormatAdapterRegistry    └── (可替换为 mock)
+```
+
+### 核心规则
+
+1. **内部模型是唯一的真相源**：所有页面、处理流程、推理引擎只与内部模型交互。内部模型包括 `DsDocument`、`TextGridDocument`、`DsProject` 等。
+
+2. **格式 I/O 必须经过适配器**：每种文件格式对应一个 `IFormatAdapter` 实现。适配器负责格式文件 ↔ 内部模型的转换：
+   ```cpp
+   // 正确：通过适配器
+   auto *adapter = FormatAdapterRegistry::instance().adapter("csv");
+   auto result = adapter->importToLayers(filePath, layers, config);
+
+   // 禁止：直接操作文件
+   QFile file(path);
+   file.open(QIODevice::ReadOnly);
+   auto json = nlohmann::json::parse(file.readAll().toStdString());
+   ```
+
+3. **迁移模块必须重构为适配器模式**：从其他项目迁移进来的模块，如果其原生代码直接操作文件，必须重构：提取出内部模型 + 适配器，业务代码只与内部模型交互。
+
+4. **适配器内部使用 IFileIOProvider**：适配器通过 `IFileIOProvider` 接口进行底层字节读写（保持可替换性）。适配器之间互不调用。
+
+### 禁止模式
+
+```cpp
+// ❌ 页面直接打开文件
+void onLoadSlice(const QString &path) {
+    QFile f(path);
+    f.open(QIODevice::ReadOnly);
+    auto json = nlohmann::json::parse(f.readAll().toStdString());
+    // 手动解析 json → 塞入 UI 控件
+    m_timeLabel->setText(...);
+}
+
+// ❌ 导出功能自己拼 CSV
+void exportSlice() {
+    QString csv = "name,phoneme,duration\n";
+    csv += name + "," + phoneme + "," + duration;
+    QFile out(path);
+    out.write(csv.toUtf8());
+}
+
+// ❌ 推理模块直接读写中间文件
+void infer() {
+    std::ifstream input(rawPath);
+    // 直接读文件内容...
+    std::ofstream output(rawPath);
+    // 直接写结果...
+}
+```
+
+### 正确模式
+
+```cpp
+// ✅ 加载：通过文档模型
+DsDocument doc;
+auto result = doc.loadFromJson(jsonData);  // json 来自适配器
+
+// ✅ 保存：通过文档模型 + 适配器
+auto jsonData = doc.toJson();
+auto *adapter = FormatAdapterRegistry::instance().adapter("ds");
+adapter->exportFromLayers(jsonData, outputPath, config);
+
+// ✅ 迁移模块：提取模型再写适配器
+// diff-singer-parser:
+//   GameDocument (新内部模型) ← GameFileAdapter.read() ← IFileIOProvider
+//   各 Processor 只与 GameDocument 交互
+```
+
+### 新增格式检查清单
+
+新增一种文件格式支持时，必须完成以下步骤：
+
+1. 该格式是否有对应的 `IFormatAdapter` 实现？
+2. 适配器已注册到 `FormatAdapterRegistry`？
+3. 业务代码是否只通过 `FormatAdapterRegistry` 获取适配器，未直接调用 `QFile`/`std::fstream`？
+4. 适配器导入的目标是否是内部文档模型（`DsDocument`/`TextGridDocument`），而非散落的 JSON map？
+5. 如从其他项目迁移模块，是否已完成"提取内部模型 + 新增适配器"重构？
+
+---
+
+## §17 新增设计原则详解
+
+### P-13：RAII 资源管理
+
+所有资源通过 RAII 包装管理：
+
+```cpp
+// ✅ 正确
+auto config = std::make_unique<ModelConfig>();
+std::lock_guard lock(m_mutex);
+std::ifstream file(path);  // 栈对象，离开作用域自动关闭
+
+// ❌ 禁止
+auto *config = new ModelConfig();  // 谁负责 delete？
+m_mutex.lock();                     // 如果中间抛异常，永不 unlock
+// ... 
+m_mutex.unlock();
+```
+
+### P-14：组合优于继承
+
+```cpp
+// ✅ 正确：组合
+class AudioVisualizerContainer {
+    BoundaryDragController m_dragCtrl;  // 拥有而非继承
+    void handleMousePress(QMouseEvent *e) {
+        m_dragCtrl.startDrag(...);  // 委托
+    }
+};
+
+// ❌ 禁止：为复用而深继承
+class WaveformWidget : public DraggableWidget, public ResizableWidget, ... {
+    // 多重继承，脆弱的基类问题
+};
+```
+
+### P-15：依赖倒置
+
+```cpp
+// ✅ 高层代码依赖抽象
+class ExportPage {
+    IFormatAdapter *m_adapter;  // 接口指针，不关心具体格式
+};
+
+// ❌ 高层代码依赖具体实现
+class ExportPage {
+    CsvAdapter m_csv;  // 硬编码依赖 CSV 格式
+};
+```
+
+### P-16：开闭原则
+
+```cpp
+// ✅ 新增格式：新增适配器，核心不改
+class NewFormatAdapter : public IFormatAdapter { ... };
+FormatAdapterRegistry::instance().registerAdapter(
+    std::make_unique<NewFormatAdapter>());
+
+// ❌ 新增格式：修改导出页 switch-case
+void ExportPage::export(const QString &fmt) {
+    if (fmt == "csv") { ... }
+    else if (fmt == "newfmt") { /* 新增分支，修改核心逻辑 */ }
+}
+```
+
+---
+
+**文档版本**: 1.3  
 **最后更新**: 2026-05-09

@@ -6,7 +6,7 @@
 
 ## 1. 设计准则（最高优先级）
 
-以下准则约束所有框架和应用层代码，详见 [human-decisions.md](human-decisions.md) P-01 ~ P-07 和 [conventions-and-standards.md](conventions-and-standards.md)。
+以下准则约束所有框架和应用层代码，详见 [human-decisions.md](human-decisions.md) P-01 ~ P-17 和 [conventions-and-standards.md](conventions-and-standards.md)。
 
 | 编号 | 准则 | 要求 |
 |---|---|---|
@@ -17,6 +17,11 @@
 | **P-05** | 异常边界隔离 | `Result<T>` 传播应用层错误；`try-catch` 仅限第三方库边界 |
 | **P-06** | 接口稳定 | 公共头文件即契约；框架接口变更需考虑向后兼容 |
 | **P-07** | 简洁可靠 | 遇错直接返回，不设计重试或回滚（除明确需求外） |
+| **P-13** | RAII 资源管理 | 所有资源通过 RAII 包装管理生命周期；禁止裸 new/delete、手动 lock/unlock |
+| **P-14** | 组合优于继承 | 优先组合/委托复用功能，接口继承优于实现继承 |
+| **P-15** | 依赖倒置 | 高层模块依赖抽象接口而非具体实现 |
+| **P-16** | 开闭原则 | 新增功能通过新增类/模块实现，不修改已稳定核心逻辑 |
+| **P-17** | 文档模型 + 适配器隔离 | 维护内部文档模型，所有文件格式通过 IFormatAdapter 对接；禁止业务代码直接操作文件 |
 
 **模式示例**：`AudioVisualizerContainer::invalidateBoundaryModel()` — 一次调用刷新 overlay + tier label + 所有 chart，消费者无需知道内部有哪些 widget。
 
