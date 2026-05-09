@@ -185,6 +185,17 @@ void SettingsPage::applySettings() {
     g2p["dictPath"] = m_dictPath->text();
     settingsData["g2p"] = g2p;
 
+    QJsonObject faConfig;
+    faConfig["nonSpeechPh"] = m_faNonSpeechPh->text().trimmed().isEmpty()
+        ? m_faNonSpeechPh->placeholderText() : m_faNonSpeechPh->text().trimmed();
+    settingsData["faConfig"] = faConfig;
+
+    QJsonObject pitchConfig;
+    pitchConfig["uvVocab"] = m_uvVocab->text().trimmed().isEmpty()
+        ? m_uvVocab->placeholderText() : m_uvVocab->text().trimmed();
+    pitchConfig["uvWordCond"] = m_uvWordCondCombo->currentData().toInt();
+    settingsData["pitchConfig"] = pitchConfig;
+
     m_backend->save(settingsData);
     m_dirty = false;
 
@@ -305,6 +316,23 @@ void SettingsPage::loadFromBackend() {
         }
         m_dictPath->setText(readString(g2p, "dictPath"));
         m_dictPath->setEnabled(engine == QStringLiteral("dictionary"));
+    }
+
+    const QJsonObject faConfig = settingsData["faConfig"].toObject();
+    {
+        m_faNonSpeechPh->setText(readString(faConfig, "nonSpeechPh", QStringLiteral("AP, SP")));
+    }
+
+    const QJsonObject pitchConfig = settingsData["pitchConfig"].toObject();
+    {
+        m_uvVocab->setText(readString(pitchConfig, "uvVocab", QStringLiteral("AP, SP, br, sil")));
+        int uvCond = readInt(pitchConfig, "uvWordCond", 1);
+        for (int i = 0; i < m_uvWordCondCombo->count(); ++i) {
+            if (m_uvWordCondCombo->itemData(i).toInt() == uvCond) {
+                m_uvWordCondCombo->setCurrentIndex(i);
+                break;
+            }
+        }
     }
 }
 
@@ -834,6 +862,14 @@ QWidget *SettingsPage::createFATab() {
     preloadLayout->addStretch();
     layout->addWidget(preloadGroup);
 
+    auto *nsGroup = new QGroupBox(QStringLiteral("非语音音素"), w);
+    auto *nsLayout = new QFormLayout(nsGroup);
+    m_faNonSpeechPh = new QLineEdit(nsGroup);
+    m_faNonSpeechPh->setPlaceholderText(QStringLiteral("AP, SP"));
+    m_faNonSpeechPh->setToolTip(QStringLiteral("逗号分隔的非语音音素列表，强制对齐时忽略这些音素"));
+    nsLayout->addRow(QStringLiteral("关键字:"), m_faNonSpeechPh);
+    layout->addWidget(nsGroup);
+
     layout->addStretch();
     return w;
 }
@@ -865,6 +901,23 @@ QWidget *SettingsPage::createPitchTab() {
     preloadLayout->addWidget(m_pitchPreloadCount);
     preloadLayout->addStretch();
     layout->addWidget(preloadGroup);
+
+    auto *uvGroup = new QGroupBox(QStringLiteral("GAME 对齐参数"), w);
+    auto *uvLayout = new QFormLayout(uvGroup);
+
+    m_uvVocab = new QLineEdit(uvGroup);
+    m_uvVocab->setPlaceholderText(QStringLiteral("AP, SP, br, sil"));
+    m_uvVocab->setToolTip(QStringLiteral("逗号分隔的无声音素词汇"));
+    uvLayout->addRow(QStringLiteral("无声音素 (uvVocab):"), m_uvVocab);
+
+    m_uvWordCondCombo = new QComboBox(uvGroup);
+    m_uvWordCondCombo->addItem(QStringLiteral("Lead（前置）"), 0);
+    m_uvWordCondCombo->addItem(QStringLiteral("All（全部）"), 1);
+    m_uvWordCondCombo->addItem(QStringLiteral("None（无）"), 2);
+    m_uvWordCondCombo->setToolTip(QStringLiteral("无声音素词汇匹配条件"));
+    uvLayout->addRow(QStringLiteral("UV 词条件:"), m_uvWordCondCombo);
+
+    layout->addWidget(uvGroup);
 
     layout->addStretch();
     return w;
@@ -944,6 +997,7 @@ void SettingsPage::connectDirtySignals() {
     connect(m_faForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_faPreloadEnabled, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_faPreloadCount, &QSpinBox::valueChanged, this, [this]() { markDirty(); });
+    connect(m_faNonSpeechPh, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
 
     connect(m_pitchModelPath, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
     connect(m_pitchForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
@@ -951,6 +1005,8 @@ void SettingsPage::connectDirtySignals() {
     connect(m_midiForceCpu, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_pitchPreloadEnabled, &QCheckBox::toggled, this, &SettingsPage::markDirty);
     connect(m_pitchPreloadCount, &QSpinBox::valueChanged, this, [this]() { markDirty(); });
+    connect(m_uvVocab, &QLineEdit::textChanged, this, &SettingsPage::markDirty);
+    connect(m_uvWordCondCombo, &QComboBox::currentIndexChanged, this, [this]() { markDirty(); });
 }
 
 } // namespace dstools

@@ -57,6 +57,7 @@ private:
     QPushButton *m_faTestBtn = nullptr;
     QCheckBox *m_faPreloadEnabled = nullptr;
     QSpinBox *m_faPreloadCount = nullptr;
+    QLineEdit *m_faNonSpeechPh = nullptr;
 
     QLineEdit *m_pitchModelPath = nullptr;
     QCheckBox *m_pitchForceCpu = nullptr;
@@ -66,6 +67,8 @@ private:
     QPushButton *m_midiTestBtn = nullptr;
     QCheckBox *m_pitchPreloadEnabled = nullptr;
     QSpinBox *m_pitchPreloadCount = nullptr;
+    QLineEdit *m_uvVocab = nullptr;
+    QComboBox *m_uvWordCondCombo = nullptr;
 
     QComboBox *m_languageCombo = nullptr;
     QCheckBox *m_autoSaveEnabled = nullptr;
