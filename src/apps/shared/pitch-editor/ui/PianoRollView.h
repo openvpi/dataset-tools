@@ -109,7 +109,9 @@ private:
 
     // Viewport controller (shared horizontal zoom/scroll)
     dstools::widgets::ViewportController *m_viewport = nullptr;
+    bool m_syncingViewport = false;
     void onViewportChanged(const dstools::widgets::ViewportState &state);
+    void syncToViewport(double startSec, double endSec);
 
     // Data
     std::shared_ptr<DSFile> m_dsFile;
