@@ -1,4 +1,5 @@
 #include <dsfw/PipelineRunner.h>
+#include <dsfw/Log.h>
 #include <dsfw/TaskProcessorRegistry.h>
 #include <dsfw/FormatAdapterRegistry.h>
 
@@ -13,8 +14,10 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
 
         // Create processor
         auto processor = TaskProcessorRegistry::instance().create(step.taskName, step.processorId);
-        if (!processor && !step.optional)
+        if (!processor && !step.optional) {
+            DSFW_LOG_ERROR("pipeline", (std::string("Processor not found: ") + step.processorId.toStdString()).c_str());
             return Result<void>::Error("Processor not found: " + step.processorId.toStdString());
+        }
         if (!processor)
             continue; // optional step, skip
 
@@ -43,6 +46,7 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                     if (!res.ok() && !step.optional) {
                         ctx.status = PipelineContext::Status::Error;
                         ctx.discardReason = QString::fromStdString(res.error());
+                        DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " import failed: " + res.error()).c_str());
                         continue;
                     }
                 }
@@ -61,6 +65,7 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                     continue;
                 ctx.status = PipelineContext::Status::Error;
                 ctx.discardReason = QString::fromStdString(inputRes.error());
+                DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " buildInput failed: " + inputRes.error()).c_str());
                 continue;
             }
 
@@ -77,6 +82,8 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                 rec.errorMessage = QString::fromStdString(outputRes.error());
                 rec.usedConfig = step.config;
                 ctx.stepHistory.push_back(rec);
+
+                DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " " + step.taskName.toStdString() + " failed: " + outputRes.error()).c_str());
                 continue;
             }
 

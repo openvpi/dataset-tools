@@ -8,6 +8,8 @@
 
 #include <dsfw/Log.h>
 
+#include <cpp-pinyin/Pinyin.h>
+
 #include <QCheckBox>
 #include <QDir>
 #include <QFileDialog>
@@ -519,6 +521,10 @@ namespace dstools {
         skipExisting->setChecked(true);
         dlg->addParamWidget(skipExisting);
 
+        auto *autoG2PBox = new QCheckBox(tr("自动 G2P (拼音) 到结果"), dlg);
+        autoG2PBox->setChecked(false);
+        dlg->addParamWidget(autoG2PBox);
+
         dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
 
         auto *asr = m_asr;
@@ -526,15 +532,16 @@ namespace dstools {
         auto *src = source();
         QPointer<MinLabelPage> guard(this);
 
-        connect(dlg, &BatchProcessDialog::started, this, [dlg, asr, asrAlive, src, ids, guard, skipExisting]() {
+        connect(dlg, &BatchProcessDialog::started, this, [dlg, asr, asrAlive, src, ids, guard, skipExisting, autoG2PBox]() {
             if (!guard) {
                 dlg->finish(0, 0, 0);
                 return;
             }
             guard->m_asrRunning = true;
             bool skip = skipExisting->isChecked();
+            bool autoG2P = autoG2PBox->isChecked();
 
-            (void) QtConcurrent::run([dlg, asr, asrAlive, src, ids, guard, skip]() {
+            (void) QtConcurrent::run([dlg, asr, asrAlive, src, ids, guard, skip, autoG2P]() {
                 int processed = 0;
                 int skipped = 0;
                 int errors = 0;
@@ -589,9 +596,12 @@ namespace dstools {
                         QString text = QString::fromUtf8(msg);
                         QMetaObject::invokeMethod(
                             guard.data(),
-                            [guard, sliceId, text]() {
-                                if (guard)
+                            [guard, sliceId, text, autoG2P]() {
+                                if (guard) {
                                     guard->setAsrResult(sliceId, text);
+                                    if (autoG2P)
+                                        guard->batchG2P(sliceId);
+                                }
                             },
                             Qt::QueuedConnection);
                         QMetaObject::invokeMethod(
@@ -603,9 +613,10 @@ namespace dstools {
                         ++processed;
                     } else {
                         ++errors;
+                        DSFW_LOG_ERROR("infer", (std::string("Batch ASR failed: ") + sliceId.toStdString() + " - " + msg).c_str());
                         QMetaObject::invokeMethod(
                             dlg,
-                            [dlg, sliceId]() { dlg->appendLog(tr("[ERROR] %1: recognition failed").arg(sliceId)); },
+                            [dlg, sliceId, msg = QString::fromStdString(msg)]() { dlg->appendLog(tr("[ERROR] %1: recognition failed - %2").arg(sliceId, msg)); },
                             Qt::QueuedConnection);
                     }
                     ++idx;
@@ -681,6 +692,76 @@ namespace dstools {
         }
 
         updateProgress();
+    }
+
+    void MinLabelPage::batchG2P(const QString &sliceId) {
+        if (!source())
+            return;
+
+        auto result = source()->loadSlice(sliceId);
+        if (!result)
+            return;
+
+        auto doc = std::move(result.value());
+
+        // Collect text from raw_text layer
+        QStringList rawParts;
+        for (const auto &layer : doc.layers) {
+            if (layer.name == QStringLiteral("raw_text")) {
+                for (const auto &b : layer.boundaries) {
+                    if (!b.text.isEmpty())
+                        rawParts.append(b.text);
+                }
+                break;
+            }
+        }
+        if (rawParts.isEmpty())
+            return;
+
+        QString rawText = rawParts.join(QStringLiteral(" "));
+
+        // Run Pinyin G2P
+        static Pinyin::Pinyin g2pMan;
+        const auto pinyinStr = g2pMan.hanziToPinyin(
+            rawText.toUtf8().toStdString(),
+            Pinyin::ManTone::TONE3,
+            Pinyin::Error::Default, false, false);
+
+        const QString phonemeStr = QString::fromStdString(pinyinStr.toStdStr()).trimmed();
+        if (phonemeStr.isEmpty())
+            return;
+
+        // Write grapheme layer
+        IntervalLayer *graphemeLayer = nullptr;
+        for (auto &layer : doc.layers) {
+            if (layer.name == QStringLiteral("grapheme")) {
+                graphemeLayer = &layer;
+                break;
+            }
+        }
+        if (!graphemeLayer) {
+            doc.layers.push_back({});
+            graphemeLayer = &doc.layers.back();
+            graphemeLayer->name = QStringLiteral("grapheme");
+            graphemeLayer->type = QStringLiteral("text");
+        }
+
+        graphemeLayer->boundaries.clear();
+        const auto parts = phonemeStr.split(QChar(' '), Qt::SkipEmptyParts);
+        int id = 1;
+        for (const auto &part : parts) {
+            Boundary b;
+            b.id = id++;
+            b.text = part;
+            graphemeLayer->boundaries.push_back(std::move(b));
+        }
+
+        (void) source()->saveSlice(sliceId, doc);
+
+        if (sliceId == currentSliceId()) {
+            m_editor->loadData(phonemeStr, m_editor->rawText());
+            m_dirty = true;
+        }
     }
 
     // ── LyricFA ──────────────────────────────────────────────────────────────────

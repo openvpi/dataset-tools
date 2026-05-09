@@ -11,6 +11,7 @@
 #include <DSFile.h>
 
 #include <QCheckBox>
+#include <QJsonObject>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSplitter>
@@ -645,7 +646,7 @@ void PitchLabelerPage::runPitchExtraction(const QString &sliceId) {
                     QStringLiteral("音高提取完成"), 3000);
             } else {
                 QMessageBox::warning(guard.data(), QStringLiteral("提取音高"),
-                                     QStringLiteral("音高提取失败。"));
+                                     QStringLiteral("音高提取失败") + (result ? QString() : QString::fromStdString(": " + result.error())));
             }
         }, Qt::QueuedConnection);
     });
@@ -685,6 +686,30 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId,
         try {
             if (useAlign && capturedInput) {
                 Game::AlignOptions options;
+
+                if (settingsBackend()) {
+                    auto cfg = settingsBackend()->load()["pitchConfig"].toObject();
+                    if (cfg.contains("uvVocab") && cfg["uvVocab"].isString()) {
+                        QString uvStr = cfg["uvVocab"].toString();
+                        std::set<std::string> uvVocab;
+                        const auto parts = uvStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
+                        for (const auto &p : parts) {
+                            std::string trimmed = p.trimmed().toStdString();
+                            if (!trimmed.empty())
+                                uvVocab.insert(trimmed);
+                        }
+                        if (!uvVocab.empty())
+                            options.uvVocab = uvVocab;
+                    }
+                    if (cfg.contains("uvWordCond") && cfg["uvWordCond"].isDouble()) {
+                        int cond = cfg["uvWordCond"].toInt();
+                        if (cond == 1)
+                            options.uvWordCond = Game::UvWordCond::All;
+                        else if (cond == 2)
+                            options.uvWordCond = Game::UvWordCond::All;
+                    }
+                }
+
                 std::vector<Game::AlignedNote> alignedNotes;
                 capturedInput->wavPath = std::filesystem::path(audioPath.toStdWString());
                 result = game->align(*capturedInput, options, alignedNotes);
@@ -733,7 +758,7 @@ void PitchLabelerPage::runMidiTranscription(const QString &sliceId,
                     QStringLiteral("MIDI 转录完成"), 3000);
             } else {
                 QMessageBox::warning(guard.data(), QStringLiteral("提取 MIDI"),
-                                     QStringLiteral("MIDI 转录失败。"));
+                                     QStringLiteral("MIDI 转录失败") + (result ? QString() : QString::fromStdString(": " + result.error())));
             }
         }, Qt::QueuedConnection);
     });
@@ -1051,16 +1076,81 @@ void PitchLabelerPage::onBatchExtract() {
                             if (guard)
                                 guard->applyPitchResult(sliceId, f0Mhz, timestep);
                         }, Qt::QueuedConnection);
+                    } else {
+                        DSFW_LOG_ERROR("infer", (std::string("Batch pitch extraction failed: ") + sliceId.toStdString() + " - " + (result ? "empty results" : result.error())).c_str());
+                        QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                            dlg->appendLog(QStringLiteral("[ERROR] %1: pitch extraction failed").arg(sliceId));
+                        }, Qt::QueuedConnection);
                     }
                 }
 
                 if (doMidi && game) {
+                    // Try align mode if phoneme data exists
+                    Game::AlignInput alignInput;
+                    bool useAlign = false;
+
+                    auto loadResult = src->loadSlice(sliceId);
+                    if (loadResult) {
+                        const auto &doc = loadResult.value();
+                        for (const auto &layer : doc.layers) {
+                            if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive) && !layer.boundaries.empty()) {
+                                const auto &bnd = layer.boundaries;
+                                for (size_t i = 0; i < bnd.size(); ++i) {
+                                    if (!bnd[i].text.isEmpty()) {
+                                        alignInput.phSeq.push_back(bnd[i].text.toStdString());
+                                        TimePos dur = (i + 1 < bnd.size())
+                                            ? bnd[i + 1].pos - bnd[i].pos
+                                            : secToUs(audioDurationSec(doc)) - bnd[i].pos;
+                                        alignInput.phDur.push_back(static_cast<float>(usToSec(dur)));
+                                    }
+                                }
+                                if (!alignInput.phSeq.empty()) {
+                                    useAlign = true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
                     std::vector<Game::GameNote> notes;
-                    auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
-                    if (result) {
+                    dstools::Result<void> midiResult;
+
+                    if (useAlign) {
+                        alignInput.wavPath = std::filesystem::path(audioPath.toStdWString());
+                        Game::AlignOptions options;
+                        std::vector<Game::AlignedNote> alignedNotes;
+                        midiResult = game->align(alignInput, options, alignedNotes);
+                        if (midiResult) {
+                            float currentTime = 0.0f;
+                            for (const auto &an : alignedNotes) {
+                                Game::GameNote gn;
+                                bool isRest = an.name.empty() || an.name == "rest";
+                                gn.voiced = !isRest;
+                                if (!isRest) {
+                                    auto parsed = dstools::parseNoteName(QString::fromStdString(an.name));
+                                    gn.pitch = parsed.valid ? parsed.midiNumber : 60.0f;
+                                } else {
+                                    gn.pitch = 0.0f;
+                                }
+                                gn.onset = currentTime;
+                                gn.duration = static_cast<float>(an.duration);
+                                notes.push_back(gn);
+                                currentTime += static_cast<float>(an.duration);
+                            }
+                        }
+                    } else {
+                        midiResult = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+                    }
+
+                    if (midiResult) {
                         QMetaObject::invokeMethod(guard.data(), [guard, sliceId, notes = std::move(notes)]() {
                             if (guard)
                                 guard->applyMidiResult(sliceId, notes);
+                        }, Qt::QueuedConnection);
+                    } else {
+                        DSFW_LOG_ERROR("infer", (std::string("Batch MIDI transcription failed: ") + sliceId.toStdString() + " - " + midiResult.error()).c_str());
+                        QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
+                            dlg->appendLog(QStringLiteral("[ERROR] %1: MIDI transcription failed").arg(sliceId));
                         }, Qt::QueuedConnection);
                     }
                 }
