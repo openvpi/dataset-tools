@@ -207,13 +207,13 @@ void SettingsPage::applySettings() {
         QString lang = langItem->text().trimmed();
         QJsonObject langCfg;
         auto *cellWidget1 = m_phNumTable->cellWidget(r, 1);
-        if (auto *le = qobject_cast<QLineEdit *>(cellWidget1))
+        if (auto *le = searchLineEditInPathCell(cellWidget1))
             langCfg["dictPath"] = le->text().trimmed();
         auto *cellWidget2 = m_phNumTable->cellWidget(r, 2);
-        if (auto *le = qobject_cast<QLineEdit *>(cellWidget2))
+        if (auto *le = searchLineEditInPathCell(cellWidget2))
             langCfg["vowelsPath"] = le->text().trimmed();
         auto *cellWidget3 = m_phNumTable->cellWidget(r, 3);
-        if (auto *le = qobject_cast<QLineEdit *>(cellWidget3))
+        if (auto *le = searchLineEditInPathCell(cellWidget3))
             langCfg["consonantsPath"] = le->text().trimmed();
         phNumLangs[lang] = langCfg;
     }
@@ -372,16 +372,22 @@ void SettingsPage::loadFromBackend() {
         int r = m_phNumTable->rowCount() - 1;
         auto *langItem = new QTableWidgetItem(lang);
         m_phNumTable->setItem(r, 0, langItem);
-        m_phNumTable->setCellWidget(r, 1, new QLineEdit(dictPath));
-        m_phNumTable->setCellWidget(r, 2, new QLineEdit(vowelsPath));
-        m_phNumTable->setCellWidget(r, 3, new QLineEdit(consonantsPath));
+        m_phNumTable->setCellWidget(r, 1, createPhNumPathCell());
+        m_phNumTable->setCellWidget(r, 2, createPhNumPathCell());
+        m_phNumTable->setCellWidget(r, 3, createPhNumPathCell());
+        if (auto *le = searchLineEditInPathCell(m_phNumTable->cellWidget(r, 1)))
+            le->setText(dictPath);
+        if (auto *le = searchLineEditInPathCell(m_phNumTable->cellWidget(r, 2)))
+            le->setText(vowelsPath);
+        if (auto *le = searchLineEditInPathCell(m_phNumTable->cellWidget(r, 3)))
+            le->setText(consonantsPath);
     }
     if (m_phNumTable->rowCount() == 0) {
         m_phNumTable->insertRow(0);
         m_phNumTable->setItem(0, 0, new QTableWidgetItem(QStringLiteral("zh")));
-        m_phNumTable->setCellWidget(0, 1, new QLineEdit);
-        m_phNumTable->setCellWidget(0, 2, new QLineEdit);
-        m_phNumTable->setCellWidget(0, 3, new QLineEdit);
+        m_phNumTable->setCellWidget(0, 1, createPhNumPathCell());
+        m_phNumTable->setCellWidget(0, 2, createPhNumPathCell());
+        m_phNumTable->setCellWidget(0, 3, createPhNumPathCell());
     }
 }
 
@@ -972,6 +978,35 @@ QWidget *SettingsPage::createPitchTab() {
     return w;
 }
 
+QWidget *SettingsPage::createPhNumPathCell() {
+    auto *container = new QWidget;
+    auto *layout = new QHBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(2);
+    auto *edit = new QLineEdit(container);
+    layout->addWidget(edit, 1);
+    auto *btn = new QPushButton(QStringLiteral("..."), container);
+    btn->setFixedWidth(24);
+    btn->setToolTip(QStringLiteral("浏览文件"));
+    layout->addWidget(btn);
+    connect(btn, &QPushButton::clicked, container, [edit]() {
+        const QString path = QFileDialog::getOpenFileName(nullptr,
+            QStringLiteral("选择文件"), QString(), QStringLiteral("文本文件 (*.txt);;所有文件 (*)"));
+        if (!path.isEmpty())
+            edit->setText(path);
+    });
+    connect(edit, &QLineEdit::textChanged, container, [this]() { markDirty(); });
+    return container;
+}
+
+QLineEdit *SettingsPage::searchLineEditInPathCell(QWidget *cellWidget) const {
+    if (!cellWidget)
+        return nullptr;
+    if (auto *le = qobject_cast<QLineEdit *>(cellWidget))
+        return le;
+    return cellWidget->findChild<QLineEdit *>();
+}
+
 QWidget *SettingsPage::createPhNumTab() {
     auto *w = new QWidget(this);
     auto *layout = new QVBoxLayout(w);
@@ -995,9 +1030,9 @@ QWidget *SettingsPage::createPhNumTab() {
 
     m_phNumTable->insertRow(0);
     m_phNumTable->setItem(0, 0, new QTableWidgetItem(QStringLiteral("zh")));
-    m_phNumTable->setCellWidget(0, 1, new QLineEdit);
-    m_phNumTable->setCellWidget(0, 2, new QLineEdit);
-    m_phNumTable->setCellWidget(0, 3, new QLineEdit);
+    m_phNumTable->setCellWidget(0, 1, createPhNumPathCell());
+    m_phNumTable->setCellWidget(0, 2, createPhNumPathCell());
+    m_phNumTable->setCellWidget(0, 3, createPhNumPathCell());
 
     layout->addWidget(m_phNumTable);
 
@@ -1020,9 +1055,9 @@ QWidget *SettingsPage::createPhNumTab() {
         int r = m_phNumTable->rowCount();
         m_phNumTable->insertRow(r);
         m_phNumTable->setItem(r, 0, new QTableWidgetItem({}));
-        m_phNumTable->setCellWidget(r, 1, new QLineEdit);
-        m_phNumTable->setCellWidget(r, 2, new QLineEdit);
-        m_phNumTable->setCellWidget(r, 3, new QLineEdit);
+        m_phNumTable->setCellWidget(r, 1, createPhNumPathCell());
+        m_phNumTable->setCellWidget(r, 2, createPhNumPathCell());
+        m_phNumTable->setCellWidget(r, 3, createPhNumPathCell());
         markDirty();
     });
     connect(m_phNumRemoveBtn, &QPushButton::clicked, this, [this]() {

@@ -98,6 +98,10 @@ private:
     QWidget *createPreprocessTab();
     QWidget *createPhNumTab();
 
+    QWidget *createPhNumPathCell();
+
+    QLineEdit *searchLineEditInPathCell(QWidget *cellWidget) const;
+
     QWidget *createModelConfigRow(const QString &label, QLineEdit *&pathEdit, QCheckBox *&forceCpu,
                                   QPushButton *&testBtn);
     QWidget *createOnnxModelConfigRow(const QString &label, QLineEdit *&pathEdit, QCheckBox *&forceCpu,
