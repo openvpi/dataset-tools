@@ -17,6 +17,7 @@
 #include <ui/SliceBoundaryModel.h>
 
 #include <AudioVisualizerContainer.h>
+#include <ChartPageBase.h>
 #include <SliceTierLabel.h>
 
 #include <map>
@@ -25,15 +26,9 @@ namespace dstools {
 
 class AudioFileListPanel;
 
-namespace phonemelabeler {
-class WaveformChartPanel;
-class SpectrogramChartPanel;
-class PowerChartPanel;
-} // namespace phonemelabeler
-
 class SliceListPanel;
 
-class SlicerPage : public QWidget, public labeler::IPageActions, public labeler::IPageLifecycle {
+class SlicerPage : public ChartPageBase, public labeler::IPageActions, public labeler::IPageLifecycle {
     Q_OBJECT
     Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
 
@@ -52,18 +47,12 @@ public:
 private:
     QUndoStack *m_undoStack = nullptr;
 
-    dstools::widgets::ViewportController *m_viewport = nullptr;
-    AudioVisualizerContainer *m_container = nullptr;
     SliceTierLabel *m_tierLabel = nullptr;
 
     phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;
 
-    dstools::widgets::PlayWidget *m_playWidget = nullptr;
-
     AudioFileListPanel *m_audioFileList = nullptr;
     QSplitter *m_hSplitter = nullptr;
-    phonemelabeler::WaveformChartPanel *m_waveformChartPanel = nullptr;
-    phonemelabeler::SpectrogramChartPanel *m_spectrogramChartPanel = nullptr;
     SliceListPanel *m_sliceListPanel = nullptr;
 
     std::vector<float> m_samples;

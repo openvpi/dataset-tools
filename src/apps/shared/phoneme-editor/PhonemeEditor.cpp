@@ -20,18 +20,15 @@ namespace dstools {
 namespace phonemelabeler {
 
 PhonemeEditor::PhonemeEditor(QWidget *parent)
-    : QWidget(parent),
+    : ChartPageBase(QStringLiteral("PhonemeEditor"), parent),
       m_document(new TextGridDocument(this)),
       m_undoStack(new QUndoStack(this)),
-      m_playWidget(new dstools::widgets::PlayWidget(this)),
       m_renderer(new WaveformRenderer(this))
 {
     buildActions();
     buildToolbar();
     buildLayout();
     connectSignals();
-
-    m_playWidget->hide();
 }
 
 // ---- Configuration ----
@@ -62,18 +59,17 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
             m_container->fitToWindow();
         }
 
-        m_waveformChartPanel->setAudioData(samples, sampleRate);
-        m_powerChartPanel->setAudioData(samples, sampleRate);
-        m_spectrogramChartPanel->setAudioData(samples, sampleRate);
+        m_waveformChart->setAudioData(samples, sampleRate);
+        m_powerChart->setAudioData(samples, sampleRate);
+        m_spectrogramChart->setAudioData(samples, sampleRate);
         m_container->setAudioData(samples, sampleRate);
     }
 
     m_playWidget->openFile(audioPath);
-
-    m_waveformChartPanel->setBoundaryModel(m_document);
+    m_waveformChart->setBoundaryModel(m_document);
     m_tierEditWidget->setDocument(m_document);
-    m_powerChartPanel->setBoundaryModel(m_document);
-    m_spectrogramChartPanel->setBoundaryModel(m_document);
+    m_powerChart->setBoundaryModel(m_document);
+    m_spectrogramChart->setBoundaryModel(m_document);
     m_entryListPanel->setDocument(m_document);
 
     emit documentLoaded();
@@ -111,7 +107,7 @@ void PhonemeEditor::setSpectrogramVisible(bool visible) {
 }
 
 void PhonemeEditor::setSpectrogramColorStyle(const QString &styleName) {
-    m_spectrogramChartPanel->setColorPalette(SpectrogramColorPalette::fromName(styleName));
+    m_spectrogramChart->setColorPalette(SpectrogramColorPalette::fromName(styleName));
 }
 
 QByteArray PhonemeEditor::saveSplitterState() const {
@@ -175,13 +171,13 @@ void PhonemeEditor::buildActions() {
     });
 
     m_actZoomIn = new QAction(tr("Zoom &In"), this);
-    connect(m_actZoomIn, &QAction::triggered, this, &PhonemeEditor::onZoomIn);
+    connect(m_actZoomIn, &QAction::triggered, this, &ChartPageBase::onZoomIn);
 
     m_actZoomOut = new QAction(tr("Zoom &Out"), this);
-    connect(m_actZoomOut, &QAction::triggered, this, &PhonemeEditor::onZoomOut);
+    connect(m_actZoomOut, &QAction::triggered, this, &ChartPageBase::onZoomOut);
 
     m_actZoomReset = new QAction(tr("&Reset Zoom"), this);
-    connect(m_actZoomReset, &QAction::triggered, this, &PhonemeEditor::onZoomReset);
+    connect(m_actZoomReset, &QAction::triggered, this, &ChartPageBase::onZoomReset);
 
     m_actToggleBinding = new QAction(tr("&Boundary Binding"), this);
     m_actToggleBinding->setCheckable(true);
@@ -298,28 +294,19 @@ void PhonemeEditor::buildLayout() {
     m_mainSplitter = new QSplitter(Qt::Horizontal, this);
     mainLayout->addWidget(m_mainSplitter);
 
-    m_container = new AudioVisualizerContainer(QStringLiteral("PhonemeEditor"), this);
-    m_container->setDefaultResolution(800);
-    m_viewport = m_container->viewport();
-    m_container->setPlayWidget(m_playWidget);
+    setupContainerAndPlayWidget(800);
 
     m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_container->dragController(), m_container);
     m_container->setEditorWidget(m_tierEditWidget);
 
-    m_waveformChartPanel = new WaveformChartPanel(m_viewport, m_container);
-    m_waveformChartPanel->setUndoStack(m_undoStack);
-    m_waveformChartPanel->setPlayWidget(m_playWidget);
-    m_container->addChart(QStringLiteral("waveform"), m_waveformChartPanel, 1, 1, 2.0);
+    addWaveformChart(1, 1, 2.0);
+    m_waveformChart->setUndoStack(m_undoStack);
 
-    m_powerChartPanel = new PowerChartPanel(m_viewport, m_container);
-    m_powerChartPanel->setUndoStack(m_undoStack);
-    m_powerChartPanel->setPlayWidget(m_playWidget);
-    m_container->addChart(QStringLiteral("power"), m_powerChartPanel, 2, 1, 3.0);
+    addPowerChart(2, 1, 3.0);
+    m_powerChart->setUndoStack(m_undoStack);
 
-    m_spectrogramChartPanel = new SpectrogramChartPanel(m_viewport, m_container);
-    m_spectrogramChartPanel->setUndoStack(m_undoStack);
-    m_spectrogramChartPanel->setPlayWidget(m_playWidget);
-    m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramChartPanel, 3, 1, 5.0);
+    addSpectrogramChart(3, 1, 5.0);
+    m_spectrogramChart->setUndoStack(m_undoStack);
 
     m_container->setBoundaryModel(m_document);
 
@@ -346,9 +333,9 @@ void PhonemeEditor::buildLayout() {
     m_tierLabelPanel->setPixelWidth(m_container->width());
     m_tierLabelPanel->hide();
 
-    m_waveformChartPanel->setBoundaryModel(m_document);
-    m_powerChartPanel->setBoundaryModel(m_document);
-    m_spectrogramChartPanel->setBoundaryModel(m_document);
+    m_waveformChart->setBoundaryModel(m_document);
+    m_powerChart->setBoundaryModel(m_document);
+    m_spectrogramChart->setBoundaryModel(m_document);
 
     auto *boundaryOverlay = m_container->boundaryOverlay();
     if (boundaryOverlay) {
@@ -429,17 +416,22 @@ void PhonemeEditor::connectSignals() {
         m_actRedo->setText(tr("&Redo") + (text.isEmpty() ? QString() : (" (" + text + ")")));
     });
 
+    connect(this, &ChartPageBase::zoomChanged, this, [this](int) {
+        m_actZoomIn->setEnabled(m_viewport->canZoomIn());
+        m_actZoomOut->setEnabled(m_viewport->canZoomOut());
+    });
+
     // Viewport connections are managed by AudioVisualizerContainer via
     // connectViewportToWidget (called by addChart/setEditorWidget) and
     // the constructor (TimeRuler, BoundaryOverlay, MiniMapScrollBar).
     // Direct connections here would cause duplicate setViewport() calls.
 
     // Sync menu action checked state with widget visibility (for external visibility changes)
-    connect(m_powerChartPanel, &PowerChartPanel::visibleStateChanged, this, [this](bool visible) {
+    connect(m_powerChart, &PowerChartPanel::visibleStateChanged, this, [this](bool visible) {
         m_actTogglePower->setChecked(visible);
         emit powerVisibilityChanged(visible);
     });
-    connect(m_spectrogramChartPanel, &SpectrogramChartPanel::visibleStateChanged, this, [this](bool visible) {
+    connect(m_spectrogramChart, &SpectrogramChartPanel::visibleStateChanged, this, [this](bool visible) {
         m_actToggleSpectrogram->setChecked(visible);
         emit spectrogramVisibilityChanged(visible);
     });
@@ -508,18 +500,18 @@ void PhonemeEditor::connectSignals() {
         if (newIndex < 0) newIndex = 0;
         m_entryListPanel->selectEntry(newIndex);
     };
-    connect(m_waveformChartPanel, &WaveformChartPanel::entryScrollRequested, this, scrollEntry);
-    connect(m_powerChartPanel, &PowerChartPanel::entryScrollRequested, this, scrollEntry);
-    connect(m_spectrogramChartPanel, &SpectrogramChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_waveformChart, &WaveformChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_powerChart, &PowerChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_spectrogramChart, &SpectrogramChartPanel::entryScrollRequested, this, scrollEntry);
 
     auto *boundaryOverlay2 = m_container->boundaryOverlay();
 
-    // Hover/drag state → boundary overlay
-    connect(m_waveformChartPanel, &WaveformChartPanel::hoveredBoundaryChanged,
+    // Hover/drag state -> boundary overlay
+    connect(m_waveformChart, &WaveformChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
-    connect(m_powerChartPanel, &PowerChartPanel::hoveredBoundaryChanged,
+    connect(m_powerChart, &PowerChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
-    connect(m_spectrogramChartPanel, &SpectrogramChartPanel::hoveredBoundaryChanged,
+    connect(m_spectrogramChart, &SpectrogramChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
 
     // Drag started/finished → boundary overlay highlight + real-time UI refresh
@@ -544,35 +536,11 @@ void PhonemeEditor::connectSignals() {
 }
 
 void PhonemeEditor::updateAllBoundaryOverlays() {
-    m_waveformChartPanel->update();
-    m_powerChartPanel->update();
-    m_spectrogramChartPanel->update();
+    m_waveformChart->update();
+    m_powerChart->update();
+    m_spectrogramChart->update();
     if (auto *bo = m_container->boundaryOverlay())
         bo->update();
-}
-
-void PhonemeEditor::onZoomIn() {
-    m_viewport->zoomIn(m_viewport->viewCenter());
-    m_container->adjustViewRangeToResolution();
-    m_actZoomIn->setEnabled(m_viewport->canZoomIn());
-    m_actZoomOut->setEnabled(m_viewport->canZoomOut());
-    emit zoomChanged(m_viewport->resolution());
-}
-
-void PhonemeEditor::onZoomOut() {
-    m_viewport->zoomOut(m_viewport->viewCenter());
-    m_container->adjustViewRangeToResolution();
-    m_actZoomIn->setEnabled(m_viewport->canZoomIn());
-    m_actZoomOut->setEnabled(m_viewport->canZoomOut());
-    emit zoomChanged(m_viewport->resolution());
-}
-
-void PhonemeEditor::onZoomReset() {
-    m_viewport->setResolution(800);
-    m_container->updateViewRangeFromResolution();
-    m_actZoomIn->setEnabled(m_viewport->canZoomIn());
-    m_actZoomOut->setEnabled(m_viewport->canZoomOut());
-    emit zoomChanged(m_viewport->resolution());
 }
 
 void PhonemeEditor::onPlayPause() {

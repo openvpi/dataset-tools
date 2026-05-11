@@ -1025,6 +1025,36 @@ void AudioVisualizerContainer::removeTierLabelArea();
 
 ---
 
+## D-53：去掉 kResolutionTable，改为无极缩放（整十取整）
+
+**决策**：彻底移除 `kResolutionTable` 离散分辨率表，改为连续整数 resolution ≥ 10，缩放步进取整十。
+
+**根因**：
+- 旧 `kResolutionTable = {10, 20, 30, ..., 44100}` 写死了 22 个离散档位，每个 zoom 步进只能在表中选择
+- 表末项 44100 spx 限制了最大缩小程度（1200px × 1s/px = 最多 20 分钟），超长音频无法一屏看完
+- `fitToWindow()` 需要从表中找最接近的 entry，导致步进粗糙、不能精确适配窗口宽度
+- D-26 原文第 2 条已指出 "去掉固定 resolution 列表，改为连续范围 + 整十取整"，但实际实现中仍保留了该表
+
+**新方案**：
+1. **Resolution** 为任意整十数（≥ 10），`roundToNearest10(x)`
+2. **缩放因子** `kZoomFactor = 1.5`：每步 ×1.5（zoom out）或 ÷1.5（zoom in），结果四舍五入取整十
+3. **`canZoomIn()`**: `m_resolution > kMinResolution (10)`
+4. **`canZoomOut()`**: 始终 `true`（无极缩放，无上限）
+5. **`clampAndEmit()`**: 移除了 `!canZoomOut()` 自动 expand 逻辑（不再需要——用户可无限缩小直至视口覆盖全音频）
+6. **`fitToWindow()`**: 直接 `round(fitResolution / 10) * 10`，不再查表
+
+**缩放步进示例**（从 10 开始 zoomOut）：20 → 30 → 50 → 80 → 120 → 180 → 270 → 410 → 620 → 930 → 1400 → 2100 → 3150 → 4730 → 7100 → ...
+
+**影响文件**：
+| 文件 | 变更 |
+|------|------|
+| `ViewportController.h` | 移除 `resolutionTable()`、`findResolutionIndex()`、`m_resolutionIndex`；新增 `kMinResolution = 10`；`canZoomOut()` const |
+| `ViewportController.cpp` | 移除 `kResolutionTable`；新增 `roundToNearest10()`、`kZoomFactor`；重写 `zoomIn/zoomOut/setResolution/canZoomIn/canZoomOut` |
+| `AudioVisualizerContainer.cpp` | `fitToWindow()` 直接计算 bestRes，不再查表 |
+| `MiniMapScrollBar.cpp` | 边缘拖拽分辨率 clamp 改为 `std::max(kMinResolution, ...)` |
+
+---
+
 ## ADR 冲突解决
 
 | 冲突项 | 旧决策 | 新决策（以此为准） |

@@ -31,15 +31,17 @@
 | 97 | 统一路径库 PathUtils 增强（P-10） | **已完成** |
 | 98 | 废弃 dstools::toFsPath / DsDocument::toFsPath（P-10） | **已完成** |
 | 99 | JsonHelper 内部 pathToUtf8 改用 PathUtils::toUtf8（P-10） | **已完成** |
-| 116 | fa_grapheme 层改名为 grapheme（D-44） | **待执行** |
-| 117 | HFA 结果使用 fill_small_gaps + add_SP 填充微小空隙（D-45） | **待执行** |
-| 118 | 刻度条系统绑定 ViewportController resolution（D-46） | **待执行** |
-| 119 | PitchLabel 缩放限制最大长度为音频时长（D-47） | **待执行** |
-| 120 | 修复音高线 F0Curve timestep 单位转换导致不显示（D-48/BUG-33） | **待执行** |
-| 121 | PitchLabel MIDI 优先 align 模式，无 ph_dur 时弹窗降级（D-49） | **待执行** |
-| 122 | 各步骤特殊关键字在设置页面体现（D-50） | **待执行** |
-| 123 | 分析修复各应用控件实时刷新问题（D-51） | **待执行** |
-| 124 | 整理归纳文档，删去过时内容，合理分类归位（D-52） | **待执行** |
+| 116 | fa_grapheme 层改名为 grapheme（D-44） | **已完成** |
+| 117 | HFA 结果使用 fill_small_gaps + add_SP 填充微小空隙（D-45） | **已完成** |
+| 118 | 刻度条系统绑定 ViewportController resolution（D-46） | **已完成** |
+| 119 | PitchLabel 缩放限制最大长度为音频时长（D-47） | **已完成** |
+| 120 | 修复音高线 F0Curve timestep 单位转换导致不显示（D-48/BUG-33） | **已完成** |
+| 121 | PitchLabel MIDI 优先 align 模式，无 ph_dur 时弹窗降级（D-49） | **已完成** |
+| 122 | 各步骤特殊关键字在设置页面体现（D-50） | **已完成** |
+| 123 | 分析修复各应用控件实时刷新问题（D-51） | **已完成** |
+| 124 | 整理归纳文档，删去过时内容，合理分类归位（D-52） | **已完成** |
+| 125 | 统一视图框架——ChartCoordinator+IChartViewport+UnifiedBoundaryOverlay（D-53） | **已完成** |
+| 126 | 去掉 kResolutionTable，改为无极缩放（整十取整，kZoomFactor=1.5）（D-53） | **已完成** |
 
 ---
 
@@ -47,15 +49,29 @@
 
 | 任务 | 关联 | 优先级 | 状态 |
 |------|------|--------|------|
-| T-16: fa_grapheme 改名为 grapheme | ADR-116, D-44 | 高 | ⬜ 待执行 |
-| T-17: HFA fill_small_gaps + add_SP 填充微小空隙 | ADR-117, D-45 | 高 | ⬜ 待执行 |
-| T-18: 重新设计刻度条系统——绑定 resolution | ADR-118, D-46 | 高 | ⬜ 待执行 |
-| T-19: PitchLabel 缩放限制最大长度 | ADR-119, D-47 | 高 | ⬜ 待执行 |
-| T-20: 修复音高线 F0Curve timestep 单位转换 bug | ADR-120, D-48, BUG-33 | 高 | ⬜ 待执行 |
-| T-21: PitchLabel MIDI align 模式 + ph_dur 弹窗 | ADR-121, D-49 | 高 | ⬜ 待执行 |
-| T-22: 各步骤特殊关键字在设置页面体现 | ADR-122, D-50 | 中 | ⬜ 待执行 |
-| T-23: 分析修复各应用控件实时刷新 | ADR-123, D-51 | 中 | ⬜ 待执行 |
-| T-24: 整理归纳文档 | ADR-124, D-52 | 中 | ⬜ 待执行 |
+| T-16: fa_grapheme 改名为 grapheme | ADR-116, D-44 | 高 | ✅ 已完成 |
+| T-17: HFA fill_small_gaps + add_SP 填充微小空隙 | ADR-117, D-45 | 高 | ✅ 已完成 |
+| T-18: 重新设计刻度条系统——绑定 resolution | ADR-118, D-46 | 高 | ✅ 已完成 |
+| T-19: PitchLabel 缩放限制最大长度 | ADR-119, D-47 | 高 | ✅ 已完成 |
+| T-20: 修复音高线 F0Curve timestep 单位转换 bug | ADR-120, D-48, BUG-33 | 高 | ✅ 已完成 |
+| T-21: PitchLabel MIDI align 模式 + ph_dur 弹窗 | ADR-121, D-49 | 高 | ✅ 已完成 |
+| T-22: 各步骤特殊关键字在设置页面体现 | ADR-122, D-50 | 中 | ✅ 已完成 |
+| T-23: 分析修复各应用控件实时刷新 | ADR-123, D-51 | 中 | ✅ 已完成 |
+| T-24: 整理归纳文档 | ADR-124, D-52 | 中 | ✅ 已完成 |
+
+### 统一视图框架 (T-UVF)
+
+| 任务 | 关联 | 优先级 | 状态 |
+|------|------|--------|------|
+| T-UVF-01: ChartCoordinator 增加 notifyViewportResized, requestFullRefresh, setDefaultResolution, fitToWindow | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-02: UnifiedRulerWidget 完善 findLevel 分级表 + formatLabel | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-03: MiniMapScrollBar 改造为 IChartViewportListener | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-04: ChartWidget::drawBoundaryOverlay 改为遍历所有层贯穿线 | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-05: AudioVisualizerContainer 使用 UnifiedRulerWidget + 移除 PlayheadOverlay + MiniMap listener | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-07: UnifiedBoundaryOverlay 移除播放游标绘制 | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-10: Slicer page 使用 WaveformChart + SpectrogramChart | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-11: Phoneme page 使用 WaveformChart + PowerChart + SpectrogramChart | ADR-125, D-53 | 高 | ✅ 已完成 |
+| T-UVF-15: 删除废弃的旧 widget 文件和 PlayheadOverlay | ADR-125, D-53 | 高 | ✅ 已完成 |
 
 ### 已完成任务
 
@@ -88,4 +104,4 @@
 | 任务 | 原因 |
 |------|------|
 | ~~T-05: MinLabel/Phoneme 复用 Slicer 文件列表（UC-05）~~ | 已撤回，导致文件列表共存 |
-| ~~T-P12-3: DsSlicerPage 继承 SlicerPage~~ | 低优先级，暂缓 |
+| ~~T-P12-3: DsSlicerPage 继承 SlicerPage~~ | 低优先级，暂缓 |

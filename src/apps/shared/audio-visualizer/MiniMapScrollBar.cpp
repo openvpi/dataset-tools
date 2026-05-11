@@ -5,6 +5,7 @@
 #include <QResizeEvent>
 #include <QWheelEvent>
 
+#include <algorithm>
 #include <cmath>
 
 namespace dstools {
@@ -213,28 +214,41 @@ void MiniMapScrollBar::mouseMoveEvent(QMouseEvent *event) {
     case DragMode::ZoomLeft: {
         double newStart = m_dragStartViewStart + dtSec;
         if (newStart < 0.0) newStart = 0.0;
+
+        double viewDur = m_dragStartViewEnd - newStart;
+        int newRes = m_viewport->resolution();
+        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
+            newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
+            newRes = std::max(ViewportController::kMinResolution, newRes);
+            double clampedViewDur = static_cast<double>(newRes) * width() / m_viewport->sampleRate();
+            newStart = m_dragStartViewEnd - clampedViewDur;
+            if (newStart < 0.0) newStart = 0.0;
+        }
         if (newStart >= m_dragStartViewEnd - 0.01)
             newStart = m_dragStartViewEnd - 0.01;
         m_viewport->setViewRange(newStart, m_dragStartViewEnd);
-        double viewDur = m_dragStartViewEnd - newStart;
-        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
-            int newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
-            m_viewport->setResolution(newRes);
-        }
+        m_viewport->setResolution(newRes);
         break;
     }
     case DragMode::ZoomRight: {
         double newEnd = m_dragStartViewEnd + dtSec;
         if (m_totalDuration > 0.0 && newEnd > m_totalDuration)
             newEnd = m_totalDuration;
+
+        double viewDur = newEnd - m_dragStartViewStart;
+        int newRes = m_viewport->resolution();
+        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
+            newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
+            newRes = std::max(ViewportController::kMinResolution, newRes);
+            double clampedViewDur = static_cast<double>(newRes) * width() / m_viewport->sampleRate();
+            newEnd = m_dragStartViewStart + clampedViewDur;
+            if (m_totalDuration > 0.0 && newEnd > m_totalDuration)
+                newEnd = m_totalDuration;
+        }
         if (newEnd <= m_dragStartViewStart + 0.01)
             newEnd = m_dragStartViewStart + 0.01;
         m_viewport->setViewRange(m_dragStartViewStart, newEnd);
-        double viewDur = newEnd - m_dragStartViewStart;
-        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
-            int newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
-            m_viewport->setResolution(newRes);
-        }
+        m_viewport->setResolution(newRes);
         break;
     }
     case DragMode::None:
@@ -243,15 +257,8 @@ void MiniMapScrollBar::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void MiniMapScrollBar::mouseReleaseEvent(QMouseEvent * /*event*/) {
-    // After edge-drag zoom, snap to the nearest discrete resolution step
-    // so the viewport always uses a resolution from the table
     if ((m_dragMode == DragMode::ZoomLeft || m_dragMode == DragMode::ZoomRight) && m_viewport) {
-        double viewDur = m_viewEnd - m_viewStart;
-        if (viewDur > 0.0 && width() > 0 && m_viewport->sampleRate() > 0) {
-            // Compute the resolution that matches the dragged view range
-            int newRes = static_cast<int>(std::round(viewDur * m_viewport->sampleRate() / width()));
-            m_viewport->setResolution(newRes); // snaps to nearest table entry
-        }
+        m_viewport->setResolution(m_viewport->resolution());
     }
     m_dragMode = DragMode::None;
     setCursor(Qt::OpenHandCursor);

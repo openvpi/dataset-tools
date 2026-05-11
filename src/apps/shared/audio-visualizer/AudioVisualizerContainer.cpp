@@ -2,11 +2,11 @@
 #include "MiniMapScrollBar.h"
 #include "PlayCursorOverlay.h"
 #include "TierLabelArea.h"
+#include "ViewportManager.h"
 
 #include <ui/BoundaryDragController.h>
 #include <ui/BoundaryOverlayWidget.h>
 #include <ui/IBoundaryModel.h>
-#include <ui/ViewportManager.h>
 
 #include <dsfw/widgets/PlayWidget.h>
 #include <dstools/TimePos.h>
@@ -352,8 +352,6 @@ namespace dstools {
     }
 
     void AudioVisualizerContainer::setDefaultResolution(int resolution) {
-        m_defaultResolution = std::clamp(resolution, 10, 44100);
-        // Apply immediately so TimeRuler/widgets show correct initial scale
         m_viewport->setResolution(m_defaultResolution);
     }
 
@@ -387,17 +385,9 @@ namespace dstools {
         double totalDur = static_cast<double>(totalSamples) / m_viewport->sampleRate();
         double fitResolution = totalDur * m_viewport->sampleRate() / w;
 
-        const auto &table = ViewportController::resolutionTable();
-        int bestRes = table[0];
-        for (int r : table) {
-            if (r <= static_cast<int>(fitResolution))
-                bestRes = r;
-            else
-                break;
-        }
-        int finalRes = std::min(bestRes, m_defaultResolution);
-
-        m_viewport->setResolution(finalRes);
+        int bestRes = static_cast<int>(std::round(fitResolution / 10.0)) * 10;
+        bestRes = std::max(ViewportController::kMinResolution, bestRes);
+        m_viewport->setResolution(bestRes);
         updateViewRangeFromResolution();
     }
 
@@ -469,8 +459,8 @@ namespace dstools {
         updateScaleIndicator();
         if (m_playCursorOverlay) {
             QPoint chartPos = m_chartSplitter->pos();
-            m_playCursorOverlay->setGeometry(chartPos.x(), chartPos.y(),
-                                             m_chartSplitter->width(), m_chartSplitter->height());
+            m_playCursorOverlay->setGeometry(chartPos.x(), chartPos.y(), m_chartSplitter->width(),
+                                             m_chartSplitter->height());
             m_playCursorOverlay->raise();
         }
         if (m_boundaryOverlay) {

@@ -4,34 +4,13 @@
 
 namespace dsfw::widgets {
 
-    // Logarithmic resolution step table (samples per pixel).
-    // 22 entries covering fine editing (10 spx) to full overview (44100 spx = 1 px/s).
-    // All values are round numbers. Zoom steps through this table sequentially.
-    static const std::vector<int> kResolutionTable = {10,   20,    30,    50,    80,    100,  150,  200,
-                                                      300,  500,   800,   1000,  1500,  2000, 3000, 5000,
-                                                      8000, 10000, 15000, 20000, 30000, 44100};
+    static constexpr double kZoomFactor = 1.5;
 
-    std::vector<int>  ViewportController::resolutionTable() {
-        return kResolutionTable;
-    }
-
-    int ViewportController::findResolutionIndex(int res) {
-        const auto &table = resolutionTable();
-        int bestIdx = 0;
-        int bestDist = std::abs(table[0] - res);
-        for (int i = 1; i < static_cast<int>(table.size()); ++i) {
-            int dist = std::abs(table[i] - res);
-            if (dist < bestDist) {
-                bestDist = dist;
-                bestIdx = i;
-            }
-        }
-        return bestIdx;
+    static int roundToNearest10(int value) {
+        return static_cast<int>(std::round(value / 10.0)) * 10;
     }
 
     ViewportController::ViewportController(QObject *parent) : QObject(parent) {
-        m_resolutionIndex = findResolutionIndex(m_resolution);
-        m_resolution = resolutionTable()[m_resolutionIndex];
         syncStateFields();
     }
 
@@ -54,8 +33,7 @@ namespace dsfw::widgets {
     }
 
     void ViewportController::setResolution(int resolution) {
-        m_resolutionIndex = findResolutionIndex(resolution);
-        m_resolution = resolutionTable()[m_resolutionIndex];
+        m_resolution = std::max(kMinResolution, roundToNearest10(resolution));
         syncStateFields();
         clampAndEmit();
     }
@@ -65,11 +43,10 @@ namespace dsfw::widgets {
             return;
 
         int oldRes = m_resolution;
-        m_resolutionIndex--;
-        m_resolution = resolutionTable()[m_resolutionIndex];
+        m_resolution = std::max(kMinResolution,
+                                roundToNearest10(static_cast<int>(std::round(m_resolution / kZoomFactor))));
         syncStateFields();
 
-        // Keep the center time at the same pixel position
         double oldDuration = m_state.endSec - m_state.startSec;
         double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
         double newDuration = oldDuration * static_cast<double>(m_resolution) / oldRes;
@@ -79,27 +56,25 @@ namespace dsfw::widgets {
     }
 
     void ViewportController::zoomOut(double centerSec) {
-        if (canZoomOut()) {
-            int oldRes = m_resolution;
-            m_resolutionIndex++;
-            m_resolution = resolutionTable()[m_resolutionIndex];
-            syncStateFields();
+        int oldRes = m_resolution;
+        m_resolution = roundToNearest10(static_cast<int>(std::round(m_resolution * kZoomFactor)));
+        m_resolution = std::max(kMinResolution, m_resolution);
+        syncStateFields();
 
-            double oldDuration = m_state.endSec - m_state.startSec;
-            double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
-            double newDuration = oldDuration * static_cast<double>(m_resolution) / oldRes;
-            m_state.startSec = centerSec - ratio * newDuration;
-            m_state.endSec = m_state.startSec + newDuration;
-        }
+        double oldDuration = m_state.endSec - m_state.startSec;
+        double ratio = (oldDuration > 0.0) ? (centerSec - m_state.startSec) / oldDuration : 0.5;
+        double newDuration = oldDuration * static_cast<double>(m_resolution) / oldRes;
+        m_state.startSec = centerSec - ratio * newDuration;
+        m_state.endSec = m_state.startSec + newDuration;
         clampAndEmit();
     }
 
     bool ViewportController::canZoomIn() const {
-        return m_resolutionIndex > 0;
+        return m_resolution > kMinResolution;
     }
 
-    bool ViewportController::canZoomOut() {
-        return m_resolutionIndex < static_cast<int>(resolutionTable().size()) - 1;
+    bool ViewportController::canZoomOut() const {
+        return true;
     }
 
     void ViewportController::zoomAt(double centerSec, double factor) {
@@ -152,14 +127,6 @@ namespace dsfw::widgets {
                 m_state.startSec = 0.0;
         }
 
-        // When at max resolution but viewport still shorter than total duration,
-        // expand to show the full audio.
-        if (!canZoomOut() && totalDur > 0.0 && (m_state.endSec - m_state.startSec) < totalDur) {
-            m_state.startSec = 0.0;
-            m_state.endSec = totalDur;
-        }
-
-        // Ensure state fields are in sync before emitting
         m_state.resolution = m_resolution;
         m_state.sampleRate = m_sampleRate;
         emit viewportChanged(m_state);

@@ -9,8 +9,6 @@
 #include <QObject>
 #include <dsfw/widgets/WidgetsGlobal.h>
 
-#include <vector>
-
 namespace dsfw::widgets {
 
     /// @brief Describes the visible time range and zoom level of a viewport.
@@ -28,12 +26,14 @@ namespace dsfw::widgets {
 
     /// @brief Controls the visible time range and zoom for time-axis views.
     ///
-    /// Zoom is driven by "resolution" (samples per pixel). The resolution steps
-    /// through a logarithmic table of round numbers, ensuring predictable zoom
-    /// levels and hard limits.
+    /// Zoom is driven by "resolution" (samples per pixel). Resolution is a
+    /// continuous integer >= kMinResolution (10), rounded to the nearest tens.
+    /// No discrete table — stepless zoom with round-tens stays predictable.
     class DSFW_WIDGETS_API ViewportController : public QObject {
         Q_OBJECT
     public:
+        static constexpr int kMinResolution = 10;
+
         /// @brief Construct a ViewportController.
         /// @param parent Parent QObject.
         explicit ViewportController(QObject *parent = nullptr);
@@ -66,7 +66,7 @@ namespace dsfw::widgets {
         // === Resolution (core zoom state) ===
 
         /// @brief Set the resolution (samples per pixel).
-        /// Snaps to the nearest entry in the resolution table.
+        /// Rounds to the nearest tens and clamps to >= kMinResolution.
         /// @param resolution Samples per pixel.
         void setResolution(int resolution);
 
@@ -87,7 +87,8 @@ namespace dsfw::widgets {
         [[nodiscard]] bool canZoomIn() const;
 
         /// @brief Check if further zoom out is possible.
-        [[nodiscard]] bool canZoomOut();
+        /// Always true — there is no hard upper bound (stepless zoom).
+        [[nodiscard]] bool canZoomOut() const;
 
         /// @brief Zoom in or out centered on a time position (convenience wrapper).
         /// @param centerSec Center time for zooming.
@@ -95,7 +96,7 @@ namespace dsfw::widgets {
         void zoomAt(double centerSec, double factor);
 
         /// @brief Set resolution from a pixels-per-second value (legacy compatibility).
-        /// Converts pps to resolution and snaps to nearest table entry.
+        /// Converts pps to resolution and rounds to nearest tens.
         /// @param pps Pixels per second.
         void setPixelsPerSecond(double pps);
 
@@ -140,10 +141,6 @@ namespace dsfw::widgets {
             return static_cast<double>(m_totalSamples) / m_resolution;
         }
 
-        /// Logarithmic resolution step table (round numbers).
-        /// Public so containers can compute resolution-to-viewport consistency.
-        static std::vector<int> resolutionTable();
-
     signals:
         /// @brief Emitted when the viewport range or zoom changes.
         /// @param state Updated viewport state.
@@ -154,12 +151,6 @@ namespace dsfw::widgets {
         int m_sampleRate = 44100;
         int64_t m_totalSamples = 0;
         int m_resolution = 40; ///< Samples per pixel.
-
-        /// Find the index of the closest resolution in the table.
-        int findResolutionIndex(int res);
-
-        /// Current index in resolution table.
-        int m_resolutionIndex = -1;
 
         void syncStateFields();
         void clampAndEmit();

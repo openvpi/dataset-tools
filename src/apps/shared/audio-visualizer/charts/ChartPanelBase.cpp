@@ -1,6 +1,6 @@
 #include "ChartPanelBase.h"
-#include "IBoundaryModel.h"
-#include "BoundaryDragController.h"
+#include <ui/IBoundaryModel.h>
+#include <ui/BoundaryDragController.h>
 
 #include <QContextMenuEvent>
 #include <QMouseEvent>

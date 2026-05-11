@@ -7,8 +7,8 @@
 #include <dstools/PlayWidget.h>
 #include <dstools/TimePos.h>
 
-#include "ViewportManager.h"
-#include "dsfw/widgets/ViewportController.h"
+#include "ChartPanelTypes.h"
+#include <dsfw/widgets/ViewportController.h>
 
 class QUndoStack;
 

@@ -23,11 +23,11 @@
 #include "ui/TextGridDocument.h"
 #include "ui/TierEditWidget.h"
 #include "ui/TierLabelPanel.h"
-#include "ui/WaveformRenderer.h"
 #include "ui/WaveformChartPanel.h"
+#include "ChartPageBase.h"
+#include "ui/WaveformRenderer.h"
 
 namespace dstools {
-    class AudioVisualizerContainer;
 
     namespace phonemelabeler {
 
@@ -40,7 +40,7 @@ namespace dstools {
         /// Contains no file I/O, no file list panel, no IPageActions, no settings
         /// persistence. PhonemeLabelerPage (and future DsPhonemeLabelerPage) compose
         /// this widget and connect it to their own data sources.
-        class PhonemeEditor : public QWidget {
+        class PhonemeEditor : public ChartPageBase {
             Q_OBJECT
 
         public:
@@ -65,12 +65,12 @@ namespace dstools {
 
             /// Access the viewport controller.
             [[nodiscard]] ViewportController *viewport() const {
-                return m_viewport;
+                return ChartPageBase::viewport();
             }
 
             /// Access the play widget for playback control.
             [[nodiscard]] dstools::widgets::PlayWidget *playWidget() const {
-                return m_playWidget;
+                return ChartPageBase::playWidget();
             }
 
             /// Access the toolbar (for embedding in parent layouts if needed).
@@ -141,7 +141,9 @@ namespace dstools {
             void setSpectrogramVisible(bool visible);
             void setSpectrogramColorStyle(const QString &styleName);
 
-            [[nodiscard]] bool isSnapEnabled() const { return m_snapEnabled; }
+            [[nodiscard]] bool isSnapEnabled() const {
+                return m_snapEnabled;
+            }
             /// Snap threshold in pixels. Boundaries within this distance snap on release.
             static constexpr int kSnapThresholdPx = 5;
 
@@ -159,7 +161,6 @@ namespace dstools {
         signals:
             void modificationChanged(bool modified);
             void positionChanged(double sec);
-            void zoomChanged(int resolution);
             void bindingChanged(bool enabled);
             void fileStatusChanged(const QString &fileName);
             void documentLoaded();
@@ -174,20 +175,14 @@ namespace dstools {
             // Document
             TextGridDocument *m_document = nullptr;
             QUndoStack *m_undoStack = nullptr;
-            ViewportController *m_viewport = nullptr;
 
             // Services
-            dstools::widgets::PlayWidget *m_playWidget = nullptr;
             WaveformRenderer *m_renderer = nullptr;
 
             // UI Components
             QSplitter *m_mainSplitter = nullptr;
-            AudioVisualizerContainer *m_container = nullptr;
-            WaveformChartPanel *m_waveformChartPanel = nullptr;
             TierEditWidget *m_tierEditWidget = nullptr;
-TierLabelPanel *m_tierLabelPanel = nullptr;
-            PowerChartPanel *m_powerChartPanel = nullptr;
-SpectrogramChartPanel *m_spectrogramChartPanel = nullptr;
+            TierLabelPanel *m_tierLabelPanel = nullptr;
             EntryListPanel *m_entryListPanel = nullptr;
             QToolBar *m_toolbar = nullptr;
             QComboBox *m_tierCombo = nullptr;
@@ -219,11 +214,6 @@ SpectrogramChartPanel *m_spectrogramChartPanel = nullptr;
             void buildLayout();
             void connectSignals();
             void updateAllBoundaryOverlays();
-
-            // Zoom
-            void onZoomIn();
-            void onZoomOut();
-            void onZoomReset();
 
             // Playback
             void onPlayPause();

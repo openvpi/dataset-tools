@@ -68,9 +68,9 @@ void TierEditWidget::rebuildTierViews() {
         if (m_document->isIntervalTier(i)) {
             auto *view = new IntervalTierView(i, m_document, m_undoStack,
                                               m_viewport, m_dragController, this);
-            view->setViewport({m_viewStart, m_viewEnd,
-                               m_viewport ? m_viewport->resolution() : 40,
-                               m_viewport ? m_viewport->sampleRate() : 44100});
+            // view->setViewport({m_viewStart, m_viewEnd,
+            //                    m_viewport ? m_viewport->resolution() : 40,
+            //                    m_viewport ? m_viewport->sampleRate() : 44100});
             view->setActive(i == m_document->activeTierIndex());
 
             connect(view, &IntervalTierView::activated, this, [this](int tierIndex) {
