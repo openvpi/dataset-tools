@@ -42,6 +42,7 @@
 | 124 | 整理归纳文档，删去过时内容，合理分类归位（D-52） | **已完成** |
 | 125 | 统一视图框架——ChartCoordinator+IChartViewport+UnifiedBoundaryOverlay（D-53） | **已完成** |
 | 126 | 去掉 kResolutionTable，改为无极缩放（整十取整，kZoomFactor=1.5）（D-53） | **已完成** |
+| 127 | DsSlicerPage 继承 SlicerPage，消除~90%重复代码（D-30/P-12/P-01） | **已完成** |
 
 ---
 
@@ -98,10 +99,10 @@
 | T-P11-2: 线程安全文档 + source() 保护 | P-11 | `9738f0f` + `4c72815` |
 | T-P12-1: 批量处理模板提取到 EditorPageBase | P-12, TD-05 | `9738f0f` |
 | T-P12-2: AudioChartWidget 共同基类提取 | P-12, TD-05 | `2e1756b` |
+| T-P12-3: DsSlicerPage 继承 SlicerPage（消除~90%重复代码） | P-12, ADR-78, D-30 | `pending` ✅ |
 
 ### 已废弃
 
 | 任务 | 原因 |
 |------|------|
 | ~~T-05: MinLabel/Phoneme 复用 Slicer 文件列表（UC-05）~~ | 已撤回，导致文件列表共存 |
-| ~~T-P12-3: DsSlicerPage 继承 SlicerPage~~ | 低优先级，暂缓 |

@@ -679,6 +679,78 @@ void SlicerPage::autoSliceFiles(const QStringList &filePaths) {
     updateFileProgress();
 }
 
+int SlicerPage::performBatchExport(const QString &outputDir, int digits, int sndFormat) {
+    int totalExported = 0;
+
+    for (const auto &[audioPath, slicePoints] : m_fileSlicePoints) {
+        if (slicePoints.empty())
+            continue;
+
+        dstools::audio::AudioDecoder decoder;
+        if (!decoder.open(audioPath))
+            continue;
+
+        auto fmt = decoder.format();
+        int sr = fmt.sampleRate();
+        int channels = fmt.channels();
+
+        std::vector<float> allSamples;
+        constexpr int kBufSize = 4096;
+        std::vector<float> buffer(kBufSize);
+        while (true) {
+            int read = decoder.read(buffer.data(), 0, kBufSize);
+            if (read <= 0)
+                break;
+            allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
+        }
+        decoder.close();
+
+        size_t numFrames = allSamples.size() / channels;
+        std::vector<float> mono(numFrames);
+        if (channels > 1) {
+            for (size_t i = 0; i < numFrames; ++i) {
+                float sum = 0.0f;
+                for (int c = 0; c < channels; ++c)
+                    sum += allSamples[i * channels + c];
+                mono[i] = sum / static_cast<float>(channels);
+            }
+        } else {
+            mono.assign(allSamples.begin(), allSamples.end());
+        }
+
+        QDir dir(outputDir);
+        QString prefix = QFileInfo(audioPath).completeBaseName();
+        int numSegments = static_cast<int>(slicePoints.size()) + 1;
+        for (int i = 0; i < numSegments; ++i) {
+            double startSec = (i == 0) ? 0.0 : slicePoints[i - 1];
+            double endSec =
+                (i < static_cast<int>(slicePoints.size())) ? slicePoints[i] : static_cast<double>(mono.size()) / sr;
+            int startSamp = static_cast<int>(startSec * sr);
+            int endSamp = std::min(static_cast<int>(endSec * sr), static_cast<int>(mono.size()));
+            if (endSamp <= startSamp)
+                continue;
+
+            QString filename = QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
+            QString filepath = dir.filePath(filename);
+
+#ifdef _WIN32
+            auto pathStr = filepath.toStdWString();
+#else
+            auto pathStr = filepath.toStdString();
+#endif
+            SndfileHandle wf(pathStr.c_str(), SFM_WRITE, sndFormat, 1, sr);
+            if (!wf)
+                continue;
+
+            sf_count_t frameCount = endSamp - startSamp;
+            wf.write(mono.data() + startSamp, frameCount);
+            ++totalExported;
+        }
+    }
+
+    return totalExported;
+}
+
 void SlicerPage::onBatchExportAll() {
     saveCurrentSlicePoints();
 
@@ -725,72 +797,7 @@ void SlicerPage::onBatchExportAll() {
             break;
     }
 
-    int totalExported = 0;
-
-    for (const auto &[audioPath, slicePoints] : m_fileSlicePoints) {
-        if (slicePoints.empty())
-            continue;
-
-        dstools::audio::AudioDecoder decoder;
-        if (!decoder.open(audioPath))
-            continue;
-
-        auto fmt = decoder.format();
-        int sr = fmt.sampleRate();
-        int channels = fmt.channels();
-
-        std::vector<float> allSamples;
-        constexpr int kBufSize = 4096;
-        std::vector<float> buffer(kBufSize);
-        while (true) {
-            int read = decoder.read(buffer.data(), 0, kBufSize);
-            if (read <= 0)
-                break;
-            allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
-        }
-        decoder.close();
-
-        size_t numFrames = allSamples.size() / channels;
-        std::vector<float> mono(numFrames);
-        if (channels > 1) {
-            for (size_t i = 0; i < numFrames; ++i) {
-                float sum = 0.0f;
-                for (int c = 0; c < channels; ++c)
-                    sum += allSamples[i * channels + c];
-                mono[i] = sum / static_cast<float>(channels);
-            }
-        } else {
-            mono.assign(allSamples.begin(), allSamples.end());
-        }
-
-        QString prefix = QFileInfo(audioPath).completeBaseName();
-        int numSegments = static_cast<int>(slicePoints.size()) + 1;
-        for (int i = 0; i < numSegments; ++i) {
-            double startSec = (i == 0) ? 0.0 : slicePoints[i - 1];
-            double endSec =
-                (i < static_cast<int>(slicePoints.size())) ? slicePoints[i] : static_cast<double>(mono.size()) / sr;
-            int startSamp = static_cast<int>(startSec * sr);
-            int endSamp = std::min(static_cast<int>(endSec * sr), static_cast<int>(mono.size()));
-            if (endSamp <= startSamp)
-                continue;
-
-            QString filename = QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
-            QString filepath = dir.filePath(filename);
-
-#ifdef _WIN32
-            auto pathStr = filepath.toStdWString();
-#else
-            auto pathStr = filepath.toStdString();
-#endif
-            SndfileHandle wf(pathStr.c_str(), SFM_WRITE, sndFormat, 1, sr);
-            if (!wf)
-                continue;
-
-            sf_count_t frameCount = endSamp - startSamp;
-            wf.write(mono.data() + startSamp, frameCount);
-            ++totalExported;
-        }
-    }
+    int totalExported = performBatchExport(outputDir, digits, sndFormat);
 
     QMessageBox::information(this, tr("Batch Export Complete"),
                              tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));

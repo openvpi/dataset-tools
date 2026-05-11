@@ -44,7 +44,7 @@ public:
     void onActivated() override;
     bool onDeactivating() override;
 
-private:
+protected:
     QUndoStack *m_undoStack = nullptr;
 
     SliceTierLabel *m_tierLabel = nullptr;
@@ -85,24 +85,25 @@ private:
 
     dstools::AppSettings m_settings;
 
-    void buildLayout();
-    void connectSignals();
-    void onAutoSlice();
-    void onImportMarkers();
-    void onSaveMarkers();
-    void onExportAudio();
-    void onBatchExportAll();
-    void onOpenAudioFiles();
-    void onOpenAudioDirectory();
-    void refreshBoundaries();
-    void updateSlicerListPanel();
-    void saveCurrentSlicePoints();
-    void loadSlicePointsForFile(const QString &filePath);
-    void updateFileProgress();
-    void autoSliceFiles(const QStringList &filePaths);
-    void loadAudioFile(const QString &filePath);
+    virtual void buildLayout();
+    virtual void connectSignals();
+    virtual void onAutoSlice();
+    virtual void onImportMarkers();
+    virtual void onSaveMarkers();
+    virtual void onExportAudio();
+    virtual void onBatchExportAll();
+    virtual void onOpenAudioFiles();
+    virtual void onOpenAudioDirectory();
+    virtual void refreshBoundaries();
+    virtual void updateSlicerListPanel();
+    virtual void saveCurrentSlicePoints();
+    virtual void loadSlicePointsForFile(const QString &filePath);
+    virtual void updateFileProgress();
+    virtual void autoSliceFiles(const QStringList &filePaths);
+    virtual void loadAudioFile(const QString &filePath);
 
-protected:
+    int performBatchExport(const QString &outputDir, int digits, int sndFormat);
+
     void keyPressEvent(QKeyEvent *event) override;
 };
 
