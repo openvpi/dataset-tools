@@ -2,6 +2,8 @@
 #include "IBoundaryModel.h"
 #include "BoundaryDragController.h"
 
+#include <dsfw/Theme.h>
+
 #include <QContextMenuEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -132,6 +134,8 @@ void ChartPanelBase::drawBoundaries(QPainter &painter) {
     int activeTier = m_boundaryModel->activeTierIndex();
     if (activeTier < 0) return;
 
+    const auto &pal = dsfw::Theme::instance().palette().phonemeEditor;
+
     int count = m_boundaryModel->boundaryCount(activeTier);
     for (int i = 0; i < count; ++i) {
         double time = usToSec(m_boundaryModel->boundaryTime(activeTier, i));
@@ -139,9 +143,9 @@ void ChartPanelBase::drawBoundaries(QPainter &painter) {
             continue;
         int x = static_cast<int>(m_xf.timeToX(time));
 
-        QColor color = QColor(255, 165, 0, 200);
+        QColor color = pal.boundaryNormal;
         if (m_hoveredBoundary.first == activeTier && m_hoveredBoundary.second == i)
-            color = QColor(255, 255, 0, 255);
+            color = pal.boundaryHovered;
 
         painter.setPen(QPen(color, 2));
         painter.drawLine(x, 0, x, height());
