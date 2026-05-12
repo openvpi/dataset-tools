@@ -1,8 +1,5 @@
 #include "SpectrogramWidget.h"
 
-#include "BoundaryDragController.h"
-#include "IBoundaryModel.h"
-
 #include <QPainter>
 #include <QPaintEvent>
 #include <QResizeEvent>

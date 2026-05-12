@@ -1,13 +1,10 @@
 #include "WaveformWidget.h"
-#include "IBoundaryModel.h"
-#include "BoundaryDragController.h"
-#include "commands/BoundaryCommands.h"
+
 #include <dsfw/Log.h>
 
 #include <QPainter>
 #include <QPaintEvent>
 #include <QResizeEvent>
-#include <QDebug>
 
 #include <cmath>
 #include <algorithm>

@@ -30,7 +30,6 @@
 #include <QLabel>
 #include <dsfw/IModelManager.h>
 #include <dsfw/IModelProvider.h>
-#include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsTextTypes.h>
