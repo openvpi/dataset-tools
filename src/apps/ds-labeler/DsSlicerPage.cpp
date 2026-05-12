@@ -9,10 +9,9 @@
 #include <SliceListPanel.h>
 
 #include <dstools/DsProject.h>
-#include <dstools/DsItemManager.h>
-#include <dstools/DsItemRecord.h>
 #include <dstools/ProjectPaths.h>
 
+#include <dsfw/JsonHelper.h>
 #include <dsfw/widgets/FileProgressTracker.h>
 
 #include <dstools/AudioDecoder.h>
@@ -48,7 +47,7 @@ void DsSlicerPage::setDataSource(ProjectDataSource *source) {
 }
 
 void DsSlicerPage::connectProjectSignals() {
-    disconnect(m_btnExportAudio, &QPushButton::clicked, this, &SlicerPage::onExportAudio);
+    QObject::disconnect(m_btnExportAudio, SIGNAL(clicked()), this, SLOT(onExportAudio()));
     connect(m_btnExportAudio, &QPushButton::clicked, this, &DsSlicerPage::onExportMenu);
 
     connect(m_audioFileList, &AudioFileListPanel::filesAdded, this, [this](const QStringList &) {
@@ -164,18 +163,15 @@ void DsSlicerPage::onExportAudio() {
             QString dsitemDir = ProjectPaths::dsItemsDir(m_dataSource->workingDir());
             QDir().mkpath(dsitemDir);
 
-            DsItemRecord record;
-            record.status = DsItemRecord::Status::Pending;
-            record.inputFile = m_currentAudioPath.toStdString();
-            record.outputFile = item.audioSource.toStdString();
+            PipelineContext dsCtx;
+            dsCtx.itemId = sliceId;
+            dsCtx.audioPath = item.audioSource;
+            dsCtx.status = PipelineContext::Status::Active;
 
-            QT_WARNING_PUSH
-            QT_WARNING_DISABLE_DEPRECATED
-            DsItemManager mgr;
-            QT_WARNING_POP
+            auto j = dsCtx.toJson();
             auto dsitemPath = std::filesystem::path(
                 (dsitemDir + QStringLiteral("/") + sliceId + QStringLiteral(".dsitem")).toStdWString());
-            mgr.save(record, dsitemPath);
+            JsonHelper::saveFile(dsitemPath, j);
         }
     }
 
