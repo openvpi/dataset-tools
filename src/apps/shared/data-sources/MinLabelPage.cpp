@@ -350,17 +350,15 @@ namespace dstools {
         if (m_asr && m_asr->initialized())
             return;
 
-        if (!m_modelManager) {
-            m_modelManager = ServiceLocator::get<IModelManager>();
-            if (m_modelManager) {
-                connect(m_modelManager, &IModelManager::modelInvalidated, this, &MinLabelPage::onModelInvalidated);
-            }
-        }
-
-        if (!m_modelManager)
+        auto *mgr = ensureModelManager();
+        if (!mgr)
             return;
 
-        auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
+        if (!m_asrAlive) {
+            connect(mgr, &IModelManager::modelInvalidated, this, &MinLabelPage::onModelInvalidated);
+        }
+
+        auto *mm = dynamic_cast<ModelManager *>(mgr);
         if (!mm)
             return;
 

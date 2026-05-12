@@ -6,6 +6,9 @@
 #include <dsfw/CommonKeys.h>
 #include <dsfw/Log.h>
 
+#include <dsfw/ServiceLocator.h>
+#include <dsfw/IModelManager.h>
+
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QCheckBox>
@@ -276,6 +279,14 @@ void EditorPageBase::cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveTo
         aliveToken->store(false);
     }
     aliveToken.reset();
+}
+
+IModelManager *EditorPageBase::ensureModelManager() {
+    if (m_modelManager)
+        return m_modelManager;
+
+    m_modelManager = ServiceLocator::get<IModelManager>();
+    return m_modelManager;
 }
 
 // ── StatusBarBuilder ──────────────────────────────────────────────────────────

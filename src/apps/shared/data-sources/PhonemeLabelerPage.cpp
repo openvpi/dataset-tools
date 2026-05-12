@@ -491,23 +491,20 @@ static QString readFaInput(const DsTextDocument &doc) {
 // ── FA engine ─────────────────────────────────────────────────────────────────
 
 void PhonemeLabelerPage::ensureHfaEngine() {
-    if (m_hfa && m_hfa->isOpen())
-        return;
+        if (m_hfa && m_hfa->isOpen())
+            return;
 
-    if (!m_modelManager) {
-        m_modelManager = ServiceLocator::get<IModelManager>();
-        if (m_modelManager) {
-            connect(m_modelManager, &IModelManager::modelInvalidated,
-                    this, &PhonemeLabelerPage::onModelInvalidated);
+        auto *mgr = ensureModelManager();
+        if (!mgr)
+            return;
+
+        if (!m_hfaAlive) {
+            connect(mgr, &IModelManager::modelInvalidated, this, &PhonemeLabelerPage::onModelInvalidated);
         }
-    }
 
-    if (!m_modelManager)
-        return;
-
-    auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
-    if (!mm)
-        return;
+        auto *mm = dynamic_cast<ModelManager *>(mgr);
+        if (!mm)
+            return;
 
     auto config = readModelConfig(settingsBackend(), QStringLiteral("phoneme_alignment"));
     if (config.modelPath.isEmpty())

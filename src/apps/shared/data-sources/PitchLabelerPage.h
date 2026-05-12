@@ -21,8 +21,6 @@ struct AlignInput;
 
 namespace dstools {
 
-class IModelManager;
-
 namespace pitchlabeler {
 class DSFile;
 }
@@ -52,7 +50,6 @@ protected:
 
 private:
     pitchlabeler::PitchEditor *m_editor = nullptr;
-    IModelManager *m_modelManager = nullptr;
     std::shared_ptr<pitchlabeler::DSFile> m_currentFile;
 
     QAction *m_extractPitchAction = nullptr;

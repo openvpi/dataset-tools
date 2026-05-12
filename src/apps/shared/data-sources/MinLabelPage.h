@@ -15,8 +15,6 @@ class MatchLyric;
 
 namespace dstools {
 
-class IModelManager;
-
 class MinLabelPage : public EditorPageBase {
     Q_OBJECT
 
@@ -48,7 +46,6 @@ protected:
 private:
     LyricFA::Asr *m_asr = nullptr;
     std::shared_ptr<std::atomic<bool>> m_asrAlive;
-    IModelManager *m_modelManager = nullptr;
 
     Minlabel::MinLabelEditor *m_editor = nullptr;
     bool m_dirty = false;

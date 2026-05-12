@@ -312,17 +312,15 @@ namespace dstools {
         if (m_rmvpe && m_rmvpe->is_open())
             return;
 
-        if (!m_modelManager) {
-            m_modelManager = ServiceLocator::get<IModelManager>();
-            if (m_modelManager) {
-                connect(m_modelManager, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
-            }
-        }
-
-        if (!m_modelManager)
+        auto *mgr = ensureModelManager();
+        if (!mgr)
             return;
 
-        auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
+        if (!m_rmvpeAlive) {
+            connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
+        }
+
+        auto *mm = dynamic_cast<ModelManager *>(mgr);
         if (!mm)
             return;
 
@@ -347,17 +345,15 @@ namespace dstools {
         if (m_game && m_game->isOpen())
             return;
 
-        if (!m_modelManager) {
-            m_modelManager = ServiceLocator::get<IModelManager>();
-            if (m_modelManager) {
-                connect(m_modelManager, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
-            }
-        }
-
-        if (!m_modelManager)
+        auto *mgr = ensureModelManager();
+        if (!mgr)
             return;
 
-        auto *mm = dynamic_cast<ModelManager *>(m_modelManager);
+        if (!m_gameAlive) {
+            connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
+        }
+
+        auto *mm = dynamic_cast<ModelManager *>(mgr);
         if (!mm)
             return;
 

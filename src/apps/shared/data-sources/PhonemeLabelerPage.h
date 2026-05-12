@@ -14,8 +14,6 @@ class HFA;
 
 namespace dstools {
 
-class IModelManager;
-
 class PhonemeLabelerPage : public EditorPageBase {
     Q_OBJECT
 
@@ -45,7 +43,6 @@ protected:
 
 private:
     phonemelabeler::PhonemeEditor *m_editor = nullptr;
-    IModelManager *m_modelManager = nullptr;
 
     QAction *m_faAction = nullptr;
 

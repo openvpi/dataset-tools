@@ -26,6 +26,7 @@ namespace dstools {
 class ISettingsBackend;
 class SliceListPanel;
 class BatchProcessDialog;
+class IModelManager;
 
 struct BatchSliceResult {
     enum Status { Processed, Skipped, Error };
@@ -84,6 +85,8 @@ protected:
     QAction *nextAction() const { return m_nextAction; }
 
     void setCurrentSliceId(const QString &id) { m_currentSliceId = id; }
+
+    IModelManager *ensureModelManager();
 
     // ── Setup helpers (call from subclass constructor) ──
 
@@ -226,6 +229,7 @@ private:
     QAction *m_nextAction = nullptr;
 
     QSet<QString> m_loadingEngines;
+    IModelManager *m_modelManager = nullptr;
 
     QTimer *m_autoSaveTimer = nullptr;
 
