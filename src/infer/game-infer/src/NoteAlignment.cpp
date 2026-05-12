@@ -39,6 +39,8 @@ namespace Game
         if (noteSeq.size() != noteDur.size()) {
             throw std::invalid_argument("noteSeq and noteDur must have the same length");
         }
+        if (noteSeq.empty())
+            return {};
 
         // Compute word start/end times
         std::vector<float> wordDurVec;
