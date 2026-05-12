@@ -182,6 +182,13 @@ protected:
 
     // ── Async engine loading ──
 
+    /// Load a model via ModelManager and register its type.
+    /// Handles the common pattern: readConfig → loadModel → registerOrGetModelType.
+    /// @return (ModelManager*, typeId) on success, (nullptr, 0) on failure.
+    ///         Caller owns the lifetime of the returned ModelManager* (same as ensureModelManager).
+    std::tuple<ModelManager *, uint32_t>
+    loadModelForTask(const QString &taskKey, const QString &modelTypeName = {});
+
     /// Load an inference engine asynchronously in a background thread.
     /// @param taskKey Unique key for this loading task (prevents duplicate loads).
     /// @param loadFunc Blocking function that loads the engine. Returns true on success.

@@ -319,16 +319,11 @@ namespace dstools {
         if (!mm)
             return;
 
-        auto config = readModelConfig(settingsBackend(), QStringLiteral("pitch_extraction"));
-        if (config.modelPath.isEmpty())
+        auto [mm2, typeId] = loadModelForTask(QStringLiteral("pitch_extraction"));
+        if (!mm2 || typeId == 0)
             return;
 
-        auto result = mm->loadModel(QStringLiteral("pitch_extraction"), config, config.deviceId);
-        if (!result)
-            return;
-
-        auto typeId = registerModelType("pitch_extraction");
-        auto *provider = mm->provider(typeId);
+        auto *provider = mm2->provider(typeId);
         auto *rmvpeProvider = dynamic_cast<InferenceModelProvider<Rmvpe::Rmvpe> *>(provider);
         if (rmvpeProvider && rmvpeProvider->engine().is_open()) {
             m_rmvpe = &rmvpeProvider->engine();
@@ -348,20 +343,11 @@ namespace dstools {
             connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
         }
 
-        auto *mm = dynamic_cast<ModelManager *>(mgr);
-        if (!mm)
+        auto [mm2, typeId] = loadModelForTask(QStringLiteral("midi_transcription"));
+        if (!mm2 || typeId == 0)
             return;
 
-        auto config = readModelConfig(settingsBackend(), QStringLiteral("midi_transcription"));
-        if (config.modelPath.isEmpty())
-            return;
-
-        auto result = mm->loadModel(QStringLiteral("midi_transcription"), config, config.deviceId);
-        if (!result)
-            return;
-
-        auto typeId = registerModelType("midi_transcription");
-        auto *provider = mm->provider(typeId);
+        auto *provider = mm2->provider(typeId);
         auto *gameProvider = dynamic_cast<InferenceModelProvider<Game::Game> *>(provider);
         if (gameProvider && gameProvider->engine().isOpen()) {
             m_game = &gameProvider->engine();

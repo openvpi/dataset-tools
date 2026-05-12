@@ -390,19 +390,10 @@ namespace dstools {
             connect(mgr, &IModelManager::modelInvalidated, this, &MinLabelPage::onModelInvalidated);
         }
 
-        auto *mm = dynamic_cast<ModelManager *>(mgr);
-        if (!mm)
+        auto [mm, typeId] = loadModelForTask(QStringLiteral("asr"));
+        if (!mm || typeId == 0)
             return;
 
-        auto config = readModelConfig(settingsBackend(), QStringLiteral("asr"));
-        if (config.modelPath.isEmpty())
-            return;
-
-        auto result = mm->loadModel(QStringLiteral("asr"), config, config.deviceId);
-        if (!result)
-            return;
-
-        auto typeId = registerModelType("asr");
         auto *provider = mm->provider(typeId);
         auto *asrProvider = dynamic_cast<FunAsrModelProvider *>(provider);
         if (asrProvider && asrProvider->asr() && asrProvider->asr()->initialized()) {

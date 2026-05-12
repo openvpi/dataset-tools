@@ -2,6 +2,7 @@
 #include "SliceListPanel.h"
 #include "ISettingsBackend.h"
 #include "BatchProcessDialog.h"
+#include "ModelConfigHelper.h"
 
 #include <dsfw/CommonKeys.h>
 #include <dsfw/Log.h>
@@ -239,7 +240,30 @@ void EditorPageBase::stopAutoSaveTimer() {
         m_autoSaveTimer->stop();
 }
 
-void EditorPageBase::loadEngineAsync(const QString &taskKey,
+std::tuple<ModelManager *, uint32_t>
+    EditorPageBase::loadModelForTask(const QString &taskKey, const QString &modelTypeName) {
+        auto config = readModelConfig(settingsBackend(), taskKey);
+        if (config.modelPath.isEmpty())
+            return {nullptr, 0};
+
+        auto *mgr = ensureModelManager();
+        if (!mgr)
+            return {nullptr, 0};
+
+        auto *mm = dynamic_cast<ModelManager *>(mgr);
+        if (!mm)
+            return {nullptr, 0};
+
+        auto result = mm->loadModel(taskKey, config, config.deviceId);
+        if (!result)
+            return {nullptr, 0};
+
+        auto typeId = mm->registerOrGetModelType(
+            modelTypeName.isEmpty() ? taskKey : modelTypeName);
+        return {mm, typeId};
+    }
+
+    void EditorPageBase::loadEngineAsync(const QString &taskKey,
                                       std::function<bool()> loadFunc,
                                       std::function<void()> onReady) {
     if (m_loadingEngines.contains(taskKey))

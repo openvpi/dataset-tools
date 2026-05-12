@@ -503,16 +503,11 @@ void PhonemeLabelerPage::ensureHfaEngine() {
         if (!mm)
             return;
 
-    auto config = readModelConfig(settingsBackend(), QStringLiteral("phoneme_alignment"));
-    if (config.modelPath.isEmpty())
+    auto [mm2, typeId] = loadModelForTask(QStringLiteral("phoneme_alignment"));
+    if (!mm2 || typeId == 0)
         return;
 
-    auto result = mm->loadModel(QStringLiteral("phoneme_alignment"), config, config.deviceId);
-    if (!result)
-        return;
-
-    auto typeId = registerModelType("phoneme_alignment");
-    auto *provider = mm->provider(typeId);
+    auto *provider = mm2->provider(typeId);
     auto *hfaProvider = dynamic_cast<InferenceModelProvider<HFA::HFA> *>(provider);
     if (hfaProvider && hfaProvider->engine().isOpen()) {
         m_hfa = &hfaProvider->engine();
