@@ -14,6 +14,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSettings>
 #include <QVBoxLayout>
 
 namespace dstools {
@@ -77,15 +78,17 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
 }
 
 void NewProjectDialog::onBrowseDir() {
-    const QString dir = QFileDialog::getExistingDirectory(
-        this, QStringLiteral("选择工程保存位置"));
-    if (dir.isEmpty())
-        return;
-    m_saveDir = dir;
-    m_labelDir->setText(QDir::toNativeSeparators(dir));
-    m_labelDir->setStyleSheet({});
-    updateOkButton();
-}
+        const QString lastDir = QSettings().value(QStringLiteral("App/lastProjectDir")).toString();
+        const QString dir = QFileDialog::getExistingDirectory(
+            this, QStringLiteral("选择工程保存位置"), lastDir);
+        if (dir.isEmpty())
+            return;
+        m_saveDir = dir;
+        QSettings().setValue(QStringLiteral("App/lastProjectDir"), dir);
+        m_labelDir->setText(QDir::toNativeSeparators(dir));
+        m_labelDir->setStyleSheet({});
+        updateOkButton();
+    }
 
 void NewProjectDialog::updateOkButton() {
     bool ok = !m_editName->text().trimmed().isEmpty() && !m_saveDir.isEmpty();

@@ -145,15 +145,17 @@ void WelcomePage::onNewProject() {
 }
 
 void WelcomePage::onOpenProject() {
-    const QString path = QFileDialog::getOpenFileName(
-        this, QStringLiteral("打开工程"), QString(),
-        QStringLiteral("DiffSinger Project (*.dsproj)"));
-    if (path.isEmpty())
-        return;
+        const QString lastDir = QSettings().value(QStringLiteral("App/lastProjectDir")).toString();
+        const QString path = QFileDialog::getOpenFileName(
+            this, QStringLiteral("打开工程"), lastDir,
+            QStringLiteral("DiffSinger Project (*.dsproj)"));
+        if (path.isEmpty())
+            return;
 
-    addToRecent(path);
-    loadProject(path);
-}
+        QSettings().setValue(QStringLiteral("App/lastProjectDir"), QFileInfo(path).absolutePath());
+        addToRecent(path);
+        loadProject(path);
+    }
 
 void WelcomePage::loadProject(const QString &path) {
     QString error;
