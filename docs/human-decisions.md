@@ -489,8 +489,6 @@ m_engineAlive.reset();  // 原子置 false 并释放引用
 **决策**：
 - 参考 vLabeler 的 `CanvasResolution` 模型，将 ViewportController 改为 **resolution（整数，每像素采样数）** 驱动
 - `resolution` 取代 `pixelsPerSecond` 作为缩放状态的真相源；`pixelsPerSecond = sampleRate / resolution` 为派生量
-- 默认 resolution = 40（与 vLabeler 一致），对 44100Hz 音频对应 PPS ≈ 1102
-- Resolution 范围硬编码 [10, 400]，步进按对数表（10→15→20→30→40→60→80→100→150→200→300→400），不会出现浮点精度问题或"到极限后继续变化"的 bug
 - 刻度线采用查表法（类似 vLabeler `Timescale.find()`）：预定义 major/minor 刻度级别表，找到 `minorSec * pps >= 60px` 的第一个级别。不再用 smoothStep 渐隐
 - 每张图默认高度比例用 `heightWeight`（waveform=1.0, power=0.5, spectrogram=0.75），首次打开按比例初始化 splitter，用户拖动后持久化
 - 打开新音频时自动 fitToWindow（resolution 自动计算为 totalSamples/widgetWidth）

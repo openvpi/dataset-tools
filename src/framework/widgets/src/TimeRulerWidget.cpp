@@ -113,7 +113,7 @@ void TimeRulerWidget::paintEvent(QPaintEvent * /*event*/) {
     if (viewDuration <= 0.0) return;
 
     auto level = findLevel(m_sampleRate > 0 && m_resolution > 0
-                           ? static_cast<double>(m_sampleRate) / m_resolution
+                           ? static_cast<double>(m_sampleRate) /  m_resolution
                            : 200.0);
 
     QFont font = painter.font();

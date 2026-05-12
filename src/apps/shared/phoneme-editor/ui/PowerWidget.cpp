@@ -59,45 +59,32 @@ void PowerWidget::paintEvent(QPaintEvent *event) {
 }
 
 void PowerWidget::drawBoundaryOverlay(QPainter &painter) {
-    if (!m_document) return;
+    if (!m_boundaryModel) return;
 
-    const auto &tiers = m_document->tiers();
-    int activeIndex = m_document->activeTierIndex();
+    int activeIndex = m_boundaryModel->activeTierIndex();
+    int tierCount = m_boundaryModel->tierCount();
 
-    for (int t = 0; t < tiers.size(); ++t) {
-        const auto &tier = tiers[t];
-        const auto &bnds = tier.boundaries;
-
-        QColor lineColor;
-        if (t == activeIndex) {
-            lineColor = QColor(255, 200, 100, 255);
-        } else {
-            switch (tier.type) {
-            case TierType::Word:
-                lineColor = QColor(100, 180, 255, 180);
-                break;
-            case TierType::Phrase:
-                lineColor = QColor(100, 255, 180, 140);
-                break;
-            case TierType::Other:
-                lineColor = QColor(255, 180, 100, 140);
-                break;
-            default:
-                lineColor = QColor(255, 255, 255, 140);
-                break;
-            }
-        }
-
-        for (const auto &bnd : bnds) {
-            int x = timeToX(usToSec(bnd.time));
+    for (int t = 0; t < tierCount; ++t) {
+        int count = m_boundaryModel->boundaryCount(t);
+        for (int b = 0; b < count; ++b) {
+            double tSec = usToSec(m_boundaryModel->boundaryTime(t, b));
+            int x = timeToX(tSec);
             if (x < 0 || x > width()) continue;
+
+            QColor lineColor;
+            if (t == activeIndex) {
+                lineColor = QColor(255, 200, 100, 255);
+            } else {
+                int hue = (t * 67 + 180) % 360;
+                lineColor = QColor::fromHsv(hue, 180, 255, 140);
+            }
 
             bool isDragging = m_dragController && m_dragController->isDragging() &&
                               t == m_dragController->draggedTier() &&
-                              bnd.id == m_dragController->draggedBoundary();
+                              b == m_dragController->draggedBoundary();
             if (isDragging) {
                 painter.setPen(QPen(lineColor.lighter(150), 2));
-            } else if (t == activeIndex && bnd.id == m_hoveredBoundary) {
+            } else if (t == activeIndex && b == m_hoveredBoundary) {
                 painter.setPen(QPen(QColor(255, 255, 255), 2));
             } else {
                 painter.setPen(QPen(lineColor, 1, Qt::SolidLine));
@@ -187,7 +174,6 @@ void PowerWidget::resizeEvent(QResizeEvent *event) {
 
 void PowerWidget::showEvent(QShowEvent *event) {
     AudioChartWidget::showEvent(event);
-    emit entryScrollRequested(this);
     emit visibleStateChanged(true);
 }
 

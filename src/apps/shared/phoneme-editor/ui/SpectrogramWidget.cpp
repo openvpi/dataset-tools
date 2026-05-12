@@ -308,7 +308,6 @@ void SpectrogramWidget::resizeEvent(QResizeEvent *event) {
 
 void SpectrogramWidget::showEvent(QShowEvent *event) {
     AudioChartWidget::showEvent(event);
-    emit entryScrollRequested(this);
     emit visibleStateChanged(true);
 }
 
