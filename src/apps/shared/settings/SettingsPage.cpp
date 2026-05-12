@@ -25,7 +25,6 @@
 
 #include <dstools/PinyinG2PProvider.h>
 #include <hubert-infer/DictionaryG2P.h>
-#include "../audio-visualizer/AudioVisualizerContainer.h"
 
 #ifdef Q_OS_WIN
 #    include <dxgi.h>
@@ -605,13 +604,13 @@ QWidget *SettingsPage::createDisplayTab() {
     scaleLayout->addRow(QStringLiteral("默认 spx："), m_defaultResolutionSpin);
 
     static const dstools::SettingsKey<int> kDefaultResolution("AudioVisualizer/defaultResolution", 0);
-    static auto s_avSettings = dstools::AudioVisualizerContainer::chartLayoutSettings();
+    static dstools::AppSettings s_avSettings(QStringLiteral("AudioVisualizer"));
     s_avSettings.reload();
     m_defaultResolutionSpin->setValue(s_avSettings.get(kDefaultResolution));
 
     connect(m_defaultResolutionSpin, &QSpinBox::valueChanged, this, [this]() {
         static const dstools::SettingsKey<int> kKey("AudioVisualizer/defaultResolution", 0);
-        static auto s = dstools::AudioVisualizerContainer::chartLayoutSettings();
+        static dstools::AppSettings s(QStringLiteral("AudioVisualizer"));
         s.set(kKey, m_defaultResolutionSpin->value());
         markDirty();
     });
