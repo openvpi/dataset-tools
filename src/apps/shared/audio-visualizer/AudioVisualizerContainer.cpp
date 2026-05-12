@@ -352,7 +352,7 @@ namespace dstools {
     }
 
     void AudioVisualizerContainer::setDefaultResolution(int resolution) {
-        m_viewport->setResolution(m_defaultResolution);
+        m_viewport->setResolution(resolution);
     }
 
     void AudioVisualizerContainer::saveResolution() {
@@ -389,6 +389,19 @@ namespace dstools {
         bestRes = std::max(ViewportController::kMinResolution, bestRes);
         m_viewport->setResolution(bestRes);
         updateViewRangeFromResolution();
+    }
+
+    void AudioVisualizerContainer::applyDefaultScale() {
+        static const dstools::SettingsKey<int> kDefaultResolution("AudioVisualizer/defaultResolution", 0);
+        auto& s_avSettings = chartLayoutSettings();
+        s_avSettings.reload();
+        int defaultRes = s_avSettings.get(kDefaultResolution);
+        if (defaultRes > 0 && m_viewport->totalSamples() > 0) {
+            m_viewport->setResolution(defaultRes);
+            updateViewRangeFromResolution();
+            return;
+        }
+        fitToWindow();
     }
 
     void AudioVisualizerContainer::updateViewRangeFromResolution() {

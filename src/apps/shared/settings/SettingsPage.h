@@ -89,8 +89,11 @@ private:
     QPushButton *m_phNumAddBtn = nullptr;
     QPushButton *m_phNumRemoveBtn = nullptr;
 
+    QSpinBox *m_defaultResolutionSpin = nullptr;
+
     QWidget *createDeviceTab();
     QWidget *createGeneralTab();
+    QWidget *createDisplayTab();
     QWidget *createAsrTab();
     QWidget *createDictTab();
     QWidget *createFATab();

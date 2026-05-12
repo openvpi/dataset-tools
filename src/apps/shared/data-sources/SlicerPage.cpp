@@ -836,7 +836,7 @@ void SlicerPage::loadAudioFile(const QString &filePath) {
     // This ensures chart widgets receive correct PPS when setAudioData triggers
     // their initial cache rebuild.
     m_viewport->setAudioParams(m_sampleRate, static_cast<int64_t>(m_samples.size()));
-    m_container->fitToWindow();
+    m_container->applyDefaultScale();
     {
         double dur = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
         DSFW_LOG_INFO("audio", ("Loaded audio: " + filePath.toStdString()

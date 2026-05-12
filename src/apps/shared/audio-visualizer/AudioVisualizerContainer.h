@@ -96,6 +96,10 @@ namespace dstools {
 
         void fitToWindow();
 
+        /// Apply the user-configured default scale (resolution) if set,
+        /// otherwise fit to window. Reads from AppSettings "AudioVisualizer/defaultResolution".
+        void applyDefaultScale();
+
         void addChart(const QString &id, QWidget *widget, int defaultOrder, int stretchFactor = 1,
                       double heightWeight = 1.0);
         void removeChart(const QString &id);

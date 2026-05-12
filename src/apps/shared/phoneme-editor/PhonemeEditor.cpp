@@ -56,7 +56,7 @@ void PhonemeEditor::loadAudio(const QString &audioPath) {
         double audioDuration = sampleRate > 0 ? static_cast<double>(samples.size()) / sampleRate : 0.0;
         if (audioDuration > 0.0) {
             m_viewport->setAudioParams(sampleRate, static_cast<int64_t>(samples.size()));
-            m_container->fitToWindow();
+            m_container->applyDefaultScale();
         }
 
         m_waveformChart->setAudioData(samples, sampleRate);

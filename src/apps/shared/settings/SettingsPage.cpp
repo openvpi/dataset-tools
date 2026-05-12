@@ -25,6 +25,7 @@
 
 #include <dstools/PinyinG2PProvider.h>
 #include <hubert-infer/DictionaryG2P.h>
+#include "../audio-visualizer/AudioVisualizerContainer.h"
 
 #ifdef Q_OS_WIN
 #    include <dxgi.h>
@@ -99,6 +100,7 @@ SettingsPage::SettingsPage(ISettingsBackend *backend, QWidget *parent) : QWidget
     m_tabWidget->addTab(createPitchTab(), QStringLiteral("音高/MIDI"));
     m_tabWidget->addTab(createPhNumTab(), QStringLiteral("ph_num"));
     m_tabWidget->addTab(createPreprocessTab(), QStringLiteral("预处理"));
+    m_tabWidget->addTab(createDisplayTab(), QStringLiteral("显示"));
     m_tabWidget->addTab(createGeneralTab(), QStringLiteral("通用"));
 
     auto *layout = new QVBoxLayout(this);
@@ -582,6 +584,50 @@ QString SettingsPage::effectiveProvider(QCheckBox *forceCpu) const {
     if (forceCpu && forceCpu->isChecked())
         return QStringLiteral("cpu");
     return m_providerCombo->currentText().split(' ').first();
+}
+
+QWidget *SettingsPage::createDisplayTab() {
+    auto *w = new QWidget(this);
+    auto *layout = new QFormLayout(w);
+
+    auto *scaleGroup = new QGroupBox(QStringLiteral("默认比例尺"), w);
+    auto *scaleLayout = new QFormLayout(scaleGroup);
+
+    m_defaultResolutionSpin = new QSpinBox(scaleGroup);
+    m_defaultResolutionSpin->setRange(0, 50000);
+    m_defaultResolutionSpin->setValue(0);
+    m_defaultResolutionSpin->setSuffix(QStringLiteral(" spx"));
+    m_defaultResolutionSpin->setToolTip(
+        QStringLiteral("默认缩放级别（samples per pixel）。\n"
+                       "设置为 0 表示打开文件时自动适配窗口。\n"
+                       "数值越小放大越近，越大缩小越远。\n"
+                       "常用参考值：40（贴近）, 200（适中）, 800（缩远）。"));
+    scaleLayout->addRow(QStringLiteral("默认 spx："), m_defaultResolutionSpin);
+
+    static const dstools::SettingsKey<int> kDefaultResolution("AudioVisualizer/defaultResolution", 0);
+    static auto s_avSettings = dstools::AudioVisualizerContainer::chartLayoutSettings();
+    s_avSettings.reload();
+    m_defaultResolutionSpin->setValue(s_avSettings.get(kDefaultResolution));
+
+    connect(m_defaultResolutionSpin, &QSpinBox::valueChanged, this, [this]() {
+        static const dstools::SettingsKey<int> kKey("AudioVisualizer/defaultResolution", 0);
+        static auto s = dstools::AudioVisualizerContainer::chartLayoutSettings();
+        s.set(kKey, m_defaultResolutionSpin->value());
+        markDirty();
+    });
+
+    layout->addWidget(scaleGroup);
+
+    auto *note = new QLabel(
+        QStringLiteral("samples per pixel (spx) 控制波形图/频谱图的默认缩放级别。\n"
+                       "修改后下次打开新文件时生效。"),
+        w);
+    note->setWordWrap(true);
+    note->setStyleSheet(QStringLiteral("color: gray; font-style: italic; margin-top: 8px;"));
+    layout->addRow(note);
+
+    layout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
+    return w;
 }
 
 QWidget *SettingsPage::createGeneralTab() {
