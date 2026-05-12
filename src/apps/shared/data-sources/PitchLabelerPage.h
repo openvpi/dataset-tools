@@ -57,8 +57,8 @@ private:
 
     Rmvpe::Rmvpe *m_rmvpe = nullptr;
     Game::Game *m_game = nullptr;
-    std::shared_ptr<std::atomic<bool>> m_rmvpeAlive;
-    std::shared_ptr<std::atomic<bool>> m_gameAlive;
+    EngineAliveToken m_rmvpeAlive;
+    EngineAliveToken m_gameAlive;
     PhNumCalculator m_phNumCalc;
     std::atomic<bool> m_inferRunning{false};
     std::atomic<bool> m_batchRunning{false};

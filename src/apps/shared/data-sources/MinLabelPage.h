@@ -48,7 +48,7 @@ protected:
 
 private:
     LyricFA::Asr *m_asr = nullptr;
-    std::shared_ptr<std::atomic<bool>> m_asrAlive;
+    EngineAliveToken m_asrAlive;
 
     Minlabel::MinLabelEditor *m_editor = nullptr;
     bool m_dirty = false;
@@ -63,7 +63,7 @@ private:
     bool m_batchAutoG2P = false;
 
     std::unique_ptr<LyricFA::MatchLyric> m_matchLyric;
-    std::shared_ptr<std::atomic<bool>> m_matchLyricAlive;
+    EngineAliveToken m_matchLyricAlive;
 
     void onRunAsr();
     void onBatchAsr();

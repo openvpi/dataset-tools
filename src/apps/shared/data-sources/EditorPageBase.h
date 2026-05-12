@@ -34,6 +34,32 @@ struct BatchSliceResult {
     QString logMessage;
 };
 
+class EngineAliveToken {
+public:
+    explicit EngineAliveToken(bool startValid = false) {
+        if (startValid)
+            m_token = std::make_shared<std::atomic<bool>>(true);
+    }
+
+    std::shared_ptr<std::atomic<bool>> token() const { return m_token; }
+
+    bool isValid() const { return m_token && *m_token; }
+    explicit operator bool() const { return isValid(); }
+
+    void create() {
+        m_token = std::make_shared<std::atomic<bool>>(true);
+    }
+
+    void invalidate() {
+        if (m_token)
+            m_token->store(false);
+        m_token.reset();
+    }
+
+private:
+    std::shared_ptr<std::atomic<bool>> m_token;
+};
+
 struct BatchConfig {
     QString dialogTitle;
     bool defaultSkipExisting = true;

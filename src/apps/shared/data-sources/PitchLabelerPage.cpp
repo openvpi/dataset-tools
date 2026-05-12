@@ -114,14 +114,10 @@ namespace dstools {
     }
 
     void PitchLabelerPage::onDeactivatedImpl() {
-        if (m_rmvpeAlive)
-            m_rmvpeAlive->store(false);
-        if (m_gameAlive)
-            m_gameAlive->store(false);
+        m_rmvpeAlive.invalidate();
+        m_gameAlive.invalidate();
         m_rmvpe = nullptr;
         m_game = nullptr;
-        cancelAsyncTask(m_rmvpeAlive);
-        cancelAsyncTask(m_gameAlive);
     }
 
     void PitchLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
@@ -315,7 +311,7 @@ namespace dstools {
         if (!mgr)
             return;
 
-        if (!m_rmvpeAlive) {
+        if (!m_rmvpeAlive.isValid()) {
             connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
         }
 
@@ -336,7 +332,7 @@ namespace dstools {
         auto *rmvpeProvider = dynamic_cast<InferenceModelProvider<Rmvpe::Rmvpe> *>(provider);
         if (rmvpeProvider && rmvpeProvider->engine().is_open()) {
             m_rmvpe = &rmvpeProvider->engine();
-            m_rmvpeAlive = std::make_shared<std::atomic<bool>>(true);
+            m_rmvpeAlive.create();
         }
     }
 
@@ -348,7 +344,7 @@ namespace dstools {
         if (!mgr)
             return;
 
-        if (!m_gameAlive) {
+        if (!m_gameAlive.isValid()) {
             connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
         }
 
@@ -369,22 +365,18 @@ namespace dstools {
         auto *gameProvider = dynamic_cast<InferenceModelProvider<Game::Game> *>(provider);
         if (gameProvider && gameProvider->engine().isOpen()) {
             m_game = &gameProvider->engine();
-            m_gameAlive = std::make_shared<std::atomic<bool>>(true);
+            m_gameAlive.create();
         }
     }
 
     void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
         if (taskKey == QStringLiteral("pitch_extraction")) {
-            if (m_rmvpeAlive)
-                m_rmvpeAlive->store(false);
+            m_rmvpeAlive.invalidate();
             m_rmvpe = nullptr;
-            cancelAsyncTask(m_rmvpeAlive);
             DSFW_LOG_WARN("infer", "Pitch extraction task cancelled: model invalidated");
         } else if (taskKey == QStringLiteral("midi_transcription")) {
-            if (m_gameAlive)
-                m_gameAlive->store(false);
+            m_gameAlive.invalidate();
             m_game = nullptr;
-            cancelAsyncTask(m_gameAlive);
             DSFW_LOG_WARN("infer", "MIDI transcription task cancelled: model invalidated");
         }
     }
@@ -566,38 +558,31 @@ namespace dstools {
                     }
                 }
 
-                QMessageBox::StandardButton btn = QMessageBox::question(
-                    this, QStringLiteral("缺少 ph_num"),
-                    dictConfigured
-                        ? QStringLiteral("当前切片缺少 ph_num 数据，提取 MIDI 前需要先计算 ph_num。\n是否立即计算？")
-                        : QStringLiteral("当前切片缺少 ph_num 数据，且未配置 ph_num 词典。\n"
-                                         "请先在 设置 → ph_num 中配置词典路径。"),
-                    dictConfigured ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok,
-                    dictConfigured ? QMessageBox::Yes : QMessageBox::Ok);
-
-                if (dictConfigured) {
-                    if (btn == QMessageBox::Yes) {
-                        loadPhNumCalculator();
-                        runAddPhNum(currentSliceId());
-                        alignInput.phNum.clear();
-                        auto reload = source()->loadSlice(currentSliceId());
-                        if (reload) {
-                            for (const auto &layer : reload->layers) {
-                                if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty()) {
-                                    for (const auto &b : layer.boundaries) {
-                                        bool ok = false;
-                                        int val = b.text.toInt(&ok);
-                                        alignInput.phNum.push_back(ok ? val : 0);
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        return;
-                    }
-                } else {
+                if (!dictConfigured) {
+                    QMessageBox::warning(
+                        this, QStringLiteral("缺少 ph_num"),
+                        QStringLiteral("当前切片缺少 ph_num 数据，且未配置 ph_num 词典。\n"
+                                       "请先在 设置 → ph_num 中配置词典路径。"));
                     return;
+                }
+
+                dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                                       QStringLiteral("自动计算 ph_num..."), 3000);
+                loadPhNumCalculator();
+                runAddPhNum(currentSliceId());
+                alignInput.phNum.clear();
+                auto reload = source()->loadSlice(currentSliceId());
+                if (reload) {
+                    for (const auto &layer : reload->layers) {
+                        if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty()) {
+                            for (const auto &b : layer.boundaries) {
+                                bool ok = false;
+                                int val = b.text.toInt(&ok);
+                                alignInput.phNum.push_back(ok ? val : 0);
+                            }
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -629,7 +614,7 @@ namespace dstools {
         m_extractMidiAction->setEnabled(false);
         DSFW_LOG_INFO("infer", ("Pitch extraction started: " + sliceId.toStdString()).c_str());
         auto *rmvpe = m_rmvpe;
-        auto rmvpeAlive = m_rmvpeAlive;
+        auto rmvpeAlive = m_rmvpeAlive.token();
         QPointer<PitchLabelerPage> guard(this);
 
         (void) QtConcurrent::run([rmvpe, rmvpeAlive, audioPath, sliceId, guard]() {
@@ -699,7 +684,7 @@ namespace dstools {
         DSFW_LOG_INFO(
             "infer", ("MIDI transcription started: " + sliceId.toStdString() + (alignInput ? " (align)" : "")).c_str());
         auto *game = m_game;
-        auto gameAlive = m_gameAlive;
+        auto gameAlive = m_gameAlive.token();
         QPointer<PitchLabelerPage> guard(this);
         bool useAlign = (alignInput != nullptr);
         auto capturedInput = useAlign ? std::make_shared<Game::AlignInput>(*alignInput) : nullptr;
@@ -1043,8 +1028,8 @@ void PitchLabelerPage::runAddPhNum(const QString &sliceId) {
 
         auto *rmvpe = m_rmvpe;
         auto *game = m_game;
-        auto rmvpeAlive = m_rmvpeAlive;
-        auto gameAlive = m_gameAlive;
+        auto rmvpeAlive = m_rmvpeAlive.token();
+        auto gameAlive = m_gameAlive.token();
         auto *src = source();
         QPointer<PitchLabelerPage> guard(this);
 
