@@ -379,8 +379,18 @@ TimePos TextGridDocument::snapToNearestBoundary(int tierIndex, TimePos proposedT
 void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePos duration) {
     m_textGrid = textgrid::TextGrid();
     double maxTime = usToSec(duration);
-    if (maxTime <= 0.0)
-        maxTime = 1.0; // fallback
+    if (maxTime <= 0.0) {
+        maxTime = 0.0;
+        for (const auto &layer : layers) {
+            for (const auto &b : layer.boundaries) {
+                double t = usToSec(b.pos);
+                if (t > maxTime)
+                    maxTime = t;
+            }
+        }
+        if (maxTime <= 0.0)
+            return;
+    }
 
     m_textGrid.SetMinTime(0.0);
     m_textGrid.SetMaxTime(maxTime);
