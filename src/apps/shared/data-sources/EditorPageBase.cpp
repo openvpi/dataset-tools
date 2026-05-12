@@ -437,4 +437,13 @@ void EditorPageBase::runBatchProcess(
     dlg->show();
 }
 
+bool EditorPageBase::applyAndReload(const QString &sliceId, const DsTextDocument &doc) {
+    if (!source())
+        return false;
+    source()->saveSlice(sliceId, doc);
+    if (sliceId == currentSliceId())
+        onSliceSelectedImpl(sliceId);
+    return true;
+}
+
 } // namespace dstools

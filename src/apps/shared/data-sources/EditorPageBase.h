@@ -173,6 +173,13 @@ protected:
                          const QStringList &sliceIds,
                          std::function<void(BatchProcessDialog *)> addExtraParams = {});
 
+    // ── Common result application ──
+
+    /// Save a slice document and reload the editor if it matches the current slice.
+    /// Handles saveSlice() + conditional reload + updateProgress() in one call.
+    /// @return true on success.
+    bool applyAndReload(const QString &sliceId, const DsTextDocument &doc);
+
     // ── Async engine loading ──
 
     /// Load an inference engine asynchronously in a background thread.
