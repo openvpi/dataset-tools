@@ -1,121 +1,50 @@
-/// @file PowerWidget.h
-/// @brief Audio power (RMS energy) visualization widget.
-
 #pragma once
 
-#include <QWidget>
-#include <vector>
-#include <QPoint>
+#include "AudioChartWidget.h"
+#include "TextGridDocument.h"
 
-#include <dstools/ViewportController.h>
-#include <dstools/TimePos.h>
-#include <dstools/PlayWidget.h>
+#include <vector>
 
 class QPainter;
-class QUndoStack;
 
 namespace dstools {
 namespace phonemelabeler {
 
-using dstools::widgets::ViewportController;
-using dstools::widgets::ViewportState;
-
-class BoundaryDragController;
-class TextGridDocument;
-
-/// @brief Displays audio power curve synchronized with the viewport, with boundary
-///        overlay and dragging support.
-class PowerWidget : public QWidget {
+class PowerWidget : public AudioChartWidget {
     Q_OBJECT
 
 public:
-    /// @brief Constructs the power widget.
-    /// @param viewport Viewport controller for time synchronization.
-    /// @param parent Optional parent widget.
     explicit PowerWidget(ViewportController *viewport, QWidget *parent = nullptr);
     ~PowerWidget() override;
 
-    /// @brief Sets the audio sample data.
-    /// @param samples Audio samples.
-    /// @param sampleRate Sample rate in Hz.
     void setAudioData(const std::vector<float> &samples, int sampleRate);
-
-    /// @brief Updates the viewport state.
-    /// @param state New viewport state.
-    void setViewport(const ViewportState &state);
-
-    /// @brief Sets the TextGrid document for boundary display.
     void setDocument(TextGridDocument *doc);
+    [[nodiscard]] TextGridDocument *document() const { return m_document; }
 
-    /// @brief Sets the drag controller for boundary dragging.
-    void setDragController(BoundaryDragController *ctrl) { m_dragController = ctrl; }
-
-    /// @brief Sets the undo stack for boundary edit commands.
-    void setUndoStack(QUndoStack *stack) { m_undoStack = stack; }
-
-    /// @brief Sets the play widget for audio playback integration.
-    void setPlayWidget(dstools::widgets::PlayWidget *pw) { m_playWidget = pw; }
-
-    /// @brief Triggers a repaint of the boundary overlay.
-    void updateBoundaryOverlay();
+    void rebuildCache() override;
 
 signals:
-    void boundaryDragStarted(int tierIndex, int boundaryIndex);  ///< Boundary drag began.
-    void boundaryDragging(int tierIndex, int boundaryIndex, TimePos newTime); ///< Boundary being dragged.
-    void boundaryDragFinished(int tierIndex, int boundaryIndex, TimePos newTime); ///< Boundary drag ended.
-    void hoveredBoundaryChanged(int boundaryIndex); ///< Hovered boundary changed.
-    void entryScrollRequested(int delta);           ///< Scroll request from wheel event.
-    void visibleStateChanged(bool visible);         ///< Emitted when widget visibility changes externally.
+    void visibleStateChanged(bool visible);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void contextMenuEvent(QContextMenuEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void drawBoundaryOverlay(QPainter &painter);
     void showEvent(QShowEvent *event) override;
     void hideEvent(QHideEvent *event) override;
 
 private:
-    void rebuildPowerCache();                           ///< Recomputes cached power values.
-    void drawPower(QPainter &painter);                  ///< Draws the power curve.
-    void drawReferenceLines(QPainter &painter);         ///< Draws dB reference lines.
-    void drawBoundaryOverlay(QPainter &painter);        ///< Draws boundary lines.
+    void rebuildPowerCache();
+    void drawPower(QPainter &painter);
+    void drawReferenceLines(QPainter &painter);
 
-    [[nodiscard]] int hitTestBoundary(int x, int *outTier = nullptr) const; ///< Returns boundary index at x, or -1.
-    void findSurroundingBoundaries(double time, double &start, double &end) const;
+    std::vector<float> m_samples;
+    int m_sampleRate = 44100;
+    TextGridDocument *m_document = nullptr;
 
-    [[nodiscard]] double xToTime(int x) const;          ///< Converts pixel x to time.
-    [[nodiscard]] int timeToX(double time) const;       ///< Converts time to pixel x.
-
-    ViewportController *m_viewport = nullptr;           ///< Viewport controller.
-    TextGridDocument *m_document = nullptr;             ///< Associated document.
-    BoundaryDragController *m_dragController = nullptr; ///< Drag controller.
-    QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
-    dstools::widgets::PlayWidget *m_playWidget = nullptr;
-
-    std::vector<float> m_samples;                       ///< Raw audio samples.
-    int m_sampleRate = 44100;                           ///< Audio sample rate in Hz.
-
-    std::vector<float> m_powerCache;                    ///< Power dB values per pixel column.
-
-    double m_viewStart = 0.0;                           ///< Visible range start in seconds.
-    double m_viewEnd = 10.0;                            ///< Visible range end in seconds.
-
-    static constexpr int kUnitSize = 60;                ///< RMS unit size in samples.
-    static constexpr int kWindowSize = 300;             ///< RMS window size in samples.
-    static constexpr float kMinPower = -48.0f;          ///< Minimum displayed power in dB.
-    static constexpr float kMaxPower = 0.0f;            ///< Maximum displayed power in dB.
-    static constexpr float kRefValue = 32768.0f;        ///< Reference value (2^15).
-
-    bool m_dragging = false;                            ///< Whether viewport is being scrolled.
-    QPoint m_dragStartPos;                              ///< Mouse position at drag start.
-    double m_dragStartTime = 0.0;                       ///< View start time at drag start.
-
-    static constexpr int kBoundaryHitWidth = 12;         ///< Hit-test width in pixels.
-    int m_hoveredBoundary = -1;                         ///< Hovered boundary index, or -1.
+    double m_cachedViewStart = -1.0;
+    double m_cachedViewEnd = -1.0;
+    int m_cachedWidth = 0;
 };
 
 } // namespace phonemelabeler
