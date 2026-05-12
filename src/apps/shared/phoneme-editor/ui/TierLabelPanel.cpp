@@ -2,6 +2,8 @@
 #include "TextGridDocument.h"
 #include "IBoundaryModel.h"
 
+#include <dsfw/Theme.h>
+
 #include <QPainter>
 #include <QPaintEvent>
 #include <QMouseEvent>
@@ -103,7 +105,9 @@ void TierLabelPanel::drawRow(QPainter &painter, const TierLabelRow &row) {
         painter.drawText(labelRect, Qt::AlignCenter, painter.fontMetrics().elidedText(text, Qt::ElideRight, static_cast<int>(labelWidth - 2)));
     }
 
-    painter.setPen(QPen(QColor(80, 80, 90), 1));
+    const auto &pal = dsfw::Theme::instance().palette();
+    QColor borderColor(pal.border.red(), pal.border.green(), pal.border.blue(), 180);
+    painter.setPen(QPen(borderColor, 1));
     painter.drawLine(0, yCenter - halfHeight, width(), yCenter - halfHeight);
     painter.drawLine(0, yCenter + halfHeight, width(), yCenter + halfHeight);
 }

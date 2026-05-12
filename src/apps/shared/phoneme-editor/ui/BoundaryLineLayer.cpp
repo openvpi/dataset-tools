@@ -3,6 +3,8 @@
 #include <QPainter>
 #include <QPaintEvent>
 
+#include <dsfw/Theme.h>
+
 #include <cmath>
 
 namespace dstools {
@@ -62,15 +64,17 @@ void BoundaryLineLayer::paintEvent(QPaintEvent *) {
             int x = static_cast<int>(timeToX(tSec));
 
             QColor color;
+            const auto &pal = dsfw::Theme::instance().palette().phonemeEditor;
             if (t == activeTier) {
                 if (m_draggedBoundary >= 0 && b == m_draggedBoundary)
-                    color = QColor(255, 200, 100);
+                    color = pal.boundaryDragged;
                 else if (b == m_hoveredBoundary)
-                    color = QColor(255, 255, 255);
+                    color = pal.boundaryHovered;
                 else
-                    color = QColor(255, 180, 80, 220);
+                    color = pal.boundaryNormal;
             } else {
-                color = QColor(120, 120, 150, 80);
+                color = QColor(pal.boundaryNormal.red(), pal.boundaryNormal.green(),
+                               pal.boundaryNormal.blue(), 80);
             }
 
             painter.setPen(QPen(color, 1));
