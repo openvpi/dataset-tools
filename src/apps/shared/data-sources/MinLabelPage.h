@@ -42,6 +42,9 @@ protected:
     bool isBatchRunning() const override;
     void setBatchRunning(bool running) override;
     std::shared_ptr<std::atomic<bool>> batchAliveToken() const override;
+    bool hasExistingResult(const QString &sliceId) const override;
+    BatchSliceResult processSlice(const QString &sliceId) override;
+    void applyBatchResult(const QString &sliceId, const BatchSliceResult &result) override;
 
 private:
     LyricFA::Asr *m_asr = nullptr;
@@ -56,7 +59,8 @@ private:
     QAction *m_lyricFaAction = nullptr;
 
     std::atomic<bool> m_batchRunning{false};
-    std::shared_ptr<std::atomic<bool>> m_batchAlive;
+    QString m_pendingAsrText;
+    bool m_batchAutoG2P = false;
 
     std::unique_ptr<LyricFA::MatchLyric> m_matchLyric;
     std::shared_ptr<std::atomic<bool>> m_matchLyricAlive;

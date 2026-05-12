@@ -83,10 +83,47 @@ namespace dstools {
 
     void MinLabelPage::setBatchRunning(bool running) {
         m_batchRunning = running;
+        m_asrRunning = running;
     }
 
     std::shared_ptr<std::atomic<bool>> MinLabelPage::batchAliveToken() const {
-        return m_batchAlive;
+        return m_asrAlive;
+    }
+
+    bool MinLabelPage::hasExistingResult(const QString &sliceId) const {
+        if (!source())
+            return false;
+        auto result = source()->loadSlice(sliceId);
+        if (!result)
+            return false;
+        for (const auto &layer : result.value().layers) {
+            if (layer.name == QStringLiteral("grapheme") && !layer.boundaries.empty())
+                return true;
+        }
+        return false;
+    }
+
+    BatchSliceResult MinLabelPage::processSlice(const QString &sliceId) {
+        if (!m_asrAlive || !*m_asrAlive)
+            return {BatchSliceResult::Error, tr("ASR model invalidated")};
+
+        QString audioPath = source()->validatedAudioPath(sliceId);
+        std::string msg;
+        bool ok = m_asr->recognize(audioPath.toStdWString(), msg);
+        if (ok) {
+            m_pendingAsrText = QString::fromUtf8(msg);
+            return {BatchSliceResult::Processed,
+                    tr("[OK] %1: \"%2\"").arg(sliceId, m_pendingAsrText.left(80))};
+        }
+        return {BatchSliceResult::Error,
+                tr("[ERROR] %1: recognition failed - %2").arg(sliceId, QString::fromStdString(msg))};
+    }
+
+    void MinLabelPage::applyBatchResult(const QString &sliceId, const BatchSliceResult &result) {
+        Q_UNUSED(result)
+        setAsrResult(sliceId, m_pendingAsrText);
+        if (m_batchAutoG2P)
+            batchG2P(sliceId);
     }
 
     // ── EditorPageBase hooks ──────────────────────────────────────────────────────
@@ -511,140 +548,23 @@ namespace dstools {
             return;
         }
 
-        auto *dlg = new BatchProcessDialog(tr("Batch ASR"), this);
-        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        m_batchAutoG2P = false;
 
-        auto *skipExisting = new QCheckBox(tr("Skip slices with existing lyrics"), dlg);
-        skipExisting->setChecked(true);
-        dlg->addParamWidget(skipExisting);
+        BatchConfig config;
+        config.dialogTitle = tr("Batch ASR");
+        config.skipExistingLabel = tr("Skip slices with existing lyrics");
+        config.defaultSkipExisting = true;
 
-        auto *autoG2PBox = new QCheckBox(tr("自动 G2P (拼音) 到结果"), dlg);
-        autoG2PBox->setChecked(false);
-        dlg->addParamWidget(autoG2PBox);
-
-        dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
-
-        auto *asr = m_asr;
-        auto asrAlive = m_asrAlive;
-        auto *src = source();
-        QPointer<MinLabelPage> guard(this);
-
-        connect(dlg, &BatchProcessDialog::started, this, [dlg, asr, asrAlive, src, ids, guard, skipExisting, autoG2PBox]() {
-            if (!guard) {
-                dlg->finish(0, 0, 0);
-                return;
-            }
-            guard->m_asrRunning = true;
-            bool skip = skipExisting->isChecked();
-            bool autoG2P = autoG2PBox->isChecked();
-
-            (void) QtConcurrent::run([dlg, asr, asrAlive, src, ids, guard, skip, autoG2P]() {
-                int processed = 0;
-                int skipped = 0;
-                int errors = 0;
-                int idx = 0;
-                try {
-                for (const auto &sliceId : ids) {
-                    if (dlg->isCancelled())
-                        break;
-                    if (!asrAlive || !*asrAlive)
-                        break;
-
-                    QMetaObject::invokeMethod(
-                        dlg, [dlg, idx, total = ids.size()]() { dlg->setProgress(idx, total); }, Qt::QueuedConnection);
-
-                    QString audioPath = src->validatedAudioPath(sliceId);
-                    if (audioPath.isEmpty()) {
-                        ++skipped;
-                        QMetaObject::invokeMethod(
-                            dlg, [dlg, sliceId]() { dlg->appendLog(tr("[SKIP] %1 (missing audio)").arg(sliceId)); },
-                            Qt::QueuedConnection);
-                        ++idx;
-                        continue;
-                    }
-
-                    if (skip) {
-                        auto result = src->loadSlice(sliceId);
-                        if (result) {
-                            bool hasLyrics = false;
-                            for (const auto &layer : result.value().layers) {
-                                if (layer.name == QStringLiteral("grapheme") && !layer.boundaries.empty()) {
-                                    hasLyrics = true;
-                                    break;
-                                }
-                            }
-                            if (hasLyrics) {
-                                ++skipped;
-                                QMetaObject::invokeMethod(
-                                    dlg,
-                                    [dlg, sliceId]() {
-                                        dlg->appendLog(tr("[SKIP] %1 (existing lyrics)").arg(sliceId));
-                                    },
-                                    Qt::QueuedConnection);
-                                ++idx;
-                                continue;
-                            }
-                        }
-                    }
-
-                    std::string msg;
-                    bool ok = asr->recognize(audioPath.toStdWString(), msg);
-                    if (ok) {
-                        QString text = QString::fromUtf8(msg);
-                        QMetaObject::invokeMethod(
-                            guard.data(),
-                            [guard, sliceId, text, autoG2P]() {
-                                if (guard) {
-                                    guard->setAsrResult(sliceId, text);
-                                    if (autoG2P)
-                                        guard->batchG2P(sliceId);
-                                }
-                            },
-                            Qt::QueuedConnection);
-                        QMetaObject::invokeMethod(
-                            dlg,
-                            [dlg, sliceId, text]() {
-                                dlg->appendLog(tr("[OK] %1: \"%2\"").arg(sliceId, text.left(80)));
-                            },
-                            Qt::QueuedConnection);
-                        ++processed;
-                    } else {
-                        ++errors;
-                        DSFW_LOG_ERROR("infer", (std::string("Batch ASR failed: ") + sliceId.toStdString() + " - " + msg).c_str());
-                        QMetaObject::invokeMethod(
-                            dlg,
-                            [dlg, sliceId, msg = QString::fromStdString(msg)]() { dlg->appendLog(tr("[ERROR] %1: recognition failed - %2").arg(sliceId, msg)); },
-                            Qt::QueuedConnection);
-                    }
-                    ++idx;
-                }
-                } catch (const std::exception &e) {
-                    DSFW_LOG_ERROR("infer", ("Batch ASR exception: " + std::string(e.what())).c_str());
-                    QMetaObject::invokeMethod(
-                        dlg, [dlg, eMsg = std::string(e.what())]() {
-                            dlg->appendLog(tr("[ERROR] Exception: %1").arg(QString::fromStdString(eMsg)));
-                        },
-                        Qt::QueuedConnection);
-                }
-                QMetaObject::invokeMethod(
-                    dlg, [dlg, processed, skipped, errors]() { dlg->finish(processed, skipped, errors); },
-                    Qt::QueuedConnection);
-                QMetaObject::invokeMethod(
-                    guard.data(),
-                    [guard]() {
-                        if (guard)
-                            guard->m_asrRunning = false;
-                    },
-                    Qt::QueuedConnection);
+        runBatchProcess(config, ids, [this](BatchProcessDialog *dlg) {
+            auto *autoG2PBox = new QCheckBox(tr("自动 G2P (拼音) 到结果"), dlg);
+            autoG2PBox->setChecked(false);
+            dlg->addParamWidget(autoG2PBox);
+            QPointer<MinLabelPage> guard(this);
+            connect(dlg, &BatchProcessDialog::started, this, [this, guard, autoG2PBox]() {
+                if (guard)
+                    m_batchAutoG2P = autoG2PBox->isChecked();
             });
         });
-
-        connect(dlg, &BatchProcessDialog::cancelled, this, [guard]() {
-            if (guard)
-                guard->m_asrRunning = false;
-        });
-
-        dlg->show();
     }
 
     void MinLabelPage::setAsrResult(const QString &sliceId, const QString &text) {
