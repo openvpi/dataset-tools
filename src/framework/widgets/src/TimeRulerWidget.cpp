@@ -9,22 +9,27 @@
 namespace dsfw::widgets {
 
 static const TimeRulerWidget::TimescaleLevel kLevels[] = {
+    {0.0005, 0.0002},   // 0.5ms / 0.2ms
     {0.001,  0.0005},   // 1ms / 0.5ms
-    {0.005,  0.001},    // 5ms / 1ms
+    {0.002,  0.001},    // 2ms / 1ms
+    {0.005,  0.002},    // 5ms / 2ms
     {0.01,   0.005},    // 10ms / 5ms
-    {0.05,   0.01},     // 50ms / 10ms
+    {0.02,   0.01},     // 20ms / 10ms
+    {0.05,   0.02},     // 50ms / 20ms
     {0.1,    0.05},     // 100ms / 50ms
     {0.2,    0.1},      // 200ms / 100ms
-    {0.5,    0.1},      // 500ms / 100ms
+    {0.5,    0.2},      // 500ms / 200ms
     {1.0,    0.5},      // 1s / 500ms
-    {2.0,    0.5},      // 2s / 500ms
-    {5.0,    1.0},      // 5s / 1s
-    {10.0,   2.0},      // 10s / 2s
+    {2.0,    1.0},      // 2s / 1s
+    {5.0,    2.0},      // 5s / 2s
+    {10.0,   5.0},      // 10s / 5s
     {15.0,   5.0},      // 15s / 5s
     {30.0,   10.0},     // 30s / 10s
-    {60.0,   15.0},     // 1min / 15s
-    {300.0,  60.0},     // 5min / 1min
-    {900.0,  300.0},    // 15min / 5min
+    {60.0,   30.0},     // 1min / 30s
+    {120.0,  60.0},     // 2min / 1min
+    {300.0,  120.0},    // 5min / 2min
+    {600.0,  300.0},    // 10min / 5min
+    {1800.0, 600.0},    // 30min / 10min
     {3600.0, 900.0},    // 1h / 15min
 };
 
@@ -91,8 +96,11 @@ QString TimeRulerWidget::formatTime(double timeSec, double intervalSec) {
     if (intervalSec >= 0.1) {
         return QString::number(timeSec, 'f', 1) + QStringLiteral("s");
     }
-    if (intervalSec >= 0.01) {
-        return QString::number(timeSec, 'f', 2) + QStringLiteral("s");
+    if (intervalSec >= 0.005) {
+        return QString::number(timeSec, 'f', 3) + QStringLiteral("s");
+    }
+    if (intervalSec >= 0.001) {
+        return QString::number(timeSec * 1000.0, 'f', 2) + QStringLiteral("ms");
     }
     return QString::number(timeSec * 1000.0, 'f', 1) + QStringLiteral("ms");
 }

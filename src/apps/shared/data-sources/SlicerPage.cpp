@@ -7,7 +7,6 @@
 
 #include <ui/WaveformChartPanel.h>
 #include <ui/SpectrogramChartPanel.h>
-#include <ui/PowerChartPanel.h>
 #include <ui/SliceBoundaryModel.h>
 
 #include <dsfw/Log.h>
@@ -167,13 +166,6 @@ void SlicerPage::buildLayout() {
     addSpectrogramChart(1, 1, 5.0);
     m_spectrogramChart->setBoundaryModel(m_boundaryModel);
     m_spectrogramChart->setVisible(true);
-
-    // Power chart: registered but hidden by default (D-30).
-    // Slicer users primarily need waveform + spectrogram; power can be
-    // toggled on via Settings if desired.
-    addPowerChart(2, 1, 3.0);
-    m_powerChart->hide();
-    m_container->setChartVisible(QStringLiteral("power"), false);
 
     m_container->setBoundaryModel(m_boundaryModel);
 

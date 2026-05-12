@@ -128,9 +128,6 @@ namespace dstools {
             [[nodiscard]] QAction *stopAction() const {
                 return m_actStop;
             }
-            [[nodiscard]] QAction *activeTierBoundariesAction() const {
-                return nullptr;
-            }
             [[nodiscard]] QList<QAction *> viewActions() const;
 
             // --- Configuration ---

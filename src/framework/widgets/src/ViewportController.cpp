@@ -7,6 +7,7 @@ namespace dsfw::widgets {
     static constexpr double kZoomFactor = 1.5;
 
     static int roundToNearest10(int value) {
+        if (value < 10) return value;
         return static_cast<int>(std::round(value / 10.0)) * 10;
     }
 

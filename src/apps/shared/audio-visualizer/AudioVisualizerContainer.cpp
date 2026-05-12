@@ -638,60 +638,22 @@ namespace dstools {
 
         // Forward playhead to all registered chart widgets via QMetaMethod invocation
         connect(m_playWidget, &PlayWidget::playheadChanged, this, [this](double sec) {
-            // Iterate all chart widgets and call setPlayhead if they have the method
-            for (const auto &id : m_chartOrder) {
-                auto it = m_charts.find(id);
-                if (it == m_charts.end() || !it->widget)
-                    continue;
-                const QMetaObject *mo = it->widget->metaObject();
-                for (int i = 0; i < mo->methodCount(); ++i) {
-                    QMetaMethod method = mo->method(i);
-                    if (method.name() == "setPlayhead" && method.parameterCount() == 1) {
-                        double secCopy = sec;
-                        method.invoke(it->widget, Qt::DirectConnection, QGenericArgument("double", &secCopy));
-                        break;
-                    }
-                }
-            }
-            // Also forward to boundary overlay
+            notifyChartsPlayhead(sec);
             if (m_boundaryOverlay)
                 m_boundaryOverlay->setPlayhead(sec);
-            // Forward to play cursor overlay
             if (m_playCursorOverlay)
                 m_playCursorOverlay->setPlayheadPosition(sec);
-            // Reset auto-clear timer
             if (m_playheadTimer)
                 m_playheadTimer->start();
         });
 
-        // Auto-clear playhead when playback stops
         connect(m_playheadTimer, &QTimer::timeout, this, [this]() {
-            for (const auto &id : m_chartOrder) {
-                auto it = m_charts.find(id);
-                if (it == m_charts.end() || !it->widget)
-                    continue;
-                const QMetaObject *mo = it->widget->metaObject();
-                for (int i = 0; i < mo->methodCount(); ++i) {
-                    QMetaMethod method = mo->method(i);
-                    if (method.name() == "setPlayhead" && method.parameterCount() == 1) {
-                        double negOne = -1.0;
-                        method.invoke(it->widget, Qt::DirectConnection, QGenericArgument("double", &negOne));
-                        break;
-                    }
-                }
-            }
+            clearChartsPlayhead();
             if (m_boundaryOverlay)
                 m_boundaryOverlay->setPlayhead(-1.0);
             if (m_playCursorOverlay)
                 m_playCursorOverlay->setPlayheadPosition(-1.0);
         });
-    }
-
-    void AudioVisualizerContainer::connectPlayheadToWidget(QWidget *chart) {
-        // Explicit connection for charts added after setPlayWidget.
-        // The setPlayWidget already handles all registered charts via iteration,
-        // so this is a no-op if setPlayWidget was called first.
-        Q_UNUSED(chart)
     }
 
     void AudioVisualizerContainer::invalidateBoundaryModel() {
@@ -701,11 +663,7 @@ namespace dstools {
         if (m_tierLabelArea)
             m_tierLabelArea->onModelDataChanged();
 
-        for (const auto &id : m_chartOrder) {
-            auto it = m_charts.find(id);
-            if (it != m_charts.end() && it->widget)
-                it->widget->update();
-        }
+        forEachChartWidget([](QWidget *w) { w->update(); });
 
         emit boundaryModelInvalidated();
     }
@@ -797,6 +755,32 @@ namespace dstools {
     void AudioVisualizerContainer::removeDragEventFilters() {
         if (m_editorWidget)
             m_editorWidget->removeEventFilter(this);
+    }
+
+    void AudioVisualizerContainer::forEachChartWidget(const std::function<void(QWidget *)> &fn) {
+        for (const auto &id : m_chartOrder) {
+            auto it = m_charts.find(id);
+            if (it != m_charts.end() && it->widget)
+                fn(it->widget);
+        }
+    }
+
+    void AudioVisualizerContainer::notifyChartsPlayhead(double sec) {
+        forEachChartWidget([sec](QWidget *w) {
+            const QMetaObject *mo = w->metaObject();
+            for (int i = 0; i < mo->methodCount(); ++i) {
+                QMetaMethod method = mo->method(i);
+                if (method.name() == "setPlayhead" && method.parameterCount() == 1) {
+                    double secCopy = sec;
+                    method.invoke(w, Qt::DirectConnection, QGenericArgument("double", &secCopy));
+                    break;
+                }
+            }
+        });
+    }
+
+    void AudioVisualizerContainer::clearChartsPlayhead() {
+        notifyChartsPlayhead(-1.0);
     }
 
 } // namespace dstools

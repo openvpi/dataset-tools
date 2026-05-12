@@ -22,67 +22,20 @@ namespace dsfw::widgets {
 
 PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
     initAudio();
-
-    m_deviceMenu = new QMenu(this);
-    m_deviceActionGroup = new QActionGroup(this);
-    m_deviceActionGroup->setExclusive(true);
-
-    m_fileLabel = new QLabel(tr("Select audio file."));
-    m_timeLabel = new QLabel("--:--/--:--");
-
-    m_slider = new QSlider(Qt::Horizontal);
-    m_slider->setRange(0, 10000);
-
-    m_playBtn = new QPushButton();
-    m_playBtn->setObjectName("play-button");
-    m_playBtn->setIcon(QIcon(":/icons/play.svg"));
-    m_playBtn->setIconSize(QSize(20, 20));
-    m_playBtn->setFixedSize(32, 28);
-    m_stopBtn = new QPushButton();
-    m_stopBtn->setObjectName("stop-button");
-    m_stopBtn->setIcon(QIcon(":/icons/stop.svg"));
-    m_stopBtn->setIconSize(QSize(20, 20));
-    m_stopBtn->setFixedSize(32, 28);
-    m_devBtn = new QPushButton();
-    m_devBtn->setObjectName("dev-button");
-    m_devBtn->setIcon(QIcon(":/icons/audio.svg"));
-    m_devBtn->setIconSize(QSize(20, 20));
-    m_devBtn->setFixedSize(32, 28);
-
-    auto *buttonsLayout = new QHBoxLayout();
-    buttonsLayout->addWidget(m_playBtn);
-    buttonsLayout->addWidget(m_stopBtn);
-    buttonsLayout->addWidget(m_devBtn);
-    buttonsLayout->addWidget(m_timeLabel);
-
-    auto *mainLayout = new QVBoxLayout(this);
-    mainLayout->addWidget(m_fileLabel);
-    mainLayout->addWidget(m_slider);
-    mainLayout->addLayout(buttonsLayout);
-
-    if (m_valid) {
-        connect(m_playBtn, &QPushButton::clicked, this, &PlayWidget::onPlayClicked);
-        connect(m_stopBtn, &QPushButton::clicked, this, &PlayWidget::onStopClicked);
-        connect(m_devBtn, &QPushButton::clicked, this, &PlayWidget::onDevClicked);
-        connect(m_slider, &QSlider::sliderReleased, this, &PlayWidget::onSliderReleased);
-        connect(m_deviceActionGroup, &QActionGroup::triggered, this, &PlayWidget::onDeviceAction);
-        connect(m_player, &dstools::audio::IAudioPlayer::stateChanged,
-                this, &PlayWidget::onPlaybackStateChanged);
-        connect(m_player, &dstools::audio::IAudioPlayer::deviceChanged,
-                this, &PlayWidget::onDeviceChanged);
-        reloadDevices();
-    } else {
-        m_playBtn->setEnabled(false);
-        m_stopBtn->setEnabled(false);
-        m_devBtn->setEnabled(false);
-        m_slider->setEnabled(false);
-    }
+    initUI();
 }
 
 PlayWidget::PlayWidget(dstools::audio::IAudioPlayer *player, QWidget *parent) : QWidget(parent) {
     m_player = player;
     m_valid = (m_player != nullptr);
+    initUI();
+}
 
+PlayWidget::~PlayWidget() {
+    uninitAudio();
+}
+
+void PlayWidget::initUI() {
     m_deviceMenu = new QMenu(this);
     m_deviceActionGroup = new QActionGroup(this);
     m_deviceActionGroup->setExclusive(true);
@@ -137,10 +90,6 @@ PlayWidget::PlayWidget(dstools::audio::IAudioPlayer *player, QWidget *parent) : 
         m_devBtn->setEnabled(false);
         m_slider->setEnabled(false);
     }
-}
-
-PlayWidget::~PlayWidget() {
-    uninitAudio();
 }
 
 void PlayWidget::initAudio() {

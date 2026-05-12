@@ -108,6 +108,7 @@ private:
     uint64_t estimatedTimeMs() const;
 
     void initAudio();
+    void initUI();
     void uninitAudio();
     void reloadDevices();
     void reloadButtonStatus();

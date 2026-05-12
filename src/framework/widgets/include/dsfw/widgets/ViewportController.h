@@ -27,12 +27,12 @@ namespace dsfw::widgets {
     /// @brief Controls the visible time range and zoom for time-axis views.
     ///
     /// Zoom is driven by "resolution" (samples per pixel). Resolution is a
-    /// continuous integer >= kMinResolution (10), rounded to the nearest tens.
+    /// continuous integer >= kMinResolution (1). Rounds to nearest tens for values ≥10.
     /// No discrete table — stepless zoom with round-tens stays predictable.
     class DSFW_WIDGETS_API ViewportController : public QObject {
         Q_OBJECT
     public:
-        static constexpr int kMinResolution = 10;
+        static constexpr int kMinResolution = 1;
 
         /// @brief Construct a ViewportController.
         /// @param parent Parent QObject.

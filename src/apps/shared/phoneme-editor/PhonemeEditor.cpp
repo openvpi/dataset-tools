@@ -536,11 +536,7 @@ void PhonemeEditor::connectSignals() {
 }
 
 void PhonemeEditor::updateAllBoundaryOverlays() {
-    m_waveformChart->update();
-    m_powerChart->update();
-    m_spectrogramChart->update();
-    if (auto *bo = m_container->boundaryOverlay())
-        bo->update();
+    m_container->invalidateBoundaryModel();
 }
 
 void PhonemeEditor::onPlayPause() {

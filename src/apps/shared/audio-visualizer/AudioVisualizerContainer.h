@@ -7,6 +7,7 @@
 ///   MiniMapScrollBar → TimeRuler → TierLabelArea → QSplitter(charts)
 /// with shared ViewportController, IBoundaryModel, and BoundaryOverlayWidget.
 
+#include <functional>
 #include <QByteArray>
 #include <QMap>
 #include <QSet>
@@ -132,9 +133,6 @@ namespace dstools {
 
         void setPlayWidget(dsfw::widgets::PlayWidget *playWidget);
 
-        /// Convenience: connect playhead to a chart widget that has setPlayhead(double).
-        void connectPlayheadToWidget(QWidget *chart);
-
         /// Notify that boundary model data has changed (boundaries added/moved/removed,
         /// tier structure changed). Refreshes overlay, tier label, and all chart widgets.
         void invalidateBoundaryModel();
@@ -171,6 +169,10 @@ namespace dstools {
         void resizeEvent(QResizeEvent *event) override;
         void wheelEvent(QWheelEvent *event) override;
         bool eventFilter(QObject *watched, QEvent *event) override;
+
+        void forEachChartWidget(const std::function<void(QWidget *)> &fn);
+        void notifyChartsPlayhead(double sec);
+        void clearChartsPlayhead();
 
         widgets::ViewportController *m_viewport = nullptr;
         IBoundaryModel *m_boundaryModel = nullptr;
