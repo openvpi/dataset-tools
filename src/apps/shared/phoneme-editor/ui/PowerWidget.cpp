@@ -55,43 +55,6 @@ void PowerWidget::paintEvent(QPaintEvent *event) {
 
     drawReferenceLines(painter);
     drawPower(painter);
-    drawBoundaryOverlay(painter);
-}
-
-void PowerWidget::drawBoundaryOverlay(QPainter &painter) {
-    if (!m_boundaryModel) return;
-
-    int activeIndex = m_boundaryModel->activeTierIndex();
-    int tierCount = m_boundaryModel->tierCount();
-
-    for (int t = 0; t < tierCount; ++t) {
-        int count = m_boundaryModel->boundaryCount(t);
-        for (int b = 0; b < count; ++b) {
-            double tSec = usToSec(m_boundaryModel->boundaryTime(t, b));
-            int x = timeToX(tSec);
-            if (x < 0 || x > width()) continue;
-
-            QColor lineColor;
-            if (t == activeIndex) {
-                lineColor = QColor(255, 200, 100, 255);
-            } else {
-                int hue = (t * 67 + 180) % 360;
-                lineColor = QColor::fromHsv(hue, 180, 255, 140);
-            }
-
-            bool isDragging = m_dragController && m_dragController->isDragging() &&
-                              t == m_dragController->draggedTier() &&
-                              b == m_dragController->draggedBoundary();
-            if (isDragging) {
-                painter.setPen(QPen(lineColor.lighter(150), 2));
-            } else if (t == activeIndex && b == m_hoveredBoundary) {
-                painter.setPen(QPen(QColor(255, 255, 255), 2));
-            } else {
-                painter.setPen(QPen(lineColor, 1, Qt::SolidLine));
-            }
-            painter.drawLine(x, 0, x, height());
-        }
-    }
 }
 
 void PowerWidget::drawReferenceLines(QPainter &painter) {

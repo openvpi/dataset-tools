@@ -274,31 +274,6 @@ void SpectrogramWidget::paintEvent(QPaintEvent *event) {
     if (!m_viewImage.isNull()) {
         painter.drawImage(rect(), m_viewImage);
     }
-
-    drawBoundaryOverlay(painter);
-}
-
-void SpectrogramWidget::drawBoundaryOverlay(QPainter &painter) {
-    if (!m_boundaryModel) return;
-
-    int activeTier = m_boundaryModel->activeTierIndex();
-    if (activeTier < 0 || activeTier >= m_boundaryModel->tierCount()) return;
-
-    int count = m_boundaryModel->boundaryCount(activeTier);
-    for (int b = 0; b < count; ++b) {
-        double t = usToSec(m_boundaryModel->boundaryTime(activeTier, b));
-        int x = timeToX(t);
-        if (x < 0 || x > width()) continue;
-
-        if (m_dragController && m_dragController->isDragging() && b == m_dragController->draggedBoundary()) {
-            painter.setPen(QPen(QColor(255, 200, 100), 2));
-        } else if (b == m_hoveredBoundary) {
-            painter.setPen(QPen(QColor(255, 255, 255), 2));
-        } else {
-            painter.setPen(QPen(QColor(180, 180, 200, 180), 1, Qt::SolidLine));
-        }
-        painter.drawLine(x, 0, x, height());
-    }
 }
 
 void SpectrogramWidget::resizeEvent(QResizeEvent *event) {

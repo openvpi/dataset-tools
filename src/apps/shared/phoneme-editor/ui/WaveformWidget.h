@@ -20,10 +20,9 @@ public:
     void setAudioData(const std::vector<float> &samples, int sampleRate);
     void loadAudio(const QString &path);
     void setPlayhead(double sec);
-    void setBoundaryOverlayEnabled(bool enabled);
-    void rebuildMinMaxCache();
 
     void rebuildCache() override;
+    void rebuildMinMaxCache();
 
 signals:
     void positionClicked(double sec);
@@ -55,7 +54,6 @@ private:
 
     double m_playhead = -1.0;
     double m_amplitudeScale = 1.0;
-    bool m_boundaryOverlayEnabled = true;
 };
 
 } // namespace phonemelabeler

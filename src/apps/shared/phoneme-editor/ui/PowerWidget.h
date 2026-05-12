@@ -29,7 +29,6 @@ signals:
 protected:
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
-    void drawBoundaryOverlay(QPainter &painter);
     void showEvent(QShowEvent *event) override;
     void hideEvent(QHideEvent *event) override;
 

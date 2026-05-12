@@ -110,9 +110,6 @@ void WaveformWidget::paintEvent(QPaintEvent * /*event*/) {
     drawWaveform(painter);
     drawDbAxis(painter);
     drawPlayCursor(painter);
-    if (m_boundaryOverlayEnabled) {
-        drawBoundaryOverlay(painter);
-    }
 }
 
 void WaveformWidget::resizeEvent(QResizeEvent *event) {
@@ -180,11 +177,6 @@ void WaveformWidget::drawDbAxis(QPainter &painter) {
         QString label = (db == 0.0f) ? QStringLiteral("0dB") : QString::number(static_cast<int>(db)) + "dB";
         painter.drawText(2, yTop - 1, label);
     }
-}
-
-void WaveformWidget::setBoundaryOverlayEnabled(bool enabled) {
-    m_boundaryOverlayEnabled = enabled;
-    update();
 }
 
 void WaveformWidget::rebuildMinMaxCache() {

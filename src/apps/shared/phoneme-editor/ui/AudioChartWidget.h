@@ -33,7 +33,6 @@ namespace dstools {
             void setUndoStack(QUndoStack *stack);
             void setPlayWidget(dstools::widgets::PlayWidget *pw);
             void setViewport(const ViewportState &state);
-            void updateBoundaryOverlay();
 
             virtual void rebuildCache() = 0;
 
@@ -55,7 +54,6 @@ namespace dstools {
             virtual void onVerticalZoom(double factor);
 
             [[nodiscard]] int hitTestBoundary(int x, int *outTier = nullptr) const;
-            void drawBoundaryOverlay(QPainter &painter);
             void findSurroundingBoundaries(double timeSec, double &outStart, double &outEnd) const;
 
             [[nodiscard]] double xToTime(int x) const;

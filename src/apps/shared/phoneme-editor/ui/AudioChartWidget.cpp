@@ -44,10 +44,6 @@ namespace dstools {
             update();
         }
 
-        void AudioChartWidget::updateBoundaryOverlay() {
-            update();
-        }
-
         void AudioChartWidget::onViewportDragStart(double timeSec) {
             Q_UNUSED(timeSec)
         }
@@ -232,30 +228,6 @@ namespace dstools {
             if (outTier)
                 *outTier = hits[bestIdx].tier;
             return hits[bestIdx].boundary;
-        }
-
-        void AudioChartWidget::drawBoundaryOverlay(QPainter &painter) {
-            if (!m_boundaryModel)
-                return;
-
-            int activeTier = m_boundaryModel->activeTierIndex();
-            if (activeTier < 0)
-                return;
-
-            int count = m_boundaryModel->boundaryCount(activeTier);
-            for (int b = 0; b < count; ++b) {
-                int bx = timeToX(usToSec(m_boundaryModel->boundaryTime(activeTier, b)));
-                if (bx < 0 || bx > width())
-                    continue;
-
-                QColor color = QColor(255, 165, 0, 200);
-                if (b == m_hoveredBoundary) {
-                    color = QColor(255, 255, 0, 255);
-                }
-
-                painter.setPen(QPen(color, 2));
-                painter.drawLine(bx, 0, bx, height());
-            }
         }
 
         void AudioChartWidget::findSurroundingBoundaries(double timeSec, double &outStart, double &outEnd) const {
