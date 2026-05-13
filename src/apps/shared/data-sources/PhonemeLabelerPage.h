@@ -54,6 +54,7 @@ private:
                        const std::vector<BindingGroup> &groups = {},
                        const std::vector<LayerDependency> &dependencies = {});
     void updateProgress();
+    void loadFaResultIntoEditor(const DsTextDocument &doc);
 };
 
 } // namespace dstools

@@ -678,39 +678,8 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
 
     (void) source()->saveSlice(sliceId, doc);
 
-    if (sliceId == currentSliceId()) {
-        QList<IntervalLayer> allLayers;
-        for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("grapheme")
-                || layer.name == QStringLiteral("phoneme"))
-                allLayers.append(layer);
-        }
-
-        TimePos duration = 0;
-        double durSec = audioDurationSec(doc);
-        if (durSec > 0.0) {
-            duration = secToUs(durSec);
-        } else {
-            double audioDur = m_editor->viewport()->totalDuration();
-            if (audioDur > 0.0)
-                duration = secToUs(audioDur);
-        }
-
-        if (duration > 0)
-            m_editor->document()->loadFromDsText(allLayers, duration);
-
-        if (!doc.groups.empty())
-            m_editor->document()->setBindingGroups(doc.groups);
-        else if (allLayers.size() > 1)
-            m_editor->document()->autoDetectBindingGroups();
-
-        for (int i = 0; i < allLayers.size(); ++i) {
-            if (allLayers[i].name == QStringLiteral("phoneme")) {
-                m_editor->document()->setTierReadOnly(i, true);
-                break;
-            }
-        }
-    }
+    if (sliceId == currentSliceId())
+        loadFaResultIntoEditor(doc);
 
     updateProgress();
 }
@@ -927,6 +896,40 @@ void PhonemeLabelerPage::updateProgress() {
         }
     }
     sliceListPanel()->setProgress(completed, total);
+}
+
+void PhonemeLabelerPage::loadFaResultIntoEditor(const DsTextDocument &doc) {
+    QList<IntervalLayer> layers;
+    for (const auto &layer : doc.layers) {
+        if (layer.name == QStringLiteral("grapheme")
+            || layer.name == QStringLiteral("phoneme"))
+            layers.append(layer);
+    }
+
+    TimePos duration = 0;
+    double durSec = audioDurationSec(doc);
+    if (durSec > 0.0) {
+        duration = secToUs(durSec);
+    } else {
+        double audioDur = m_editor->viewport()->totalDuration();
+        if (audioDur > 0.0)
+            duration = secToUs(audioDur);
+    }
+
+    if (duration > 0)
+        m_editor->document()->loadFromDsText(layers, duration);
+
+    if (!doc.groups.empty())
+        m_editor->document()->setBindingGroups(doc.groups);
+    else if (layers.size() > 1)
+        m_editor->document()->autoDetectBindingGroups();
+
+    for (int i = 0; i < layers.size(); ++i) {
+        if (layers[i].name == QStringLiteral("phoneme")) {
+            m_editor->document()->setTierReadOnly(i, true);
+            break;
+        }
+    }
 }
 
 } // namespace dstools
