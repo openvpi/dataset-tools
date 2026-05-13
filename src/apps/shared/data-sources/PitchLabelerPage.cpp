@@ -363,7 +363,7 @@ namespace dstools {
         }
 
         QPointer<PitchLabelerPage> guard(this);
-        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady), &aliveToken, taskKey, enginePtr]() {
+        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady), &aliveToken, taskKey, &enginePtr]() {
             if (!guard)
                 return;
             ensureEngine(enginePtr, aliveToken, taskKey);
