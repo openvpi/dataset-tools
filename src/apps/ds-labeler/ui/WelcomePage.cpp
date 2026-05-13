@@ -14,7 +14,7 @@
 
 #include <memory>
 
-#include "NewProjectDialog.h"
+#include "ui/NewProjectDialog.h"
 
 namespace dstools {
 

@@ -14,12 +14,12 @@
 
 #include <cpp-pinyin/G2pglobal.h>
 
-#include "DsSlicerPage.h"
-#include "ExportPage.h"
+#include "ui/DsSlicerPage.h"
+#include "ui/ExportPage.h"
 #include "core/ProjectDataSource.h"
 #include <AppSettingsBackend.h>
 #include <ModelProviderInit.h>
-#include "WelcomePage.h"
+#include "ui/WelcomePage.h"
 
 #include <MinLabelPage.h>
 #include <PhonemeLabelerPage.h>
