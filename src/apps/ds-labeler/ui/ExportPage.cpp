@@ -391,206 +391,221 @@ namespace dstools {
             m_enginesAlive = std::make_shared<std::atomic<bool>>(true);
     }
 
-    void ExportPage::autoCompleteSlice(const QString &sliceId) {
-        if (!m_source)
-            return;
+    ExportPage::AutoCompleteResult ExportPage::runAutoComplete(DsTextDocument doc,
+                                                                const QString &audioPath,
+                                                                HFA::HFA *hfa,
+                                                                Rmvpe::Rmvpe *rmvpe,
+                                                                Game::Game *game,
+                                                                PhNumCalculator *phNumCalc) {
+    AutoCompleteResult result;
+    result.doc = std::move(doc);
 
-        auto result = m_source->loadSlice(sliceId);
-        if (!result)
-            return;
+    bool hasPhoneme = false;
+    bool hasPhNum = false;
+    bool hasPitch = false;
+    bool hasMidi = false;
+    bool hasGrapheme = false;
+    QStringList graphemeTexts;
+    QStringList phonemeTexts;
 
-        DsTextDocument doc = std::move(result.value());
-
-        bool hasPhoneme = false;
-        bool hasPhNum = false;
-        bool hasPitch = false;
-        bool hasMidi = false;
-        bool hasGrapheme = false;
-        QStringList graphemeTexts;
-        QStringList phonemeTexts;
-
-        for (const auto &layer : doc.layers) {
-            if (layer.name == QStringLiteral("grapheme")) {
-                hasGrapheme = true;
-                for (const auto &b : layer.boundaries) {
-                    if (!b.text.isEmpty())
-                        graphemeTexts << b.text;
-                }
-            } else if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
-                hasPhoneme = true;
-                for (const auto &b : layer.boundaries) {
-                    if (!b.text.isEmpty())
-                        phonemeTexts << b.text;
-                }
-            } else if (layer.name == QStringLiteral("ph_num")) {
-                hasPhNum = true;
-            } else if (layer.name == QStringLiteral("midi")) {
-                hasMidi = true;
+    for (const auto &layer : result.doc.layers) {
+        if (layer.name == QStringLiteral("grapheme")) {
+            hasGrapheme = true;
+            for (const auto &b : layer.boundaries) {
+                if (!b.text.isEmpty())
+                    graphemeTexts << b.text;
             }
-        }
-
-        for (const auto &curve : doc.curves) {
-            if (curve.name == QStringLiteral("pitch"))
-                hasPitch = true;
-        }
-
-        QString audioPath = m_source->audioPath(sliceId);
-
-        // Run FA if missing phoneme layer
-        if (!hasPhoneme && hasGrapheme && m_hfa && m_hfa->isOpen() && !audioPath.isEmpty()) {
-            std::string lyricsText;
-            for (const auto &text : graphemeTexts) {
-                if (!lyricsText.empty())
-                    lyricsText += " ";
-                lyricsText += text.toStdString();
+        } else if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
+            hasPhoneme = true;
+            for (const auto &b : layer.boundaries) {
+                if (!b.text.isEmpty())
+                    phonemeTexts << b.text;
             }
-
-            HFA::WordList words;
-            std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-            auto faResult = m_hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
-            if (faResult) {
-                IntervalLayer phonemeLayer;
-                phonemeLayer.name = QStringLiteral("phoneme");
-                phonemeLayer.type = QStringLiteral("interval");
-                int id = 1;
-                for (const auto &word : words) {
-                    for (const auto &phone : word.phones) {
-                        Boundary b;
-                        b.id = id++;
-                        b.pos = phone.start;
-                        b.text = QString::fromStdString(phone.text);
-                        phonemeLayer.boundaries.push_back(std::move(b));
-                    }
-                }
-                if (!phonemeLayer.boundaries.empty()) {
-                    Boundary endB;
-                    endB.id = id;
-                    endB.pos = words.back().phones.back().end;
-                    endB.text = QString();
-                    phonemeLayer.boundaries.push_back(std::move(endB));
-                }
-
-                bool replaced = false;
-                for (auto &layer : doc.layers) {
-                    if (layer.name == QStringLiteral("phoneme")) {
-                        layer = phonemeLayer;
-                        replaced = true;
-                        break;
-                    }
-                }
-                if (!replaced)
-                    doc.layers.push_back(std::move(phonemeLayer));
-
-                hasPhoneme = true;
-                phonemeTexts.clear();
-                for (const auto &layer : doc.layers) {
-                    if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
-                        for (const auto &b : layer.boundaries) {
-                            if (!b.text.isEmpty())
-                                phonemeTexts << b.text;
-                        }
-                    }
-                }
-            }
+        } else if (layer.name == QStringLiteral("ph_num")) {
+            hasPhNum = true;
+        } else if (layer.name == QStringLiteral("midi")) {
+            hasMidi = true;
         }
-
-        // Run add_ph_num if missing
-        if (hasPhoneme && !hasPhNum && !phonemeTexts.isEmpty()) {
-            QString phNumStr;
-            QString error;
-            if (m_phNumCalc->calculate(phonemeTexts.join(' '), phNumStr, error)) {
-                IntervalLayer phNumLayer;
-                phNumLayer.name = QStringLiteral("ph_num");
-                phNumLayer.type = QStringLiteral("attribute");
-                const auto parts = phNumStr.split(QChar(' '), Qt::SkipEmptyParts);
-                int id = 1;
-                for (const auto &part : parts) {
-                    Boundary b;
-                    b.id = id++;
-                    b.text = part;
-                    phNumLayer.boundaries.push_back(std::move(b));
-                }
-
-                bool replaced = false;
-                for (auto &layer : doc.layers) {
-                    if (layer.name == QStringLiteral("ph_num")) {
-                        layer = phNumLayer;
-                        replaced = true;
-                        break;
-                    }
-                }
-                if (!replaced)
-                    doc.layers.push_back(std::move(phNumLayer));
-            }
-        }
-
-        // Run RMVPE if missing pitch
-        if (!hasPitch && m_rmvpe && m_rmvpe->is_open() && !audioPath.isEmpty()) {
-            std::vector<Rmvpe::RmvpeRes> results;
-            auto rmvpeResult = m_rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
-            if (rmvpeResult && !results.empty()) {
-                const auto &res = results[0];
-                std::vector<int32_t> f0Mhz(res.f0.size());
-                for (size_t i = 0; i < res.f0.size(); ++i)
-                    f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
-
-                float timestep = 0.005f;
-
-                CurveLayer *pitchCurve = nullptr;
-                for (auto &curve : doc.curves) {
-                    if (curve.name == QStringLiteral("pitch")) {
-                        pitchCurve = &curve;
-                        break;
-                    }
-                }
-                if (!pitchCurve) {
-                    doc.curves.push_back({});
-                    pitchCurve = &doc.curves.back();
-                    pitchCurve->name = QStringLiteral("pitch");
-                }
-                pitchCurve->values = f0Mhz;
-                pitchCurve->timestep = timestep;
-            }
-        }
-
-        // Run GAME if missing midi
-        if (!hasMidi && m_game && m_game->isOpen() && !audioPath.isEmpty()) {
-            std::vector<Game::GameNote> notes;
-            auto gameResult = m_game->getNotes(audioPath.toStdWString(), notes, nullptr);
-            if (gameResult && !notes.empty()) {
-                IntervalLayer *midiLayer = nullptr;
-                for (auto &layer : doc.layers) {
-                    if (layer.name == QStringLiteral("midi")) {
-                        midiLayer = &layer;
-                        break;
-                    }
-                }
-                if (!midiLayer) {
-                    doc.layers.push_back({});
-                    midiLayer = &doc.layers.back();
-                    midiLayer->name = QStringLiteral("midi");
-                    midiLayer->type = QStringLiteral("note");
-                }
-
-                midiLayer->boundaries.clear();
-                int id = 1;
-                for (const auto &note : notes) {
-                    Boundary b;
-                    b.id = id++;
-                    b.pos = static_cast<int64_t>(note.onset * 1000000.0);
-                    int midiNote = static_cast<int>(note.pitch + 0.5);
-                    int octave = midiNote / 12 - 1;
-                    int pc = midiNote % 12;
-                    static const char *pcNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-                    b.text = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
-                    midiLayer->boundaries.push_back(std::move(b));
-                }
-            }
-        }
-
-        (void) m_source->saveSlice(sliceId, doc);
     }
 
+    for (const auto &curve : result.doc.curves) {
+        if (curve.name == QStringLiteral("pitch"))
+            hasPitch = true;
+    }
+
+    if (!hasPhoneme && hasGrapheme && hfa && hfa->isOpen() && !audioPath.isEmpty()) {
+        std::string lyricsText;
+        for (const auto &text : graphemeTexts) {
+            if (!lyricsText.empty())
+                lyricsText += " ";
+            lyricsText += text.toStdString();
+        }
+
+        HFA::WordList words;
+        std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+        auto faResult = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
+        if (faResult) {
+            IntervalLayer phonemeLayer;
+            phonemeLayer.name = QStringLiteral("phoneme");
+            phonemeLayer.type = QStringLiteral("interval");
+            int id = 1;
+            for (const auto &word : words) {
+                if (word.text == "SP" || word.text == "AP")
+                    continue;
+                for (const auto &phone : word.phones) {
+                    if (phone.text == "SP" || phone.text == "AP")
+                        continue;
+                    Boundary b;
+                    b.id = id++;
+                    b.pos = secToUs(phone.start);
+                    b.text = QString::fromStdString(phone.text);
+                    phonemeLayer.boundaries.push_back(std::move(b));
+                }
+            }
+            if (!phonemeLayer.boundaries.empty()) {
+                Boundary endB;
+                endB.id = id;
+                endB.pos = secToUs(words.back().phones.back().end);
+                endB.text = QString();
+                phonemeLayer.boundaries.push_back(std::move(endB));
+            }
+
+            bool replaced = false;
+            for (auto &layer : result.doc.layers) {
+                if (layer.name == QStringLiteral("phoneme")) {
+                    layer = std::move(phonemeLayer);
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced)
+                result.doc.layers.push_back(std::move(phonemeLayer));
+            result.modified = true;
+            hasPhoneme = true;
+
+            phonemeTexts.clear();
+            for (const auto &layer : result.doc.layers) {
+                if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
+                    for (const auto &b : layer.boundaries) {
+                        if (!b.text.isEmpty())
+                            phonemeTexts << b.text;
+                    }
+                }
+            }
+        }
+    }
+
+    if (hasPhoneme && !hasPhNum && !phonemeTexts.isEmpty() && phNumCalc) {
+        QString phNumStr;
+        QString error;
+        if (phNumCalc->calculate(phonemeTexts.join(' '), phNumStr, error)) {
+            IntervalLayer phNumLayer;
+            phNumLayer.name = QStringLiteral("ph_num");
+            phNumLayer.type = QStringLiteral("attribute");
+            const auto parts = phNumStr.split(QChar(' '), Qt::SkipEmptyParts);
+            int id = 1;
+            for (const auto &part : parts) {
+                Boundary b;
+                b.id = id++;
+                b.text = part;
+                phNumLayer.boundaries.push_back(std::move(b));
+            }
+
+            bool replaced = false;
+            for (auto &layer : result.doc.layers) {
+                if (layer.name == QStringLiteral("ph_num")) {
+                    layer = std::move(phNumLayer);
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced)
+                result.doc.layers.push_back(std::move(phNumLayer));
+            result.modified = true;
+        }
+    }
+
+    if (!hasPitch && rmvpe && rmvpe->is_open() && !audioPath.isEmpty()) {
+        std::vector<Rmvpe::RmvpeRes> results;
+        auto rmvpeResult = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
+        if (rmvpeResult && !results.empty()) {
+            const auto &res = results[0];
+            std::vector<int32_t> f0Mhz(res.f0.size());
+            for (size_t i = 0; i < res.f0.size(); ++i)
+                f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
+
+            float timestep = 0.005f;
+            CurveLayer *pitchCurve = nullptr;
+            for (auto &curve : result.doc.curves) {
+                if (curve.name == QStringLiteral("pitch")) {
+                    pitchCurve = &curve;
+                    break;
+                }
+            }
+            if (!pitchCurve) {
+                result.doc.curves.push_back({});
+                pitchCurve = &result.doc.curves.back();
+                pitchCurve->name = QStringLiteral("pitch");
+            }
+            pitchCurve->values = std::move(f0Mhz);
+            pitchCurve->timestep = timestep;
+            result.modified = true;
+        }
+    }
+
+    if (!hasMidi && game && game->isOpen() && !audioPath.isEmpty()) {
+        std::vector<Game::GameNote> notes;
+        auto gameResult = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+        if (gameResult && !notes.empty()) {
+            IntervalLayer *midiLayer = nullptr;
+            for (auto &layer : result.doc.layers) {
+                if (layer.name == QStringLiteral("midi")) {
+                    midiLayer = &layer;
+                    break;
+                }
+            }
+            if (!midiLayer) {
+                result.doc.layers.push_back({});
+                midiLayer = &result.doc.layers.back();
+                midiLayer->name = QStringLiteral("midi");
+                midiLayer->type = QStringLiteral("note");
+            }
+
+            midiLayer->boundaries.clear();
+            int id = 1;
+            for (const auto &note : notes) {
+                Boundary b;
+                b.id = id++;
+                b.pos = static_cast<int64_t>(note.onset * 1000000.0);
+                int midiNote = static_cast<int>(note.pitch + 0.5);
+                int octave = midiNote / 12 - 1;
+                int pc = midiNote % 12;
+                static const char *pcNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+                b.text = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
+                midiLayer->boundaries.push_back(std::move(b));
+            }
+            result.modified = true;
+        }
+    }
+
+    return result;
+}
+
+void ExportPage::autoCompleteSlice(const QString &sliceId) {
+    if (!m_source)
+        return;
+
+    auto result = m_source->loadSlice(sliceId);
+    if (!result)
+        return;
+
+    QString audioPath = m_source->audioPath(sliceId);
+    auto outcome = runAutoComplete(std::move(result.value()), audioPath,
+                                    m_hfa.get(), m_rmvpe.get(),
+                                    m_game.get(), m_phNumCalc.get());
+    if (outcome.modified)
+        (void) m_source->saveSlice(sliceId, outcome.doc);
+}
     void ExportPage::onExport() {
         if (!m_source) {
             QMessageBox::warning(this, QStringLiteral("导出"), QStringLiteral("请先打开工程。"));
@@ -656,205 +671,10 @@ namespace dstools {
                         }
 
                         DsTextDocument doc = std::move(result.value());
-                        bool modified = false;
-                        bool hasPhoneme = false;
-                        bool hasPhNum = false;
-                        bool hasPitch = false;
-                        bool hasMidi = false;
-                        bool hasGrapheme = false;
-                        QStringList graphemeTexts;
-                        QStringList phonemeTexts;
-
-                        for (const auto &layer : doc.layers) {
-                            if (layer.name == QStringLiteral("grapheme")) {
-                                hasGrapheme = true;
-                                for (const auto &b : layer.boundaries) {
-                                    if (!b.text.isEmpty())
-                                        graphemeTexts << b.text;
-                                }
-                            } else if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
-                                hasPhoneme = true;
-                                for (const auto &b : layer.boundaries) {
-                                    if (!b.text.isEmpty())
-                                        phonemeTexts << b.text;
-                                }
-                            } else if (layer.name == QStringLiteral("ph_num")) {
-                                hasPhNum = true;
-                            } else if (layer.name == QStringLiteral("midi")) {
-                                hasMidi = true;
-                            }
-                        }
-
-                        for (const auto &curve : doc.curves) {
-                            if (curve.name == QStringLiteral("pitch"))
-                                hasPitch = true;
-                        }
-
                         QString audioPath = src->audioPath(sliceId);
-
-                        // Run FA if missing phoneme layer
-                        if (!hasPhoneme && hasGrapheme && hfa && hfa->isOpen() && !audioPath.isEmpty()) {
-                            std::string lyricsText;
-                            for (const auto &text : graphemeTexts) {
-                                if (!lyricsText.empty())
-                                    lyricsText += " ";
-                                lyricsText += text.toStdString();
-                            }
-
-                            HFA::WordList words;
-                            std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-                            auto faResult =
-                                hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
-                            if (faResult) {
-                                IntervalLayer phonemeLayer;
-                                phonemeLayer.name = QStringLiteral("phoneme");
-                                phonemeLayer.type = QStringLiteral("interval");
-                                int id = 1;
-                                for (const auto &word : words) {
-                                    if (word.text == "SP" || word.text == "AP")
-                                        continue;
-                                    for (const auto &phone : word.phones) {
-                                        if (phone.text == "SP" || phone.text == "AP")
-                                            continue;
-                                        Boundary b;
-                                        b.id = id++;
-                                        b.pos = secToUs(phone.start);
-                                        b.text = QString::fromStdString(phone.text);
-                                        phonemeLayer.boundaries.push_back(std::move(b));
-                                    }
-                                }
-                                if (!phonemeLayer.boundaries.empty()) {
-                                    Boundary endB;
-                                    endB.id = id;
-                                    endB.pos = secToUs(words.back().phones.back().end);
-                                    endB.text = QString();
-                                    phonemeLayer.boundaries.push_back(std::move(endB));
-                                }
-
-                                bool replaced = false;
-                                for (auto &layer : doc.layers) {
-                                    if (layer.name == QStringLiteral("phoneme")) {
-                                        layer = std::move(phonemeLayer);
-                                        replaced = true;
-                                        break;
-                                    }
-                                }
-                                if (!replaced)
-                                    doc.layers.push_back(std::move(phonemeLayer));
-                                modified = true;
-                                hasPhoneme = true;
-
-                                phonemeTexts.clear();
-                                for (const auto &layer : doc.layers) {
-                                    if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive)) {
-                                        for (const auto &b : layer.boundaries) {
-                                            if (!b.text.isEmpty())
-                                                phonemeTexts << b.text;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Run add_ph_num if missing
-                        if (hasPhoneme && !hasPhNum && !phonemeTexts.isEmpty() && phNumCalc) {
-                            QString phNumStr;
-                            QString error;
-                            if (phNumCalc->calculate(phonemeTexts.join(' '), phNumStr, error)) {
-                                IntervalLayer phNumLayer;
-                                phNumLayer.name = QStringLiteral("ph_num");
-                                phNumLayer.type = QStringLiteral("attribute");
-                                const auto parts = phNumStr.split(QChar(' '), Qt::SkipEmptyParts);
-                                int id = 1;
-                                for (const auto &part : parts) {
-                                    Boundary b;
-                                    b.id = id++;
-                                    b.text = part;
-                                    phNumLayer.boundaries.push_back(std::move(b));
-                                }
-
-                                bool replaced = false;
-                                for (auto &layer : doc.layers) {
-                                    if (layer.name == QStringLiteral("ph_num")) {
-                                        layer = std::move(phNumLayer);
-                                        replaced = true;
-                                        break;
-                                    }
-                                }
-                                if (!replaced)
-                                    doc.layers.push_back(std::move(phNumLayer));
-                                modified = true;
-                            }
-                        }
-
-                        // Run RMVPE if missing pitch
-                        if (!hasPitch && rmvpe && rmvpe->is_open() && !audioPath.isEmpty()) {
-                            std::vector<Rmvpe::RmvpeRes> results;
-                            auto rmvpeResult = rmvpe->get_f0(audioPath.toStdWString(), 0.03f, results, nullptr);
-                            if (rmvpeResult && !results.empty()) {
-                                const auto &res = results[0];
-                                std::vector<int32_t> f0Mhz(res.f0.size());
-                                for (size_t i = 0; i < res.f0.size(); ++i)
-                                    f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
-
-                                float timestep = 0.005f;
-                                CurveLayer *pitchCurve = nullptr;
-                                for (auto &curve : doc.curves) {
-                                    if (curve.name == QStringLiteral("pitch")) {
-                                        pitchCurve = &curve;
-                                        break;
-                                    }
-                                }
-                                if (!pitchCurve) {
-                                    doc.curves.push_back({});
-                                    pitchCurve = &doc.curves.back();
-                                    pitchCurve->name = QStringLiteral("pitch");
-                                }
-                                pitchCurve->values = std::move(f0Mhz);
-                                pitchCurve->timestep = timestep;
-                                modified = true;
-                            }
-                        }
-
-                        // Run GAME if missing midi
-                        if (!hasMidi && game && game->isOpen() && !audioPath.isEmpty()) {
-                            std::vector<Game::GameNote> notes;
-                            auto gameResult = game->getNotes(audioPath.toStdWString(), notes, nullptr);
-                            if (gameResult && !notes.empty()) {
-                                IntervalLayer *midiLayer = nullptr;
-                                for (auto &layer : doc.layers) {
-                                    if (layer.name == QStringLiteral("midi")) {
-                                        midiLayer = &layer;
-                                        break;
-                                    }
-                                }
-                                if (!midiLayer) {
-                                    doc.layers.push_back({});
-                                    midiLayer = &doc.layers.back();
-                                    midiLayer->name = QStringLiteral("midi");
-                                    midiLayer->type = QStringLiteral("note");
-                                }
-
-                                midiLayer->boundaries.clear();
-                                int id = 1;
-                                for (const auto &note : notes) {
-                                    Boundary b;
-                                    b.id = id++;
-                                    b.pos = static_cast<int64_t>(note.onset * 1000000.0);
-                                    int midiNote = static_cast<int>(note.pitch + 0.5);
-                                    int octave = midiNote / 12 - 1;
-                                    int pc = midiNote % 12;
-                                    static const char *pcNames[] = {"C",  "C#", "D",  "D#", "E",  "F",
-                                                                    "F#", "G",  "G#", "A",  "A#", "B"};
-                                    b.text = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
-                                    midiLayer->boundaries.push_back(std::move(b));
-                                }
-                                modified = true;
-                            }
-                        }
-
-                        if (modified)
-                            modifiedDocs[sliceId] = std::move(doc);
+                        auto outcome = runAutoComplete(std::move(doc), audioPath, hfa, rmvpe, game, phNumCalc);
+                        if (outcome.modified)
+                            modifiedDocs[sliceId] = std::move(outcome.doc);
 
                         ++processed;
                         // Update progress on main thread

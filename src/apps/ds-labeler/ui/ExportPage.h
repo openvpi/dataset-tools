@@ -6,6 +6,8 @@
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
 
+#include <dstools/DsTextTypes.h>
+
 #include <QCheckBox>
 #include <QLabel>
 #include <QProgressBar>
@@ -110,6 +112,17 @@ private:
 
     void ensureEngines();
     void autoCompleteSlice(const QString &sliceId);
+
+    struct AutoCompleteResult {
+        DsTextDocument doc;
+        bool modified = false;
+    };
+    AutoCompleteResult runAutoComplete(DsTextDocument doc,
+                                       const QString &audioPath,
+                                       HFA::HFA *hfa,
+                                       Rmvpe::Rmvpe *rmvpe,
+                                       Game::Game *game,
+                                       PhNumCalculator *phNumCalc);
 };
 
 } // namespace dstools
