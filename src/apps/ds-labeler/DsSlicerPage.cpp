@@ -1,7 +1,7 @@
 #include "DsSlicerPage.h"
 
 #include "AudioFileListPanel.h"
-#include "ProjectDataSource.h"
+#include "core/ProjectDataSource.h"
 
 #include <AudacityMarkerIO.h>
 #include <SliceCommands.h>

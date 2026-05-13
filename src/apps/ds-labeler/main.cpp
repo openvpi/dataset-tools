@@ -16,7 +16,7 @@
 
 #include "DsSlicerPage.h"
 #include "ExportPage.h"
-#include "ProjectDataSource.h"
+#include "core/ProjectDataSource.h"
 #include <AppSettingsBackend.h>
 #include <ModelProviderInit.h>
 #include "WelcomePage.h"
