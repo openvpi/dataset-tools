@@ -10,9 +10,9 @@ dstools_add_library(${PROJECT_NAME}
         PUBLIC dstools-domain dsfw-core dsfw-widgets settings-page
                min-label-editor phoneme-editor pitch-editor
                audio-visualizer
-               lyricfa-lib hubertfa-lib rmvpepitch-lib gameinfer-lib
                audio-util
                SndFile::sndfile
                Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
                Qt${QT_VERSION_MAJOR}::Concurrent
+        PRIVATE lyricfa-lib hubertfa-lib rmvpepitch-lib gameinfer-lib
 )
