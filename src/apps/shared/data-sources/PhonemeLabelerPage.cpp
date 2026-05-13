@@ -504,7 +504,7 @@ void PhonemeLabelerPage::ensureHfaEngine() {
             return;
 
     auto [mm2, typeId] = loadModelForTask(QStringLiteral("phoneme_alignment"));
-    if (!mm2 || typeId == 0)
+    if (!mm2 || !typeId.isValid())
         return;
 
     auto *provider = mm2->provider(typeId);

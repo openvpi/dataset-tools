@@ -240,26 +240,26 @@ void EditorPageBase::stopAutoSaveTimer() {
         m_autoSaveTimer->stop();
 }
 
-std::tuple<ModelManager *, uint32_t>
+std::tuple<ModelManager *, ModelTypeId>
     EditorPageBase::loadModelForTask(const QString &taskKey, const QString &modelTypeName) {
         auto config = readModelConfig(settingsBackend(), taskKey);
         if (config.modelPath.isEmpty())
-            return {nullptr, 0};
+            return {nullptr, ModelTypeId{}};
 
         auto *mgr = ensureModelManager();
         if (!mgr)
-            return {nullptr, 0};
+            return {nullptr, ModelTypeId{}};
 
         auto *mm = dynamic_cast<ModelManager *>(mgr);
         if (!mm)
-            return {nullptr, 0};
+            return {nullptr, ModelTypeId{}};
 
         auto result = mm->loadModel(taskKey, config, config.deviceId);
         if (!result)
-            return {nullptr, 0};
+            return {nullptr, ModelTypeId{}};
 
-        auto typeId = mm->registerOrGetModelType(
-            modelTypeName.isEmpty() ? taskKey : modelTypeName);
+        auto typeId = registerModelType(
+            (modelTypeName.isEmpty() ? taskKey : modelTypeName).toStdString());
         return {mm, typeId};
     }
 
@@ -464,7 +464,7 @@ void EditorPageBase::runBatchProcess(
 bool EditorPageBase::applyAndReload(const QString &sliceId, const DsTextDocument &doc) {
     if (!source())
         return false;
-    source()->saveSlice(sliceId, doc);
+    (void) source()->saveSlice(sliceId, doc);
     if (sliceId == currentSliceId())
         onSliceSelectedImpl(sliceId);
     return true;

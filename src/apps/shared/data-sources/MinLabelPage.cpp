@@ -391,7 +391,7 @@ namespace dstools {
         }
 
         auto [mm, typeId] = loadModelForTask(QStringLiteral("asr"));
-        if (!mm || typeId == 0)
+        if (!mm || !typeId.isValid())
             return;
 
         auto *provider = mm->provider(typeId);

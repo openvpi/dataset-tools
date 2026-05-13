@@ -1,11 +1,14 @@
 #pragma once
 
+#include "dstools/ModelManager.h"
+
+
+#include <dsfw/AppSettings.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
-#include <dsfw/AppSettings.h>
-#include <dstools/ShortcutManager.h>
-#include <dstools/IEditorDataSource.h>
 #include <dstools/DsTextTypes.h>
+#include <dstools/IEditorDataSource.h>
+#include <dstools/ShortcutManager.h>
 
 #include <QWidget>
 #include <QString>
@@ -186,7 +189,7 @@ protected:
     /// Handles the common pattern: readConfig → loadModel → registerOrGetModelType.
     /// @return (ModelManager*, typeId) on success, (nullptr, 0) on failure.
     ///         Caller owns the lifetime of the returned ModelManager* (same as ensureModelManager).
-    std::tuple<ModelManager *, uint32_t>
+    std::tuple<ModelManager *, ModelTypeId>
     loadModelForTask(const QString &taskKey, const QString &modelTypeName = {});
 
     /// Load an inference engine asynchronously in a background thread.
