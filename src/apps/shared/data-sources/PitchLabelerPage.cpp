@@ -61,7 +61,15 @@ struct PitchExtractionData {
 
 namespace dstools {
 
-    PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabeler", parent) {
+static QString gameNoteMidiName(double pitch) {
+    int midiNote = static_cast<int>(pitch + 0.5);
+    int octave = midiNote / 12 - 1;
+    int pc = midiNote % 12;
+    static const char *pcNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    return QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
+}
+
+PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabeler", parent) {
         m_editor = new pitchlabeler::PitchEditor(this);
 
         setupBaseLayout(m_editor);
@@ -431,34 +439,13 @@ namespace dstools {
         bool useAlignMode = false;
         Game::AlignInput alignInput;
         alignInput.wavPath = source()->validatedAudioPath(currentSliceId()).toStdWString();
-
-        auto loadResult = source()->loadSlice(currentSliceId());
-        if (loadResult) {
-            const auto &doc = loadResult.value();
-            for (const auto &layer : doc.layers) {
-                if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive) && !layer.boundaries.empty()) {
-                    const auto &bnd = layer.boundaries;
-                    for (size_t i = 0; i < bnd.size(); ++i) {
-                        if (!bnd[i].text.isEmpty()) {
-                            alignInput.phSeq.push_back(bnd[i].text.toStdString());
-                            TimePos dur = (i + 1 < bnd.size()) ? bnd[i + 1].pos - bnd[i].pos
-                                                               : secToUs(audioDurationSec(doc)) - bnd[i].pos;
-                            alignInput.phDur.push_back(static_cast<float>(usToSec(dur)));
-                        }
-                    }
-                    if (!alignInput.phSeq.empty()) {
-                        useAlignMode = true;
-                    }
-                    break;
-                }
-            }
-        }
+        useAlignMode = buildAlignInput(alignInput);
 
         if (useAlignMode) {
             bool hasPhNum = false;
+            auto loadResult = source()->loadSlice(currentSliceId());
             if (loadResult) {
-                const auto &doc = loadResult.value();
-                for (const auto &layer : doc.layers) {
+                for (const auto &layer : loadResult.value().layers) {
                     if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty()) {
                         for (const auto &b : layer.boundaries) {
                             bool ok = false;
@@ -478,8 +465,7 @@ namespace dstools {
                     auto langs = cfg["languages"].toObject();
                     for (auto it = langs.begin(); it != langs.end(); ++it) {
                         auto langCfg = it.value().toObject();
-                        QString dictPath = langCfg["dictPath"].toString();
-                        if (!dictPath.isEmpty()) {
+                        if (!langCfg["dictPath"].toString().isEmpty()) {
                             dictConfigured = true;
                             break;
                         }
@@ -516,6 +502,28 @@ namespace dstools {
         }
 
         runMidiTranscription(currentSliceId(), useAlignMode ? &alignInput : nullptr);
+    }
+
+    bool PitchLabelerPage::buildAlignInput(Game::AlignInput &outAlignInput) const {
+        auto loadResult = source()->loadSlice(currentSliceId());
+        if (!loadResult)
+            return false;
+        const auto &doc = loadResult.value();
+        for (const auto &layer : doc.layers) {
+            if (layer.name.contains(QStringLiteral("phoneme"), Qt::CaseInsensitive) && !layer.boundaries.empty()) {
+                const auto &bnd = layer.boundaries;
+                for (size_t i = 0; i < bnd.size(); ++i) {
+                    if (!bnd[i].text.isEmpty()) {
+                        outAlignInput.phSeq.push_back(bnd[i].text.toStdString());
+                        TimePos dur = (i + 1 < bnd.size()) ? bnd[i + 1].pos - bnd[i].pos
+                                                           : secToUs(audioDurationSec(doc)) - bnd[i].pos;
+                        outAlignInput.phDur.push_back(static_cast<float>(usToSec(dur)));
+                    }
+                }
+                return !outAlignInput.phSeq.empty();
+            }
+        }
+        return false;
     }
 
     void PitchLabelerPage::onAddPhNum() {
@@ -840,11 +848,7 @@ void PitchLabelerPage::runAddPhNum(const QString &sliceId) {
             Boundary startB;
             startB.id = id++;
             startB.pos = static_cast<int64_t>(note.onset * 1000000.0);
-            int midiNote = static_cast<int>(note.pitch + 0.5);
-            int octave = midiNote / 12 - 1;
-            int pc = midiNote % 12;
-            static const char *pcNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-            startB.text = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
+            startB.text = gameNoteMidiName(note.pitch);
             midiLayer->boundaries.push_back(std::move(startB));
 
             Boundary endB;
@@ -864,11 +868,7 @@ void PitchLabelerPage::runAddPhNum(const QString &sliceId) {
                 pitchlabeler::Note n;
                 n.start = static_cast<int64_t>(note.onset * 1000000.0);
                 n.duration = static_cast<int64_t>(note.duration * 1000000.0);
-                int midiNote = static_cast<int>(note.pitch + 0.5);
-                int octave = midiNote / 12 - 1;
-                int pc = midiNote % 12;
-                static const char *pcNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-                n.name = QStringLiteral("%1%2").arg(pcNames[pc]).arg(octave);
+                n.name = gameNoteMidiName(note.pitch);
                 m_currentFile->notes.push_back(std::move(n));
             }
             m_editor->loadDSFile(m_currentFile);

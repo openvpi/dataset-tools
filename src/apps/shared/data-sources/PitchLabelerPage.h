@@ -60,6 +60,7 @@ private:
     void onBatchExtract();
     void onAddPhNum();
     void loadPhNumCalculator();
+    bool buildAlignInput(Game::AlignInput &outAlignInput) const;
 
     void ensureRmvpeEngine();
     void ensureGameEngine();
