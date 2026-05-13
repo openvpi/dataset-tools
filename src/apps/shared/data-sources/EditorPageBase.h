@@ -127,6 +127,14 @@ protected:
     /// Get or create an alive token for the given engine key.
     EngineAliveToken &aliveToken(const QString &key) { return m_aliveTokens[key]; }
 
+    /// Look up an alive token without creating (const version).
+    /// Returns a default (invalid) token if not found.
+    const EngineAliveToken &aliveToken(const QString &key) const {
+        static const EngineAliveToken kEmpty;
+        auto it = m_aliveTokens.find(key);
+        return it != m_aliveTokens.end() ? it->second : kEmpty;
+    }
+
     // ── Setup helpers (call from subclass constructor) ──
 
     /// Set up the standard SliceListPanel + QSplitter + editor layout.
@@ -223,7 +231,7 @@ protected:
     // ── Template-based engine loading (P-12) ──
 
     /// Called when a model is invalidated (override to clear engine pointer).
-    virtual void onEngineInvalidated(const QString &taskKey) {}
+    virtual void onEngineInvalidated(const QString &taskKey) { Q_UNUSED(taskKey) }
 
     /// Ensure an inference engine is loaded and ready.
     /// Uses EngineTraits<EngineType> for type-specific behavior.
