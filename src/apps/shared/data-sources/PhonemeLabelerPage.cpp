@@ -572,34 +572,24 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                           + " | nonSpeechPh: AP SP"
                           + " | lyrics: " + lyricsText).c_str());
     auto *hfa = m_hfa;
-    auto hfaAlive = aliveToken(QStringLiteral("phoneme_alignment")).token();
-    QPointer<PhonemeLabelerPage> guard(this);
 
-    (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, nonSpeechPh, sliceId, guard]() {
-        if (!hfaAlive || !*hfaAlive)
-            return;
-        if (!hfa)
-            return;
-        HFA::WordList words;
-        dstools::Result<void> result = Err("Not executed");
-
-        try {
-            result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
-        } catch (const std::exception &e) {
-            DSFW_LOG_ERROR("infer", ("FA inference exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
-            result = Err(std::string("Exception: ") + e.what());
-        }
-
-        if (!guard)
-            return;
-
-        QMetaObject::invokeMethod(guard.data(), [guard, sliceId, words = std::move(words), result = std::move(result)]() {
-            if (!guard)
-                return;
-            guard->m_faRunning = false;
+    runAsyncTask<HFA::WordList>(QStringLiteral("phoneme_alignment"), sliceId,
+        [hfa, audioPath, lyricsText = std::move(lyricsText),
+         nonSpeechPh = std::move(nonSpeechPh)]
+        (const std::shared_ptr<std::atomic<bool>> &) -> Result<HFA::WordList> {
+            if (!hfa)
+                return Err("FA engine is null");
+            HFA::WordList words;
+            auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
+            if (result)
+                return std::move(words);
+            return Err(result.error());
+        },
+        [this](const QString &sliceId, const Result<HFA::WordList> &result) {
+            m_faRunning = false;
 
             if (result) {
-                auto faResult = buildFaLayers(words);
+                auto faResult = buildFaLayers(result.value());
 
                 std::string phonemeDetail;
                 for (const auto &b : faResult.phonemeLayer.boundaries) {
@@ -615,18 +605,17 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 layers.push_back(std::move(faResult.graphemeLayer));
                 layers.push_back(std::move(faResult.phonemeLayer));
 
-                guard->applyFaResult(sliceId, layers, faResult.groups, faResult.dependencies);
+                applyFaResult(sliceId, layers, faResult.groups, faResult.dependencies);
                 dsfw::widgets::ToastNotification::show(
-                    guard.data(), dsfw::widgets::ToastType::Info,
+                    this, dsfw::widgets::ToastType::Info,
                     tr("Force alignment completed"), 3000);
             } else {
                 DSFW_LOG_ERROR("fa", ("FA pipeline error [inference]: " + sliceId.toStdString() + " - " + result.error()).c_str());
-                QMessageBox::warning(guard.data(), tr("Force Align"),
+                QMessageBox::warning(this, tr("Force Align"),
                                      tr("Force alignment failed: %1")
                                          .arg(QString::fromStdString(result.error())));
             }
-        }, Qt::QueuedConnection);
-    });
+        });
 }
 
 void PhonemeLabelerPage::applyFaResult(const QString &sliceId,

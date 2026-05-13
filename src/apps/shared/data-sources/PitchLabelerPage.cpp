@@ -54,6 +54,11 @@ struct EngineTraits<Game::Game> {
     }
 };
 
+struct PitchExtractionData {
+    std::vector<int32_t> f0Mhz;
+    float timestep = 0.01f;
+};
+
 namespace dstools {
 
     PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabeler", parent) {
@@ -537,57 +542,40 @@ namespace dstools {
         m_extractMidiAction->setEnabled(false);
         DSFW_LOG_INFO("infer", ("Pitch extraction started: " + sliceId.toStdString()).c_str());
         auto *rmvpe = m_rmvpe;
-        auto rmvpeAlive = aliveToken(QStringLiteral("pitch_extraction")).token();
-        QPointer<PitchLabelerPage> guard(this);
 
-        (void) QtConcurrent::run([rmvpe, rmvpeAlive, audioPath, sliceId, guard]() {
-            if (!rmvpeAlive || !*rmvpeAlive)
-                return;
-            if (!rmvpe)
-                return;
-            std::vector<Rmvpe::RmvpeRes> results;
-            dstools::Result<void> result = Err("Not executed");
-
-            try {
-                result = rmvpe->get_f0(audioPath.toStdWString(), 0.01f, results, nullptr);
-            } catch (const std::exception &e) {
-                DSFW_LOG_ERROR("infer",
-                               ("Pitch extraction exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
-                result = Err(std::string("Exception: ") + e.what());
-            }
-
-            if (!guard)
-                return;
-
-            QMetaObject::invokeMethod(
-                guard.data(),
-                [guard, sliceId, result = std::move(result), results = std::move(results)]() {
-                    if (!guard)
-                        return;
-                    guard->m_inferRunning = false;
-                    guard->m_extractPitchAction->setEnabled(true);
-                    guard->m_extractMidiAction->setEnabled(true);
-                    if (result && !results.empty()) {
-                        const auto &res = results[0];
-                        std::vector<int32_t> f0Mhz(res.f0.size());
-                        for (size_t i = 0; i < res.f0.size(); ++i) {
-                            f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
-                        }
-                        float timestep = 0.01f;
-                        guard->applyPitchResult(sliceId, f0Mhz, timestep);
-                        DSFW_LOG_INFO("infer", ("Pitch extraction completed: " + sliceId.toStdString() + " - " +
-                                                std::to_string(f0Mhz.size()) + " frames")
-                                                   .c_str());
-                        dsfw::widgets::ToastNotification::show(guard.data(), dsfw::widgets::ToastType::Info,
-                                                               QStringLiteral("音高提取完成"), 3000);
-                    } else {
-                        QMessageBox::warning(guard.data(), QStringLiteral("提取音高"),
-                                             QStringLiteral("音高提取失败") +
-                                                 (result ? QString() : QString::fromStdString(": " + result.error())));
-                    }
-                },
-                Qt::QueuedConnection);
-        });
+        runAsyncTask<PitchExtractionData>(QStringLiteral("pitch_extraction"), sliceId,
+            [rmvpe, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> Result<PitchExtractionData> {
+                if (!rmvpe)
+                    return Err("RMVPE engine is null");
+                std::vector<Rmvpe::RmvpeRes> results;
+                auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.01f, results, nullptr);
+                if (result && !results.empty()) {
+                    const auto &res = results[0];
+                    PitchExtractionData data;
+                    data.f0Mhz.resize(res.f0.size());
+                    for (size_t i = 0; i < res.f0.size(); ++i)
+                        data.f0Mhz[i] = static_cast<int32_t>(res.f0[i] * 1000.0f);
+                    data.timestep = 0.01f;
+                    return data;
+                }
+                return Err(result.error());
+            },
+            [this](const QString &sliceId, const Result<PitchExtractionData> &result) {
+                m_inferRunning = false;
+                m_extractPitchAction->setEnabled(true);
+                m_extractMidiAction->setEnabled(true);
+                if (result) {
+                    applyPitchResult(sliceId, result.value().f0Mhz, result.value().timestep);
+                    DSFW_LOG_INFO("infer", ("Pitch extraction completed: " + sliceId.toStdString() + " - " +
+                                            std::to_string(result.value().f0Mhz.size()) + " frames").c_str());
+                    dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                                           QStringLiteral("音高提取完成"), 3000);
+                } else {
+                    QMessageBox::warning(this, QStringLiteral("提取音高"),
+                                         QStringLiteral("音高提取失败") +
+                                             QString::fromStdString(": " + result.error()));
+                }
+            });
     }
 
     void PitchLabelerPage::runMidiTranscription(const QString &sliceId, const Game::AlignInput *alignInput) {
@@ -607,49 +595,45 @@ namespace dstools {
         DSFW_LOG_INFO(
             "infer", ("MIDI transcription started: " + sliceId.toStdString() + (alignInput ? " (align)" : "")).c_str());
         auto *game = m_game;
-        auto gameAlive = aliveToken(QStringLiteral("midi_transcription")).token();
-        QPointer<PitchLabelerPage> guard(this);
         bool useAlign = (alignInput != nullptr);
         auto capturedInput = useAlign ? std::make_shared<Game::AlignInput>(*alignInput) : nullptr;
 
-        (void) QtConcurrent::run([game, gameAlive, audioPath, sliceId, guard, useAlign, capturedInput, this]() {
-            if (!gameAlive || !*gameAlive)
-                return;
-            if (!game)
-                return;
-            std::vector<Game::GameNote> notes;
-            dstools::Result<void> result = Err("Not executed");
-
-            try {
-                if (useAlign && capturedInput) {
-                    Game::AlignOptions options;
-
-                    if (settingsBackend()) {
-                        auto cfg = settingsBackend()->load()["pitchConfig"].toObject();
-                        if (cfg.contains("uvVocab") && cfg["uvVocab"].isString()) {
-                            QString uvStr = cfg["uvVocab"].toString();
-                            std::set<std::string> uvVocab;
-                            const auto parts = uvStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
-                            for (const auto &p : parts) {
-                                std::string trimmed = p.trimmed().toStdString();
-                                if (!trimmed.empty())
-                                    uvVocab.insert(trimmed);
-                            }
-                            if (!uvVocab.empty())
-                                options.uvVocab = uvVocab;
-                        }
-                        if (cfg.contains("uvWordCond") && cfg["uvWordCond"].isDouble()) {
-                            int cond = cfg["uvWordCond"].toInt();
-                            if (cond == 1)
-                                options.uvWordCond = Game::UvWordCond::All;
-                            else if (cond == 2)
-                                options.uvWordCond = Game::UvWordCond::All;
-                        }
+        Game::AlignOptions options;
+        if (useAlign && capturedInput) {
+            auto *sb = settingsBackend();
+            if (sb) {
+                auto cfg = sb->load()["pitchConfig"].toObject();
+                if (cfg.contains("uvVocab") && cfg["uvVocab"].isString()) {
+                    QString uvStr = cfg["uvVocab"].toString();
+                    std::set<std::string> uvVocab;
+                    const auto parts = uvStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
+                    for (const auto &p : parts) {
+                        std::string trimmed = p.trimmed().toStdString();
+                        if (!trimmed.empty())
+                            uvVocab.insert(trimmed);
                     }
+                    if (!uvVocab.empty())
+                        options.uvVocab = uvVocab;
+                }
+                if (cfg.contains("uvWordCond") && cfg["uvWordCond"].isDouble()) {
+                    int cond = cfg["uvWordCond"].toInt();
+                    if (cond == 1 || cond == 2)
+                        options.uvWordCond = Game::UvWordCond::All;
+                }
+            }
+        }
 
-                    std::vector<Game::AlignedNote> alignedNotes;
+        runAsyncTask<std::vector<Game::GameNote>>(QStringLiteral("midi_transcription"), sliceId,
+            [game, audioPath, useAlign, capturedInput, options = std::move(options)]
+            (const std::shared_ptr<std::atomic<bool>> &) -> Result<std::vector<Game::GameNote>> {
+                if (!game)
+                    return Err("Game engine is null");
+                std::vector<Game::GameNote> notes;
+
+                if (useAlign && capturedInput) {
                     capturedInput->wavPath = std::filesystem::path(audioPath.toStdWString());
-                    result = game->align(*capturedInput, options, alignedNotes);
+                    std::vector<Game::AlignedNote> alignedNotes;
+                    auto result = game->align(*capturedInput, options, alignedNotes);
                     if (result) {
                         float currentTime = 0.0f;
                         for (const auto &an : alignedNotes) {
@@ -667,42 +651,32 @@ namespace dstools {
                             notes.push_back(gn);
                             currentTime += an.duration;
                         }
+                        return notes;
                     }
+                    return Err(result.error());
                 } else {
-                    result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+                    auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
+                    if (result)
+                        return notes;
+                    return Err(result.error());
                 }
-            } catch (const std::exception &e) {
-                DSFW_LOG_ERROR("infer",
-                               ("MIDI transcription exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
-                result = Err(std::string("Exception: ") + e.what());
-            }
-
-            if (!guard)
-                return;
-
-            QMetaObject::invokeMethod(
-                guard.data(),
-                [guard, sliceId, result = std::move(result), notes = std::move(notes)]() {
-                    if (!guard)
-                        return;
-                    guard->m_inferRunning = false;
-                    guard->m_extractPitchAction->setEnabled(true);
-                    guard->m_extractMidiAction->setEnabled(true);
-                    if (result) {
-                        guard->applyMidiResult(sliceId, notes);
-                        DSFW_LOG_INFO("infer", ("MIDI transcription completed: " + sliceId.toStdString() + " - " +
-                                                std::to_string(notes.size()) + " notes")
-                                                   .c_str());
-                        dsfw::widgets::ToastNotification::show(guard.data(), dsfw::widgets::ToastType::Info,
-                                                               QStringLiteral("MIDI 转录完成"), 3000);
-                    } else {
-                        QMessageBox::warning(guard.data(), QStringLiteral("提取 MIDI"),
-                                             QStringLiteral("MIDI 转录失败") +
-                                                 (result ? QString() : QString::fromStdString(": " + result.error())));
-                    }
-                },
-                Qt::QueuedConnection);
-        });
+            },
+            [this](const QString &sliceId, const Result<std::vector<Game::GameNote>> &result) {
+                m_inferRunning = false;
+                m_extractPitchAction->setEnabled(true);
+                m_extractMidiAction->setEnabled(true);
+                if (result) {
+                    applyMidiResult(sliceId, result.value());
+                    DSFW_LOG_INFO("infer", ("MIDI transcription completed: " + sliceId.toStdString() + " - " +
+                                            std::to_string(result.value().size()) + " notes").c_str());
+                    dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                                           QStringLiteral("MIDI 转录完成"), 3000);
+                } else {
+                    QMessageBox::warning(this, QStringLiteral("提取 MIDI"),
+                                         QStringLiteral("MIDI 转录失败") +
+                                             QString::fromStdString(": " + result.error()));
+                }
+            });
     }
 
     void PitchLabelerPage::loadPhNumCalculator() {

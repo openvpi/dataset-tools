@@ -428,52 +428,32 @@ namespace dstools {
         m_asrRunning = true;
         DSFW_LOG_INFO("infer", ("ASR started: " + sliceId.toStdString()).c_str());
         auto *asr = m_asr;
-        auto asrAlive = aliveToken(QStringLiteral("asr")).token();
-        QPointer<MinLabelPage> guard(this);
 
-        (void) QtConcurrent::run([asr, asrAlive, audioPath, sliceId, guard]() {
-            if (!asrAlive || !*asrAlive)
-                return;
-            if (!asr)
-                return;
-            std::string msg;
-            bool ok = false;
-
-            try {
-                ok = asr->recognize(audioPath.toStdWString(), msg);
-            } catch (const std::exception &e) {
-                DSFW_LOG_ERROR("infer", ("ASR exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
-                msg = std::string("Exception: ") + e.what();
-            }
-
-            QString text;
-            if (ok)
-                text = QString::fromUtf8(msg);
-
-            if (!guard)
-                return;
-
-            QMetaObject::invokeMethod(
-                guard.data(),
-                [=]() {
-                    if (!guard)
-                        return;
-                    guard->m_asrRunning = false;
-                    if (ok) {
-                        guard->setAsrResult(sliceId, text);
-                        DSFW_LOG_INFO("infer", ("ASR completed: " + sliceId.toStdString() + " - \"" +
-                                                text.left(50).toStdString() + "\"")
-                                                   .c_str());
-                        dsfw::widgets::ToastNotification::show(guard.data(), dsfw::widgets::ToastType::Info,
-                                                               tr("ASR recognition completed"), 3000);
-                    } else {
-                        DSFW_LOG_ERROR("infer", ("ASR failed: " + sliceId.toStdString() + " - " + msg).c_str());
-                        QMessageBox::warning(guard.data(), tr("ASR"),
-                                             tr("ASR recognition failed: %1").arg(QString::fromUtf8(msg)));
-                    }
-                },
-                Qt::QueuedConnection);
-        });
+        runAsyncTask<QString>(QStringLiteral("asr"), sliceId,
+            [asr, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> Result<QString> {
+                if (!asr)
+                    return Err("ASR engine is null");
+                std::string msg;
+                if (asr->recognize(audioPath.toStdWString(), msg))
+                    return QString::fromUtf8(msg);
+                return Err(std::move(msg));
+            },
+            [this](const QString &sliceId, const Result<QString> &result) {
+                m_asrRunning = false;
+                if (result) {
+                    setAsrResult(sliceId, result.value());
+                    DSFW_LOG_INFO("infer", ("ASR completed: " + sliceId.toStdString() + " - \"" +
+                                            result.value().left(50).toStdString() + "\"").c_str());
+                    dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                                           tr("ASR recognition completed"), 3000);
+                } else {
+                    DSFW_LOG_ERROR("infer", ("ASR failed: " + sliceId.toStdString() + " - " +
+                                             result.error()).c_str());
+                    QMessageBox::warning(this, tr("ASR"),
+                                         tr("ASR recognition failed: %1")
+                                             .arg(QString::fromStdString(result.error())));
+                }
+            });
     }
 
     void MinLabelPage::onBatchAsr() {
