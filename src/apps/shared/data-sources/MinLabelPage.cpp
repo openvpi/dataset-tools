@@ -432,11 +432,11 @@ namespace dstools {
         runAsyncTask<QString>(QStringLiteral("asr"), sliceId,
             [asr, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> Result<QString> {
                 if (!asr)
-                    return Err("ASR engine is null");
+                    return Err<QString>("ASR engine is null");
                 std::string msg;
                 if (asr->recognize(audioPath.toStdWString(), msg))
                     return QString::fromUtf8(msg);
-                return Err(std::move(msg));
+                return Err<QString>(std::move(msg));
             },
             [this](const QString &sliceId, const Result<QString> &result) {
                 m_asrRunning = false;

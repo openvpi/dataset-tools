@@ -578,12 +578,12 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
          nonSpeechPh = std::move(nonSpeechPh)]
         (const std::shared_ptr<std::atomic<bool>> &) -> Result<HFA::WordList> {
             if (!hfa)
-                return Err("FA engine is null");
+                return Err<HFA::WordList>("FA engine is null");
             HFA::WordList words;
             auto result = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
             if (result)
                 return std::move(words);
-            return Err(result.error());
+            return Err<HFA::WordList>(result.error());
         },
         [this](const QString &sliceId, const Result<HFA::WordList> &result) {
             m_faRunning = false;

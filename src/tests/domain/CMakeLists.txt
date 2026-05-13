@@ -46,6 +46,7 @@ set_tests_properties(TestPitchProcessor PROPERTIES
 add_executable(TestPitchExtractionService TestPitchExtractionService.cpp)
 target_link_libraries(TestPitchExtractionService PRIVATE
     data-sources
+    game-infer
     Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestPitchExtractionService COMMAND TestPitchExtractionService)

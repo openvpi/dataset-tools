@@ -12,7 +12,7 @@
 namespace dstools {
 
 ChartPageBase::ChartPageBase(const QString &settingsGroup, QWidget *parent)
-    : QWidget(parent), m_settingsGroup(settingsGroup) {
+    : AudioEditorWidgetBase(parent), m_settingsGroup(settingsGroup) {
     m_playWidget = new dstools::widgets::PlayWidget(this);
     m_playWidget->hide();
 }

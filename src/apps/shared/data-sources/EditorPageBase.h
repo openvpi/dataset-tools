@@ -265,14 +265,14 @@ protected:
             if (!alive || !*alive)
                 return;
 
-            Result<T> result = Err(std::string("Not executed"));
+            Result<T> result = Err<T>(std::string("Not executed"));
             try {
                 if (backgroundWork)
                     result = backgroundWork(alive);
             } catch (const std::exception &e) {
                 DSFW_LOG_ERROR("infer", ("Async task exception: " + sliceId.toStdString() +
                                          " - " + e.what()).c_str());
-                result = Err(std::string("Exception: ") + e.what());
+                result = Err<T>(std::string("Exception: ") + e.what());
             }
 
             if (!guard)

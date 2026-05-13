@@ -19,7 +19,7 @@ QJsonObject AppSettingsBackend::load() const {
     QJsonObject models;
     static const char *taskKeys[] = {"asr", "phoneme_alignment", "pitch_extraction", "midi_transcription"};
     for (const auto &task : taskKeys) {
-        settings.beginGroup(QStringLiteral(ModelsGroupFmt).arg(QString::fromLatin1(task)));
+        settings.beginGroup(QString::fromLatin1(ModelsGroupFmt).arg(QString::fromLatin1(task)));
         QJsonObject cfg;
         cfg["modelPath"] = settings.value(QLatin1String(ModelsModelPath)).toString();
         cfg["provider"] = settings.value(QLatin1String(ModelsProvider), QStringLiteral("cpu")).toString();
@@ -32,7 +32,7 @@ QJsonObject AppSettingsBackend::load() const {
     QJsonObject preload;
     static const char *preloadKeys[] = {"phoneme_alignment", "pitch_extraction"};
     for (const auto &task : preloadKeys) {
-        settings.beginGroup(QStringLiteral(PreloadGroupFmt).arg(QString::fromLatin1(task)));
+        settings.beginGroup(QString::fromLatin1(PreloadGroupFmt).arg(QString::fromLatin1(task)));
         QJsonObject cfg;
         cfg["enabled"] = settings.value(QLatin1String(PreloadEnabled), false).toBool();
         cfg["count"] = settings.value(QLatin1String(PreloadCount), 10).toInt();
@@ -83,7 +83,7 @@ void AppSettingsBackend::save(const QJsonObject &data) {
 
     const QJsonObject models = data["taskModels"].toObject();
     for (auto it = models.begin(); it != models.end(); ++it) {
-        settings.beginGroup(QStringLiteral(ModelsGroupFmt).arg(it.key()));
+        settings.beginGroup(QString::fromLatin1(ModelsGroupFmt).arg(it.key()));
         const QJsonObject cfg = it.value().toObject();
         settings.setValue(QLatin1String(ModelsModelPath), cfg["modelPath"].toString());
         settings.setValue(QLatin1String(ModelsProvider), cfg["provider"].toString("cpu"));
@@ -93,7 +93,7 @@ void AppSettingsBackend::save(const QJsonObject &data) {
 
     const QJsonObject preload = data["preload"].toObject();
     for (auto it = preload.begin(); it != preload.end(); ++it) {
-        settings.beginGroup(QStringLiteral(PreloadGroupFmt).arg(it.key()));
+        settings.beginGroup(QString::fromLatin1(PreloadGroupFmt).arg(it.key()));
         const QJsonObject cfg = it.value().toObject();
         settings.setValue(QLatin1String(PreloadEnabled), cfg["enabled"].toBool(false));
         settings.setValue(QLatin1String(PreloadCount), cfg["count"].toInt(10));

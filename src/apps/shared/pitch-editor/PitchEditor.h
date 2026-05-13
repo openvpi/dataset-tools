@@ -171,7 +171,6 @@ private:
     // Edit
     void onUndo() override;
     void onRedo() override;
-    void updateUndoRedoState() override;
 
     // View
     void onZoomIn();

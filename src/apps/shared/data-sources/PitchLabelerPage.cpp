@@ -554,7 +554,7 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
         runAsyncTask<PitchExtractionData>(QStringLiteral("pitch_extraction"), sliceId,
             [rmvpe, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> Result<PitchExtractionData> {
                 if (!rmvpe)
-                    return Err("RMVPE engine is null");
+                    return Err<PitchExtractionData>("RMVPE engine is null");
                 std::vector<Rmvpe::RmvpeRes> results;
                 auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.01f, results, nullptr);
                 if (result && !results.empty()) {
@@ -566,7 +566,7 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
                     data.timestep = 0.01f;
                     return data;
                 }
-                return Err(result.error());
+                return Err<PitchExtractionData>(result.error());
             },
             [this](const QString &sliceId, const Result<PitchExtractionData> &result) {
                 m_inferRunning = false;
@@ -635,7 +635,7 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
             [game, audioPath, useAlign, capturedInput, options = std::move(options)]
             (const std::shared_ptr<std::atomic<bool>> &) -> Result<std::vector<Game::GameNote>> {
                 if (!game)
-                    return Err("Game engine is null");
+                    return Err<std::vector<Game::GameNote>>("Game engine is null");
                 std::vector<Game::GameNote> notes;
 
                 if (useAlign && capturedInput) {
@@ -661,12 +661,12 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
                         }
                         return notes;
                     }
-                    return Err(result.error());
+                    return Err<std::vector<Game::GameNote>>(result.error());
                 } else {
                     auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
                     if (result)
                         return notes;
-                    return Err(result.error());
+                    return Err<std::vector<Game::GameNote>>(result.error());
                 }
             },
             [this](const QString &sliceId, const Result<std::vector<Game::GameNote>> &result) {
