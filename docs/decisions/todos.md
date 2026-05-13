@@ -5,7 +5,7 @@
 | # | 任务 | 状态 | 备注 |
 |---|---|---|---|
 | D-42 | FA word.end边界实现 | ✅ 完成 | buildFaLayers输出word.start+word.end，phone[end].end绑定已建立 |
-| D-43 | PitchLabeler工具栏+音频播放修复 | ❌ 待实施 | 创建独立QToolBar，修复onSliceSelectedImpl音频加载 |
+| D-43 | PitchLabeler工具栏+音频播放修复 | ✅ 完成 | toolbar()访问器已添加，音频无条件加载已修复 |
 | D-54 | 删除旧Widget死代码(WaveformWidget/SpectrogramWidget/PowerWidget) | ✅ 完成 | 文件已删除，注释引用已更新为 ChartPanel |
 | — | 统一边界线渲染到BoundaryLineRenderer | ✅ 完成 | 创建 BoundaryLineRenderer 统一渲染器；BoundaryOverlayWidget、IntervalTierView 委托绘制；删除死代码 BoundaryLineLayer和BoundaryInteractionManager；移除ChartPanelBase::drawBoundaries()避免分隔线打断贯穿线 |
 

@@ -34,7 +34,7 @@
 - ✅ word.end + phone[end].end绑定已建立
 - ✅ 两个调用点（L653单切片、L923批量处理）均更新
 
-### D-43：PitchLabelerPage添加工具栏+音频播放修复 [待实施]
+### D-43：PitchLabelerPage添加工具栏+音频播放修复 [已完成]
 
 - PitchLabelerPage创建独立QToolBar成员，包含：播放/暂停、停止、分隔符、提取F0(RMVPE)、提取MIDI(GAME)、分隔符、保存、Zoom In/Zoom Out
 - 工具栏按钮使用已有action（m_extractPitchAction, m_extractMidiAction等）
