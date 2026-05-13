@@ -9,6 +9,8 @@
 #include <dsfw/Log.h>
 
 #include <DSFile.h>
+#include <rmvpe-infer/Rmvpe.h>
+#include <game-infer/Game.h>
 
 #include <QCheckBox>
 #include <QJsonObject>
@@ -33,6 +35,24 @@
 #include <dstools/DsTextTypes.h>
 #include <dstools/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
+
+template<>
+struct EngineTraits<Rmvpe::Rmvpe> {
+    using ProviderType = dstools::InferenceModelProvider<Rmvpe::Rmvpe>;
+
+    static bool isOpen(const Rmvpe::Rmvpe *engine) {
+        return engine && engine->is_open();
+    }
+};
+
+template<>
+struct EngineTraits<Game::Game> {
+    using ProviderType = dstools::InferenceModelProvider<Game::Game>;
+
+    static bool isOpen(const Game::Game *engine) {
+        return engine && engine->isOpen();
+    }
+};
 
 namespace dstools {
 
@@ -303,56 +323,61 @@ namespace dstools {
         return container;
     }
 
-    void PitchLabelerPage::ensureRmvpeEngine() {
-        if (m_rmvpe && m_rmvpe->is_open())
+    template<typename EngineType>
+    void PitchLabelerPage::ensureEngine(EngineType *&enginePtr, EngineAliveToken &aliveToken,
+                                        const QString &taskKey) {
+        using Traits = EngineTraits<EngineType>;
+
+        if (Traits::isOpen(enginePtr))
             return;
 
         auto *mgr = ensureModelManager();
         if (!mgr)
             return;
 
-        if (!m_rmvpeAlive.isValid()) {
+        if (!aliveToken.isValid()) {
             connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
         }
 
-        auto *mm = dynamic_cast<ModelManager *>(mgr);
-        if (!mm)
-            return;
-
-        auto [mm2, typeId] = loadModelForTask(QStringLiteral("pitch_extraction"));
-        if (!mm2 || typeId == 0)
+        auto [mm2, typeId] = loadModelForTask(taskKey);
+        if (!mm2 || !typeId.isValid())
             return;
 
         auto *provider = mm2->provider(typeId);
-        auto *rmvpeProvider = dynamic_cast<InferenceModelProvider<Rmvpe::Rmvpe> *>(provider);
-        if (rmvpeProvider && rmvpeProvider->engine().is_open()) {
-            m_rmvpe = &rmvpeProvider->engine();
-            m_rmvpeAlive.create();
+        auto *typedProvider = dynamic_cast<typename Traits::ProviderType *>(provider);
+        if (Traits::isOpen(&typedProvider->engine())) {
+            enginePtr = &typedProvider->engine();
+            aliveToken.create();
         }
     }
 
+    template<typename EngineType>
+    void PitchLabelerPage::ensureEngineAsync(EngineType *&enginePtr, EngineAliveToken &aliveToken,
+                                             const QString &taskKey, std::function<void()> onReady) {
+        using Traits = EngineTraits<EngineType>;
+
+        if (Traits::isOpen(enginePtr)) {
+            if (onReady)
+                onReady();
+            return;
+        }
+
+        QPointer<PitchLabelerPage> guard(this);
+        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady), &aliveToken, taskKey, enginePtr]() {
+            if (!guard)
+                return;
+            ensureEngine(enginePtr, aliveToken, taskKey);
+            if (Traits::isOpen(enginePtr) && onReady)
+                onReady();
+        });
+    }
+
+    void PitchLabelerPage::ensureRmvpeEngine() {
+        ensureEngine(m_rmvpe, m_rmvpeAlive, QStringLiteral("pitch_extraction"));
+    }
+
     void PitchLabelerPage::ensureGameEngine() {
-        if (m_game && m_game->isOpen())
-            return;
-
-        auto *mgr = ensureModelManager();
-        if (!mgr)
-            return;
-
-        if (!m_gameAlive.isValid()) {
-            connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
-        }
-
-        auto [mm2, typeId] = loadModelForTask(QStringLiteral("midi_transcription"));
-        if (!mm2 || typeId == 0)
-            return;
-
-        auto *provider = mm2->provider(typeId);
-        auto *gameProvider = dynamic_cast<InferenceModelProvider<Game::Game> *>(provider);
-        if (gameProvider && gameProvider->engine().isOpen()) {
-            m_game = &gameProvider->engine();
-            m_gameAlive.create();
-        }
+        ensureEngine(m_game, m_gameAlive, QStringLiteral("midi_transcription"));
     }
 
     void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
@@ -368,36 +393,19 @@ namespace dstools {
     }
 
     void PitchLabelerPage::ensureRmvpeEngineAsync(std::function<void()> onReady) {
-        if (m_rmvpe && m_rmvpe->is_open()) {
-            if (onReady)
-                onReady();
-            return;
-        }
-        QPointer<PitchLabelerPage> guard(this);
-        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
-            if (!guard)
-                return;
-            ensureRmvpeEngine();
-            if (m_rmvpe && m_rmvpe->is_open() && onReady)
-                onReady();
-        });
+        ensureEngineAsync(m_rmvpe, m_rmvpeAlive, QStringLiteral("pitch_extraction"), std::move(onReady));
     }
 
     void PitchLabelerPage::ensureGameEngineAsync(std::function<void()> onReady) {
-        if (m_game && m_game->isOpen()) {
-            if (onReady)
-                onReady();
-            return;
-        }
-        QPointer<PitchLabelerPage> guard(this);
-        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
-            if (!guard)
-                return;
-            ensureGameEngine();
-            if (m_game && m_game->isOpen() && onReady)
-                onReady();
-        });
+        ensureEngineAsync(m_game, m_gameAlive, QStringLiteral("midi_transcription"), std::move(onReady));
     }
+
+    template void PitchLabelerPage::ensureEngine<Rmvpe::Rmvpe>(Rmvpe::Rmvpe *&, EngineAliveToken &, const QString &);
+    template void PitchLabelerPage::ensureEngine<Game::Game>(Game::Game *&, EngineAliveToken &, const QString &);
+    template void PitchLabelerPage::ensureEngineAsync<Rmvpe::Rmvpe>(Rmvpe::Rmvpe *&, EngineAliveToken &,
+                                                                     const QString &, std::function<void()>);
+    template void PitchLabelerPage::ensureEngineAsync<Game::Game>(Game::Game *&, EngineAliveToken &,
+                                                                   const QString &, std::function<void()>);
 
     void PitchLabelerPage::onAutoInfer() {
         updateProgress();
