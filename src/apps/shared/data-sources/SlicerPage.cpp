@@ -47,7 +47,6 @@
 namespace dstools {
 
 SlicerPage::SlicerPage(QWidget *parent) : ChartPageBase(QStringLiteral("Slicer"), parent), m_settings("Slicer") {
-    m_undoStack = new QUndoStack(this);
     m_boundaryModel = new phonemelabeler::SliceBoundaryModel();
     buildLayout();
     connectSignals();

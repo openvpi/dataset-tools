@@ -45,8 +45,6 @@ public:
     bool onDeactivating() override;
 
 protected:
-    QUndoStack *m_undoStack = nullptr;
-
     SliceTierLabel *m_tierLabel = nullptr;
 
     phonemelabeler::SliceBoundaryModel *m_boundaryModel = nullptr;

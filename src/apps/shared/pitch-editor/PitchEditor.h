@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "AudioEditorWidgetBase.h"
 #include <QAction>
 #include <QActionGroup>
 #include <QLabel>
@@ -39,7 +40,7 @@ class PropertyPanel;
 ///
 /// Contains no file I/O, no FileListPanel, no IPageActions, no settings persistence.
 /// PitchLabelerPage (and future DsPitchLabelerPage) compose this widget.
-class PitchEditor : public QWidget {
+class PitchEditor : public AudioEditorWidgetBase {
     Q_OBJECT
 
 public:
@@ -54,9 +55,6 @@ public:
 
     /// Clear the editor to empty state.
     void clear();
-
-    /// Access the undo stack.
-    [[nodiscard]] QUndoStack *undoStack() const { return m_undoStack; }
 
     /// Access the viewport controller.
     [[nodiscard]] dstools::widgets::ViewportController *viewport() const { return m_viewport; }
@@ -76,8 +74,6 @@ public:
     // --- Actions for menu/shortcut binding ---
     [[nodiscard]] QAction *saveAction() const { return m_actSave; }
     [[nodiscard]] QAction *saveAllAction() const { return m_actSaveAll; }
-    [[nodiscard]] QAction *undoAction() const { return m_actUndo; }
-    [[nodiscard]] QAction *redoAction() const { return m_actRedo; }
     [[nodiscard]] QAction *zoomInAction() const { return m_actZoomIn; }
     [[nodiscard]] QAction *zoomOutAction() const { return m_actZoomOut; }
     [[nodiscard]] QAction *zoomResetAction() const { return m_actZoomReset; }
@@ -106,7 +102,6 @@ signals:
     void noteSelected(int index);
     void zoomChanged(int percent);
     void noteCountChanged(int count);
-    void modificationChanged(bool modified);
     void noteDeleteRequested(const std::vector<int> &indices);
     void noteGlideChanged(int idx, const QString &glide);
     void noteSlurToggled(int idx);
@@ -116,7 +111,6 @@ signals:
 private:
     // Core state
     std::shared_ptr<DSFile> m_currentFile;
-    QUndoStack *m_undoStack = nullptr;
     dstools::widgets::ViewportController *m_viewport = nullptr;
     dstools::widgets::PlayWidget *m_playWidget = nullptr;
 
@@ -150,8 +144,6 @@ private:
     // Actions - Edit
     QAction *m_actSave = nullptr;
     QAction *m_actSaveAll = nullptr;
-    QAction *m_actUndo = nullptr;
-    QAction *m_actRedo = nullptr;
 
     // Actions - View
     QAction *m_actZoomIn = nullptr;
@@ -177,9 +169,9 @@ private:
     void connectSignals();
 
     // Edit
-    void onUndo();
-    void onRedo();
-    void updateUndoRedoState();
+    void onUndo() override;
+    void onRedo() override;
+    void updateUndoRedoState() override;
 
     // View
     void onZoomIn();

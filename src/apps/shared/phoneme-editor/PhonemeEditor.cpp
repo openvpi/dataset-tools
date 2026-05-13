@@ -22,7 +22,6 @@ namespace phonemelabeler {
 PhonemeEditor::PhonemeEditor(QWidget *parent)
     : ChartPageBase(QStringLiteral("PhonemeEditor"), parent),
       m_document(new TextGridDocument(this)),
-      m_undoStack(new QUndoStack(this)),
       m_renderer(new WaveformRenderer(this))
 {
     buildActions();
@@ -160,15 +159,9 @@ void PhonemeEditor::buildActions() {
     m_actSave = new QAction(tr("&Save"), this);
     m_actSaveAs = new QAction(tr("Save &As..."), this);
 
-    m_actUndo = new QAction(tr("&Undo"), this);
-    connect(m_actUndo, &QAction::triggered, this, [this]() {
-        if (m_undoStack->canUndo()) m_undoStack->undo();
-    });
+    m_actUndo->setText(tr("&Undo"));
 
-    m_actRedo = new QAction(tr("&Redo"), this);
-    connect(m_actRedo, &QAction::triggered, this, [this]() {
-        if (m_undoStack->canRedo()) m_undoStack->redo();
-    });
+    m_actRedo->setText(tr("&Redo"));
 
     m_actZoomIn = new QAction(tr("Zoom &In"), this);
     connect(m_actZoomIn, &QAction::triggered, this, &ChartPageBase::onZoomIn);
@@ -407,8 +400,7 @@ void PhonemeEditor::connectSignals() {
     });
 
     // Undo stack
-    connect(m_undoStack, &QUndoStack::canUndoChanged, m_actUndo, &QAction::setEnabled);
-    connect(m_undoStack, &QUndoStack::canRedoChanged, m_actRedo, &QAction::setEnabled);
+    connectUndoRedo();
     connect(m_undoStack, &QUndoStack::undoTextChanged, [this](const QString &text) {
         m_actUndo->setText(tr("&Undo") + (text.isEmpty() ? QString() : (" (" + text + ")")));
     });

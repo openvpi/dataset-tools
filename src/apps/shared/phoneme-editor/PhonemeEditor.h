@@ -58,11 +58,6 @@ namespace dstools {
                 return m_document;
             }
 
-            /// Access the undo stack.
-            [[nodiscard]] QUndoStack *undoStack() const {
-                return m_undoStack;
-            }
-
             /// Access the viewport controller.
             [[nodiscard]] ViewportController *viewport() const {
                 return ChartPageBase::viewport();
@@ -116,12 +111,6 @@ namespace dstools {
             [[nodiscard]] QAction *saveAsAction() const {
                 return m_actSaveAs;
             }
-            [[nodiscard]] QAction *undoAction() const {
-                return m_actUndo;
-            }
-            [[nodiscard]] QAction *redoAction() const {
-                return m_actRedo;
-            }
             [[nodiscard]] QAction *playPauseAction() const {
                 return m_actPlayPause;
             }
@@ -156,7 +145,6 @@ namespace dstools {
             void restoreChartVisibility();
 
         signals:
-            void modificationChanged(bool modified);
             void positionChanged(double sec);
             void bindingChanged(bool enabled);
             void fileStatusChanged(const QString &fileName);
@@ -171,7 +159,6 @@ namespace dstools {
         private:
             // Document
             TextGridDocument *m_document = nullptr;
-            QUndoStack *m_undoStack = nullptr;
 
             // Services
             WaveformRenderer *m_renderer = nullptr;
@@ -187,8 +174,6 @@ namespace dstools {
             // Actions
             QAction *m_actSave = nullptr;
             QAction *m_actSaveAs = nullptr;
-            QAction *m_actUndo = nullptr;
-            QAction *m_actRedo = nullptr;
             QAction *m_actZoomIn = nullptr;
             QAction *m_actZoomOut = nullptr;
             QAction *m_actZoomReset = nullptr;

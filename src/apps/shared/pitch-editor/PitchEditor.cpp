@@ -38,8 +38,7 @@ namespace dstools {
 namespace pitchlabeler {
 
 PitchEditor::PitchEditor(QWidget *parent)
-    : QWidget(parent),
-      m_undoStack(new QUndoStack(this)),
+    : AudioEditorWidgetBase(parent),
       m_playWidget(new dstools::widgets::PlayWidget(this))
 {
     m_viewport = new dstools::widgets::ViewportController(this);
@@ -146,11 +145,11 @@ void PitchEditor::buildActions() {
     m_actSaveAll = new QAction(QStringLiteral("全部保存(&L)"), this);
     m_actSaveAll->setStatusTip(QStringLiteral("保存所有已修改的文件"));
 
-    m_actUndo = new QAction(QStringLiteral("撤销(&U)"), this);
+    m_actUndo->setText(QStringLiteral("撤销(&U)"));
     m_actUndo->setStatusTip(QStringLiteral("撤销上一步操作"));
     m_actUndo->setEnabled(false);
 
-    m_actRedo = new QAction(QStringLiteral("重做(&R)"), this);
+    m_actRedo->setText(QStringLiteral("重做(&R)"));
     m_actRedo->setStatusTip(QStringLiteral("重做上一步撤销的操作"));
     m_actRedo->setEnabled(false);
 
@@ -355,13 +354,9 @@ void PitchEditor::buildLayout() {
 }
 
 void PitchEditor::connectSignals() {
-    // Edit actions
-    connect(m_actUndo, &QAction::triggered, this, &PitchEditor::onUndo);
-    connect(m_actRedo, &QAction::triggered, this, &PitchEditor::onRedo);
+    connectUndoRedo();
 
     // Undo stack
-    connect(m_undoStack, &QUndoStack::canUndoChanged, m_actUndo, &QAction::setEnabled);
-    connect(m_undoStack, &QUndoStack::canRedoChanged, m_actRedo, &QAction::setEnabled);
 
     // View actions
     connect(m_actZoomIn, &QAction::triggered, this, &PitchEditor::onZoomIn);
@@ -465,22 +460,13 @@ void PitchEditor::connectSignals() {
 // ---- Edit ----
 
 void PitchEditor::onUndo() {
-    m_undoStack->undo();
+    AudioEditorWidgetBase::onUndo();
     m_pianoRoll->update();
-    updateUndoRedoState();
-    emit modificationChanged(true); // simplified — page checks actual state
 }
 
 void PitchEditor::onRedo() {
-    m_undoStack->redo();
+    AudioEditorWidgetBase::onRedo();
     m_pianoRoll->update();
-    updateUndoRedoState();
-    emit modificationChanged(true);
-}
-
-void PitchEditor::updateUndoRedoState() {
-    m_actUndo->setEnabled(m_undoStack->canUndo());
-    m_actRedo->setEnabled(m_undoStack->canRedo());
 }
 
 // ---- View ----

@@ -1,10 +1,9 @@
 #pragma once
 
+#include "AudioEditorWidgetBase.h"
 #include "IBoundaryModel.h"
 
-
 #include <QString>
-#include <QWidget>
 
 #include <dstools/ViewportController.h>
 #include <dstools/PlayWidget.h>
@@ -19,7 +18,7 @@ class SpectrogramChartPanel;
 class PowerChartPanel;
 }
 
-class ChartPageBase : public QWidget {
+class ChartPageBase : public AudioEditorWidgetBase {
     Q_OBJECT
 public:
     explicit ChartPageBase(const QString &settingsGroup, QWidget *parent = nullptr);
