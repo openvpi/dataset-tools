@@ -48,7 +48,6 @@ private:
 
     HFA::HFA *m_hfa = nullptr;
     std::atomic<bool> m_faRunning{false};
-    EngineAliveToken m_hfaAlive;
     std::atomic<bool> m_batchRunning{false};
     std::shared_ptr<std::atomic<bool>> m_batchAlive;
 

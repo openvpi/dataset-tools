@@ -87,7 +87,7 @@ namespace dstools {
     }
 
     std::shared_ptr<std::atomic<bool>> MinLabelPage::batchAliveToken() const {
-        return m_asrAlive.token();
+        return aliveToken(QStringLiteral("asr")).token();
     }
 
     bool MinLabelPage::hasExistingResult(const QString &sliceId) const {
@@ -104,7 +104,7 @@ namespace dstools {
     }
 
     BatchSliceResult MinLabelPage::processSlice(const QString &sliceId) {
-        if (!m_asrAlive.isValid())
+        if (!aliveToken(QStringLiteral("asr")).isValid())
             return {BatchSliceResult::Error, tr("ASR model invalidated")};
 
         QString audioPath = source()->validatedAudioPath(sliceId);
@@ -271,8 +271,8 @@ namespace dstools {
     }
 
     void MinLabelPage::onDeactivatedImpl() {
-        m_asrAlive.invalidate();
-        m_matchLyricAlive.invalidate();
+        aliveToken(QStringLiteral("asr")).invalidate();
+        aliveToken(QStringLiteral("match_lyric")).invalidate();
         m_asr = nullptr;
     }
 
@@ -386,7 +386,7 @@ namespace dstools {
         if (!mgr)
             return;
 
-        if (!m_asrAlive.isValid()) {
+        if (!aliveToken(QStringLiteral("asr")).isValid()) {
             connect(mgr, &IModelManager::modelInvalidated, this, &MinLabelPage::onModelInvalidated);
         }
 
@@ -398,13 +398,13 @@ namespace dstools {
         auto *asrProvider = dynamic_cast<FunAsrModelProvider *>(provider);
         if (asrProvider && asrProvider->asr() && asrProvider->asr()->initialized()) {
             m_asr = asrProvider->asr();
-            m_asrAlive.create();
+            aliveToken(QStringLiteral("asr")).create();
         }
     }
 
     void MinLabelPage::onModelInvalidated(const QString &taskKey) {
+        aliveToken(taskKey).invalidate();
         if (taskKey == QStringLiteral("asr")) {
-            m_asrAlive.invalidate();
             m_asr = nullptr;
             DSFW_LOG_WARN("infer", "ASR task cancelled: model invalidated");
         }
@@ -461,7 +461,7 @@ namespace dstools {
         m_asrRunning = true;
         DSFW_LOG_INFO("infer", ("ASR started: " + sliceId.toStdString()).c_str());
         auto *asr = m_asr;
-        auto asrAlive = m_asrAlive.token();
+        auto asrAlive = aliveToken(QStringLiteral("asr")).token();
         QPointer<MinLabelPage> guard(this);
 
         (void) QtConcurrent::run([asr, asrAlive, audioPath, sliceId, guard]() {
@@ -690,9 +690,9 @@ namespace dstools {
         if (!m_matchLyric->isInitialized()) {
             QMessageBox::warning(this, tr("LyricFA"), tr("No lyric files found in the selected directory."));
             m_matchLyric.reset();
-            m_matchLyricAlive.invalidate();
+            aliveToken(QStringLiteral("match_lyric")).invalidate();
         } else {
-            m_matchLyricAlive.create();
+            aliveToken(QStringLiteral("match_lyric")).create();
         }
     }
 
@@ -754,7 +754,7 @@ namespace dstools {
         dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
 
         auto *matchLyric = m_matchLyric.get();
-        auto matchLyricAlive = m_matchLyricAlive.token();
+        auto matchLyricAlive = aliveToken(QStringLiteral("match_lyric")).token();
         auto *src = source();
         QPointer<MinLabelPage> guard(this);
 

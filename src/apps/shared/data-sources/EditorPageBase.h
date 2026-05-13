@@ -16,6 +16,7 @@
 #include <QTimer>
 #include <atomic>
 #include <functional>
+#include <map>
 #include <memory>
 
 class QAction;
@@ -116,6 +117,11 @@ protected:
     void setCurrentSliceId(const QString &id) { m_currentSliceId = id; }
 
     IModelManager *ensureModelManager();
+
+    // ── Engine token management ──
+
+    /// Get or create an alive token for the given engine key.
+    EngineAliveToken &aliveToken(const QString &key) { return m_aliveTokens[key]; }
 
     // ── Setup helpers (call from subclass constructor) ──
 
@@ -273,6 +279,7 @@ private:
 
     QSet<QString> m_loadingEngines;
     IModelManager *m_modelManager = nullptr;
+    std::map<QString, EngineAliveToken> m_aliveTokens;
 
     QTimer *m_autoSaveTimer = nullptr;
 

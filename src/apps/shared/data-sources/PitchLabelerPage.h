@@ -60,8 +60,6 @@ private:
 
     Rmvpe::Rmvpe *m_rmvpe = nullptr;
     Game::Game *m_game = nullptr;
-    EngineAliveToken m_rmvpeAlive;
-    EngineAliveToken m_gameAlive;
     PhNumCalculator m_phNumCalc;
     std::atomic<bool> m_inferRunning{false};
     std::atomic<bool> m_batchRunning{false};

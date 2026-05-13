@@ -294,7 +294,7 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
 }
 
 void PhonemeLabelerPage::onDeactivatedImpl() {
-    m_hfaAlive.invalidate();
+    aliveToken(QStringLiteral("phoneme_alignment")).invalidate();
     m_hfa = nullptr;
     if (m_editor && m_editor->playWidget())
         m_editor->playWidget()->setPlaying(false);
@@ -487,7 +487,7 @@ static QString readFaInput(const DsTextDocument &doc) {
 
 // ── FA engine ─────────────────────────────────────────────────────────────────
 
-void PhonemeLabelerPage::ensureHfaEngine() {
+    void PhonemeLabelerPage::ensureHfaEngine() {
         if (m_hfa && m_hfa->isOpen())
             return;
 
@@ -495,7 +495,7 @@ void PhonemeLabelerPage::ensureHfaEngine() {
         if (!mgr)
             return;
 
-        if (!m_hfaAlive.isValid()) {
+        if (!aliveToken(QStringLiteral("phoneme_alignment")).isValid()) {
             connect(mgr, &IModelManager::modelInvalidated, this, &PhonemeLabelerPage::onModelInvalidated);
         }
 
@@ -511,13 +511,13 @@ void PhonemeLabelerPage::ensureHfaEngine() {
     auto *hfaProvider = dynamic_cast<InferenceModelProvider<HFA::HFA> *>(provider);
     if (hfaProvider && hfaProvider->engine().isOpen()) {
         m_hfa = &hfaProvider->engine();
-        m_hfaAlive.create();
+        aliveToken(QStringLiteral("phoneme_alignment")).create();
     }
 }
 
 void PhonemeLabelerPage::onModelInvalidated(const QString &taskKey) {
+    aliveToken(taskKey).invalidate();
     if (taskKey == QStringLiteral("phoneme_alignment")) {
-        m_hfaAlive.invalidate();
         m_hfa = nullptr;
         DSFW_LOG_WARN("fa", "FA task cancelled: model invalidated");
     }
@@ -623,7 +623,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                           + " | nonSpeechPh: AP SP"
                           + " | lyrics: " + lyricsText).c_str());
     auto *hfa = m_hfa;
-    auto hfaAlive = m_hfaAlive.token();
+    auto hfaAlive = aliveToken(QStringLiteral("phoneme_alignment")).token();
     QPointer<PhonemeLabelerPage> guard(this);
 
     (void) QtConcurrent::run([hfa, hfaAlive, audioPath, lyricsText, nonSpeechPh, sliceId, guard]() {
@@ -821,7 +821,7 @@ void PhonemeLabelerPage::onBatchFA() {
     dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
 
     auto *hfa = m_hfa;
-    auto hfaAlive = m_hfaAlive.token();
+    auto hfaAlive = aliveToken(QStringLiteral("phoneme_alignment")).token();
     auto *src = source();
     QPointer<PhonemeLabelerPage> guard(this);
 

@@ -134,8 +134,8 @@ namespace dstools {
     }
 
     void PitchLabelerPage::onDeactivatedImpl() {
-        m_rmvpeAlive.invalidate();
-        m_gameAlive.invalidate();
+        aliveToken(QStringLiteral("pitch_extraction")).invalidate();
+        aliveToken(QStringLiteral("midi_transcription")).invalidate();
         m_rmvpe = nullptr;
         m_game = nullptr;
     }
@@ -373,31 +373,32 @@ namespace dstools {
     }
 
     void PitchLabelerPage::ensureRmvpeEngine() {
-        ensureEngine(m_rmvpe, m_rmvpeAlive, QStringLiteral("pitch_extraction"));
+        ensureEngine(m_rmvpe, aliveToken(QStringLiteral("pitch_extraction")), QStringLiteral("pitch_extraction"));
     }
 
     void PitchLabelerPage::ensureGameEngine() {
-        ensureEngine(m_game, m_gameAlive, QStringLiteral("midi_transcription"));
+        ensureEngine(m_game, aliveToken(QStringLiteral("midi_transcription")), QStringLiteral("midi_transcription"));
     }
 
     void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
+        aliveToken(taskKey).invalidate();
         if (taskKey == QStringLiteral("pitch_extraction")) {
-            m_rmvpeAlive.invalidate();
             m_rmvpe = nullptr;
             DSFW_LOG_WARN("infer", "Pitch extraction task cancelled: model invalidated");
         } else if (taskKey == QStringLiteral("midi_transcription")) {
-            m_gameAlive.invalidate();
             m_game = nullptr;
             DSFW_LOG_WARN("infer", "MIDI transcription task cancelled: model invalidated");
         }
     }
 
     void PitchLabelerPage::ensureRmvpeEngineAsync(std::function<void()> onReady) {
-        ensureEngineAsync(m_rmvpe, m_rmvpeAlive, QStringLiteral("pitch_extraction"), std::move(onReady));
+        ensureEngineAsync(m_rmvpe, aliveToken(QStringLiteral("pitch_extraction")),
+                          QStringLiteral("pitch_extraction"), std::move(onReady));
     }
 
     void PitchLabelerPage::ensureGameEngineAsync(std::function<void()> onReady) {
-        ensureEngineAsync(m_game, m_gameAlive, QStringLiteral("midi_transcription"), std::move(onReady));
+        ensureEngineAsync(m_game, aliveToken(QStringLiteral("midi_transcription")),
+                          QStringLiteral("midi_transcription"), std::move(onReady));
     }
 
     template void PitchLabelerPage::ensureEngine<Rmvpe::Rmvpe>(Rmvpe::Rmvpe *&, EngineAliveToken &, const QString &);
@@ -608,7 +609,7 @@ namespace dstools {
         m_extractMidiAction->setEnabled(false);
         DSFW_LOG_INFO("infer", ("Pitch extraction started: " + sliceId.toStdString()).c_str());
         auto *rmvpe = m_rmvpe;
-        auto rmvpeAlive = m_rmvpeAlive.token();
+        auto rmvpeAlive = aliveToken(QStringLiteral("pitch_extraction")).token();
         QPointer<PitchLabelerPage> guard(this);
 
         (void) QtConcurrent::run([rmvpe, rmvpeAlive, audioPath, sliceId, guard]() {
@@ -678,7 +679,7 @@ namespace dstools {
         DSFW_LOG_INFO(
             "infer", ("MIDI transcription started: " + sliceId.toStdString() + (alignInput ? " (align)" : "")).c_str());
         auto *game = m_game;
-        auto gameAlive = m_gameAlive.token();
+        auto gameAlive = aliveToken(QStringLiteral("midi_transcription")).token();
         QPointer<PitchLabelerPage> guard(this);
         bool useAlign = (alignInput != nullptr);
         auto capturedInput = useAlign ? std::make_shared<Game::AlignInput>(*alignInput) : nullptr;
@@ -1022,8 +1023,8 @@ void PitchLabelerPage::runAddPhNum(const QString &sliceId) {
 
         auto *rmvpe = m_rmvpe;
         auto *game = m_game;
-        auto rmvpeAlive = m_rmvpeAlive.token();
-        auto gameAlive = m_gameAlive.token();
+        auto rmvpeAlive = aliveToken(QStringLiteral("pitch_extraction")).token();
+        auto gameAlive = aliveToken(QStringLiteral("midi_transcription")).token();
         auto *src = source();
         QPointer<PitchLabelerPage> guard(this);
 
