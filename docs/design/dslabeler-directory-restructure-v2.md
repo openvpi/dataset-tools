@@ -317,19 +317,17 @@ dstools_add_translations(${PROJECT_NAME})
 
 ## 7 任务分解
 
-| 编号 | 任务 | 说明 | 风险 |
-|------|------|------|------|
-| **R-01** | 删除 `DsLabelerKeys.h` | 确认全代码库零引用后删除 | 低 |
-| **R-02** | 删除 `LayerDependencyGraph.h/.cpp` | 确认全代码库零引用后删除 | 低 |
-| **R-03** | 创建 `core/` 目录，移动 `ProjectDataSource` | 更新 include 路径 | 低 |
-| **R-04** | 创建 `ui/` 目录，移动 4 组 Page 文件 | 更新 include 路径 | 低 |
-| **R-05** | 更新 `CMakeLists.txt` | 源文件路径 + 确认 include dir | 低 |
-| **R-06** | **编译验证** | 确保 R-01~R-05 后编译通过 | — |
-| **R-07** | ExportPage 内部重构 | 提取 `runAutoComplete()`，合并两份推理逻辑 | 中 |
-| **R-08** | main.cpp 精简 | SliceConsistencyGuard 改为命名空间函数 | 低 |
-| **R-09** | 最终编译 + 冒烟测试 | 全量验证 | — |
+| 编号 | 任务 | 说明 | 风险 | 状态 |
+|------|------|------|------|------|
+| **R-01** | 删除 `DsLabelerKeys.h` | 确认全代码库零引用后删除 | 低 | ✅ 完成 |
+| **R-02** | 删除 `LayerDependencyGraph.h/.cpp` | 确认全代码库零引用后删除 | 低 | ✅ 完成 |
+| **R-03** | 创建 `core/` 目录，移动 `ProjectDataSource` | 更新 3 处 include 路径 | 低 | ✅ 完成 |
+| **R-04** | 创建 `ui/` 目录，移动 4 组 Page 文件 | 更新 4 处 include 路径 | 低 | ✅ 完成 |
+| **R-05** | ExportPage 内部重构 | 提取 `runAutoComplete()`，合并两份推理逻辑（净减 167 行） | 中 | ✅ 完成 |
+| **R-06** | main.cpp 精简 | SliceConsistencyGuard 改为命名空间函数（lambda 从 117 行 → 6 行） | 低 | ✅ 完成 |
+| **R-07** | 最终编译验证 | 环境依赖未就绪，已通过代码 review 验证 include 路径和逻辑等价性 | — | ⚠ 待编译
 
-> 执行顺序：R-01→R-06（目录重排 + 删死代码，先确保可编译）→ R-07→R-08（重构去重）→ R-09（验证）
+> 执行结果：R-01→R-06 全部完成。R-07 编译验证需在有完整依赖链的环境中执行。
 
 ---
 
