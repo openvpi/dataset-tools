@@ -1,7 +1,7 @@
 /// @file IBoundaryModel.h
 /// @brief Abstract boundary model interface for visualization widgets.
 ///
-/// Decouples WaveformWidget/SpectrogramWidget from TextGridDocument so that
+/// Decouples WaveformChartPanel/SpectrogramChartPanel from TextGridDocument so that
 /// any boundary source (TextGrid multi-tier, simple slice points, etc.) can
 /// drive the same visualization and interaction logic.
 

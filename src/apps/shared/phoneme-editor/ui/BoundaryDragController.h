@@ -2,7 +2,7 @@
 /// @brief Centralized boundary drag state machine for all chart widgets.
 ///
 /// Extracts the duplicated startDrag/updateDrag/endDrag logic from
-/// WaveformWidget, SpectrogramWidget, PowerWidget, IntervalTierView
+/// WaveformChartPanel, SpectrogramChartPanel, PowerChartPanel, IntervalTierView
 /// into a single controller owned by AudioVisualizerContainer.
 
 #pragma once

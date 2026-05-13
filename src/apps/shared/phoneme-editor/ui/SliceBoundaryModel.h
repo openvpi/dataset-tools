@@ -12,7 +12,7 @@ namespace phonemelabeler {
 
 /// @brief Single-tier boundary model backed by a sorted vector of time points.
 ///
-/// Used by DsSlicerPage to drive the same WaveformWidget/SpectrogramWidget
+/// Used by DsSlicerPage to drive the same WaveformChartPanel/SpectrogramChartPanel
 /// as PhonemeEditor without any TextGrid or binding dependency.
 class SliceBoundaryModel : public IBoundaryModel {
 public:
