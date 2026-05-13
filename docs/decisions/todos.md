@@ -7,6 +7,7 @@
 | D-42 | FA word.end边界实现 | ⚠ 部分完成 | buildFaLayers只输出word.start，word.end+phone[end].end绑定未实现 |
 | D-43 | PitchLabeler工具栏+音频播放修复 | ❌ 待实施 | 创建独立QToolBar，修复onSliceSelectedImpl音频加载 |
 | D-54 | 删除旧Widget死代码(WaveformWidget/SpectrogramWidget/PowerWidget) | ✅ 完成 | 文件已删除，注释引用已更新为 ChartPanel |
+| — | 统一边界线渲染到BoundaryLineRenderer | ✅ 完成 | 创建 BoundaryLineRenderer 统一渲染器；BoundaryOverlayWidget、IntervalTierView 委托绘制；删除死代码 BoundaryLineLayer和BoundaryInteractionManager；移除ChartPanelBase::drawBoundaries()避免分隔线打断贯穿线 |
 
 ## 重构任务
 
@@ -39,7 +40,7 @@
 
 | 任务 | 说明 | 工作量 | 状态 |
 |---|---|---|---|
-| PitchLabelerPage拆分(1283行) | 最大源文件，违反P-01 | 2天 | ⚠ 部分完成 (1283→1040行，提取了buildAlignInput和gameNoteMidiName) |
+| PitchLabelerPage拆分(1283行) | 最大源文件，违反P-01 | 2天 | ⚠ 部分完成 (提取了buildAlignInput、gameNoteMidiName、resolveAlignInputWithPhNum) |
 | PhonemeLabelerPage精简(994行) | 提取applyFaResult | 1天 | ✅ |
 | Spectrogram增量渲染(TD-03) | rebuildViewImage每次重建全图 | 1周 | ❌ |
 | 未使用变量/编译警告清理 | halfWindow等 | 0.5天 | ✅ |
