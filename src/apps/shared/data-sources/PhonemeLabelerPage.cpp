@@ -69,6 +69,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
 
     struct WordIds {
         int graphemeStartId = 0;
+        int graphemeEndId = 0;
         std::vector<int> phoneBoundaryIds;
     };
     std::vector<WordIds> wordIdList;
@@ -87,6 +88,13 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         ids.graphemeStartId = graphemeStart.id;
         r.graphemeLayer.boundaries.push_back(std::move(graphemeStart));
 
+        Boundary graphemeEnd;
+        graphemeEnd.id = nextId++;
+        graphemeEnd.pos = secToUs(std::max(0.0f, word.end));
+        graphemeEnd.text.clear();
+        ids.graphemeEndId = graphemeEnd.id;
+        r.graphemeLayer.boundaries.push_back(std::move(graphemeEnd));
+
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
             const auto &phone = word.phones[pi];
 
@@ -101,6 +109,16 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
                 r.groups.push_back({ids.graphemeStartId, phoneB.id});
 
             r.phonemeLayer.boundaries.push_back(std::move(phoneB));
+
+            if (pi + 1 == word.phones.size()) {
+                Boundary phoneEndB;
+                phoneEndB.id = nextId++;
+                phoneEndB.pos = secToUs(std::max(0.0f, phone.end));
+                phoneEndB.text.clear();
+                ids.phoneBoundaryIds.push_back(phoneEndB.id);
+                r.groups.push_back({ids.graphemeEndId, phoneEndB.id});
+                r.phonemeLayer.boundaries.push_back(std::move(phoneEndB));
+            }
         }
 
         wordIdList.push_back(std::move(ids));
@@ -113,9 +131,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         dep.parentLayerName = QStringLiteral("grapheme");
         dep.childLayerName = QStringLiteral("phoneme");
         dep.parentStartBoundaryId = ids.graphemeStartId;
-        dep.parentEndBoundaryId = (wi + 1 < wordIdList.size())
-                                      ? wordIdList[wi + 1].graphemeStartId
-                                      : ids.graphemeStartId;
+        dep.parentEndBoundaryId = ids.graphemeEndId;
 
         if (!ids.phoneBoundaryIds.empty()) {
             dep.childStartBoundaryId = ids.phoneBoundaryIds.front();
