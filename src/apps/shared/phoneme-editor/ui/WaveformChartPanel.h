@@ -14,7 +14,7 @@ namespace dstools {
             explicit WaveformChartPanel(ViewportController *viewport, QWidget *parent = nullptr);
 
             void setAudioData(const std::vector<float> &samples, int sampleRate);
-            void setPlayhead(double sec);
+            void setPlayhead(double sec) override;
 
             QString chartId() const override {
                 return QStringLiteral("waveform");

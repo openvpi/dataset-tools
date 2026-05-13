@@ -18,6 +18,7 @@ namespace dstools {
 
         class IBoundaryModel;
         class BoundaryDragController;
+        class BoundaryInteractionManager;
 
         class ChartPanelBase : public QWidget, public IChartPanel {
             Q_OBJECT
@@ -38,10 +39,10 @@ namespace dstools {
             }
             void onPlayheadUpdate(const PlayheadState &state) override;
 
-            std::pair<int, int> hitTestBoundary(int x) const override;
             std::pair<double, double> findSurrounding(double timeSec) const override;
 
             void onActiveTierChanged(int tierIndex) override;
+            std::pair<int, int> hitTestBoundary(int x) const;
 
             void setBoundaryModel(IBoundaryModel *model) {
                 m_boundaryModel = model;
@@ -54,6 +55,10 @@ namespace dstools {
             }
             void setUndoStack(QUndoStack *stack) {
                 m_undoStack = stack;
+            }
+
+            virtual void setPlayhead(double sec) {
+                Q_UNUSED(sec)
             }
 
             void setShowBoundaryOverlay(bool show) {

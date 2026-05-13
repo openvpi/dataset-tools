@@ -1,8 +1,10 @@
 #include "AudioVisualizerContainer.h"
+#include "ChartCoordinator.h"
 #include "MiniMapScrollBar.h"
 #include "PlayCursorOverlay.h"
 #include "TierLabelArea.h"
-#include "ChartCoordinator.h"
+
+#include "ChartPanelBase.h"
 
 #include <ui/BoundaryDragController.h>
 #include <ui/BoundaryOverlayWidget.h>
@@ -12,7 +14,6 @@
 #include <dstools/TimePos.h>
 
 #include <QLabel>
-#include <QMetaMethod>
 #include <QMouseEvent>
 #include <QPointer>
 #include <QResizeEvent>
@@ -780,15 +781,8 @@ namespace dstools {
 
     void AudioVisualizerContainer::notifyChartsPlayhead(double sec) {
         forEachChartWidget([sec](QWidget *w) {
-            const QMetaObject *mo = w->metaObject();
-            for (int i = 0; i < mo->methodCount(); ++i) {
-                QMetaMethod method = mo->method(i);
-                if (method.name() == "setPlayhead" && method.parameterCount() == 1) {
-                    double secCopy = sec;
-                    method.invoke(w, Qt::DirectConnection, QGenericArgument("double", &secCopy));
-                    break;
-                }
-            }
+            if (auto *panel = qobject_cast<phonemelabeler::ChartPanelBase *>(w))
+                panel->setPlayhead(sec);
         });
     }
 
