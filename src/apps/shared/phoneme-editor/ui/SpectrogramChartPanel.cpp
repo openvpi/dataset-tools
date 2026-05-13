@@ -81,7 +81,6 @@ void SpectrogramChartPanel::prepareSpectrogramParams() {
 
     m_fftWindow = makeBlackmanHarrisWindow(m_windowSize);
 
-    int halfWindow = m_windowSize / 2;
     int fftOutSize = m_windowSize / 2 + 1;
 
     int maxBins = static_cast<int>(static_cast<double>(fftOutSize) * kMaxFrequency / m_sampleRate * 2.0);
