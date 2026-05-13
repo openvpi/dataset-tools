@@ -323,64 +323,15 @@ namespace dstools {
         return container;
     }
 
-    template<typename EngineType>
-    void PitchLabelerPage::ensureEngine(EngineType *&enginePtr, EngineAliveToken &aliveToken,
-                                        const QString &taskKey) {
-        using Traits = EngineTraits<EngineType>;
-
-        if (Traits::isOpen(enginePtr))
-            return;
-
-        auto *mgr = ensureModelManager();
-        if (!mgr)
-            return;
-
-        if (!aliveToken.isValid()) {
-            connect(mgr, &IModelManager::modelInvalidated, this, &PitchLabelerPage::onModelInvalidated);
-        }
-
-        auto [mm2, typeId] = loadModelForTask(taskKey);
-        if (!mm2 || !typeId.isValid())
-            return;
-
-        auto *provider = mm2->provider(typeId);
-        auto *typedProvider = dynamic_cast<typename Traits::ProviderType *>(provider);
-        if (Traits::isOpen(&typedProvider->engine())) {
-            enginePtr = &typedProvider->engine();
-            aliveToken.create();
-        }
-    }
-
-    template<typename EngineType>
-    void PitchLabelerPage::ensureEngineAsync(EngineType *&enginePtr, EngineAliveToken &aliveToken,
-                                             const QString &taskKey, std::function<void()> onReady) {
-        using Traits = EngineTraits<EngineType>;
-
-        if (Traits::isOpen(enginePtr)) {
-            if (onReady)
-                onReady();
-            return;
-        }
-
-        QPointer<PitchLabelerPage> guard(this);
-        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady), &aliveToken, taskKey, &enginePtr]() {
-            if (!guard)
-                return;
-            ensureEngine(enginePtr, aliveToken, taskKey);
-            if (Traits::isOpen(enginePtr) && onReady)
-                onReady();
-        });
-    }
-
     void PitchLabelerPage::ensureRmvpeEngine() {
-        ensureEngine(m_rmvpe, aliveToken(QStringLiteral("pitch_extraction")), QStringLiteral("pitch_extraction"));
+        ensureEngine(m_rmvpe, QStringLiteral("pitch_extraction"));
     }
 
     void PitchLabelerPage::ensureGameEngine() {
-        ensureEngine(m_game, aliveToken(QStringLiteral("midi_transcription")), QStringLiteral("midi_transcription"));
+        ensureEngine(m_game, QStringLiteral("midi_transcription"));
     }
 
-    void PitchLabelerPage::onModelInvalidated(const QString &taskKey) {
+    void PitchLabelerPage::onEngineInvalidated(const QString &taskKey) {
         aliveToken(taskKey).invalidate();
         if (taskKey == QStringLiteral("pitch_extraction")) {
             m_rmvpe = nullptr;
@@ -392,21 +343,12 @@ namespace dstools {
     }
 
     void PitchLabelerPage::ensureRmvpeEngineAsync(std::function<void()> onReady) {
-        ensureEngineAsync(m_rmvpe, aliveToken(QStringLiteral("pitch_extraction")),
-                          QStringLiteral("pitch_extraction"), std::move(onReady));
+        ensureEngineAsync(m_rmvpe, QStringLiteral("pitch_extraction"), std::move(onReady));
     }
 
     void PitchLabelerPage::ensureGameEngineAsync(std::function<void()> onReady) {
-        ensureEngineAsync(m_game, aliveToken(QStringLiteral("midi_transcription")),
-                          QStringLiteral("midi_transcription"), std::move(onReady));
+        ensureEngineAsync(m_game, QStringLiteral("midi_transcription"), std::move(onReady));
     }
-
-    template void PitchLabelerPage::ensureEngine<Rmvpe::Rmvpe>(Rmvpe::Rmvpe *&, EngineAliveToken &, const QString &);
-    template void PitchLabelerPage::ensureEngine<Game::Game>(Game::Game *&, EngineAliveToken &, const QString &);
-    template void PitchLabelerPage::ensureEngineAsync<Rmvpe::Rmvpe>(Rmvpe::Rmvpe *&, EngineAliveToken &,
-                                                                     const QString &, std::function<void()>);
-    template void PitchLabelerPage::ensureEngineAsync<Game::Game>(Game::Game *&, EngineAliveToken &,
-                                                                   const QString &, std::function<void()>);
 
     void PitchLabelerPage::onAutoInfer() {
         updateProgress();

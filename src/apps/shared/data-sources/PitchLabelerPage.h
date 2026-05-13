@@ -19,9 +19,6 @@ struct GameNote;
 struct AlignInput;
 }
 
-template<typename EngineType>
-struct EngineTraits;
-
 namespace dstools {
 
 namespace pitchlabeler {
@@ -71,18 +68,11 @@ private:
     void onAddPhNum();
     void loadPhNumCalculator();
 
-    template<typename EngineType>
-    void ensureEngine(EngineType *&enginePtr, EngineAliveToken &aliveToken, const QString &taskKey);
-
-    template<typename EngineType>
-    void ensureEngineAsync(EngineType *&enginePtr, EngineAliveToken &aliveToken, const QString &taskKey,
-                           std::function<void()> onReady);
-
     void ensureRmvpeEngine();
     void ensureGameEngine();
     void ensureRmvpeEngineAsync(std::function<void()> onReady = {});
     void ensureGameEngineAsync(std::function<void()> onReady = {});
-    void onModelInvalidated(const QString &taskKey);
+    void onEngineInvalidated(const QString &taskKey) override;
     void runPitchExtraction(const QString &sliceId);
     void runMidiTranscription(const QString &sliceId, const Game::AlignInput *alignInput = nullptr);
     void runAddPhNum(const QString &sliceId);

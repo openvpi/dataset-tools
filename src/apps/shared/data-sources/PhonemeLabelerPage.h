@@ -55,7 +55,7 @@ private:
     void onBatchFA();
     void ensureHfaEngine();
     void ensureHfaEngineAsync(std::function<void()> onReady = {});
-    void onModelInvalidated(const QString &taskKey);
+    void onEngineInvalidated(const QString &taskKey) override;
     void runFaForSlice(const QString &sliceId);
     void applyFaResult(const QString &sliceId, const QList<IntervalLayer> &layers,
                        const std::vector<BindingGroup> &groups = {},

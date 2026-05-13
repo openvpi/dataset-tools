@@ -68,7 +68,7 @@ private:
     void runAsrForSlice(const QString &sliceId);
     void ensureAsrEngine();
     void ensureAsrEngineAsync(std::function<void()> onReady = {});
-    void onModelInvalidated(const QString &taskKey);
+    void onEngineInvalidated(const QString &taskKey) override;
     void setAsrResult(const QString &sliceId, const QString &text);
     void batchG2P(const QString &sliceId);
     void updateProgress();

@@ -387,7 +387,7 @@ namespace dstools {
             return;
 
         if (!aliveToken(QStringLiteral("asr")).isValid()) {
-            connect(mgr, &IModelManager::modelInvalidated, this, &MinLabelPage::onModelInvalidated);
+            connect(mgr, &IModelManager::modelInvalidated, this, &MinLabelPage::onEngineInvalidated);
         }
 
         auto [mm, typeId] = loadModelForTask(QStringLiteral("asr"));
@@ -402,7 +402,7 @@ namespace dstools {
         }
     }
 
-    void MinLabelPage::onModelInvalidated(const QString &taskKey) {
+    void MinLabelPage::onEngineInvalidated(const QString &taskKey) {
         aliveToken(taskKey).invalidate();
         if (taskKey == QStringLiteral("asr")) {
             m_asr = nullptr;

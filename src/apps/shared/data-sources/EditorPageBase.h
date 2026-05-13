@@ -14,6 +14,7 @@
 #include <QString>
 #include <QSet>
 #include <QTimer>
+#include <QPointer>
 #include <atomic>
 #include <functional>
 #include <map>
@@ -24,6 +25,9 @@ class QMenuBar;
 class QSplitter;
 class QLabel;
 class QHBoxLayout;
+
+template<typename EngineType>
+struct EngineTraits;
 
 namespace dstools {
 
@@ -215,6 +219,65 @@ protected:
     /// This ordering ensures the background thread sees false before
     /// the engine pointer is nulled, closing the TOCTOU gap (P-09).
     static void cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveToken);
+
+    // ── Template-based engine loading (P-12) ──
+
+    /// Called when a model is invalidated (override to clear engine pointer).
+    virtual void onEngineInvalidated(const QString &taskKey) {}
+
+    /// Ensure an inference engine is loaded and ready.
+    /// Uses EngineTraits<EngineType> for type-specific behavior.
+    template<typename EngineType>
+    void ensureEngine(EngineType *&enginePtr, const QString &taskKey) {
+        using Traits = EngineTraits<EngineType>;
+
+        if (Traits::isOpen(enginePtr))
+            return;
+
+        auto *mgr = ensureModelManager();
+        if (!mgr)
+            return;
+
+        auto &token = aliveToken(taskKey);
+        if (!token.isValid()) {
+            connect(mgr, &IModelManager::modelInvalidated,
+                    this, &EditorPageBase::onEngineInvalidated);
+        }
+
+        auto [mm, typeId] = loadModelForTask(taskKey);
+        if (!mm || !typeId.isValid())
+            return;
+
+        auto *provider = mm->provider(typeId);
+        auto *typedProvider = dynamic_cast<typename Traits::ProviderType *>(provider);
+        if (typedProvider && Traits::isOpen(&typedProvider->engine())) {
+            enginePtr = &typedProvider->engine();
+            token.create();
+        }
+    }
+
+    /// Async version: defers ensureEngine to next event-loop iteration.
+    template<typename EngineType>
+    void ensureEngineAsync(EngineType *&enginePtr, const QString &taskKey,
+                           std::function<void()> onReady = {}) {
+        using Traits = EngineTraits<EngineType>;
+
+        if (Traits::isOpen(enginePtr)) {
+            if (onReady)
+                onReady();
+            return;
+        }
+
+        QPointer<EditorPageBase> guard(this);
+        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady),
+                                     taskKey, &enginePtr]() {
+            if (!guard)
+                return;
+            ensureEngine(enginePtr, taskKey);
+            if (Traits::isOpen(enginePtr) && onReady)
+                onReady();
+        });
+    }
 
     // ── Common utility ──
 

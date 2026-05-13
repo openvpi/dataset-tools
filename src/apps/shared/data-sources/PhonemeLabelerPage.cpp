@@ -28,6 +28,15 @@
 #include <dstools/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 
+template<>
+struct EngineTraits<HFA::HFA> {
+    using ProviderType = dstools::InferenceModelProvider<HFA::HFA>;
+
+    static bool isOpen(const HFA::HFA *engine) {
+        return engine && engine->isOpen();
+    }
+};
+
 namespace dstools {
 
 // ---------------------------------------------------------------------------
@@ -488,66 +497,20 @@ static QString readFaInput(const DsTextDocument &doc) {
 // ── FA engine ─────────────────────────────────────────────────────────────────
 
     void PhonemeLabelerPage::ensureHfaEngine() {
-        if (m_hfa && m_hfa->isOpen())
-            return;
+        ensureEngine(m_hfa, QStringLiteral("phoneme_alignment"));
+    }
 
-        auto *mgr = ensureModelManager();
-        if (!mgr)
-            return;
-
-        if (!aliveToken(QStringLiteral("phoneme_alignment")).isValid()) {
-            connect(mgr, &IModelManager::modelInvalidated, this, &PhonemeLabelerPage::onModelInvalidated);
+    void PhonemeLabelerPage::onEngineInvalidated(const QString &taskKey) {
+        aliveToken(taskKey).invalidate();
+        if (taskKey == QStringLiteral("phoneme_alignment")) {
+            m_hfa = nullptr;
+            DSFW_LOG_WARN("fa", "FA task cancelled: model invalidated");
         }
-
-        auto *mm = dynamic_cast<ModelManager *>(mgr);
-        if (!mm)
-            return;
-
-    auto [mm2, typeId] = loadModelForTask(QStringLiteral("phoneme_alignment"));
-    if (!mm2 || !typeId.isValid())
-        return;
-
-    auto *provider = mm2->provider(typeId);
-    auto *hfaProvider = dynamic_cast<InferenceModelProvider<HFA::HFA> *>(provider);
-    if (hfaProvider && hfaProvider->engine().isOpen()) {
-        m_hfa = &hfaProvider->engine();
-        aliveToken(QStringLiteral("phoneme_alignment")).create();
-    }
-}
-
-void PhonemeLabelerPage::onModelInvalidated(const QString &taskKey) {
-    aliveToken(taskKey).invalidate();
-    if (taskKey == QStringLiteral("phoneme_alignment")) {
-        m_hfa = nullptr;
-        DSFW_LOG_WARN("fa", "FA task cancelled: model invalidated");
-    }
-}
-
-void PhonemeLabelerPage::ensureHfaEngineAsync(std::function<void()> onReady) {
-    // Already loaded — invoke callback immediately
-    if (m_hfa && m_hfa->isOpen()) {
-        if (onReady) onReady();
-        return;
     }
 
-    // Already loading in background
-    if (isEngineLoading(QStringLiteral("phoneme_alignment")))
-        return;
-
-    // ModelManager::loadModel must run on main thread (Q_ASSERT).
-    // The heavy work is IModelProvider::load() (ONNX session creation).
-    // We use loadEngineAsync to track loading state and provide callback,
-    // but the actual load is deferred to a QTimer::singleShot so the
-    // current call stack (onAutoInfer → onActivated) can return first.
-    QPointer<PhonemeLabelerPage> guard(this);
-    QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
-        if (!guard)
-            return;
-        ensureHfaEngine();
-        if (m_hfa && m_hfa->isOpen() && onReady)
-            onReady();
-    });
-}
+    void PhonemeLabelerPage::ensureHfaEngineAsync(std::function<void()> onReady) {
+        ensureEngineAsync(m_hfa, QStringLiteral("phoneme_alignment"), std::move(onReady));
+    }
 
 void PhonemeLabelerPage::onRunFA() {
     if (currentSliceId().isEmpty()) {
