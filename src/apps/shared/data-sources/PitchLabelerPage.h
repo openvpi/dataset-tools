@@ -32,6 +32,9 @@ public:
     explicit PitchLabelerPage(QWidget *parent = nullptr);
     ~PitchLabelerPage() override;
 
+    [[nodiscard]] QToolBar *toolbar() const { return m_editor->toolbar(); }
+
+protected:
     QMenuBar *createMenuBar(QWidget *parent) override;
     QWidget *createStatusBarContent(QWidget *parent) override;
 

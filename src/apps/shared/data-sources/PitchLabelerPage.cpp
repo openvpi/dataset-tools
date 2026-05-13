@@ -150,6 +150,7 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
         const QString audioPath = source()->validatedAudioPath(sliceId);
 
         auto result = source()->loadSlice(sliceId);
+        double audioDurSec = 0.0;
         if (result) {
             const auto &doc = result.value();
             auto file = std::make_shared<pitchlabeler::DSFile>();
@@ -178,15 +179,16 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
 
             m_currentFile = file;
             m_editor->loadDSFile(file);
-
-            if (!audioPath.isEmpty())
-                m_editor->loadAudio(audioPath, audioDurationSec(doc));
-        } else if (!audioPath.isEmpty()) {
+            audioDurSec = audioDurationSec(doc);
+        } else {
             m_currentFile = std::make_shared<pitchlabeler::DSFile>();
-            m_currentFile->setFilePath(audioPath);
+            if (!audioPath.isEmpty())
+                m_currentFile->setFilePath(audioPath);
             m_editor->loadDSFile(m_currentFile);
-            m_editor->loadAudio(audioPath, 0.0);
         }
+
+        if (!audioPath.isEmpty())
+            m_editor->loadAudio(audioPath, audioDurSec);
     }
 
     bool PitchLabelerPage::saveCurrentSlice() {
