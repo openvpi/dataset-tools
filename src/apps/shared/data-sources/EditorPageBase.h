@@ -1,10 +1,12 @@
 #pragma once
 
 #include "dstools/ModelManager.h"
+#include <dstools/Result.h>
 
 
 #include <dsfw/AppSettings.h>
 #include <dsfw/IPageActions.h>
+#include <dsfw/Log.h>
 #include <dsfw/IPageLifecycle.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/IEditorDataSource.h>
@@ -15,6 +17,7 @@
 #include <QSet>
 #include <QTimer>
 #include <QPointer>
+#include <QtConcurrent>
 #include <atomic>
 #include <functional>
 #include <map>
@@ -227,6 +230,54 @@ protected:
     /// This ordering ensures the background thread sees false before
     /// the engine pointer is nulled, closing the TOCTOU gap (P-09).
     static void cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveToken);
+
+    // ── Async inference task runner ──
+
+    /// Run an async inference task with alive-token + QPointer safety.
+    /// Handles QtConcurrent::run, try/catch, alive-token check, and
+    /// invokeMethod callback to the main thread.
+    /// @tparam T Result type (default void).
+    /// @param taskKey  Alive-token key.
+    /// @param sliceId  Current slice ID (for logging, etc.).
+    /// @param backgroundWork  Blocking work on worker thread.
+    ///        Receives shared_ptr<atomic<bool>> for cancellation check.
+    ///        Should return Result<T>.
+    /// @param onComplete  Called on main thread with the result.
+    template<typename T = void>
+    void runAsyncTask(const QString &taskKey, const QString &sliceId,
+                      std::function<Result<T>(const std::shared_ptr<std::atomic<bool>>&)> backgroundWork,
+                      std::function<void(const QString&, const Result<T>&)> onComplete) {
+        auto alive = aliveToken(taskKey).token();
+        QPointer<EditorPageBase> guard(this);
+
+        (void) QtConcurrent::run([alive, sliceId, guard,
+                                  backgroundWork = std::move(backgroundWork),
+                                  onComplete = std::move(onComplete)]() {
+            if (!alive || !*alive)
+                return;
+
+            Result<T> result = Err(std::string("Not executed"));
+            try {
+                if (backgroundWork)
+                    result = backgroundWork(alive);
+            } catch (const std::exception &e) {
+                DSFW_LOG_ERROR("infer", ("Async task exception: " + sliceId.toStdString() +
+                                         " - " + e.what()).c_str());
+                result = Err(std::string("Exception: ") + e.what());
+            }
+
+            if (!guard)
+                return;
+
+            QMetaObject::invokeMethod(guard.data(), [guard, sliceId, result = std::move(result),
+                                                      onComplete = std::move(onComplete)]() {
+                if (!guard)
+                    return;
+                if (onComplete)
+                    onComplete(sliceId, result);
+            }, Qt::QueuedConnection);
+        });
+    }
 
     // ── Template-based engine loading (P-12) ──
 
