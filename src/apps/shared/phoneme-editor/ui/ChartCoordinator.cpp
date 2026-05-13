@@ -1,4 +1,4 @@
-#include "ViewportManager.h"
+#include "ChartCoordinator.h"
 #include "IBoundaryModel.h"
 #include "BoundaryDragController.h"
 
@@ -9,18 +9,18 @@
 namespace dstools {
 namespace phonemelabeler {
 
-ViewportManager::ViewportManager(QObject *parent)
+ChartCoordinator::ChartCoordinator(QObject *parent)
     : QObject(parent)
 {
 }
 
-void ViewportManager::addPanel(IChartPanel *panel) {
+void ChartCoordinator::addPanel(IChartPanel *panel) {
     if (!panel) return;
     m_panels.push_back(panel);
     m_panelMap[panel->chartId()] = panel;
 }
 
-void ViewportManager::removePanel(const QString &chartId) {
+void ChartCoordinator::removePanel(const QString &chartId) {
     auto it = m_panelMap.find(chartId);
     if (it != m_panelMap.end()) {
         auto pit = std::find(m_panels.begin(), m_panels.end(), it->second);
@@ -30,19 +30,19 @@ void ViewportManager::removePanel(const QString &chartId) {
     }
 }
 
-IChartPanel *ViewportManager::panel(const QString &chartId) {
+IChartPanel *ChartCoordinator::panel(const QString &chartId) {
     auto it = m_panelMap.find(chartId);
     return (it != m_panelMap.end()) ? it->second : nullptr;
 }
 
-std::vector<QString> ViewportManager::chartIds() const {
+std::vector<QString> ChartCoordinator::chartIds() const {
     std::vector<QString> ids;
     for (const auto *p : m_panels)
         ids.push_back(p->chartId());
     return ids;
 }
 
-void ViewportManager::onViewportStateUpdate(const ViewportState &state, int pixelWidth) {
+void ChartCoordinator::onViewportStateUpdate(const ViewportState &state, int pixelWidth) {
     m_xf.updateFromState(state, pixelWidth);
 
     for (auto *panel : m_panels)
@@ -51,7 +51,7 @@ void ViewportManager::onViewportStateUpdate(const ViewportState &state, int pixe
     emit viewportChanged(m_xf);
 }
 
-void ViewportManager::onPlayheadUpdate(const PlayheadState &state) {
+void ChartCoordinator::onPlayheadUpdate(const PlayheadState &state) {
     m_playhead = state;
 
     for (auto *panel : m_panels)
@@ -60,40 +60,40 @@ void ViewportManager::onPlayheadUpdate(const PlayheadState &state) {
     emit playheadChanged(m_playhead);
 }
 
-void ViewportManager::onActiveTierChanged(int tierIndex) {
+void ChartCoordinator::onActiveTierChanged(int tierIndex) {
     for (auto *panel : m_panels)
         panel->onActiveTierChanged(tierIndex);
 }
 
-void ViewportManager::setBoundaryModel(IBoundaryModel *model) {
+void ChartCoordinator::setBoundaryModel(IBoundaryModel *model) {
     m_boundaryModel = model;
 
     for (auto *panel : m_panels)
         panel->setBoundaryModel(model);
 }
 
-void ViewportManager::notifyAll() {
+void ChartCoordinator::notifyAll() {
     for (auto *panel : m_panels) {
         panel->onViewportUpdate(m_xf);
         panel->onPlayheadUpdate(m_playhead);
     }
 }
 
-void ViewportManager::setDragController(BoundaryDragController *ctrl) {
+void ChartCoordinator::setDragController(BoundaryDragController *ctrl) {
     m_dragController = ctrl;
 
     for (auto *panel : m_panels)
         panel->setDragController(ctrl);
 }
 
-void ViewportManager::setPlayWidget(dstools::widgets::PlayWidget *pw) {
+void ChartCoordinator::setPlayWidget(dstools::widgets::PlayWidget *pw) {
     m_playWidget = pw;
 
     for (auto *panel : m_panels)
         panel->setPlayWidget(pw);
 }
 
-void ViewportManager::setUndoStack(QUndoStack *stack) {
+void ChartCoordinator::setUndoStack(QUndoStack *stack) {
     m_undoStack = stack;
 
     for (auto *panel : m_panels)

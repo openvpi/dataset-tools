@@ -13,11 +13,11 @@ class QUndoStack;
 namespace dstools {
     namespace phonemelabeler {
 
-        class ViewportManager : public QObject {
+        class ChartCoordinator : public QObject {
             Q_OBJECT
 
         public:
-            explicit ViewportManager(QObject *parent = nullptr);
+            explicit ChartCoordinator(QObject *parent = nullptr);
 
             void addPanel(IChartPanel *panel);
             void removePanel(const QString &chartId);

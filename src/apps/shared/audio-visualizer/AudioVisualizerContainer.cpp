@@ -2,7 +2,7 @@
 #include "MiniMapScrollBar.h"
 #include "PlayCursorOverlay.h"
 #include "TierLabelArea.h"
-#include "ViewportManager.h"
+#include "ChartCoordinator.h"
 
 #include <ui/BoundaryDragController.h>
 #include <ui/BoundaryOverlayWidget.h>
