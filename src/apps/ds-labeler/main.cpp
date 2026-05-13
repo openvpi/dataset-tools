@@ -31,6 +31,113 @@
 #include <filesystem>
 #include <memory>
 
+namespace {
+
+void checkSliceConsistency(dstools::DsProject *project,
+                           dsfw::AppShell *shell) {
+    if (!project)
+        return;
+
+    const auto &items = project->items();
+    const auto &slicerState = project->slicerState();
+
+    if (items.empty()) {
+        if (!slicerState.audioFiles.isEmpty()) {
+            auto ret = QMessageBox::question(
+                shell,
+                QStringLiteral("未导出切片"),
+                QStringLiteral("切片页面已有音频文件和切点，但尚未导出切片。\n"
+                               "是否回到切片页面导出？"),
+                QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes)
+                QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
+        } else {
+            auto ret = QMessageBox::question(
+                shell,
+                QStringLiteral("未切片"),
+                QStringLiteral("尚未导出切片，是否回到切片页面？"),
+                QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes)
+                QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
+        }
+        return;
+    }
+
+    QStringList problemFiles;
+
+    for (const auto &[originalPath, points] : slicerState.slicePoints) {
+        if (points.empty())
+            continue;
+
+        QString baseName = QFileInfo(originalPath).completeBaseName();
+        int expectedSegments = static_cast<int>(points.size()) + 1;
+
+        int actualSegments = 0;
+        for (const auto &item : items) {
+            if (item.id.startsWith(baseName))
+                ++actualSegments;
+        }
+
+        if (actualSegments == 0) {
+            problemFiles.append(QFileInfo(originalPath).fileName()
+                                + QStringLiteral(" (未导出)"));
+        } else if (actualSegments != expectedSegments) {
+            problemFiles.append(QFileInfo(originalPath).fileName()
+                                + QStringLiteral(" (切点数不一致: 期望 %1 段, 实际 %2 段)")
+                                      .arg(expectedSegments).arg(actualSegments));
+        } else {
+            constexpr double kToleranceUs = 1000.0;
+            bool mismatch = false;
+            int segIdx = 0;
+            for (const auto &item : items) {
+                if (!item.id.startsWith(baseName))
+                    continue;
+                if (item.slices.empty())
+                    continue;
+                const auto &slice = item.slices[0];
+                double expectedStart = (segIdx == 0) ? 0.0 : points[segIdx - 1] * 1e6;
+                if (std::abs(expectedStart - static_cast<double>(slice.inPos)) > kToleranceUs) {
+                    mismatch = true;
+                    break;
+                }
+                ++segIdx;
+            }
+            if (mismatch)
+                problemFiles.append(QFileInfo(originalPath).fileName()
+                                    + QStringLiteral(" (切点位置已变化)"));
+        }
+    }
+
+    for (const auto &audioFile : slicerState.audioFiles) {
+        QString resolved = audioFile;
+        if (QDir::isRelativePath(resolved))
+            resolved = QDir(project->workingDirectory()).absoluteFilePath(resolved);
+        if (slicerState.slicePoints.find(resolved) == slicerState.slicePoints.end()) {
+            problemFiles.append(QFileInfo(audioFile).fileName()
+                                + QStringLiteral(" (未切片)"));
+        }
+    }
+
+    if (problemFiles.isEmpty())
+        return;
+
+    QMessageBox msgBox(shell);
+    msgBox.setWindowTitle(QStringLiteral("切片状态不一致"));
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setText(QStringLiteral("以下音频文件的切片结果与当前切点不一致，\n"
+                                  "继续操作可能导致标注数据错误："));
+    msgBox.setDetailedText(problemFiles.join(QStringLiteral("\n")));
+    auto *goBackBtn = msgBox.addButton(QStringLiteral("回到切片页面重新导出"), QMessageBox::AcceptRole);
+    msgBox.addButton(QStringLiteral("忽略继续"), QMessageBox::RejectRole);
+
+    msgBox.exec();
+    if (msgBox.clickedButton() == goBackBtn) {
+        QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
+    }
+}
+
+} // namespace
+
 static void initPinyin(QApplication &app) {
     std::filesystem::path dictPath =
 #ifdef Q_OS_MAC
@@ -154,119 +261,11 @@ int main(int argc, char *argv[]) {
     // ── Page-switch guard: check slice consistency when entering downstream pages ──
     QObject::connect(&shell, &dsfw::AppShell::currentPageChanged, &shell,
                      [&](int index) {
-        // Pages 2-4 (minlabel, phoneme, pitch) need items from slicer
         if (index < 2 || index > 4)
             return;
         if (!project || !dataSource)
             return;
-
-        const auto &items = project->items();
-        const auto &slicerState = project->slicerState();
-
-        // Case 1: No items exported at all but slicer has audio files with slice points
-        if (items.empty()) {
-            if (!slicerState.audioFiles.isEmpty()) {
-                auto ret = QMessageBox::question(
-                    &shell,
-                    QStringLiteral("未导出切片"),
-                    QStringLiteral("切片页面已有音频文件和切点，但尚未导出切片。\n"
-                                   "是否回到切片页面导出？"),
-                    QMessageBox::Yes | QMessageBox::No);
-                if (ret == QMessageBox::Yes)
-                    QTimer::singleShot(0, &shell, [&shell]() { shell.setCurrentPage(1); });
-            } else {
-                auto ret = QMessageBox::question(
-                    &shell,
-                    QStringLiteral("未切片"),
-                    QStringLiteral("尚未导出切片，是否回到切片页面？"),
-                    QMessageBox::Yes | QMessageBox::No);
-                if (ret == QMessageBox::Yes)
-                    QTimer::singleShot(0, &shell, [&shell]() { shell.setCurrentPage(1); });
-            }
-            return;
-        }
-
-        // Case 2: Check consistency between slicer state and exported items.
-        // SlicerState.slicePoints keys are original audio paths;
-        // items have exported WAV paths. Match by basename prefix.
-        QStringList problemFiles;
-
-        for (const auto &[originalPath, points] : slicerState.slicePoints) {
-            if (points.empty())
-                continue;
-
-            QString baseName = QFileInfo(originalPath).completeBaseName();
-            int expectedSegments = static_cast<int>(points.size()) + 1;
-
-            // Count project items whose ID starts with this audio's basename
-            int actualSegments = 0;
-            for (const auto &item : items) {
-                if (item.id.startsWith(baseName))
-                    ++actualSegments;
-            }
-
-            if (actualSegments == 0) {
-                // This audio file was sliced but never exported
-                problemFiles.append(QFileInfo(originalPath).fileName()
-                                    + QStringLiteral(" (未导出)"));
-            } else if (actualSegments != expectedSegments) {
-                // Slice count mismatch — points changed after export
-                problemFiles.append(QFileInfo(originalPath).fileName()
-                                    + QStringLiteral(" (切点数不一致: 期望 %1 段, 实际 %2 段)")
-                                          .arg(expectedSegments).arg(actualSegments));
-            } else {
-                // Slice count matches — verify boundary positions (tolerance: 1ms)
-                constexpr double kToleranceUs = 1000.0;
-                bool mismatch = false;
-                int segIdx = 0;
-                for (const auto &item : items) {
-                    if (!item.id.startsWith(baseName))
-                        continue;
-                    if (item.slices.empty())
-                        continue;
-                    const auto &slice = item.slices[0];
-                    double expectedStart = (segIdx == 0) ? 0.0 : points[segIdx - 1] * 1e6;
-                    if (std::abs(expectedStart - static_cast<double>(slice.inPos)) > kToleranceUs) {
-                        mismatch = true;
-                        break;
-                    }
-                    ++segIdx;
-                }
-                if (mismatch)
-                    problemFiles.append(QFileInfo(originalPath).fileName()
-                                        + QStringLiteral(" (切点位置已变化)"));
-            }
-        }
-
-        // Also check for audio files in slicer list that have no slice points at all
-        for (const auto &audioFile : slicerState.audioFiles) {
-            QString resolved = audioFile;
-            if (QDir::isRelativePath(resolved))
-                resolved = QDir(project->workingDirectory()).absoluteFilePath(resolved);
-            if (slicerState.slicePoints.find(resolved) == slicerState.slicePoints.end()) {
-                // Audio file added but never sliced
-                problemFiles.append(QFileInfo(audioFile).fileName()
-                                    + QStringLiteral(" (未切片)"));
-            }
-        }
-
-        if (problemFiles.isEmpty())
-            return;
-
-        // Show warning dialog
-        QMessageBox msgBox(&shell);
-        msgBox.setWindowTitle(QStringLiteral("切片状态不一致"));
-        msgBox.setIcon(QMessageBox::Warning);
-        msgBox.setText(QStringLiteral("以下音频文件的切片结果与当前切点不一致，\n"
-                                      "继续操作可能导致标注数据错误："));
-        msgBox.setDetailedText(problemFiles.join(QStringLiteral("\n")));
-        auto *goBackBtn = msgBox.addButton(QStringLiteral("回到切片页面重新导出"), QMessageBox::AcceptRole);
-        msgBox.addButton(QStringLiteral("忽略继续"), QMessageBox::RejectRole);
-
-        msgBox.exec();
-        if (msgBox.clickedButton() == goBackBtn) {
-            QTimer::singleShot(0, &shell, [&shell]() { shell.setCurrentPage(1); });
-        }
+        checkSliceConsistency(project.get(), &shell);
     });
 
     shell.show();
