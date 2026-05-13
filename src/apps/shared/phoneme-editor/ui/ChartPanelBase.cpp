@@ -192,11 +192,13 @@ void ChartPanelBase::mouseMoveEvent(QMouseEvent *event) {
     }
 
     auto [tier, idx] = hitTestBoundary(event->pos().x());
+    int activeTier = m_boundaryModel ? m_boundaryModel->activeTierIndex() : -1;
+
     if (tier >= 0) {
         if (m_hoveredBoundary.first != tier || m_hoveredBoundary.second != idx) {
             m_hoveredBoundary = {tier, idx};
             setCursor(Qt::SizeHorCursor);
-            emit hoveredBoundaryChanged(idx);
+            emit hoveredBoundaryChanged(tier == activeTier ? idx : -1);
             update();
         }
     } else {
