@@ -42,7 +42,7 @@
 | PitchLabelerPage拆分(1283行) | 最大源文件，违反P-01 | 2天 | ⚠ 部分完成 (1283→1040行，提取了buildAlignInput和gameNoteMidiName) |
 | PhonemeLabelerPage精简(994行) | 提取applyFaResult | 1天 | ❌ |
 | Spectrogram增量渲染(TD-03) | rebuildViewImage每次重建全图 | 1周 | ❌ |
-| 未使用变量/编译警告清理 | halfWindow等 | 0.5天 | ❌ |
+| 未使用变量/编译警告清理 | halfWindow等 | 0.5天 | ✅ |
 | QMetaMethod反射移除(TD-01) | 连接不可靠静默失败 | 0.5天 | ✅ |
 
 ## 实施顺序
