@@ -1,5 +1,7 @@
 #include "WelcomePage.h"
 
+#include <AppSettingKeys.h>
+
 #include <QApplication>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -19,7 +21,6 @@
 namespace dstools {
 
 static constexpr int kMaxRecentProjects = 10;
-static const QString kRecentProjectsKey = QStringLiteral("App/recentProjects");
 
 WelcomePage::WelcomePage(QWidget *parent) : QWidget(parent) {
     // Title
@@ -87,9 +88,9 @@ WelcomePage::WelcomePage(QWidget *parent) : QWidget(parent) {
                 QMessageBox::Yes | QMessageBox::No);
             if (result == QMessageBox::Yes) {
                 QSettings settings;
-                auto recent = settings.value(kRecentProjectsKey).toStringList();
+                auto recent = settings.value(QLatin1String(AppSettingKeys::RecentProjects)).toStringList();
                 recent.removeAll(path);
-                settings.setValue(kRecentProjectsKey, recent);
+                settings.setValue(QLatin1String(AppSettingKeys::RecentProjects), recent);
                 refreshRecentList();
             }
             return;
@@ -145,14 +146,14 @@ void WelcomePage::onNewProject() {
 }
 
 void WelcomePage::onOpenProject() {
-        const QString lastDir = QSettings().value(QStringLiteral("App/lastProjectDir")).toString();
+        const QString lastDir = QSettings().value(QLatin1String(AppSettingKeys::LastProjectDir)).toString();
         const QString path = QFileDialog::getOpenFileName(
             this, QStringLiteral("打开工程"), lastDir,
             QStringLiteral("DiffSinger Project (*.dsproj)"));
         if (path.isEmpty())
             return;
 
-        QSettings().setValue(QStringLiteral("App/lastProjectDir"), QFileInfo(path).absolutePath());
+        QSettings().setValue(QLatin1String(AppSettingKeys::LastProjectDir), QFileInfo(path).absolutePath());
         addToRecent(path);
         loadProject(path);
     }
@@ -172,19 +173,19 @@ void WelcomePage::loadProject(const QString &path) {
 
 void WelcomePage::addToRecent(const QString &path) {
     QSettings settings;
-    auto recent = settings.value(kRecentProjectsKey).toStringList();
+    auto recent = settings.value(QLatin1String(AppSettingKeys::RecentProjects)).toStringList();
     recent.removeAll(path);
     recent.prepend(path);
     while (recent.size() > kMaxRecentProjects)
         recent.removeLast();
-    settings.setValue(kRecentProjectsKey, recent);
+    settings.setValue(QLatin1String(AppSettingKeys::RecentProjects), recent);
     refreshRecentList();
 }
 
 void WelcomePage::refreshRecentList() {
     m_recentList->clear();
     QSettings settings;
-    const auto recent = settings.value(kRecentProjectsKey).toStringList();
+    const auto recent = settings.value(QLatin1String(AppSettingKeys::RecentProjects)).toStringList();
 
     for (const auto &path : recent) {
         QFileInfo fi(path);

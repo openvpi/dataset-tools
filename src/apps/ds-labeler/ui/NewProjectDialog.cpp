@@ -1,5 +1,7 @@
 #include "NewProjectDialog.h"
 
+#include <AppSettingKeys.h>
+
 #include <dstools/DsProject.h>
 
 #include <QComboBox>
@@ -78,13 +80,13 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
 }
 
 void NewProjectDialog::onBrowseDir() {
-        const QString lastDir = QSettings().value(QStringLiteral("App/lastProjectDir")).toString();
+        const QString lastDir = QSettings().value(QLatin1String(AppSettingKeys::LastProjectDir)).toString();
         const QString dir = QFileDialog::getExistingDirectory(
             this, QStringLiteral("选择工程保存位置"), lastDir);
         if (dir.isEmpty())
             return;
         m_saveDir = dir;
-        QSettings().setValue(QStringLiteral("App/lastProjectDir"), dir);
+        QSettings().setValue(QLatin1String(AppSettingKeys::LastProjectDir), dir);
         m_labelDir->setText(QDir::toNativeSeparators(dir));
         m_labelDir->setStyleSheet({});
         updateOkButton();

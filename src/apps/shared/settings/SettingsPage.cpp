@@ -1,5 +1,6 @@
 #include "SettingsPage.h"
 
+#include "AppSettingKeys.h"
 #include "ISettingsBackend.h"
 
 #include <dsfw/AppSettings.h>
@@ -639,7 +640,7 @@ QWidget *SettingsPage::createGeneralTab() {
     m_languageCombo->addItem(QStringLiteral("English (en)"), QStringLiteral("en"));
 
     QSettings settings;
-    QString savedLang = settings.value(QStringLiteral("App/language")).toString();
+    QString savedLang = settings.value(QLatin1String(AppSettingKeys::Language)).toString();
     for (int i = 0; i < m_languageCombo->count(); ++i) {
         if (m_languageCombo->itemData(i).toString() == savedLang) {
             m_languageCombo->setCurrentIndex(i);
@@ -658,7 +659,7 @@ QWidget *SettingsPage::createGeneralTab() {
     connect(m_languageCombo, &QComboBox::currentIndexChanged, this, [this]() {
         QString lang = m_languageCombo->currentData().toString();
         QSettings settings;
-        settings.setValue(QStringLiteral("App/language"), lang);
+        settings.setValue(QLatin1String(AppSettingKeys::Language), lang);
         markDirty();
     });
 
