@@ -22,28 +22,28 @@
 
 | 任务 | 说明 | 工作量 | 状态 |
 |---|---|---|---|
-| runAsyncTask异步框架提取 | 4个异步处理函数遵循same validate->flag->run->callback模式 | 2天 | ❌ |
-| AudioEditorWidgetBase统一基类 | PhonemeEditor/PitchEditor~200-300行脚手架重复 | 3天 | ❌ |
-| data-sources依赖倒置 | 直接链接5个infer lib编译时耦合(AD-01) | 2天 | ❌ |
+| runAsyncTask异步框架提取 | 4个异步处理函数遵循same validate->flag->run->callback模式 | 2天 | ✅ |
+| AudioEditorWidgetBase统一基类 | PhonemeEditor/PitchEditor~200-300行脚手架重复 | 3天 | ✅ |
+| data-sources依赖倒置 | 直接链接5个infer lib编译时耦合(AD-01) | 2天 | ✅ |
 
 ### P2 -- 低优先级
 
 | 任务 | 说明 | 工作量 | 状态 |
 |---|---|---|---|
 | FunASR适配器隔离 | 29文件~2400行，违反P-17 | 2周 | ❌ |
-| ViewportManager/ViewportController重命名 | 同名近义易混淆 | 0.5天 | ❌ |
-| QSettings键名统一(TD-20) | 部分硬编码->全部SettingsKey | 1天 | ❌ |
-| SimpleDialogs清理 | 拆分RunProgressRow | 0.5天 | ❌ |
+| ViewportManager/ViewportController重命名 | 同名近义易混淆 | 0.5天 | ✅ |
+| QSettings键名统一(TD-20) | 部分硬编码->全部SettingsKey | 1天 | ✅ |
+| SimpleDialogs清理 | 拆分RunProgressRow | 0.5天 | ✅ |
 
 ### P3 -- 长期
 
 | 任务 | 说明 | 工作量 | 状态 |
 |---|---|---|---|
-| PitchLabelerPage拆分(1283行) | 最大源文件，违反P-01 | 2天 | ❌ |
+| PitchLabelerPage拆分(1283行) | 最大源文件，违反P-01 | 2天 | ⚠ 部分完成 (1283→1040行，提取了buildAlignInput和gameNoteMidiName) |
 | PhonemeLabelerPage精简(994行) | 提取applyFaResult | 1天 | ❌ |
 | Spectrogram增量渲染(TD-03) | rebuildViewImage每次重建全图 | 1周 | ❌ |
 | 未使用变量/编译警告清理 | halfWindow等 | 0.5天 | ❌ |
-| QMetaMethod反射移除(TD-01) | 连接不可靠静默失败 | 0.5天 | ❌ |
+| QMetaMethod反射移除(TD-01) | 连接不可靠静默失败 | 0.5天 | ✅ |
 
 ## 实施顺序
 
