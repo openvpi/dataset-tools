@@ -188,10 +188,19 @@ protected:
 
     virtual void applyBatchResult(const QString &sliceId, const BatchSliceResult &result);
 
-    virtual bool isBatchRunning() const = 0;
-    virtual void setBatchRunning(bool running) = 0;
+    bool isBatchRunning() const { return m_batchRunning; }
+    void setBatchRunning(bool running) {
+        if (m_batchRunning.exchange(running) != running)
+            onBatchRunningChanged(running);
+    }
 
-    virtual std::shared_ptr<std::atomic<bool>> batchAliveToken() const = 0;
+    std::shared_ptr<std::atomic<bool>> batchAliveToken() const {
+        return aliveToken(m_batchTaskKey).token();
+    }
+
+    void setBatchTaskKey(const QString &key) { m_batchTaskKey = key; }
+
+    virtual void onBatchRunningChanged(bool running) { Q_UNUSED(running); }
 
     void runBatchProcess(const BatchConfig &config,
                          const QStringList &sliceIds,
@@ -402,6 +411,8 @@ private:
     QSet<QString> m_loadingEngines;
     IModelManager *m_modelManager = nullptr;
     std::map<QString, EngineAliveToken> m_aliveTokens;
+    std::atomic<bool> m_batchRunning{false};
+    QString m_batchTaskKey;
 
     QTimer *m_autoSaveTimer = nullptr;
 

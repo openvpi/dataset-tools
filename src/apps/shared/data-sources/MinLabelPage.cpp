@@ -39,6 +39,7 @@
 namespace dstools {
 
     MinLabelPage::MinLabelPage(QWidget *parent) : EditorPageBase("MinLabel", parent) {
+        setBatchTaskKey(QStringLiteral("asr"));
         m_editor = new Minlabel::MinLabelEditor(this);
 
         setupBaseLayout(m_editor);
@@ -75,19 +76,8 @@ namespace dstools {
 
     MinLabelPage::~MinLabelPage() = default;
 
-    // ── Batch processing (P-12 template) ─────────────────────────────────────
-
-    bool MinLabelPage::isBatchRunning() const {
-        return m_batchRunning;
-    }
-
-    void MinLabelPage::setBatchRunning(bool running) {
-        m_batchRunning = running;
+    void MinLabelPage::onBatchRunningChanged(bool running) {
         m_asrRunning = running;
-    }
-
-    std::shared_ptr<std::atomic<bool>> MinLabelPage::batchAliveToken() const {
-        return aliveToken(QStringLiteral("asr")).token();
     }
 
     bool MinLabelPage::hasExistingResult(const QString &sliceId) const {

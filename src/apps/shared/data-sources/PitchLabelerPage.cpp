@@ -111,20 +111,6 @@ namespace dstools {
 
     PitchLabelerPage::~PitchLabelerPage() = default;
 
-    // ── Batch processing (P-12 template) ──────────────────────────────────────────
-
-    bool PitchLabelerPage::isBatchRunning() const {
-        return m_batchRunning;
-    }
-
-    void PitchLabelerPage::setBatchRunning(bool running) {
-        m_batchRunning = running;
-    }
-
-    std::shared_ptr<std::atomic<bool>> PitchLabelerPage::batchAliveToken() const {
-        return m_batchAlive;
-    }
-
     QString PitchLabelerPage::windowTitlePrefix() const {
         return tr("Pitch Labeling");
     }

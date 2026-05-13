@@ -43,11 +43,6 @@ protected:
     void onAutoInfer() override;
     void onDeactivatedImpl() override;
 
-    // Batch processing (P-12 template)
-    bool isBatchRunning() const override;
-    void setBatchRunning(bool running) override;
-    std::shared_ptr<std::atomic<bool>> batchAliveToken() const override;
-
 private:
     pitchlabeler::PitchEditor *m_editor = nullptr;
     std::shared_ptr<pitchlabeler::DSFile> m_currentFile;
@@ -59,8 +54,6 @@ private:
     Game::Game *m_game = nullptr;
     PhNumCalculator m_phNumCalc;
     std::atomic<bool> m_inferRunning{false};
-    std::atomic<bool> m_batchRunning{false};
-    std::shared_ptr<std::atomic<bool>> m_batchAlive;
 
     void onExtractPitch();
     void onExtractMidi();

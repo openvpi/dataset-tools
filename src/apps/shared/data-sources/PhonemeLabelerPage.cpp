@@ -170,20 +170,6 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
 
 PhonemeLabelerPage::~PhonemeLabelerPage() = default;
 
-// ── Batch processing (P-12 template) ──────────────────────────────────────────
-
-bool PhonemeLabelerPage::isBatchRunning() const {
-    return m_batchRunning;
-}
-
-void PhonemeLabelerPage::setBatchRunning(bool running) {
-    m_batchRunning = running;
-}
-
-std::shared_ptr<std::atomic<bool>> PhonemeLabelerPage::batchAliveToken() const {
-    return m_batchAlive;
-}
-
 // ── EditorPageBase hooks ──────────────────────────────────────────────────────
 
 QString PhonemeLabelerPage::windowTitlePrefix() const {

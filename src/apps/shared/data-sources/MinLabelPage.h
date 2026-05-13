@@ -38,10 +38,7 @@ protected:
     void onAutoInfer() override;
     void onDeactivatedImpl() override;
 
-    // Batch processing (P-12 template)
-    bool isBatchRunning() const override;
-    void setBatchRunning(bool running) override;
-    std::shared_ptr<std::atomic<bool>> batchAliveToken() const override;
+    void onBatchRunningChanged(bool running) override;
     bool hasExistingResult(const QString &sliceId) const override;
     BatchSliceResult processSlice(const QString &sliceId) override;
     void applyBatchResult(const QString &sliceId, const BatchSliceResult &result) override;
@@ -57,7 +54,6 @@ private:
     QAction *m_asrAction = nullptr;
     QAction *m_lyricFaAction = nullptr;
 
-    std::atomic<bool> m_batchRunning{false};
     QString m_pendingAsrText;
     bool m_batchAutoG2P = false;
 
