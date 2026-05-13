@@ -418,7 +418,69 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
         runPitchExtraction(currentSliceId());
     }
 
-    void PitchLabelerPage::onExtractMidi() {
+    bool PitchLabelerPage::resolveAlignInputWithPhNum(Game::AlignInput &alignInput) {
+    bool hasPhNum = false;
+    auto loadResult = source()->loadSlice(currentSliceId());
+    if (loadResult) {
+        for (const auto &layer : loadResult.value().layers) {
+            if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty()) {
+                for (const auto &b : layer.boundaries) {
+                    bool ok = false;
+                    int val = b.text.toInt(&ok);
+                    alignInput.phNum.push_back(ok ? val : 0);
+                }
+                hasPhNum = true;
+                break;
+            }
+        }
+    }
+
+    if (!hasPhNum) {
+        bool dictConfigured = false;
+        if (settingsBackend()) {
+            auto cfg = settingsBackend()->load()["phNumConfig"].toObject();
+            auto langs = cfg["languages"].toObject();
+            for (auto it = langs.begin(); it != langs.end(); ++it) {
+                auto langCfg = it.value().toObject();
+                if (!langCfg["dictPath"].toString().isEmpty()) {
+                    dictConfigured = true;
+                    break;
+                }
+            }
+        }
+
+        if (!dictConfigured) {
+            QMessageBox::warning(
+                this, QStringLiteral("缺少 ph_num"),
+                QStringLiteral("当前切片缺少 ph_num 数据，且未配置 ph_num 词典。\n"
+                               "请先在 设置 → ph_num 中配置词典路径。"));
+            return false;
+        }
+
+        dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                               QStringLiteral("自动计算 ph_num..."), 3000);
+        loadPhNumCalculator();
+        runAddPhNum(currentSliceId());
+        alignInput.phNum.clear();
+        auto reload = source()->loadSlice(currentSliceId());
+        if (reload) {
+            for (const auto &layer : reload->layers) {
+                if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty()) {
+                    for (const auto &b : layer.boundaries) {
+                        bool ok = false;
+                        int val = b.text.toInt(&ok);
+                        alignInput.phNum.push_back(ok ? val : 0);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+void PitchLabelerPage::onExtractMidi() {
         if (currentSliceId().isEmpty()) {
             QMessageBox::information(this, QStringLiteral("提取 MIDI"), QStringLiteral("请先选择一个切片。"));
             return;
@@ -442,63 +504,8 @@ PitchLabelerPage::PitchLabelerPage(QWidget *parent) : EditorPageBase("PitchLabel
         useAlignMode = buildAlignInput(alignInput);
 
         if (useAlignMode) {
-            bool hasPhNum = false;
-            auto loadResult = source()->loadSlice(currentSliceId());
-            if (loadResult) {
-                for (const auto &layer : loadResult.value().layers) {
-                    if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty()) {
-                        for (const auto &b : layer.boundaries) {
-                            bool ok = false;
-                            int val = b.text.toInt(&ok);
-                            alignInput.phNum.push_back(ok ? val : 0);
-                        }
-                        hasPhNum = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasPhNum) {
-                bool dictConfigured = false;
-                if (settingsBackend()) {
-                    auto cfg = settingsBackend()->load()["phNumConfig"].toObject();
-                    auto langs = cfg["languages"].toObject();
-                    for (auto it = langs.begin(); it != langs.end(); ++it) {
-                        auto langCfg = it.value().toObject();
-                        if (!langCfg["dictPath"].toString().isEmpty()) {
-                            dictConfigured = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!dictConfigured) {
-                    QMessageBox::warning(
-                        this, QStringLiteral("缺少 ph_num"),
-                        QStringLiteral("当前切片缺少 ph_num 数据，且未配置 ph_num 词典。\n"
-                                       "请先在 设置 → ph_num 中配置词典路径。"));
-                    return;
-                }
-
-                dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
-                                                       QStringLiteral("自动计算 ph_num..."), 3000);
-                loadPhNumCalculator();
-                runAddPhNum(currentSliceId());
-                alignInput.phNum.clear();
-                auto reload = source()->loadSlice(currentSliceId());
-                if (reload) {
-                    for (const auto &layer : reload->layers) {
-                        if (layer.name == QStringLiteral("ph_num") && !layer.boundaries.empty()) {
-                            for (const auto &b : layer.boundaries) {
-                                bool ok = false;
-                                int val = b.text.toInt(&ok);
-                                alignInput.phNum.push_back(ok ? val : 0);
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
+            if (!resolveAlignInputWithPhNum(alignInput))
+                return;
         }
 
         runMidiTranscription(currentSliceId(), useAlignMode ? &alignInput : nullptr);

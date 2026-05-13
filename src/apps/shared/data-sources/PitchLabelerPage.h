@@ -70,6 +70,7 @@ private:
     void runPitchExtraction(const QString &sliceId);
     void runMidiTranscription(const QString &sliceId, const Game::AlignInput *alignInput = nullptr);
     void runAddPhNum(const QString &sliceId);
+    bool resolveAlignInputWithPhNum(Game::AlignInput &alignInput);
     void applyPitchResult(const QString &sliceId, const std::vector<int32_t> &f0, float timestep);
     void applyMidiResult(const QString &sliceId, const std::vector<Game::GameNote> &notes);
     void updateProgress();
