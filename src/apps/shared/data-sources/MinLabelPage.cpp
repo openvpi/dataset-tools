@@ -36,6 +36,15 @@
 #include <dstools/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 
+template<>
+struct EngineTraits<LyricFA::Asr> {
+    using ProviderType = dstools::FunAsrModelProvider;
+
+    static bool isOpen(const LyricFA::Asr *engine) {
+        return engine && engine->initialized();
+    }
+};
+
 namespace dstools {
 
     MinLabelPage::MinLabelPage(QWidget *parent) : EditorPageBase("MinLabel", parent) {
@@ -369,27 +378,7 @@ namespace dstools {
     }
 
     void MinLabelPage::ensureAsrEngine() {
-        if (m_asr && m_asr->initialized())
-            return;
-
-        auto *mgr = ensureModelManager();
-        if (!mgr)
-            return;
-
-        if (!aliveToken(QStringLiteral("asr")).isValid()) {
-            connect(mgr, &IModelManager::modelInvalidated, this, &MinLabelPage::onEngineInvalidated);
-        }
-
-        auto [mm, typeId] = loadModelForTask(QStringLiteral("asr"));
-        if (!mm || !typeId.isValid())
-            return;
-
-        auto *provider = mm->provider(typeId);
-        auto *asrProvider = dynamic_cast<FunAsrModelProvider *>(provider);
-        if (asrProvider && asrProvider->asr() && asrProvider->asr()->initialized()) {
-            m_asr = asrProvider->asr();
-            aliveToken(QStringLiteral("asr")).create();
-        }
+        ensureEngine(m_asr, QStringLiteral("asr"));
     }
 
     void MinLabelPage::onEngineInvalidated(const QString &taskKey) {
@@ -401,19 +390,7 @@ namespace dstools {
     }
 
     void MinLabelPage::ensureAsrEngineAsync(std::function<void()> onReady) {
-        if (m_asr && m_asr->initialized()) {
-            if (onReady)
-                onReady();
-            return;
-        }
-        QPointer<MinLabelPage> guard(this);
-        QTimer::singleShot(0, this, [this, guard, onReady = std::move(onReady)]() {
-            if (!guard)
-                return;
-            ensureAsrEngine();
-            if (m_asr && m_asr->initialized() && onReady)
-                onReady();
-        });
+        ensureEngineAsync(m_asr, QStringLiteral("asr"), std::move(onReady));
     }
 
     void MinLabelPage::onRunAsr() {

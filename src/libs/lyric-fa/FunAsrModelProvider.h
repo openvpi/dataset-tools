@@ -23,6 +23,9 @@ public:
 
     LyricFA::Asr *asr() const;
 
+    LyricFA::Asr &engine() { return *m_asr; }
+    const LyricFA::Asr &engine() const { return *m_asr; }
+
     ModelTypeId type() const override;
     QString displayName() const override;
     Result<void> load(const QString &modelPath, int gpuIndex) override;
