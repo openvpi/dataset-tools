@@ -1,5 +1,5 @@
 #include "DictionaryPanel.h"
-#include "SharedSettingsKeys.h"
+#include "Keys.h"
 
 #include <dsfw/FileDialogHelper.h>
 #include <dstools/PinyinG2PProvider.h>

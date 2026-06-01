@@ -1,46 +1,20 @@
 #include "PageFactory.h"
 
-#include "MinLabelPage.h"
-#include "PhonemeLabelerPage.h"
-#include "PitchLabelerPage.h"
-
 #include <AppSettingsBackend.h>
-#include <SettingsPage.h>
-#include <LogPage.h>
-
 #include <dsfw/AppShell.h>
 
 namespace dstools {
 
-void PageFactory::registerSharedEditorPages(
+void PageFactory::registerPages(
     dsfw::AppShell *shell,
     IEditorDataSource *dataSource,
-    AppSettingsBackend *settingsBackend)
+    AppSettingsBackend *settingsBackend,
+    const std::vector<const IPageDescriptor *> &descriptors)
 {
-    auto *minLabelPage = new MinLabelPage(shell);
-    minLabelPage->setDataSource(dataSource, settingsBackend);
-    shell->addPage(minLabelPage, "minlabel", {}, QObject::tr("MinLabel"));
-
-    auto *phonemePage = new PhonemeLabelerPage(shell);
-    phonemePage->setDataSource(dataSource, settingsBackend);
-    shell->addPage(phonemePage, "phoneme", {}, QObject::tr("Phoneme"));
-
-    auto *pitchPage = new PitchLabelerPage(shell);
-    pitchPage->setDataSource(dataSource, settingsBackend);
-    shell->addPage(pitchPage, "pitch", {}, QObject::tr("Pitch"));
-}
-
-SettingsPage *PageFactory::registerUtilityPages(
-    dsfw::AppShell *shell,
-    AppSettingsBackend *settingsBackend)
-{
-    auto *settingsPage = new SettingsPage(settingsBackend, shell);
-    shell->addPage(settingsPage, "settings", {}, QObject::tr("Settings"));
-
-    auto *logPage = new LogPage(shell);
-    shell->addPage(logPage, "log", {}, QObject::tr("Log"));
-
-    return settingsPage;
+    for (const auto *desc : descriptors) {
+        auto *page = desc->create(shell, dataSource, settingsBackend);
+        shell->addPage(page, desc->id(), {}, desc->title());
+    }
 }
 
 } // namespace dstools

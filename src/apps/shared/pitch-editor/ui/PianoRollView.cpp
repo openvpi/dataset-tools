@@ -3,7 +3,7 @@
 #include "commands/PitchCommands.h"
 #include "commands/SplitMergeCommands.h"
 
-#include "PitchLabelerKeys.h"
+#include "Keys.h"
 
 #include <QContextMenuEvent>
 #include <QDebug>
@@ -336,7 +336,7 @@ namespace dstools {
      void PianoRollView::resetZoom() {
         if (!m_viewport) return;
 
-        m_viewport->setResolution(40);
+        m_viewport->setResolution(m_defaultResolution);
 
         if (m_audioDuration > 0) {
             m_viewport->setViewRange(0.0, m_audioDuration);
@@ -499,8 +499,7 @@ namespace dstools {
                 double midi = yToMidi(sceneY);
 
                 // Check if we're near a note boundary
-                const double boundaryHitRadius = 5.0;
-                const double sceneRadius = xToTime(boundaryHitRadius) - xToTime(0);
+                const double sceneRadius = xToTime(m_boundaryHitRadius) - xToTime(0);
 
                 for (int i = 0; i < static_cast<int>(m_dsFile->notes.size()); ++i) {
                     const auto &note = m_dsFile->notes[i];
@@ -777,10 +776,13 @@ namespace dstools {
             // ============================================================================
 
             void PianoRollView::loadConfig(dstools::AppSettings &settings) {
-                m_snapToKey = settings.get(PitchLabelerKeys::SnapToKey);
-                m_showPitchTextOverlay = settings.get(PitchLabelerKeys::ShowPitchTextOverlay);
-                m_showPhonemeTexts = settings.get(PitchLabelerKeys::ShowPhonemeTexts);
-                m_showCrosshairAndPitch = settings.get(PitchLabelerKeys::ShowCrosshairAndPitch);
+                m_snapToKey = settings.get(dstools::settings::pitch::kSnapToKey);
+                m_showPitchTextOverlay = settings.get(dstools::settings::pitch::kShowPitchTextOverlay);
+                m_showPhonemeTexts = settings.get(dstools::settings::pitch::kShowPhonemeTexts);
+                m_showCrosshairAndPitch = settings.get(dstools::settings::pitch::kShowCrosshairAndPitch);
+                m_vScale = settings.get(dstools::settings::pitch::kVScale);
+                m_boundaryHitRadius = settings.get(dstools::settings::pitch::kBoundaryHitRadius);
+                m_defaultResolution = settings.get(dstools::settings::pitch::kDefaultResolution);
 
                 if (m_actSnapToKey)
                     m_actSnapToKey->setChecked(m_snapToKey);
@@ -795,10 +797,13 @@ namespace dstools {
             }
 
             void PianoRollView::pullConfig(dstools::AppSettings &settings) const {
-                settings.set(PitchLabelerKeys::SnapToKey, m_snapToKey);
-                settings.set(PitchLabelerKeys::ShowPitchTextOverlay, m_showPitchTextOverlay);
-                settings.set(PitchLabelerKeys::ShowPhonemeTexts, m_showPhonemeTexts);
-                settings.set(PitchLabelerKeys::ShowCrosshairAndPitch, m_showCrosshairAndPitch);
+                settings.set(dstools::settings::pitch::kSnapToKey, m_snapToKey);
+                settings.set(dstools::settings::pitch::kShowPitchTextOverlay, m_showPitchTextOverlay);
+                settings.set(dstools::settings::pitch::kShowPhonemeTexts, m_showPhonemeTexts);
+                settings.set(dstools::settings::pitch::kShowCrosshairAndPitch, m_showCrosshairAndPitch);
+                settings.set(dstools::settings::pitch::kVScale, m_vScale);
+                settings.set(dstools::settings::pitch::kBoundaryHitRadius, m_boundaryHitRadius);
+                settings.set(dstools::settings::pitch::kDefaultResolution, m_defaultResolution);
             }
 
             // ============================================================================

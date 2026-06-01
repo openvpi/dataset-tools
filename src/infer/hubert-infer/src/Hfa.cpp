@@ -62,8 +62,7 @@ namespace HFA {
                     fs::path dict_path = model_folder / dict_path_str;
 
                     if (!fs::exists(dict_path)) {
-                        auto u8path = dict_path.u8string();
-                        std::cerr << std::string(u8path.begin(), u8path.end()) << " does not exist" << std::endl;
+                        std::cerr << dsfw::PathUtils::toUtf8(dict_path) << " does not exist" << std::endl;
                     } else {
                         m_dictG2p[language] = std::make_unique<DictionaryG2P>(dict_path, language);
                     }

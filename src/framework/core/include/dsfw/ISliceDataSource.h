@@ -11,6 +11,8 @@ namespace dsfw {
         Q_OBJECT
 
     public:
+        static constexpr int kInterfaceVersion = 1;
+
         using QObject::QObject;
         ~ISliceDataSource() noexcept override = default;
 

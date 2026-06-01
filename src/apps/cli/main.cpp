@@ -2,12 +2,20 @@
 #include <string>
 
 #include <dsfw/Log.h>
+#include <dsfw/PathUtils.h>
 #include <dsfw/TaskProcessorRegistry.h>
 #include <dstools/DsKeys.h>
 #include <dstools/ModelManager.h>
 
 #include <syscmdline/parser.h>
 #include <syscmdline/command.h>
+
+#include <InferBridge.h>
+#include <audio-util/Util.h>
+#include <nlohmann/json.hpp>
+#include <sndfile.hh>
+
+#include <fstream>
 
 #include "SlicerService.h"
 
@@ -183,6 +191,94 @@ static int cmdTranscribe(const ParseResult &result) {
     return 0;
 }
 
+static int cmdHfa(const ParseResult &result) {
+    QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
+    QString wavPath = QString::fromStdString(result.valueForOption("wav").toString());
+    QString labPath = QString::fromStdString(result.valueForOption("lab").toString());
+    QString saveWavPath = QString::fromStdString(result.valueForOption("save-wav").toString());
+
+    if (modelPath.isEmpty() || wavPath.isEmpty() || labPath.isEmpty()) {
+        std::cerr << "Error: --model, --wav, and --lab are required" << std::endl;
+        return 1;
+    }
+
+    auto modelStdPath = dsfw::PathUtils::toStdPath(modelPath);
+    auto wavStdPath = dsfw::PathUtils::toStdPath(wavPath);
+
+    int modelSampleRate = 0;
+    {
+        auto cfgPath = modelStdPath / "config.json";
+        std::ifstream f(cfgPath);
+        if (f.is_open()) {
+            auto cfg = nlohmann::json::parse(f);
+            modelSampleRate = cfg["mel_spec_config"]["sample_rate"].get<int>();
+        }
+    }
+
+    if (!saveWavPath.isEmpty() && modelSampleRate > 0) {
+        std::string errMsg;
+        auto sf_vio = AudioUtil::resample_to_vio(wavStdPath, errMsg, 1, modelSampleRate);
+        if (!errMsg.empty()) {
+            std::cerr << "Resample error: " << errMsg << std::endl;
+            return 1;
+        }
+        AudioUtil::write_vio_to_wav(sf_vio, dsfw::PathUtils::toStdPath(saveWavPath), 1);
+    }
+
+    std::string lyrics;
+    {
+        auto labStdPath = dsfw::PathUtils::toStdPath(labPath);
+        std::ifstream f(labStdPath);
+        if (!f.is_open()) {
+            std::cerr << "Error: cannot open " << dsfw::PathUtils::toUtf8(labStdPath) << std::endl;
+            return 1;
+        }
+        lyrics = std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+    }
+    if (!lyrics.empty() && lyrics.back() == '\n') {
+        lyrics.pop_back();
+    }
+
+    HFA::HFA hfa;
+    auto loadResult = hfa.load(modelStdPath, HFA::ExecutionProvider::CPU, -1);
+    if (!loadResult) {
+        std::cerr << "Failed to load model: " << loadResult.error() << std::endl;
+        return 1;
+    }
+
+    std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+    HFA::WordList words;
+    auto hfaResult = hfa.recognize(wavStdPath, "zh", nonSpeechPh, lyrics, words);
+    if (!hfaResult) {
+        std::cerr << "FA failed: " << hfaResult.error() << std::endl;
+        return 1;
+    }
+
+    nlohmann::json j;
+    j["words"] = nlohmann::json::array();
+    j["phonemes"] = nlohmann::json::array();
+
+    for (const auto &word : words) {
+        nlohmann::json wj;
+        wj["text"] = word.text;
+        wj["start"] = word.start;
+        wj["end"] = word.end;
+        wj["phones"] = nlohmann::json::array();
+        for (const auto &ph : word.phones) {
+            nlohmann::json pj;
+            pj["phone"] = ph.text;
+            pj["start"] = ph.start;
+            pj["end"] = ph.end;
+            wj["phones"].push_back(pj);
+            j["phonemes"].push_back(pj);
+        }
+        j["words"].push_back(std::move(wj));
+    }
+
+    std::cout << j.dump(2) << std::endl;
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     dstools::Logger::instance().setMinLevel(dstools::LogLevel::Warning);
 
@@ -220,11 +316,23 @@ int main(int argc, char *argv[]) {
     transcribeCommand.addArgument(Argument("input", "Input audio file path"));
     transcribeCommand.setHandler(cmdTranscribe);
 
+    Command hfaCommand("hfa", "Hubert Forced Aligner on audio file");
+    hfaCommand.addOption(Option(std::string("model"), "Model folder path",
+                                Argument("path", "Model path", true)));
+    hfaCommand.addOption(Option(std::string("wav"), "Input audio file path",
+                                Argument("path", "Audio path", true)));
+    hfaCommand.addOption(Option(std::string("lab"), "Input lyrics .lab file path",
+                                Argument("path", "Lab path", true)));
+    hfaCommand.addOption(Option(std::string("save-wav"), "Resampled output audio path",
+                                Argument("path", "Output path", false)));
+    hfaCommand.setHandler(cmdHfa);
+
     rootCommand.addCommand(sliceCommand);
     rootCommand.addCommand(asrCommand);
     rootCommand.addCommand(alignCommand);
     rootCommand.addCommand(pitchCommand);
     rootCommand.addCommand(transcribeCommand);
+    rootCommand.addCommand(hfaCommand);
     rootCommand.addHelpOption(true);
 
     Parser parser(rootCommand);

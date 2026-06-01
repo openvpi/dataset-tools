@@ -1,8 +1,9 @@
 #pragma once
 
-#include "SettingsPage.h"
+#include "IPageDescriptor.h"
 
 #include <QObject>
+#include <vector>
 
 namespace dsfw {
     class AppShell;
@@ -15,10 +16,9 @@ namespace dstools {
 
     class PageFactory {
     public:
-        static void registerSharedEditorPages(dsfw::AppShell *shell, IEditorDataSource *dataSource,
-                                              AppSettingsBackend *settingsBackend);
-
-        static SettingsPage *registerUtilityPages(dsfw::AppShell *shell, AppSettingsBackend *settingsBackend);
+        static void registerPages(dsfw::AppShell *shell, IEditorDataSource *dataSource,
+                                  AppSettingsBackend *settingsBackend,
+                                  const std::vector<const IPageDescriptor *> &descriptors);
     };
 
 } // namespace dstools

@@ -31,12 +31,14 @@ namespace dstools {
         try {
             j = nlohmann::json::parse(textResult.value().toStdString());
         } catch (const nlohmann::json::parse_error &e) {
-            return Result<DsTextDocument>::Error(std::string("DsTextDocument JSON parse error: ") + e.what());
+            return Result<DsTextDocument>::Error("DsTextDocument JSON parse error [" +
+                                                 dsfw::PathUtils::toNarrowPath(path) + "]: " + e.what());
         } catch (const nlohmann::json::type_error &e) {
-            return Result<DsTextDocument>::Error(std::string("DsTextDocument JSON type error: ") + e.what());
+            return Result<DsTextDocument>::Error("DsTextDocument JSON type error [" +
+                                                 dsfw::PathUtils::toNarrowPath(path) + "]: " + e.what());
         }
 
-        auto version = QString::fromStdString(j.value("version", "2.0.0"));
+        auto version = QString::fromStdString(j.value("version", std::string(kDsTextVersionFallback)));
 
         DsTextDocument doc;
         doc.version = version;
@@ -204,7 +206,7 @@ namespace dstools {
 
         // AtomicFileWriter handles directory creation internally
         auto str = j.dump(4);
-        return dsfw::AtomicFileWriter::write(dsfw::PathUtils::toStdPath(path), str);
+        return dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
     }
 
     const BindingGroup *DsTextDocument::findGroup(int boundaryId) const {

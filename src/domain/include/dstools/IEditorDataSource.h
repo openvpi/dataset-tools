@@ -13,6 +13,8 @@ namespace dstools {
         Q_OBJECT
 
     public:
+        static constexpr int kInterfaceVersion = 1;
+
         using dsfw::ISliceDataSource::ISliceDataSource;
         ~IEditorDataSource() noexcept override = default;
 

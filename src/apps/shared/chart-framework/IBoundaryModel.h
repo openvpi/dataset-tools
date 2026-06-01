@@ -12,8 +12,10 @@ namespace dstools {
         };
 
         class IBoundaryModel {
-        public:
-            virtual ~IBoundaryModel() = default;
+    public:
+        static constexpr int kInterfaceVersion = 1;
+
+        virtual ~IBoundaryModel() = default;
 
             [[nodiscard]] virtual int tierCount() const = 0;
 

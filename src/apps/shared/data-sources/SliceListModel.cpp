@@ -2,7 +2,7 @@
 
 #include <dstools/IEditorDataSource.h>
 #include <dsfw/AppSettings.h>
-#include "SharedSettingsKeys.h"
+#include "Keys.h"
 
 #include <QColor>
 #include <QIcon>
@@ -29,6 +29,8 @@ QVariant SliceListModel::data(const QModelIndex &index, int role) const {
     case Qt::DisplayRole:
         return buildDisplayText(index.row());
     case Qt::ForegroundRole: {
+        if (!item.loadError.isEmpty())
+            return QColor(Qt::gray);
         if (item.discarded)
             return QColor(Qt::gray);
         if (item.dirty)
@@ -38,6 +40,8 @@ QVariant SliceListModel::data(const QModelIndex &index, int role) const {
         return {};
     }
     case Qt::ToolTipRole: {
+        if (!item.loadError.isEmpty())
+            return item.loadError;
         if (!item.audioExists)
             return QStringLiteral("音频文件不存在: %1").arg(item.id);
         return {};
@@ -61,6 +65,8 @@ QVariant SliceListModel::data(const QModelIndex &index, int role) const {
         return item.dirtyLayers;
     case DiscardedRole:
         return item.discarded;
+    case LoadErrorRole:
+        return item.loadError;
     case StartTimeRole:
         return item.startTime;
     case EndTimeRole:
@@ -138,6 +144,17 @@ void SliceListModel::setSliceDirtyLayers(const QString &sliceId, const QStringLi
         m_items[i].dirtyLayers = dirtyLayers;
         rebuildItemText(i);
         emit dataChanged(index(i), index(i), {Qt::DisplayRole, Qt::ForegroundRole, Qt::ToolTipRole});
+        break;
+    }
+}
+
+void SliceListModel::setSliceLoadError(const QString &sliceId, const QString &error) {
+    for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
+        if (m_items[i].id != sliceId)
+            continue;
+
+        m_items[i].loadError = error;
+        emit dataChanged(index(i), index(i), {Qt::ForegroundRole, Qt::ToolTipRole});
         break;
     }
 }

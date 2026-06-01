@@ -1,6 +1,6 @@
 #include "ExportSettingsPanel.h"
 #include "AppSettingKeys.h"
-#include "SharedSettingsKeys.h"
+#include "Keys.h"
 
 #include <dsfw/AppSettings.h>
 

@@ -46,7 +46,7 @@ void TestDsTextDocument::load_v2_roundtrip() {
     auto res = DsTextDocument::load(path1);
     QVERIFY(res.ok());
     const auto &doc = res.value();
-    QCOMPARE(doc.version, "2.0.0");
+    QCOMPARE(doc.version, QString::fromLatin1(kDsTextVersionFallback));
     QCOMPARE(doc.audio.path, "test.wav");
     QCOMPARE(doc.audio.in, 1000000);
     QCOMPARE(doc.audio.out, 5000000);

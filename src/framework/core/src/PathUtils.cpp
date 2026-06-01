@@ -1,7 +1,11 @@
 #include <dsfw/PathUtils.h>
+#include <dsfw/Encoding.h>
 
 #include <QDir>
 #include <QFileInfo>
+
+#include <array>
+#include <fstream>
 
 namespace dsfw {
 
@@ -93,6 +97,67 @@ QString PathUtils::toPosixSeparators(const QString &path) {
     QString result = path;
     result.replace('\\', '/');
     return result;
+}
+
+PathUtils::Encoding PathUtils::detectEncoding(const std::filesystem::path &path) {
+    constexpr size_t kHeaderSize = 4096;
+    std::array<char, kHeaderSize> buf{};
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open())
+        return Encoding::Unknown;
+
+    file.read(buf.data(), buf.size());
+    const auto bytesRead = static_cast<int>(file.gcount());
+    if (bytesRead <= 0)
+        return Encoding::Utf8;
+
+    QByteArray data(buf.data(), bytesRead);
+    const auto detected = Encoding::detect(data);
+
+    switch (detected) {
+        case EncodingType::Utf8:
+        case EncodingType::Utf8Bom:
+            return Encoding::Utf8;
+        case EncodingType::Utf16LE:
+        case EncodingType::Utf16BE:
+            return Encoding::Utf8;
+        case EncodingType::Gbk:
+            return Encoding::Ansi;
+        case EncodingType::Latin1:
+            return Encoding::Ansi;
+    }
+    return Encoding::Unknown;
+}
+
+std::optional<std::filesystem::path> PathUtils::canonicalOrNull(const std::filesystem::path &path) noexcept {
+    std::error_code ec;
+    auto canonical = std::filesystem::canonical(path, ec);
+    if (ec)
+        return std::nullopt;
+    return canonical;
+}
+
+bool PathUtils::isSubPath(const std::filesystem::path &parent, const std::filesystem::path &child) noexcept {
+    std::error_code ec;
+    const auto canonParent = std::filesystem::canonical(parent, ec);
+    if (ec)
+        return false;
+    const auto canonChild = std::filesystem::canonical(child, ec);
+    if (ec)
+        return false;
+
+    auto itParent = canonParent.begin();
+    auto itChild = canonChild.begin();
+    for (; itParent != canonParent.end() && itChild != canonChild.end(); ++itParent, ++itChild) {
+        if (*itParent != *itChild)
+            return false;
+    }
+    return itParent == canonParent.end();
+}
+
+std::filesystem::path PathUtils::relativeTo(const std::filesystem::path &path, const std::filesystem::path &base) {
+    return std::filesystem::relative(path, base);
 }
 
 } // namespace dsfw

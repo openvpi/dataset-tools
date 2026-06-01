@@ -26,6 +26,7 @@ namespace dstools {
             AudioExistsRole = Qt::UserRole + 4,
             DirtyLayersRole = Qt::UserRole + 5,
             DiscardedRole = Qt::UserRole + 6,
+            LoadErrorRole = Qt::UserRole + 7,
             StartTimeRole = Qt::UserRole + 10,
             EndTimeRole = Qt::UserRole + 11,
         };
@@ -45,6 +46,7 @@ namespace dstools {
 
         void setSliceDirty(const QString &sliceId, bool dirty);
         void setSliceDirtyLayers(const QString &sliceId, const QStringList &dirtyLayers);
+        void setSliceLoadError(const QString &sliceId, const QString &error);
 
         QString ensureSelection(AppSettings &settings);
         void saveSelection(AppSettings &settings) const;
@@ -72,6 +74,7 @@ namespace dstools {
             bool discarded = false;
             QString baseText;
             QStringList dirtyLayers;
+            QString loadError;
         };
 
         void rebuildEditorItems();

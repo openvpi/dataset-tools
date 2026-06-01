@@ -34,6 +34,7 @@ namespace dstools {
         [[nodiscard]] dsfw::widgets::FileProgressTracker *progressTracker() const;
         void setSliceDirty(const QString &sliceId, bool dirty);
         void setSliceDirtyLayers(const QString &sliceId, const QStringList &dirtyLayers);
+        void setSliceLoadError(const QString &sliceId, const QString &error);
 
         QString ensureSelection(AppSettings &settings);
         void saveSelection(AppSettings &settings) const;

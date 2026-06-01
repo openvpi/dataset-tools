@@ -1,6 +1,6 @@
 #include "EditorPageBase.h"
 #include "EnginePool.h"
-#include "SharedSettingsKeys.h"
+#include "Keys.h"
 #include "SliceListPanel.h"
 #include "AppSettingsBackend.h"
 #include "BatchProcessDialog.h"
@@ -505,6 +505,9 @@ void EditorPageBase::updateProgress(const QStringList &layerNames) {
                     break;
                 }
             }
+            sliceListPanel()->setSliceLoadError(id, QString());
+        } else {
+            sliceListPanel()->setSliceLoadError(id, QString::fromStdString(result.error()));
         }
     }
     sliceListPanel()->setProgress(completed, total);

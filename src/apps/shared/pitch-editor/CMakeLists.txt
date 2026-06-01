@@ -10,7 +10,7 @@ dstools_add_library(${PROJECT_NAME}
         DEPENDS
         PUBLIC chart-framework dstools-domain
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
-        PRIVATE audio-visualizer
+        PRIVATE audio-visualizer settings-page
 )
 
 dstools_add_translations(${PROJECT_NAME})

@@ -71,7 +71,7 @@
 |------|------|
 | [附录A](#附录a已废止决策索引) | 已废止决策索引（D-14、D-24） |
 | [附录B](#附录badr-冲突解决记录) | ADR 冲突解决——旧决策→新决策演变记录 |
-| [附录C](#附录c已完成实施任务存档) | 已完成实施任务存档（详见 zero-debt-v5-refactoring-plan.md 第2章） |
+| [附录C](#附录c已完成实施任务存档) | 已完成实施任务存档（INSERT-03~09 已完成） |
 
 ---
 
@@ -250,7 +250,7 @@
 
 **关联**：ARCH-07（开闭原则）——适配器模式是本原则在文件格式领域的具体实践；INFRA-05（统一路径库）——适配器内部使用 PathUtils 做路径编码。
 
-**2026-05-25 修订**：移除 IFileIOProvider 强制通道要求。适配器内部直接使用 QFile + PathUtils 即可，无需引入只有 1 个实现的 IFileIOProvider 抽象层。详见 zero-debt-v5-refactoring-plan.md 第2章。
+**2026-05-25 修订**：移除 IFileIOProvider 强制通道要求。适配器内部直接使用 QFile + PathUtils 即可，无需引入只有 1 个实现的 IFileIOProvider 抽象层。
 
 **2026-05-25 补充**：文件 I/O 分为两类，处理方式不同：
 1. **格式读写 I/O**（必须通过适配器）：读取/写入业务文档（.ds、.csv、.textgrid 等结构化格式）。业务代码必须通过 `IFormatAdapter` 进行。

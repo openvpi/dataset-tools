@@ -118,6 +118,10 @@ void SliceListPanel::setSliceDirtyLayers(const QString &sliceId, const QStringLi
     m_model->setSliceDirtyLayers(sliceId, dirtyLayers);
 }
 
+void SliceListPanel::setSliceLoadError(const QString &sliceId, const QString &error) {
+    m_model->setSliceLoadError(sliceId, error);
+}
+
 QString SliceListPanel::ensureSelection(AppSettings &settings) {
     return m_model->ensureSelection(settings);
 }

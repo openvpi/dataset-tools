@@ -8,6 +8,9 @@
 
 namespace dstools {
 
+    inline constexpr const char *kDsTextVersion = "3.0.0";
+    inline constexpr const char *kDsTextVersionFallback = "2.0.0";
+
     struct Boundary {
         int id = 0;
         TimePos pos = 0;
@@ -55,7 +58,7 @@ namespace dstools {
     };
 
     struct DsTextDocument {
-        QString version = "3.0.0";
+        QString version = QString::fromLatin1(kDsTextVersion);
         DsTextAudio audio;
         std::vector<IntervalLayer> layers;
         std::vector<CurveLayer> curves;

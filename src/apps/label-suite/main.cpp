@@ -27,6 +27,7 @@
 
 #include <DirectoryDataSource.h>
 #include <MinLabelPage.h>
+#include <PageDescriptors.h>
 #include <PageFactory.h>
 #include <PhonemeLabelerPage.h>
 #include <SlicerPage.h>
@@ -119,7 +120,11 @@ int main(int argc, char *argv[]) {
     shell.addPage(pitchPage, "pitch", {}, QObject::tr("Pitch"));
 
     // Steps 9-10: Settings + Log (utility pages)
-    auto *settingsPage = dstools::PageFactory::registerUtilityPages(&shell, settingsBackend);
+    static const dstools::SettingsPageDescriptor settingsPageDesc;
+    static const dstools::LogPageDescriptor logPageDesc;
+    dstools::PageFactory::registerPages(&shell, nullptr, settingsBackend, {&settingsPageDesc, &logPageDesc});
+
+    auto *settingsPage = shell.findChild<dstools::SettingsPage *>(QString(), Qt::FindDirectChildrenOnly);
 
     if (modelManager) {
         QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested, modelManager,

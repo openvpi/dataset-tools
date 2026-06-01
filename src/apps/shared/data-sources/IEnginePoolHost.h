@@ -49,6 +49,8 @@ private:
 
 class IEnginePoolHost {
 public:
+    static constexpr int kInterfaceVersion = 1;
+
     virtual ~IEnginePoolHost() = default;
 
     virtual ModelManager *ensureModelManager() = 0;

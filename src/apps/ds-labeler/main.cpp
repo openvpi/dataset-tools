@@ -6,6 +6,7 @@
 #include <AppSettingsBackend.h>
 #include <EnginePool.h>
 #include <ModelProviderInit.h>
+#include <PageDescriptors.h>
 #include <PageFactory.h>
 #include <SettingsPage.h>
 #include <QApplication>
@@ -138,7 +139,10 @@ int main(int argc, char *argv[]) {
     shell.addPage(slicerPage, "slicer", {}, QStringLiteral("切片"));
 
     // Pages 2-4: 标注 (shared editor pages)
-    dstools::PageFactory::registerSharedEditorPages(&shell, dataSource, settingsBackend);
+    static const dstools::MinLabelPageDescriptor minLabelDesc;
+    static const dstools::PhonemeLabelerPageDescriptor phonemeDesc;
+    static const dstools::PitchLabelerPageDescriptor pitchDesc;
+    dstools::PageFactory::registerPages(&shell, dataSource, settingsBackend, {&minLabelDesc, &phonemeDesc, &pitchDesc});
 
     // Page 5: 导出 (Export)
     auto *exportPage = new dstools::ExportPage(&shell);
@@ -150,7 +154,11 @@ int main(int argc, char *argv[]) {
     shell.addPage(exportPage, "export", {}, QStringLiteral("导出"));
 
     // Pages 6-7: 设置 (Settings + Log)
-    auto *settingsPage = dstools::PageFactory::registerUtilityPages(&shell, settingsBackend);
+    static const dstools::SettingsPageDescriptor settingsPageDesc;
+    static const dstools::LogPageDescriptor logPageDesc;
+    dstools::PageFactory::registerPages(&shell, nullptr, settingsBackend, {&settingsPageDesc, &logPageDesc});
+
+    auto *settingsPage = shell.findChild<dstools::SettingsPage *>(QString(), Qt::FindDirectChildrenOnly);
 
     if (modelManager) {
         QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested, modelManager,

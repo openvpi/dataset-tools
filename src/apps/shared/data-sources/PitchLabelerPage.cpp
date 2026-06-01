@@ -6,7 +6,7 @@
 #include "EnginePool.h"
 #include "ModelConfigHelper.h"
 #include "PitchLabelerPageHelpers.h"
-#include "SharedSettingsKeys.h"
+#include "Keys.h"
 #include "SliceListPanel.h"
 
 #include <dstools/Constants.h>

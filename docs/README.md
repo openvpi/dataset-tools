@@ -1,6 +1,6 @@
 # 文档索引
 
-> 最后更新：2026-05-25
+> 最后更新：2026-06-01
 
 ## 设计准则与决策
 
@@ -18,7 +18,9 @@
 | [architecture/data-flow/pipeline.md](developer/architecture/data-flow/pipeline.md) | 任务处理器架构与流水线定义 |
 | [architecture/framework/dirty-mechanism.md](developer/architecture/framework/dirty-mechanism.md) | 标脏机制设计（层依赖 DAG + 传播规则） |
 | [architecture/data-flow/component-design.md](developer/architecture/data-flow/component-design.md) | 组件设计 |
+| [architecture/refactoring-plan-v1.md](developer/architecture/refactoring-plan-v1.md) | 大型重构方案 v1（统一底层 + 清偿技术债） |
 | [testing/test-design.md](developer/testing/test-design.md) | 测试分层设计 |
+| [magic-numbers-audit.md](developer/magic-numbers-audit.md) | 魔法数字审计报告 |
 
 ## 指南 (guides/)
 

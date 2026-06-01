@@ -154,6 +154,8 @@ namespace dstools {
 
                 // Display parameters (vertical scale only, horizontal uses ViewportController)
                 double m_vScale = 20.0;
+                double m_boundaryHitRadius = 5.0;
+                int m_defaultResolution = 40;
 
                 int m_contentLeftMargin = RenderState::PianoWidth;
 

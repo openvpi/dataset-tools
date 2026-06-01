@@ -153,4 +153,4 @@
 
 ## 9. 下一步：ChartConfig 体系设计
 
-ChartConfig 系统将在 v5 阶段 2.1 实施，详见 zero-debt-v5-refactoring-plan.md 第6.1节。
+ChartConfig 系统将在后续重构中实施。

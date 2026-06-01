@@ -31,3 +31,16 @@ inline const dstools::SettingsKey<int> kDefaultResolution{"AudioVisualizer/defau
 inline const dstools::SettingsKey<QString> kLastSlice{"State/lastSlice", ""};
 
 } // namespace dstools::settings
+
+namespace dstools::settings::pitch {
+
+inline const dstools::SettingsKey<bool> kShowPitchTextOverlay("PianoRoll/showPitchTextOverlay", false);
+inline const dstools::SettingsKey<bool> kShowPhonemeTexts("PianoRoll/showPhonemeTexts", true);
+inline const dstools::SettingsKey<bool> kShowCrosshairAndPitch("PianoRoll/showCrosshairAndPitch", true);
+inline const dstools::SettingsKey<bool> kSnapToKey("PianoRoll/snapToKey", false);
+inline const dstools::SettingsKey<double> kVScale("PianoRoll/vScale", 20.0);
+inline const dstools::SettingsKey<double> kBoundaryHitRadius("PianoRoll/boundaryHitRadius", 5.0);
+inline const dstools::SettingsKey<int> kDefaultResolution("PianoRoll/defaultResolution", 40);
+inline const dstools::SettingsKey<double> kModulationDragSensitivity("PianoRoll/modulationDragSensitivity", 80.0);
+
+} // namespace dstools::settings::pitch

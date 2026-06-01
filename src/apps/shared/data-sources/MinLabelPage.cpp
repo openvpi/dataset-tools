@@ -6,7 +6,7 @@
 #include "AppSettingsBackend.h"
 #include "MatchLyric.h"
 #include "ModelConfigHelper.h"
-#include "SharedSettingsKeys.h"
+#include "Keys.h"
 #include "SliceListPanel.h"
 #include "EnginePool.h"
 

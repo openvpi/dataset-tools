@@ -131,7 +131,7 @@ void ProjectDataSource::addDirtyLayers(const QString &sliceId,
 
     auto j = it->second.toJson();
     auto str = j.dump(2);
-    dsfw::AtomicFileWriter::write(dsfw::PathUtils::toStdPath(path), str);
+    dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 
 void ProjectDataSource::setLayerManuallyEdited(const QString &sliceId,
@@ -147,7 +147,7 @@ void ProjectDataSource::setLayerManuallyEdited(const QString &sliceId,
 
     auto j = it->second.toJson();
     auto str = j.dump(2);
-    dsfw::AtomicFileWriter::write(dsfw::PathUtils::toStdPath(path), str);
+    dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 
 bool ProjectDataSource::isLayerManuallyEdited(const QString &sliceId,
@@ -178,7 +178,7 @@ void ProjectDataSource::addEditedStep(const QString &sliceId, const QString &ste
 
     auto j = it->second.toJson();
     auto str = j.dump(2);
-    dsfw::AtomicFileWriter::write(dsfw::PathUtils::toStdPath(path), str);
+    dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 
 bool ProjectDataSource::audioExists(const QString &sliceId) const {
@@ -256,7 +256,7 @@ Result<void> ProjectDataSource::saveContext(const QString &sliceId) {
 
     auto j = it->second.toJson();
     auto str = j.dump(2);
-    return dsfw::AtomicFileWriter::write(dsfw::PathUtils::toStdPath(path), str);
+    return dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 
 QString ProjectDataSource::contextPath(const QString &sliceId) const {
@@ -275,8 +275,14 @@ QString ProjectDataSource::sliceAudioPath(const QString &sliceId) const {
                     QString audioPath = item.audioSource;
                     if (QDir::isRelativePath(audioPath))
                         audioPath = QDir(m_workingDir).absoluteFilePath(audioPath);
-                    if (QFile::exists(audioPath))
+                    if (QFile::exists(audioPath)) {
+                        if (!dsfw::PathUtils::isSubPath(dsfw::PathUtils::toStdPath(m_workingDir),
+                                                        dsfw::PathUtils::toStdPath(audioPath))) {
+                            qWarning() << "ProjectDataSource: audioSource escapes project directory:"
+                                       << audioPath;
+                        }
                         return audioPath;
+                    }
 
                     // V.7: Heuristic fallback — try wavs/<sliceId>.wav
                     QString fallback = QDir(m_workingDir).absoluteFilePath(
