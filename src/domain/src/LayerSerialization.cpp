@@ -169,7 +169,7 @@ namespace dstools {
                 return LayerDataVariant(parseMidiArray(j));
             }
 
-            if (layerType == QString::fromUtf8(keys::layers::text) ||
+            if (layerType == QStringLiteral("text") ||
                 layerType == QStringLiteral("sentence")) {
                 return LayerDataVariant(parseTextValue(j));
             }
@@ -186,8 +186,7 @@ namespace dstools {
         return std::visit([](const auto &value) -> LayerData {
             using T = std::decay_t<decltype(value)>;
 
-            if constexpr (std::is_same_v<T, TextBoundaryLayer> ||
-                          std::is_same_v<T, PhonemeBoundaryLayer>) {
+            if constexpr (std::is_same_v<T, TextBoundaryLayer>) {
                 return LayerData::fromJson(serializeBoundariesArray(value));
             } else if constexpr (std::is_same_v<T, PitchCurveLayer>) {
                 return LayerData::fromJson(serializePitchArray(value));

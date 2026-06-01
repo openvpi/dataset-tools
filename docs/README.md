@@ -13,12 +13,11 @@
 | 文档 | 说明 |
 |------|------|
 | [architecture/overview.md](developer/architecture/overview.md) | 框架六层架构 |
+| [architecture/data-flow/data-flow-design.md](developer/architecture/data-flow/data-flow-design.md) | 数据流设计（流水线 + 层依赖 DAG + 脏传播） |
+| [architecture/data-flow/ds-format.md](developer/architecture/data-flow/ds-format.md) | 工程格式规范（.dsproj, .dstext, PipelineContext） |
+| [architecture/data-flow/component-design.md](developer/architecture/data-flow/component-design.md) | 核心组件设计 |
 | [architecture/framework/unified-app-design.md](developer/architecture/framework/unified-app-design.md) | LabelSuite + DsLabeler 统一应用设计 |
-| [architecture/data-flow/ds-format.md](developer/architecture/data-flow/ds-format.md) | DS 数据格式规范（.dsproj, .dstext, PipelineContext） |
-| [architecture/data-flow/pipeline.md](developer/architecture/data-flow/pipeline.md) | 任务处理器架构与流水线定义 |
-| [architecture/framework/dirty-mechanism.md](developer/architecture/framework/dirty-mechanism.md) | 标脏机制设计（层依赖 DAG + 传播规则） |
-| [architecture/data-flow/component-design.md](developer/architecture/data-flow/component-design.md) | 组件设计 |
-| [architecture/refactoring-plan-v1.md](developer/architecture/refactoring-plan-v1.md) | 大型重构方案 v1（统一底层 + 清偿技术债） |
+| [architecture/refactoring-plan-v1.md](developer/architecture/refactoring-plan-v1.md) | 重构方案 v1（统一底层 + 清偿技术债） |
 | [testing/test-design.md](developer/testing/test-design.md) | 测试分层设计 |
 | [magic-numbers-audit.md](developer/magic-numbers-audit.md) | 魔法数字审计报告 |
 

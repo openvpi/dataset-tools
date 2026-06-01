@@ -1,4 +1,4 @@
-#include "IntervalTierView.h"
+﻿#include "IntervalTierView.h"
 #include "commands/BoundaryCommands.h"
 #include "BoundaryDragController.h"
 
@@ -289,6 +289,7 @@ int IntervalTierView::hitTestInterval(int x) const {
     for (int i = 0; i < count; ++i) {
         int x1 = static_cast<int>(timeToX(usToSec(m_doc->intervalStart(m_tierIndex, i))));
         int x2 = static_cast<int>(timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, i))));
+        if (x2 - x1 < 1) x2 = x1 + 1;
         if (x >= x1 && x < x2) {
             return i;
         }

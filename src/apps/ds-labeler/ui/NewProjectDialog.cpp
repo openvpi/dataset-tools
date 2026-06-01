@@ -1,7 +1,8 @@
 #include "NewProjectDialog.h"
 
-#include <AppSettingKeys.h>
+#include "Keys.h"
 
+#include <dsfw/AppSettings.h>
 #include <dstools/DsProject.h>
 
 #include <dsfw/FileDialogHelper.h>
@@ -80,13 +81,14 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
 }
 
 void NewProjectDialog::onBrowseDir() {
-    const QString lastDir = AppSettingKeys::readAppSettingString(AppSettingKeys::LastProjectDir);
+    AppSettings settings(QStringLiteral("DsLabeler"));
+    const QString lastDir = settings.get(settings::app::kLastProjectDir);
     const QString dir = dsfw::FileDialogHelper::getExistingDirectory(
         {this, QStringLiteral("选择工程保存位置"), lastDir});
     if (dir.isEmpty())
         return;
     m_saveDir = dir;
-    AppSettingKeys::writeAppSettingString(AppSettingKeys::LastProjectDir, dir);
+    settings.set(settings::app::kLastProjectDir, dir);
     m_labelDir->setText(QDir::toNativeSeparators(dir));
     m_labelDir->setStyleSheet({});
     updateOkButton();

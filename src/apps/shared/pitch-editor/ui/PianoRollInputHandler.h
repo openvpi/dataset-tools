@@ -91,6 +91,10 @@ namespace dstools {
                     m_contentLeftMargin = margin;
                 }
 
+                void setModulationDragSensitivity(double sensitivity) {
+                    m_modulationDragSensitivity = sensitivity;
+                }
+
                 // Event handlers — return true if event was handled
                 void handleMousePress(QMouseEvent *event, ToolMode toolMode, const std::shared_ptr<DsPitchDocument> &dsFile,
                                       std::set<int> &selectedNotes);
@@ -152,8 +156,6 @@ namespace dstools {
                 // Reset all drag state (called on setDsPitchDocument / clear)
                 void reset();
 
-                static constexpr double ModulationDragSensitivity = 80.0;
-
             private:
                 InputHandlerCallbacks m_cb;
 
@@ -176,6 +178,7 @@ namespace dstools {
                 double m_driftDragStartY = 0.0;
                 double m_modulationDragAmount = 1.0;
                 double m_driftDragAmount = 1.0;
+                double m_modulationDragSensitivity = 80.0;
                 std::vector<float> m_preAdjustF0;
 
                 // Rubber-band selection

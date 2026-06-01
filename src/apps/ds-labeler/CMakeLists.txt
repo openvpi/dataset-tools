@@ -9,7 +9,7 @@ dstools_add_executable(${PROJECT_NAME}
         AUTOMOC AUTORCC
         DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
         DEPENDS
-        PRIVATE dstools-ui-core dstools-domain
+        PRIVATE dstools-ui-core dstools-domain dsfw-widgets
         min-label-editor phoneme-editor pitch-editor settings-page
         data-sources log-page infer-bridge
         SndFile::sndfile

@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <dsfw/AtomicFileWriter.h>
-#include <dsfw/Encoding.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/PathUtils.h>
 #include <dstools/DsTextTypes.h>
@@ -23,7 +22,7 @@ namespace dstools {
     }
 
     Result<DsTextDocument> DsTextDocument::load(const QString &path) {
-        auto textResult = dsfw::Encoding::readFile(path);
+        auto textResult = dsfw::PathUtils::readFile(path);
         if (!textResult.ok())
             return Result<DsTextDocument>::Error(textResult.error());
 

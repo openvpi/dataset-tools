@@ -62,3 +62,6 @@ public:
 };
 
 } // namespace dstools
+
+#define DSTOOLS_ENGINE_POOL_HOST_IID "org.dstools.IEnginePoolHost"
+Q_DECLARE_INTERFACE(dstools::IEnginePoolHost, DSTOOLS_ENGINE_POOL_HOST_IID)

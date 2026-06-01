@@ -181,8 +181,7 @@ void DsSlicerPage::onExportAudio() {
     }
 
     project->setItems(std::move(items));
-    QString saveError;
-    project->save(saveError);
+    project->saveFile();
     emit m_dataSource->sliceListChanged();
 
     SlicerIntegrityGuard guard;
@@ -290,8 +289,7 @@ void DsSlicerPage::onBatchExportAll() {
                 }
             }
             project->setItems(std::move(currentItems));
-            QString saveError;
-            project->save(saveError);
+            project->saveFile();
             emit m_dataSource->sliceListChanged();
 
             SlicerIntegrityGuard slicerGuard;
@@ -436,8 +434,7 @@ void DsSlicerPage::promptSliceUpdateIfNeeded() {
     }
 
     project->setItems(std::move(currentItems));
-    QString saveError;
-    project->save(saveError);
+    project->saveFile();
     emit m_dataSource->sliceListChanged();
 }
 
@@ -454,8 +451,7 @@ void DsSlicerPage::saveSlicerParamsToProject() {
     state.params.maxSilence = m_maxSilenceSpin->value();
     project->setSlicerState(std::move(state));
 
-    QString saveError;
-    project->save(saveError);
+    project->saveFile();
 }
 
 void DsSlicerPage::saveSlicerStateToProject() {
@@ -468,8 +464,7 @@ void DsSlicerPage::saveSlicerStateToProject() {
     state.slicePoints = m_fileSlicePoints;
     project->setSlicerState(std::move(state));
 
-    QString saveError;
-    project->save(saveError);
+    project->saveFile();
 }
 
 QMenuBar *DsSlicerPage::createMenuBar(QWidget *parent) {

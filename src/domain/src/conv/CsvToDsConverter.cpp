@@ -148,12 +148,9 @@ namespace dstools {
                 dsfw::PathUtils::join(dsfw::PathUtils::toStdPath(opts.outputDir),
                                       (row.name + QStringLiteral(".ds")).toStdString()));
 
-            Result<std::vector<float>> f0Result;
-            if (f0Callback) {
-                f0Result = f0Callback(wavPath);
-            } else {
-                f0Result = extractF0Builtin(wavPath, opts.sampleRate, opts.hopSize, opts.minF0, opts.maxF0);
-            }
+            auto f0Result = f0Callback
+                ? f0Callback(wavPath)
+                : extractF0Builtin(wavPath, opts.sampleRate, opts.hopSize, opts.minF0, opts.maxF0);
             if (!f0Result.ok()) {
                 return Result<void>::Error(f0Result.error());
             }

@@ -18,6 +18,7 @@
 #include <dsfw/Theme.h>
 #include <dstools/AppInit.h>
 #include <dstools/DomainInit.h>
+#include <SettingsPage.h>
 
 // Page includes
 #include "PitchLabelerPage.h"

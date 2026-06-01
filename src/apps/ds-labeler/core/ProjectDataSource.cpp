@@ -129,8 +129,7 @@ void ProjectDataSource::addDirtyLayers(const QString &sliceId,
     // 为了避免死锁，我们直接在这里保存而不调用saveContext
     const QString path = contextPath(sliceId);
 
-    auto j = it->second.toJson();
-    auto str = j.dump(2);
+    auto str = it->second.toJsonString();
     dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 
@@ -145,8 +144,7 @@ void ProjectDataSource::setLayerManuallyEdited(const QString &sliceId,
 
     const QString path = contextPath(sliceId);
 
-    auto j = it->second.toJson();
-    auto str = j.dump(2);
+    auto str = it->second.toJsonString();
     dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 
@@ -176,8 +174,7 @@ void ProjectDataSource::addEditedStep(const QString &sliceId, const QString &ste
 
     const QString path = contextPath(sliceId);
 
-    auto j = it->second.toJson();
-    auto str = j.dump(2);
+    auto str = it->second.toJsonString();
     dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 
@@ -228,7 +225,7 @@ PipelineContext *ProjectDataSource::context(const QString &sliceId) {
             auto j = nlohmann::json::parse(data.constData(), data.constData() + data.size(),
                                            nullptr, false);
             if (!j.is_discarded()) {
-                auto ctxResult = PipelineContext::fromJson(j);
+                auto ctxResult = PipelineContext::fromJsonString(j.dump());
                 if (ctxResult) {
                     m_contexts[sliceId] = std::move(ctxResult.value());
                     return &m_contexts[sliceId];
@@ -254,8 +251,7 @@ Result<void> ProjectDataSource::saveContext(const QString &sliceId) {
 
     const QString path = contextPath(sliceId);
 
-    auto j = it->second.toJson();
-    auto str = j.dump(2);
+    auto str = it->second.toJsonString();
     return dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }
 

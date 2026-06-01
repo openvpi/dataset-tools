@@ -500,7 +500,6 @@ void SlicerPage::onExportAudio() {
 
         sf_count_t frameCount = end - start;
         sf_count_t written = wf.write(samples.data() + start, frameCount);
-        wf.close();
         if (written != frameCount) {
             QFile::remove(tmppath);
             QMessageBox::warning(this, tr("Export Error"), tr("Failed to write all samples to: %1").arg(filepath));
@@ -852,7 +851,6 @@ int SlicerPage::performBatchExport(const QString &outputDir, int digits, int snd
 
             sf_count_t frameCount = endSamp - startSamp;
             sf_count_t written = wf.write(mono.data() + startSamp, frameCount);
-            wf.close();
             if (written != frameCount) {
                 QFile::remove(tmppath);
                 continue;

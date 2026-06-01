@@ -19,6 +19,7 @@
 #include <map>
 
 #include <dsfw/TaskTypes.h>
+#include <dsfw/widgets/WidgetsGlobal.h>
 
 namespace dstools {
     struct PipelineContext;
@@ -27,7 +28,7 @@ namespace dstools {
 
 namespace dsfw::widgets {
 
-class PipelineStatusBar : public QWidget {
+class DSFW_WIDGETS_API PipelineStatusBar : public QWidget {
     Q_OBJECT
 
 public:

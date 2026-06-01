@@ -279,6 +279,7 @@ void PhonemeEditor::buildLayout() {
     m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_container->dragController(), m_container);
     m_container->setEditorWidget(m_tierEditWidget);
     m_tierEditWidget->setCoordConverter(&m_container->coordConverter());
+    m_container->setTierRadioPanel(m_tierEditWidget->radioButtonContainer());
 
     addWaveformChart(1, 1, 2.0);
     m_waveformChart->setUndoStack(m_undoStack);
@@ -295,6 +296,8 @@ void PhonemeEditor::buildLayout() {
     m_pianoRollChart = new pitchlabeler::ui::PianoRollChartPanel(m_viewport);
     m_pianoRollChart->setUndoStack(m_undoStack);
     m_container->addChart("pianoroll", m_pianoRollChart, 0, 0, 3.0);
+
+    m_container->restoreChartVisibility();
 
     m_container->setBoundaryModel(m_document);
 
@@ -436,6 +439,7 @@ void PhonemeEditor::connectSignals() {
     connect(m_tierEditWidget, &TierEditWidget::requestPlayback, this,
             [this](TimePos startTime, TimePos endTime) {
                 if (!m_playWidget) return;
+                m_playWidget->setPlaying(false);
                 m_playWidget->setPlayRange(usToSec(startTime), usToSec(endTime));
                 m_playWidget->seek(usToSec(startTime));
                 m_playWidget->setPlaying(true);

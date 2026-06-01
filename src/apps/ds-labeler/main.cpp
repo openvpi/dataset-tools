@@ -10,6 +10,7 @@
 #include <PageFactory.h>
 #include <SettingsPage.h>
 #include <QApplication>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QTimer>
 #include <cpp-pinyin/G2pglobal.h>
@@ -190,8 +191,7 @@ int main(int argc, char *argv[]) {
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
         if (project) {
             settingsPage->applySettings();
-            QString error;
-            project->save(error);
+            project->saveFile();
         }
         project.reset();
     });

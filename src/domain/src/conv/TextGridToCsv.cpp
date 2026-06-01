@@ -1,6 +1,6 @@
 #include <dstools/TextGridToCsv.h>
 
-#include <dsfw/Encoding.h>
+#include <dsfw/PathUtils.h>
 #include <textgrid.hpp>
 
 #include <QDir>
@@ -13,7 +13,7 @@
 namespace dstools {
 
 Result<TranscriptionRow> TextGridToCsv::extractFromTextGrid(const QString &tgPath) {
-    auto textResult = dsfw::Encoding::readFile(tgPath);
+    auto textResult = dsfw::PathUtils::readFile(tgPath);
     if (!textResult.ok()) {
         return Result<TranscriptionRow>::Error(textResult.error());
     }

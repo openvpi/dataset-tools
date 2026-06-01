@@ -86,7 +86,7 @@ void PipelineStatusBar::rebuild() {
     m_layout->addStretch();
 }
 
-bool PipelineStatusBar::eventFilter(QObject *obj, QEvent *event) override {
+bool PipelineStatusBar::eventFilter(QObject *obj, QEvent *event) {
     if (event->type() == QEvent::MouseButtonRelease) {
         for (int i = 0; i < m_labels.size(); ++i) {
             if (m_labels[i] == obj && i < m_steps.size()) {

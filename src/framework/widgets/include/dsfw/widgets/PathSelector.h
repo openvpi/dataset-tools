@@ -24,7 +24,9 @@ namespace dsfw::widgets {
         /// @param label Display label text.
         /// @param filter File filter string for file dialogs.
         /// @param parent Parent widget.
-        explicit PathSelector(Mode mode, const QString &label, const QString &filter = {}, QWidget *parent = nullptr);
+        /// @param settingsKey Key for remembering the last browsed directory (empty = no memory).
+        explicit PathSelector(Mode mode, const QString &label, const QString &filter = {}, QWidget *parent = nullptr,
+                              const QString &settingsKey = {});
 
         /// @brief Get the currently selected path.
         /// @return Selected path string.
@@ -57,9 +59,12 @@ namespace dsfw::widgets {
 
     private:
         void onBrowseClicked();
+        QString loadRecentDir() const;
+        void saveRecentDir(const QString &path);
 
         Mode m_mode;
         QString m_filter;
+        QString m_settingsKey;
         QLabel *m_label;
         QLineEdit *m_lineEdit;
         QPushButton *m_browseBtn;

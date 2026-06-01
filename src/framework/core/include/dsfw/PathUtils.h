@@ -1,5 +1,8 @@
 #pragma once
 
+#include <dstools/Result.h>
+
+#include <QByteArray>
 #include <QString>
 #include <cstdint>
 #include <filesystem>
@@ -11,6 +14,8 @@ namespace dsfw {
     class PathUtils {
     public:
         enum class Encoding : std::uint8_t { Utf8, Ansi, Unknown };
+
+        enum class TextEncoding : std::uint8_t { Utf8, Utf8Bom, Utf16LE, Utf16BE, Gbk, Latin1 };
 
         static std::filesystem::path toStdPath(const QString &path);
 
@@ -45,6 +50,24 @@ namespace dsfw {
         static bool isSubPath(const std::filesystem::path &parent, const std::filesystem::path &child) noexcept;
 
         static std::filesystem::path relativeTo(const std::filesystem::path &path, const std::filesystem::path &base);
+
+        static TextEncoding detectTextEncoding(const QByteArray &data);
+
+        static QString decodeText(const QByteArray &data, TextEncoding encoding);
+
+        static QByteArray encodeText(const QString &text, TextEncoding encoding);
+
+        static dstools::Result<QString> readFile(const QString &path);
+
+        static dstools::Result<QString> readFile(const std::string &path);
+
+        static dstools::Result<void> writeFile(const QString &path,
+                                               const QString &text,
+                                               TextEncoding encoding = TextEncoding::Utf8);
+
+        static dstools::Result<void> writeFile(const std::string &path,
+                                               const QString &text,
+                                               TextEncoding encoding = TextEncoding::Utf8);
     };
 
 } // namespace dsfw

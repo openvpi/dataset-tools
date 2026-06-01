@@ -450,17 +450,9 @@ groups 由 PipelineRunner 根据 schema 层间关系自动推导：
 
 ## 5 PipelineContext（中间数据格式）
 
-PipelineContext 是运行时层数据的暂存格式，持久化为 `dstemp/contexts/{sliceId}.json`。
+PipelineContext 是运行时层数据的暂存格式，持久化为 `dstemp/contexts/{sliceId}.json`。与 .dstext 的关系：.dstext 是持久标注数据，PipelineContext 是运行时中间数据（不纳入版本控制），两者间可相互转换。
 
-### 5.1 与 .dstext 的关系
-
-| 维度 | .dstext | PipelineContext |
-|------|---------|-----------------|
-| 用途 | 持久标注数据，纳入版本控制 | 运行时中间数据，不纳入版本控制 |
-| 层格式 | 统一 Boundary 格式 `{id, pos, text}` | 按 category 的紧凑格式（见下） |
-| 生命周期 | 用户保存时写入 | 每步完成后自动写入 |
-
-### 5.2 层 category 格式
+### 5.1 层 category 格式
 
 PipelineContext 中的层数据以 category 为 key、紧凑 JSON 为 value：
 
@@ -473,19 +465,9 @@ PipelineContext 中的层数据以 category 为 key、紧凑 JSON 为 value：
 | `midi` | `[{pitch, onset, duration, voiced}]` | MIDI 音符序列。`onset`/`duration` = 微秒 |
 | `pitch` | `{f0: [int], timestep: int}` | F0：毫赫兹，timestep：微秒 |
 
-### 5.3 与 .dstext Boundary 的转换
+> .dstext ↔ PipelineContext 转换逻辑见 [data-flow-design.md](data-flow-design.md) §9。
 
-加载 .dstext 到 PipelineContext 时：
-
-```
-phoneme 层 boundaries → [{phone: b[i].text, start: b[i].pos, end: b[i+1].pos}]
-grapheme 层 boundaries → [{text: b[i].text, pos: b[i].pos}]
-midi 层 boundaries → [{pitch: parseNote(b[i].text), onset: b[i].pos, duration: b[i+1].pos - b[i].pos, voiced: true}]
-```
-
-保存 PipelineContext 到 .dstext 时做逆向转换，自动分配 Boundary ID。
-
-### 5.4 Context JSON 格式
+### 5.2 Context JSON 格式
 
 ```json
 {
@@ -522,19 +504,17 @@ midi 层 boundaries → [{pitch: parseNote(b[i].text), onset: b[i].pos, duration
 **v3 变更**：
 - 合并 `completedSteps` 和 `stepHistory` 为单一 `stepHistory`（completedSteps 可从 stepHistory 推导）
 - 新增 `editedSteps`：记录用户手动编辑过哪些步骤，同步到 .dstext 的 `meta.editedSteps`
-- 新增 `dirty`：标记哪些层因上游修改而过期（详见 §6）
+- 新增 `dirty`：标记哪些层因上游修改而过期（详见 §6 dirty 字段）
 - 新增 `manuallyEdited`：记录用户手动编辑过的层，防止自动重算覆盖
 - `stepHistory` 条目扩展为 `StepRecord` 结构：含 `stepName`、`processorId`、`startTime`、`endTime`、`success`、`errorMessage`、`usedConfig`
 
 ---
 
-## 6 层依赖与脏数据失效
+## 6 dirty 字段（Context JSON）
 
-> 层依赖 DAG、失效传播规则及 dirty 机制的完整设计说明参见 [dirty-mechanism.md](dirty-mechanism.md)。
-> 流水线 I/O 契约参见 [pipeline.md](pipeline.md) §3.1。
-> 本节仅描述 Context JSON 中 dirty 字段的格式。
+> 层依赖 DAG 及失效传播规则详见 [data-flow-design.md](data-flow-design.md) §3-4。
 
-### 6.1 dirty 字段
+### 6.1 格式
 
 PipelineContext 中的 `dirty` 字段记录哪些层因上游修改而过期：
 
@@ -621,9 +601,8 @@ v3.1.0 将所有用户配置迁移到 `AppSettings`（用户目录），`.dsproj
 
 ## 关联文档
 
-- [pipeline.md](pipeline.md) — 流水线架构设计
+- [data-flow-design.md](data-flow-design.md) — 完整数据流设计（合并后）
 - [unified-app-design.md](unified-app-design.md) — LabelSuite + DsLabeler 设计
 - [overview.md](../overview.md) — 框架架构
-- [dirty-mechanism.md](dirty-mechanism.md) — 层依赖脏数据失效机制
 
 > 更新时间：2026-05-20

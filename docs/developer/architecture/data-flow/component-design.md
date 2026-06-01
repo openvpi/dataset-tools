@@ -325,8 +325,7 @@ InferBridge 是 apps→infer 的静态桥接。Libs 层的具体库（如 hubert
 
 ## 关联文档
 
-- [pipeline.md](pipeline.md) — 流水线 I/O 契约
+- [data-flow-design.md](data-flow-design.md) — I/O 契约 + 层依赖 DAG + dirty 传播（合并后）
 - [ds-format.md](ds-format.md) — PipelineContext JSON 格式 + 层依赖 DAG
-- [dirty-mechanism.md](../framework/dirty-mechanism.md) — 标脏传播机制
 - [unified-app-design.md](../framework/unified-app-design.md) — 统一应用架构设计
 - [overview.md](../overview.md) — 框架架构总览

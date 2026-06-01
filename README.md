@@ -9,7 +9,7 @@ DiffSinger dataset processing tools for singing voice synthesis data preparation
 | **LabelSuite** | All-in-one audio labeling toolset (AppShell multi-page). 11 pages (Slice, ASR, Label, Align, Phone, CSV, MIDI, DS, Pitch, Settings, Log). Shares the same dstext/PipelineContext data model as DsLabeler; imports/exports legacy formats (TextGrid, .lab, .ds) via FormatAdapters. Supports auto-completion (auto FA/F0/MIDI on page entry). No `.dsproj` project file required. |
 | **DsLabeler** | DiffSinger dataset labeler driven by `.dsproj` project files. Eight pages: Welcome (create/open project), Slicer (audio slicing + export), MinLabel (+ ASR/LyricFA), Phoneme (+ auto FA), Pitch (+ auto F0/MIDI extraction), Export (CSV/DS/WAV output with auto-completion of skipped steps), Settings (unified configuration), Log (application logs). |
 
-See [Unified App Design](docs/developer/architecture/framework/appshell.md) for the full design.
+See [Unified App Design](docs/developer/architecture/framework/unified-app-design.md) for the full design.
 
 ## Supported Platforms
 
@@ -158,12 +158,11 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 | Document | Description |
 |---|---|
 | [Unified App Design](docs/developer/architecture/framework/unified-app-design.md) | DsSuite unified application design (multi-page AppShell) |
-| [Getting Started](docs/developer/getting-started/index.md) | Quick start guide with hello world examples |
+| [Getting Started](docs/guides/framework-getting-started.md) | Quick start guide with hello world examples |
 | [Architecture](docs/developer/architecture/overview.md) | Detailed architecture design and layer descriptions |
-| [Pipeline Design](docs/developer/architecture/data-flow/pipeline.md) | Task processor architecture and pipeline design |
+| [Data Flow Design](docs/developer/architecture/data-flow/data-flow-design.md) | **Unified** — pipeline + layer DAG + dirty propagation |
 | [Data Format](docs/developer/architecture/data-flow/ds-format.md) | Project and data format specifications |
-| [Dirty Mechanism](docs/developer/architecture/framework/dirty-mechanism.md) | Layer dependency and dirty data propagation |
-| [Build Guide](docs/developer/getting-started/building.md) | Build from source instructions |
+| [Build Guide](docs/guides/build.md) | Build from source instructions |
 
 ## Libraries
 

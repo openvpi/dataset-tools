@@ -1,5 +1,7 @@
 #include "AudioSettingsPanel.h"
-#include "AppSettingKeys.h"
+#include "Keys.h"
+
+#include <dsfw/AppSettings.h>
 
 #include <QFormLayout>
 #include <QGroupBox>
@@ -37,7 +39,8 @@ QWidget *AudioSettingsPanel::createAudioTab() {
         m_audioDeviceCombo->setEnabled(false);
     }
 
-    QString savedDevice = AppSettingKeys::readAppSettingString(AppSettingKeys::AudioDevice);
+    AppSettings settings(QStringLiteral("DsLabeler"));
+    QString savedDevice = settings.get(settings::app::kAudioDevice);
     if (!savedDevice.isEmpty()) {
         for (int i = 0; i < m_audioDeviceCombo->count(); ++i) {
             if (m_audioDeviceCombo->itemData(i).toString() == savedDevice) {
@@ -68,8 +71,9 @@ QWidget *AudioSettingsPanel::createAudioTab() {
 
 void AudioSettingsPanel::connectDirtySignals() {
     connect(m_audioDeviceCombo, &QComboBox::currentIndexChanged, this, [this]() {
-        AppSettingKeys::writeAppSettingString(AppSettingKeys::AudioDevice,
-                                              m_audioDeviceCombo->currentData().toString());
+        AppSettings settings(QStringLiteral("DsLabeler"));
+        settings.set(settings::app::kAudioDevice,
+                     m_audioDeviceCombo->currentData().toString());
         emit dirtyChanged();
     });
 }

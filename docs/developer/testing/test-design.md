@@ -107,7 +107,7 @@ src/tests/
 | `TestAppSettings` | 设置读写、默认值、类型安全 |
 | `TestServiceLocator` | 注册、获取、替换、线程安全 |
 | `TestAsyncTask` | 异步执行、取消、回调 |
-| `TestLocalFileIOProvider` | 文件读写、目录创建、错误路径 |
+| ~~`TestLocalFileIOProvider`~~ | ~~文件读写、目录创建、错误路径~~（`ILocalFileIOProvider` 已随冗余接口原则删除，适配器内直接使用 QFile） |
 | `TestModelManager` | 模型注册、查找、生命周期 |
 | `TestModelDownloader` | 下载逻辑、错误处理 |
 

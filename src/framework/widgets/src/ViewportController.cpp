@@ -81,7 +81,12 @@ namespace dsfw::widgets {
     }
 
     bool ViewportController::canZoomOut() const {
-        return m_resolution < kMaxResolution;
+        if (m_resolution >= kMaxResolution)
+            return false;
+        double totalDur = totalDuration();
+        if (totalDur > 0.0 && m_state.startSec <= 0.0 && m_state.endSec >= totalDur)
+            return false;
+        return true;
     }
 
     void ViewportController::zoomAt(double centerSec, double factor) {

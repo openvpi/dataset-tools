@@ -1,6 +1,6 @@
 #include <dstools/TranscriptionCsv.h>
 
-#include <dsfw/Encoding.h>
+#include <dsfw/PathUtils.h>
 
 #include <QHash>
 
@@ -171,7 +171,7 @@ Result<std::vector<TranscriptionRow>> TranscriptionCsv::parse(const QString &con
 }
 
 Result<std::vector<TranscriptionRow>> TranscriptionCsv::read(const QString &path) {
-    auto textResult = dsfw::Encoding::readFile(path);
+    auto textResult = dsfw::PathUtils::readFile(path);
     if (!textResult.ok()) {
         return Result<std::vector<TranscriptionRow>>::Error(textResult.error());
     }
@@ -227,7 +227,7 @@ Result<void> TranscriptionCsv::write(const QString &path,
     }
 
     // Write file
-    auto writeResult = dsfw::Encoding::writeFile(path, out);
+    auto writeResult = dsfw::PathUtils::writeFile(path, out);
     if (!writeResult.ok()) {
         return Result<void>::Error(writeResult.error());
     }

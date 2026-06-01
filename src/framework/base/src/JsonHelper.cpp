@@ -1,5 +1,4 @@
 #include <dsfw/JsonHelper.h>
-#include <dsfw/PathUtils.h>
 
 #include <fstream>
 
@@ -8,7 +7,7 @@ namespace dstools {
     Result<nlohmann::json> JsonHelper::loadFile(const std::filesystem::path &path) {
         std::ifstream file(path);
         if (!file.is_open()) {
-            return Err<nlohmann::json>("Cannot open file: " + dsfw::PathUtils::toUtf8(path));
+            return Err<nlohmann::json>("Cannot open file: " + path.string());
         }
         try {
             nlohmann::json data = nlohmann::json::parse(file);
@@ -26,20 +25,20 @@ namespace dstools {
         {
             std::ofstream file(tmpPath);
             if (!file.is_open()) {
-                return Err("Cannot open file for writing: " + dsfw::PathUtils::toUtf8(path));
+                return Err("Cannot open file for writing: " + path.string());
             }
             file << data.dump(indent);
             if (!file.good()) {
                 file.close();
                 std::filesystem::remove(tmpPath);
-                return Err("Failed to write JSON file: " + dsfw::PathUtils::toUtf8(path));
+                return Err("Failed to write JSON file: " + path.string());
             }
         }
         std::error_code ec;
         std::filesystem::rename(tmpPath, path, ec);
         if (ec) {
             std::filesystem::remove(tmpPath);
-            return Err("Failed to finalize JSON file: " + dsfw::PathUtils::toUtf8(path));
+            return Err("Failed to finalize JSON file: " + path.string());
         }
         return Ok();
     }

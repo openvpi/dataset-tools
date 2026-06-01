@@ -10,7 +10,7 @@
 #include <dstools/TextGridToCsv.h>
 #include <dstools/TimePos.h>
 
-#include <dsfw/Encoding.h>
+#include <dsfw/PathUtils.h>
 
 #include <QRegularExpression>
 
@@ -79,7 +79,7 @@ Result<void> TextGridAdapter::exportFromLayers(const std::map<QString, LayerData
 Result<void> LabAdapter::importToLayers(const QString &filePath,
                                         std::map<QString, LayerData> &layers,
                                         const ProcessorConfig & /*config*/) {
-    auto textResult = dsfw::Encoding::readFile(filePath);
+    auto textResult = dsfw::PathUtils::readFile(filePath);
     if (!textResult.ok())
         return Result<void>::Error(textResult.error());
 
@@ -116,7 +116,7 @@ Result<void> LabAdapter::exportFromLayers(const std::map<QString, LayerData> &la
             texts.append(text);
     }
 
-    auto writeResult = dsfw::Encoding::writeFile(outputPath, texts.join(' '));
+    auto writeResult = dsfw::PathUtils::writeFile(outputPath, texts.join(' '));
     if (!writeResult.ok())
         return Result<void>::Error(writeResult.error());
     return Result<void>::Ok();

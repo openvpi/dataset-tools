@@ -21,7 +21,7 @@ dstools_add_executable(${PROJECT_NAME}
         pages/GameAlignPage.h
         pages/GameAlignPage.cpp
         DEPENDS
-        PRIVATE dstools-ui-core dstools-domain
+        PRIVATE dstools-ui-core dstools-domain dsfw-widgets
         settings-page data-sources log-page infer-bridge
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )

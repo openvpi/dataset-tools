@@ -1,5 +1,6 @@
 #include <audio-util/Util.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <soxr.h>
@@ -207,7 +208,7 @@ namespace AudioUtil
                 size_t input_samples_remaining = input_total_samples - input_samples_processed;
                 size_t max_input_frames_this_call = output_buffer_frames;
                 size_t input_frames_this_call =
-                    min(input_samples_remaining / original_src_channels, max_input_frames_this_call);
+                    std::min(input_samples_remaining / original_src_channels, max_input_frames_this_call);
 
                 void *current_input_ptr = static_cast<char *>(input_buffer_ptr) +
                     input_samples_processed *
@@ -351,7 +352,7 @@ namespace AudioUtil
                         }
                     }
                 } else {
-                    const int min_channels = min(channels, tar_channel);
+                    const int min_channels = std::min(channels, tar_channel);
                     for (sf_count_t i = 0; i < readFrames; ++i) {
                         for (int ch = 0; ch < min_channels; ++ch) {
                             converted_buffer[i * tar_channel + ch] = buffer[i * channels + ch];

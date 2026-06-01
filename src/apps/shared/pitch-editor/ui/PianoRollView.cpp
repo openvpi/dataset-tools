@@ -783,6 +783,7 @@ namespace dstools {
                 m_vScale = settings.get(dstools::settings::pitch::kVScale);
                 m_boundaryHitRadius = settings.get(dstools::settings::pitch::kBoundaryHitRadius);
                 m_defaultResolution = settings.get(dstools::settings::pitch::kDefaultResolution);
+                m_inputHandler.setModulationDragSensitivity(settings.get(dstools::settings::pitch::kModulationDragSensitivity));
 
                 if (m_actSnapToKey)
                     m_actSnapToKey->setChecked(m_snapToKey);

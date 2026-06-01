@@ -7,7 +7,7 @@ dstools_add_library(${PROJECT_NAME}
         STATIC
         AUTOMOC
         DEPENDS
-        PUBLIC dstools-domain
+        PUBLIC dstools-domain dsfw-widgets
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
         cpp-pinyin::cpp-pinyin cpp-kana::cpp-kana
 )

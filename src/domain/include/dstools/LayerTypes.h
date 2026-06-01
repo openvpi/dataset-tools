@@ -48,7 +48,6 @@ namespace dstools {
 
     using LayerDataVariant = std::variant<
         TextBoundaryLayer,
-        PhonemeBoundaryLayer,
         PhonemeNumberLayer,
         PitchCurveLayer,
         SliceBoundaryLayer,

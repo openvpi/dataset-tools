@@ -3,6 +3,7 @@
 #include <game-infer/Game.h>
 
 #include <dsfw/ConfigTypes.h>
+#include <dsfw/PathUtils.h>
 #include <dsfw/TaskProcessorRegistry.h>
 #include <dstools/ExecutionProvider.h>
 
@@ -114,16 +115,16 @@ Result<TaskOutput> GameMidiProcessor::process(const TaskInput &input) {
         const auto csvPath = configValueString(input.config, QStringLiteral("csvPath"));
         const auto savePath = configValueString(input.config, QStringLiteral("savePath"), csvPath);
         Game::AlignOptions opts;
-        auto result = m_game->alignCSV(csvPath.toStdWString(),
-                                       QString::fromStdString(savePath).toStdWString(),
-                                       "", false, opts, nullptr);
+        auto result = m_game->alignCSV(dsfw::PathUtils::toStdPath(csvPath),
+                                       dsfw::PathUtils::toStdPath(savePath),
+                                       std::string{}, false, opts, nullptr);
         if (!result) {
             return Err<TaskOutput>(result.error());
         }
         TaskOutput output;
         output.layers["alignment"] = LayerData::fromJson(nlohmann::json::object({
             {"csvPath", csvPath.toStdString()},
-            {"savePath", savePath}
+            {"savePath", savePath.toStdString()}
         }));
         return Ok(std::move(output));
     }

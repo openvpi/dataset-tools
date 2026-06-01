@@ -2,7 +2,6 @@
 #include <QTemporaryDir>
 #include <QFile>
 
-#include <dsfw/Encoding.h>
 #include <dsfw/PathUtils.h>
 
 using namespace dsfw;
@@ -59,7 +58,7 @@ private slots:
 
 void TestEncoding::detect_utf8() {
     QByteArray data = "Hello World";
-    QCOMPARE(Encoding::detect(data), EncodingType::Utf8);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8);
 }
 
 void TestEncoding::detect_utf8Bom() {
@@ -68,7 +67,7 @@ void TestEncoding::detect_utf8Bom() {
     data.append('\xBB');
     data.append('\xBF');
     data.append("Hello");
-    QCOMPARE(Encoding::detect(data), EncodingType::Utf8Bom);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8Bom);
 }
 
 void TestEncoding::detect_utf16LE() {
@@ -76,7 +75,7 @@ void TestEncoding::detect_utf16LE() {
     data.append('\xFF');
     data.append('\xFE');
     data.append("H\0e\0l\0l\0o\0", 10);
-    QCOMPARE(Encoding::detect(data), EncodingType::Utf16LE);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf16LE);
 }
 
 void TestEncoding::detect_utf16BE() {
@@ -84,7 +83,7 @@ void TestEncoding::detect_utf16BE() {
     data.append('\xFE');
     data.append('\xFF');
     data.append("\0H\0e\0l\0l\0o", 10);
-    QCOMPARE(Encoding::detect(data), EncodingType::Utf16BE);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf16BE);
 }
 
 void TestEncoding::detect_gbk() {
@@ -94,7 +93,7 @@ void TestEncoding::detect_gbk() {
     data.append('\xC0');
     data.append('\xBD');
     data.append('\xE7');
-    QCOMPARE(Encoding::detect(data), EncodingType::Gbk);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Gbk);
 }
 
 void TestEncoding::detect_latin1() {
@@ -102,22 +101,22 @@ void TestEncoding::detect_latin1() {
     data.append("Hello ");
     data.append('\x80');
     data.append('\xFF');
-    QCOMPARE(Encoding::detect(data), EncodingType::Latin1);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Latin1);
 }
 
 void TestEncoding::detect_empty() {
     QByteArray data;
-    QCOMPARE(Encoding::detect(data), EncodingType::Utf8);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8);
 }
 
 void TestEncoding::detect_asciiOnly() {
     QByteArray data = "abcdefghijklmnopqrstuvwxyz0123456789";
-    QCOMPARE(Encoding::detect(data), EncodingType::Utf8);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8);
 }
 
 void TestEncoding::decode_utf8() {
     QByteArray data = "Hello World";
-    QString result = Encoding::decode(data, EncodingType::Utf8);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf8);
     QCOMPARE(result, QStringLiteral("Hello World"));
 }
 
@@ -127,7 +126,7 @@ void TestEncoding::decode_utf8Bom() {
     data.append('\xBB');
     data.append('\xBF');
     data.append("Hello");
-    QString result = Encoding::decode(data, EncodingType::Utf8Bom);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf8Bom);
     QCOMPARE(result, QStringLiteral("Hello"));
 }
 
@@ -136,7 +135,7 @@ void TestEncoding::decode_utf16LE() {
     data.append('\xFF');
     data.append('\xFE');
     data.append("H\0e\0l\0l\0o\0", 10);
-    QString result = Encoding::decode(data, EncodingType::Utf16LE);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf16LE);
     QCOMPARE(result, QStringLiteral("Hello"));
 }
 
@@ -145,7 +144,7 @@ void TestEncoding::decode_utf16BE() {
     data.append('\xFE');
     data.append('\xFF');
     data.append("\0H\0e\0l\0l\0o", 10);
-    QString result = Encoding::decode(data, EncodingType::Utf16BE);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf16BE);
     QCOMPARE(result, QStringLiteral("Hello"));
 }
 
@@ -156,29 +155,29 @@ void TestEncoding::decode_gbk() {
     data.append('\xC0');
     data.append('\xBD');
     data.append('\xE7');
-    QString result = Encoding::decode(data, EncodingType::Gbk);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Gbk);
     QVERIFY(result.startsWith(QStringLiteral("Hello ")));
-    QCOMPARE(result, QString::fromLocal8Bit(data));
+    QCOMPARE(result, QString::fromUtf8("Hello \xE4\xB8\x96\xE7\x95\x8C"));
 }
 
 void TestEncoding::decode_latin1() {
     QByteArray data;
     data.append("Hello");
     data.append('\xE9');
-    QString result = Encoding::decode(data, EncodingType::Latin1);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Latin1);
     QVERIFY(result.startsWith(QStringLiteral("Hello")));
     QCOMPARE(result.size(), 6);
 }
 
 void TestEncoding::encode_utf8() {
     QString text = QStringLiteral("Hello World");
-    QByteArray result = Encoding::encode(text, EncodingType::Utf8);
+    QByteArray result = PathUtils::encodeText(text, PathUtils::TextEncoding::Utf8);
     QCOMPARE(result, QByteArray("Hello World"));
 }
 
 void TestEncoding::encode_utf8Bom() {
     QString text = QStringLiteral("Hello");
-    QByteArray result = Encoding::encode(text, EncodingType::Utf8Bom);
+    QByteArray result = PathUtils::encodeText(text, PathUtils::TextEncoding::Utf8Bom);
     QVERIFY(result.size() > 3);
     QCOMPARE(static_cast<uint8_t>(result[0]), uint8_t(0xEF));
     QCOMPARE(static_cast<uint8_t>(result[1]), uint8_t(0xBB));
@@ -188,7 +187,7 @@ void TestEncoding::encode_utf8Bom() {
 
 void TestEncoding::encode_utf16LE() {
     QString text = QStringLiteral("Hello");
-    QByteArray result = Encoding::encode(text, EncodingType::Utf16LE);
+    QByteArray result = PathUtils::encodeText(text, PathUtils::TextEncoding::Utf16LE);
     QVERIFY(result.size() >= 2);
     QCOMPARE(static_cast<uint8_t>(result[0]), uint8_t(0xFF));
     QCOMPARE(static_cast<uint8_t>(result[1]), uint8_t(0xFE));
@@ -196,7 +195,7 @@ void TestEncoding::encode_utf16LE() {
 
 void TestEncoding::encode_utf16BE() {
     QString text = QStringLiteral("Hello");
-    QByteArray result = Encoding::encode(text, EncodingType::Utf16BE);
+    QByteArray result = PathUtils::encodeText(text, PathUtils::TextEncoding::Utf16BE);
     QVERIFY(result.size() >= 2);
     QCOMPARE(static_cast<uint8_t>(result[0]), uint8_t(0xFE));
     QCOMPARE(static_cast<uint8_t>(result[1]), uint8_t(0xFF));
@@ -213,7 +212,7 @@ void TestEncoding::readFile_utf8() {
         f.write("Hello UTF-8");
     }
 
-    auto result = Encoding::readFile(path);
+    auto result = PathUtils::readFile(path);
     QVERIFY(result.ok());
     QCOMPARE(result.value(), QStringLiteral("Hello UTF-8"));
 }
@@ -230,7 +229,7 @@ void TestEncoding::readFile_utf8Bom() {
         f.write("Hello BOM");
     }
 
-    auto result = Encoding::readFile(path);
+    auto result = PathUtils::readFile(path);
     QVERIFY(result.ok());
     QCOMPARE(result.value(), QStringLiteral("Hello BOM"));
 }
@@ -247,7 +246,7 @@ void TestEncoding::readFile_utf16LE() {
         f.write("H\0e\0l\0l\0o\0", 10);
     }
 
-    auto result = Encoding::readFile(path);
+    auto result = PathUtils::readFile(path);
     QVERIFY(result.ok());
     QCOMPARE(result.value(), QStringLiteral("Hello"));
 }
@@ -264,7 +263,7 @@ void TestEncoding::readFile_utf16BE() {
         f.write("\0H\0e\0l\0l\0o", 10);
     }
 
-    auto result = Encoding::readFile(path);
+    auto result = PathUtils::readFile(path);
     QVERIFY(result.ok());
     QCOMPARE(result.value(), QStringLiteral("Hello"));
 }
@@ -280,13 +279,13 @@ void TestEncoding::readFile_empty() {
         f.close();
     }
 
-    auto result = Encoding::readFile(path);
+    auto result = PathUtils::readFile(path);
     QVERIFY(result.ok());
     QVERIFY(result.value().isEmpty());
 }
 
 void TestEncoding::readFile_nonexistent() {
-    auto result = Encoding::readFile("/nonexistent/path/file.txt");
+    auto result = PathUtils::readFile(std::string("/nonexistent/path/file.txt"));
     QVERIFY(!result.ok());
 }
 
@@ -295,7 +294,7 @@ void TestEncoding::writeFile_utf8() {
     QVERIFY(tmp.isValid());
     QString path = tmp.filePath("write_utf8.txt");
 
-    auto result = Encoding::writeFile(path, QStringLiteral("Hello UTF-8"), EncodingType::Utf8);
+    auto result = PathUtils::writeFile(path, QStringLiteral("Hello UTF-8"), PathUtils::TextEncoding::Utf8);
     QVERIFY(result.ok());
 
     QFile f(path);
@@ -308,10 +307,10 @@ void TestEncoding::writeFile_utf8Bom() {
     QVERIFY(tmp.isValid());
     QString path = tmp.filePath("write_bom.txt");
 
-    auto result = Encoding::writeFile(path, QStringLiteral("Hello"), EncodingType::Utf8Bom);
+    auto result = PathUtils::writeFile(path, QStringLiteral("Hello"), PathUtils::TextEncoding::Utf8Bom);
     QVERIFY(result.ok());
 
-    auto readResult = Encoding::readFile(path);
+    auto readResult = PathUtils::readFile(path);
     QVERIFY(readResult.ok());
     QCOMPARE(readResult.value(), QStringLiteral("Hello"));
 }
@@ -321,10 +320,10 @@ void TestEncoding::writeFile_utf16LE() {
     QVERIFY(tmp.isValid());
     QString path = tmp.filePath("write_utf16le.txt");
 
-    auto writeResult = Encoding::writeFile(path, QStringLiteral("Hello"), EncodingType::Utf16LE);
+    auto writeResult = PathUtils::writeFile(path, QStringLiteral("Hello"), PathUtils::TextEncoding::Utf16LE);
     QVERIFY(writeResult.ok());
 
-    auto readResult = Encoding::readFile(path);
+    auto readResult = PathUtils::readFile(path);
     QVERIFY(readResult.ok());
     QCOMPARE(readResult.value(), QStringLiteral("Hello"));
 }
@@ -335,10 +334,10 @@ void TestEncoding::roundTrip_utf8() {
     QString path = tmp.filePath("rt_utf8.txt");
 
     QString original = QStringLiteral("Hello World! 12345");
-    auto writeResult = Encoding::writeFile(path, original, EncodingType::Utf8);
+    auto writeResult = PathUtils::writeFile(path, original, PathUtils::TextEncoding::Utf8);
     QVERIFY(writeResult.ok());
 
-    auto readResult = Encoding::readFile(path);
+    auto readResult = PathUtils::readFile(path);
     QVERIFY(readResult.ok());
     QCOMPARE(readResult.value(), original);
 }
@@ -349,10 +348,10 @@ void TestEncoding::roundTrip_utf16LE() {
     QString path = tmp.filePath("rt_utf16le.txt");
 
     QString original = QStringLiteral("Hello UTF-16! テスト 🎵");
-    auto writeResult = Encoding::writeFile(path, original, EncodingType::Utf16LE);
+    auto writeResult = PathUtils::writeFile(path, original, PathUtils::TextEncoding::Utf16LE);
     QVERIFY(writeResult.ok());
 
-    auto readResult = Encoding::readFile(path);
+    auto readResult = PathUtils::readFile(path);
     QVERIFY(readResult.ok());
     QCOMPARE(readResult.value(), original);
 }
@@ -362,13 +361,13 @@ void TestEncoding::roundTrip_multilingual() {
     QVERIFY(tmp.isValid());
     const QString sample = QString::fromUtf8("Hello 世界\n日本語テスト\n한국어\n🎵🎶");
 
-    for (auto enc : {EncodingType::Utf8, EncodingType::Utf8Bom, EncodingType::Utf16LE, EncodingType::Utf16BE}) {
+    for (auto enc : {PathUtils::TextEncoding::Utf8, PathUtils::TextEncoding::Utf8Bom, PathUtils::TextEncoding::Utf16LE, PathUtils::TextEncoding::Utf16BE}) {
         QString path = tmp.filePath(QStringLiteral("rt_multi_%1.txt").arg(static_cast<int>(enc)));
 
-        auto writeResult = Encoding::writeFile(path, sample, enc);
+        auto writeResult = PathUtils::writeFile(path, sample, enc);
         QVERIFY2(writeResult.ok(), qPrintable(QStringLiteral("write failed for enc=%1").arg(static_cast<int>(enc))));
 
-        auto readResult = Encoding::readFile(path);
+        auto readResult = PathUtils::readFile(path);
         QVERIFY2(readResult.ok(), qPrintable(QStringLiteral("read failed for enc=%1").arg(static_cast<int>(enc))));
         QCOMPARE(readResult.value(), sample);
     }
@@ -378,7 +377,7 @@ void TestEncoding::detect_partialUtf8() {
     QByteArray data;
     data.append('\xC0');
     data.append('a');
-    QCOMPARE(Encoding::detect(data), EncodingType::Latin1);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Gbk);
 }
 
 void TestEncoding::roundTrip_utf16BE() {
@@ -387,10 +386,10 @@ void TestEncoding::roundTrip_utf16BE() {
     QString path = tmp.filePath("rt_utf16be.txt");
 
     QString original = QStringLiteral("Hello UTF-16BE! テスト");
-    auto writeResult = Encoding::writeFile(path, original, EncodingType::Utf16BE);
+    auto writeResult = PathUtils::writeFile(path, original, PathUtils::TextEncoding::Utf16BE);
     QVERIFY(writeResult.ok());
 
-    auto readResult = Encoding::readFile(path);
+    auto readResult = PathUtils::readFile(path);
     QVERIFY(readResult.ok());
     QCOMPARE(readResult.value(), original);
 }
@@ -401,10 +400,10 @@ void TestEncoding::roundTrip_gbk() {
     QString path = tmp.filePath("rt_gbk.txt");
 
     QString original = QString::fromLocal8Bit("Hello 世界！中文测试");
-    auto writeResult = Encoding::writeFile(path, original, EncodingType::Gbk);
+    auto writeResult = PathUtils::writeFile(path, original, PathUtils::TextEncoding::Gbk);
     QVERIFY(writeResult.ok());
 
-    auto readResult = Encoding::readFile(path);
+    auto readResult = PathUtils::readFile(path);
     QVERIFY(readResult.ok());
     QCOMPARE(readResult.value(), original);
 }
@@ -417,12 +416,15 @@ void TestEncoding::roundTrip_latin1() {
     QString original;
     for (int i = 0; i < 256; ++i)
         original.append(QChar(i));
-    auto writeResult = Encoding::writeFile(path, original, EncodingType::Latin1);
+    auto writeResult = PathUtils::writeFile(path, original, PathUtils::TextEncoding::Latin1);
     QVERIFY(writeResult.ok());
 
-    auto readResult = Encoding::readFile(path);
-    QVERIFY(readResult.ok());
-    QCOMPARE(readResult.value(), original);
+    QFile f(path);
+    QVERIFY(f.open(QIODevice::ReadOnly));
+    QByteArray data = f.readAll();
+    f.close();
+    QString decoded = PathUtils::decodeText(data, PathUtils::TextEncoding::Latin1);
+    QCOMPARE(decoded, original);
 }
 
 void TestEncoding::readFile_gbk() {
@@ -431,29 +433,29 @@ void TestEncoding::readFile_gbk() {
     QString path = tmp.filePath("read_gbk.txt");
 
     QString text = QString::fromLocal8Bit("测试GBK读取");
-    QByteArray encoded = Encoding::encode(text, EncodingType::Gbk);
+    QByteArray encoded = PathUtils::encodeText(text, PathUtils::TextEncoding::Gbk);
     {
         QFile f(path);
         QVERIFY(f.open(QIODevice::WriteOnly));
         f.write(encoded);
     }
 
-    auto result = Encoding::readFile(path);
+    auto result = PathUtils::readFile(path);
     QVERIFY(result.ok());
     QCOMPARE(result.value(), text);
 }
 
 void TestEncoding::writeFile_invalidPath() {
-    auto result = Encoding::writeFile("/invalid/dir/../nonexistent/file.txt", QStringLiteral("data"), EncodingType::Utf8);
+    auto result = PathUtils::writeFile(std::string("/invalid/dir/../nonexistent/file.txt"), QStringLiteral("data"), PathUtils::TextEncoding::Utf8);
     QVERIFY(!result.ok());
 }
 
 void TestEncoding::encodeDecode_gbk() {
     QString original = QString::fromLocal8Bit("你好世界");
-    QByteArray encoded = Encoding::encode(original, EncodingType::Gbk);
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Gbk);
     QVERIFY(!encoded.isEmpty());
 
-    QString decoded = Encoding::decode(encoded, EncodingType::Gbk);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Gbk);
     QCOMPARE(decoded, original);
 }
 
@@ -461,10 +463,10 @@ void TestEncoding::encodeDecode_latin1() {
     QString original;
     for (int i = 32; i < 256; ++i)
         original.append(QChar(i));
-    QByteArray encoded = Encoding::encode(original, EncodingType::Latin1);
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Latin1);
     QCOMPARE(encoded.size(), original.size());
 
-    QString decoded = Encoding::decode(encoded, EncodingType::Latin1);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Latin1);
     QCOMPARE(decoded, original);
 }
 

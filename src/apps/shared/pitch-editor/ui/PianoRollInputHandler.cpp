@@ -169,7 +169,7 @@ void PianoRollInputHandler::handleMouseMove(
     // Modulation drag
     if (m_modulationDragging && !selectedNotes.empty() && !m_preAdjustF0.empty()) {
         double dy = m_modulationDragStartY - sceneY;
-        m_modulationDragAmount = std::clamp(1.0 + dy / ModulationDragSensitivity, 0.0, 5.0);
+        m_modulationDragAmount = std::clamp(1.0 + dy / m_modulationDragSensitivity, 0.0, 5.0);
         if (dsFile) {
             PitchProcessor::applyModulationDriftPreview(
                 *dsFile, m_preAdjustF0, selectedNotes,
@@ -182,7 +182,7 @@ void PianoRollInputHandler::handleMouseMove(
     // Drift drag
     if (m_driftDragging && !selectedNotes.empty() && !m_preAdjustF0.empty()) {
         double dy = m_driftDragStartY - sceneY;
-        m_driftDragAmount = std::clamp(1.0 + dy / ModulationDragSensitivity, 0.0, 5.0);
+        m_driftDragAmount = std::clamp(1.0 + dy / m_modulationDragSensitivity, 0.0, 5.0);
         if (dsFile) {
             PitchProcessor::applyModulationDriftPreview(
                 *dsFile, m_preAdjustF0, selectedNotes,

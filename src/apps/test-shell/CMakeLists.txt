@@ -5,6 +5,6 @@ dstools_add_executable(${PROJECT_NAME}
         WIN32_EXECUTABLE
         SOURCES main.cpp
         DEPENDS
-        PRIVATE dstools-ui-core dstools-domain dsfw-ui-core
+        PRIVATE dstools-ui-core dstools-domain dsfw-ui-core dsfw-widgets
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
 )

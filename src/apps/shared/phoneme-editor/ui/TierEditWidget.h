@@ -53,6 +53,8 @@ namespace dstools {
             /// @param state New viewport state.
             void setViewport(const ViewportState &state);
             void setCoordConverter(const ChartCoordinate *conv);
+            void setYAxisWidth(int w); ///< 设置单选按钮区域宽度
+            QWidget *radioButtonContainer() const { return m_radioButtonContainer; }
 
         public slots:
             /// @brief Slot invoked when the viewport changes.

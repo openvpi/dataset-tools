@@ -1,7 +1,8 @@
 #include "WelcomePage.h"
 
-#include <AppSettingKeys.h>
+#include "Keys.h"
 
+#include <dsfw/AppSettings.h>
 #include <dsfw/FileDialogHelper.h>
 
 #include <QApplication>
@@ -21,6 +22,19 @@
 namespace dstools {
 
 static constexpr int kMaxRecentProjects = 10;
+
+static QStringList readRecentProjects() {
+    AppSettings settings(QStringLiteral("DsLabeler"));
+    QString raw = settings.get(settings::app::kRecentProjects);
+    if (raw.isEmpty())
+        return {};
+    return raw.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+}
+
+static void writeRecentProjects(const QStringList &list) {
+    AppSettings settings(QStringLiteral("DsLabeler"));
+    settings.set(settings::app::kRecentProjects, list.join(QLatin1Char('\n')));
+}
 
 WelcomePage::WelcomePage(QWidget *parent) : QWidget(parent) {
     // Title
@@ -87,9 +101,9 @@ WelcomePage::WelcomePage(QWidget *parent) : QWidget(parent) {
                 QStringLiteral("工程文件不存在：\n%1\n\n是否从列表中移除？").arg(path),
                 QMessageBox::Yes | QMessageBox::No);
             if (result == QMessageBox::Yes) {
-                auto recent = AppSettingKeys::readAppSettingStringList(AppSettingKeys::RecentProjects);
+                auto recent = readRecentProjects();
                 recent.removeAll(path);
-                AppSettingKeys::writeAppSettingStringList(AppSettingKeys::RecentProjects, recent);
+                writeRecentProjects(recent);
                 refreshRecentList();
             }
             return;
@@ -145,14 +159,15 @@ void WelcomePage::onNewProject() {
 }
 
 void WelcomePage::onOpenProject() {
-    const QString lastDir = AppSettingKeys::readAppSettingString(AppSettingKeys::LastProjectDir);
+    AppSettings settings(QStringLiteral("DsLabeler"));
+    const QString lastDir = settings.get(settings::app::kLastProjectDir);
     const QString path = dsfw::FileDialogHelper::getOpenFileName(
         {this, QStringLiteral("打开工程"), lastDir,
          {QStringLiteral("DiffSinger Project (*.dsproj)")}});
     if (path.isEmpty())
         return;
 
-    AppSettingKeys::writeAppSettingString(AppSettingKeys::LastProjectDir, QFileInfo(path).absolutePath());
+    settings.set(settings::app::kLastProjectDir, QFileInfo(path).absolutePath());
     addToRecent(path);
     loadProject(path);
 }
@@ -171,18 +186,18 @@ void WelcomePage::loadProject(const QString &path) {
 }
 
 void WelcomePage::addToRecent(const QString &path) {
-    auto recent = AppSettingKeys::readAppSettingStringList(AppSettingKeys::RecentProjects);
+    auto recent = readRecentProjects();
     recent.removeAll(path);
     recent.prepend(path);
     while (recent.size() > kMaxRecentProjects)
         recent.removeLast();
-    AppSettingKeys::writeAppSettingStringList(AppSettingKeys::RecentProjects, recent);
+    writeRecentProjects(recent);
     refreshRecentList();
 }
 
 void WelcomePage::refreshRecentList() {
     m_recentList->clear();
-    const auto recent = AppSettingKeys::readAppSettingStringList(AppSettingKeys::RecentProjects);
+    const auto recent = readRecentProjects();
 
     for (const auto &path : recent) {
         QFileInfo fi(path);

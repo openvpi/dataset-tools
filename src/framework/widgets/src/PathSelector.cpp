@@ -1,7 +1,9 @@
 #include <dsfw/widgets/PathSelector.h>
 
+#include <dsfw/AppSettings.h>
 #include <dsfw/FileDialogHelper.h>
 
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileInfo>
@@ -35,8 +37,9 @@ static bool matchesDialogFilter(const QString &fileName, const QString &filter) 
 }
 
 PathSelector::PathSelector(Mode mode, const QString &label,
-                           const QString &filter, QWidget *parent)
-    : QWidget(parent), m_mode(mode), m_filter(filter) {
+                           const QString &filter, QWidget *parent,
+                           const QString &settingsKey)
+    : QWidget(parent), m_mode(mode), m_filter(filter), m_settingsKey(settingsKey) {
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
 
@@ -113,8 +116,15 @@ void PathSelector::onBrowseClicked() {
     dsfw::FileDialogHelper::Options opts;
     opts.parent = this;
     opts.title = m_label->text();
-    opts.defaultDir = path().isEmpty() ? QString() : QFileInfo(path()).absolutePath();
     opts.nameFilters = {m_filter};
+
+    QString defaultDir;
+    if (!path().isEmpty()) {
+        defaultDir = QFileInfo(path()).absolutePath();
+    } else {
+        defaultDir = loadRecentDir();
+    }
+    opts.defaultDir = defaultDir;
 
     QString result;
     switch (m_mode) {
@@ -125,12 +135,30 @@ void PathSelector::onBrowseClicked() {
         result = dsfw::FileDialogHelper::getSaveFileName(opts);
         break;
     case Directory:
-        opts.defaultDir = path().isEmpty() ? QString() : path();
+        opts.defaultDir = path().isEmpty() ? defaultDir : path();
         result = dsfw::FileDialogHelper::getExistingDirectory(opts);
         break;
     }
-    if (!result.isEmpty())
+    if (!result.isEmpty()) {
         setPath(result);
+        saveRecentDir(result);
+    }
+}
+
+QString PathSelector::loadRecentDir() const {
+    if (m_settingsKey.isEmpty())
+        return {};
+    static dstools::AppSettings s_settings(QStringLiteral("PathSelector"));
+    return s_settings.getRawString(m_settingsKey.toUtf8().constData(), {});
+}
+
+void PathSelector::saveRecentDir(const QString &path) {
+    if (m_settingsKey.isEmpty())
+        return;
+    static dstools::AppSettings s_settings(QStringLiteral("PathSelector"));
+    const QFileInfo info(path);
+    const QString dir = info.isDir() ? path : info.absolutePath();
+    s_settings.setRawString(m_settingsKey.toUtf8().constData(), dir);
 }
 
 } // namespace dsfw::widgets

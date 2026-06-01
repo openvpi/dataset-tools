@@ -90,6 +90,10 @@ namespace dstools {
         void recomputeYAxisWidth();
         void refreshYAxisLabels();
 
+        /// Set a widget to be placed in the left pane, aligned with the editor widget.
+        /// Used for tier radio buttons (phoneme mode).
+        void setTierRadioPanel(QWidget *panel);
+
         const chart::ChartCoordinate &coordConverter() const {
             return m_coordConverter;
         }
@@ -190,6 +194,7 @@ namespace dstools {
         void connectViewportToWidget(QWidget *widget);
         void applyDefaultHeightRatios();
         void updateOverlayTopOffset();
+        void updateTierRadioPanelGeometry();
         double xToTimeGlobal(qreal globalX) const;
         void installDragEventFilters();
         void removeDragEventFilters();
@@ -213,6 +218,7 @@ namespace dstools {
         MiniMapScrollBar *m_miniMap = nullptr;
         QLabel *m_scaleLabel = nullptr;
         QWidget *m_leftPane = nullptr;
+        QWidget *m_tierRadioPanel = nullptr;
         DataAreaWidget *m_dataArea = nullptr;
         QList<QWidget *> m_yAxisLabels;
         dsfw::widgets::PlayWidget *m_playWidget = nullptr;

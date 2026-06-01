@@ -1,5 +1,4 @@
 #include <dstools/DsDocument.h>
-#include <dsfw/Encoding.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/PathUtils.h>
 
@@ -33,7 +32,7 @@ DsDocument &DsDocument::operator=(DsDocument &&other) noexcept {
 Result<DsDocument> DsDocument::loadFile(const QString &path) {
     DsDocument doc;
 
-    auto textResult = dsfw::Encoding::readFile(path);
+    auto textResult = dsfw::PathUtils::readFile(path);
     if (!textResult.ok()) {
         return Result<DsDocument>::Error(textResult.error());
     }
@@ -97,7 +96,7 @@ Result<void> DsDocument::saveFile(const QString &path) const {
     if (!saveResult) {
         return Result<void>::Error(saveResult.error());
     }
-    return {};
+    return Result<void>::Ok();
 }
 
 // ── Sentence access ───────────────────────────────────────────────────
