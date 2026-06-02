@@ -1,4 +1,5 @@
 #include <dstools/DsProject.h>
+#include <dstools/ProjectBackupManager.h>
 #include <dsfw/ConfigTypesJson.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/Log.h>
@@ -8,9 +9,11 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QStringList>
 
 #include <cmath>
 #include <filesystem>
+#include <unordered_set>
 
 namespace dstools {
 
@@ -97,44 +100,6 @@ static nlohmann::json serializeItem(const Item& item) {
     return j;
 }
 
-static constexpr int kMaxBackups = 3;
-
-static void rotateBackups(const QString& filePath) {
-    if (!QFile::exists(filePath))
-        return;
-
-    QFile::remove(filePath + QStringLiteral(".bak"));
-    QFile::copy(filePath, filePath + QStringLiteral(".bak"));
-
-    QString lastNewer = filePath + QStringLiteral(".bak.%1").arg(kMaxBackups);
-    QFile::remove(lastNewer);
-
-    for (int i = kMaxBackups - 1; i >= 1; --i) {
-        QString older = filePath + QStringLiteral(".bak.%1").arg(i);
-        QString newer = filePath + QStringLiteral(".bak.%1").arg(i + 1);
-        if (QFile::exists(older)) {
-            QFile::remove(newer);
-            QFile::copy(older, newer);
-        }
-    }
-
-    QString bak1 = filePath + QStringLiteral(".bak.1");
-    QFile::remove(bak1);
-    QFile::copy(filePath, bak1);
-}
-
-static QString findLatestBackup(const QString& filePath) {
-    QString simpleBak = filePath + QStringLiteral(".bak");
-    if (QFile::exists(simpleBak))
-        return simpleBak;
-    for (int i = 1; i <= kMaxBackups; ++i) {
-        QString bak = filePath + QStringLiteral(".bak.%1").arg(i);
-        if (QFile::exists(bak))
-            return bak;
-    }
-    return {};
-}
-
 // ── File I/O ──────────────────────────────────────────────────────────
 
 Result<DsProject> DsProject::loadFile(const QString& path) {
@@ -147,8 +112,9 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
 
     auto jsonResult = JsonHelper::loadFile(dsfw::PathUtils::toStdPath(path));
     if (!jsonResult) {
-        QString bakPath = findLatestBackup(path);
-        if (!bakPath.isEmpty()) {
+        auto bakPathResult = ProjectBackupManager::findLatestBackup(dsfw::PathUtils::toStdPath(path));
+        if (bakPathResult && !bakPathResult.value().empty()) {
+            QString bakPath = dsfw::PathUtils::fromStdPath(bakPathResult.value());
             DSFW_LOG_WARN("io", ("DsProject::loadFile: failed, trying backup: " + bakPath.toStdString()).c_str());
             jsonResult = JsonHelper::loadFile(dsfw::PathUtils::toStdPath(bakPath));
             if (jsonResult)
@@ -292,8 +258,19 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
 
     auto consistencyResult = proj.validateSliceConsistency();
     if (!consistencyResult.ok()) {
+        DSFW_LOG_WARN("io", ("DsProject::loadFile: slice consistency issues: " + consistencyResult.error()).c_str());
+    }
+
+    auto missingPaths = proj.validateExternalPaths();
+    if (!missingPaths.empty()) {
+        QStringList missingList;
+        for (const auto &p : missingPaths) {
+            missingList.append(p);
+        }
         DSFW_LOG_WARN("io",
-                      ("DsProject::loadFile: slice consistency issues: " + consistencyResult.error()).c_str());
+                      ("DsProject::loadFile: " + std::to_string(missingPaths.size()) +
+                       " external path(s) not found: " + missingList.join(", ").toStdString())
+                          .c_str());
     }
 
     return proj;
@@ -306,7 +283,9 @@ Result<void> DsProject::saveFile(const QString& path) const {
         return Result<void>::Error("No file path specified");
     }
 
-    rotateBackups(targetPath);
+    auto backupResult = ProjectBackupManager::createBackup(dsfw::PathUtils::toStdPath(targetPath));
+    if (!backupResult)
+        DSFW_LOG_WARN("io", ("DsProject::saveFile: backup failed: " + backupResult.error()).c_str());
 
     nlohmann::json json = m_extraFields.is_object() ? m_extraFields : nlohmann::json::object();
 
@@ -374,6 +353,11 @@ Result<void> DsProject::saveFile(const QString& path) const {
     if (!saveResult) {
         return Result<void>::Error(saveResult.error());
     }
+
+    auto pruneResult = ProjectBackupManager::pruneBackups(dsfw::PathUtils::toStdPath(targetPath));
+    if (!pruneResult)
+        DSFW_LOG_WARN("io", ("DsProject::saveFile: prune failed: " + pruneResult.error()).c_str());
+
     return Result<void>::Ok();
 }
 
@@ -385,7 +369,7 @@ Result<void> DsProject::validateSliceConsistency() const {
 
     QStringList issues;
 
-    for (const auto &[originalPath, points] : m_slicerState.slicePoints) {
+    for (const auto& [originalPath, points] : m_slicerState.slicePoints) {
         if (points.empty())
             continue;
 
@@ -393,7 +377,7 @@ Result<void> DsProject::validateSliceConsistency() const {
         int expectedSegments = static_cast<int>(points.size()) + 1;
 
         int actualSegments = 0;
-        for (const auto &item : m_items) {
+        for (const auto& item : m_items) {
             if (item.id.startsWith(baseName))
                 ++actualSegments;
         }
@@ -401,20 +385,19 @@ Result<void> DsProject::validateSliceConsistency() const {
         if (actualSegments == 0) {
             issues.append(QFileInfo(originalPath).fileName() + QStringLiteral(" (未导出)"));
         } else if (actualSegments != expectedSegments) {
-            issues.append(QFileInfo(originalPath).fileName() +
-                          QStringLiteral(" (切点数不一致: 期望 %1 段, 实际 %2 段)")
-                              .arg(expectedSegments)
-                              .arg(actualSegments));
+            issues.append(
+                QFileInfo(originalPath).fileName() +
+                QStringLiteral(" (切点数不一致: 期望 %1 段, 实际 %2 段)").arg(expectedSegments).arg(actualSegments));
         } else {
             constexpr double kToleranceUs = 1000.0;
             bool mismatch = false;
             int segIdx = 0;
-            for (const auto &item : m_items) {
+            for (const auto& item : m_items) {
                 if (!item.id.startsWith(baseName))
                     continue;
                 if (item.slices.empty())
                     continue;
-                const auto &slice = item.slices[0];
+                const auto& slice = item.slices[0];
                 double expectedStart = (segIdx == 0) ? 0.0 : points[static_cast<size_t>(segIdx - 1)] * 1e6;
                 if (std::abs(expectedStart - static_cast<double>(slice.inPos)) > kToleranceUs) {
                     mismatch = true;
@@ -427,7 +410,7 @@ Result<void> DsProject::validateSliceConsistency() const {
         }
     }
 
-    for (const auto &audioFile : m_slicerState.audioFiles) {
+    for (const auto& audioFile : m_slicerState.audioFiles) {
         QString resolved = audioFile;
         if (QDir::isRelativePath(resolved))
             resolved = QDir(m_workingDirectory).absoluteFilePath(resolved);
@@ -440,6 +423,42 @@ Result<void> DsProject::validateSliceConsistency() const {
         return Result<void>::Ok();
 
     return Result<void>::Error(issues.join(QStringLiteral("\n")).toStdString());
+}
+
+std::vector<QString> DsProject::validateExternalPaths() const {
+    std::vector<QString> missing;
+    std::unordered_set<QString> checked;
+
+    auto resolvePath = [&](const QString &p) -> QString {
+        if (p.isEmpty())
+            return {};
+        if (QDir::isRelativePath(p) && !m_workingDirectory.isEmpty()) {
+            return QDir(m_workingDirectory).absoluteFilePath(p);
+        }
+        return p;
+    };
+
+    auto checkFile = [&](const QString &p) {
+        if (p.isEmpty())
+            return;
+        auto resolved = resolvePath(p);
+        if (checked.count(resolved))
+            return;
+        checked.insert(resolved);
+        if (!QFileInfo::exists(resolved)) {
+            missing.push_back(p);
+        }
+    };
+
+    for (const auto &item : m_items) {
+        checkFile(item.audioSource);
+    }
+
+    for (const auto &audioFile : m_slicerState.audioFiles) {
+        checkFile(audioFile);
+    }
+
+    return missing;
 }
 
 // ── Properties ────────────────────────────────────────────────────────

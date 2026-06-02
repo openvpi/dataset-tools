@@ -17,6 +17,7 @@
 #include <dsfw/AppPaths.h>
 #include <dsfw/AppShell.h>
 #include <dsfw/PathUtils.h>
+#include <dsfw/SingleInstanceGuard.h>
 #include <dstools/ModelManager.h>
 #include <dsfw/ServiceLocator.h>
 #include <dsfw/Theme.h>
@@ -97,9 +98,16 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion("0.1.0");
     app.setOrganizationName("Team OpenVPI");
 
+    dsfw::SingleInstanceGuard instanceGuard("DsLabeler");
+    if (!instanceGuard.tryLock()) {
+        instanceGuard.sendArguments(app.arguments());
+        return 0;
+    }
+
     dstools::AppInit::registerPostInitHook(&initPinyin);
     if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
+    instanceGuard.listen();
     dstools::registerDomainFormatAdapters();
     dsfw::Theme::instance().init(app);
 
@@ -206,6 +214,20 @@ int main(int argc, char *argv[]) {
     });
 
     shell.show();
+
+    QObject::connect(&instanceGuard, &dsfw::SingleInstanceGuard::argumentsReceived,
+                     &shell, [&](const QStringList &args) {
+                         if (args.size() > 1) {
+                             QString arg = args.at(1);
+                             if (arg.endsWith(QLatin1String(".dsproj"), Qt::CaseInsensitive)) {
+                                 auto result = dstools::DsProject::loadFile(arg);
+                                 if (result.ok()) {
+                                     auto proj = std::make_unique<dstools::DsProject>(std::move(result.value()));
+                                     loadProject(std::move(proj), arg);
+                                 }
+                             }
+                         }
+                     });
 
     // Handle command-line .dsproj argument
     if (argc > 1) {

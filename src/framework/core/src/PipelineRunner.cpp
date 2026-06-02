@@ -70,12 +70,18 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                 auto *adapter = FormatAdapterRegistry::instance().adapter(step.importFormat);
                 if (adapter) {
                     auto importPath = step.importPath.isEmpty() ? ctx.audioPath : step.importPath;
-                    auto res = adapter->importToLayers(importPath, ctx.layers, step.config);
-                    if (!res.ok() && !step.optional) {
-                        ctx.status = PipelineContext::Status::Error;
-                        ctx.discardReason = QString::fromStdString(res.error());
-                        DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " import failed: " + res.error()).c_str());
-                        continue;
+                    auto tempLayers = ctx.layers;
+                    auto res = adapter->importToLayers(importPath, tempLayers, step.config);
+                    if (!res.ok()) {
+                        if (!step.optional) {
+                            ctx.status = PipelineContext::Status::Error;
+                            ctx.discardReason = QString::fromStdString(res.error());
+                            DSFW_LOG_ERROR("pipeline",
+                                           (ctx.itemId.toStdString() + " import failed: " + res.error()).c_str());
+                            continue;
+                        }
+                    } else {
+                        ctx.layers = std::move(tempLayers);
                     }
                 }
             }

@@ -68,6 +68,10 @@ namespace dsfw {
         static dstools::Result<void> writeFile(const std::string &path,
                                                const QString &text,
                                                TextEncoding encoding = TextEncoding::Utf8);
+
+        static dstools::Result<uint32_t> crc32(const std::filesystem::path &path);
+
+        static uint32_t crc32(const uint8_t *data, size_t size);
     };
 
 } // namespace dsfw

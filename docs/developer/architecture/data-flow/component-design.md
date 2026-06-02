@@ -5,34 +5,34 @@
 
 ---
 
-## 1. DSFile — 音高编辑器数据模型
+## 1. DsPitchDocument — 音高编辑器数据模型
 
-**位置**：[src/apps/shared/pitch-editor/DSFile.h](../../src/apps/shared/pitch-editor/DSFile.h)
-**命名空间**：`dstools::pitchlabeler`
+**位置**：[src/domain/include/dstools/DsPitchDocument.h](../../src/domain/include/dstools/DsPitchDocument.h)
+**命名空间**：`dstools`（`dstools::pitchlabeler` 通过 using 别名引用）
 
 ### 1.1 设计目标
 
-DSFile 是 PitchEditor 的核心数据载体，存储一个切片内所有音高/音符相关数据。它是一个 **无 Qt GUI 依赖** 的纯内存模型，直接序列化为 JSON。
+DsPitchDocument 是 PitchEditor 的核心数据载体，存储一个切片内所有音高/音符相关数据。它是一个 **无 Qt GUI 依赖** 的纯内存模型，直接序列化为 JSON。
 
 ### 1.2 数据结构
 
 ```cpp
 struct Phone {           // 音素信息（从 FA 步骤获取）
     QString symbol;      // 音素符号
-    TimePos start;       // 相对于切片的起始时间 (µs)
-    TimePos duration;    // 持续时间 (µs)
+    TimePos start;       // 相对于切片的起始时间 (us)
+    TimePos duration;    // 持续时间 (us)
 };
 
 struct Note {            // MIDI 音符
     QString name;        // 音高名，如 "C4", "D#5", "rest"
-    TimePos duration;    // 持续时长 (µs)
+    TimePos duration;    // 持续时长 (us)
     int slur = 0;        // 是否连音 (1=slur)
     QString glide;       // 滑音类型 ("up", "down", "")
-    TimePos start;       // 音符起始时间 (µs)，由 recomputeNoteStarts() 计算
+    TimePos start;       // 音符起始时间 (us)，由 recomputeNoteStarts() 计算
 };
 
-class DSFile {
-    TimePos offset;                // 偏移量 (µs)
+class DsPitchDocument {
+    TimePos offset;                // 偏移量 (us)
     QString text;                  // 原始歌词文本
     std::vector<Phone> phones;     // 音素列表
     std::vector<Note> notes;       // MIDI 音符列表
@@ -48,14 +48,14 @@ class DSFile {
 | `recomputeNoteStarts()` | 根据 note[i].duration 重新计算所有 note 的 start 时间 |
 | `markModified()` | 设置 modified=true，用于 UI 的保存提示 |
 | `getTotalDuration()` | 返回所有 note 的 end() 最大值 |
-| `serializeNote(note)` / `deserializeNote(json)` | Note ↔ JSON 序列化 |
+| `serializeNote(note)` / `deserializeNote(json)` | Note <-> JSON 序列化 |
 
 ### 1.4 与 DsTextDocument 的关系
 
-DSFile 和 DsTextDocument 是**并行关系**，分别服务不同的编辑器：
+DsPitchDocument 和 DsTextDocument 是**并行关系**，分别服务不同的编辑器：
 
 ```
-DsTextDocument                       DSFile
+DsTextDocument                       DsPitchDocument
 ├── layers[] (IntervalLayer)         ├── notes[] (Note)
 │   ├── grapheme 层                  │   └── name/duration/start/slur/glide
 │   ├── phoneme 层                   ├── f0 (F0Curve)
@@ -67,9 +67,7 @@ DsTextDocument                       DSFile
                                      └── modified
 ```
 
-**当前问题**：两者之间没有自动转换桥接，PitchLabelerPage 中手动做 DSFile ↔ DsTextDocument 映射（分散在多处），容易出错。
-
-**建议**：创建 `DsTextDocBridge` 统一管理三向转换（DsTextDocument ↔ DSFile ↔ TextGridDocument）。
+**当前状态**：两者之间通过 `DsTextDocBridge` 桥接，PitchLabelerPage 中通过该桥接器做 DsPitchDocument <-> DsTextDocument <-> TextGridDocument 三向转换。桥接器已实现，但仍有优化空间。
 
 ---
 
@@ -209,7 +207,7 @@ PianoRollView 支持 4 种交互模式，通过 [ToolMode 枚举](file:///d:/pro
 
 ### 3.6 A/B 对比
 
-PianoRollView 内置 A/B 对比功能（`setABComparisonActive(bool)`），在两个 DSFile 之间切换显示，用于对比编辑前后的 MIDI/F0 差异。
+PianoRollView 内置 A/B 对比功能（`setABComparisonActive(bool)`），在两个 DsPitchDocument 之间切换显示，用于对比编辑前后的 MIDI/F0 差异。
 
 ---
 

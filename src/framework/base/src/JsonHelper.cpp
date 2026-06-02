@@ -25,20 +25,23 @@ namespace dstools {
         {
             std::ofstream file(tmpPath);
             if (!file.is_open()) {
-                return Err("Cannot open file for writing: " + path.string());
+                const auto u8 = path.u8string();
+                return Err("Cannot open file for writing: " + std::string(u8.begin(), u8.end()));
             }
             file << data.dump(indent);
             if (!file.good()) {
                 file.close();
                 std::filesystem::remove(tmpPath);
-                return Err("Failed to write JSON file: " + path.string());
+                const auto u8 = path.u8string();
+                return Err("Failed to write JSON file: " + std::string(u8.begin(), u8.end()));
             }
         }
         std::error_code ec;
         std::filesystem::rename(tmpPath, path, ec);
         if (ec) {
             std::filesystem::remove(tmpPath);
-            return Err("Failed to finalize JSON file: " + path.string());
+            const auto u8 = path.u8string();
+            return Err("Failed to finalize JSON file: " + std::string(u8.begin(), u8.end()));
         }
         return Ok();
     }

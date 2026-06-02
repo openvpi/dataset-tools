@@ -13,6 +13,7 @@
 #include <dsfw/AppPaths.h>
 #include <dsfw/AppShell.h>
 #include <dsfw/PathUtils.h>
+#include <dsfw/SingleInstanceGuard.h>
 #include <dstools/ModelManager.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/Theme.h>
@@ -41,8 +42,15 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion("0.1.0");
     app.setOrganizationName("Team OpenVPI");
 
+    dsfw::SingleInstanceGuard instanceGuard("LabelSuite");
+    if (!instanceGuard.tryLock()) {
+        instanceGuard.sendArguments(app.arguments());
+        return 0;
+    }
+
     if (!dstools::AppInit::init(app, /*initCrashHandler=*/true))
         return 0;
+    instanceGuard.listen();
     dstools::registerDomainFormatAdapters();
     dsfw::Theme::instance().init(app);
 

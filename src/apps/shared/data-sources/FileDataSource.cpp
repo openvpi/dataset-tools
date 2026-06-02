@@ -150,10 +150,21 @@ Result<DsTextDocument> FileDataSource::loadSlice(const QString &sliceId) {
 
     std::map<QString, LayerData> layers;
     auto result = adapter->importToLayers(m_annotationPath, layers, {});
-    if (!result)
+    if (!result) {
         return Result<DsTextDocument>::Error(result.error());
+    }
 
-    return layersToDocument(layers, m_audioPath);
+    auto docResult = layersToDocument(layers, m_audioPath);
+    if (!docResult) {
+        return Result<DsTextDocument>::Error(docResult.error());
+    }
+
+    auto validationResult = docResult.value().validate();
+    if (!validationResult) {
+        return Result<DsTextDocument>::Error("Imported document validation failed: " + validationResult.error());
+    }
+
+    return docResult;
 }
 
 Result<void> FileDataSource::saveSlice(const QString &sliceId,

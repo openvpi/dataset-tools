@@ -5,6 +5,9 @@
 
 #include <algorithm>
 
+#include <dsfw/AtomicFileWriter.h>
+#include <dsfw/PathUtils.h>
+
 namespace dstools {
 
 Result<std::vector<double>> AudacityMarkerAdapter::read(const QString &path) {
@@ -41,13 +44,8 @@ Result<std::vector<double>> AudacityMarkerAdapter::read(const QString &path) {
 }
 
 Result<void> AudacityMarkerAdapter::write(const QString &path, const std::vector<double> &times) {
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        return Result<void>::Error(
-            QObject::tr("Cannot write file: %1").arg(path).toStdString());
-    }
-
-    QTextStream out(&file);
+    QString content;
+    QTextStream out(&content);
     out.setRealNumberPrecision(6);
     out.setRealNumberNotation(QTextStream::FixedNotation);
 
@@ -56,7 +54,8 @@ Result<void> AudacityMarkerAdapter::write(const QString &path, const std::vector
         out << times[i] << '\t' << times[i] << '\t' << label << '\n';
     }
 
-    return Result<void>::Ok();
+    const std::string data = content.toStdString();
+    return dsfw::AtomicFileWriter::write(dsfw::PathUtils::toStdPath(path), data);
 }
 
 } // namespace dstools

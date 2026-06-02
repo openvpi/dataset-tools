@@ -22,25 +22,14 @@ void TestDsTextDocBridgeRoundtrip::layer_roundtrip() {
     IntervalLayer grapheme;
     grapheme.name = QString::fromUtf8(dstools::keys::layers::grapheme);
     grapheme.type = QStringLiteral("grapheme");
-    grapheme.boundaries = {
-        {1, 0, "hello"},
-        {2, 500000, "world"},
-        {3, 1000000, ""}
-    };
+    grapheme.boundaries = {{1, 0, "hello"}, {2, 500000, "world"}, {3, 1000000, ""}};
     original.layers.push_back(grapheme);
 
     IntervalLayer phoneme;
     phoneme.name = QString::fromUtf8(dstools::keys::layers::phoneme);
     phoneme.type = QStringLiteral("phoneme");
-    phoneme.boundaries = {
-        {1, 0, "hh"},
-        {2, 200000, "ah"},
-        {3, 400000, "l"},
-        {4, 500000, "ow"},
-        {5, 800000, "w"},
-        {6, 900000, "er"},
-        {7, 1000000, ""}
-    };
+    phoneme.boundaries = {{1, 0, "hh"},     {2, 200000, "ah"}, {3, 400000, "l"}, {4, 500000, "ow"},
+                          {5, 800000, "w"}, {6, 900000, "er"}, {7, 1000000, ""}};
     original.layers.push_back(phoneme);
 
     // Save → reload to simulate roundtrip
@@ -52,7 +41,7 @@ void TestDsTextDocBridgeRoundtrip::layer_roundtrip() {
 
     auto loadRes = DsTextDocument::load(path);
     QVERIFY(loadRes.ok());
-    const auto &restored = loadRes.value();
+    const auto& restored = loadRes.value();
 
     auto verifyRes = DsTextDocBridge::verifyLayerRoundtrip(original, restored);
     QVERIFY(verifyRes.ok());
@@ -75,12 +64,7 @@ void TestDsTextDocBridgeRoundtrip::pitch_doc_roundtrip() {
     IntervalLayer midi;
     midi.name = QString::fromUtf8(dstools::keys::layers::midi);
     midi.type = QStringLiteral("midi");
-    midi.boundaries = {
-        {1, 0, "C4"},
-        {2, 500000, ""},
-        {3, 500000, "D4"},
-        {4, 1000000, ""}
-    };
+    midi.boundaries = {{1, 0, "C4"}, {2, 500000, ""}, {3, 500000, "D4"}, {4, 1000000, ""}};
     original.layers.push_back(midi);
 
     CurveLayer pitch;
@@ -104,10 +88,11 @@ void TestDsTextDocBridgeRoundtrip::pitch_doc_roundtrip() {
 
     DsTextDocument roundtripped;
     roundtripped.curves.push_back(pitch);
-    DsTextDocBridge::fromPitchDoc(roundtripped, *pitchDoc);
+    auto mergeResult = DsTextDocBridge::fromPitchDoc(roundtripped, *pitchDoc);
+    QVERIFY(mergeResult.ok());
 
     // Note: DsPitchDocument doesn't carry timestep back, so only checks notes
-    for (auto &layer : roundtripped.layers) {
+    for (auto& layer : roundtripped.layers) {
         if (layer.name == QString::fromUtf8(dstools::keys::layers::midi)) {
             QCOMPARE(layer.boundaries.size(), size_t(4));
             break;

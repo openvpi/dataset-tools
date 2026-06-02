@@ -1,4 +1,5 @@
 #include <dsfw/PathUtils.h>
+#include <dsfw/AtomicFileWriter.h>
 
 #include <QDir>
 #include <QFile>
@@ -365,22 +366,68 @@ dstools::Result<QString> PathUtils::readFile(const std::string &path) {
 
 dstools::Result<void> PathUtils::writeFile(const QString &path, const QString &text, TextEncoding encoding) {
     const QByteArray encoded = encodeText(text, encoding);
-
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly))
-        return dstools::Result<void>::Error("Cannot open file for writing: " + toNarrowPath(path));
-
-    const qint64 written = file.write(encoded);
-    file.close();
-
-    if (written != encoded.size())
-        return dstools::Result<void>::Error("Failed to write file: " + toNarrowPath(path));
-
-    return dstools::Result<void>::Ok();
+    const std::string content(encoded.constData(), encoded.size());
+    return AtomicFileWriter::write(toStdPath(path), content);
 }
 
 dstools::Result<void> PathUtils::writeFile(const std::string &path, const QString &text, TextEncoding encoding) {
     return writeFile(QString::fromStdString(path), text, encoding);
+}
+
+namespace {
+
+    constexpr uint32_t kCrc32Polynomial = 0xEDB88320;
+
+    constexpr std::array<uint32_t, 256> makeCrc32Table() {
+        std::array<uint32_t, 256> table{};
+        for (uint32_t i = 0; i < 256; ++i) {
+            uint32_t crc = i;
+            for (int j = 0; j < 8; ++j) {
+                if (crc & 1) {
+                    crc = (crc >> 1) ^ kCrc32Polynomial;
+                } else {
+                    crc >>= 1;
+                }
+            }
+            table[i] = crc;
+        }
+        return table;
+    }
+
+    constexpr auto kCrc32Table = makeCrc32Table();
+
+    uint32_t crc32Update(uint32_t crc, const uint8_t *data, size_t size) {
+        crc ^= 0xFFFFFFFF;
+        for (size_t i = 0; i < size; ++i) {
+            crc = kCrc32Table[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
+        }
+        return crc ^ 0xFFFFFFFF;
+    }
+
+} // anonymous namespace
+
+uint32_t PathUtils::crc32(const uint8_t *data, size_t size) {
+    return crc32Update(0, data, size);
+}
+
+dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path &path) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        return dstools::Result<uint32_t>::Error("Failed to open file for CRC32: " + path.string());
+    }
+
+    constexpr size_t kBufSize = 65536;
+    std::array<char, kBufSize> buf{};
+    uint32_t crc = 0;
+    while (file.read(buf.data(), kBufSize) || file.gcount() > 0) {
+        crc = crc32Update(crc, reinterpret_cast<const uint8_t *>(buf.data()), file.gcount());
+    }
+
+    if (file.bad()) {
+        return dstools::Result<uint32_t>::Error("Read error during CRC32: " + path.string());
+    }
+
+    return dstools::Result<uint32_t>::Ok(crc);
 }
 
 } // namespace dsfw

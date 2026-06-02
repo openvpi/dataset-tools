@@ -23,6 +23,7 @@ inline const dstools::SettingsKey<QString> kSplitterState{"Layout/splitterState"
 
 inline const dstools::SettingsKey<bool> kAutoSaveEnabled{"General/autoSaveEnabled", true};
 inline const dstools::SettingsKey<int> kAutoSaveIntervalMs{"General/autoSaveIntervalMs", 30000};
+inline const dstools::SettingsKey<int> kBackupKeepCount{"General/backupKeepCount", 10};
 
 inline const dstools::SettingsKey<QString> kChartVisible{"ViewLayout/chartVisible", ""};
 inline const dstools::SettingsKey<QString> kChartOrder{"ViewLayout/chartOrder", ""};

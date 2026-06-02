@@ -182,6 +182,17 @@ void WelcomePage::loadProject(const QString &path) {
 
     auto project = std::make_unique<DsProject>(std::move(result.value()));
     addToRecent(path);
+
+    auto missingPaths = project->validateExternalPaths();
+    if (!missingPaths.empty()) {
+        QStringList missingList;
+        for (const auto &p : missingPaths) {
+            missingList.append(p);
+        }
+        QMessageBox::warning(this, QStringLiteral("打开工程"),
+                             QStringLiteral("以下外部路径不存在:\n%1").arg(missingList.join(QStringLiteral("\n"))));
+    }
+
     emit projectLoaded(project.release(), path);
 }
 

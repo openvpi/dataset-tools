@@ -94,6 +94,12 @@ public:
     /// Returns Ok() if consistent, or Error() with a newline-separated list of issues.
     [[nodiscard]] Result<void> validateSliceConsistency() const;
 
+    /// Validate that all external paths referenced in the project exist.
+    /// Checks: item audioSource paths, slicer audioFiles, model paths.
+    /// Relative paths are resolved against the working directory.
+    /// Returns a list of missing paths (empty if all exist).
+    [[nodiscard]] std::vector<QString> validateExternalPaths() const;
+
     // ── Properties ────────────────────────────────────────────────────
 
     QString workingDirectory() const;

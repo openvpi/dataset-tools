@@ -561,4 +561,4 @@ CI 验证模块独立构建。`find_package(dsfw)` 集成测试存在。
 
 ## 15. 已知架构问题
 
-详见 [refactoring-plan-v1.md](refactoring-plan-v1.md) 第3章（技术债清单）。
+详见 [refactoring-plan-v2.md](refactoring-plan-v2.md) 第3章（技术债清单，已归档）。最新方案见 [refactoring-plan-v3.md](refactoring-plan-v3.md)。
