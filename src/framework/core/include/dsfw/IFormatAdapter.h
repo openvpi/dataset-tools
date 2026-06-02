@@ -14,10 +14,13 @@ namespace dstools {
         virtual ~IFormatAdapter() noexcept = default;
         virtual QString formatId() const = 0;
         virtual QString displayName() const = 0;
-        virtual bool canImport() const {
+        virtual int interfaceVersion() const noexcept {
+            return kInterfaceVersion;
+        }
+        virtual bool canImport() const noexcept {
             return false;
         }
-        virtual bool canExport() const {
+        virtual bool canExport() const noexcept {
             return false;
         }
 

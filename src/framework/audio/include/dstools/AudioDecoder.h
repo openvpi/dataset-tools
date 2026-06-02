@@ -19,10 +19,16 @@ namespace dstools::audio {
         AudioDecoder(const AudioDecoder &) = delete;
         AudioDecoder &operator=(const AudioDecoder &) = delete;
 
-        /// @brief Open an audio file.
+        /// @brief Open an audio file (decode all into memory - backward compatible).
         /// @param path Path to audio file (supports wav/mp3/m4a/flac).
         /// @return True on success.
         bool open(const QString &path);
+
+        /// @brief Open an audio file in streaming mode (decode on-demand).
+        ///        Suitable for large files (>1h) to reduce memory usage.
+        /// @param path Path to audio file.
+        /// @return True on success.
+        bool openStreaming(const QString &path);
 
         /// @brief Close the current file.
         void close();
@@ -34,6 +40,14 @@ namespace dstools::audio {
         /// @brief Get the audio format of the opened file.
         /// @return Audio format descriptor.
         WaveFormat format() const;
+
+        /// @brief Get the total duration of the audio file in seconds.
+        /// @return Duration in seconds, or 0.0 if not available.
+        double totalDuration() const;
+
+        /// @brief Get the sample rate of the opened file.
+        /// @return Sample rate in Hz, or 0 if not open.
+        int sampleRate() const;
 
         /// @brief Read PCM data into a byte buffer.
         /// @param buffer Destination buffer.
@@ -49,9 +63,13 @@ namespace dstools::audio {
         /// @return Actual samples read; 0 means EOF.
         int read(float *buffer, int offset, int count);
 
-        /// @brief Set the playback position.
+        /// @brief Set the playback position by byte offset.
         /// @param pos Byte offset to seek to.
         void setPosition(qint64 pos);
+
+        /// @brief Set the playback position by time in seconds.
+        /// @param sec Time in seconds to seek to.
+        void seekToTime(double sec);
 
         /// @brief Get the current read position.
         /// @return Current byte offset.

@@ -15,7 +15,7 @@ namespace dstools {
 
         void registerAdapter(std::unique_ptr<IFormatAdapter> adapter);
         IFormatAdapter *adapter(const QString &formatId) const;
-        QStringList availableFormats() const;
+        QStringList availableFormats() const noexcept;
 
     private:
         FormatAdapterRegistry() = default;

@@ -7,21 +7,23 @@
 
 namespace dstools {
 
-static void phonemeRowToLayers(const TranscriptionRow &row,
-                               std::map<QString, LayerData> &layers) {
+static std::map<QString, LayerData> phonemeRowToLayers(const TranscriptionRow &row) {
+    std::map<QString, LayerData> temp;
     const QStringList phones = row.phSeq.split(' ', Qt::SkipEmptyParts);
     const QStringList durs = row.phDur.split(' ', Qt::SkipEmptyParts);
 
     auto boundaries = buildBoundaries(phones, durs, 0);
-    layers[QStringLiteral("phoneme")] = LayerData::fromJson({{"name", "phoneme"}, {"boundaries", boundaries.toJson()}});
+    temp[QStringLiteral("phoneme")] = LayerData::fromJson({{"name", "phoneme"}, {"boundaries", boundaries.toJson()}});
 
     if (!row.phNum.isEmpty()) {
         const QStringList nums = row.phNum.split(' ', Qt::SkipEmptyParts);
         nlohmann::json phNumArr = nlohmann::json::array();
         for (const auto &n : nums)
             phNumArr.push_back(n.toInt());
-        layers[QStringLiteral("ph_num")] = LayerData::fromJson(phNumArr);
+        temp[QStringLiteral("ph_num")] = LayerData::fromJson(phNumArr);
     }
+
+    return temp;
 }
 
 static std::map<QString, nlohmann::json> layersToJson(const std::map<QString, LayerData> &layers) {
@@ -29,6 +31,23 @@ static std::map<QString, nlohmann::json> layersToJson(const std::map<QString, La
     for (const auto &[key, val] : layers)
         result[key] = val.toJson();
     return result;
+}
+
+static Result<void> validateLayerData(const std::map<QString, LayerData> &layers) {
+    if (layers.empty())
+        return Result<void>::Error("import produced no layers");
+    for (const auto &[key, val] : layers) {
+        if (val.empty())
+            return Result<void>::Error(QString("layer '%1' is empty").arg(key));
+        try {
+            const auto j = val.toJson();
+            if (j.is_null())
+                return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key));
+        } catch (const std::exception &e) {
+            return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()));
+        }
+    }
+    return Result<void>::Ok();
 }
 
 Result<void> CsvAdapter::importToLayers(const QString &filePath,
@@ -53,7 +72,12 @@ Result<void> CsvAdapter::importToLayers(const QString &filePath,
         }
     }
 
-    phonemeRowToLayers(*target, layers);
+    auto temp = phonemeRowToLayers(*target);
+    auto validation = validateLayerData(temp);
+    if (!validation.ok())
+        return validation;
+
+    layers = std::move(temp);
     return Result<void>::Ok();
 }
 

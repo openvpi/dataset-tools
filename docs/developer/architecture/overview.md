@@ -74,29 +74,42 @@ chart，消费者无需知道内部有哪些 widget。
 
 ---
 
-## 4. 六层架构
+## 4. 模块层次结构
 
 ```
-Layer 5 ─ dstools-infer-common   OnnxEnv, OnnxModelBase, IInferenceEngine
+App Layer     ds-labeler, label-suite, dstools-cli, widget-gallery
+                    ↓
+App Shared    dstools-ui-core     (STATIC, 包装 dsfw-ui-core + dsfw-core + dstools-domain)
+App Libs      dstools-domain      (STATIC, 领域逻辑: DsDocument, F0Curve, CurveTools, 适配器等)
+                    ↓
 Layer 4 ─ dsfw-widgets           通用 UI 组件 (SHARED DLL)
 Layer 3 ─ dsfw-ui-core           AppShell, IconNavBar, Theme, FramelessHelper, IPageActions
 Layer 2 ─ dstools-audio          AudioDecoder (FFmpeg), AudioPlayback (SDL2)
-Layer 2.5─ dsfw-signal           F0Curve, CurveTools (信号处理, 静态库)
 Layer 1 ─ dsfw-core              AppSettings, ServiceLocator, AsyncTask, 接口集
-                                 Logger, FileLogSink, CrashHandler, AppPaths, BatchCheckpoint
                                  PipelineContext, PipelineRunner, ITaskProcessor
+                                 含 infer-common 源文件 (OnnxEnv, OnnxModelBase)
 Layer 0.5─ dsfw-base             JsonHelper (Qt-free 静态库)
 Layer 0 ─ dsfw-types             Result<T>, ExecutionProvider, TimePos (header-only)
+
+此外层:
+dsfw-signal     curve_tools, music_math, time_series (dsfw::signal 命名空间)
+dstools-widgets INTERFACE header-only 层
 ```
 
 ### 依赖关系
 
 ```
-dsfw-signal → dsfw-types
-dsfw-widgets → dsfw-ui-core → dsfw-core → dsfw-base → dsfw-types
-                                          ↑
-dsfw-widgets → dstools-audio              dstools-infer-common
+dsfw-widgets ─PUBLIC──→ dsfw-core ───→ dsfw-base ───→ dsfw-types
+    │                       ↑
+    ├─PRIVATE→ dsfw-ui-core ┘
+    └─PRIVATE→ dstools-audio
+
+dsfw-signal ───→ dsfw-types
+dstools-domain → dsfw-core + dsfw-signal + dsfw-types
+dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 ```
+
+**注意**：`dstools-infer-common` 非独立库，其源文件通过 target_sources 编译入 dsfw-core。
 
 ---
 
@@ -115,7 +128,7 @@ dsfw-widgets → dstools-audio              dstools-infer-common
 │   PhonemeLabelerPage · PitchLabelerPage · ExportPage                    │
 │   SettingsPage · LogPage                                                │
 │                                                                          │
-│ dstools-cli · hfa-cli · TestShell · WidgetGallery                        │
+│ dstools-cli · WidgetGallery                        │
 └─────┬──────┴────┬─────┴─────┬──────┴─────┬──────┴────┬─────┴─────┬──────┘
       │           │           │            │           │           │
       ▼           ▼           ▼            ▼           ▼           ▼
@@ -217,14 +230,12 @@ dsfw-widgets → dstools-audio              dstools-infer-common
 ┌────────────────────────────────────────┐
 │              推理层 (src/infer/)        │
 │                                        │
-│  ┌──────────────────────┐              │
-│  │ dstools-infer-common  │ (STATIC)    │
-│  │ OnnxEnv 单例          │              │
-│  │ OnnxModelBase         │              │
-│  │ CancellableOnnxModel  │              │
-│  │ IInferenceEngine      │              │
-│  │ ExecutionProvider 枚举│              │
-│  └──────────┬───────────┘              │
+│  dstools-infer-common 非独立 target。   │
+│  OnnxEnv / OnnxModelBase 源文件位于     │
+│  src/framework/infer/，通过 dsfw-core   │
+│  的 target_sources() 编译入 dsfw-core。 │
+│  IInferenceEngine 接口仍位于此层头文件。 │
+│                                        │
 │             │ PUBLIC                    │
 │  ┌──────────┼──────────┬──────────────┬──────────────┐│
 │  ▼          ▼          ▼              ▼              ▼│
@@ -301,13 +312,15 @@ DiffSinger 领域 UI 组件。所有应用的公共 UI 基础设施（通过 dsf
 
 | 库                    | 类型 | 功能                                                                         | 特有依赖                                          |
 |----------------------|----|----------------------------------------------------------------------------|-----------------------------------------------|
-| dstools-infer-common | 静态 | OnnxEnv 单例 + OnnxModelBase/CancellableOnnxModel + IInferenceEngine + EP 选择 | dstools-types, onnxruntime                    |
+| dstools-infer-common¹ | —   | OnnxEnv 单例 + OnnxModelBase + IInferenceEngine + EP 选择 | dstools-types, onnxruntime |
 | audio-util           | 动态 | 重采样/格式转换/读写                                                                | SndFile, soxr, mpg123, (xsimd)                |
 | game-infer           | 动态 | GAME Audio→MIDI                                                            | audio-util, wolf-midi, SndFile, nlohmann_json |
 | rmvpe-infer          | 动态 | RMVPE F0 提取                                                                | audio-util, SndFile                           |
 | hubert-infer         | 动态 | HuBERT 强制对齐                                                                | audio-util, SndFile, nlohmann_json            |
 | moe-infer            | 动态 | R3MOE 口型曲线预估                                                               | audio-util, SndFile, nlohmann_json            |
 | FunAsr               | 静态 | FunASR Paraformer 中文 ASR                                                   | (直接链接 ORT)                                    |
+
+> ¹ `dstools-infer-common` 非独立 CMake target，源文件通过 dsfw-core 的 target_sources() 编译入 dsfw-core。
 
 ### 第三方库
 
@@ -414,7 +427,7 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 | dstools-audio        | dstools::audio                             | dstools::audio                                                                                                                                                                                                                                                  | `<dstools/AudioDecoder.h>`    |
 | dsfw-ui-core         | dsfw::ui-core                              | dsfw (AppShell, Theme, IconNavBar, FramelessHelper), dsfw::widgets (LogPanelWidget), dstools::labeler (IPageActions, IPageLifecycle)                                                                                                                            | `<dsfw/AppShell.h>`           |
 | dsfw-widgets         | dsfw::widgets                              | dsfw::widgets                                                                                                                                                                                                                                                   | `<dsfw/widgets/PlayWidget.h>` |
-| dstools-infer-common | dstools-infer-common::dstools-infer-common | dstools::infer                                                                                                                                                                                                                                                  | —                             |
+| dstools-infer-common¹ | —                                       | dstools::infer                                                                                                                                                                                                                                                   | —                             |
 | dstools-domain       | dstools-domain                             | dstools                                                                                                                                                                                                                                                         | `<dstools/DsDocument.h>`      |
 
 ```
@@ -497,8 +510,8 @@ dataset-tools/
 │   │   ├── min-label-lib/     # MinLabel 服务 + AddPhNum 处理器
 │   │   ├── slicer/            # RMS 切片服务 + 处理器
 │   │   └── moe-lib/           # R3MOE 口型曲线处理器
-│   ├── infer/
-│   │   ├── common/             # dstools-infer-common (STATIC)
+│   ├── framework/
+│   │   └── infer/              # infer-common 源文件 (OnnxEnv, OnnxModelBase) 编译入 dsfw-core
 │   │   ├── onnxruntime/        # 预下载 ORT 二进制
 │   │   ├── audio-util/         # (SHARED, 独立可安装)
 │   │   ├── game-infer/         # (SHARED)
@@ -520,7 +533,6 @@ dataset-tools/
 │   │   │   ├── model-init/         # 模型初始化注册
 │   │   │   └── mouth-curve-chart/  # 口型曲线图渲染
 │   │   ├── cli/                    # dstools-cli
-│   │   ├── test-shell/             # TestShell
 │   │   └── widget-gallery/         # WidgetGallery
 │   └── tests/
 │       ├── framework/          # dsfw 核心类单元测试
@@ -536,13 +548,13 @@ dataset-tools/
 ```
 ~42 CMake targets (excluding tests):
 
-Framework (7):  dsfw-base → dsfw-signal → dsfw-core → dsfw-ui-core → dsfw-widgets + dstools-audio + dstools-infer-common
+Framework (6):  dsfw-base → dsfw-signal → dsfw-core → dsfw-ui-core → dsfw-widgets + dstools-audio (infer-common 源文件编译入 dsfw-core)
 Domain (1):     dstools-domain
 App-Lib (2):    dstools-ui-core, dstools-widgets (INTERFACE, header-only)
 Infer (6):      audio-util, FunAsr, game-infer, hubert-infer, rmvpe-infer, moe-infer
 Libs (8):       slicer-lib, lyricfa-lib, hubertfa-lib, gameinfer-lib, rmvpepitch-lib, minlabel-lib, moelib, infer-bridge
 App-Shared (9): data-sources, audio-visualizer, phoneme-editor, pitch-editor, min-label-editor, settings, log-page, model-init, mouth-curve-chart
-Apps (6):       LabelSuite, DsLabeler, dstools-cli, hfa-cli, WidgetGallery, TestShell
+Apps (5):       LabelSuite, DsLabeler, dstools-cli, WidgetGallery, TestShell
 Header-Only (2): dstools-types, textgrid (no build output)
 ```
 

@@ -68,8 +68,6 @@ std::optional<Note> DsPitchDocument::deserializeNote(const QString& json) {
     return note;
 }
 
-} // namespace dstools
-
 Result<void> DsPitchDocument::validate() const {
     for (size_t i = 0; i < notes.size(); ++i) {
         const auto& note = notes[i];
@@ -109,3 +107,4 @@ Result<void> DsPitchDocument::validate() const {
 
     return Result<void>::Ok();
 }
+} // namespace dstools

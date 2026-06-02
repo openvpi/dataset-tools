@@ -3,7 +3,6 @@
 #include <dsfw/TaskProcessorRegistry.h>
 #include <QTemporaryDir>
 #include <QDir>
-#include <atomic>
 #include <nlohmann/json.hpp>
 
 using namespace dstools;
@@ -11,31 +10,22 @@ using namespace dstools;
 // Simple mock processor that copies input layer to output layer
 class MockProcessor : public ITaskProcessor {
 public:
-    QString processorId() const override {
-        return QStringLiteral("mock");
-    }
-    QString displayName() const override {
-        return QStringLiteral("Mock");
-    }
+    QString processorId() const override { return QStringLiteral("mock"); }
+    QString displayName() const override { return QStringLiteral("Mock"); }
     TaskSpec taskSpec() const override {
         return {QStringLiteral("mock_task"),
                 {{QStringLiteral("in"), QStringLiteral("input_cat")}},
                 {{QStringLiteral("out"), QStringLiteral("output_cat")}}};
     }
-    Result<void> initialize(ModelManager &, const ProcessorConfig &) override {
-        return Result<void>::Ok();
-    }
-    void release() override {
-    }
-    Result<TaskOutput> process(const TaskInput &input) override {
+    Result<void> initialize(ModelManager&, const ProcessorConfig&) override { return Result<void>::Ok(); }
+    void release() override {}
+    Result<TaskOutput> process(const TaskInput& input) override {
         TaskOutput out;
         auto it = input.layers.find(QStringLiteral("in"));
         if (it != input.layers.end())
             out.layers[QStringLiteral("out")] = it->second;
         else
-            out.layers[QStringLiteral("out")] = LayerData::fromJson(nlohmann::json{
-                {"processed", true}
-            });
+            out.layers[QStringLiteral("out")] = LayerData::fromJson(nlohmann::json{{"processed", true}});
         return Result<TaskOutput>::Ok(std::move(out));
     }
 };
@@ -58,6 +48,9 @@ private slots:
     void snapshot_cleanup_old();
     void snapshot_has_latest();
     void snapshot_round_trip_all_fields();
+    void precondition_missing_layer_fails();
+    void precondition_empty_layer_fails();
+    void precondition_optional_skips_gracefully();
 };
 
 // Test: single step processes all contexts
@@ -71,13 +64,9 @@ void TestPipelineRunner::single_step() {
 
     std::vector<PipelineContext> ctxs(2);
     ctxs[0].itemId = QStringLiteral("item0");
-    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{
-        {"data", "hello"}
-    });
+    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{{"data", "hello"}});
     ctxs[1].itemId = QStringLiteral("item1");
-    ctxs[1].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{
-        {"data", "world"}
-    });
+    ctxs[1].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{{"data", "world"}});
 
     auto res = runner.run(opts, ctxs);
     QVERIFY(res.ok());
@@ -97,14 +86,10 @@ void TestPipelineRunner::skip_discarded() {
 
     std::vector<PipelineContext> ctxs(2);
     ctxs[0].itemId = QStringLiteral("active");
-    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{
-        {"data", "ok"}
-    });
+    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{{"data", "ok"}});
     ctxs[1].itemId = QStringLiteral("discarded");
     ctxs[1].status = PipelineContext::Status::Discarded;
-    ctxs[1].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{
-        {"data", "skip"}
-    });
+    ctxs[1].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{{"data", "skip"}});
 
     auto res = runner.run(opts, ctxs);
     QVERIFY(res.ok());
@@ -136,7 +121,7 @@ void TestPipelineRunner::validator_discard() {
     StepConfig step;
     step.taskName = QStringLiteral("mock_task");
     step.processorId = QStringLiteral("mock");
-    step.validator = [](const PipelineContext &, const TaskSpec &, QString &reason) {
+    step.validator = [](const PipelineContext&, const TaskSpec&, QString& reason) {
         reason = QStringLiteral("Too short");
         return PipelineContext::Status::Discarded;
     };
@@ -144,9 +129,7 @@ void TestPipelineRunner::validator_discard() {
 
     std::vector<PipelineContext> ctxs(1);
     ctxs[0].itemId = QStringLiteral("item0");
-    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{
-        {"data", "test"}
-    });
+    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{{"data", "test"}});
 
     auto res = runner.run(opts, ctxs);
     QVERIFY(res.ok());
@@ -233,7 +216,7 @@ void TestPipelineRunner::snapshot_save_and_load() {
     auto loadedResult = PipelineRunner::loadLatestSnapshot(tmpDir.path());
     QVERIFY(loadedResult.ok());
 
-    const auto &[loadedCtxs, loadedStep] = loadedResult.value();
+    const auto& [loadedCtxs, loadedStep] = loadedResult.value();
     QVERIFY(!loadedCtxs.empty());
     QVERIFY(loadedStep >= 0);
 }
@@ -301,17 +284,12 @@ void TestPipelineRunner::snapshot_round_trip_all_fields() {
     opts.snapshotDir = tmpDir.path();
 
     std::vector<PipelineContext> ctxs(1);
-    auto &ctx = ctxs[0];
+    auto& ctx = ctxs[0];
     ctx.itemId = QStringLiteral("round_trip_item");
     ctx.audioPath = QStringLiteral("/fake/audio.wav");
-    ctx.layers[QStringLiteral("wave")] = LayerData::fromJson(nlohmann::json{
-        {"duration", 3.5},
-        {"sampleRate", 44100}
-    });
-    ctx.layers[QStringLiteral("pitch")] = LayerData::fromJson(nlohmann::json{
-        {"f0", nlohmann::json::array({100.0, 200.0, 150.0})},
-        {"confidence", 0.95}
-    });
+    ctx.layers[QStringLiteral("wave")] = LayerData::fromJson(nlohmann::json{{"duration", 3.5}, {"sampleRate", 44100}});
+    ctx.layers[QStringLiteral("pitch")] =
+        LayerData::fromJson(nlohmann::json{{"f0", nlohmann::json::array({100.0, 200.0, 150.0})}, {"confidence", 0.95}});
     ctx.globalConfig["hopSize"] = ConfigValue(static_cast<int64_t>(256));
     ctx.dirty = {QStringLiteral("wave")};
     ctx.editedSteps = {QStringLiteral("mock_task")};
@@ -323,11 +301,11 @@ void TestPipelineRunner::snapshot_round_trip_all_fields() {
     auto loadedResult = PipelineRunner::loadLatestSnapshot(tmpDir.path());
     QVERIFY(loadedResult.ok());
 
-    const auto &[loadedCtxs, loadedStep] = loadedResult.value();
+    const auto& [loadedCtxs, loadedStep] = loadedResult.value();
     QCOMPARE(loadedCtxs.size(), ctxs.size());
     QVERIFY(loadedStep >= 0);
 
-    const auto &loaded = loadedCtxs[0];
+    const auto& loaded = loadedCtxs[0];
     QCOMPARE(loaded.itemId, QStringLiteral("round_trip_item"));
     QCOMPARE(loaded.audioPath, QStringLiteral("/fake/audio.wav"));
     QVERIFY(loaded.layers.count(QStringLiteral("wave")));
@@ -339,6 +317,55 @@ void TestPipelineRunner::snapshot_round_trip_all_fields() {
     QVERIFY(loaded.dirty.contains(QStringLiteral("wave")));
     QVERIFY(loaded.manuallyEdited.contains(QStringLiteral("pitch")));
     QCOMPARE(loaded.status, PipelineContext::Status::Active);
+}
+
+void TestPipelineRunner::precondition_missing_layer_fails() {
+    PipelineRunner runner;
+    PipelineOptions opts;
+    StepConfig step;
+    step.taskName = QStringLiteral("mock_task");
+    step.processorId = QStringLiteral("mock");
+    opts.steps = {step};
+
+    std::vector<PipelineContext> ctxs(1);
+    ctxs[0].itemId = QStringLiteral("item0");
+
+    auto res = runner.run(opts, ctxs);
+    QVERIFY(!res.ok());
+    QVERIFY(ctxs[0].status == PipelineContext::Status::Error);
+}
+
+void TestPipelineRunner::precondition_empty_layer_fails() {
+    PipelineRunner runner;
+    PipelineOptions opts;
+    StepConfig step;
+    step.taskName = QStringLiteral("mock_task");
+    step.processorId = QStringLiteral("mock");
+    opts.steps = {step};
+
+    std::vector<PipelineContext> ctxs(1);
+    ctxs[0].itemId = QStringLiteral("item0");
+    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData();
+
+    auto res = runner.run(opts, ctxs);
+    QVERIFY(!res.ok());
+    QVERIFY(ctxs[0].status == PipelineContext::Status::Error);
+}
+
+void TestPipelineRunner::precondition_optional_skips_gracefully() {
+    PipelineRunner runner;
+    PipelineOptions opts;
+    StepConfig step;
+    step.taskName = QStringLiteral("mock_task");
+    step.processorId = QStringLiteral("mock");
+    step.optional = true;
+    opts.steps = {step};
+
+    std::vector<PipelineContext> ctxs(1);
+    ctxs[0].itemId = QStringLiteral("item0");
+
+    auto res = runner.run(opts, ctxs);
+    QVERIFY(res.ok());
 }
 
 QTEST_MAIN(TestPipelineRunner)

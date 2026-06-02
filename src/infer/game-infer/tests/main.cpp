@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include <dstools/PathEncoding.h>
 #include <game-infer/Game.h>
 #include <game-infer/GameModel.h>
 

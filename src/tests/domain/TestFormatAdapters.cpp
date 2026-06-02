@@ -52,7 +52,7 @@ void TestFormatAdapters::lab_roundtrip() {
 
     QVERIFY(layers.count(QStringLiteral("grapheme")) == 1);
     const auto graphemeJson = layers["grapheme"].toJson();
-    const auto &boundaries = graphemeJson["boundaries"];
+    const auto& boundaries = graphemeJson["boundaries"];
     QVERIFY(boundaries.size() == 5);
     QVERIFY(boundaries[0]["text"] == "gan");
     QVERIFY(boundaries[1]["text"] == "shou");
@@ -94,7 +94,7 @@ void TestFormatAdapters::csv_import() {
 
     QVERIFY(layers.count(QStringLiteral("phoneme")) == 1);
     const auto phonemeJson = layers["phoneme"].toJson();
-    const auto &boundaries = phonemeJson["boundaries"];
+    const auto& boundaries = phonemeJson["boundaries"];
     QVERIFY(boundaries.size() == 4);
 
     QVERIFY(boundaries[0]["text"] == "a");
@@ -137,7 +137,7 @@ void TestFormatAdapters::ds_import() {
 
     QVERIFY(layers.count(QStringLiteral("phoneme")) == 1);
     const auto phonemeJson = layers["phoneme"].toJson();
-    const auto &boundaries = phonemeJson["boundaries"];
+    const auto& boundaries = phonemeJson["boundaries"];
     QVERIFY(boundaries.size() == 5);
 
     QVERIFY(boundaries[0]["text"] == "x");
@@ -171,7 +171,7 @@ void TestFormatAdapters::lab_empty_file() {
     QVERIFY(result.ok());
     QVERIFY(layers.count(QStringLiteral("grapheme")) == 1);
     const auto graphemeJson = layers["grapheme"].toJson();
-    const auto &boundaries = graphemeJson["boundaries"];
+    const auto& boundaries = graphemeJson["boundaries"];
     QVERIFY(boundaries.size() == 1);
     QVERIFY(boundaries[0]["text"] == "");
 }
@@ -270,7 +270,7 @@ void TestFormatAdapters::lab_single_word() {
     QVERIFY(result.ok());
     QVERIFY(layers.count(QStringLiteral("grapheme")) == 1);
     const auto graphemeJson = layers["grapheme"].toJson();
-    const auto &boundaries = graphemeJson["boundaries"];
+    const auto& boundaries = graphemeJson["boundaries"];
     QVERIFY(boundaries.size() == 2);
     QVERIFY(boundaries[0]["text"] == "hello");
     QVERIFY(boundaries[1]["text"] == "");
@@ -296,7 +296,7 @@ void TestFormatAdapters::csv_single_phoneme() {
     QVERIFY(result.ok());
     QVERIFY(layers.count(QStringLiteral("phoneme")) == 1);
     const auto phonemeJson = layers["phoneme"].toJson();
-    const auto &boundaries = phonemeJson["boundaries"];
+    const auto& boundaries = phonemeJson["boundaries"];
     QVERIFY(boundaries.size() == 2);
     QVERIFY(boundaries[0]["text"] == "a");
     QVERIFY(boundaries[0]["pos"] == 0);

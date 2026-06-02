@@ -22,6 +22,12 @@ void TaskProcessorRegistry::registerProcessor(const QString &taskName,
                     << "factory returned null for task" << taskName;
         return;
     }
+    auto version = temp->interfaceVersion();
+    if (version != ITaskProcessor::kInterfaceVersion) {
+        qWarning() << "TaskProcessorRegistry:" << processorId
+                   << "reports interface version" << version
+                   << "(expected" << ITaskProcessor::kInterfaceVersion << ")";
+    }
     TaskSpec spec = temp->taskSpec();
     temp.reset();
 
@@ -96,7 +102,7 @@ QStringList TaskProcessorRegistry::availableProcessors(const QString &taskName) 
     return result;
 }
 
-QStringList TaskProcessorRegistry::availableTasks() const {
+QStringList TaskProcessorRegistry::availableTasks() const noexcept {
     std::lock_guard lock(m_mutex);
     QStringList result;
     for (const auto &[name, _] : m_registry)

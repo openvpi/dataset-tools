@@ -15,16 +15,15 @@
 
 namespace dstools {
 
-PipelineRunner::PipelineRunner(QObject *parent) : QObject(parent) {}
+PipelineRunner::PipelineRunner(QObject* parent) : QObject(parent) {
+}
 
-Result<void> PipelineRunner::run(const PipelineOptions &opts,
-                                  std::vector<PipelineContext> &contexts) {
+Result<void> PipelineRunner::run(const PipelineOptions& opts, std::vector<PipelineContext>& contexts) {
     return run(opts, contexts, nullptr);
 }
 
-Result<void> PipelineRunner::run(const PipelineOptions &opts,
-                                  std::vector<PipelineContext> &contexts,
-                                  std::shared_ptr<std::atomic<bool>> cancelToken) {
+Result<void> PipelineRunner::run(const PipelineOptions& opts, std::vector<PipelineContext>& contexts,
+                                 std::shared_ptr<std::atomic<bool>> cancelToken) {
     const int totalSteps = static_cast<int>(opts.steps.size());
 
     saveSnapshot(opts, contexts, 0, totalSteps);
@@ -34,7 +33,7 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
             emit cancelled();
             return Result<void>::Error("Pipeline cancelled");
         }
-        const auto &step = opts.steps[stepIdx];
+        const auto& step = opts.steps[stepIdx];
 
         // Create processor
         auto processor = TaskProcessorRegistry::instance().create(step.taskName, step.processorId);
@@ -53,7 +52,7 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                 emit cancelled();
                 return Result<void>::Error("Pipeline cancelled");
             }
-            auto &ctx = contexts[itemIdx];
+            auto& ctx = contexts[itemIdx];
 
             // Skip discarded/error items
             if (ctx.status != PipelineContext::Status::Active)
@@ -67,7 +66,7 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
 
             // Optional import
             if (!step.importFormat.isEmpty()) {
-                auto *adapter = FormatAdapterRegistry::instance().adapter(step.importFormat);
+                auto* adapter = FormatAdapterRegistry::instance().adapter(step.importFormat);
                 if (adapter) {
                     auto importPath = step.importPath.isEmpty() ? ctx.audioPath : step.importPath;
                     auto tempLayers = ctx.layers;
@@ -92,6 +91,17 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                 mergedConfig[it->first] = it->second;
             ctx.globalConfig = mergedConfig;
 
+            auto precondRes = ctx.checkPreconditions(spec);
+            if (!precondRes.ok()) {
+                if (step.optional)
+                    continue;
+                ctx.status = PipelineContext::Status::Error;
+                ctx.discardReason = QString::fromStdString(precondRes.error());
+                DSFW_LOG_ERROR("pipeline",
+                               (ctx.itemId.toStdString() + " precondition failed: " + precondRes.error()).c_str());
+                continue;
+            }
+
             // Build input
             auto inputRes = ctx.buildTaskInput(spec);
             if (!inputRes.ok()) {
@@ -99,7 +109,8 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                     continue;
                 ctx.status = PipelineContext::Status::Error;
                 ctx.discardReason = QString::fromStdString(inputRes.error());
-                DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " buildInput failed: " + inputRes.error()).c_str());
+                DSFW_LOG_ERROR("pipeline",
+                               (ctx.itemId.toStdString() + " buildInput failed: " + inputRes.error()).c_str());
                 continue;
             }
 
@@ -117,7 +128,9 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
                 rec.usedConfig = step.config;
                 ctx.stepHistory.push_back(rec);
 
-                DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " " + step.taskName.toStdString() + " failed: " + outputRes.error()).c_str());
+                DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " " + step.taskName.toStdString() +
+                                            " failed: " + outputRes.error())
+                                               .c_str());
                 continue;
             }
 
@@ -146,14 +159,15 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
 
             // Optional export
             if (!step.exportFormat.isEmpty()) {
-                auto *adapter = FormatAdapterRegistry::instance().adapter(step.exportFormat);
+                auto* adapter = FormatAdapterRegistry::instance().adapter(step.exportFormat);
                 if (adapter) {
                     auto exportPath = step.exportPath.isEmpty() ? ctx.audioPath : step.exportPath;
                     auto exportRes = adapter->exportFromLayers(ctx.layers, exportPath, step.config);
                     if (!exportRes.ok() && !step.optional) {
                         ctx.status = PipelineContext::Status::Error;
                         ctx.discardReason = QString::fromStdString(exportRes.error());
-                        DSFW_LOG_ERROR("pipeline", (ctx.itemId.toStdString() + " export failed: " + exportRes.error()).c_str());
+                        DSFW_LOG_ERROR("pipeline",
+                                       (ctx.itemId.toStdString() + " export failed: " + exportRes.error()).c_str());
                     }
                 }
             }
@@ -166,10 +180,8 @@ Result<void> PipelineRunner::run(const PipelineOptions &opts,
     return Result<void>::Ok();
 }
 
-void PipelineRunner::saveSnapshot(const PipelineOptions &opts,
-                                  const std::vector<PipelineContext> &contexts,
-                                  int currentStep,
-                                  int totalSteps) {
+void PipelineRunner::saveSnapshot(const PipelineOptions& opts, const std::vector<PipelineContext>& contexts,
+                                  int currentStep, int totalSteps) {
     if (opts.snapshotDir.isEmpty())
         return;
 
@@ -184,7 +196,7 @@ void PipelineRunner::saveSnapshot(const PipelineOptions &opts,
     snapshot["timestamp"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate).toStdString();
 
     nlohmann::json ctxArray = nlohmann::json::array();
-    for (const auto &ctx : contexts) {
+    for (const auto& ctx : contexts) {
         ctxArray.push_back(nlohmann::json::parse(ctx.toJsonString()));
     }
     snapshot["contexts"] = std::move(ctxArray);
@@ -198,8 +210,7 @@ void PipelineRunner::saveSnapshot(const PipelineOptions &opts,
     cleanupOldSnapshots(opts.snapshotDir);
 }
 
-Result<std::pair<std::vector<PipelineContext>, int>> PipelineRunner::loadLatestSnapshot(
-    const QString &snapshotDir) {
+Result<std::pair<std::vector<PipelineContext>, int>> PipelineRunner::loadLatestSnapshot(const QString& snapshotDir) {
     QDir dir(snapshotDir);
     if (!dir.exists())
         return Result<std::pair<std::vector<PipelineContext>, int>>::Error("Snapshot directory not found");
@@ -209,16 +220,17 @@ Result<std::pair<std::vector<PipelineContext>, int>> PipelineRunner::loadLatestS
     if (entries.isEmpty())
         return Result<std::pair<std::vector<PipelineContext>, int>>::Error("No snapshots found");
 
-    const auto &latest = entries.first();
+    const auto& latest = entries.first();
     auto loadResult = dstools::JsonHelper::loadFile(dsfw::PathUtils::toStdPath(latest.absoluteFilePath()));
     if (!loadResult.ok())
-        return Result<std::pair<std::vector<PipelineContext>, int>>::Error("Failed to read snapshot: " + loadResult.error());
+        return Result<std::pair<std::vector<PipelineContext>, int>>::Error("Failed to read snapshot: " +
+                                                                           loadResult.error());
 
-    const auto &j = loadResult.value();
+    const auto& j = loadResult.value();
 
     std::vector<PipelineContext> contexts;
     if (j.contains("contexts") && j.at("contexts").is_array()) {
-        for (const auto &ctxJson : j.at("contexts")) {
+        for (const auto& ctxJson : j.at("contexts")) {
             auto result = PipelineContext::fromJson(ctxJson);
             if (result.ok())
                 contexts.push_back(std::move(result.value()));
@@ -229,7 +241,7 @@ Result<std::pair<std::vector<PipelineContext>, int>> PipelineRunner::loadLatestS
     return std::make_pair(std::move(contexts), currentStep);
 }
 
-void PipelineRunner::cleanupOldSnapshots(const QString &snapshotDir) {
+void PipelineRunner::cleanupOldSnapshots(const QString& snapshotDir) {
     QDir dir(snapshotDir);
     if (!dir.exists())
         return;
@@ -238,12 +250,12 @@ void PipelineRunner::cleanupOldSnapshots(const QString &snapshotDir) {
     auto entries = dir.entryInfoList(filters, QDir::Files, QDir::Name | QDir::Reversed);
 
     while (entries.size() > kMaxSnapshots) {
-        const auto &oldest = entries.takeLast();
+        const auto& oldest = entries.takeLast();
         QFile::remove(oldest.absoluteFilePath());
     }
 }
 
-bool PipelineRunner::hasLatestSnapshot(const QString &snapshotDir) {
+bool PipelineRunner::hasLatestSnapshot(const QString& snapshotDir) {
     QDir dir(snapshotDir);
     if (!dir.exists())
         return false;

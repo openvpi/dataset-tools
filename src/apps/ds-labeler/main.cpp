@@ -1,4 +1,7 @@
 #include "core/ProjectDataSource.h"
+#include "dsfw/AppPaths.h"
+#include "dsfw/SingleInstanceGuard.h"
+#include "dsfw/Theme.h"
 #include "ui/DsSlicerPage.h"
 #include "ui/ExportPage.h"
 #include "ui/WelcomePage.h"
@@ -14,70 +17,69 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <cpp-pinyin/G2pglobal.h>
-#include <dsfw/AppPaths.h>
 #include <dsfw/AppShell.h>
 #include <dsfw/PathUtils.h>
-#include <dsfw/SingleInstanceGuard.h>
-#include <dstools/ModelManager.h>
 #include <dsfw/ServiceLocator.h>
-#include <dsfw/Theme.h>
 #include <dstools/AppInit.h>
 #include <dstools/DomainInit.h>
 #include <dstools/PinyinG2PProvider.h>
 #include <filesystem>
 #include <memory>
+#include <unified-editor/AppShellConfig.h>
+
+using namespace dstools::unified_editor;
 
 namespace {
 
-    void checkSliceConsistency(dstools::DsProject *project, dsfw::AppShell *shell) {
-        if (!project)
-            return;
+void checkSliceConsistency(dstools::DsProject* project, dsfw::AppShell* shell) {
+    if (!project)
+        return;
 
-        const auto &items = project->items();
-        const auto &slicerState = project->slicerState();
+    const auto& items = project->items();
+    const auto& slicerState = project->slicerState();
 
-        if (items.empty()) {
-            if (!slicerState.audioFiles.isEmpty()) {
-                auto ret = QMessageBox::question(shell, QStringLiteral("未导出切片"),
-                                                 QStringLiteral("切片页面已有音频文件和切点，但尚未导出切片。\n"
-                                                                "是否回到切片页面导出？"),
-                                                 QMessageBox::Yes | QMessageBox::No);
-                if (ret == QMessageBox::Yes)
-                    QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
-            } else {
-                auto ret = QMessageBox::question(shell, QStringLiteral("未切片"),
-                                                 QStringLiteral("尚未导出切片，是否回到切片页面？"),
-                                                 QMessageBox::Yes | QMessageBox::No);
-                if (ret == QMessageBox::Yes)
-                    QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
-            }
-            return;
+    if (items.empty()) {
+        if (!slicerState.audioFiles.isEmpty()) {
+            auto ret = QMessageBox::question(shell, QStringLiteral("未导出切片"),
+                                             QStringLiteral("切片页面已有音频文件和切点，但尚未导出切片。\n"
+                                                            "是否回到切片页面导出？"),
+                                             QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes)
+                QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
+        } else {
+            auto ret = QMessageBox::question(shell, QStringLiteral("未切片"),
+                                             QStringLiteral("尚未导出切片，是否回到切片页面？"),
+                                             QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes)
+                QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
         }
-
-        auto consistencyResult = project->validateSliceConsistency();
-        if (consistencyResult.ok())
-            return;
-
-        const QString issueText = QString::fromStdString(consistencyResult.error());
-
-        QMessageBox msgBox(shell);
-        msgBox.setWindowTitle(QStringLiteral("切片状态不一致"));
-        msgBox.setIcon(QMessageBox::Warning);
-        msgBox.setText(QStringLiteral("以下音频文件的切片结果与当前切点不一致，\n"
-                                      "继续操作可能导致标注数据错误："));
-        msgBox.setDetailedText(issueText);
-        auto *goBackBtn = msgBox.addButton(QStringLiteral("回到切片页面重新导出"), QMessageBox::AcceptRole);
-        msgBox.addButton(QStringLiteral("忽略继续"), QMessageBox::RejectRole);
-
-        msgBox.exec();
-        if (msgBox.clickedButton() == goBackBtn) {
-            QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
-        }
+        return;
     }
+
+    auto consistencyResult = project->validateSliceConsistency();
+    if (consistencyResult.ok())
+        return;
+
+    const QString issueText = QString::fromStdString(consistencyResult.error());
+
+    QMessageBox msgBox(shell);
+    msgBox.setWindowTitle(QStringLiteral("切片状态不一致"));
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setText(QStringLiteral("以下音频文件的切片结果与当前切点不一致，\n"
+                                  "继续操作可能导致标注数据错误："));
+    msgBox.setDetailedText(issueText);
+    auto* goBackBtn = msgBox.addButton(QStringLiteral("回到切片页面重新导出"), QMessageBox::AcceptRole);
+    msgBox.addButton(QStringLiteral("忽略继续"), QMessageBox::RejectRole);
+
+    msgBox.exec();
+    if (msgBox.clickedButton() == goBackBtn) {
+        QTimer::singleShot(0, shell, [shell]() { shell->setCurrentPage(1); });
+    }
+}
 
 } // namespace
 
-static void initPinyin(QApplication &app) {
+static void initPinyin(QApplication& app) {
     std::filesystem::path dictPath =
 #ifdef Q_OS_MAC
         dsfw::PathUtils::toStdPath(app.applicationDirPath()) / ".." / "Resources" / "dict";
@@ -87,12 +89,12 @@ static void initPinyin(QApplication &app) {
     Pinyin::setDictionaryPath(dsfw::PathUtils::toUtf8(dictPath.make_preferred()));
 
     if (!dstools::ServiceLocator::get<dstools::IG2PProvider>()) {
-        auto *g2p = new dstools::PinyinG2PProvider;
+        auto* g2p = new dstools::PinyinG2PProvider;
         dstools::ServiceLocator::set<dstools::IG2PProvider>(g2p);
     }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("DsLabeler");
     app.setApplicationVersion("0.1.0");
@@ -111,39 +113,28 @@ int main(int argc, char *argv[]) {
     dstools::registerDomainFormatAdapters();
     dsfw::Theme::instance().init(app);
 
-    auto *modelManager = &dstools::ModelManager::instance();
+    auto* modelManager = &dstools::ModelManager::instance();
     if (modelManager)
         dstools::registerModelProviders(*modelManager);
 
-    static constexpr int kDefaultWidth = 1400;
-    static constexpr int kDefaultHeight = 900;
-
     dsfw::AppShell shell;
-    shell.setWindowTitle(QStringLiteral("DsLabeler — DiffSinger Dataset Labeler"));
-    shell.resize(kDefaultWidth, kDefaultHeight);
+    setupShell(shell, QStringLiteral("DsLabeler — DiffSinger Dataset Labeler"));
 
-    if (dstools::AppInit::wasPreviousCrash()) {
-        QMessageBox::information(&shell, QStringLiteral("异常退出提示"),
-                                 QStringLiteral("检测到上次会话异常退出（崩溃或强制终止）。\n\n"
-                                                "您的标注数据已通过自动保存功能保护。\n"
-                                                "日志文件保存在 %1/logs 目录下，可用于排查问题。")
-                                     .arg(dsfw::AppPaths::dataDir()),
-                                 QMessageBox::Ok);
-    }
+    showCrashRecoveryDialog(&shell);
 
     // Shared data source (lifetime = app)
-    auto *dataSource = new dstools::ProjectDataSource(&shell);
-    auto *settingsBackend = new dstools::AppSettingsBackend(&shell);
+    auto* dataSource = new dstools::ProjectDataSource(&shell);
+    auto* settingsBackend = new dstools::AppSettingsBackend(&shell);
     std::unique_ptr<dstools::DsProject> project;
 
     // ── Register all 7 pages ─────────────────────────────────────────────
 
     // Page 0: 工程 (Welcome)
-    auto *welcomePage = new dstools::WelcomePage(&shell);
+    auto* welcomePage = new dstools::WelcomePage(&shell);
     shell.addPage(welcomePage, "welcome", {}, QStringLiteral("工程"));
 
     // Page 1: 切片 (Slicer)
-    auto *slicerPage = new dstools::DsSlicerPage(&shell);
+    auto* slicerPage = new dstools::DsSlicerPage(&shell);
     slicerPage->setDataSource(dataSource);
     shell.addPage(slicerPage, "slicer", {}, QStringLiteral("切片"));
 
@@ -154,7 +145,7 @@ int main(int argc, char *argv[]) {
     dstools::PageFactory::registerPages(&shell, dataSource, settingsBackend, {&minLabelDesc, &phonemeDesc, &pitchDesc});
 
     // Page 5: 导出 (Export)
-    auto *exportPage = new dstools::ExportPage(&shell);
+    auto* exportPage = new dstools::ExportPage(&shell);
     exportPage->setDataSource(dataSource);
     if (modelManager) {
         auto enginePool = std::make_unique<dstools::EnginePool>(modelManager, settingsBackend, exportPage);
@@ -168,15 +159,11 @@ int main(int argc, char *argv[]) {
     dstools::PageFactory::registerPages(&shell, nullptr, settingsBackend, {&settingsPageDesc, &logPageDesc});
 
     auto *settingsPage = shell.findChild<dstools::SettingsPage *>(QString(), Qt::FindDirectChildrenOnly);
-
-    if (modelManager) {
-        QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested, modelManager,
-                         &dstools::ModelManager::invalidateModel);
-    }
+    connectModelReload<dstools::SettingsPage>(&shell, modelManager);
 
     // ── Project lifecycle ────────────────────────────────────────────────
 
-    auto loadProject = [&](std::unique_ptr<dstools::DsProject> proj, const QString &path) {
+    auto loadProject = [&](std::unique_ptr<dstools::DsProject> proj, const QString& path) {
         project = std::move(proj);
 
         const QString workDir =
@@ -191,7 +178,7 @@ int main(int argc, char *argv[]) {
     };
 
     QObject::connect(welcomePage, &dstools::WelcomePage::projectLoaded, &shell,
-                     [&](dstools::DsProject *proj, const QString &path) {
+                     [&](dstools::DsProject* proj, const QString& path) {
                          loadProject(std::unique_ptr<dstools::DsProject>(proj), path);
                      });
 
@@ -215,8 +202,8 @@ int main(int argc, char *argv[]) {
 
     shell.show();
 
-    QObject::connect(&instanceGuard, &dsfw::SingleInstanceGuard::argumentsReceived,
-                     &shell, [&](const QStringList &args) {
+    QObject::connect(&instanceGuard, &dsfw::SingleInstanceGuard::argumentsReceived, &shell,
+                     [&](const QStringList& args) {
                          if (args.size() > 1) {
                              QString arg = args.at(1);
                              if (arg.endsWith(QLatin1String(".dsproj"), Qt::CaseInsensitive)) {

@@ -87,6 +87,25 @@ Result<TaskInput> PipelineContext::buildTaskInput(const TaskSpec &spec) const {
     return Result<TaskInput>::Ok(std::move(input));
 }
 
+Result<void> PipelineContext::checkPreconditions(const TaskSpec &spec) const {
+    if (status != Status::Active)
+        return Result<void>::Error("Context is not active");
+
+    for (const auto &slot : spec.inputs) {
+        auto it = layers.find(slot.category);
+        if (it == layers.end())
+            return Result<void>::Error(
+                "Missing required layer '" + slot.category.toStdString() +
+                "' for step '" + spec.taskName.toStdString() + "'");
+        if (it->second.empty())
+            return Result<void>::Error(
+                "Required layer '" + slot.category.toStdString() +
+                "' is empty for step '" + spec.taskName.toStdString() + "'");
+    }
+
+    return Result<void>::Ok();
+}
+
 void PipelineContext::applyTaskOutput(const TaskSpec &spec, const TaskOutput &output) {
     for (const auto &slot : spec.outputs) {
         auto it = output.layers.find(slot.name);

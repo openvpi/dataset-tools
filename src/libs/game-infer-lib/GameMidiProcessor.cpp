@@ -28,7 +28,7 @@ TaskSpec GameMidiProcessor::taskSpec() const {
     return {"midi_transcription", {}, {{"midi", "midi"}}};
 }
 
-ProcessorConfig GameMidiProcessor::capabilities() const {
+ProcessorConfig GameMidiProcessor::capabilities() const noexcept {
         ProcessorConfig cap;
         cap["segThreshold"] = ConfigValue(0.0);
         cap["segRadiusFrames"] = ConfigValue(0.0);

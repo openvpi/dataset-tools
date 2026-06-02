@@ -5,6 +5,8 @@
 #include <QObject>
 #include <QRunnable>
 #include <QString>
+#include <atomic>
+#include <chrono>
 
 namespace dstools {
 
@@ -18,6 +20,9 @@ namespace dstools {
     class AsyncTask : public QObject, public QRunnable {
         Q_OBJECT
     public:
+        /// @brief Default timeout for async tasks (30 seconds).
+        static constexpr auto kDefaultTimeout = std::chrono::milliseconds(30000);
+
         /// @brief Construct an async task.
         /// @param identifier Unique identifier for this task instance.
         /// @param parent Optional QObject parent.
@@ -29,19 +34,40 @@ namespace dstools {
 
         /// @brief Entry point called by QThreadPool. Calls execute() internally.
         void run() final {
+            m_startTime = std::chrono::steady_clock::now();
             QString msg;
             if (execute(msg)) {
                 Q_EMIT succeeded(m_identifier, msg);
             } else {
                 Q_EMIT failed(m_identifier, msg);
             }
+            m_finished.store(true, std::memory_order_release);
             deleteLater();
         }
 
         /// @brief Return the task's identifier.
-        /// @return Task identifier string.
-        const QString &identifier() const {
-            return m_identifier;
+        const QString &identifier() const { return m_identifier; }
+
+        /// @brief Set the timeout duration for this task.
+        void setTimeout(std::chrono::milliseconds timeout) { m_timeout = timeout; }
+
+        /// @brief Get the current timeout setting.
+        std::chrono::milliseconds timeout() const { return m_timeout; }
+
+        /// @brief Request cancellation. Subclasses should check isCanceled() periodically.
+        void requestCancel() { m_canceled.store(true, std::memory_order_release); }
+
+        /// @brief Check if cancellation has been requested.
+        [[nodiscard]] bool isCanceled() const { return m_canceled.load(std::memory_order_acquire); }
+
+        /// @brief Check if the task has completed.
+        [[nodiscard]] bool isFinished() const { return m_finished.load(std::memory_order_acquire); }
+
+        /// @brief Check if the task has exceeded its timeout. Subclasses should call this periodically.
+        [[nodiscard]] bool hasTimedOut() const {
+            if (m_timeout == std::chrono::milliseconds::zero())
+                return false;
+            return std::chrono::steady_clock::now() - m_startTime > m_timeout;
         }
 
     protected:
@@ -52,16 +78,18 @@ namespace dstools {
 
     signals:
         /// @brief Emitted when execute() returns true.
-        /// @param identifier Task identifier.
-        /// @param msg Success message.
         void succeeded(const QString &identifier, const QString &msg);
         /// @brief Emitted when execute() returns false.
-        /// @param identifier Task identifier.
-        /// @param msg Error message.
         void failed(const QString &identifier, const QString &msg);
+        /// @brief Emitted when the task exceeds its timeout.
+        void timedOut(const QString &identifier);
 
     private:
         QString m_identifier;
+        std::atomic<bool> m_canceled{false};
+        std::atomic<bool> m_finished{false};
+        std::chrono::steady_clock::time_point m_startTime{};
+        std::chrono::milliseconds m_timeout{kDefaultTimeout};
     };
 
 } // namespace dstools

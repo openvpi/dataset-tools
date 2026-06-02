@@ -24,7 +24,7 @@ namespace dstools {
         QString processorId() const override;
         QString displayName() const override;
         TaskSpec taskSpec() const override;
-        ProcessorConfig capabilities() const override;
+        ProcessorConfig capabilities() const noexcept override;
 
         Result<void> initialize(ModelManager &mm, const ProcessorConfig &modelConfig) override;
         void release() override;

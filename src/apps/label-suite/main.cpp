@@ -20,6 +20,7 @@
 #include <dstools/AppInit.h>
 #include <dstools/DomainInit.h>
 #include <SettingsPage.h>
+#include <unified-editor/AppShellConfig.h>
 
 // Page includes
 #include "PitchLabelerPage.h"
@@ -35,6 +36,7 @@
 #include <SlicerPage.h>
 
 using namespace dstools::labeler;
+using namespace dstools::unified_editor;
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -58,24 +60,12 @@ int main(int argc, char *argv[]) {
     if (modelManager)
         dstools::registerModelProviders(*modelManager);
 
-    static constexpr int kDefaultWidth = 1400;
-    static constexpr int kDefaultHeight = 900;
-
     // ── AppShell setup ────────────────────────────────────────────────────
 
     dsfw::AppShell shell;
-    shell.setWindowTitle(QStringLiteral("LabelSuite"));
-    shell.resize(kDefaultWidth, kDefaultHeight);
+    setupShell(shell, QStringLiteral("LabelSuite"));
 
-    if (dstools::AppInit::wasPreviousCrash()) {
-        QMessageBox::information(
-            &shell, QObject::tr("Abnormal Exit"),
-            QObject::tr("The previous session ended unexpectedly (crash or forced termination).\n\n"
-                        "Your annotation data is protected by auto-save.\n"
-                        "Log files are saved in %1/logs for troubleshooting.")
-                .arg(dsfw::AppPaths::dataDir()),
-            QMessageBox::Ok);
-    }
+    showCrashRecoveryDialog(&shell);
 
     // ── Data source for shared pages ────────────────────────────────────
 
@@ -132,13 +122,7 @@ int main(int argc, char *argv[]) {
     static const dstools::SettingsPageDescriptor settingsPageDesc;
     static const dstools::LogPageDescriptor logPageDesc;
     dstools::PageFactory::registerPages(&shell, nullptr, settingsBackend, {&settingsPageDesc, &logPageDesc});
-
-    auto *settingsPage = shell.findChild<dstools::SettingsPage *>(QString(), Qt::FindDirectChildrenOnly);
-
-    if (modelManager) {
-        QObject::connect(settingsPage, &dstools::SettingsPage::modelReloadRequested, modelManager,
-                         &dstools::ModelManager::invalidateModel);
-    }
+    connectModelReload<dstools::SettingsPage>(&shell, modelManager);
 
     // ── Global menu actions (File menu — no .dsproj project management) ──
 

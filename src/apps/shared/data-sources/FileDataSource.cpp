@@ -14,7 +14,7 @@ namespace dstools {
 
 namespace {
 
-QString formatIdFromExtension(const QString &filePath) {
+QString formatIdFromExtension(const QString& filePath) {
     const QString ext = QFileInfo(filePath).suffix().toLower();
     if (ext == QStringLiteral("textgrid"))
         return QStringLiteral("textgrid");
@@ -27,23 +27,22 @@ QString formatIdFromExtension(const QString &filePath) {
     return {};
 }
 
-Result<DsTextDocument> layersToDocument(
-    const std::map<QString, LayerData> &layers,
-    const QString &audioPath) {
+Result<DsTextDocument> layersToDocument(const std::map<QString, LayerData>& layers, const QString& audioPath) {
     DsTextDocument doc;
     doc.audio.path = audioPath;
 
-    for (const auto &[key, layerData] : layers) {
+    for (const auto& [key, layerData] : layers) {
         const nlohmann::json value = layerData.toJson();
         if (value.is_object() && value.contains("boundaries")) {
             IntervalLayer layer;
             layer.name = key;
-            if (key == QString::fromUtf8(dstools::keys::layers::midi) || key == QString::fromUtf8(dstools::keys::layers::note))
+            if (key == QString::fromUtf8(dstools::keys::layers::midi) ||
+                key == QString::fromUtf8(dstools::keys::layers::note))
                 layer.type = QString::fromUtf8(dstools::keys::layers::note);
             else
                 layer.type = QStringLiteral("text");
 
-            for (const auto &jb : value["boundaries"]) {
+            for (const auto& jb : value["boundaries"]) {
                 Boundary b;
                 b.id = jb.value("id", 0);
                 b.pos = jb.value("pos", int64_t(0));
@@ -61,11 +60,10 @@ Result<DsTextDocument> layersToDocument(
             curve.timestep = secToUs(timestepSec);
 
             if (value["f0_seq"].is_string()) {
-                const auto f0Str =
-                    QString::fromStdString(value["f0_seq"].get<std::string>());
+                const auto f0Str = QString::fromStdString(value["f0_seq"].get<std::string>());
                 const QStringList vals = f0Str.split(' ', Qt::SkipEmptyParts);
                 curve.values.reserve(vals.size());
-                for (const auto &v : vals)
+                for (const auto& v : vals)
                     curve.values.push_back(hzToMhz(v.toDouble()));
             }
 
@@ -76,29 +74,26 @@ Result<DsTextDocument> layersToDocument(
     return Result<DsTextDocument>::Ok(std::move(doc));
 }
 
-void documentToLayers(const DsTextDocument &doc,
-                      std::map<QString, LayerData> &layers) {
-    for (const auto &layer : doc.layers) {
+void documentToLayers(const DsTextDocument& doc, std::map<QString, LayerData>& layers) {
+    for (const auto& layer : doc.layers) {
         nlohmann::json layerJson;
         layerJson["name"] = layer.name.toStdString();
 
         nlohmann::json boundaries = nlohmann::json::array();
-        for (const auto &b : layer.boundaries) {
-            boundaries.push_back({{"id", b.id},
-                                  {"pos", b.pos},
-                                  {"text", b.text.toStdString()}});
+        for (const auto& b : layer.boundaries) {
+            boundaries.push_back({{"id", b.id}, {"pos", b.pos}, {"text", b.text.toStdString()}});
         }
         layerJson["boundaries"] = boundaries;
         layers[layer.name] = LayerData::fromJson(layerJson);
     }
 
-    for (const auto &curve : doc.curves) {
+    for (const auto& curve : doc.curves) {
         nlohmann::json curveJson;
         curveJson["name"] = curve.name.toStdString();
 
         QStringList f0Vals;
         f0Vals.reserve(static_cast<int>(curve.values.size()));
-        for (const auto &v : curve.values)
+        for (const auto& v : curve.values)
             f0Vals.append(QString::number(mhzToHz(v), 'f', 2));
         curveJson["f0_seq"] = f0Vals.join(' ').toStdString();
 
@@ -111,12 +106,14 @@ void documentToLayers(const DsTextDocument &doc,
 
 } // namespace
 
-FileDataSource::FileDataSource(QObject *parent) : IEditorDataSource(parent) {}
+FileDataSource::FileDataSource(QObject* parent) : IEditorDataSource(parent) {
+}
 
-int FileDataSource::getSliceCount() const { return m_annotationPath.isEmpty() ? 0 : 1; }
+int FileDataSource::getSliceCount() const {
+    return m_annotationPath.isEmpty() ? 0 : 1;
+}
 
-void FileDataSource::setFile(const QString &audioFilePath,
-                              const QString &annotationPath) {
+void FileDataSource::setFile(const QString& audioFilePath, const QString& annotationPath) {
     m_audioPath = audioFilePath;
     m_annotationPath = annotationPath;
     m_formatId = formatIdFromExtension(annotationPath);
@@ -130,7 +127,9 @@ void FileDataSource::clear() {
     emit sliceListChanged();
 }
 
-bool FileDataSource::hasFile() const { return !m_annotationPath.isEmpty(); }
+bool FileDataSource::hasFile() const {
+    return !m_annotationPath.isEmpty();
+}
 
 QStringList FileDataSource::sliceIds() const {
     if (m_annotationPath.isEmpty())
@@ -138,13 +137,13 @@ QStringList FileDataSource::sliceIds() const {
     return {m_annotationPath};
 }
 
-Result<DsTextDocument> FileDataSource::loadSlice(const QString &sliceId) {
+Result<DsTextDocument> FileDataSource::loadSlice(const QString& sliceId) {
     Q_UNUSED(sliceId)
 
     if (m_formatId.isEmpty())
         return DsTextDocument::load(m_annotationPath);
 
-    auto *adapter = FormatAdapterRegistry::instance().adapter(m_formatId);
+    auto* adapter = FormatAdapterRegistry::instance().adapter(m_formatId);
     if (!adapter || !adapter->canImport())
         return DsTextDocument::load(m_annotationPath);
 
@@ -167,8 +166,7 @@ Result<DsTextDocument> FileDataSource::loadSlice(const QString &sliceId) {
     return docResult;
 }
 
-Result<void> FileDataSource::saveSlice(const QString &sliceId,
-                                        const DsTextDocument &doc) {
+Result<void> FileDataSource::saveSlice(const QString& sliceId, const DsTextDocument& doc) {
     Q_UNUSED(sliceId)
 
     if (m_formatId.isEmpty()) {
@@ -178,12 +176,10 @@ Result<void> FileDataSource::saveSlice(const QString &sliceId,
         return result;
     }
 
-    auto *adapter = FormatAdapterRegistry::instance().adapter(m_formatId);
+    auto* adapter = FormatAdapterRegistry::instance().adapter(m_formatId);
     if (!adapter || !adapter->canExport()) {
         QFileInfo fi(m_annotationPath);
-        QString dstextPath = fi.absolutePath() + QLatin1Char('/') +
-                             fi.completeBaseName() +
-                             QStringLiteral(".dstext");
+        QString dstextPath = fi.absolutePath() + QLatin1Char('/') + fi.completeBaseName() + QStringLiteral(".dstext");
         auto result = doc.save(dstextPath);
         if (result)
             emit sliceSaved(m_annotationPath);
@@ -199,7 +195,7 @@ Result<void> FileDataSource::saveSlice(const QString &sliceId,
     return result;
 }
 
-QString FileDataSource::audioPath(const QString &sliceId) const {
+QString FileDataSource::audioPath(const QString& sliceId) const {
     Q_UNUSED(sliceId)
     return m_audioPath;
 }

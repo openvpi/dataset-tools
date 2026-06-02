@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+#include <format>
+
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
@@ -145,8 +147,23 @@ bool PlayWidget::isPlaying() const {
 }
 
 void PlayWidget::setPlaying(bool playing) {
-    if (!m_valid) return;
+    if (!m_valid) {
+        if (playing) emit playbackError(tr("No audio file loaded"));
+        return;
+    }
     if (playing && !isPlaying()) {
+        // Validate playback range before starting
+        if (m_hasRange && m_rangeStart >= m_rangeEnd) {
+            DSFW_LOG_WARN("audio", std::format("Cannot play: invalid range [{}, {}]", m_rangeStart, m_rangeEnd));
+            emit playbackError(tr("Invalid playback range: start >= end"));
+            return;
+        }
+        if (m_hasRange) {
+            DSFW_LOG_INFO("audio", std::format("Play range [{:.3f}, {:.3f}] duration={:.3f}s",
+                                                m_rangeStart, m_rangeEnd, m_rangeEnd - m_rangeStart));
+        } else {
+            DSFW_LOG_INFO("audio", std::format("Play from {:.3f}s", m_player->isOpen() ? m_player->position() : 0.0));
+        }
         emit playRequested();
         m_player->play();
         if (m_player->isOpen()) {
@@ -169,7 +186,15 @@ void PlayWidget::setPlaying(bool playing) {
 }
 
 void PlayWidget::seek(double sec) {
-    if (!m_valid || !m_player || !m_player->isOpen()) return;
+    if (!m_valid || !m_player || !m_player->isOpen()) {
+        DSFW_LOG_WARN("audio", std::format("seek({:.3f}) failed: no audio file open", sec));
+        return;
+    }
+    if (sec < 0 || sec > m_player->duration()) {
+        DSFW_LOG_WARN("audio", std::format("seek({:.3f}) out of range [0, {:.3f}]", sec, m_player->duration()));
+        return;
+    }
+    DSFW_LOG_DEBUG("audio", std::format("seek to {:.3f}s", sec));
     m_player->setPosition(sec);
     reloadFinePlayheadStatus(static_cast<uint64_t>(sec * 1000));
     reloadSliderStatus();
@@ -181,6 +206,12 @@ double PlayWidget::duration() const {
 }
 
 void PlayWidget::setPlayRange(double startSec, double endSec) {
+    if (startSec >= endSec) {
+        DSFW_LOG_WARN("audio", std::format("setPlayRange rejected: start({:.3f}) >= end({:.3f})", startSec, endSec));
+        emit playbackError(tr("Invalid playback range: start >= end"));
+        return;
+    }
+    DSFW_LOG_INFO("audio", std::format("setPlayRange [{:.3f}, {:.3f}] duration={:.3f}s", startSec, endSec, endSec - startSec));
     m_rangeStart = startSec;
     m_rangeEnd = endSec;
     m_hasRange = true;
@@ -210,7 +241,10 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
             if (m_hasRange) {
                 posSec = std::clamp(posSec, m_rangeStart, m_rangeEnd);
                 emit playheadChanged(posSec);
-                if (posSec >= m_rangeEnd) {
+                // Use actual decoder position for accurate range termination
+                // to avoid premature stopping for short intervals
+                double decoderPos = m_player->isOpen() ? m_player->position() : -1.0;
+                if ((decoderPos >= 0 && decoderPos >= m_rangeEnd) || posSec >= m_rangeEnd + 0.1) {
                     m_player->stop();
                     reloadButtonStatus();
                 }

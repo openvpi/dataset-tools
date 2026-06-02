@@ -1,4 +1,4 @@
-﻿#include "IntervalTierView.h"
+#include "IntervalTierView.h"
 #include "commands/BoundaryCommands.h"
 #include "BoundaryDragController.h"
 
@@ -286,12 +286,27 @@ void IntervalTierView::mouseReleaseEvent(QMouseEvent *event) {
 int IntervalTierView::hitTestInterval(int x) const {
     if (!m_doc) return -1;
     int count = m_doc->intervalCount(m_tierIndex);
-    for (int i = 0; i < count; ++i) {
-        int x1 = static_cast<int>(timeToX(usToSec(m_doc->intervalStart(m_tierIndex, i))));
-        int x2 = static_cast<int>(timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, i))));
+    if (count == 0) return -1;
+
+    // Binary search for the interval containing pixel x
+    // Intervals are non-overlapping and sorted by start time
+    int lo = 0, hi = count;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        int midEndX = static_cast<int>(timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, mid))));
+        if (x < midEndX) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+    // Verify the candidate
+    if (lo < count) {
+        int x1 = static_cast<int>(timeToX(usToSec(m_doc->intervalStart(m_tierIndex, lo))));
+        int x2 = static_cast<int>(timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, lo))));
         if (x2 - x1 < 1) x2 = x1 + 1;
         if (x >= x1 && x < x2) {
-            return i;
+            return lo;
         }
     }
     return -1;

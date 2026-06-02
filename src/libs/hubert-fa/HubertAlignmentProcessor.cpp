@@ -30,7 +30,7 @@ namespace dstools {
                 {{QStringLiteral("phoneme"), QStringLiteral("phoneme")}}};
     }
 
-    ProcessorConfig HubertAlignmentProcessor::capabilities() const {
+    ProcessorConfig HubertAlignmentProcessor::capabilities() const noexcept {
         ProcessorConfig cap;
         cap["language"] = ConfigValue(false);
         cap["nonSpeechPhonemes"] = ConfigValue(std::vector<QString>{});

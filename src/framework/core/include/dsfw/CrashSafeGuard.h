@@ -41,7 +41,7 @@ namespace dsfw {
 
         /// @brief Whether the previous session ended abnormally.
         /// @return true if marker existed at startup (previous crash).
-        static bool wasPreviousCrash();
+        static bool wasPreviousCrash() noexcept;
 
     private:
         CrashSafeGuard() = delete;

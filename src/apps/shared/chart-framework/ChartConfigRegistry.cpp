@@ -70,6 +70,7 @@ QVariant ChartConfigRegistry::value(const QString &chartId, const QString &param
 
 void ChartConfigRegistry::setValue(const QString &chartId, const QString &paramKey, const QVariant &value) {
     m_overrides[chartId][paramKey] = value;
+    saveConfig(chartId);
 }
 
 void ChartConfigRegistry::loadDefaults() {

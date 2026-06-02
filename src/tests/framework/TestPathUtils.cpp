@@ -258,8 +258,8 @@ void TestPathUtils::crc32_nonexistentFile() {
 }
 
 void TestPathUtils::crc32_memoryData() {
-    const char *data = "Hello CRC32";
-    uint32_t crcMem = PathUtils::crc32(reinterpret_cast<const uint8_t *>(data), 11);
+    const char* data = "Hello CRC32";
+    uint32_t crcMem = PathUtils::crc32(reinterpret_cast<const uint8_t*>(data), 11);
 
     QTemporaryDir dir;
     QVERIFY(dir.isValid());

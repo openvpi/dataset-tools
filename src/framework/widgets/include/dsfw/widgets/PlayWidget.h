@@ -71,8 +71,9 @@ namespace dsfw::widgets {
     signals:
         void playRequested();
         void playStopped();
-
         void playheadChanged(double positionSec);
+        /// @brief Emitted when a playback error occurs (e.g., invalid range, no audio file).
+        void playbackError(const QString &message);
 
     public:
         void registerPlayCallbacks(QObject *context,

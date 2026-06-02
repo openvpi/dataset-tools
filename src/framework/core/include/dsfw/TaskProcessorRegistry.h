@@ -40,7 +40,7 @@ namespace dstools {
         QStringList availableProcessors(const QString &taskName) const;
 
         /// @brief List all registered task names.
-        QStringList availableTasks() const;
+        QStringList availableTasks() const noexcept;
 
         /// @brief Self-registration helper (Essentia Registrar pattern).
         /// Place a static instance in the processor's .cpp file.

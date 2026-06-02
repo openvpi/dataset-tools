@@ -91,7 +91,7 @@ Result<std::vector<std::filesystem::path>> ProjectBackupManager::listBackups(con
 Result<std::filesystem::path> ProjectBackupManager::findLatestBackup(const std::filesystem::path& projectPath) {
     auto result = listBackups(projectPath);
     if (!result) {
-        return Err(result.error());
+        return Err<std::filesystem::path>(result.error());
     }
 
     const auto& backups = result.value();

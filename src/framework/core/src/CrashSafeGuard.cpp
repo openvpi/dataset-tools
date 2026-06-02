@@ -39,7 +39,7 @@ void CrashSafeGuard::markCleanExit() {
     }
 }
 
-bool CrashSafeGuard::wasPreviousCrash() {
+bool CrashSafeGuard::wasPreviousCrash() noexcept {
     return m_previousCrash;
 }
 

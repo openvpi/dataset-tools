@@ -4,11 +4,12 @@
 #include <QStringList>
 #include <dstools/Result.h>
 #include <dstools/TimePos.h>
+#include <dstools/Version.h>
 #include <vector>
 
 namespace dstools {
 
-inline constexpr const char* kDsTextVersion = "3.0.0";
+inline constexpr const char* kDsTextVersion = DSTOOLS_DOMAIN_VERSION;
 inline constexpr const char* kDsTextVersionFallback = "2.0.0";
 
 struct Boundary {

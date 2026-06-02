@@ -52,6 +52,8 @@ namespace dstools {
     [[nodiscard]] Result<TaskInput> buildTaskInput(const TaskSpec &spec) const;
     void applyTaskOutput(const TaskSpec &spec, const TaskOutput &output);
 
+    [[nodiscard]] Result<void> checkPreconditions(const TaskSpec &spec) const;
+
     // Convenience: derive completed steps from stepHistory
     QStringList completedSteps() const;
 

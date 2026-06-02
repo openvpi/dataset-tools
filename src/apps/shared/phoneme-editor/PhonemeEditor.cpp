@@ -5,18 +5,11 @@
 #include "../pitch-editor/ui/PianoRollChartPanel.h"
 #include "../pitch-editor/ui/PianoRollView.h"
 
-#include <QDataStream>
 #include <QHBoxLayout>
-#include <QIODevice>
-#include <QIcon>
-#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
-#include <algorithm>
-
-#include <dstools/AudioDecoder.h>
-#include <dstools/WaveFormat.h>
+#include <dsfw/Log.h>
 
 namespace dstools {
 namespace phonemelabeler {
@@ -435,6 +428,13 @@ void PhonemeEditor::connectSignals() {
                 emit positionChanged(sec);
             });
 
+    // Playback error relay to parent page (for status bar / toast notification)
+    connect(m_playWidget, &dsfw::widgets::PlayWidget::playbackError,
+            this, [this](const QString &msg) {
+                DSFW_LOG_WARN("audio", ("Playback error: " + msg).toStdString().c_str());
+                emit fileStatusChanged(msg);
+            });
+
     // Tier view right-click playback
     connect(m_tierEditWidget, &TierEditWidget::requestPlayback, this,
             [this](TimePos startTime, TimePos endTime) {
@@ -522,13 +522,19 @@ void PhonemeEditor::playBoundarySegment(double timeSec) {
     if (activeTier < 0 || activeTier >= m_document->tierCount()) return;
 
     double segStart = 0.0;
-    double segEnd = m_document->totalDuration();
+    double segEnd = usToSec(m_document->totalDuration());
 
     int count = m_document->boundaryCount(activeTier);
     for (int b = 0; b < count; ++b) {
-        double t = m_document->boundaryTime(activeTier, b);
+        double t = usToSec(m_document->boundaryTime(activeTier, b));
         if (t <= timeSec) segStart = t;
         if (t > timeSec) { segEnd = t; break; }
+    }
+
+    // Validate segment bounds before playback
+    if (segStart >= segEnd) {
+        DSFW_LOG_WARN("PhonemeEditor", "Invalid segment range at timeSec");
+        return;
     }
 
     m_playWidget->setPlayRange(segStart, segEnd);

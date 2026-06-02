@@ -271,7 +271,7 @@ void TestCurveTools::drag_boundary_center() {
     std::vector<double> v = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int boundaryIdx = 5;
     double delta = 10.0;
-    dragBoundary(v, boundaryIdx, delta, 3);
+    dsfw::signal::dragBoundary(v, boundaryIdx, delta, 3);
     QCOMPARE(v[boundaryIdx], 10.0);
     QVERIFY(v[0] < 1.0);
     QVERIFY(v[10] < 1.0);
@@ -279,7 +279,7 @@ void TestCurveTools::drag_boundary_center() {
 
 void TestCurveTools::drag_boundary_edges() {
     std::vector<double> v = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    dragBoundary(v, 0, 5.0, 3);
+    dsfw::signal::dragBoundary(v, 0, 5.0, 3);
     QCOMPARE(v[0], 5.0);
     QVERIFY(v[4] < 1.0);
 }
@@ -287,15 +287,15 @@ void TestCurveTools::drag_boundary_edges() {
 void TestCurveTools::drag_boundary_out_of_bounds() {
     std::vector<double> v = {1, 2, 3};
     auto copy = v;
-    dragBoundary(v, -1, 10.0, 3);
+    dsfw::signal::dragBoundary(v, -1, 10.0, 3);
     QCOMPARE(v, copy);
-    dragBoundary(v, 100, 10.0, 3);
+    dsfw::signal::dragBoundary(v, 100, 10.0, 3);
     QCOMPARE(v, copy);
 }
 
 void TestCurveTools::drag_boundary_int32() {
     std::vector<int32_t> v = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    dragBoundary(v, 5, 100, 3);
+    dsfw::signal::dragBoundary(v, 5, 100, 3);
     QCOMPARE(v[5], int32_t(100));
     QVERIFY(v[0] < 1);
     QVERIFY(v[10] < 1);
@@ -326,5 +326,3 @@ void TestCurveTools::mhz_to_midi_batch() {
     QCOMPARE(midi[0], 69.0);
     QCOMPARE(midi[1], 0.0);
 }
-
-#include "TestCurveTools.moc"

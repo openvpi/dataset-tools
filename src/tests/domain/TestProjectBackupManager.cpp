@@ -8,6 +8,7 @@
 #include <dsfw/PathUtils.h>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestProjectBackupManager : public QObject {
     Q_OBJECT
@@ -94,7 +95,7 @@ void TestProjectBackupManager::restore_from_backup() {
     QVERIFY(tmpDir.isValid());
 
     QString projectPath = tmpDir.filePath("test.dsproj");
-    const char *originalContent = "{\"version\":\"3.0.0\",\"data\":\"original\"}";
+    const char* originalContent = "{\"version\":\"3.0.0\",\"data\":\"original\"}";
     {
         QFile f(projectPath);
         QVERIFY(f.open(QIODevice::WriteOnly));
@@ -116,8 +117,7 @@ void TestProjectBackupManager::restore_from_backup() {
     QVERIFY(backups.ok());
     QVERIFY(!backups.value().empty());
 
-    auto restoreResult = ProjectBackupManager::restoreFromBackup(backups.value()[0],
-                                                                  PathUtils::toStdPath(projectPath));
+    auto restoreResult = ProjectBackupManager::restoreFromBackup(backups.value()[0], PathUtils::toStdPath(projectPath));
     QVERIFY(restoreResult.ok());
 
     QFile restored(projectPath);
@@ -206,8 +206,7 @@ void TestProjectBackupManager::backup_then_restore_roundtrip() {
     QVERIFY(latest.ok());
     QVERIFY(!latest.value().empty());
 
-    auto restoreResult = ProjectBackupManager::restoreFromBackup(latest.value(),
-                                                                  PathUtils::toStdPath(projectPath));
+    auto restoreResult = ProjectBackupManager::restoreFromBackup(latest.value(), PathUtils::toStdPath(projectPath));
     QVERIFY(restoreResult.ok());
 
     QFile restored(projectPath);

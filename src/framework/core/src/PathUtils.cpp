@@ -14,41 +14,41 @@ namespace dsfw {
 
 namespace {
 
-    bool isGbkFirstByte(unsigned char c) {
-        return c >= 0x81 && c <= 0xFE;
-    }
+bool isGbkFirstByte(unsigned char c) {
+    return c >= 0x81 && c <= 0xFE;
+}
 
-    bool isGbkSecondByte(unsigned char c) {
-        return (c >= 0x40 && c <= 0x7E) || (c >= 0x80 && c <= 0xFE);
-    }
+bool isGbkSecondByte(unsigned char c) {
+    return (c >= 0x40 && c <= 0x7E) || (c >= 0x80 && c <= 0xFE);
+}
 
-    PathUtils::TextEncoding tryGbkHeuristic(const QByteArray &data) {
-        int gbkPairs = 0;
-        int nonAsciiBytes = 0;
+PathUtils::TextEncoding tryGbkHeuristic(const QByteArray& data) {
+    int gbkPairs = 0;
+    int nonAsciiBytes = 0;
 
-        for (int i = 0; i < data.size(); ++i) {
-            unsigned char c = data[i];
-            if (c < 0x80)
-                continue;
-            ++nonAsciiBytes;
-            if (isGbkFirstByte(c) && i + 1 < data.size() && isGbkSecondByte(data[i + 1])) {
-                ++gbkPairs;
-                ++i;
-            }
+    for (int i = 0; i < data.size(); ++i) {
+        unsigned char c = data[i];
+        if (c < 0x80)
+            continue;
+        ++nonAsciiBytes;
+        if (isGbkFirstByte(c) && i + 1 < data.size() && isGbkSecondByte(data[i + 1])) {
+            ++gbkPairs;
+            ++i;
         }
-
-        if (nonAsciiBytes > 0) {
-            double gbkRatio = static_cast<double>(gbkPairs * 2) / static_cast<double>(nonAsciiBytes);
-            if (gbkRatio > 0.5)
-                return PathUtils::TextEncoding::Gbk;
-        }
-
-        return PathUtils::TextEncoding::Latin1;
     }
+
+    if (nonAsciiBytes > 0) {
+        double gbkRatio = static_cast<double>(gbkPairs * 2) / static_cast<double>(nonAsciiBytes);
+        if (gbkRatio > 0.5)
+            return PathUtils::TextEncoding::Gbk;
+    }
+
+    return PathUtils::TextEncoding::Latin1;
+}
 
 } // namespace
 
-std::filesystem::path PathUtils::toStdPath(const QString &path) {
+std::filesystem::path PathUtils::toStdPath(const QString& path) {
 #ifdef Q_OS_WIN
     return std::filesystem::path(path.toStdWString());
 #else
@@ -56,7 +56,7 @@ std::filesystem::path PathUtils::toStdPath(const QString &path) {
 #endif
 }
 
-std::string PathUtils::toNarrowPath(const QString &path) {
+std::string PathUtils::toNarrowPath(const QString& path) {
 #ifdef Q_OS_WIN
     return path.toLocal8Bit().toStdString();
 #else
@@ -64,7 +64,7 @@ std::string PathUtils::toNarrowPath(const QString &path) {
 #endif
 }
 
-QString PathUtils::fromStdPath(const std::filesystem::path &path) {
+QString PathUtils::fromStdPath(const std::filesystem::path& path) {
 #ifdef Q_OS_WIN
     return QString::fromStdWString(path.wstring());
 #else
@@ -72,31 +72,28 @@ QString PathUtils::fromStdPath(const std::filesystem::path &path) {
 #endif
 }
 
-std::string PathUtils::toUtf8(const std::filesystem::path &path) {
+std::string PathUtils::toUtf8(const std::filesystem::path& path) {
     auto u8 = path.u8string();
     return {u8.begin(), u8.end()};
 }
 
-std::wstring PathUtils::toWide(const std::filesystem::path &path) {
+std::wstring PathUtils::toWide(const std::filesystem::path& path) {
     return path.wstring();
 }
 
-std::filesystem::path PathUtils::join(const std::filesystem::path &base,
-                                       const std::filesystem::path &relative) {
+std::filesystem::path PathUtils::join(const std::filesystem::path& base, const std::filesystem::path& relative) {
     return base / relative;
 }
 
-std::filesystem::path PathUtils::join(const std::filesystem::path &base,
-                                       const std::string &relative) {
+std::filesystem::path PathUtils::join(const std::filesystem::path& base, const std::string& relative) {
     return base / relative;
 }
 
-std::filesystem::path PathUtils::join(const std::filesystem::path &base,
-                                       const char *relative) {
+std::filesystem::path PathUtils::join(const std::filesystem::path& base, const char* relative) {
     return base / relative;
 }
 
-QString PathUtils::normalize(const QString &path) {
+QString PathUtils::normalize(const QString& path) {
     QString result = QDir::cleanPath(path);
 
 #ifdef Q_OS_MAC
@@ -106,7 +103,7 @@ QString PathUtils::normalize(const QString &path) {
     return result;
 }
 
-FILE *PathUtils::openFile(const QString &path, const char *mode) {
+FILE* PathUtils::openFile(const QString& path, const char* mode) {
 #ifdef Q_OS_WIN
     std::wstring wPath = path.toStdWString();
     std::wstring wMode;
@@ -120,25 +117,25 @@ FILE *PathUtils::openFile(const QString &path, const char *mode) {
 #endif
 }
 
-bool PathUtils::hasNonAscii(const QString &path) {
-    for (const QChar &ch : path) {
+bool PathUtils::hasNonAscii(const QString& path) {
+    for (const QChar& ch : path) {
         if (ch.unicode() > 127)
             return true;
     }
     return false;
 }
 
-QString PathUtils::toNativeSeparators(const QString &path) {
+QString PathUtils::toNativeSeparators(const QString& path) {
     return QDir::toNativeSeparators(path);
 }
 
-QString PathUtils::toPosixSeparators(const QString &path) {
+QString PathUtils::toPosixSeparators(const QString& path) {
     QString result = path;
     result.replace('\\', '/');
     return result;
 }
 
-PathUtils::TextEncoding PathUtils::detectTextEncoding(const QByteArray &data) {
+PathUtils::TextEncoding PathUtils::detectTextEncoding(const QByteArray& data) {
     if (data.size() >= 3 && static_cast<uint8_t>(data[0]) == 0xEF && static_cast<uint8_t>(data[1]) == 0xBB &&
         static_cast<uint8_t>(data[2]) == 0xBF) {
         return TextEncoding::Utf8Bom;
@@ -196,7 +193,7 @@ PathUtils::TextEncoding PathUtils::detectTextEncoding(const QByteArray &data) {
     return TextEncoding::Utf8;
 }
 
-QString PathUtils::decodeText(const QByteArray &data, TextEncoding encoding) {
+QString PathUtils::decodeText(const QByteArray& data, TextEncoding encoding) {
     switch (encoding) {
         case TextEncoding::Utf8Bom:
             if (data.size() >= 3 && static_cast<uint8_t>(data[0]) == 0xEF && static_cast<uint8_t>(data[1]) == 0xBB &&
@@ -242,7 +239,7 @@ QString PathUtils::decodeText(const QByteArray &data, TextEncoding encoding) {
     }
 }
 
-QByteArray PathUtils::encodeText(const QString &text, TextEncoding encoding) {
+QByteArray PathUtils::encodeText(const QString& text, TextEncoding encoding) {
     switch (encoding) {
         case TextEncoding::Utf8Bom:
             return QByteArray("\xEF\xBB\xBF") + text.toUtf8();
@@ -273,7 +270,7 @@ QByteArray PathUtils::encodeText(const QString &text, TextEncoding encoding) {
         case TextEncoding::Latin1: {
             QByteArray result;
             result.reserve(text.size());
-            for (const auto &ch : text)
+            for (const auto& ch : text)
                 result.append(static_cast<char>(ch.unicode() < 256 ? ch.unicode() : '?'));
             return result;
         }
@@ -284,7 +281,7 @@ QByteArray PathUtils::encodeText(const QString &text, TextEncoding encoding) {
     }
 }
 
-PathUtils::Encoding PathUtils::detectEncoding(const std::filesystem::path &path) {
+PathUtils::Encoding PathUtils::detectEncoding(const std::filesystem::path& path) {
     constexpr size_t kHeaderSize = 4096;
     std::array<char, kHeaderSize> buf{};
 
@@ -315,7 +312,7 @@ PathUtils::Encoding PathUtils::detectEncoding(const std::filesystem::path &path)
     return Encoding::Unknown;
 }
 
-std::optional<std::filesystem::path> PathUtils::canonicalOrNull(const std::filesystem::path &path) noexcept {
+std::optional<std::filesystem::path> PathUtils::canonicalOrNull(const std::filesystem::path& path) noexcept {
     std::error_code ec;
     auto canonical = std::filesystem::canonical(path, ec);
     if (ec)
@@ -323,7 +320,7 @@ std::optional<std::filesystem::path> PathUtils::canonicalOrNull(const std::files
     return canonical;
 }
 
-bool PathUtils::isSubPath(const std::filesystem::path &parent, const std::filesystem::path &child) noexcept {
+bool PathUtils::isSubPath(const std::filesystem::path& parent, const std::filesystem::path& child) noexcept {
     std::error_code ec;
     const auto canonParent = std::filesystem::canonical(parent, ec);
     if (ec)
@@ -341,11 +338,11 @@ bool PathUtils::isSubPath(const std::filesystem::path &parent, const std::filesy
     return itParent == canonParent.end();
 }
 
-std::filesystem::path PathUtils::relativeTo(const std::filesystem::path &path, const std::filesystem::path &base) {
+std::filesystem::path PathUtils::relativeTo(const std::filesystem::path& path, const std::filesystem::path& base) {
     return std::filesystem::relative(path, base);
 }
 
-dstools::Result<QString> PathUtils::readFile(const QString &path) {
+dstools::Result<QString> PathUtils::readFile(const QString& path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
         return dstools::Result<QString>::Error("Cannot open file: " + toUtf8(path.toStdString()));
@@ -360,57 +357,57 @@ dstools::Result<QString> PathUtils::readFile(const QString &path) {
     return decodeText(data, encoding);
 }
 
-dstools::Result<QString> PathUtils::readFile(const std::string &path) {
+dstools::Result<QString> PathUtils::readFile(const std::string& path) {
     return readFile(QString::fromStdString(path));
 }
 
-dstools::Result<void> PathUtils::writeFile(const QString &path, const QString &text, TextEncoding encoding) {
+dstools::Result<void> PathUtils::writeFile(const QString& path, const QString& text, TextEncoding encoding) {
     const QByteArray encoded = encodeText(text, encoding);
     const std::string content(encoded.constData(), encoded.size());
     return AtomicFileWriter::write(toStdPath(path), content);
 }
 
-dstools::Result<void> PathUtils::writeFile(const std::string &path, const QString &text, TextEncoding encoding) {
+dstools::Result<void> PathUtils::writeFile(const std::string& path, const QString& text, TextEncoding encoding) {
     return writeFile(QString::fromStdString(path), text, encoding);
 }
 
 namespace {
 
-    constexpr uint32_t kCrc32Polynomial = 0xEDB88320;
+constexpr uint32_t kCrc32Polynomial = 0xEDB88320;
 
-    constexpr std::array<uint32_t, 256> makeCrc32Table() {
-        std::array<uint32_t, 256> table{};
-        for (uint32_t i = 0; i < 256; ++i) {
-            uint32_t crc = i;
-            for (int j = 0; j < 8; ++j) {
-                if (crc & 1) {
-                    crc = (crc >> 1) ^ kCrc32Polynomial;
-                } else {
-                    crc >>= 1;
-                }
+constexpr std::array<uint32_t, 256> makeCrc32Table() {
+    std::array<uint32_t, 256> table{};
+    for (uint32_t i = 0; i < 256; ++i) {
+        uint32_t crc = i;
+        for (int j = 0; j < 8; ++j) {
+            if (crc & 1) {
+                crc = (crc >> 1) ^ kCrc32Polynomial;
+            } else {
+                crc >>= 1;
             }
-            table[i] = crc;
         }
-        return table;
+        table[i] = crc;
     }
+    return table;
+}
 
-    constexpr auto kCrc32Table = makeCrc32Table();
+constexpr auto kCrc32Table = makeCrc32Table();
 
-    uint32_t crc32Update(uint32_t crc, const uint8_t *data, size_t size) {
-        crc ^= 0xFFFFFFFF;
-        for (size_t i = 0; i < size; ++i) {
-            crc = kCrc32Table[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
-        }
-        return crc ^ 0xFFFFFFFF;
+uint32_t crc32Update(uint32_t crc, const uint8_t* data, size_t size) {
+    crc ^= 0xFFFFFFFF;
+    for (size_t i = 0; i < size; ++i) {
+        crc = kCrc32Table[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
     }
+    return crc ^ 0xFFFFFFFF;
+}
 
 } // anonymous namespace
 
-uint32_t PathUtils::crc32(const uint8_t *data, size_t size) {
+uint32_t PathUtils::crc32(const uint8_t* data, size_t size) {
     return crc32Update(0, data, size);
 }
 
-dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path &path) {
+dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
         return dstools::Result<uint32_t>::Error("Failed to open file for CRC32: " + path.string());
@@ -420,7 +417,7 @@ dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path &path) {
     std::array<char, kBufSize> buf{};
     uint32_t crc = 0;
     while (file.read(buf.data(), kBufSize) || file.gcount() > 0) {
-        crc = crc32Update(crc, reinterpret_cast<const uint8_t *>(buf.data()), file.gcount());
+        crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(buf.data()), file.gcount());
     }
 
     if (file.bad()) {

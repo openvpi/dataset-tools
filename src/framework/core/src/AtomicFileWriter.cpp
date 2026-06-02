@@ -20,10 +20,10 @@ namespace dsfw {
     }
 
     void AtomicFileWriter::setBackupEnabled(bool enabled) { s_backupEnabled.store(enabled); }
-    bool AtomicFileWriter::isBackupEnabled() { return s_backupEnabled.load(); }
+    bool AtomicFileWriter::isBackupEnabled() noexcept { return s_backupEnabled.load(); }
 
     void AtomicFileWriter::setValidationEnabled(bool enabled) { s_validationEnabled.store(enabled); }
-    bool AtomicFileWriter::isValidationEnabled() { return s_validationEnabled.load(); }
+    bool AtomicFileWriter::isValidationEnabled() noexcept { return s_validationEnabled.load(); }
 
     dstools::Result<void> AtomicFileWriter::writeImpl(const std::filesystem::path &path,
                                                       const std::string &content,
@@ -51,9 +51,9 @@ namespace dsfw {
         if (!file.commit())
             return dstools::Result<void>::Error("AtomicFileWriter: commit failed: " + dsfw::PathUtils::toUtf8(path));
 
-        if (validateJson) {
+        if (validateJson && s_validationEnabled.load()) {
             try {
-                nlohmann::json::parse(content, nullptr, false);
+                nlohmann::json::parse(content, nullptr, true);
             } catch (const std::exception &e) {
                 const QString backupPath = qPath + QStringLiteral(".bak");
                 if (QFile::exists(backupPath)) {

@@ -27,6 +27,9 @@ namespace dstools {
 
         // ── Metadata ──
 
+        /// @brief Interface version for runtime compatibility checking.
+        virtual int interfaceVersion() const noexcept { return kInterfaceVersion; }
+
         /// @brief Unique processor identifier (e.g. "hubert-fa", "rmvpe", "game").
         virtual QString processorId() const = 0;
 
@@ -39,7 +42,7 @@ namespace dstools {
         /// @brief Parameter capabilities declaration.
         /// Returns JSON describing supported parameters, their types, ranges, and defaults.
         /// UI uses this to dynamically generate configuration controls.
-        virtual ProcessorConfig capabilities() const {
+        virtual ProcessorConfig capabilities() const noexcept {
             return {};
         }
 

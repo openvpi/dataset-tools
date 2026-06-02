@@ -32,6 +32,25 @@ Result<void> exportContextsToCsv(const std::vector<PipelineContext> &contexts,
     return CsvAdapter::batchExport(contexts, outputPath, config);
 }
 
+// ─── Import validation helper ─────────────────────────────────────────────────
+
+static Result<void> validateLayerData(const std::map<QString, LayerData> &layers) {
+    if (layers.empty())
+        return Result<void>::Error("import produced no layers");
+    for (const auto &[key, val] : layers) {
+        if (val.empty())
+            return Result<void>::Error(QString("layer '%1' is empty").arg(key));
+        try {
+            const auto j = val.toJson();
+            if (j.is_null())
+                return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key));
+        } catch (const std::exception &e) {
+            return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()));
+        }
+    }
+    return Result<void>::Ok();
+}
+
 // ─── TextGridAdapter ──────────────────────────────────────────────────────────
 
 Result<void> TextGridAdapter::importToLayers(const QString &filePath,
@@ -49,22 +68,23 @@ Result<void> TextGridAdapter::importToLayers(const QString &filePath,
     if (phones.size() != durs.size())
         return Result<void>::Error("ph_seq and ph_dur count mismatch");
 
-    std::map<QString, nlohmann::json> internal;
-
+    std::map<QString, LayerData> temp;
     auto boundaries = buildBoundaries(phones, durs, 0);
-    internal[QStringLiteral("phoneme")] = {{"name", "phoneme"}, {"boundaries", boundaries.toJson()}};
+    temp[QStringLiteral("phoneme")] = LayerData::fromJson({{"name", "phoneme"}, {"boundaries", boundaries.toJson()}});
 
     if (!row.phNum.isEmpty()) {
         const QStringList nums = row.phNum.split(' ', Qt::SkipEmptyParts);
         nlohmann::json phNumArr = nlohmann::json::array();
         for (const auto &n : nums)
             phNumArr.push_back(n.toInt());
-        internal[QStringLiteral("ph_num")] = phNumArr;
+        temp[QStringLiteral("ph_num")] = LayerData::fromJson(phNumArr);
     }
 
-    for (const auto &[key, val] : internal)
-        layers[key] = LayerData::fromJson(val);
+    auto validation = validateLayerData(temp);
+    if (!validation.ok())
+        return validation;
 
+    layers = std::move(temp);
     return Result<void>::Ok();
 }
 
@@ -95,8 +115,15 @@ Result<void> LabAdapter::importToLayers(const QString &filePath,
     }
     boundaries.push_back({{"id", id}, {"pos", 0}, {"text", ""}});
 
+    std::map<QString, LayerData> temp;
     nlohmann::json grapheme = {{"name", "grapheme"}, {"boundaries", boundaries}};
-    layers[QStringLiteral("grapheme")] = LayerData::fromJson(grapheme);
+    temp[QStringLiteral("grapheme")] = LayerData::fromJson(grapheme);
+
+    auto validation = validateLayerData(temp);
+    if (!validation.ok())
+        return validation;
+
+    layers = std::move(temp);
     return Result<void>::Ok();
 }
 

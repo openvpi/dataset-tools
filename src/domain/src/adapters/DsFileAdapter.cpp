@@ -7,6 +7,27 @@
 
 namespace dstools {
 
+namespace {
+
+Result<void> validateLayerData(const std::map<QString, LayerData> &layers) {
+    if (layers.empty())
+        return Result<void>::Error("import produced no layers");
+    for (const auto &[key, val] : layers) {
+        if (val.empty())
+            return Result<void>::Error(QString("layer '%1' is empty").arg(key));
+        try {
+            const auto j = val.toJson();
+            if (j.is_null())
+                return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key));
+        } catch (const std::exception &e) {
+            return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()));
+        }
+    }
+    return Result<void>::Ok();
+}
+
+} // anonymous namespace
+
 Result<void> DsFileAdapter::importToLayers(const QString &filePath,
                                            std::map<QString, LayerData> &layers,
                                            const ProcessorConfig &config) {
@@ -29,14 +50,14 @@ Result<void> DsFileAdapter::importToLayers(const QString &filePath,
 
     const double offset = sv.offset;
 
-    std::map<QString, nlohmann::json> internal;
+    std::map<QString, LayerData> temp;
 
     if (!sv.phSeq.isEmpty() && !sv.phDur.isEmpty()) {
         const QStringList phones = sv.phSeq.split(' ', Qt::SkipEmptyParts);
         const QStringList durs = sv.phDur.split(' ', Qt::SkipEmptyParts);
 
         auto boundaries = buildBoundaries(phones, durs, secToUs(offset));
-        internal[QStringLiteral("phoneme")] = {{"name", "phoneme"}, {"boundaries", boundaries.toJson()}};
+        temp[QStringLiteral("phoneme")] = LayerData::fromJson({{"name", "phoneme"}, {"boundaries", boundaries.toJson()}});
     }
 
     if (!sv.noteSeq.isEmpty() && !sv.noteDur.isEmpty()) {
@@ -44,21 +65,23 @@ Result<void> DsFileAdapter::importToLayers(const QString &filePath,
         const QStringList noteDurs = sv.noteDur.split(' ', Qt::SkipEmptyParts);
 
         auto boundaries = buildBoundaries(notes, noteDurs, secToUs(offset));
-        internal[QStringLiteral("midi")] = {{"name", "midi"}, {"boundaries", boundaries.toJson()}};
+        temp[QStringLiteral("midi")] = LayerData::fromJson({{"name", "midi"}, {"boundaries", boundaries.toJson()}});
     }
 
     if (s.contains("f0_seq") && s.contains("f0_timestep")) {
         const double timestep = sv.f0Timestep;
-        internal[QStringLiteral("pitch")] = {
+        temp[QStringLiteral("pitch")] = LayerData::fromJson({
             {"name", "pitch"},
             {"f0_seq", s["f0_seq"]},
             {"f0_timestep", timestep},
-            {"offset", offset}};
+            {"offset", offset}});
     }
 
-    for (const auto &[key, val] : internal)
-        layers[key] = LayerData::fromJson(val);
+    auto validation = validateLayerData(temp);
+    if (!validation.ok())
+        return validation;
 
+    layers = std::move(temp);
     return Result<void>::Ok();
 }
 

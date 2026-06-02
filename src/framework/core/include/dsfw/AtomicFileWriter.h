@@ -19,10 +19,10 @@ namespace dsfw {
         static dstools::Result<void> writeJson(const std::filesystem::path &path, const std::string &jsonContent);
 
         static void setBackupEnabled(bool enabled);
-        static bool isBackupEnabled();
+        static bool isBackupEnabled() noexcept;
 
         static void setValidationEnabled(bool enabled);
-        static bool isValidationEnabled();
+        static bool isValidationEnabled() noexcept;
 
     private:
         static dstools::Result<void> writeImpl(const std::filesystem::path &path,

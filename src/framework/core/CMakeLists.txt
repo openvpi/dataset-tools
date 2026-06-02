@@ -41,22 +41,13 @@ dstools_add_library(${PROJECT_NAME}
         NAMESPACE dsfw::core
         EXPORT_SET dsfwTargets
         DEPENDS
-        PUBLIC dsfw-base dstools-types::dstools-types Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json onnxruntime
+        PUBLIC dsfw-base dstools-types::dstools-types infer-common Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
         PRIVATE $<$<PLATFORM_ID:Windows>:dbghelp> Qt${QT_VERSION_MAJOR}::Widgets
         INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
 )
 
 dstools_add_translations(${PROJECT_NAME} EXPORT_SET dsfwTargets)
-
-# Merged dstools-infer-common sources (explicit listing)
-target_sources(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../infer/src/OnnxEnv.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../infer/src/OnnxModelBase.cpp
-)
-target_include_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../infer/include>
-)
 
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /wd4275)

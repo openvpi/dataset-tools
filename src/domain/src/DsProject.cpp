@@ -264,13 +264,12 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
     auto missingPaths = proj.validateExternalPaths();
     if (!missingPaths.empty()) {
         QStringList missingList;
-        for (const auto &p : missingPaths) {
+        for (const auto& p : missingPaths) {
             missingList.append(p);
         }
-        DSFW_LOG_WARN("io",
-                      ("DsProject::loadFile: " + std::to_string(missingPaths.size()) +
-                       " external path(s) not found: " + missingList.join(", ").toStdString())
-                          .c_str());
+        DSFW_LOG_WARN("io", ("DsProject::loadFile: " + std::to_string(missingPaths.size()) +
+                             " external path(s) not found: " + missingList.join(", ").toStdString())
+                                .c_str());
     }
 
     return proj;
@@ -429,7 +428,7 @@ std::vector<QString> DsProject::validateExternalPaths() const {
     std::vector<QString> missing;
     std::unordered_set<QString> checked;
 
-    auto resolvePath = [&](const QString &p) -> QString {
+    auto resolvePath = [&](const QString& p) -> QString {
         if (p.isEmpty())
             return {};
         if (QDir::isRelativePath(p) && !m_workingDirectory.isEmpty()) {
@@ -438,7 +437,7 @@ std::vector<QString> DsProject::validateExternalPaths() const {
         return p;
     };
 
-    auto checkFile = [&](const QString &p) {
+    auto checkFile = [&](const QString& p) {
         if (p.isEmpty())
             return;
         auto resolved = resolvePath(p);
@@ -450,11 +449,11 @@ std::vector<QString> DsProject::validateExternalPaths() const {
         }
     };
 
-    for (const auto &item : m_items) {
+    for (const auto& item : m_items) {
         checkFile(item.audioSource);
     }
 
-    for (const auto &audioFile : m_slicerState.audioFiles) {
+    for (const auto& audioFile : m_slicerState.audioFiles) {
         checkFile(audioFile);
     }
 
