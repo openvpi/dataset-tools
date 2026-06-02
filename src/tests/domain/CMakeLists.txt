@@ -22,6 +22,7 @@ set(DOMAIN_TESTS
         TestProjectPaths
         TestExportFormats
         TestPinyinG2PProvider
+        TestProjectBackupManager
 )
 
 foreach (test_name ${DOMAIN_TESTS})

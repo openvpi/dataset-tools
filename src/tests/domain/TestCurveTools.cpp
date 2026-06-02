@@ -40,6 +40,19 @@ private slots:
     // Helpers
     void hopsize_to_timestep();
     void expected_frames();
+
+    // Boundary drag
+    void drag_boundary_center();
+    void drag_boundary_edges();
+    void drag_boundary_out_of_bounds();
+    void drag_boundary_int32();
+
+    // Double-precision variants
+    void resample_curve_f();
+    void interp_unvoiced_f();
+
+    // mhzToMidi
+    void mhz_to_midi_batch();
 };
 
 // ── Resampling ──
@@ -253,4 +266,65 @@ void TestCurveTools::expected_frames() {
 }
 
 QTEST_MAIN(TestCurveTools)
+
+void TestCurveTools::drag_boundary_center() {
+    std::vector<double> v = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int boundaryIdx = 5;
+    double delta = 10.0;
+    dragBoundary(v, boundaryIdx, delta, 3);
+    QCOMPARE(v[boundaryIdx], 10.0);
+    QVERIFY(v[0] < 1.0);
+    QVERIFY(v[10] < 1.0);
+}
+
+void TestCurveTools::drag_boundary_edges() {
+    std::vector<double> v = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    dragBoundary(v, 0, 5.0, 3);
+    QCOMPARE(v[0], 5.0);
+    QVERIFY(v[4] < 1.0);
+}
+
+void TestCurveTools::drag_boundary_out_of_bounds() {
+    std::vector<double> v = {1, 2, 3};
+    auto copy = v;
+    dragBoundary(v, -1, 10.0, 3);
+    QCOMPARE(v, copy);
+    dragBoundary(v, 100, 10.0, 3);
+    QCOMPARE(v, copy);
+}
+
+void TestCurveTools::drag_boundary_int32() {
+    std::vector<int32_t> v = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    dragBoundary(v, 5, 100, 3);
+    QCOMPARE(v[5], int32_t(100));
+    QVERIFY(v[0] < 1);
+    QVERIFY(v[10] < 1);
+}
+
+void TestCurveTools::resample_curve_f() {
+    std::vector<double> in = {100.0, 200.0, 300.0, 400.0, 500.0};
+    auto out = resampleCurveF(in, 10000, 10000);
+    QCOMPARE(static_cast<int>(out.size()), 5);
+    for (int i = 0; i < 5; ++i)
+        QCOMPARE(out[i], in[i]);
+}
+
+void TestCurveTools::interp_unvoiced_f() {
+    std::vector<double> v = {0.0, 0.0, 440.0, 441.0, 0.0, 0.0};
+    std::vector<bool> uv;
+    interpUnvoicedF(v, &uv);
+    QCOMPARE(uv[0], true);
+    QCOMPARE(uv[2], false);
+    QCOMPARE(v[0], 440.0);
+    QCOMPARE(v[1], 440.0);
+    QCOMPARE(v[4], 441.0);
+    QCOMPARE(v[5], 441.0);
+}
+
+void TestCurveTools::mhz_to_midi_batch() {
+    auto midi = mhzToMidiBatch({440000, 0});
+    QCOMPARE(midi[0], 69.0);
+    QCOMPARE(midi[1], 0.0);
+}
+
 #include "TestCurveTools.moc"

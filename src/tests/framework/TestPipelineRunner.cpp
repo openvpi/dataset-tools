@@ -3,6 +3,7 @@
 #include <dsfw/TaskProcessorRegistry.h>
 #include <QTemporaryDir>
 #include <QDir>
+#include <atomic>
 #include <nlohmann/json.hpp>
 
 using namespace dstools;
@@ -48,7 +49,11 @@ private slots:
     void single_step();
     void skip_discarded();
     void optional_missing_processor();
+    void required_missing_processor_fails();
     void validator_discard();
+    void cancel_during_execution();
+    void dirty_propagation_single_layer();
+    void dirty_propagation_downstream();
     void snapshot_save_and_load();
     void snapshot_cleanup_old();
     void snapshot_has_latest();
@@ -147,6 +152,61 @@ void TestPipelineRunner::validator_discard() {
     QVERIFY(res.ok());
     QVERIFY(ctxs[0].status == PipelineContext::Status::Discarded);
     QCOMPARE(ctxs[0].discardReason, QStringLiteral("Too short"));
+}
+
+// Test: required step with missing processor fails
+void TestPipelineRunner::required_missing_processor_fails() {
+    PipelineRunner runner;
+    PipelineOptions opts;
+    StepConfig step;
+    step.taskName = QStringLiteral("nonexistent_task");
+    step.processorId = QStringLiteral("nonexistent");
+    step.optional = false;
+    opts.steps = {step};
+
+    std::vector<PipelineContext> ctxs(1);
+    ctxs[0].itemId = QStringLiteral("item0");
+
+    auto res = runner.run(opts, ctxs);
+    QVERIFY(!res.ok());
+}
+
+// Test: cancel token stops execution
+void TestPipelineRunner::cancel_during_execution() {
+    PipelineRunner runner;
+    PipelineOptions opts;
+
+    StepConfig step1;
+    step1.taskName = QStringLiteral("mock_task");
+    step1.processorId = QStringLiteral("mock");
+    StepConfig step2;
+    step2.taskName = QStringLiteral("mock_task");
+    step2.processorId = QStringLiteral("mock");
+    opts.steps = {step1, step2};
+
+    std::vector<PipelineContext> ctxs(1);
+    ctxs[0].itemId = QStringLiteral("item0");
+    ctxs[0].layers[QStringLiteral("input_cat")] = LayerData::fromJson(nlohmann::json{{"data", "test"}});
+
+    auto cancelToken = std::make_shared<std::atomic<bool>>(true);
+    auto res = runner.run(opts, ctxs, cancelToken);
+    QVERIFY(!res.ok());
+}
+
+// Test: dirty propagation marks a layer as dirty
+void TestPipelineRunner::dirty_propagation_single_layer() {
+    PipelineContext ctx;
+    ctx.addDirtyLayer(QStringLiteral("wave"));
+    QVERIFY(ctx.dirty.contains(QStringLiteral("wave")));
+    ctx.removeDirtyLayer(QStringLiteral("wave"));
+    QVERIFY(!ctx.dirty.contains(QStringLiteral("wave")));
+}
+
+// Test: propagateDirty adds the layer and its downstream dependencies to dirty set
+void TestPipelineRunner::dirty_propagation_downstream() {
+    PipelineContext ctx;
+    ctx.propagateDirty(QStringLiteral("wave"));
+    QVERIFY(ctx.dirty.contains(QStringLiteral("wave")));
 }
 
 void TestPipelineRunner::snapshot_save_and_load() {

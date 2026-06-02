@@ -14,6 +14,7 @@ set(DSFW_TESTS
         TestPipelineContext
         TestPipelineRunner
         TestAtomicFileWriterSafety
+        TestPathUtils
 )
 
 foreach (test_name ${DSFW_TESTS})

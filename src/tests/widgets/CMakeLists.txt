@@ -16,3 +16,19 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})
+
+add_executable(TestAudioVisualizerContainer TestAudioVisualizerContainer.cpp)
+
+target_include_directories(TestAudioVisualizerContainer PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/apps/shared
+)
+
+target_link_libraries(TestAudioVisualizerContainer PRIVATE
+        audio-visualizer
+        dsfw-widgets
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::Test
+)
+
+add_test(NAME TestAudioVisualizerContainer COMMAND TestAudioVisualizerContainer)
