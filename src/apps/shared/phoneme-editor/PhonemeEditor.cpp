@@ -11,6 +11,8 @@
 
 #include <dsfw/Log.h>
 
+#include <format>
+
 namespace dstools {
 namespace phonemelabeler {
 
@@ -439,9 +441,24 @@ void PhonemeEditor::connectSignals() {
     connect(m_tierEditWidget, &TierEditWidget::requestPlayback, this,
             [this](TimePos startTime, TimePos endTime) {
                 if (!m_playWidget) return;
+                // Guard against zero-length intervals (startTime == endTime in TextGrid)
+                if (startTime >= endTime) {
+                    // Extend zero-length intervals by 50ms for audible playback
+                    endTime = startTime + 50000;
+                    DSFW_LOG_DEBUG("PhonemeEditor",
+                                   std::format("Extending zero-length interval playback to 50ms (start={})",
+                                               usToSec(startTime)));
+                }
+                double startSec = usToSec(startTime);
+                double endSec = usToSec(endTime);
                 m_playWidget->setPlaying(false);
-                m_playWidget->setPlayRange(usToSec(startTime), usToSec(endTime));
-                m_playWidget->seek(usToSec(startTime));
+                if (startSec >= endSec) {
+                    DSFW_LOG_WARN("PhonemeEditor",
+                                  std::format("Cannot play: invalid range [{}, {}]", startSec, endSec));
+                    return;
+                }
+                m_playWidget->setPlayRange(startSec, endSec);
+                m_playWidget->seek(startSec);
                 m_playWidget->setPlaying(true);
             });
 

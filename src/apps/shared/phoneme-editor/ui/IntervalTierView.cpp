@@ -304,9 +304,19 @@ int IntervalTierView::hitTestInterval(int x) const {
     if (lo < count) {
         int x1 = static_cast<int>(timeToX(usToSec(m_doc->intervalStart(m_tierIndex, lo))));
         int x2 = static_cast<int>(timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, lo))));
-        if (x2 - x1 < 1) x2 = x1 + 1;
+        // Ensure minimum 3px hit target; sub-pixel intervals are invisible but should still be clickable
+        if (x2 - x1 < 3) x2 = x1 + 3;
         if (x >= x1 && x < x2) {
             return lo;
+        }
+    }
+    // Fallback: try previous interval (binary search may overshoot with sub-pixel intervals)
+    if (lo > 0) {
+        int x1 = static_cast<int>(timeToX(usToSec(m_doc->intervalStart(m_tierIndex, lo - 1))));
+        int x2 = static_cast<int>(timeToX(usToSec(m_doc->intervalEnd(m_tierIndex, lo - 1))));
+        if (x2 - x1 < 3) x2 = x1 + 3;
+        if (x >= x1 && x < x2) {
+            return lo - 1;
         }
     }
     return -1;

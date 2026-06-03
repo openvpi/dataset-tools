@@ -61,6 +61,15 @@ namespace dsfw {
         p.pianoRoll.rubberBandFill = QColor(0x4A, 0x8F, 0xD9, 38);
         p.pianoRoll.playhead = QColor("#EF5350");
         p.pianoRoll.playheadIdle = QColor("#F0F1F2");
+        p.pianoRoll.whiteKeyBorder = QColor("#CCCCCC");
+        p.pianoRoll.octaveLabel = QColor("#5A5A68");
+        p.pianoRoll.phonemeSeparator = QColor(200, 200, 200, 255);
+        p.pianoRoll.phonemeSeparatorFill = QColor(200, 200, 200, 80);
+        p.pianoRoll.phonemeText = QColor(220, 220, 220);
+        p.pianoRoll.f0Original = QColor("#4DD0E1");
+        p.pianoRoll.crosshair = QColor(200, 200, 200, 100);
+        p.pianoRoll.tooltipBg = QColor(30, 30, 40, 200);
+        p.pianoRoll.tooltipText = QColor(220, 220, 230);
 
         p.audioVisualizer.waveformColor = QColor("#4FC1FF");
         p.audioVisualizer.powerColor = QColor("#FFD866");

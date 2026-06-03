@@ -14,6 +14,7 @@
 #include <QWheelEvent>
 
 #include <dsfw/AppSettings.h>
+#include <dsfw/Theme.h>
 
 #include <algorithm>
 #include <cmath>
@@ -655,7 +656,7 @@ namespace dstools {
                 auto rs = buildRenderState();
 
                 p.setClipRect(0, 0, w, h);
-                p.fillRect(m_contentLeftMargin, 0, w - m_contentLeftMargin, h, Colors::Background);
+                p.fillRect(m_contentLeftMargin, 0, w - m_contentLeftMargin, h, dsfw::Theme::instance().palette().pianoRoll.background);
 
                 PianoRollRenderer::drawGrid(p, w, h, rs);
                 PianoRollRenderer::drawNotes(p, w, h, rs);

@@ -81,6 +81,15 @@ namespace dsfw {
                 QColor rubberBandFill;     ///< Rubber band selection fill.
                 QColor playhead;           ///< Playhead line color (playing).
                 QColor playheadIdle;       ///< Playhead line color (stopped).
+                QColor whiteKeyBorder;     ///< White key border line in piano keyboard.
+                QColor octaveLabel;        ///< Octave label text on piano keys.
+                QColor phonemeSeparator;   ///< Phoneme boundary separator line.
+                QColor phonemeSeparatorFill; ///< Phoneme separator background fill.
+                QColor phonemeText;        ///< Phoneme label text color.
+                QColor f0Original;         ///< Original F0 reference curve (dashed).
+                QColor crosshair;          ///< Mouse crosshair cursor line.
+                QColor tooltipBg;          ///< Tooltip background.
+                QColor tooltipText;        ///< Tooltip text color.
             } pianoRoll;
 
             /// @brief Audio visualization colors (waveform, power, spectrogram).
