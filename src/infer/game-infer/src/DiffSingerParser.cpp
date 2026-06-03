@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 
 namespace Game
 {
@@ -89,17 +88,17 @@ namespace Game
         return values;
     }
 
-    std::vector<DiffSingerItem> parseDiffSingerCSV(const std::filesystem::path &csvPath,
+    dstools::Result<std::vector<DiffSingerItem>> parseDiffSingerCSV(const std::filesystem::path &csvPath,
                                                     const std::vector<std::string> &audioExtensions) {
         std::ifstream file(csvPath, std::ios::in);
         if (!file.is_open()) {
-            throw std::runtime_error("Cannot open CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("Cannot open CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
         }
 
         // Read header
         std::string headerLine;
         if (!std::getline(file, headerLine)) {
-            throw std::runtime_error("Empty CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("Empty CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
         }
         // Strip BOM if present
         if (headerLine.size() >= 3 && headerLine[0] == '\xEF' && headerLine[1] == '\xBB' && headerLine[2] == '\xBF') {
@@ -126,13 +125,13 @@ namespace Game
         }
 
         if (nameIdx < 0)
-            throw std::runtime_error("CSV missing 'name' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("CSV missing 'name' column: " + dsfw::PathUtils::toUtf8(csvPath));
         if (phSeqIdx < 0)
-            throw std::runtime_error("CSV missing 'ph_seq' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("CSV missing 'ph_seq' column: " + dsfw::PathUtils::toUtf8(csvPath));
         if (phDurIdx < 0)
-            throw std::runtime_error("CSV missing 'ph_dur' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("CSV missing 'ph_dur' column: " + dsfw::PathUtils::toUtf8(csvPath));
         if (phNumIdx < 0)
-            throw std::runtime_error("CSV missing 'ph_num' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("CSV missing 'ph_num' column: " + dsfw::PathUtils::toUtf8(csvPath));
 
         const auto parentDir = csvPath.parent_path();
 
@@ -170,7 +169,7 @@ namespace Game
                 }
             }
             if (!found) {
-                throw std::runtime_error("Waveform file not found for item '" + item.name + "' in " +
+                return dstools::Err("Waveform file not found for item '" + item.name + "' in " +
                                          dsfw::PathUtils::toUtf8(csvPath));
             }
 
@@ -178,16 +177,16 @@ namespace Game
         }
 
         if (items.empty()) {
-            throw std::runtime_error("No items found in CSV: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("No items found in CSV: " + dsfw::PathUtils::toUtf8(csvPath));
         }
 
         return items;
     }
 
-    void writeDiffSingerCSV(const std::filesystem::path &csvPath, const std::vector<DiffSingerItem> &items,
+    dstools::Result<void> writeDiffSingerCSV(const std::filesystem::path &csvPath, const std::vector<DiffSingerItem> &items,
                             const std::vector<std::vector<AlignedNote>> &alignResults) {
         if (items.size() != alignResults.size()) {
-            throw std::invalid_argument("items and alignResults must have the same length");
+            return dstools::Err("items and alignResults must have the same length");
         }
 
         // Build column order: start from original, ensure note_seq/note_dur/note_slur present, remove note_glide
@@ -216,7 +215,7 @@ namespace Game
 
         std::ofstream file(csvPath, std::ios::out | std::ios::trunc);
         if (!file.is_open()) {
-            throw std::runtime_error("Cannot open output CSV: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dstools::Err("Cannot open output CSV: " + dsfw::PathUtils::toUtf8(csvPath));
         }
 
         // Write header
@@ -267,6 +266,7 @@ namespace Game
             }
             file << "\n";
         }
+        return dstools::Ok();
     }
 
 } // namespace Game

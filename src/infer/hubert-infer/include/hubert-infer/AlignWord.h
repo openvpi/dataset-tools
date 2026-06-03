@@ -4,6 +4,7 @@
 #pragma once
 
 #include <hubert-infer/HubertInferGlobal.h>
+#include <dstools/Result.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -64,7 +65,7 @@ namespace HFA {
         /// @brief Appends a diagnostic log message.
         void _add_log(const std::string &message);
         /// @brief Removes overlapping portions from an interval.
-        static std::vector<std::pair<float, float>>
+        static dstools::Result<std::vector<std::pair<float, float>>>
             remove_overlapping_intervals(const std::pair<float, float> &raw_interval,
                                          const std::pair<float, float> &remove_interval);
 

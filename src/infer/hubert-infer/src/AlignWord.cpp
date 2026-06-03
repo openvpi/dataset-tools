@@ -111,7 +111,7 @@ namespace HFA {
         log.clear();
     }
 
-    std::vector<std::pair<float, float>>
+    dstools::Result<std::vector<std::pair<float, float>>>
         WordList::remove_overlapping_intervals(const std::pair<float, float> &raw_interval,
                                                const std::pair<float, float> &remove_interval) {
 
@@ -121,10 +121,10 @@ namespace HFA {
         const float m_end = remove_interval.second;
 
         if (!(r_start < r_end)) {
-            throw std::runtime_error("raw_interval.start must be smaller than raw_interval.end");
+            return dstools::Err("raw_interval.start must be smaller than raw_interval.end");
         }
         if (!(m_start < m_end)) {
-            throw std::runtime_error("remove_interval.start must be smaller than remove_interval.end");
+            return dstools::Err("remove_interval.start must be smaller than remove_interval.end");
         }
 
         float overlap_start = std::max(r_start, m_start);
@@ -211,7 +211,12 @@ namespace HFA {
             for (const auto &word : words_) {
                 std::vector<std::pair<float, float>> temp_res;
                 for (const auto &ap : ap_intervals) {
-                    auto intervals = remove_overlapping_intervals(ap, {word.start, word.end});
+                    auto intervalsResult = remove_overlapping_intervals(ap, {word.start, word.end});
+                    if (!intervalsResult) {
+                        _add_log("ERROR: remove_overlapping_intervals: " + intervalsResult.error());
+                        continue;
+                    }
+                    const auto &intervals = intervalsResult.value();
                     temp_res.insert(temp_res.end(), intervals.begin(), intervals.end());
                 }
                 ap_intervals = temp_res;

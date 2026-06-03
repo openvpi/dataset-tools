@@ -14,12 +14,13 @@ namespace FunAsr {
         SpeechWrap speech;
         FeatureQueue fqueue;
         int mode;
+        bool m_valid = true;
 
         float *fft_input{};
         fftwf_complex *fft_out{};
         fftwf_plan p{};
 
-        void fftw_init();
+        bool fftw_init();
         void melspect(const float *din, float *dout);
         void global_cmvn(float *din) const;
 
@@ -30,6 +31,7 @@ namespace FunAsr {
         void reset();
         void insert(float *din, int len, int flag);
         bool fetch(std::unique_ptr<Tensor<float>> &dout);
+        [[nodiscard]] bool isValid() const { return m_valid; }
     };
 }
 #endif

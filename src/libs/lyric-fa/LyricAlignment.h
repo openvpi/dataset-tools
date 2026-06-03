@@ -10,6 +10,7 @@
 #include <QVector>
 #include <cpp-pinyin/Pinyin.h>
 #include <dsfw/AsyncTask.h>
+#include <dstools/Result.h>
 #include <memory>
 #include <tuple>
 
@@ -44,7 +45,7 @@ namespace LyricFA {
     public:
         LyricMatcher();
 
-        LyricData process_lyric_file(const QString &lyric_path) const;
+        dstools::Result<LyricData> process_lyric_file(const QString &lyric_path) const;
         LyricData processLyricContent(const QString &content) const;
 
         std::pair<QVector<QString>, QVector<QString>> process_asr_content(const QString &lab_content) const;

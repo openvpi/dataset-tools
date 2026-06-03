@@ -107,16 +107,17 @@ QWidget *DictionaryPanel::createDictTab() {
                 m_g2pTestResult->setText(QStringLiteral("(请先设置词典路径)"));
                 return;
             }
-            try {
-                HFA::DictionaryG2P g2p(dictPath.toStdString(), "zh");
-                auto [phSeq, wordSeq, ph2word] = g2p.convert(input.toStdString(), "zh");
-                QStringList phonemes;
-                for (const auto &ph : phSeq)
-                    phonemes << QString::fromStdString(ph);
-                m_g2pTestResult->setText(phonemes.join(QStringLiteral(" ")));
-            } catch (const std::exception &e) {
-                m_g2pTestResult->setText(QStringLiteral("错误: ") + QString::fromLocal8Bit(e.what()));
+            auto g2pResult = HFA::DictionaryG2P::load(dictPath.toStdString(), "zh");
+            if (!g2pResult) {
+                m_g2pTestResult->setText(QStringLiteral("错误: ") + QString::fromStdString(g2pResult.error()));
+                return;
             }
+            auto &g2p = *g2pResult.value();
+            auto [phSeq, wordSeq, ph2word] = g2p.convert(input.toStdString(), "zh");
+            QStringList phonemes;
+            for (const auto &ph : phSeq)
+                phonemes << QString::fromStdString(ph);
+            m_g2pTestResult->setText(phonemes.join(QStringLiteral(" ")));
         }
     });
 

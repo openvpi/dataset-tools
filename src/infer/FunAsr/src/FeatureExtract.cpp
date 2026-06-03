@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <cstring>
-#include <new>
 
 #include "predefine_coe.h"
 #include <ComDefine.h>
@@ -37,7 +36,8 @@ namespace FunAsr {
             if (fft_out) fftwf_free(fft_out);
             fft_input = nullptr;
             fft_out = nullptr;
-            throw std::bad_alloc();
+            m_valid = false;
+            return;
         }
         memset(fft_input, 0, sizeof(float) * fft_size);
         p = fftwf_plan_dft_r2c_1d(fft_size, fft_input, fft_out, FFTW_ESTIMATE);

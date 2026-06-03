@@ -3,6 +3,8 @@
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
+#include <QThread>
+#include <QtConcurrent/QtConcurrent>
 #include <dsfw/AtomicFileWriter.h>
 #include <dsfw/PathUtils.h>
 #include <nlohmann/json.hpp>
@@ -22,6 +24,9 @@ private slots:
     void write_failure_readonly_directory();
     void multiple_consecutive_writes();
     void large_content_write();
+    void cjk_filename_write_and_read();
+    void long_path_write();
+    void concurrent_write_safety();
 };
 
 void TestAtomicFileWriterSafety::write_and_read_back() {
@@ -231,6 +236,88 @@ void TestAtomicFileWriterSafety::large_content_write() {
     QFile f(tmpDir.filePath("large.txt"));
     QVERIFY(f.open(QIODevice::ReadOnly));
     QCOMPARE(QTextStream(&f).readAll().toStdString(), content);
+}
+
+void TestAtomicFileWriterSafety::cjk_filename_write_and_read() {
+    QTemporaryDir tmpDir;
+    QVERIFY(tmpDir.isValid());
+
+    const auto path = dsfw::PathUtils::toStdPath(tmpDir.filePath(QString::fromUtf8("测试文件_日本語_한국어.txt")));
+    const std::string content = "CJK filename test content";
+
+    auto res = dsfw::AtomicFileWriter::write(path, content);
+    QVERIFY2(res.ok(), qPrintable(QString::fromStdString(res.error())));
+
+    QFile f(tmpDir.filePath(QString::fromUtf8("测试文件_日本語_한국어.txt")));
+    QVERIFY(f.open(QIODevice::ReadOnly | QIODevice::Text));
+    QCOMPARE(QTextStream(&f).readAll(), QString::fromStdString(content));
+}
+
+void TestAtomicFileWriterSafety::long_path_write() {
+    QTemporaryDir tmpDir;
+    QVERIFY(tmpDir.isValid());
+
+    // Build a path > 260 characters to test MAX_PATH handling
+    QString longSubDir = QStringLiteral("a");
+    for (int i = 0; i < 10; ++i) {
+        longSubDir += QStringLiteral("/long_directory_name_segment_") + QString::number(i);
+    }
+    const QString longFileName = QStringLiteral("file_with_a_very_long_name_to_test_path_limits_") +
+                                 QString(50, QLatin1Char('x')) + QStringLiteral(".txt");
+    const QString fullPath = tmpDir.filePath(longSubDir + QStringLiteral("/") + longFileName);
+
+    const auto path = dsfw::PathUtils::toStdPath(fullPath);
+    const std::string content = "long path test";
+
+    auto res = dsfw::AtomicFileWriter::write(path, content);
+    QVERIFY2(res.ok(), qPrintable(QString::fromStdString(res.error())));
+
+    QFile f(fullPath);
+    QVERIFY(f.open(QIODevice::ReadOnly | QIODevice::Text));
+    QCOMPARE(QTextStream(&f).readAll(), QString::fromStdString(content));
+}
+
+void TestAtomicFileWriterSafety::concurrent_write_safety() {
+    QTemporaryDir tmpDir;
+    QVERIFY(tmpDir.isValid());
+
+    // Disable backup/validation to avoid interference during concurrent writes
+    dsfw::AtomicFileWriter::setBackupEnabled(false);
+    dsfw::AtomicFileWriter::setValidationEnabled(false);
+
+    const auto path = dsfw::PathUtils::toStdPath(tmpDir.filePath("concurrent.txt"));
+    constexpr int kNumThreads = 8;
+    constexpr int kWritesPerThread = 20;
+
+    std::atomic<int> errors{0};
+    std::atomic<int> completed{0};
+
+    QList<QFuture<void>> futures;
+    for (int t = 0; t < kNumThreads; ++t) {
+        futures.append(QtConcurrent::run([&, t]() {
+            for (int i = 0; i < kWritesPerThread; ++i) {
+                std::string content = "thread_" + std::to_string(t) + "_iter_" + std::to_string(i);
+                auto res = dsfw::AtomicFileWriter::write(path, content);
+                if (!res.ok()) {
+                    errors.fetch_add(1);
+                }
+                completed.fetch_add(1);
+            }
+        }));
+    }
+
+    for (auto &future : futures) {
+        future.waitForFinished();
+    }
+
+    QCOMPARE(errors.load(), 0);
+    QCOMPARE(completed.load(), kNumThreads * kWritesPerThread);
+
+    QFile f(tmpDir.filePath("concurrent.txt"));
+    QVERIFY(f.exists());
+
+    dsfw::AtomicFileWriter::setBackupEnabled(true);
+    dsfw::AtomicFileWriter::setValidationEnabled(true);
 }
 
 QTEST_MAIN(TestAtomicFileWriterSafety)

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
-#include <stdexcept>
 #include <vector>
 
 namespace Game
@@ -32,15 +31,15 @@ namespace Game
         return bestIdx;
     }
 
-    std::vector<AlignedNote> alignNotesToWords(const std::vector<WordInfo> &words,
-                                               const std::vector<std::string> &noteSeq,
-                                               const std::vector<float> &noteDur, const float tol,
-                                               const bool applyWordUv) {
+    dstools::Result<std::vector<AlignedNote>> alignNotesToWords(const std::vector<WordInfo> &words,
+                                                               const std::vector<std::string> &noteSeq,
+                                                               const std::vector<float> &noteDur, const float tol,
+                                                               const bool applyWordUv) {
         if (noteSeq.size() != noteDur.size()) {
-            throw std::invalid_argument("noteSeq and noteDur must have the same length");
+            return dstools::Err("noteSeq and noteDur must have the same length");
         }
         if (noteSeq.empty())
-            return {};
+            return std::vector<AlignedNote>{};
 
         // Compute word start/end times
         std::vector<float> wordDurVec;

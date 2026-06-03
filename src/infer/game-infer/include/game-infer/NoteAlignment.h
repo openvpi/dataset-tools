@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include <dstools/Result.h>
+
 #include "GameGlobal.h"
 #include "WordParser.h"
 
@@ -24,11 +26,11 @@ namespace Game
      * @param noteDur Predicted note durations in seconds
      * @param tol Alignment tolerance in seconds (default 0.01)
      * @param applyWordUv If true, force unvoiced words to "rest" (used when uv_note_cond == "follow")
-     * @return Aligned notes with slur flags
+     * @return Aligned notes with slur flags, or error
      */
-    GAME_INFER_EXPORT std::vector<AlignedNote> alignNotesToWords(const std::vector<WordInfo> &words,
-                                                                 const std::vector<std::string> &noteSeq,
-                                                                 const std::vector<float> &noteDur, float tol = 0.01f,
-                                                                 bool applyWordUv = false);
+    GAME_INFER_EXPORT dstools::Result<std::vector<AlignedNote>> alignNotesToWords(const std::vector<WordInfo> &words,
+                                                                                   const std::vector<std::string> &noteSeq,
+                                                                                   const std::vector<float> &noteDur, float tol = 0.01f,
+                                                                                   bool applyWordUv = false);
 
 } // namespace Game

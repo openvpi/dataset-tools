@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <dstools/OnnxEnv.h>
+#include <dstools/Result.h>
 
 namespace HFA {
     HfaModel::HfaModel(const std::filesystem::path &model_Path, const ExecutionProvider provider, const int device_id)
@@ -57,11 +58,11 @@ namespace HFA {
             auto predictor_outputs = m_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1,
                                                           output_names.data(), output_names.size());
 
-            auto parse_3d_output = [](Ort::Value &tensor) {
+            auto parse_3d_output = [](Ort::Value &tensor) -> dstools::Result<std::vector<std::vector<std::vector<float>>>> {
                 const auto shape = tensor.GetTensorTypeAndShapeInfo().GetShape();
 
                 if (shape.size() != 3) {
-                    throw std::runtime_error("Expected 3D tensor (BCT) but got " + std::to_string(shape.size()) + "D");
+                    return dstools::Err("Expected 3D tensor (BCT) but got " + std::to_string(shape.size()) + "D");
                 }
 
                 const size_t batch = shape[0];
@@ -103,16 +104,23 @@ namespace HFA {
                 return output;
             };
 
-            result.ph_frame_logits = parse_3d_output(predictor_outputs[0]);
+            auto phFrameResult = parse_3d_output(predictor_outputs[0]);
+            if (!phFrameResult) {
+                msg = phFrameResult.error();
+                return false;
+            }
+            result.ph_frame_logits = std::move(phFrameResult.value());
             result.ph_edge_logits = parse_2d_output(predictor_outputs[1]);
-            result.cvnt_logits = parse_3d_output(predictor_outputs[2]);
+            auto cvntResult = parse_3d_output(predictor_outputs[2]);
+            if (!cvntResult) {
+                msg = cvntResult.error();
+                return false;
+            }
+            result.cvnt_logits = std::move(cvntResult.value());
 
             return true;
         } catch (const Ort::Exception &e) {
             msg = "预测器推理错误: " + std::string(e.what());
-            return false;
-        } catch (const std::exception &e) {
-            msg = "预测器内部错误: " + std::string(e.what());
             return false;
         }
     }

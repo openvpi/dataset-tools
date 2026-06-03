@@ -408,7 +408,11 @@ namespace Game
                     parseWords(input.phSeq, input.phDur, input.phNum, options.uvVocab, options.uvWordCond, false);
             }
 
-            output = alignNotesToWords(alignWords, noteSeq, validDur, 0.01f, options.uvNoteCond == UvNoteCond::Follow);
+            auto alignResult = alignNotesToWords(alignWords, noteSeq, validDur, 0.01f, options.uvNoteCond == UvNoteCond::Follow);
+            if (!alignResult) {
+                return dstools::Err(alignResult.error());
+            }
+            output = std::move(alignResult.value());
         } else {
             for (size_t i = 0; i < validScores.size(); ++i) {
                 std::string name;
@@ -429,12 +433,11 @@ namespace Game
                                          const AlignOptions &options,
                                          const std::function<void(int)> &progressChanged) const {
         std::vector<DiffSingerItem> items;
-        try {
-            items = parseDiffSingerCSV(csvPath);
+        auto parseResult = parseDiffSingerCSV(csvPath);
+        if (!parseResult) {
+            return dstools::Err("Failed to parse CSV: " + parseResult.error());
         }
-        catch (const std::exception &e) {
-            return dstools::Err("Failed to parse CSV: " + std::string(e.what()));
-        }
+        items = std::move(parseResult.value());
 
         std::filesystem::path outputPath;
         if (!savePath.empty()) {
@@ -475,11 +478,9 @@ namespace Game
             }
         }
 
-        try {
-            writeDiffSingerCSV(outputPath, items, allResults);
-        }
-        catch (const std::exception &e) {
-            return dstools::Err("Failed to write output CSV: " + std::string(e.what()));
+        auto writeResult = writeDiffSingerCSV(outputPath, items, allResults);
+        if (!writeResult) {
+            return dstools::Err("Failed to write output CSV: " + writeResult.error());
         }
 
         return dstools::Ok();

@@ -7,6 +7,7 @@
 
 #include "GameGlobal.h"
 #include "NoteAlignment.h"
+#include <dstools/Result.h>
 
 namespace Game
 {
@@ -39,9 +40,9 @@ namespace Game
      * @param audioExtensions Audio file extensions to try (default: .wav, .flac)
      * @return Vector of parsed items
      */
-    GAME_INFER_EXPORT std::vector<DiffSingerItem> parseDiffSingerCSV(const std::filesystem::path &csvPath,
-                                                                     const std::vector<std::string> &audioExtensions = {
-                                                                         ".wav", ".flac"});
+    GAME_INFER_EXPORT dstools::Result<std::vector<DiffSingerItem>> parseDiffSingerCSV(
+        const std::filesystem::path &csvPath,
+        const std::vector<std::string> &audioExtensions = {".wav", ".flac"});
 
     /**
      * Write updated DiffSinger transcription CSV with alignment results.
@@ -53,8 +54,8 @@ namespace Game
      * @param items Original parsed items (provides column order and extra fields)
      * @param alignResults Alignment results per item (must be same length as items)
      */
-    GAME_INFER_EXPORT void writeDiffSingerCSV(const std::filesystem::path &csvPath,
-                                              const std::vector<DiffSingerItem> &items,
-                                              const std::vector<std::vector<AlignedNote>> &alignResults);
+    GAME_INFER_EXPORT dstools::Result<void> writeDiffSingerCSV(const std::filesystem::path &csvPath,
+                                                       const std::vector<DiffSingerItem> &items,
+                                                       const std::vector<std::vector<AlignedNote>> &alignResults);
 
 } // namespace Game

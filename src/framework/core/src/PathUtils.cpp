@@ -410,7 +410,7 @@ uint32_t PathUtils::crc32(const uint8_t* data, size_t size) {
 dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
-        return dstools::Result<uint32_t>::Error("Failed to open file for CRC32: " + path.string());
+        return dstools::Result<uint32_t>::Error("Failed to open file for CRC32: " + toUtf8(path));
     }
 
     constexpr size_t kBufSize = 65536;
@@ -421,7 +421,7 @@ dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path& path) {
     }
 
     if (file.bad()) {
-        return dstools::Result<uint32_t>::Error("Read error during CRC32: " + path.string());
+        return dstools::Result<uint32_t>::Error("Read error during CRC32: " + toUtf8(path));
     }
 
     return dstools::Result<uint32_t>::Ok(crc);

@@ -4,6 +4,8 @@
 #pragma once
 #include <filesystem>
 #include <hubert-infer/HubertInferGlobal.h>
+#include <dstools/Result.h>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -15,10 +17,12 @@ namespace HFA {
     ///        sequences with word-to-phoneme index mapping.
     class HUBERT_INFER_EXPORT DictionaryG2P {
     public:
-        /// @brief Constructs the G2P converter from a dictionary file.
+        /// @brief Factory method to construct from a dictionary file.
         /// @param dictionaryPath Path to the pronunciation dictionary.
         /// @param language Default language identifier.
-        DictionaryG2P(const std::filesystem::path &dictionaryPath, const std::string &language);
+        /// @return Valid DictionaryG2P or error.
+        static dstools::Result<std::unique_ptr<DictionaryG2P>> load(const std::filesystem::path &dictionaryPath,
+                                                                     const std::string &language);
 
         /// @brief Converts input text to phoneme and word sequences.
         /// @param inputText Text to convert.
@@ -28,6 +32,9 @@ namespace HFA {
             convert(const std::string &inputText, const std::string &language);
 
     private:
+        /// @brief Constructs the G2P converter from a dictionary file.
+        DictionaryG2P(const std::filesystem::path &dictionaryPath, const std::string &language);
+
         std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>>
             dictionary_;       ///< Language-keyed pronunciation dictionary.
         std::string language_; ///< Default language.

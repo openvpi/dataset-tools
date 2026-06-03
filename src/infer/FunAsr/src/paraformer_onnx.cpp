@@ -21,6 +21,10 @@ namespace FunAsr {
 
         try {
             fe = std::make_unique<FeatureExtract>(3);
+            if (!fe->isValid()) {
+                m_errorMessage = "FeatureExtract initialization failed";
+                return;
+            }
 
             auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(
                 dstools::infer::ExecutionProvider::CPU, 0, nNumThread);

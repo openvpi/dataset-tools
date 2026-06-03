@@ -64,7 +64,12 @@ namespace HFA {
                     if (!fs::exists(dict_path)) {
                         std::cerr << dsfw::PathUtils::toUtf8(dict_path) << " does not exist" << std::endl;
                     } else {
-                        m_dictG2p[language] = std::make_unique<DictionaryG2P>(dict_path, language);
+                        auto dictResult = DictionaryG2P::load(dict_path, language);
+                        if (!dictResult) {
+                            std::cerr << "Failed to load dictionary: " << dictResult.error() << std::endl;
+                        } else {
+                            m_dictG2p[language] = std::move(dictResult.value());
+                        }
                     }
                 }
             }
