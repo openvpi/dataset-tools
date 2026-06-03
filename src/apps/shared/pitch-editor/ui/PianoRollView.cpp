@@ -47,7 +47,7 @@ namespace dstools {
                 setupInputCallbacks();
 
                 // Center view on middle C area by default
-                m_scrollY = static_cast<int>((RenderState::MaxMidi - 72) * m_vScale);
+                m_scrollY = static_cast<int>((s.maxMidi - 72) * m_vScale);
             }
 
             PianoRollView::~PianoRollView() = default;
@@ -422,11 +422,11 @@ namespace dstools {
             }
 
             double PianoRollView::midiToY(double midi) const {
-                return (RenderState::MaxMidi - midi) * m_vScale + RenderState::RulerHeight;
+                return (s.maxMidi - midi) * m_vScale + RenderState::RulerHeight;
             }
 
             double PianoRollView::yToMidi(double y) const {
-                return RenderState::MaxMidi - (y - RenderState::RulerHeight) / m_vScale;
+                return s.maxMidi - (y - RenderState::RulerHeight) / m_vScale;
             }
 
             int PianoRollView::sceneXToWidget(double sceneX) const {
@@ -451,7 +451,7 @@ namespace dstools {
 
              void PianoRollView::updateScrollBars() {
                 int drawH = height();
-                double sceneH = midiToY(RenderState::MinMidi) + 50;
+                double sceneH = midiToY(s.minMidi) + 50;
 
                 m_vScrollBar->setRange(0, qMax(0, static_cast<int>(sceneH - drawH)));
                 m_vScrollBar->setPageStep(drawH);
@@ -618,7 +618,13 @@ namespace dstools {
 
                 s.coord = m_coord;
 
-                s.contentLeft = m_contentLeftMargin;
+                // Layout config (from ChartConfigRegistry)
+                s.pianoWidth = m_configPianoWidth;
+                s.scrollBarSize = m_configScrollBarSize;
+                s.minMidi = m_configMinMidi;
+                s.maxMidi = m_configMaxMidi;
+                s.modulationDragSensitivity = m_configModSensitivity;
+                s.contentLeft = m_configPianoWidth;
 
                 return s;
             }
@@ -633,7 +639,7 @@ namespace dstools {
                 rs.coord = coord;
                 rs.coord.scrollX = m_coord.scrollX;
                 rs.coord.scrollY = m_coord.scrollY;
-                int w = width() - RenderState::ScrollBarSize;
+                int w = width() - s.scrollBarSize;
                 int h = height();
                 PianoRollRenderer::drawGrid(painter, w, h, rs);
                 PianoRollRenderer::drawNotes(painter, w, h, rs);
@@ -650,7 +656,7 @@ namespace dstools {
                 QPainter p(this);
                 p.setRenderHint(QPainter::Antialiasing);
 
-                int w = width() - RenderState::ScrollBarSize;
+                int w = width() - s.scrollBarSize;
                 int h = height();
 
                 auto rs = buildRenderState();
@@ -669,7 +675,7 @@ namespace dstools {
                 p.setClipRect(0, 0, w, h);
 
                 // Position vertical scroll bar on the right
-                m_vScrollBar->setGeometry(w, 0, RenderState::ScrollBarSize, h);
+                m_vScrollBar->setGeometry(w, 0, s.scrollBarSize, h);
             }
 
             // ============================================================================
@@ -775,6 +781,19 @@ namespace dstools {
             // ============================================================================
             // Config persistence
             // ============================================================================
+
+            void PianoRollView::setLayoutConfig(int pianoWidth, int scrollBarSize, int minMidi, int maxMidi,
+                                                double modSensitivity) {
+                m_configPianoWidth = pianoWidth;
+                m_configScrollBarSize = scrollBarSize;
+                m_configMinMidi = minMidi;
+                m_configMaxMidi = maxMidi;
+                m_configModSensitivity = modSensitivity;
+                m_contentLeftMargin = pianoWidth;
+                m_inputHandler.setContentLeftMargin(pianoWidth);
+                m_inputHandler.setModulationDragSensitivity(modSensitivity);
+                update();
+            }
 
             void PianoRollView::loadConfig(dstools::AppSettings &settings) {
                 m_snapToKey = settings.get(dstools::settings::pitch::kSnapToKey);

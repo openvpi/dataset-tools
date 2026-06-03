@@ -7,7 +7,8 @@ namespace dstools {
     Result<nlohmann::json> JsonHelper::loadFile(const std::filesystem::path &path) {
         std::ifstream file(path);
         if (!file.is_open()) {
-            return Err<nlohmann::json>("Cannot open file: " + path.string());
+            const auto u8 = path.u8string();
+            return Err<nlohmann::json>("Cannot open file: " + std::string(u8.begin(), u8.end()));
         }
         try {
             nlohmann::json data = nlohmann::json::parse(file);

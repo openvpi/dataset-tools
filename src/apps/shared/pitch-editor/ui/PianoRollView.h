@@ -89,9 +89,13 @@ namespace dstools {
                 void setBoundaryModel(chart::IBoundaryModel *model);
                 chart::IBoundaryModel *boundaryModel() const;
 
-                // Config persistence (following SlurCutter F0Widget pattern)
+                ///// Config persistence (following SlurCutter F0Widget pattern)
                 void loadConfig(dstools::AppSettings &settings);
                 void pullConfig(dstools::AppSettings &settings) const;
+
+                /// Set layout config from ChartConfigRegistry
+                void setLayoutConfig(int pianoWidth, int scrollBarSize, int minMidi, int maxMidi,
+                                     double modSensitivity);
 
             signals:
                 void noteSelected(int noteIndex);
@@ -157,7 +161,14 @@ namespace dstools {
                 double m_boundaryHitRadius = 5.0;
                 int m_defaultResolution = 40;
 
-                int m_contentLeftMargin = RenderState::PianoWidth;
+                int m_contentLeftMargin = 52; // default pianoWidth
+
+                // Config values from ChartConfigRegistry (set by PianoRollChartPanel)
+                int m_configPianoWidth = 52;
+                int m_configScrollBarSize = 14;
+                int m_configMinMidi = 24;
+                int m_configMaxMidi = 96;
+                double m_configModSensitivity = 80.0;
 
                 // Unified coordinate (from ChartCoordinate)
                 chart::ChartCoordinate m_coord;

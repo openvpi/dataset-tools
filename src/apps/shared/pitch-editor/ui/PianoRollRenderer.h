@@ -62,14 +62,16 @@ namespace dstools {
 
                 chart::ChartCoordinate coord; // Unified coordinate interface
 
-                // Layout constants
-                static constexpr int PianoWidth = 52;
+                // Layout constants (configurable via ChartConfigRegistry)
                 static constexpr int RulerHeight = 0;
-                static constexpr int ScrollBarSize = 14;
-                static constexpr int MinMidi = 24;
-                static constexpr int MaxMidi = 96;
 
-                int contentLeft = PianoWidth;
+                int pianoWidth = 52;
+                int scrollBarSize = 14;
+                int minMidi = 24;
+                int maxMidi = 96;
+                double modulationDragSensitivity = 80.0;
+
+                int contentLeft = 52; // initialized from pianoWidth in buildRenderState
 
                 // Coordinate conversion helpers (inlined for performance)
                 double timeToX(double time) const {

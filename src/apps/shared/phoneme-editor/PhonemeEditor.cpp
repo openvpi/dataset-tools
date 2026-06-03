@@ -288,6 +288,7 @@ void PhonemeEditor::buildLayout() {
     m_spectrogramChart->setUndoStack(m_undoStack);
 
     // Add piano roll chart
+    pitchlabeler::ui::PianoRollChartPanel::registerChartConfig();
     m_pianoRollChart = new pitchlabeler::ui::PianoRollChartPanel(m_viewport);
     m_pianoRollChart->setUndoStack(m_undoStack);
     m_container->addChart("pianoroll", m_pianoRollChart, 0, 0, 3.0);

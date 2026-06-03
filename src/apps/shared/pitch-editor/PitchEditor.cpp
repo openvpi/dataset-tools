@@ -303,6 +303,7 @@ void PitchEditor::buildLayout() {
     contentLayout->addWidget(m_mainSplitter, 1);
     m_container->setTierLabelArea(nullptr);
 
+    ui::PianoRollChartPanel::registerChartConfig();
     m_pianoRollChart = new ui::PianoRollChartPanel(m_viewport);
     m_pianoRollChart->setUndoStack(m_undoStack);
     m_container->addChart("pianoroll", m_pianoRollChart, 0, 0, 3.0);

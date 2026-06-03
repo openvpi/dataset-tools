@@ -1,4 +1,5 @@
 #pragma once
+#include "ErrorCode.h"
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -20,6 +21,7 @@ namespace dstools {
             Result r;
             r.m_ok = false;
             r.m_error = std::move(error);
+            r.m_errcode = ErrorCode::Unknown;
             return r;
         }
 
@@ -27,39 +29,63 @@ namespace dstools {
             return Error(std::string(error));
         }
 
-        bool ok() const {
+        static Result Error(ErrorCode code, std::string error) {
+            Result r;
+            r.m_ok = false;
+            r.m_error = std::move(error);
+            r.m_errcode = code;
+            return r;
+        }
+
+        static Result Error(ErrorCode code, const char *error) {
+            return Error(code, std::string(error));
+        }
+
+        static Result Error(ErrorCode code) {
+            Result r;
+            r.m_ok = false;
+            r.m_error = std::string(errorCodeMessage(code));
+            r.m_errcode = code;
+            return r;
+        }
+
+        bool ok() const noexcept {
             return m_ok;
         }
-        explicit operator bool() const {
+        explicit operator bool() const noexcept {
             return m_ok;
         }
 
-        const T &value() const & {
+        const T &value() const & noexcept {
             return m_value;
         }
-        T &value() & {
+        T &value() & noexcept {
             return m_value;
         }
-        T &&value() && {
+        T &&value() && noexcept {
             return std::move(m_value);
         }
 
-        const T &operator*() const & {
+        const T &operator*() const & noexcept {
             return m_value;
         }
-        T &operator*() & {
+        T &operator*() & noexcept {
             return m_value;
         }
 
-        const T *operator->() const {
+        const T *operator->() const noexcept {
             return &m_value;
         }
-        T *operator->() {
+        T *operator->() noexcept {
             return &m_value;
         }
 
-        const std::string &error() const {
+        const std::string &error() const noexcept {
             return m_error;
+        }
+
+        ErrorCode code() const noexcept {
+            return m_errcode;
         }
 
         T value_or(T default_value) const {
@@ -71,6 +97,7 @@ namespace dstools {
 
         T m_value{};
         std::string m_error;
+        ErrorCode m_errcode = ErrorCode::None;
         bool m_ok = false;
     };
 
@@ -84,21 +111,46 @@ namespace dstools {
             Result r;
             r.m_ok = false;
             r.m_error = std::move(error);
+            r.m_errcode = ErrorCode::Unknown;
             return r;
         }
         static Result Error(const char *error) {
             return Error(std::string(error));
         }
 
-        bool ok() const {
+        static Result Error(ErrorCode code, std::string error) {
+            Result r;
+            r.m_ok = false;
+            r.m_error = std::move(error);
+            r.m_errcode = code;
+            return r;
+        }
+
+        static Result Error(ErrorCode code, const char *error) {
+            return Error(code, std::string(error));
+        }
+
+        static Result Error(ErrorCode code) {
+            Result r;
+            r.m_ok = false;
+            r.m_error = std::string(errorCodeMessage(code));
+            r.m_errcode = code;
+            return r;
+        }
+
+        bool ok() const noexcept {
             return m_ok;
         }
-        explicit operator bool() const {
+        explicit operator bool() const noexcept {
             return m_ok;
         }
 
-        const std::string &error() const {
+        const std::string &error() const noexcept {
             return m_error;
+        }
+
+        ErrorCode code() const noexcept {
+            return m_errcode;
         }
 
     private:
@@ -107,6 +159,7 @@ namespace dstools {
         Result() = default;
 
         std::string m_error;
+        ErrorCode m_errcode = ErrorCode::None;
         bool m_ok = false;
     };
 
@@ -127,6 +180,18 @@ namespace dstools {
         return Result<void>::Error(error);
     }
 
+    inline Result<void> Err(ErrorCode code, std::string error) {
+        return Result<void>::Error(code, std::move(error));
+    }
+
+    inline Result<void> Err(ErrorCode code, const char *error) {
+        return Result<void>::Error(code, error);
+    }
+
+    inline Result<void> Err(ErrorCode code) {
+        return Result<void>::Error(code);
+    }
+
     template <typename T>
     inline Result<T> Err(std::string error) {
         return Result<T>::Error(std::move(error));
@@ -135,6 +200,21 @@ namespace dstools {
     template <typename T>
     inline Result<T> Err(const char *error) {
         return Result<T>::Error(error);
+    }
+
+    template <typename T>
+    inline Result<T> Err(ErrorCode code, std::string error) {
+        return Result<T>::Error(code, std::move(error));
+    }
+
+    template <typename T>
+    inline Result<T> Err(ErrorCode code, const char *error) {
+        return Result<T>::Error(code, error);
+    }
+
+    template <typename T>
+    inline Result<T> Err(ErrorCode code) {
+        return Result<T>::Error(code);
     }
 
 }

@@ -189,7 +189,7 @@ namespace dstools {
                 // Boundary dragging
                 bool m_boundaryDragging = false;
                 int m_draggingBoundaryIndex = -1;
-                int m_contentLeftMargin = RenderState::PianoWidth;
+                int m_contentLeftMargin = 52; // default pianoWidth
             };
 
         } // namespace ui

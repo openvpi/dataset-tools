@@ -23,6 +23,8 @@ namespace dstools {
             public:
                 explicit PianoRollChartPanel(dsfw::widgets::ViewportController *vc, QWidget *parent = nullptr);
 
+                static void registerChartConfig();
+
                 void setDsPitchDocument(std::shared_ptr<DsPitchDocument> file);
                 void setUndoStack(QUndoStack *stack);
                 void setBoundaryModel(chart::IBoundaryModel *model);
@@ -52,7 +54,16 @@ namespace dstools {
                 void noteDeleteRequested(const std::vector<int> &indices);
 
             private:
+                void loadConfigParams();
+
                 PianoRollView *m_pianoRoll = nullptr;
+
+                // Config values from ChartConfigRegistry
+                int m_configPianoWidth = 52;
+                int m_configScrollBarSize = 14;
+                int m_configMinMidi = 24;
+                int m_configMaxMidi = 96;
+                double m_configModSensitivity = 80.0;
             };
 
         } // namespace ui
