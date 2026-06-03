@@ -49,22 +49,8 @@ double MouthCurveChartPanel::amplitudeMaxForZoom() const {
 
 void MouthCurveChartPanel::setData(const MouthCurve& curve) {
     m_curve = curve;
-    m_cacheDirty = true;
+    m_fullDataDirty = true;
     update();
-}
-
-void MouthCurveChartPanel::rebuildCache(const chart::RegionUpdate& region) {
-    Q_UNUSED(region)
-}
-
-void MouthCurveChartPanel::drawContent(QPainter& painter, const chart::ChartCoordinate& coord) {
-    Q_UNUSED(coord)
-    if (m_curve.isEmpty()) {
-        drawEmptyState(painter, QStringLiteral("No mouth curve data"));
-        return;
-    }
-
-    paintCurve(painter);
 }
 
 void MouthCurveChartPanel::paintYAxisContent(QPainter& painter, const QRect& chartRect) {
@@ -73,47 +59,53 @@ void MouthCurveChartPanel::paintYAxisContent(QPainter& painter, const QRect& cha
     paintYAxisTicks(painter, innerRect, kCurveMin, kCurveMax, kYTickCount, 2);
 }
 
-void MouthCurveChartPanel::paintCurve(QPainter& painter) {
-    int yaw = yAxisWidth();
-    QRect chartRect = chartContentRect();
-    int cols = chartRect.width();
+void MouthCurveChartPanel::renderFullData(QImage &image) {
+    image.fill(Qt::transparent);
+    if (m_curve.isEmpty()) return;
 
-    if (cols <= 0)
-        return;
+    int imgW = image.width();
+    int imgH = image.height();
+    if (imgW <= 0 || imgH <= 0) return;
 
-    painter.save();
-    painter.setClipRect(chartRect);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    double totalDur = dataDurationSec();
+    if (totalDur <= 0.0) return;
 
     QPainterPath path;
     bool started = false;
 
-    for (int col = 0; col < cols; ++col) {
-        double t = m_converter->startSec() +
-                   (m_converter->endSec() - m_converter->startSec()) * static_cast<double>(col) / cols;
-        int curveIdx = static_cast<int>(t * m_curve.values.size() / (m_converter->endSec() - m_converter->startSec()));
+    for (int col = 0; col < imgW; ++col) {
+        // Map column to time, then to curve index using timeToIndex
+        double t = totalDur * col / imgW;
+        double curveIdx = t / (totalDur / m_curve.values.size());
 
-        if (curveIdx < 0 || curveIdx >= static_cast<int>(m_curve.values.size()))
-            continue;
+        int idx = static_cast<int>(curveIdx);
+        if (idx < 0 || idx >= static_cast<int>(m_curve.values.size())) continue;
 
-        float val = m_curve.values[curveIdx] * static_cast<float>(m_amplitudeScale);
+        float val = m_curve.values[idx] * static_cast<float>(m_amplitudeScale);
         val = std::clamp(val, kCurveMin, kCurveMax);
 
-        int x = yaw + col;
-        int y = chartRect.bottom() - static_cast<int>(val / (kCurveMax - kCurveMin) * chartRect.height());
+        float norm = (val - kCurveMin) / (kCurveMax - kCurveMin);
+        float y = imgH - norm * imgH;
 
         if (!started) {
-            path.moveTo(x, y);
+            path.moveTo(static_cast<float>(col), y);
             started = true;
         } else {
-            path.lineTo(x, y);
+            path.lineTo(static_cast<float>(col), y);
         }
     }
 
+    if (!started) return;
+
     painter.setPen(QPen(QColor(0x00, 0xDC, 0xDC), 2));
-    painter.setRenderHint(QPainter::Antialiasing, true);
     painter.drawPath(path);
-    painter.setRenderHint(QPainter::Antialiasing, false);
-    painter.restore();
+}
+
+double MouthCurveChartPanel::dataDurationSec() const {
+    return m_curve.durationSec();
 }
 
 } // namespace dstools

@@ -29,7 +29,7 @@ namespace dstools {
             m_samples = samples;
             m_sampleRate = sampleRate;
             onAudioDataChanged();
-            m_cacheDirty = true;
+            m_fullDataDirty = true;
             update();
         }
 
@@ -44,7 +44,6 @@ namespace dstools {
         void ChartPanelBase::onViewportUpdate(const ChartCoordinate &conv, int pixelWidth) {
             m_converter = &conv;
             m_dataPixelWidth = pixelWidth;
-            m_cacheDirty = true;
             update();
         }
 
@@ -176,27 +175,47 @@ namespace dstools {
         }
 
         void ChartPanelBase::paintEvent(QPaintEvent *) {
-            if (m_cacheDirty) {
-                rebuildCache(m_pendingRegion);
-                m_cacheDirty = false;
-            }
+            ensureFullDataCache();
 
             QPainter painter(this);
             painter.setRenderHint(QPainter::Antialiasing, false);
 
             auto cr = chartContentRect();
-            if (cr.width() <= 0 && cr.height() <= 0)
+            if (cr.width() <= 0 || cr.height() <= 0)
                 return;
 
             painter.save();
             painter.setClipRect(cr);
+
+            if (!m_fullDataImage.isNull() && m_converter) {
+                double totalDur = dataDurationSec();
+                if (totalDur > 0.0) {
+                    double fracStart = m_converter->startSec() / totalDur;
+                    double fracEnd = m_converter->endSec() / totalDur;
+                    int srcX = static_cast<int>(fracStart * m_fullDataImage.width());
+                    int srcW = std::max(1,
+                        static_cast<int>((fracEnd - fracStart) * m_fullDataImage.width()));
+                    QRect srcRect(srcX, 0, srcW, m_fullDataImage.height());
+
+                    if (supportsVerticalZoom() && m_amplitudeScale != 1.0) {
+                        painter.save();
+                        painter.translate(0, cr.height() / 2.0);
+                        painter.scale(1.0, m_amplitudeScale);
+                        painter.translate(0, -cr.height() / 2.0);
+                        painter.drawImage(cr, m_fullDataImage, srcRect);
+                        painter.restore();
+                    } else {
+                        painter.drawImage(cr, m_fullDataImage, srcRect);
+                    }
+                }
+            }
+
             ChartCoordinate coord;
             if (m_converter) {
                 coord.viewStart = m_converter->startSec();
                 coord.viewEnd = m_converter->endSec();
                 coord.pixelWidth = m_dataPixelWidth;
             }
-            drawContent(painter, coord);
             paintOutOfBoundsOverlay(painter, cr, coord);
             painter.restore();
 
@@ -209,9 +228,21 @@ namespace dstools {
             }
         }
 
+        void ChartPanelBase::ensureFullDataCache() {
+            if (!m_fullDataDirty) return;
+            int imgW = fullDataImageWidth();
+            int imgH = fullDataImageHeight();
+            if (imgW > 0 && imgH > 0) {
+                m_fullDataImage = QImage(imgW, imgH, QImage::Format_ARGB32);
+                m_fullDataImage.fill(Qt::transparent);
+                renderFullData(m_fullDataImage);
+            }
+            m_fullDataDirty = false;
+        }
+
         void ChartPanelBase::resizeEvent(QResizeEvent *event) {
             m_dataPixelWidth = width();
-            m_cacheDirty = true;
+            m_fullDataDirty = true;
             QWidget::resizeEvent(event);
         }
 

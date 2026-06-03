@@ -19,19 +19,26 @@ namespace dstools {
             static void registerChartConfig();
 
             void setColorPalette(const SpectrogramColorPalette &palette);
-            void rebuildCache(const RegionUpdate &region) override;
-            void drawContent(QPainter &painter, const ChartCoordinate &coord) override;
             void paintYAxisContent(QPainter &painter, const QRect &chartRect) override;
             void onAudioDataChanged() override;
+
+            // F-01: 新增纯虚方法实现
+            void renderFullData(QImage &image) override;
+            double dataDurationSec() const override;
+
+            // F-04: 完整频谱图尺寸 — 受 QImage 最大宽度限制
+            int fullDataImageWidth() const override {
+                return std::min(m_totalFrames, 32767);
+            }
+            int fullDataImageHeight() const override {
+                return m_numFreqBins;
+            }
 
         private:
             void loadConfigParams();
             void prepareSpectrogramParams();
             void computeSpectrogramRange(int frameStart, int frameEnd);
             void ensureSpectrogramRange(int frameStart, int frameEnd);
-            void rebuildViewImage();
-            void rebuildViewImagePartial(const RegionUpdate &region);
-            void fillImageColumns(int startX, int endX, int w, int h, int totalFrames, double totalDuration);
             QRgb intensityToColor(float normalized) const;
             static std::vector<double> makeBlackmanHarrisWindow(int N);
 
@@ -50,10 +57,6 @@ namespace dstools {
 
             std::vector<std::vector<float>> m_spectrogramData;
             std::vector<bool> m_computedFrames;
-
-            QImage m_viewImage;
-            RegionUpdate m_pendingRegion{};
-            bool m_cacheDirty = false;
 
             SpectrogramColorPalette m_palette{SpectrogramColorPalette::orangeYellow()};
         };

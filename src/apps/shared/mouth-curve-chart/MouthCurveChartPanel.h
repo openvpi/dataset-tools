@@ -17,8 +17,6 @@ namespace dstools {
         void setData(const MouthCurve &curve);
 
     protected:
-        void drawContent(QPainter &painter, const chart::ChartCoordinate &coord) override;
-        void rebuildCache(const chart::RegionUpdate &region) override;
         bool supportsVerticalZoom() const override {
             return true;
         }
@@ -26,9 +24,17 @@ namespace dstools {
         double amplitudeMaxForZoom() const override;
         void paintYAxisContent(QPainter &painter, const QRect &chartRect) override;
 
+        // F-01: 新增纯虚方法实现
+        void renderFullData(QImage &image) override;
+        double dataDurationSec() const override;
+
+        // F-03: 每个采样点一列，确保精确渲染
+        int fullDataImageWidth() const override {
+            return static_cast<int>(m_curve.values.size());
+        }
+
     private:
         void loadConfigParams();
-        void paintCurve(QPainter &painter);
 
         MouthCurve m_curve;
 

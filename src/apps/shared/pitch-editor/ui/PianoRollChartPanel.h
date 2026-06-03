@@ -31,10 +31,13 @@ namespace dstools {
                     return m_pianoRoll;
                 }
 
-                void drawContent(QPainter &painter, const chart::ChartCoordinate &coord) override;
                 void onViewportUpdate(const chart::ChartCoordinate &conv, int pixelWidth) override;
                 void onBoundaryModelInvalidated() override;
                 void paintYAxisContent(QPainter &painter, const QRect &rect) override;
+
+                // F-01: 新增纯虚方法实现
+                void renderFullData(QImage &image) override;
+                double dataDurationSec() const override;
 
             signals:
                 void noteSelected(int noteIndex);

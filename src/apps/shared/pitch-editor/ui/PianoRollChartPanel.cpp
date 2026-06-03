@@ -63,11 +63,6 @@ void PianoRollChartPanel::setBoundaryModel(chart::IBoundaryModel *model)
     ChartPanelBase::setBoundaryModel(model);
 }
 
-void PianoRollChartPanel::drawContent(QPainter &painter, const chart::ChartCoordinate &coord)
-{
-    m_pianoRoll->render(painter, coord);
-}
-
 void PianoRollChartPanel::onViewportUpdate(const chart::ChartCoordinate &conv, int pixelWidth)
 {
     ChartPanelBase::onViewportUpdate(conv, pixelWidth);
@@ -85,6 +80,16 @@ void PianoRollChartPanel::paintYAxisContent(QPainter &painter, const QRect &rect
     painter.translate(rect.topLeft());
     PianoRollRenderer::drawPianoKeys(painter, rect.height(), rs);
     painter.restore();
+}
+
+void PianoRollChartPanel::renderFullData(QImage &image) {
+    Q_UNUSED(image)
+    // TODO: F-04 实现完整数据渲染
+}
+
+double PianoRollChartPanel::dataDurationSec() const {
+    // TODO: F-04 从 PianoRollView/DsPitchDocument 获取实际 duration
+    return 0.0;
 }
 
 } // namespace ui

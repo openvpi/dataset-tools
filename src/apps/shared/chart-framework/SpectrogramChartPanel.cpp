@@ -63,28 +63,13 @@ void SpectrogramChartPanel::loadConfigParams() {
 void SpectrogramChartPanel::setColorPalette(const SpectrogramColorPalette &palette) {
     m_palette = palette;
     m_viewImage = QImage();
-    m_pendingRegion = RegionUpdate{};
-    m_cacheDirty = true;
+    m_fullDataDirty = true;
     update();
 }
 
 void SpectrogramChartPanel::onAudioDataChanged() {
     prepareSpectrogramParams();
-    m_pendingRegion = RegionUpdate{};
-}
-
-void SpectrogramChartPanel::drawContent(QPainter &painter, const ChartCoordinate &coord) {
-    Q_UNUSED(coord)
-    if (m_samples.empty()) {
-        drawEmptyState(painter, tr("No audio loaded"));
-        return;
-    }
-
-    int yaw = yAxisWidth();
-
-    if (!m_viewImage.isNull()) {
-        painter.drawImage(yaw, 0, m_viewImage);
-    }
+    m_fullDataDirty = true;
 }
 
 void SpectrogramChartPanel::paintYAxisContent(QPainter &painter, const QRect &chartRect) {
@@ -120,14 +105,6 @@ void SpectrogramChartPanel::paintYAxisContent(QPainter &painter, const QRect &ch
 
     painter.drawLine(labelW - 1, 0, labelW - 1, h - 1);
     painter.restore();
-}
-
-void SpectrogramChartPanel::rebuildCache(const RegionUpdate &region) {
-    if (region.fullRebuild) {
-        rebuildViewImage();
-    } else {
-        rebuildViewImagePartial(region);
-    }
 }
 
 std::vector<double> SpectrogramChartPanel::makeBlackmanHarrisWindow(int N) {
@@ -267,103 +244,40 @@ QRgb SpectrogramChartPanel::intensityToColor(float normalized) const {
     return m_palette.map(v);
 }
 
-void SpectrogramChartPanel::rebuildViewImage() {
-    if (m_totalFrames <= 0 || m_numFreqBins <= 0 || !m_converter) {
-        m_viewImage = QImage();
-        return;
-    }
+QRgb SpectrogramChartPanel::intensityToColor(float normalized) const {
+    image.fill(Qt::black);
+    if (m_totalFrames <= 0 || m_numFreqBins <= 0) return;
 
-    int w = width();
-    int yaw = yAxisWidth();
-    int h = height();
-    int dataW = w - yaw;
-    if (dataW <= 0) dataW = 1;
-    if (h <= 0) h = 200;
+    int imgW = image.width();
+    int imgH = image.height();
+    if (imgW <= 0 || imgH <= 0) return;
 
-    double totalDuration = static_cast<double>(m_samples.size()) / m_sampleRate;
+    // Lazily compute all FFT frames
     int totalFrames = m_totalFrames;
+    ensureSpectrogramRange(0, totalFrames);
 
-    double viewFrameStartF = (m_converter->startSec() / totalDuration) * totalFrames;
-    double viewFrameEndF = (m_converter->endSec() / totalDuration) * totalFrames;
-    int margin = 2;
-    int frameStart = std::max(0, static_cast<int>(viewFrameStartF) - margin);
-    int frameEnd = std::min(totalFrames, static_cast<int>(std::ceil(viewFrameEndF)) + margin);
-
-    ensureSpectrogramRange(frameStart, frameEnd);
-
-    m_viewImage = QImage(dataW, h, QImage::Format_RGB32);
-    m_viewImage.fill(qRgb(0, 0, 0));
-
-    fillImageColumns(0, dataW, dataW, h, totalFrames, totalDuration);
-}
-
-void SpectrogramChartPanel::rebuildViewImagePartial(const RegionUpdate &region) {
-    if (m_totalFrames <= 0 || m_numFreqBins <= 0 || m_viewImage.isNull() || !m_converter)
-        return;
-
-    int w = width();
-    int yaw = yAxisWidth();
-    int dataW = w - yaw;
-    int h = height();
-    double totalDuration = static_cast<double>(m_samples.size()) / m_sampleRate;
-    int totalFrames = m_totalFrames;
-
-    double span = m_converter->endSec() - m_converter->startSec();
-    int frameStart = static_cast<int>((m_converter->startSec() + span * region.dirtyStartCol / dataW) / totalDuration * totalFrames);
-    int frameEnd = static_cast<int>(std::ceil((m_converter->startSec() + span * region.dirtyEndCol / dataW) / totalDuration * totalFrames)) + 1;
-    frameStart = std::max(0, frameStart - 2);
-    frameEnd = std::min(totalFrames, frameEnd + 2);
-    ensureSpectrogramRange(frameStart, frameEnd);
-
-    QRgb *bits = reinterpret_cast<QRgb *>(m_viewImage.bits());
-    int stride = m_viewImage.bytesPerLine() / static_cast<int>(sizeof(QRgb));
-
-    if (region.colShift > 0) {
-        for (int y = 0; y < h; ++y)
-            std::memmove(bits + y * stride, bits + y * stride + region.colShift,
-                         (dataW - region.colShift) * sizeof(QRgb));
-    } else {
-        int shift = -region.colShift;
-        for (int y = 0; y < h; ++y)
-            std::memmove(bits + y * stride + shift, bits + y * stride,
-                         (dataW - shift) * sizeof(QRgb));
-    }
-
-    fillImageColumns(region.dirtyStartCol, region.dirtyEndCol, dataW, h, totalFrames, totalDuration);
-}
-
-void SpectrogramChartPanel::fillImageColumns(int startX, int endX, int w, int h,
-                                              int totalFrames, double totalDuration) {
-    if (startX < 0 || endX > w || startX >= endX) return;
-
-    int stride = m_viewImage.bytesPerLine() / static_cast<int>(sizeof(QRgb));
-
-    for (int x = startX; x < endX; ++x) {
-        double t = m_converter->startSec() + (m_converter->endSec() - m_converter->startSec()) * (x + 0.5) / w;
-        double frameIdx = (t / totalDuration) * totalFrames;
+    // Render spectrogram: map each pixel column to a frame, each row to a frequency bin
+    for (int x = 0; x < imgW; ++x) {
+        double frameIdx = static_cast<double>(x) / imgW * totalFrames;
         int frame0 = static_cast<int>(frameIdx);
-        int frame1 = frame0 + 1;
+        int frame1 = std::min(frame0 + 1, totalFrames - 1);
         float frameFrac = static_cast<float>(frameIdx - frame0);
-        if (frame0 < 0 || frame0 >= totalFrames) continue;
-        if (frame1 >= totalFrames) frame1 = frame0;
 
+        if (frame0 < 0 || frame0 >= totalFrames) continue;
         if (!m_computedFrames[frame0]) continue;
         if (!m_computedFrames[frame1]) frame1 = frame0;
 
         const auto &bins0 = m_spectrogramData[frame0];
         const auto &bins1 = m_spectrogramData[frame1];
-
         if (bins0.empty() || bins1.empty()) continue;
 
-        QRgb *scanLine = reinterpret_cast<QRgb *>(m_viewImage.scanLine(0));
-        for (int y = 0; y < h; ++y) {
-            float binFrac = static_cast<float>(h - 1 - y) / (h - 1) * (m_numFreqBins - 1);
+        for (int y = 0; y < imgH; ++y) {
+            // Map pixel row to frequency bin (y=0 = top = highest frequency)
+            float binFrac = static_cast<float>(imgH - 1 - y) / (imgH - 1) * (m_numFreqBins - 1);
             int bin = static_cast<int>(binFrac);
-            if (bin < 0 || bin >= m_numFreqBins) {
-                scanLine += stride;
-                continue;
-            }
+            if (bin < 0 || bin >= m_numFreqBins) continue;
 
+            // Bilinear interpolation in frequency dimension
             float val0, val1;
             if (bin + 1 < m_numFreqBins) {
                 float frac = binFrac - bin;
@@ -373,12 +287,19 @@ void SpectrogramChartPanel::fillImageColumns(int startX, int endX, int w, int h,
                 val0 = bins0[bin];
                 val1 = bins1[bin];
             }
+
+            // Linear interpolation in time dimension
             float val = val0 * (1.0f - frameFrac) + val1 * frameFrac;
 
-            scanLine[x] = intensityToColor(val);
-            scanLine += stride;
+            image.setPixelColor(x, y, QColor(intensityToColor(val)));
         }
     }
+}
+
+double SpectrogramChartPanel::dataDurationSec() const {
+    if (m_samples.empty() || m_sampleRate <= 0) return 0.0;
+    // m_samples is stereo interleaved
+    return static_cast<double>(m_samples.size()) / (m_sampleRate * 2.0);
 }
 
 } // namespace chart

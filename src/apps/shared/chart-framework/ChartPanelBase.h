@@ -3,6 +3,7 @@
 #include "ChartCoordinate.h"
 #include "ChartPanelTypes.h"
 
+#include <QImage>
 #include <QPoint>
 #include <QWidget>
 #include <cstring>
@@ -76,10 +77,20 @@ namespace dstools {
             void verticalContentScrolled();
 
         protected:
-            virtual void rebuildCache(const RegionUpdate &region) {
-                Q_UNUSED(region)
-            }
-            virtual void drawContent(QPainter &painter, const ChartCoordinate &coord) = 0;
+            // ========== 新增纯虚方法（子类必须实现） ==========
+            /// @brief Render the full data into a pre-allocated image.
+            ///        The image is sized according to fullDataImageWidth() x fullDataImageHeight().
+            virtual void renderFullData(QImage &image) = 0;
+            /// @brief Return the total data duration in seconds.
+            virtual double dataDurationSec() const = 0;
+
+            // ========== 新增可选虚方法（子类可覆盖） ==========
+            /// @brief Width of the full-data image. Default: widget width().
+            virtual int fullDataImageWidth() const { return width(); }
+            /// @brief Height of the full-data image. Default: widget height().
+            virtual int fullDataImageHeight() const { return height(); }
+
+            // ========== 现有虚方法 ==========
             virtual void onVerticalZoom(double factor);
             virtual void onAudioDataChanged();
             virtual bool supportsVerticalZoom() const {
@@ -119,13 +130,8 @@ namespace dstools {
 
             void drawEmptyState(QPainter &painter, const QString &msg);
 
-            template <typename T>
-            static void shiftCache(std::vector<T> &cache, int width, int colShift) {
-                if (colShift > 0)
-                    std::memmove(&cache[0], &cache[colShift], (width - colShift) * sizeof(T));
-                else if (colShift < 0)
-                    std::memmove(&cache[-colShift], &cache[0], (width + colShift) * sizeof(T));
-            }
+            // F-05: 确保完整数据缓存已就绪
+            void ensureFullDataCache();
 
             void paintEvent(QPaintEvent *event) override;
             void resizeEvent(QResizeEvent *event) override;
@@ -139,9 +145,11 @@ namespace dstools {
             int m_sampleRate = constants::kDefaultSampleRate;
             const ChartCoordinate *m_converter = nullptr;
             int m_dataPixelWidth = 0;
-            bool m_cacheDirty = true;
-            RegionUpdate m_pendingRegion;
             double m_amplitudeScale = 1.0;
+
+            // ========== 新增成员 ==========
+            QImage m_fullDataImage;
+            bool m_fullDataDirty = true;
 
         private:
             void playSegmentBetween(double startSec, double endSec);
