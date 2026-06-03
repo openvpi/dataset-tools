@@ -18,7 +18,7 @@ dstools_add_library(${PROJECT_NAME}
         STATIC
         AUTOMOC
         DEPENDS
-        PUBLIC dsfw-core dsfw-signal dstools-types
+        PUBLIC dsfw-core dstools-types
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
         PRIVATE textgrid SndFile::sndfile audio-util
         INCLUDE_DIRS

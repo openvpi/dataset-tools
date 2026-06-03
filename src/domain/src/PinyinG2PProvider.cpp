@@ -4,6 +4,11 @@
 
 namespace dstools {
 
+    PinyinG2PProvider &PinyinG2PProvider::instance() {
+        static PinyinG2PProvider s_instance;
+        return s_instance;
+    }
+
     const char *PinyinG2PProvider::providerName() const {
         return "PinyinG2P";
     }

@@ -89,8 +89,7 @@ static void initPinyin(QApplication& app) {
     Pinyin::setDictionaryPath(dsfw::PathUtils::toUtf8(dictPath.make_preferred()));
 
     if (!dstools::ServiceLocator::get<dstools::IG2PProvider>()) {
-        auto* g2p = new dstools::PinyinG2PProvider;
-        dstools::ServiceLocator::set<dstools::IG2PProvider>(g2p);
+        dstools::ServiceLocator::set<dstools::IG2PProvider>(&dstools::PinyinG2PProvider::instance());
     }
 }
 

@@ -16,6 +16,9 @@ namespace dstools {
         PinyinG2PProvider() = default;
         ~PinyinG2PProvider() override = default;
 
+        /// @brief Access the global singleton instance.
+        static PinyinG2PProvider &instance();
+
         /// @brief Return the human-readable provider name.
         const char *providerName() const override;
 

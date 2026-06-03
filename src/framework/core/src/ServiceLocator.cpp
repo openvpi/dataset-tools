@@ -31,13 +31,8 @@ void ServiceLocator::resetFormatAdapterRegistry() {
 namespace dstools {
 
 FormatAdapterRegistry &FormatAdapterRegistry::instance() {
-    auto *registry = ServiceLocator::formatAdapterRegistry();
-    if (!registry) {
-        static FormatAdapterRegistry defaultRegistry;
-        ServiceLocator::setFormatAdapterRegistry(&defaultRegistry);
-        return defaultRegistry;
-    }
-    return *registry;
+    static FormatAdapterRegistry s_instance;
+    return s_instance;
 }
 
 void FormatAdapterRegistry::registerAdapter(std::unique_ptr<IFormatAdapter> adapter) {
