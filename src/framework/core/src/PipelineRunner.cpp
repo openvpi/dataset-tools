@@ -8,7 +8,6 @@
 
 #include <QDir>
 #include <QFileInfo>
-#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <nlohmann/json.hpp>

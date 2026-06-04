@@ -39,13 +39,13 @@ static Result<void> validateLayerData(const std::map<QString, LayerData> &layers
         return Result<void>::Error("import produced no layers");
     for (const auto &[key, val] : layers) {
         if (val.empty())
-            return Result<void>::Error(QString("layer '%1' is empty").arg(key));
+            return Result<void>::Error(QString("layer '%1' is empty").arg(key).toStdString());
         try {
             const auto j = val.toJson();
             if (j.is_null())
-                return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key));
+                return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key).toStdString());
         } catch (const std::exception &e) {
-            return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()));
+            return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()).toStdString());
         }
     }
     return Result<void>::Ok();

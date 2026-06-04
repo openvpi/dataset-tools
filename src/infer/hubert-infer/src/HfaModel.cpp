@@ -62,7 +62,7 @@ namespace HFA {
                 const auto shape = tensor.GetTensorTypeAndShapeInfo().GetShape();
 
                 if (shape.size() != 3) {
-                    return dstools::Err("Expected 3D tensor (BCT) but got " + std::to_string(shape.size()) + "D");
+                    return dstools::Err<std::vector<std::vector<std::vector<float>>>>("Expected 3D tensor (BCT) but got " + std::to_string(shape.size()) + "D");
                 }
 
                 const size_t batch = shape[0];

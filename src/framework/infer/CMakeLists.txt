@@ -36,5 +36,4 @@ dstools_add_library(${PROJECT_NAME}
         PUBLIC dstools-types::dstools-types onnxruntime nlohmann_json::nlohmann_json Qt${QT_VERSION_MAJOR}::Core
         INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../core/include>
 )

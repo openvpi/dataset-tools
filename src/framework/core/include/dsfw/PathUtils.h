@@ -2,7 +2,6 @@
 
 #include <dstools/Result.h>
 
-#include <QByteArray>
 #include <QString>
 #include <cstdint>
 #include <filesystem>

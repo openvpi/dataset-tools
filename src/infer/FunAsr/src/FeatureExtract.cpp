@@ -26,7 +26,7 @@ namespace FunAsr {
         return fqueue.size();
     }
 
-    void FeatureExtract::fftw_init() {
+    bool FeatureExtract::fftw_init() {
         constexpr int fft_size = 512;
         fft_input = (float *) fftwf_malloc(sizeof(float) * fft_size);
         fft_out = (fftwf_complex *) fftwf_malloc(sizeof(fftwf_complex) * fft_size);
@@ -37,10 +37,11 @@ namespace FunAsr {
             fft_input = nullptr;
             fft_out = nullptr;
             m_valid = false;
-            return;
+            return false;
         }
         memset(fft_input, 0, sizeof(float) * fft_size);
         p = fftwf_plan_dft_r2c_1d(fft_size, fft_input, fft_out, FFTW_ESTIMATE);
+        return true;
     }
 
     void FeatureExtract::insert(float *din, int len, int flag) {

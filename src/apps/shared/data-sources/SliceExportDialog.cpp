@@ -1,6 +1,6 @@
 #include "SliceExportDialog.h"
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -84,7 +84,9 @@ namespace dstools {
     }
 
     void SliceExportDialog::onBrowseDir() {
-        QString dir = dsfw::FileDialogHelper::getExistingDirectory({this, tr("Select Output Directory")});
+        dsfw::widgets::FilePathSelector selector(
+            {dsfw::widgets::FilePathSelector::Mode::OpenDirectory, tr("Select Output Directory")}, this);
+        QString dir = selector.exec();
         if (!dir.isEmpty())
             m_editOutputDir->setText(dir);
     }

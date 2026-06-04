@@ -91,6 +91,10 @@ namespace dstools {
             virtual int fullDataImageHeight() const { return height(); }
 
             // ========== 现有虚方法 ==========
+            virtual void rebuildCache(const RegionUpdate &region) {
+                Q_UNUSED(region)
+            }
+            virtual void drawContent(QPainter &painter, const ChartCoordinate &coord) = 0;
             virtual void onVerticalZoom(double factor);
             virtual void onAudioDataChanged();
             virtual bool supportsVerticalZoom() const {
@@ -130,8 +134,13 @@ namespace dstools {
 
             void drawEmptyState(QPainter &painter, const QString &msg);
 
-            // F-05: 确保完整数据缓存已就绪
-            void ensureFullDataCache();
+            template <typename T>
+            static void shiftCache(std::vector<T> &cache, int width, int colShift) {
+                if (colShift > 0)
+                    std::memmove(&cache[0], &cache[colShift], (width - colShift) * sizeof(T));
+                else if (colShift < 0)
+                    std::memmove(&cache[-colShift], &cache[0], (width + colShift) * sizeof(T));
+            }
 
             void paintEvent(QPaintEvent *event) override;
             void resizeEvent(QResizeEvent *event) override;
@@ -145,6 +154,8 @@ namespace dstools {
             int m_sampleRate = constants::kDefaultSampleRate;
             const ChartCoordinate *m_converter = nullptr;
             int m_dataPixelWidth = 0;
+            bool m_cacheDirty = true;
+            RegionUpdate m_pendingRegion;
             double m_amplitudeScale = 1.0;
 
             // ========== 新增成员 ==========

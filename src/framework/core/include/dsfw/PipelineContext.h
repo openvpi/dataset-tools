@@ -77,14 +77,15 @@ namespace dstools {
     std::string toJsonString() const;
     [[nodiscard]] static Result<PipelineContext> fromJsonString(const std::string &jsonStr);
 
-    // Schema validation for loaded PipelineContext JSON
-    [[nodiscard]] static Result<void> validate(const nlohmann::json &j);
+    // Schema validation for loaded PipelineContext JSON (string-based, isolates nlohmann::json)
+    [[nodiscard]] static Result<void> validateFromString(const std::string &jsonStr);
 
     friend class PipelineRunner;
 
 private:
         nlohmann::json toJson() const;
         [[nodiscard]] static Result<PipelineContext> fromJson(const nlohmann::json &j);
+        [[nodiscard]] static Result<void> validate(const nlohmann::json &j);
     };
 
 } // namespace dstools

@@ -1,6 +1,6 @@
 #include "SlicerService.h"
 
-#include <audio-util/PathCompat.h>
+#include <audio-util/SndfileHelper.h>
 #include <audio-util/Slicer.h>
 #include <dsfw/PathUtils.h>
 #include <dstools/AudioDecoder.h>

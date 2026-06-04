@@ -7,7 +7,7 @@
 #include "FlacDecoder.h"
 #include "Mp3Decoder.h"
 
-#include <audio-util/PathCompat.h>
+#include <audio-util/SndfileHelper.h>
 #include <dsfw/PathUtils.h>
 
 static std::vector<float> convertChannels(const std::vector<float> &output_buffer, size_t output_frames,

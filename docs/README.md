@@ -17,8 +17,6 @@
 | [architecture/data-flow/ds-format.md](developer/architecture/data-flow/ds-format.md) | 工程格式规范（.dsproj, .dstext, PipelineContext） |
 | [architecture/data-flow/component-design.md](developer/architecture/data-flow/component-design.md) | 核心组件设计 |
 | [architecture/framework/unified-app-design.md](developer/architecture/framework/unified-app-design.md) | LabelSuite + DsLabeler 统一应用设计 |
-| [architecture/refactoring-plan-v2.md](developer/architecture/refactoring-plan-v2.md) | 重构方案 v2（部分已实现，已归档） |
-| [architecture/refactoring-plan-v3.md](developer/architecture/refactoring-plan-v3.md) | 重构方案 v3（当前最新） |
 | [testing/test-design.md](developer/testing/test-design.md) | 测试分层设计 |
 | [magic-numbers-audit.md](developer/magic-numbers-audit.md) | 魔法数字审计报告 |
 

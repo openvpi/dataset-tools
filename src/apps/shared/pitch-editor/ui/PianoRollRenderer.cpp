@@ -69,7 +69,7 @@ void PianoRollRenderer::drawGrid(QPainter &p, int w, int h, const RenderState &s
     p.setClipRect(s.contentLeft, RenderState::RulerHeight,
                   w - s.contentLeft, h - RenderState::RulerHeight);
 
-    QPen penSemitone(dsfw::Theme::instance().palette().pianoRoll.GridSemitone, 1);
+    QPen penSemitone(dsfw::Theme::instance().palette().pianoRoll.gridSemitone, 1);
     for (int midi = s.minMidi; midi <= s.maxMidi; ++midi) {
         double sceneY = s.midiToY(midi + 0.5);
         int wy = s.sceneYToWidget(static_cast<int>(sceneY));
@@ -84,7 +84,7 @@ void PianoRollRenderer::drawGrid(QPainter &p, int w, int h, const RenderState &s
     double tRight = s.xToTime(s.widgetXToScene(w));
     tLeft = qMax(0.0, tLeft);
     
-    QPen penBar(dsfw::Theme::instance().palette().pianoRoll.BarLine, 1);
+    QPen penBar(dsfw::Theme::instance().palette().pianoRoll.barLine, 1);
     p.setPen(penBar);
     
     // 只绘制主刻度线作为网格线
@@ -114,7 +114,7 @@ void PianoRollRenderer::drawPianoKeys(QPainter &p, int h, const RenderState &s) 
     p.setClipRect(s.contentLeft, RenderState::RulerHeight, s.pianoWidth,
                   h - RenderState::RulerHeight);
     p.fillRect(s.contentLeft, RenderState::RulerHeight, s.pianoWidth,
-               h - RenderState::RulerHeight, dsfw::Theme::instance().palette().pianoRoll.PianoBg);
+               h - RenderState::RulerHeight, dsfw::Theme::instance().palette().pianoRoll.pianoBg);
 
     static const QSet<int> blackKeys = {1, 3, 6, 8, 10};
     QFont font("Segoe UI", 7);
@@ -132,11 +132,11 @@ void PianoRollRenderer::drawPianoKeys(QPainter &p, int h, const RenderState &s) 
         int noteInOctave = midi % 12;
         if (blackKeys.contains(noteInOctave)) {
             p.setPen(Qt::NoPen);
-            p.setBrush(dsfw::Theme::instance().palette().pianoRoll.PianoBlack);
+            p.setBrush(dsfw::Theme::instance().palette().pianoRoll.pianoBlackKey);
             p.drawRect(s.contentLeft, wy, static_cast<int>(s.pianoWidth * 0.6), keyH);
         } else {
             p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.whiteKeyBorder, 0.5));
-            p.setBrush(dsfw::Theme::instance().palette().pianoRoll.PianoWhite);
+            p.setBrush(dsfw::Theme::instance().palette().pianoRoll.pianoWhiteKey);
             p.drawRect(s.contentLeft, wy, s.pianoWidth, keyH);
             if (noteInOctave == 0) {
                 int octave = midi / 12 - 1;
@@ -160,7 +160,7 @@ void PianoRollRenderer::drawRuler(QPainter &p, int w, const RenderState &s) {
     p.setClipRect(s.contentLeft, 0, w - s.contentLeft,
                   RenderState::RulerHeight);
     p.fillRect(s.contentLeft, 0, w - s.contentLeft,
-               RenderState::RulerHeight, dsfw::Theme::instance().palette().pianoRoll.RulerBg);
+               RenderState::RulerHeight, dsfw::Theme::instance().palette().pianoRoll.rulerBg);
 
     double tLeft = s.xToTime(s.widgetXToScene(s.contentLeft));
     double tRight = s.xToTime(s.widgetXToScene(w));
@@ -184,11 +184,11 @@ void PianoRollRenderer::drawRuler(QPainter &p, int w, const RenderState &s) {
                 continue;
             }
             bool isMajor = std::fmod(t, level.majorSec) < level.minorSec * 0.5;
-            p.setPen(QPen(isMajor ? dsfw::Theme::instance().palette().pianoRoll.RulerText : dsfw::Theme::instance().palette().pianoRoll.RulerTick));
+            p.setPen(QPen(isMajor ? dsfw::Theme::instance().palette().pianoRoll.rulerText : dsfw::Theme::instance().palette().pianoRoll.rulerTick));
             int hTick = isMajor ? tickH - 6 : tickH - 3;
             p.drawLine(wx, hTick, wx, tickH);
             if (isMajor) {
-                p.setPen(dsfw::Theme::instance().palette().pianoRoll.RulerText);
+                p.setPen(dsfw::Theme::instance().palette().pianoRoll.rulerText);
                 p.drawText(wx + 2, 14, QString::number(t, 'f', 1));
             }
         }
@@ -232,21 +232,21 @@ void PianoRollRenderer::drawNotes(QPainter &p, int w, int h, const RenderState &
 
         if (isRest) {
             noteMidi = PitchProcessor::getRestMidi(*s.dsFile, i);
-            fillColor = dsfw::Theme::instance().palette().pianoRoll.NoteRestFill;
-            borderColor = dsfw::Theme::instance().palette().pianoRoll.NoteRestBorder;
+            fillColor = dsfw::Theme::instance().palette().pianoRoll.noteRestFill;
+            borderColor = dsfw::Theme::instance().palette().pianoRoll.noteRestBorder;
         } else {
             auto pitch = parseNoteName(note.name);
             if (!pitch.valid) continue;
             noteMidi = pitch.midiNumber;
             if (isSelected) {
-                fillColor = dsfw::Theme::instance().palette().pianoRoll.NoteSelectedTop;
-                borderColor = dsfw::Theme::instance().palette().pianoRoll.NoteSelectedBorder;
+                fillColor = dsfw::Theme::instance().palette().pianoRoll.noteSelectedTop;
+                borderColor = dsfw::Theme::instance().palette().pianoRoll.noteSelectedBorder;
             } else if (note.isSlur()) {
-                fillColor = dsfw::Theme::instance().palette().pianoRoll.NoteSlur;
-                borderColor = dsfw::Theme::instance().palette().pianoRoll.NoteSlurBorder;
+                fillColor = dsfw::Theme::instance().palette().pianoRoll.noteSlur;
+                borderColor = dsfw::Theme::instance().palette().pianoRoll.noteSlurBorder;
             } else {
-                fillColor = dsfw::Theme::instance().palette().pianoRoll.NoteDefault;
-                borderColor = dsfw::Theme::instance().palette().pianoRoll.NoteBorder;
+                fillColor = dsfw::Theme::instance().palette().pianoRoll.noteDefault;
+                borderColor = dsfw::Theme::instance().palette().pianoRoll.noteBorder;
             }
         }
 
@@ -266,20 +266,20 @@ void PianoRollRenderer::drawNotes(QPainter &p, int w, int h, const RenderState &
         if (!isRest) {
             if (isSelected) {
                 p.setPen(Qt::NoPen);
-                p.setBrush(dsfw::Theme::instance().palette().pianoRoll.NoteSelectedGlow);
+                p.setBrush(dsfw::Theme::instance().palette().pianoRoll.noteSelectedGlow);
                 p.drawRoundedRect(drawX - 3, wy - 3, noteW + 6, noteH + 6, 4, 4);
             }
 
             QLinearGradient grad(drawX, wy, drawX, wy + noteH);
             if (isSelected) {
-                grad.setColorAt(0.0, dsfw::Theme::instance().palette().pianoRoll.NoteSelectedTop);
+                grad.setColorAt(0.0, dsfw::Theme::instance().palette().pianoRoll.noteSelectedTop);
                 grad.setColorAt(0.5, fillColor);
-                grad.setColorAt(1.0, dsfw::Theme::instance().palette().pianoRoll.NoteSelectedBottom);
+                grad.setColorAt(1.0, dsfw::Theme::instance().palette().pianoRoll.noteSelectedBottom);
             } else {
-                grad.setColorAt(0.0, dsfw::Theme::instance().palette().pianoRoll.NoteDefaultTop);
+                grad.setColorAt(0.0, dsfw::Theme::instance().palette().pianoRoll.noteDefaultTop);
                 grad.setColorAt(0.10, fillColor);
                 grad.setColorAt(0.95, fillColor);
-                grad.setColorAt(1.0, dsfw::Theme::instance().palette().pianoRoll.NoteDefaultBottom);
+                grad.setColorAt(1.0, dsfw::Theme::instance().palette().pianoRoll.noteDefaultBottom);
             }
             p.setPen(QPen(borderColor, 0));
             p.setBrush(grad);
@@ -331,7 +331,7 @@ void PianoRollRenderer::drawNotes(QPainter &p, int w, int h, const RenderState &
     }
 
     p.setFont(nameFont);
-    p.setPen(dsfw::Theme::instance().palette().pianoRoll.NoteText);
+    p.setPen(dsfw::Theme::instance().palette().pianoRoll.noteText);
     for (const auto &desc : noteDescriptions) {
         p.drawText(desc.first, desc.second);
     }
@@ -409,7 +409,7 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
         }
 
         if (s.selectedNotes && !s.selectedNotes->empty() && s.dsFile) {
-            p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.F0Dimmed, 2));
+            p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.f0Dimmed, 2));
             p.setBrush(Qt::NoBrush);
             p.drawPath(path);
 
@@ -436,12 +436,12 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
                     else selPath.lineTo(swx, swy);
                 }
                 if (!selPath.isEmpty()) {
-                    p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.F0Selected, 2.5));
+                    p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.f0Selected, 2.5));
                     p.drawPath(selPath);
                 }
             }
         } else {
-            p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.F0Default, 2));
+            p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.f0Default, 2));
             p.setBrush(Qt::NoBrush);
             p.drawPath(path);
         }
@@ -465,10 +465,10 @@ void PianoRollRenderer::drawPlayhead(QPainter &p, int w, int h, const RenderStat
     double sceneX = s.timeToX(playheadTime);
     int wx = s.sceneXToWidget(sceneX);
     if (wx >= s.contentLeft && wx < w) {
-        p.setPen(QPen(s.isPlaying ? dsfw::Theme::instance().palette().pianoRoll.Playhead : dsfw::Theme::instance().palette().pianoRoll.PlayheadIdle, 2));
+        p.setPen(QPen(s.isPlaying ? dsfw::Theme::instance().palette().pianoRoll.playhead : dsfw::Theme::instance().palette().pianoRoll.playheadIdle, 2));
         p.drawLine(wx, RenderState::RulerHeight, wx, h);
 
-        p.setBrush(s.isPlaying ? dsfw::Theme::instance().palette().pianoRoll.Playhead : dsfw::Theme::instance().palette().pianoRoll.PlayheadIdle);
+        p.setBrush(s.isPlaying ? dsfw::Theme::instance().palette().pianoRoll.playhead : dsfw::Theme::instance().palette().pianoRoll.playheadIdle);
         p.setPen(Qt::NoPen);
         QPolygonF triangle;
         triangle << QPointF(wx - 4, 0) << QPointF(wx + 4, 0) << QPointF(wx, 8);
@@ -535,8 +535,8 @@ void PianoRollRenderer::drawCrosshair(QPainter &p, int w, int h, const RenderSta
 void PianoRollRenderer::drawRubberBand(QPainter &p, const RenderState &s) {
     if (!s.rubberBandActive || s.rubberBandRect.isNull()) return;
     p.save();
-    p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.RubberBandBorder, 1, Qt::DashLine));
-    p.setBrush(dsfw::Theme::instance().palette().pianoRoll.RubberBandFill);
+    p.setPen(QPen(dsfw::Theme::instance().palette().pianoRoll.rubberBandBorder, 1, Qt::DashLine));
+    p.setBrush(dsfw::Theme::instance().palette().pianoRoll.rubberBandFill);
     p.drawRect(s.rubberBandRect);
     p.restore();
 }
@@ -572,10 +572,10 @@ void PianoRollRenderer::drawSnapGuide(QPainter &p, int w, int h, const RenderSta
     int newWy = s.sceneYToWidget(s.midiToY(newMidi));
     int midX = (wx1 + wx2) / 2;
 
-    QPen guidePen(dsfw::Theme::instance().palette().pianoRoll.SnapGuide, 1.5, Qt::DashLine);
+    QPen guidePen(dsfw::Theme::instance().palette().pianoRoll.snapGuide, 1.5, Qt::DashLine);
     p.setPen(guidePen);
     p.drawLine(wx1, origWy, wx2, origWy);
-    QPen vertPen(dsfw::Theme::instance().palette().pianoRoll.SnapGuide, 1.0, Qt::DashLine);
+    QPen vertPen(dsfw::Theme::instance().palette().pianoRoll.snapGuide, 1.0, Qt::DashLine);
     p.setPen(vertPen);
     p.drawLine(midX, origWy, midX, newWy);
     p.drawLine(wx1, newWy, wx2, newWy);
@@ -583,7 +583,7 @@ void PianoRollRenderer::drawSnapGuide(QPainter &p, int w, int h, const RenderSta
     QString label = midiToNoteString(origMidi);
     QFont font("Segoe UI", 9, QFont::Bold);
     p.setFont(font);
-    p.setPen(dsfw::Theme::instance().palette().pianoRoll.SnapGuide);
+    p.setPen(dsfw::Theme::instance().palette().pianoRoll.snapGuide);
     QFontMetrics fm(font);
     p.drawText(wx1 - fm.horizontalAdvance(label) - 4,
                origWy + fm.ascent() / 2, label);

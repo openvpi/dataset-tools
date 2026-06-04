@@ -326,3 +326,5 @@ void TestCurveTools::mhz_to_midi_batch() {
     QCOMPARE(midi[0], 69.0);
     QCOMPARE(midi[1], 0.0);
 }
+
+#include "TestCurveTools.moc"

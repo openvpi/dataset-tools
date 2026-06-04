@@ -121,17 +121,17 @@ namespace HFA {
         const float m_end = remove_interval.second;
 
         if (!(r_start < r_end)) {
-            return dstools::Err("raw_interval.start must be smaller than raw_interval.end");
+            return dstools::Err<std::vector<std::pair<float, float>>>("raw_interval.start must be smaller than raw_interval.end");
         }
         if (!(m_start < m_end)) {
-            return dstools::Err("remove_interval.start must be smaller than remove_interval.end");
+            return dstools::Err<std::vector<std::pair<float, float>>>("remove_interval.start must be smaller than remove_interval.end");
         }
 
         float overlap_start = std::max(r_start, m_start);
         float overlap_end = std::min(r_end, m_end);
 
         if (overlap_start >= overlap_end) {
-            return {raw_interval};
+            return std::vector<std::pair<float, float>>{raw_interval};
         }
 
         std::vector<std::pair<float, float>> result;

@@ -17,8 +17,11 @@ namespace dstools {
 
             void setColor(const QColor &color);
 
+            void drawContent(QPainter &painter, const ChartCoordinate &coord) override;
             void onAudioDataChanged() override;
             void paintYAxisContent(QPainter &painter, const QRect &chartRect) override;
+
+            void rebuildCache(const RegionUpdate &region) override;
 
             // F-01: 新增纯虚方法实现
             void renderFullData(QImage &image) override;
@@ -31,6 +34,9 @@ namespace dstools {
 
         private:
             void loadConfigParams();
+            void rebuildWaveformCache();
+            void rebuildWaveformCachePartial(const RegionUpdate &region);
+            void drawWaveform(QPainter &painter);
 
             std::vector<float> m_selectionMask;
 
@@ -40,6 +46,11 @@ namespace dstools {
 
             double m_opacity = 0.16;
             float m_loudnessRef = 0.5f;
+
+            std::vector<float> m_yMax;
+            std::vector<float> m_yMin;
+            std::vector<float> m_rms;
+            std::vector<float> m_loudnessMask;
         };
 
     } // namespace chart

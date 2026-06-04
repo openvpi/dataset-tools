@@ -3,7 +3,7 @@
 #include "Keys.h"
 
 #include <dsfw/AppSettings.h>
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <QApplication>
 #include <QFileInfo>
@@ -13,6 +13,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSettings>
 #include <QVBoxLayout>
 
 #include <memory>
@@ -23,17 +24,26 @@ namespace dstools {
 
 static constexpr int kMaxRecentProjects = 10;
 
-static QStringList readRecentProjects() {
-    AppSettings settings(QStringLiteral("DsLabeler"));
-    QString raw = settings.get(settings::app::kRecentProjects);
-    if (raw.isEmpty())
-        return {};
-    return raw.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
-}
-
 static void writeRecentProjects(const QStringList& list) {
     AppSettings settings(QStringLiteral("DsLabeler"));
     settings.set(settings::app::kRecentProjects, list.join(QLatin1Char('\n')));
+}
+
+static QStringList readRecentProjects() {
+    AppSettings settings(QStringLiteral("DsLabeler"));
+    QString raw = settings.get(settings::app::kRecentProjects);
+    if (raw.isEmpty()) {
+        // Phase 0 migration: old QSettings → new AppSettings
+        QSettings oldSettings;
+        QStringList oldList = oldSettings.value(QStringLiteral("App/recentProjects")).toStringList();
+        if (!oldList.isEmpty()) {
+            writeRecentProjects(oldList);
+            oldSettings.remove(QStringLiteral("App/recentProjects"));
+            return oldList;
+        }
+        return {};
+    }
+    return raw.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
 }
 
 WelcomePage::WelcomePage(QWidget* parent) : QWidget(parent) {
@@ -159,8 +169,10 @@ void WelcomePage::onNewProject() {
 void WelcomePage::onOpenProject() {
     AppSettings settings(QStringLiteral("DsLabeler"));
     const QString lastDir = settings.get(settings::app::kLastProjectDir);
-    const QString path = dsfw::FileDialogHelper::getOpenFileName(
-        {this, QStringLiteral("打开工程"), lastDir, {QStringLiteral("DiffSinger Project (*.dsproj)")}});
+    dsfw::widgets::FilePathSelector selector(
+        {dsfw::widgets::FilePathSelector::Mode::OpenFile, QStringLiteral("打开工程"),
+         {QStringLiteral("DiffSinger Project (*.dsproj)")}}, this);
+    const QString path = selector.exec();
     if (path.isEmpty())
         return;
 

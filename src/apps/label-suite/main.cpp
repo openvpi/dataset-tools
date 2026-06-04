@@ -3,7 +3,7 @@
 #include <AppSettingsBackend.h>
 #include <ModelProviderInit.h>
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <QApplication>
 #include <QDir>
@@ -130,8 +130,10 @@ int main(int argc, char *argv[]) {
 
     auto *setDirAction = fileMenu->addAction(QObject::tr("Set Working Directory..."));
     QObject::connect(setDirAction, &QAction::triggered, &shell, [&]() {
-        auto dir = dsfw::FileDialogHelper::getExistingDirectory(
-            {&shell, QObject::tr("Select Working Directory"), shell.workingDirectory()});
+        dsfw::widgets::FilePathSelector selector(
+            {dsfw::widgets::FilePathSelector::Mode::OpenDirectory, QObject::tr("Select Working Directory"), {}, {}, shell.workingDirectory()},
+            &shell);
+        auto dir = selector.exec();
         if (!dir.isEmpty())
             shell.setWorkingDirectory(dir);
     });

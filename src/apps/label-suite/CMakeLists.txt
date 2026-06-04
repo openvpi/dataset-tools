@@ -20,6 +20,8 @@ dstools_add_executable(${PROJECT_NAME}
         pages/BuildDsPage.cpp
         pages/GameAlignPage.h
         pages/GameAlignPage.cpp
+        pages/WizardPageBase.h
+        pages/WizardPageBase.cpp
         DEPENDS
         PRIVATE dstools-ui-core dstools-domain dsfw-widgets
         settings-page data-sources log-page infer-bridge unified-editor

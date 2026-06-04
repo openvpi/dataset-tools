@@ -2,7 +2,7 @@
 
 > 本文档记录代码库中所有发现的可配置化魔法数字，按来源文件和分类整理。
 >
-> 最后更新：2025-05-21
+> 最后更新：2026-06-04
 
 ---
 
@@ -10,86 +10,94 @@
 
 对代码库进行了全面扫描，发现的魔法数字按领域分为以下几类：
 
-| 类别 | 文件数 | 参数个数 | 配置优先级 |
-|------|--------|---------|-----------|
-| 频谱图渲染 | 1 | 5 | **高** |
-| 功率图渲染 | 1 | 3 | **高** |
-| 波形图渲染 | 1 | 3 | 中 |
-| 钢琴卷帘编辑器 | 3 | 10 | 中 |
-| 音高提取 | 3 | 5 | **高** |
-| 通用常量 | 1 | 3 | 低（已有 Constants.h） |
+| 类别 | 文件数 | 参数个数 | 配置状态 |
+|------|--------|---------|---------|
+| 频谱图渲染 | 1 | 5 | **已完成** ✅ (ChartConfigRegistry) |
+| 功率图渲染 | 1 | 3 | **已完成** ✅ (ChartConfigRegistry) |
+| 波形图渲染 | 1 | 3 | **已完成** ✅ (ChartConfigRegistry) |
+| 钢琴卷帘编辑器 | 3 | 10 | **已完成** ✅ (C-01: ChartConfigRegistry) |
+| 音高提取 | 3 | 5 | minF0/maxF0 已配置 ✅ |
+| 通用常量 | 1 | 3 | 低（Constants.h 已有） |
 
 ---
 
-## 2. 高频优先级 — 频谱图渲染参数
+## 2. 高频优先级 — 频谱图渲染参数 ✅ 已完成
 
 ### 2.1 SpectrogramChartPanel
 
-| 参数 | 当前硬编码值 | 位置 | 说明 | 建议配置名 |
-|------|------------|------|------|-----------|
-| `kStandardSampleRate` | `44100.0` | SpectrogramChartPanel.h:L35 | STFT 标准采样率（用于自适应 hop/window） | `spectrogram.sampleRate` |
-| `kStandardHopSize` | `256` | SpectrogramChartPanel.h:L36 | STFT 标准 hop size（决定频谱时间分辨率） | `spectrogram.hopSize` |
-| `kStandardWindowSize` | `2048` | SpectrogramChartPanel.h:L37 | STFT 标准窗口大小（决定频谱频率分辨率） | `spectrogram.windowSize` |
-| `kMinIntensityDb` | `-120.0` | SpectrogramChartPanel.h:L38 | 频谱图最小强度阈值（dB），低于此值视为静默 | `spectrogram.minDb` |
-| `kMaxIntensityDb` | `0.0` | SpectrogramChartPanel.h:L39 | 频谱图最大强度（dB），归一化上限 | `spectrogram.maxDb` |
+> **状态**：已配置化。参数通过 `ChartConfigRegistry` 管理，在 `SpectrogramChartPanel::registerChartConfig()` 中注册，
+> 在 `loadConfigParams()` 中加载到 `m_configHopSize`/`m_configWindowSize`/`m_configMinDb`/`m_configMaxDb`。
 
-**业务影响**：
-- `windowSize` / `hopSize` 直接影响频谱图的**频率分辨率**和**时间分辨率**，是用户最可能需要调整的参数。
-- `minDb` / `maxDb` 控制频谱图的**动态范围**显示效果。
+| 参数 | 默认值 | 配置键 | 说明 |
+|------|--------|--------|------|
+| hopSize | `256` | `spectrogram.hopSize` | STFT hop size（决定频谱时间分辨率） |
+| windowSize | `2048` | `spectrogram.windowSize` | STFT 窗口大小（决定频谱频率分辨率） |
+| minDb | `-80.0` | `spectrogram.minDb` | 频谱图动态范围下限 |
+| maxDb | `0.0` | `spectrogram.maxDb` | 频谱图动态范围上限 |
+
+`kStandardSampleRate = 44100.0` 为数学标准常数，不需要配置化。
 
 ---
 
-## 3. 高频优先级 — 功率图渲染参数
+## 3. 高频优先级 — 功率图渲染参数 ✅ 已完成
 
 ### 3.1 PowerChartPanel
 
-| 参数 | 当前硬编码值 | 位置 | 说明 | 建议配置名 |
-|------|------------|------|------|-----------|
-| `kWindowSize` | `2048` | PowerChartPanel.h:L28 | RMS 计算窗口大小（样本数） | `power.windowSize` |
-| `kMinPower` | `-96.0f` | PowerChartPanel.h:L26 | 功率图最小 dB 值 | `power.minDb` |
-| `kMaxPower` | `0.0f` | PowerChartPanel.h:L27 | 功率图最大 dB 值 | `power.maxDb` |
+> **状态**：已配置化。参数通过 `ChartConfigRegistry` 管理，在 `PowerChartPanel::registerChartConfig()` 中注册，
+> 在 `loadConfigParams()` 中加载到 `m_configWindowSize`/`m_configMinDb`/`m_configMaxDb`。
 
-**业务影响**：
-- `windowSize` 越大，RMS 平滑度越高，但瞬时变化越迟钝。
+| 参数 | 默认值 | 配置键 | 说明 |
+|------|--------|--------|------|
+| windowSize | `2048` | `power.windowSize` | RMS 计算窗口大小（样本数） |
+| minDb | `-96.0` | `power.minDb` | 功率图最小 dB 值 |
+| maxDb | `0.0` | `power.maxDb` | 功率图最大 dB 值 |
 
 ---
 
-## 4. 中优先级 — 波形图渲染参数
+## 4. 中优先级 — 波形图渲染参数 ✅ 已完成
 
 ### 4.1 WaveformChartPanel
 
-| 参数 | 当前硬编码值 | 位置 | 说明 | 建议配置名 |
-|------|------------|------|------|-----------|
-| 响度归一化系数 | `0.5f` | WaveformChartPanel.cpp:L94 | RMS / 0.5 做响度 clamp（控制波形填充色彩映射） | `waveform.loudnessRef` |
-| 振幅范围 | `[-1.0f, 1.0f]` | WaveformChartPanel.cpp:L177-178 | 归一化音频采样范围 | `waveform.ampRange` |
-| 振幅缩放范围 | `[0.1, 20.0]` | ChartPanelBase.h:L92-93 | Shift+滚轮缩放振幅的 min/max | `waveform.ampZoomRange` |
+> **状态**：已配置化。参数通过 `ChartConfigRegistry` 管理，在 `WaveformChartPanel::registerChartConfig()` 中注册，
+> 在 `loadConfigParams()` 中加载到 `m_loudnessRef`/`m_opacity`。
+
+| 参数 | 默认值 | 配置键 | 说明 |
+|------|--------|--------|------|
+| 响度归一化系数 | `0.5` | `waveform.loudnessRef` | RMS / 此值做响度 clamp |
+| 填充透明度 | `0.16` | `waveform.opacity` | 波形填充区域透明度 |
+
+振幅范围 `[-1.0, 1.0]` 为归一化音频标准范围，不需要配置化。
+振幅缩放范围 `[0.1, 20.0]` 在 `ChartPanelBase` 中作为 UI 交互参数，不需要配置化。
 
 ---
 
-## 5. 中优先级 — 钢琴卷帘编辑器参数
+## 5. 中优先级 — 钢琴卷帘编辑器参数 ✅ 已完成 (C-01)
+
+> **状态**：已配置化（commit `26169c73`）。所有 10 个参数通过 `ChartConfigRegistry` 管理，
+> 在 `PianoRollChartPanel::registerChartConfig()` 中注册。
 
 ### 5.1 PianoRollView
 
-| 参数 | 当前硬编码值 | 位置 | 说明 | 建议配置名 |
-|------|------------|------|------|-----------|
-| `boundaryHitRadius` | `5.0` | PianoRollView.cpp:L487 | 音符边界点击检测半径（像素） | `pianoroll.hitRadius` |
-| 默认分辨率 | `40` | PianoRollView.cpp:L340 | resetZoom 时的默认分辨率 | `pianoroll.defaultResolution` |
-| 垂直缩放 | `20.0` | PianoRollView.cpp:L350 | 钢琴卷帘垂直缩放因子 | `pianoroll.vScale` |
+| 参数 | 默认值 | 配置键 | 说明 |
+|------|--------|--------|------|
+| boundaryHitRadius | `5.0` | `pianoroll.hitRadius` | 音符边界点击检测半径（像素） |
+| 默认分辨率 | `40` | `pianoroll.defaultResolution` | resetZoom 时的默认分辨率 |
+| 垂直缩放 | `20.0` | `pianoroll.vScale` | 钢琴卷帘垂直缩放因子 |
 
 ### 5.2 PianoRollRenderer / RenderState
 
-| 参数 | 当前硬编码值 | 位置 | 说明 | 建议配置名 |
-|------|------------|------|------|-----------|
-| `PianoWidth` | `52` | PianoRollRenderer.h:L105 | 钢琴键盘宽度 | `pianoroll.pianoWidth` |
-| `MinMidi` | `24` | PianoRollRenderer.h:L108 | 最低 MIDI 音符号 | `pianoroll.minMidi` |
-| `MaxMidi` | `96` | PianoRollRenderer.h:L109 | 最高 MIDI 音符号 | `pianoroll.maxMidi` |
-| `ScrollBarSize` | `14` | PianoRollRenderer.h:L107 | 滚动条宽度 | `pianoroll.scrollBarSize` |
+| 参数 | 默认值 | 配置键 | 说明 |
+|------|--------|--------|------|
+| PianoWidth | `52` | `pianoroll.pianoWidth` | 钢琴键盘宽度 |
+| MinMidi | `24` | `pianoroll.minMidi` | 最低 MIDI 音符号 |
+| MaxMidi | `96` | `pianoroll.maxMidi` | 最高 MIDI 音符号 |
+| ScrollBarSize | `14` | `pianoroll.scrollBarSize` | 滚动条宽度 |
 
 ### 5.3 PianoRollInputHandler
 
-| 参数 | 当前硬编码值 | 位置 | 说明 | 建议配置名 |
-|------|------------|------|------|-----------|
-| `ModulationDragSensitivity` | `80.0` | PianoRollInputHandler.h:L155 | 调制拖动灵敏度 | `pianoroll.modSensitivity` |
+| 参数 | 默认值 | 配置键 | 说明 |
+|------|--------|--------|------|
+| ModulationDragSensitivity | `80.0` | `pianoroll.modSensitivity` | 调制拖动灵敏度 |
 
 ---
 
@@ -140,17 +148,18 @@
 
 ## 8. 汇总统计
 
-| 图表类型 | 可配置参数数 | 已配置化 | 待配置化 |
+| 图表类型 | 可配置参数数 | 已配置化 | 配置方式 |
 |----------|------------|---------|---------|
-| 频谱图 (Spectrogram) | 5 | 0 | 5 |
-| 功率图 (Power) | 3 | 0 | 3 |
-| 波形图 (Waveform) | 3 | 0 | 3 |
-| 钢琴卷帘 (PianoRoll) | 10 | 0 | 10 |
-| 音高提取 (Pitch) | 2 | 2 | 0 |
-| **合计** | **23** | **2** | **21** |
+| 频谱图 (Spectrogram) | 5 | 5 | ChartConfigRegistry |
+| 功率图 (Power) | 3 | 3 | ChartConfigRegistry |
+| 波形图 (Waveform) | 3 | 3 | ChartConfigRegistry |
+| 钢琴卷帘 (PianoRoll) | 10 | 10 | ChartConfigRegistry (C-01) |
+| 音高提取 (Pitch) | 2 | 2 | AppSettings / SettingsKey |
+| **合计** | **23** | **23** | **全部完成** |
 
 ---
 
-## 9. 下一步：ChartConfig 体系设计
+## 9. 实施状态
 
-ChartConfig 系统将在后续重构中实施。
+ChartConfig 体系已全面实施。所有图表参数通过 `ChartConfigRegistry` 管理，支持运行时修改和持久化存储。
+各图表的 `registerChartConfig()` 在应用启动时调用，`loadConfigParams()` 在构造函数中加载配置值。

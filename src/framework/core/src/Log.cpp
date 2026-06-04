@@ -1,6 +1,5 @@
 #include <dsfw/Log.h>
 
-#include <QByteArray>
 #include <QDateTime>
 #include <QDebug>
 #include <QFile>
@@ -8,7 +7,6 @@
 
 #include <chrono>
 #include <deque>
-#include <memory>
 
 namespace dstools {
 

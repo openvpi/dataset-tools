@@ -34,6 +34,51 @@ private slots:
     void crc32_emptyFile();
     void crc32_nonexistentFile();
     void crc32_memoryData();
+
+    // ── Text encoding（merged from TestEncoding） ──────────────────────
+    void detect_utf8();
+    void detect_utf8Bom();
+    void detect_utf16LE();
+    void detect_utf16BE();
+    void detect_gbk();
+    void detect_latin1();
+    void detect_empty();
+    void detect_asciiOnly();
+    void detect_partialUtf8();
+
+    void decode_utf8();
+    void decode_utf8Bom();
+    void decode_utf16LE();
+    void decode_utf16BE();
+    void decode_gbk();
+    void decode_latin1();
+
+    void encode_utf8();
+    void encode_utf8Bom();
+    void encode_utf16LE();
+    void encode_utf16BE();
+
+    void readFile_utf8();
+    void readFile_utf8Bom();
+    void readFile_utf16LE();
+    void readFile_utf16BE();
+    void readFile_empty();
+    void readFile_nonexistent();
+    void readFile_gbk();
+
+    void writeFile_utf8();
+    void writeFile_utf8Bom();
+    void writeFile_utf16LE();
+    void writeFile_invalidPath();
+
+    void roundTrip_utf8();
+    void roundTrip_utf16LE();
+    void roundTrip_utf16BE();
+    void roundTrip_gbk();
+    void roundTrip_latin1();
+    void roundTrip_multilingual();
+    void encodeDecode_gbk();
+    void encodeDecode_latin1();
 };
 
 // ── Path normalization ─────────────────────────────────────────────
@@ -275,6 +320,343 @@ void TestPathUtils::crc32_memoryData() {
     auto crcFile = PathUtils::crc32(PathUtils::toStdPath(filePath));
     QVERIFY(crcFile.ok());
     QCOMPARE(crcMem, crcFile.value());
+}
+
+// ── Text encoding detection（merged from TestEncoding） ───────────────────
+
+void TestPathUtils::detect_utf8() {
+    QByteArray data = "Hello World";
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8);
+}
+
+void TestPathUtils::detect_utf8Bom() {
+    QByteArray data;
+    data.append('\xEF');
+    data.append('\xBB');
+    data.append('\xBF');
+    data.append("Hello");
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8Bom);
+}
+
+void TestPathUtils::detect_utf16LE() {
+    QByteArray data;
+    data.append('\xFF');
+    data.append('\xFE');
+    data.append("H\0e\0l\0l\0o\0", 10);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf16LE);
+}
+
+void TestPathUtils::detect_utf16BE() {
+    QByteArray data;
+    data.append('\xFE');
+    data.append('\xFF');
+    data.append("\0H\0e\0l\0l\0o", 10);
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf16BE);
+}
+
+void TestPathUtils::detect_gbk() {
+    QByteArray data;
+    data.append('\xCE');
+    data.append('\xD2');
+    data.append('\xB0');
+    data.append('\xAE');
+    data.append('\xC4');
+    data.append('\xE3');
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Gbk);
+}
+
+void TestPathUtils::detect_latin1() {
+    QByteArray data;
+    data.append('\xE9');
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Latin1);
+}
+
+void TestPathUtils::detect_empty() {
+    QByteArray data;
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8);
+}
+
+void TestPathUtils::detect_asciiOnly() {
+    QByteArray data = "ASCII only";
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Utf8);
+}
+
+void TestPathUtils::detect_partialUtf8() {
+    QByteArray data;
+    data.append('\xCE');
+    QCOMPARE(PathUtils::detectTextEncoding(data), PathUtils::TextEncoding::Latin1);
+}
+
+// ── Text decoding ────────────────────────────────────────────────────────
+
+void TestPathUtils::decode_utf8() {
+    QByteArray data = "Hello World";
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf8);
+    QCOMPARE(result, QStringLiteral("Hello World"));
+}
+
+void TestPathUtils::decode_utf8Bom() {
+    QByteArray data;
+    data.append('\xEF');
+    data.append('\xBB');
+    data.append('\xBF');
+    data.append("Hello");
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf8Bom);
+    QCOMPARE(result, QStringLiteral("Hello"));
+}
+
+void TestPathUtils::decode_utf16LE() {
+    QByteArray data;
+    data.append('\xFF');
+    data.append('\xFE');
+    data.append("H\0e\0l\0l\0o\0", 10);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf16LE);
+    QCOMPARE(result, QStringLiteral("Hello"));
+}
+
+void TestPathUtils::decode_utf16BE() {
+    QByteArray data;
+    data.append('\xFE');
+    data.append('\xFF');
+    data.append("\0H\0e\0l\0l\0o", 10);
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Utf16BE);
+    QCOMPARE(result, QStringLiteral("Hello"));
+}
+
+void TestPathUtils::decode_gbk() {
+    QByteArray data;
+    data.append('\xCE');
+    data.append('\xD2');
+    QCOMPARE(PathUtils::decodeText(data, PathUtils::TextEncoding::Gbk), QString::fromLocal8Bit(data));
+}
+
+void TestPathUtils::decode_latin1() {
+    QByteArray data;
+    data.append('\xE9');
+    QString result = PathUtils::decodeText(data, PathUtils::TextEncoding::Latin1);
+    QCOMPARE(result, QStringLiteral("é"));
+}
+
+// ── Text encoding ────────────────────────────────────────────────────────
+
+void TestPathUtils::encode_utf8() {
+    QByteArray result = PathUtils::encodeText(QStringLiteral("Hello"), PathUtils::TextEncoding::Utf8);
+    QCOMPARE(result, QByteArray("Hello"));
+}
+
+void TestPathUtils::encode_utf8Bom() {
+    QByteArray result = PathUtils::encodeText(QStringLiteral("Hello"), PathUtils::TextEncoding::Utf8Bom);
+    QVERIFY(result.startsWith(QByteArray("\xEF\xBB\xBF", 3)));
+    QCOMPARE(result.mid(3), QByteArray("Hello"));
+}
+
+void TestPathUtils::encode_utf16LE() {
+    QByteArray result = PathUtils::encodeText(QStringLiteral("A"), PathUtils::TextEncoding::Utf16LE);
+    QCOMPARE(result, QByteArray("A\0", 2));
+}
+
+void TestPathUtils::encode_utf16BE() {
+    QByteArray result = PathUtils::encodeText(QStringLiteral("A"), PathUtils::TextEncoding::Utf16BE);
+    QCOMPARE(result, QByteArray("\0A", 2));
+}
+
+// ── File read ────────────────────────────────────────────────────────────
+
+void TestPathUtils::readFile_utf8() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    {
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("Hello World");
+        file.close();
+    }
+    auto result = PathUtils::readFile(filePath);
+    QVERIFY(result.ok());
+    QCOMPARE(result.value(), QStringLiteral("Hello World"));
+}
+
+void TestPathUtils::readFile_utf8Bom() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    {
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("\xEF\xBB\xBF");
+        file.write("Hello");
+        file.close();
+    }
+    auto result = PathUtils::readFile(filePath);
+    QVERIFY(result.ok());
+    QCOMPARE(result.value(), QStringLiteral("Hello"));
+}
+
+void TestPathUtils::readFile_utf16LE() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    {
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("\xFF\xFE");
+        file.write("H\0e\0l\0l\0o\0", 10);
+        file.close();
+    }
+    auto result = PathUtils::readFile(filePath);
+    QVERIFY(result.ok());
+    QCOMPARE(result.value(), QStringLiteral("Hello"));
+}
+
+void TestPathUtils::readFile_utf16BE() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    {
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("\xFE\xFF");
+        file.write("\0H\0e\0l\0l\0o", 10);
+        file.close();
+    }
+    auto result = PathUtils::readFile(filePath);
+    QVERIFY(result.ok());
+    QCOMPARE(result.value(), QStringLiteral("Hello"));
+}
+
+void TestPathUtils::readFile_empty() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/empty.txt";
+    {
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.close();
+    }
+    auto result = PathUtils::readFile(filePath);
+    QVERIFY(result.ok());
+    QVERIFY(result.value().isEmpty());
+}
+
+void TestPathUtils::readFile_nonexistent() {
+    auto result = PathUtils::readFile(QStringLiteral("/nonexistent/file.txt"));
+    QVERIFY(!result.ok());
+}
+
+void TestPathUtils::readFile_gbk() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    {
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("\xCE\xD2\xB0\xAE\xC4\xE3");
+        file.close();
+    }
+    auto result = PathUtils::readFile(filePath);
+    QVERIFY(result.ok());
+}
+
+// ── File write ───────────────────────────────────────────────────────────
+
+void TestPathUtils::writeFile_utf8() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    auto result = PathUtils::writeFile(filePath, QStringLiteral("Hello"), PathUtils::TextEncoding::Utf8);
+    QVERIFY(result.ok());
+    QFile file(filePath);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QCOMPARE(file.readAll(), QByteArray("Hello"));
+}
+
+void TestPathUtils::writeFile_utf8Bom() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    auto result = PathUtils::writeFile(filePath, QStringLiteral("Hello"), PathUtils::TextEncoding::Utf8Bom);
+    QVERIFY(result.ok());
+    QFile file(filePath);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QByteArray data = file.readAll();
+    QVERIFY(data.startsWith(QByteArray("\xEF\xBB\xBF", 3)));
+    QCOMPARE(data.mid(3), QByteArray("Hello"));
+}
+
+void TestPathUtils::writeFile_utf16LE() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QString filePath = dir.path() + "/test.txt";
+    auto result = PathUtils::writeFile(filePath, QStringLiteral("A"), PathUtils::TextEncoding::Utf16LE);
+    QVERIFY(result.ok());
+    QFile file(filePath);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QCOMPARE(file.readAll(), QByteArray("A\0", 2));
+}
+
+void TestPathUtils::writeFile_invalidPath() {
+    auto result = PathUtils::writeFile(QStringLiteral("/nonexistent/dir/file.txt"), QStringLiteral("test"),
+                                       PathUtils::TextEncoding::Utf8);
+    QVERIFY(!result.ok());
+}
+
+// ── Round-trip ───────────────────────────────────────────────────────────
+
+void TestPathUtils::roundTrip_utf8() {
+    const QString original = QStringLiteral("Hello World");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Utf8);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Utf8);
+    QCOMPARE(decoded, original);
+}
+
+void TestPathUtils::roundTrip_utf16LE() {
+    const QString original = QStringLiteral("Hello World");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Utf16LE);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Utf16LE);
+    QCOMPARE(decoded, original);
+}
+
+void TestPathUtils::roundTrip_utf16BE() {
+    const QString original = QStringLiteral("Hello World");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Utf16BE);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Utf16BE);
+    QCOMPARE(decoded, original);
+}
+
+void TestPathUtils::roundTrip_gbk() {
+    const QString original = QStringLiteral("你好世界");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Gbk);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Gbk);
+    QCOMPARE(decoded, original);
+}
+
+void TestPathUtils::roundTrip_latin1() {
+    const QString original = QStringLiteral("é");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Latin1);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Latin1);
+    QCOMPARE(decoded, original);
+}
+
+void TestPathUtils::roundTrip_multilingual() {
+    const QString original = QStringLiteral("Hello 你好 こんにちは");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Utf8);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Utf8);
+    QCOMPARE(decoded, original);
+}
+
+void TestPathUtils::encodeDecode_gbk() {
+    const QString original = QStringLiteral("你好");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Gbk);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Gbk);
+    QCOMPARE(decoded, original);
+}
+
+void TestPathUtils::encodeDecode_latin1() {
+    const QString original = QStringLiteral("café");
+    QByteArray encoded = PathUtils::encodeText(original, PathUtils::TextEncoding::Latin1);
+    QString decoded = PathUtils::decodeText(encoded, PathUtils::TextEncoding::Latin1);
+    QCOMPARE(decoded, original);
 }
 
 QTEST_MAIN(TestPathUtils)

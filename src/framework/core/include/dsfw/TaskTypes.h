@@ -40,7 +40,7 @@ struct LayerData {
     static LayerData fromJson(const nlohmann::json& j);
     nlohmann::json toJson() const;
 
-    bool empty() const { return json.empty(); }
+    bool empty() const noexcept { return json.empty(); }
 
     bool operator==(const LayerData& other) const { return json == other.json; }
     bool operator!=(const LayerData& other) const { return json != other.json; }

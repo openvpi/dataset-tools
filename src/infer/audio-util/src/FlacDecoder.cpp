@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <audio-util/PathCompat.h>
+#include <audio-util/SndfileHelper.h>
 
 namespace AudioUtil
 {

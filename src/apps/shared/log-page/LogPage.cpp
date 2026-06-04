@@ -3,7 +3,7 @@
 #include <dsfw/LogNotifier.h>
 #include <dsfw/widgets/LogViewer.h>
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <QDateTime>
 #include <QFile>
@@ -148,8 +148,9 @@ void LogPage::applyCategoryFilter() {
 }
 
 void LogPage::exportToFile() {
-    QString path = dsfw::FileDialogHelper::getSaveFileName(
-        {this, tr("Export Log"), {}, {tr("Log files (*.log)"), tr("All files (*)")}});
+    dsfw::widgets::FilePathSelector selector(
+        {dsfw::widgets::FilePathSelector::Mode::SaveFile, tr("Export Log"), {tr("Log files (*.log)"), tr("All files (*)")}}, this);
+    QString path = selector.exec();
     if (path.isEmpty())
         return;
 

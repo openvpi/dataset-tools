@@ -1,4 +1,4 @@
-#include "BuildDsPage.h"
+﻿#include "BuildDsPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -12,12 +12,11 @@
 #include <dstools/Constants.h>
 #include <dstools/CsvAdapter.h>
 #include <dstools/ProjectPaths.h>
-#include <dsfw/widgets/RunProgressRow.h>
 #include <dstools/TranscriptionCsv.h>
 
 namespace dstools::labeler {
 
-BuildDsPage::BuildDsPage(QWidget *parent) : QWidget(parent) {
+BuildDsPage::BuildDsPage(QWidget *parent) : WizardPageBase(parent) {
     buildUi();
 }
 
@@ -50,15 +49,7 @@ void BuildDsPage::buildUi() {
 
     vLayout->addLayout(form);
 
-    m_runProgress = new dsfw::widgets::RunProgressRow(tr("Run"));
-    vLayout->addWidget(m_runProgress);
-
-    m_log = new QTextEdit;
-    m_log->setReadOnly(true);
-    vLayout->addWidget(m_log, 1);
-
-    m_runAction = new QAction(tr("Run Build DS"), this);
-    m_runAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
+    buildCommonUi(vLayout, tr("Run"), tr("Run Build DS"));
     auto runSlot = [this]() {
         if (m_workingDir.isEmpty()) {
             QMessageBox::warning(this, tr("Error"), tr("No working directory set."));
@@ -204,14 +195,6 @@ void BuildDsPage::buildUi() {
     };
     connect(m_runProgress, &dsfw::widgets::RunProgressRow::runClicked, this, runSlot);
     connect(m_runAction, &QAction::triggered, this, runSlot);
-}
-
-void BuildDsPage::setWorkingDirectory(const QString &dir) {
-    m_workingDir = dir;
-}
-
-QString BuildDsPage::workingDirectory() const {
-    return m_workingDir;
 }
 
 } // namespace dstools::labeler

@@ -47,7 +47,7 @@ namespace dstools {
                 setupInputCallbacks();
 
                 // Center view on middle C area by default
-                m_scrollY = static_cast<int>((s.maxMidi - 72) * m_vScale);
+                m_scrollY = static_cast<int>((m_configMaxMidi - 72) * m_vScale);
             }
 
             PianoRollView::~PianoRollView() = default;
@@ -422,11 +422,11 @@ namespace dstools {
             }
 
             double PianoRollView::midiToY(double midi) const {
-                return (s.maxMidi - midi) * m_vScale + RenderState::RulerHeight;
+                return (m_configMaxMidi - midi) * m_vScale + RenderState::RulerHeight;
             }
 
             double PianoRollView::yToMidi(double y) const {
-                return s.maxMidi - (y - RenderState::RulerHeight) / m_vScale;
+                return m_configMaxMidi - (y - RenderState::RulerHeight) / m_vScale;
             }
 
             int PianoRollView::sceneXToWidget(double sceneX) const {
@@ -451,7 +451,7 @@ namespace dstools {
 
              void PianoRollView::updateScrollBars() {
                 int drawH = height();
-                double sceneH = midiToY(s.minMidi) + 50;
+                double sceneH = midiToY(m_configMinMidi) + 50;
 
                 m_vScrollBar->setRange(0, qMax(0, static_cast<int>(sceneH - drawH)));
                 m_vScrollBar->setPageStep(drawH);
@@ -639,7 +639,7 @@ namespace dstools {
                 rs.coord = coord;
                 rs.coord.scrollX = m_coord.scrollX;
                 rs.coord.scrollY = m_coord.scrollY;
-                int w = width() - s.scrollBarSize;
+                int w = width() - m_configScrollBarSize;
                 int h = height();
                 PianoRollRenderer::drawGrid(painter, w, h, rs);
                 PianoRollRenderer::drawNotes(painter, w, h, rs);
@@ -656,7 +656,7 @@ namespace dstools {
                 QPainter p(this);
                 p.setRenderHint(QPainter::Antialiasing);
 
-                int w = width() - s.scrollBarSize;
+                int w = width() - m_configScrollBarSize;
                 int h = height();
 
                 auto rs = buildRenderState();
@@ -675,7 +675,7 @@ namespace dstools {
                 p.setClipRect(0, 0, w, h);
 
                 // Position vertical scroll bar on the right
-                m_vScrollBar->setGeometry(w, 0, s.scrollBarSize, h);
+                m_vScrollBar->setGeometry(w, 0, m_configScrollBarSize, h);
             }
 
             // ============================================================================

@@ -1,4 +1,4 @@
-#include "GameAlignPage.h"
+﻿#include "GameAlignPage.h"
 
 #include <QComboBox>
 #include <QDir>
@@ -19,17 +19,17 @@
 
 namespace dstools::labeler {
 
-GameAlignPage::GameAlignPage(QWidget *parent) : QWidget(parent) {
+GameAlignPage::GameAlignPage(QWidget* parent) : WizardPageBase(parent) {
     buildUi();
 }
 
 void GameAlignPage::buildUi() {
-    auto *vLayout = new QVBoxLayout(this);
+    auto* vLayout = new QVBoxLayout(this);
 
-    auto *form = new QFormLayout;
+    auto* form = new QFormLayout;
 
-    m_modelPath = new QLineEdit;
-    m_modelPath->setPlaceholderText(tr("Path to GAME model directory"));
+    m_modelPath = new dsfw::widgets::PathSelector(dsfw::widgets::PathSelector::Directory, {}, {}, this);
+    m_modelPath->setPlaceholder(tr("Path to GAME model directory"));
     form->addRow(tr("Model:"), m_modelPath);
 
     m_gpuSelector = new QComboBox;
@@ -39,19 +39,14 @@ void GameAlignPage::buildUi() {
 
     vLayout->addLayout(form);
 
-    m_runProgress = new dsfw::widgets::RunProgressRow(tr("Run"));
-    vLayout->addWidget(m_runProgress);
-
-    m_log = new QTextEdit;
-    m_log->setReadOnly(true);
-    vLayout->addWidget(m_log, 1);
+    buildCommonUi(vLayout, tr("Run"));
 
     connect(m_runProgress, &dsfw::widgets::RunProgressRow::runClicked, this, [this]() {
         if (m_workingDir.isEmpty()) {
             QMessageBox::warning(this, tr("Error"), tr("No working directory set."));
             return;
         }
-        if (m_modelPath->text().isEmpty()) {
+        if (m_modelPath->path().isEmpty()) {
             QMessageBox::warning(this, tr("Error"), tr("No GAME model directory selected."));
             return;
         }
@@ -70,15 +65,14 @@ void GameAlignPage::buildUi() {
         const QStringList wavFiles = dir.entryList({QStringLiteral("*.wav")}, QDir::Files);
         if (wavFiles.isEmpty()) {
             m_log->append(tr("<b>Error:</b> No .wav files found in %1").arg(audioDir));
-            QMessageBox::warning(this, tr("GAME Alignment Failed"),
-                                 tr("No .wav files found in %1").arg(audioDir));
+            QMessageBox::warning(this, tr("GAME Alignment Failed"), tr("No .wav files found in %1").arg(audioDir));
             return;
         }
 
         m_log->append(tr("Found %1 audio file(s).").arg(wavFiles.size()));
 
         std::vector<PipelineContext> contexts;
-        for (const QString &fileName : wavFiles) {
+        for (const QString& fileName : wavFiles) {
             PipelineContext ctx;
             ctx.itemId = QFileInfo(fileName).completeBaseName();
             ctx.audioPath = QDir(audioDir).filePath(fileName);
@@ -91,7 +85,7 @@ void GameAlignPage::buildUi() {
         StepConfig step;
         step.taskName = QStringLiteral("midi_transcription");
         step.processorId = QStringLiteral("game");
-        step.config["path"] = m_modelPath->text();
+        step.config["path"] = m_modelPath->path();
         step.config["deviceId"] = static_cast<int64_t>(gpuIndex);
         step.config["csvPath"] = csvPath;
         step.validator = makeAlignmentQualityValidator(QStringLiteral("phoneme"), 0.6);
@@ -107,14 +101,13 @@ void GameAlignPage::buildUi() {
             if (answer == QMessageBox::Yes) {
                 auto recoveryResult = PipelineRunner::loadLatestSnapshot(opts.snapshotDir);
                 if (recoveryResult.ok()) {
-                    auto &[recoveredCtxs, recoveredStep] = recoveryResult.value();
-                    m_log->append(tr("Recovered %1 item(s) from step %2.")
-                                      .arg(recoveredCtxs.size())
-                                      .arg(recoveredStep));
+                    auto& [recoveredCtxs, recoveredStep] = recoveryResult.value();
+                    m_log->append(
+                        tr("Recovered %1 item(s) from step %2.").arg(recoveredCtxs.size()).arg(recoveredStep));
                     contexts = std::move(recoveredCtxs);
                 } else {
-                    m_log->append(tr("Warning: Failed to load snapshot: %1")
-                                      .arg(QString::fromStdString(recoveryResult.error())));
+                    m_log->append(
+                        tr("Warning: Failed to load snapshot: %1").arg(QString::fromStdString(recoveryResult.error())));
                 }
             } else {
                 PipelineRunner::cleanupOldSnapshots(opts.snapshotDir);
@@ -122,32 +115,28 @@ void GameAlignPage::buildUi() {
         }
 
         PipelineRunner runner;
-        QObject::connect(&runner, &PipelineRunner::progress,
-                         this, [this](int, int item, int total, const QString &) {
-                             if (total > 0)
-                                 m_runProgress->setProgress(item * 100 / total);
-                         });
+        QObject::connect(&runner, &PipelineRunner::progress, this, [this](int, int item, int total, const QString&) {
+            if (total > 0)
+                m_runProgress->setProgress(item * 100 / total);
+        });
 
         auto result = runner.run(opts, contexts);
         if (!result.ok()) {
             m_log->append(tr("<b>Error:</b> %1").arg(QString::fromStdString(result.error())));
-            QMessageBox::warning(this, tr("GAME Alignment Failed"),
-                                 QString::fromStdString(result.error()));
+            QMessageBox::warning(this, tr("GAME Alignment Failed"), QString::fromStdString(result.error()));
             return;
         }
 
         int processed = 0;
         int skipped = 0;
-        for (const auto &ctx : contexts) {
+        for (const auto& ctx : contexts) {
             if (ctx.status == PipelineContext::Status::Active) {
                 m_log->append(tr("  [OK] %1").arg(ctx.itemId));
                 ++processed;
             } else {
-                m_log->append(tr("  [SKIP] %1: %2")
-                                  .arg(ctx.itemId,
-                                       ctx.discardReason.isEmpty()
-                                           ? tr("unknown error")
-                                           : ctx.discardReason));
+                m_log->append(
+                    tr("  [SKIP] %1: %2")
+                        .arg(ctx.itemId, ctx.discardReason.isEmpty() ? tr("unknown error") : ctx.discardReason));
                 ++skipped;
             }
         }
@@ -157,14 +146,6 @@ void GameAlignPage::buildUi() {
         if (skipped > 0)
             m_log->append(tr("  %1 file(s) skipped.").arg(skipped));
     });
-}
-
-void GameAlignPage::setWorkingDirectory(const QString &dir) {
-    m_workingDir = dir;
-}
-
-QString GameAlignPage::workingDirectory() const {
-    return m_workingDir;
 }
 
 } // namespace dstools::labeler

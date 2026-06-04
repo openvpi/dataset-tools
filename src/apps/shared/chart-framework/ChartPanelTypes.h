@@ -21,6 +21,13 @@ namespace dstools {
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
 
+        struct RegionUpdate {
+            bool fullRebuild = true;
+            int dirtyStartCol = 0;
+            int dirtyEndCol = 0;
+            int colShift = 0;
+        };
+
         struct PlayheadState {
             double positionSec = -1.0;
             QColor color = QColor(255, 60, 60, 220);

@@ -8,23 +8,23 @@
 
 ## 1. 设计准则（最高优先级）
 
-以下准则约束所有框架和应用层代码，详见 [human-decisions.md](../human-decisions.md) P-01 ~ P-19
+以下准则约束所有框架和应用层代码，详见 [human-decisions.md](../human-decisions.md)（新版 ARCH/CONCUR/ROBUST/INFRA/VIEW 体系，旧 P-01~P-19 已废弃）
 和 [conventions.md](../guides/conventions.md)。
 
-| 编号       | 准则           | 要求                                                 |
-|----------|--------------|----------------------------------------------------|
-| **P-01** | 模块职责单一       | 相同行为只存在一处；刷新/通知由容器统一分发，不散落在各消费者                    |
-| **P-02** | 被动接口 + 容器通知  | 纯数据接口不加 QObject；变更通知由容器的 `invalidateXxx()` 负责      |
-| **P-03** | 异步一切         | 超过 50ms 的操作禁止主线程同步执行；禁止 `processEvents` 反模式        |
-| **P-04** | 错误根因传播       | 错误消息必须追溯到根因，不得忽略 out-parameter 继续报二次错误             |
-| **P-05** | 异常边界隔离       | `Result<T>` 传播应用层错误；`try-catch` 仅限第三方库边界           |
-| **P-06** | 接口稳定         | 公共头文件即契约；框架接口变更需考虑向后兼容                             |
-| **P-07** | 简洁可靠         | 遇错直接返回，不设计重试或回滚（除明确需求外）                            |
-| **P-13** | RAII 资源管理    | 所有资源通过 RAII 包装管理生命周期；禁止裸 new/delete、手动 lock/unlock |
-| **P-14** | 组合优于继承       | 优先组合/委托复用功能，接口继承优于实现继承                             |
-| **P-15** | 依赖倒置         | 高层模块依赖抽象接口而非具体实现                                   |
-| **P-16** | 开闭原则         | 新增功能通过新增类/模块实现，不修改已稳定核心逻辑                          |
-| **P-17** | 文档模型 + 适配器隔离 | 维护内部文档模型，所有文件格式通过 IFormatAdapter 对接；禁止业务代码直接操作文件   |
+| 编号           | 领域 | 准则           | 要求                                                 |
+|--------------|----|--------------|----------------------------------------------------|
+| **ARCH-01**  | 架构 | 模块职责单一       | 相同行为只存在一处；刷新/通知由容器统一分发，不散落在各消费者                    |
+| **ARCH-02**  | 架构 | 被动接口 + 容器通知  | 纯数据接口不加 QObject；变更通知由容器的 `invalidateXxx()` 负责      |
+| **CONCUR-01** | 并发 | 异步一切         | 超过 50ms 的操作禁止主线程同步执行；禁止 `processEvents` 反模式        |
+| **ROBUST-01** | 健壮 | 错误根因传播       | 错误消息必须追溯到根因，不得忽略 out-parameter 继续报二次错误             |
+| **ROBUST-02** | 健壮 | 异常边界隔离       | `Result<T>` 传播应用层错误；`try-catch` 仅限第三方库边界           |
+| **ARCH-03**  | 架构 | 接口稳定         | 公共头文件即契约；框架接口变更需考虑向后兼容                             |
+| **ROBUST-03** | 健壮 | 简洁可靠         | 遇错直接返回，不设计重试或回滚（除明确需求外）                            |
+| **INFRA-06** | 基础 | RAII 资源管理    | 所有资源通过 RAII 包装管理生命周期；禁止裸 new/delete、手动 lock/unlock |
+| **ARCH-05**  | 架构 | 组合优于继承       | 优先组合/委托复用功能，接口继承优于实现继承                             |
+| **ARCH-06**  | 架构 | 依赖倒置         | 高层模块依赖抽象接口而非具体实现                                   |
+| **ARCH-07**  | 架构 | 开闭原则         | 新增功能通过新增类/模块实现，不修改已稳定核心逻辑                          |
+| **ARCH-08**  | 架构 | 文档模型 + 适配器隔离 | 维护内部文档模型，所有文件格式通过 IFormatAdapter 对接；禁止业务代码直接操作文件   |
 
 **模式示例**：`AudioVisualizerContainer::invalidateBoundaryModel()` — 一次调用刷新 overlay + tier label + 所有
 chart，消费者无需知道内部有哪些 widget。
@@ -357,7 +357,7 @@ DiffSinger 领域 UI 组件。所有应用的公共 UI 基础设施（通过 dsf
 | rmvpepitch-lib | ITaskProcessor 适配（RMVPE F0）             |
 | minlabel-lib   | MinLabel 业务逻辑 + AddPhNum 处理器            |
 | moelib         | R3MOE 口型曲线推理调度                          |
-| infer-bridge   | 推理引擎桥接（domain ↔ infer 解耦，上接 ARCH-OP-01） |
+| infer-bridge   | 推理引擎桥接（domain ↔ infer 解耦，上接 ARCH-01） |
 
 ---
 
@@ -443,19 +443,17 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 
 ## 11. 框架接口一览
 
-| 接口               | 层级      | 职责       | 默认实现                                        |
-|------------------|---------|----------|---------------------------------------------|
-| IDocument        | core    | 文档生命周期   | —                                           |
-| IModelProvider   | core    | 模型加载/卸载  | —                                           |
-| IModelDownloader | core    | 模型下载     | ModelDownloader, StubModelDownloader        |
-| IModelManager    | core    | 模型生命周期管理 | ModelManager (domain)                       |
-| IG2PProvider     | core    | G2P 转换   | StubG2PProvider, PinyinG2PProvider (domain) |
-| IExportFormat    | core    | 数据导出     | StubExportFormat                            |
-| IQualityMetrics  | core    | 质量评估     | StubQualityMetrics                          |
-| ISliceDataSource | core    | 切片数据源    | —                                           |
-| IAudioPlayer     | audio   | 音频播放     | AudioPlayer                                 |
-| IStepPlugin      | ui-core | 步骤插件     | StubStepPlugin                              |
-| IInferenceEngine | infer   | 推理引擎     | —                                           |
+| 接口               | 层级      | 职责       | 实际实现                                                     |
+|------------------|---------|----------|----------------------------------------------------------|
+| IDocument        | core    | 文档生命周期   | DsDocumentAdapter (domain)                                |
+| IModelProvider   | core    | 模型加载/卸载  | FunAsrModelProvider, GameModelProvider, HuBERTModelProvider (libs) |
+| IG2PProvider     | core    | G2P 转换   | PinyinG2PProvider (domain)                                |
+| IExportFormat    | core    | 数据导出     | HtsLabelExportFormat, SinsyXmlExportFormat (domain)       |
+| ISliceDataSource | core    | 切片数据源    | ProjectDataSource (ds-labeler)                            |
+| IAudioPlayer     | audio   | 音频播放     | AudioPlayer (audio)                                       |
+| IInferenceEngine | infer   | 推理引擎     | GameEngine, HuBERTEngine, RmvpeEngine, MoeEngine, FunAsrEngine |
+
+> **备注**：ModelManager 是具体类而非接口；QualityTypes 仅定义类型，无 IQualityMetrics 接口。
 
 ---
 
@@ -496,11 +494,12 @@ dataset-tools/
 │   │   │   ├── src/
 │   │   │   └── res/            # 主题 QSS, 资源文件
 │   │   ├── audio/              # dstools-audio (STATIC)
+│   │   ├── infer/              # infer-common (STATIC, 编译入 dsfw-core)
 │   │   └── widgets/            # dsfw-widgets (SHARED)
 │   ├── domain/                 # dstools-domain (STATIC)
 │   │   ├── include/dstools/    # DsDocument, DsProject, CsvToDsConverter, ...
 │   │   └── src/
-│   ├── widgets/                # dstools-widgets (INTERFACE, header-only)
+│   ├── ui-core/                # dstools-widgets (INTERFACE, header-only)
 │   ├── libs/
 │   │   ├── textgrid/          # header-only
 │   │   ├── hubert-fa/         # HuBERT 强制对齐处理器
@@ -510,14 +509,13 @@ dataset-tools/
 │   │   ├── min-label-lib/     # MinLabel 服务 + AddPhNum 处理器
 │   │   ├── slicer/            # RMS 切片服务 + 处理器
 │   │   └── moe-lib/           # R3MOE 口型曲线处理器
-│   ├── framework/
-│   │   └── infer/              # infer-common 源文件 (OnnxEnv, OnnxModelBase) 编译入 dsfw-core
+│   ├── infer/
 │   │   ├── onnxruntime/        # 预下载 ORT 二进制
 │   │   ├── audio-util/         # (SHARED, 独立可安装)
 │   │   ├── game-infer/         # (SHARED)
 │   │   ├── rmvpe-infer/        # (SHARED)
 │   │   ├── hubert-infer/       # (SHARED)
-│   │   ├── moe-infer/           # (SHARED)
+│   │   ├── moe-infer/          # (SHARED)
 │   │   └── FunAsr/             # (STATIC)
 │   ├── apps/
 │   │   ├── label-suite/            # LabelSuite — 通用标注工具集
@@ -530,7 +528,8 @@ dataset-tools/
 │   │   │   ├── pitch-editor/       # 音高编辑 UI 组件
 │   │   │   ├── settings/           # 设置 UI
 │   │   │   ├── log-page/           # 日志查看 UI
-│   │   │   ├── model-init/         # 模型初始化注册
+│   │   │   ├── chart-framework/   # 图表框架基类 (ChartConfigRegistry, ChartPanelBase)
+│   │   │   ├── bridges/           # 文档桥接层 (DsTextDocBridge)
 │   │   │   └── mouth-curve-chart/  # 口型曲线图渲染
 │   │   ├── cli/                    # dstools-cli
 │   │   └── widget-gallery/         # WidgetGallery
@@ -573,4 +572,4 @@ CI 验证模块独立构建。`find_package(dsfw)` 集成测试存在。
 
 ## 15. 已知架构问题
 
-详见 [refactoring-plan-v2.md](refactoring-plan-v2.md) 第3章（技术债清单，已归档）。最新方案见 [refactoring-plan-v3.md](refactoring-plan-v3.md)。
+详见 [refactoring-plan-v4.md](refactoring-plan-v4.md)（包含完整审计、补充准则和分阶段重构方案）。

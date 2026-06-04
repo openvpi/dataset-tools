@@ -10,7 +10,7 @@
 #include "SliceListPanel.h"
 #include "EnginePool.h"
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <dstools/DsKeys.h>
 
@@ -660,7 +660,10 @@ namespace dstools {
         QString lyricDir = settings().get(kLyricDir);
 
         if (lyricDir.isEmpty() || !QDir(lyricDir).exists()) {
-            lyricDir = dsfw::FileDialogHelper::getExistingDirectory({this, tr("Select Lyric Library Directory"), lyricDir});
+            dsfw::widgets::FilePathSelector selector(
+                {dsfw::widgets::FilePathSelector::Mode::OpenDirectory, tr("Select Lyric Library Directory"), {}, {}, lyricDir},
+                this);
+            lyricDir = selector.exec();
             if (lyricDir.isEmpty())
                 return;
             settings().set(kLyricDir, lyricDir);

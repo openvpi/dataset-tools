@@ -32,17 +32,17 @@ namespace dstools {
 
         /// @brief Access the underlying inference engine (const).
         /// @return Const reference to the engine.
-        const Engine &engine() const {
+        const Engine &engine() const noexcept {
             return m_engine;
         }
 
         /// @brief Return the model type identifier.
-        ModelTypeId type() const override {
+        ModelTypeId type() const noexcept override {
             return m_typeId;
         }
 
         /// @brief Return the human-readable model name.
-        QString displayName() const override {
+        QString displayName() const noexcept override {
             return m_displayName;
         }
 

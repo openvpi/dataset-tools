@@ -3,10 +3,10 @@
 #include <QComboBox>
 #include <QJsonObject>
 #include <QLabel>
-#include <QLineEdit>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QWidget>
+#include <dsfw/widgets/PathSelector.h>
 
 namespace dstools {
 
@@ -33,7 +33,7 @@ private:
     QLineEdit *searchLineEditInPathCell(QWidget *cellWidget) const;
 
     QComboBox *m_g2pEngineCombo = nullptr;
-    QLineEdit *m_dictPath = nullptr;
+    dsfw::widgets::PathSelector *m_dictPath = nullptr;
     QLineEdit *m_g2pTestInput = nullptr;
     QPushButton *m_g2pTestBtn = nullptr;
     QLabel *m_g2pTestResult = nullptr;

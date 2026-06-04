@@ -10,9 +10,9 @@ namespace HFA {
     dstools::Result<std::unique_ptr<DictionaryG2P>> DictionaryG2P::load(const std::filesystem::path &dictionaryPath,
                                                                          const std::string &language) {
         try {
-            return std::make_unique<DictionaryG2P>(dictionaryPath, language);
+            return std::unique_ptr<DictionaryG2P>(new DictionaryG2P(dictionaryPath, language));
         } catch (const std::exception &e) {
-            return dstools::Err(std::string("Failed to load dictionary: ") + e.what());
+            return dstools::Err<std::unique_ptr<DictionaryG2P>>(std::string("Failed to load dictionary: ") + e.what());
         }
     }
 

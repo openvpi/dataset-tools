@@ -12,10 +12,10 @@ namespace dstools {
         QString displayName() const override {
             return QStringLiteral("DiffSinger DS");
         }
-        bool canImport() const override {
+        bool canImport() const noexcept override {
             return true;
         }
-        bool canExport() const override {
+        bool canExport() const noexcept override {
             return true;
         }
 

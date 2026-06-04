@@ -7,7 +7,7 @@
 #include "SliceExportDialog.h"
 #include "SliceListPanel.h"
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <QCheckBox>
 #include <QDialog>
@@ -385,9 +385,10 @@ void SlicerPage::onAutoSlice() {
 }
 
 void SlicerPage::onImportMarkers() {
-    QString path =
-        dsfw::FileDialogHelper::getOpenFileName({this, tr("Import Markers"), {},
-                                                  {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}});
+    dsfw::widgets::FilePathSelector selector(
+        {dsfw::widgets::FilePathSelector::Mode::OpenFile, tr("Import Markers"),
+         {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}}, this);
+    QString path = selector.exec();
     if (path.isEmpty())
         return;
 
@@ -414,9 +415,10 @@ void SlicerPage::onImportMarkers() {
 }
 
 void SlicerPage::onSaveMarkers() {
-    QString path =
-        dsfw::FileDialogHelper::getSaveFileName({this, tr("Save Markers"), {},
-                                                  {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}});
+    dsfw::widgets::FilePathSelector selector(
+        {dsfw::widgets::FilePathSelector::Mode::SaveFile, tr("Save Markers"),
+         {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}}, this);
+    QString path = selector.exec();
     if (path.isEmpty())
         return;
 
@@ -628,16 +630,19 @@ bool SlicerPage::onDeactivating() {
 }
 
 void SlicerPage::onOpenAudioFiles() {
-    const QStringList files = dsfw::FileDialogHelper::getOpenFileNames(
-        {this, QStringLiteral("选择音频文件"), {},
-         {QStringLiteral("音频文件 (*.wav *.mp3 *.flac *.m4a *.ogg *.opus)"), QStringLiteral("所有文件 (*)")}});
+    dsfw::widgets::FilePathSelector selector(
+        {dsfw::widgets::FilePathSelector::Mode::OpenFiles, QStringLiteral("选择音频文件"),
+         {QStringLiteral("音频文件 (*.wav *.mp3 *.flac *.m4a *.ogg *.opus)"), QStringLiteral("所有文件 (*)")}}, this);
+    selector.exec();
+    const QStringList files = selector.selectedPaths();
     if (!files.isEmpty())
         m_audioFileList->addFiles(files);
 }
 
 void SlicerPage::onOpenAudioDirectory() {
-    const QString dir = dsfw::FileDialogHelper::getExistingDirectory(
-        {this, QStringLiteral("选择音频目录")});
+    dsfw::widgets::FilePathSelector selector(
+        {dsfw::widgets::FilePathSelector::Mode::OpenDirectory, QStringLiteral("选择音频目录")}, this);
+    const QString dir = selector.exec();
     if (!dir.isEmpty())
         m_audioFileList->addDirectory(dir);
 }

@@ -6,7 +6,6 @@ set(CMAKE_AUTOMOC ON)
 set(DSFW_TESTS
         TestResult
         TestJsonHelper
-        TestEncoding
         TestAppSettings
         TestAsyncTask
         TestIDocument

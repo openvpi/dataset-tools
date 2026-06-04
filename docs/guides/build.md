@@ -205,7 +205,7 @@ ctest --output-on-failure
 |------|------|
 | 应用 | LabelSuite, DsLabeler |
 | 工具 | dstools-cli, hfa-cli, WidgetGallery, TestShell |
-| 测试 | TestTimePos, TestResult, TestJsonHelper, TestAppSettings, TestServiceLocator, TestAsyncTask, TestLocalFileIOProvider, TestModelManager, TestModelDownloader, TestF0Curve, TestCurveTools, TestGame, TestRmvpe, TestAudioUtil 等 |
+| 测试 | TestTimePos, TestResult, TestJsonHelper, TestAppSettings, TestServiceLocator, TestAsyncTask, TestModelManager, TestModelDownloader, TestF0Curve, TestCurveTools, TestGame, TestRmvpe, TestAudioUtil 等 |
 | 动态库 | dsfw-widgets, audio-util, game-infer, rmvpe-infer, hubert-infer, moe-infer |
 | header-only 库 | dstools-widgets, dstools-types, textgrid |
 

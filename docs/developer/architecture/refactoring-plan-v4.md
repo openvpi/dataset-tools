@@ -1,596 +1,813 @@
-# Dataset Tools 重构方案 v4
+# 大型重构方案 v4.2
 
-> 版本 4.0 | 2026-06-03
->
-> v4 基于 v3 全面代码核实后重写：所有已完成任务经逐项代码验证确认正确后删除，仅保留未完成任务并深化设计。
-> 核实范围：Phase A~E 全部 38 项任务，核实方法：Grep 验证符号存在性 + Read 验证实现正确性。
->
-> 本方案严格遵循 [human-decisions.md](../../human-decisions.md) 的设计准则体系（ARCH/CONCUR/ROBUST/INFRA/VIEW）。
+> 版本：4.2.0 (深度修正版)
+> 日期：2026-06-04
+> 状态：方案设计阶段
+> 取代：v4.1（修正版，含范围错误和遗漏模块，已作废）
 
 ---
 
-## 1 项目现状
+## 0. 前置声明
 
-### 1.1 技术栈
+### 0.1 方案目标
 
-| 层级     | 技术                    | 版本要求                                          |
-|--------|-----------------------|-----------------------------------------------|
-| 语言     | C++20                 | MSVC 2022 / GCC / Clang                       |
-| GUI    | Qt 6                  | 6.8+, Core/Gui/Widgets/Svg/Network/Concurrent |
-| 构建     | CMake                 | 3.21+                                         |
-| 包管理    | vcpkg                 | nlohmann_json, QWindowKit                     |
-| 推理     | ONNX Runtime          | --                                            |
-| 音频解码   | FFmpeg                | --                                            |
-| 音频播放   | SDL2                  | --                                            |
-| 音频文件读写 | SndFile, soxr, mpg123 | --                                            |
-| 窗口框架   | QWindowKit            | --                                            |
-| CLI 参数 | syscmdline            | --                                            |
-| G2P    | cpp-pinyin            | --                                            |
+1. **功能不变**：所有现有功能行为完全一致，用户无感知
+2. **数据安全**：工程数据稳定性、安全性不降低，所有 I/O 操作保持原子性
+3. **设计一致**：严格遵循 [human-decisions.md](../../human-decisions.md) 全部准则（ARCH-01~11, CONCUR-01~03, ROBUST-01~03,
+   INFRA-01~17, VIEW-01~18）
+4. **零技术债**：抛开所有历史包袱，清理所有已验证的架构问题
+5. **统一底层**：跨平台路径、编码、文件选择由固定模块负责，消除各应用行为不一致
+6. **流水线适配**：重构后流程与标注流水线文档一致
 
-### 1.2 模块层次结构
+### 0.2 方案约束
+
+- 不引入新的外部依赖
+- 不修改稳定核心代码来加新功能（遵循 ARCH-07）
+- 保持 C++20/Qt6 技术栈
+- 保持 4-space indent、120-col width、`#pragma once` 格式规范
+- 不修改 `.dsproj` / `.dstext` 文件格式（向后兼容）
+- 各阶段独立可验证，可独立回滚
+
+### 0.3 核心文档引用
+
+| 文档                                                       | 用途                                                                            |
+|----------------------------------------------------------|-------------------------------------------------------------------------------|
+| [human-decisions.md](../../human-decisions.md)           | 设计准则权威来源（速查表 ARCH-01~11, CONCUR-01~03, ROBUST-01~03, INFRA-01~17, VIEW-01~18） |
+| [overview.md](overview.md)                               | 项目架构总览（框架分离原则、分层架构、命名规范、CMake 目标）                                             |
+| [data-flow-design.md](data-flow/data-flow-design.md)     | 流水线定义、层依赖 DAG、脏数据传播                                                           |
+| [component-design.md](data-flow/component-design.md)     | 核心组件设计说明                                                                      |
+| [ds-format.md](data-flow/ds-format.md)                   | .dsproj/.dstext 格式规范                                                          |
+| [unified-app-design.md](framework/unified-app-design.md) | LabelSuite/DsLabeler 统一应用设计                                                   |
+| [conventions.md](../../guides/conventions.md)            | 编码规范                                                                          |
+| [test-design.md](../testing/test-design.md)              | 测试架构                                                                          |
+| [magic-numbers-audit.md](../magic-numbers-audit.md)      | 魔法数字审计                                                                        |
+
+---
+
+## 0A. v4.1 → v4.2 修正摘要
+
+**方案本身的问题**（本节即"错误修正"）：
+
+| # | v4.1 问题                                     | v4.2 修正                                                         |
+|---|---------------------------------------------|-----------------------------------------------------------------|
+| 1 | R1 声称 `EncodingUtils` "被多文件引用"需"全局搜索替换"     | 经 Grep 验证：**仅 PathUtils.cpp 内部调用**，无外部调用方。删除"全局搜索替换"描述          |
+| 2 | R1 引用不存在的函数名 `openIfstream`/`openOfstream`  | 实际为 `openIfstream`/`openOfstream`，且无直接调用方（仅在 audio-util 层有弃用包装） |
+| 3 | R5（删除 EncodingUtils::kInterfaceVersion）是死阶段 | 合并到 R1，R1 删除 EncodingUtils 后自动消除                                |
+| 4 | R1 遗漏 audio-util/PathCompat.h 弃用层清理         | R1 新增步骤：迁移 SlicerService/Util/FlacDecoder 3 调用方到 PathUtils      |
+| 5 | R2 列出不存在的 `FileDataSource`                  | 删除该引用                                                           |
+
+**遗漏的代码问题**（需新增阶段）：
+
+| #  | 发现                                                                                                                | ARCH 准则          | 处理                               |
+|----|-------------------------------------------------------------------------------------------------------------------|------------------|----------------------------------|
+| 6  | BuildDsPage / BuildCsvPage / GameAlignPage 三页面 ~70% 结构重复（RunProgressRow + QTextEdit + QAction + batch 模式）         | ARCH-01, ARCH-04 | 新增 R9                            |
+| 7  | GameAlignPage 用 QLineEdit 替代 PathSelector，虽已 include PathSelector.h                                               | ARCH-13          | 新增 R10                           |
+| 8  | audio-util/PathCompat.h 双重弃用层（`[[deprecated]]` 包装 → dsfw::PathCompat → PathUtils），3 处字符串转化写了 3 遍                  | INFRA-01         | 新增 R11                           |
+| 9  | MoveBoundaryCommand(IBoundaryModel+TimePos) vs MoveSlicePointCommand(vector\<double\>+std::function) — 相同概念不同数据模型 | —                | 记录为文档债，暂不处理（两域有不同精度需求）           |
+| 10 | ExportPage 未继承 EditorPageBase，自行实现 IPageActions/IPageLifecycle                                                    | —                | 记录为观察项，当前两层体系（数据驱动 vs 音频可视化）有合理性 |
+
+---
+
+## 1. 现状审计
+
+### 1.1 代码库规模与模块划分
 
 ```
-App Layer    ds-labeler, label-suite, dstools-cli, widget-gallery
-                ↓
-App Shared   dstools-ui-core    (STATIC, src/ui-core/)
-                ↓ 包装 dsfw-ui-core + dsfw-core + dstools-domain
-App Libs     dstools-domain     (STATIC, src/domain/)
-             DsPitchDocument, DsTextDocument, DsProject
-             F0Curve, CurveTools, MouthCurve
-             格式适配器 (CsvAdapter, DsDocumentAdapter 等)
-                ↓
-──────────────── 框架层 ─────────────────
-Layer 4  dsfw-widgets           通用 UI 组件 (SHARED DLL)
-Layer 3  dsfw-ui-core           AppShell, IconNavBar, Theme, FramelessHelper, IPageActions (STATIC)
-Layer 2  dstools-audio          AudioDecoder (FFmpeg), AudioPlayback (SDL2) (STATIC)
-Layer 1  dsfw-core              AppSettings, ServiceLocator, AsyncTask, PathUtils
-                                PipelineContext, PipelineRunner, ITaskProcessor, 接口集
-Layer 0.5 dsfw-base             JsonHelper (Qt-free 静态库)
-Layer 0  dsfw-types             Result<T>, ExecutionProvider, TimePos (header-only)
+~42 CMake targets (excluding tests)
 
-此外层：
-dsfw-signal           curve_tools, music_math, time_series (dsfw::signal 命名空间, 静态库)
-dstools-widgets       INTERFACE header-only 层, 通过 dsfw-widgets 导出宏转发
-infer-common          OnnxEnv, OnnxModelBase (独立 STATIC target, 已从 dsfw-core 拆分)
+Framework (6):  dsfw-base (static) → dsfw-core (static) → dsfw-ui-core (static)
+                → dsfw-widgets (shared) + dstools-audio (static)
+                infer-common 源文件编译入 dsfw-core
+
+Domain (1):     dstools-domain (static)
+
+Libs (8):       slicer-lib, lyricfa-lib, hubertfa-lib, gameinfer-lib, rmvpepitch-lib,
+                minlabel-lib, moelib, infer-bridge
+
+App-Shared (9): data-sources, audio-visualizer, phoneme-editor, pitch-editor,
+                min-label-editor, settings, log-page, model-init, mouth-curve-chart
+
+Apps (5):       LabelSuite, DsLabeler, dstools-cli, WidgetGallery, TestShell
+
+Infer (6):      audio-util, FunAsr, game-infer, hubert-infer, rmvpe-infer, moe-infer
+
+Tests:          ~19 单元测试 + 1 集成测试
 ```
 
-### 1.3 应用清单
-
-| 应用             | 类型  | CMake Target  | 说明                        |
-|----------------|-----|---------------|---------------------------|
-| ds-labeler     | GUI | DsLabeler     | DsLabeler 主应用（工程管理、标注流水线） |
-| label-suite    | GUI | LabelSuite    | LabelSuite（独立编辑器集合）       |
-| dstools-cli    | CLI | dstools-cli   | 统一命令行工具（含 HFA、切片、对齐等子命令）  |
-| dstools-cli    | CLI | dstools-cli   | 统一命令行工具（含 HFA、切片、对齐等子命令）  |
-| widget-gallery | GUI | WidgetGallery | UI 控件展示                   |
-
-### 1.4 已完成成果（经代码核实，2026-06-03）
-
-以下 32 项任务已完成并经逐项代码验证确认实现正确，不再重复计划：
-
-| 阶段 | 已完成任务 | 核实要点 |
-|------|-----------|---------|
-| Phase S | 可视化架构统一（AudioVisualizerContainer, MiniMapScrollBar, BoundaryOverlayWidget） | 文件存在，功能运行 |
-| Phase R.1 | 配置系统重构（统一 AppSettings，删除 ProjectSettingsBackend） | AppSettings 统一入口 |
-| Phase L | 格式适配器基础设施（TextGridAdapter, DsFileAdapter, CsvAdapter, LabAdapter） | IFormatAdapter 接口完整 |
-| Phase V.1~V.6 | 路径编码统一、文件选择控件、配置键集中、MiniMap 修复、ISlicerService 删除、接口版本号 | 全部代码核实通过 |
-| Phase A | A-01~A-03, A-05~A-06: AtomicFileWriter 统一、ProjectBackupManager、数据校验、外部路径校验、CRC32 | 实现文件存在，方法签名正确 |
-| Phase B | B-01~B-07: 7 套测试全部就位 | 测试文件存在，CMakeLists.txt 已注册 |
-| Phase C | C-01~C-06: ChartConfigRegistry 配置化 + 持久化 | setValue()→saveConfig()→AppSettings 已实现 |
-| Phase D | D-01~D-02, D-04~D-05, D-07~D-08: test-shell 评估+迁移、PipelineRunner 前置条件、AsyncTask 超时、noexcept/const | 代码中均有对应实现 |
-| Phase E | E-01~E-07, E-09, E-11: 合并评估、unified-editor、解耦、版本校验、版本号、头文件审计、infer-common 拆分、音素播放修复、播放管线错误处理 | 实现文件存在，代码逻辑正确 |
-
-### 1.5 已完备的基础设施
-
-| 基础设施 | 位置 |
-|---------|------|
-| AudioVisualizerContainer 统一视图 | apps/shared/audio-visualizer |
-| ViewportController 统一缩放 | dsfw-widgets |
-| BoundaryDragController 集中拖拽 | apps/shared/chart-framework |
-| MiniMapScrollBar 缩略图 | apps/shared/audio-visualizer |
-| TierLabelArea 标签层次结构 | apps/shared/phoneme-editor/ui |
-| AppSettings 统一配置 + SettingsKey\<T\> | dsfw-core |
-| FormatAdapterRegistry 注册机制 | dsfw-core |
-| PipelineContext + dirty 传播 | dsfw-core |
-| PipelineRunner 流水线执行 | dsfw-core |
-| TaskProcessorRegistry | dsfw-core |
-| EditorPageBase 生命周期 | apps/shared/data-sources |
-| InferBridge 引擎桥接 | libs/infer-bridge |
-| DsTextDocBridge 三向转换 | apps/shared/bridges |
-| ServiceLocator（全局服务） | dsfw-core |
-| AtomicFileWriter 原子写入 | dsfw-core |
-| ProjectBackupManager 自动备份 | dstools-domain |
-| ChartConfigRegistry 配置化 + 持久化 | apps/shared/chart-framework |
-| unified-editor 共享目录 | apps/unified-editor |
-| infer-common 独立 target | framework/infer |
-| Runtime 接口版本校验 | ServiceLocator + TaskProcessorRegistry |
-
----
-
-## 2 重构原则
-
-### 2.1 核心约束（摘自 human-decisions.md）
-
-| 编号 | 约束 | 重构中的影响 |
-|------|------|------------|
-| ARCH-01 | 相同行为只存在一处 | 所有重复代码必须下沉到共享层 |
-| ARCH-06 | 依赖倒置，构造注入优先 | 新增模块必须面向接口，通过构造函数注入依赖 |
-| ARCH-07 | 开闭原则 | 新增功能通过新增类，不修改稳定核心 |
-| ARCH-08 | 适配器隔离文件格式 | 任何文件 I/O 必须通过 IFormatAdapter |
-| ROBUST-01 | Result\<T\> 传播错误 | 所有可能失败的操作返回 Result\<T\>，不抛异常 |
-| ROBUST-02 | 禁止静默吞掉 catch | 捕获必须记录日志或返回错误 |
-| ROBUST-03 | try-catch 仅限第三方边界 | 业务逻辑不使用 try-catch |
-| CONCUR-01 | IO/计算 (>50ms) 异步 | 长操作使用 AsyncTask 或 QtConcurrent |
-| CONCUR-02 | 禁止 processEvents | 使用异步 + 信号 |
-| CONCUR-03 | UI 线程安全 | 后台线程通过 QMetaObject::invokeMethod 操作 UI |
-| INFRA-01 | PathUtils 统一路径 | 禁止 path.string()，统一用 PathUtils |
-| INFRA-02 | RAII 资源管理 | 禁止裸 new/delete |
-| INFRA-03 | ServiceLocator 限制 | 仅注册全局服务，不注册页面级资源 |
-| INFRA-04 | SettingsKey\<T\> 集中 | 所有配置键在 Keys.h 中声明，强类型 |
-
-### 2.2 补充准则（CD-01~CD-09）
-
-同 v3，详见 [refactoring-plan-v3.md §2.2](refactoring-plan-v3.md)。
-
----
+### 1.2 框架分层与命名空间（现状）
 
-## 3 待解决技术债
+项目采用公认的**双命名空间分层架构**，详见 [overview.md](overview.md) Section 3 和 Section 10：
 
-### 3.1 架构债
+| 层        | CMake Target         | 主要命名空间                                                 | 职责                                         |
+|----------|----------------------|--------------------------------------------------------|--------------------------------------------|
+| 底层工具     | dsfw-base            | `dstools`                                              | JsonHelper                                 |
+| 框架核心     | dsfw-core            | `dsfw` (工具类) + `dstools` (服务类)                         | 路径、编码、日志、AppSettings、Pipeline、Task         |
+| 信号处理     | dsfw-core            | `dsfw::signal`, `dsfw::music`                          | 曲线工具、时序数据、音乐数学                             |
+| UI 核心    | dsfw-ui-core         | `dsfw`, `dsfw::widgets`, `dstools`, `dstools::labeler` | AppShell、Theme、IPageActions、IPageLifecycle |
+| Widget 库 | dsfw-widgets         | `dsfw::widgets` (主), `dstools` (少量)                    | PathSelector、LogViewer、TimeRulerWidget 等   |
+| 音频       | dstools-audio        | `dstools::audio`                                       | AudioPlayer、AudioDecoder                   |
+| 推理       | dstools-infer-common | `dstools::infer`                                       | IInferenceEngine、OnnxEnv、OnnxModelBase     |
+| 领域       | dstools-domain       | `dstools`                                              | DsDocument、DsProject、ModelManager 等        |
+| 应用       | dstools-apps         | `dstools`                                              | 所有页面、编辑器组件                                 |
 
-| ID | 问题 | 严重度 | 关联任务 |
-|----|------|--------|---------|
-| ARCH-D2 | test-shell 已删除（D-02），不再存在独立测试 target 问题 | 已解决 | D-02 ✅ |
-| ARCH-D7 | dsfw-ui-core PRIVATE 包含 widgets 头文件路径，存在循环包含风险 | 低 | E-08（暂缓） |
+**关键设计原则**：框架 `dsfw` 包含通用可复用代码（不含歌声合成领域逻辑），`dstools` 包含 DiffSinger 特定的领域逻辑。此分层是*
+*有意设计**，不是混乱。
 
-### 3.2 配置债
-
-| ID | 问题 | 严重度 | 关联任务 |
-|----|------|--------|---------|
-| CONFIG-D5 | AudioVisualizerContainer::addChart() 的 heightWeight/stretchFactor 分散硬编码 | 低 | 合并到 C-07 |
-
-### 3.3 代码债
-
-| ID | 问题 | 严重度 | 关联任务 |
-|----|------|--------|---------|
-| CODE-D3 | dstools-audio AudioDecoder.cpp 部分路径处理未通过 PathUtils | 中 | D-03（暂缓） |
-| CODE-D4 | F0Curve 插值算法边界条件未处理（空 curve、单点曲线） | 中 | 已有测试 TestCurveTools.cpp |
+### 1.3 已识别的技术债与架构债（经代码验证）
 
-### 3.4 数据安全债
+#### 债-1：include 前缀与命名空间不完全对应
 
-| ID | 问题 | 严重度 | 关联任务 |
-|----|------|--------|---------|
-| SAFETY-D4 | 外部文件导入缺乏事务性（全成功或全失败） | 中 | A-04 |
+**已验证**：`<dsfw/AppSettings.h>` 声明 `namespace dstools`，`<dsfw/PathUtils.h>` 声明 `namespace dsfw`。同一 CMake
+target (`dsfw::core`) 的 include 前缀统一为 `dsfw/`，但内部命名空间按职责分为 `dsfw`（工具类）和 `dstools`
+（服务类）。这是有意的分层，但确实增加了新手学习成本。
 
-### 3.5 测试债
+**影响**：新开发者难以根据 include 路径推断命名空间。
 
-| ID | 问题 | 严重度 | 关联任务 |
-|----|------|--------|---------|
-| TEST-D6 | 现有测试覆盖率约 55%，领域层和应用层仍偏低 | 中 | 持续补充 |
+**涉及文件**：`<dsfw/...>` 下约 20 个文件使用 `namespace dstools`，约 18 个使用 `namespace dsfw`。
 
-### 3.6 文档债
+#### 债-2：路径与编码模块分散但功能重叠
 
-| ID | 问题 | 严重度 |
-|----|------|--------|
-| DOC-D1 | component-design.md 中仍有 DSFile 引用 | 低 |
-| DOC-D2 | overview.md 架构图标注状态与实际不符 | 低 |
-| DOC-D3 | human-decisions.md 中部分代码示例使用了已废弃 API | 低 |
+**已验证**：存在 4 个相关文件：
 
----
+| 文件                     | 命名空间   | 核心功能                                          |
+|------------------------|--------|-----------------------------------------------|
+| `PathUtils.h/.cpp`     | `dsfw` | 路径操作、文件 I/O、CRC32、编码检测(`TextEncoding`)        |
+| `EncodingUtils.h/.cpp` | `dsfw` | 文本编码检测/解码/编码（`Encoding` 枚举）                   |
+| `PathCompat.h`         | `dsfw` | `std::ifstream`/`std::ofstream` 宽字符路径打开（18 行） |
+| `FileDialogHelper.h`   | `dsfw` | QFileDialog 封装（QObject，非 Widget）              |
 
-## 4 剩余任务清单
+**关键发现**：
 
-### 4.1 待开始任务总览
+- `PathUtils::TextEncoding` 和 `EncodingUtils::Encoding` 枚举值**完全一一对应**（Utf8, Utf8Bom, Utf16LE, Utf16BE, Gbk,
+  Latin1）
+- `EncodingUtils` 还错误地包含 `kInterfaceVersion`（这是具体工具类，不应有接口版本号）
+- `PathCompat.h` 仅 18 行，应合并到 `PathUtils` 或直接内联
+- `TestPathUtils` 和 `TestEncoding` 两个测试文件**已存在**，分别测试各自功能
 
-| 优先级 | 任务 | 阶段 | 说明 |
-|--------|------|------|------|
-| 🔴 高 | A-04 | 数据安全 | 外部文件导入事务性 |
-| 🟡 中 | E-10 | 架构演进 | AudioDecoder 流式解码 |
-| 🟢 低 | C-07 | 配置化 | PianoRollView 颜色常量迁移 |
-| 🟢 低 | D-03 | 代码清理 | AudioDecoder 路径处理（暂缓） |
-| 🟢 低 | E-08 | 架构演进 | dsfw-ui-core 循环包含（暂缓） |
+**影响**：两个枚举并存造成调用方困惑，同一类编码问题需要在两个类中查方法。
 
-### 4.2 未完成任务详细设计
+#### 债-3：PipelineContext 公开方法暴露 nlohmann::json
 
-#### A-04：外部文件导入事务性
-
-**问题**：外部文件导入（TextGrid/CSV/Lab）时，错误格式的文件可能产生部分损坏的内部数据。
-
-**方案**：
-
-```
-1. 解析到临时内存模型（TemporaryDocument）
-2. 验证临时模型完整性（validate()）
-3. 验证通过 → 原子替换现有数据
-4. 验证失败 → 完全回滚，不修改任何现有数据
-5. 返回 Result<void> 包含详细错误信息
-```
-
-**涉及文件**：
-- `TextGridAdapter::importToLayers()` — 导入逻辑
-- `CsvAdapter::importToLayers()` — 导入逻辑
-- `LabAdapter::importToLayers()` — 导入逻辑
-
-**实施要点**：
-- 在适配器内部创建临时 `std::map<QString, LayerData>`，解析完成后整体替换
-- 不修改现有 `LayerData` 直到验证通过
-- 增加 `validateLayerData()` 辅助方法，检查必填字段、坐标范围
-
-**风险**：低 — 不影响现有写入路径，仅改变导入流程。
-
----
-
-#### D-02：test-shell 迁移为 Qt Test 单元测试 ✅ 已完成
-
-**现状**：test-shell 已精简为仅 AppShell + QMenu 下拉测试，无推理测试逻辑（推理测试已在 D-01 提取）。TestAppShellIntegration 已覆盖 AppShell 程序化测试。
-
-**实施**：
-1. 删除 `src/apps/test-shell/` 目录及 CMakeLists.txt 注册
-2. 更新 `docs/developer/architecture/overview.md` 移除 test-shell 引用
-3. 无需新增测试（TestAppShellIntegration 已覆盖）
-
----
-
-#### E-10：AudioDecoder 流式解码
-
-**问题**：当前 `AudioDecoder::decodeAll()` 将整个音频文件全部解码到内存，对大文件（>1h）内存占用高，且字节偏移 seek 对 VBR 格式不精确。
-
-**方案**：
-
-```
-1. 引入 StreamingAudioDecoder 类，支持按需解码
-2. 核心 API：
-   - seekToTime(double sec) → 定位到指定时间点
-   - readSamples(size_t count) → 读取指定数量采样点
-   - totalDuration() → 总时长
-   - sampleRate() → 采样率
-3. 对 VBR 格式构建 seek table（时间→字节偏移映射表）
-4. 保持 decodeAll() 作为便捷方法，内部委托给流式解码器
-5. 向后兼容：AudioPlayback 接口不变
-```
-
-**涉及文件**：
-- `src/framework/audio/src/AudioDecoder.cpp` — 核心修改
-- `src/framework/audio/include/dstools/AudioDecoder.h` — 接口扩展
-- `src/framework/audio/src/AudioPlayback.cpp` — 适配新接口
-
-**风险**：
-- 🔴 **高**：FFmpeg API 使用复杂，seek 精度与格式强相关
-- 缓解：先支持 WAV（无压缩）作为第一阶段，再扩展 MP3/FLAC
-- 必须保持向后兼容，现有调用方不能 broken
-
----
-
-#### C-07：PianoRollView 颜色常量迁移
-
-**问题**：PianoRollView 中的颜色常量（如 `Colors::pitchLine`, `Colors::phonemeText` 等）硬编码在代码中。
-
-**方案**：
-
-```
-1. 在 ChartConfigRegistry 中新增 PianoRoll 颜色配置项
-2. 或统一到 dsfw::Theme 系统
-3. 优先级：低，当前颜色方案已满足用户需求
-```
-
----
-
-## 5 重大重构：图表绘制架构统一（Phase F）
-
-> 独立重大重构方案，详见 [附录 B](#b-附录图表绘制架构统一重构方案)。
-
-### 5.1 问题核心
-
-所有图表（Waveform/Power/Spectrogram/MouthCurve/PianoRoll）虽继承同一基类 `ChartPanelBase`，但各自实现了完全不同的绘制逻辑。MouthCurveChartPanel 因索引计算公式错误导致缩放时曲线消失，暴露了架构缺陷。
-
-### 5.2 核心思想
-
-**子类负责渲染"完整数据图像"，基类负责视口裁剪、变换、缓存管理。**
-
-当前架构中 `drawContent(coord)` 参数形同虚设（4 个图表 `Q_UNUSED(coord)`），`rebuildCache()` 不强制，视口变化触发缓存重建导致性能问题。新架构将这些职责统一到基类。
-
-### 5.3 风险矩阵
-
-| 风险 | 影响 | 可能性 | 缓解措施 |
-|------|------|--------|---------|
-| Waveform 绘制行为回归 | 高 | 中 | 先保留旧代码标记 `[[deprecated]]`，对比验证后删除 |
-| 频谱图大文件缓存过大 | 中 | 中 | `fullDataImageWidth()` 上限 32767 (QImage 限制) |
-| 钢琴卷帘图委托模式不兼容 | 中 | 低 | Phase F 不改造 PianoRollView 内部，仅适配外部接口 |
-| 性能回归（完整图像渲染） | 中 | 低 | 视口变化不再触发重建，实际性能可能提升 |
-| 垂直缩放与图像裁剪交互 | 低 | 低 | 以中心为锚点保证对称性 |
-
-### 5.4 实施策略
-
-**分 6 个子阶段，每个子阶段独立可回滚：**
-
-| 阶段 | 内容 | 风险 | 可回滚 |
-|------|------|------|--------|
-| F-01 | 基类接口扩展（新增纯虚方法，暂不改 paintEvent） | 低 | 是 |
-| F-02 | WaveformChartPanel 先行迁移 | 中 | 是（保留旧代码） |
-| F-03 | PowerChartPanel + MouthCurveChartPanel 迁移 | 中 | 是 |
-| F-04 | SpectrogramChartPanel 迁移 | 中 | 是 |
-| F-05 | 基类 paintEvent() 接管绘制，drawContent() final | 高 | 否（需积累信心） |
-| F-06 | 清理废弃代码 | 低 | 是 |
-
----
-
-## 6 实施约束
-
-### 6.1 不可变原则
-
-| 原则 | 说明 |
-|------|------|
-| 行为一致 | 所有重构不改变任何用户可见行为 |
-| 数据安全 | Phase A 优先，确保后续重构有安全网 |
-| 增量提交 | 每个子任务独立提交（不推送），确保可单独回滚 |
-| 无新依赖 | 不引入项目未使用的外部库 |
-| 文档同步 | 每个 Phase 完成后更新相关设计文档 |
-
-### 6.2 每阶段执行流程
-
-```
-1. 阅读 human-decisions.md 速查表 + 相关章节
-2. 逐条对照设计准则复核实施计划
-3. 编写测试（测试先行）
-4. 实施代码变更
-5. 运行完整构建（CLion MCP 编译）
-6. 运行测试套件（ctest）
-7. 手动冒烟测试
-8. 更新文档
-9. 提交（不推送）
-```
-
----
-
-## A 附录：与 v3 的差异
-
-| 方面 | v3 | v4 |
-|------|-----|-----|
-| 已完成任务 | 作为待办列出，含详细描述 | 移至 1.4 已完成成果表格，仅保留摘要 |
-| 技术债 | 列出所有已解决+未解决 | 仅列出未解决 |
-| 任务清单 | 全部任务（含已完成） | 仅未完成任务，含深化设计 |
-| Phase F | 作为附录 B | 作为独立重大重构方案，含风险矩阵（5.3）和实施策略（5.4） |
-| 代码核实 | 文档级记录 | 逐项 Grep+Read 验证后删除，确保文档不包含虚假信息 |
-
----
-
-## B 附录：图表绘制架构统一重构方案
-
-### B.1 问题陈述
-
-当前所有图表虽然继承自同一基类 `ChartPanelBase`，但各自实现了完全不同的绘制逻辑。口型曲线图（MouthCurveChartPanel）因错误的索引计算公式导致在缩放/平移时曲线消失，暴露出架构层面的根本缺陷：**每个子类都在重复发明视口映射、缓存管理、坐标变换等基础设施，行为不一致是必然结果**。
-
-违背 ARCH-01（相同行为只存在一处）和 ARCH-04（>60% 重叠应合并到基类）。
-
-### B.2 现状分析：五种图表绘制模式
-
-| 图表 | 类型 | rebuildCache() | drawContent() | 使用 coord？ | 数据源 |
-|------|------|---------------|---------------|-------------|--------|
-| WaveformChartPanel | 1D 波形 | ✅ 全量+增量 | 遍历缓存绘制 | ❌ Q_UNUSED | m_samples (音频) |
-| PowerChartPanel | 1D 功率 | ✅ 全量+增量 | 遍历缓存绘制 | ❌ Q_UNUSED | m_samples (音频) |
-| SpectrogramChartPanel | 2D 频谱 | ✅ 全量+增量 | 绘制 m_viewImage | ❌ Q_UNUSED | m_samples → FFT |
-| MouthCurveChartPanel | 1D 曲线 | ❌ 空实现 | 实时计算索引，**公式错误** | ❌ Q_UNUSED | m_curve (TimeSeries) |
-| PianoRollChartPanel | 2D 钢琴卷帘 | ❌ 委托子控件 | 委托 PianoRollView::render | ✅ 传入 coord | DsPitchDocument |
-
-#### 核心问题
-
-1. **视口映射逻辑重复**：Waveform、Power、Spectrogram 各自独立计算，同一逻辑在 3 个文件中重复
-2. **drawContent(coord) 参数形同虚设**：4 个图表 `Q_UNUSED(coord)`，直接读取 `m_converter` 成员变量
-3. **rebuildCache() 不强制**：MouthCurve 空实现，PianoRoll 不需要，基类未提供默认实现
-4. **两阶段渲染不一致**：Waveform/Power/Spectrogram 采用"缓存→绘制"，MouthCurve 采用"实时计算"
-5. **关注点未分离**：视口数学、幅度缩放、数据渲染混杂在子类中
-
-#### 口型曲线 Bug 根因
-
-[MouthCurveChartPanel.cpp:L91-L93](file:///d:/projects/dataset-tools/src/apps/shared/mouth-curve-chart/MouthCurveChartPanel.cpp#L91-L93)：
+**已验证**：[PipelineContext.h](../../src/framework/core/include/dsfw/PipelineContext.h) L81：
 
 ```cpp
-int curveIdx = static_cast<int>(t * m_curve.values.size() /
-    (m_converter->endSec() - m_converter->startSec()));  // BUG: 分母应为 dataDuration
+[[nodiscard]] static Result<void> validate(const nlohmann::json &j);
 ```
 
-`curveIdx` 分母使用了**视口时长**而非**数据总时长**。当视口从 0~10s 缩放到 2~4s 时，`curveIdx` 全部越界，曲线完全消失。
+文件注释称 "nlohmann::json is isolated"，但此公开方法直接暴露该类型。`toJsonString()`/`fromJsonString()` 确实使用
+`std::string` 隔离，但 `validate()` 破坏了隔离。
 
-### B.3 统一架构设计
+**影响**：调用方需要 `#include <nlohmann/json.hpp>`，违反 INFRA-13（PIMPL 隔离），增加增量编译时间。
 
-#### 核心思想
+#### 债-4：PathSelector 已存在但采用不统一
 
-**子类负责渲染"完整数据图像"，基类负责视口裁剪、变换、缓存管理。**
+**已验证**：
 
-```
-┌─────────────────────────────────────────────────┐
-│                 ChartPanelBase                   │
-│  ┌───────────────────────────────────────────┐  │
-│  │  paintEvent()                             │  │
-│  │  1. 检查 m_fullDataDirty → 调用 renderFullData() │
-│  │  2. 计算 srcRect = viewport 在完整图上的区域  │  │
-│  │  3. 应用垂直缩放 transform                   │  │
-│  │  4. painter.drawImage(destRect, image, srcRect) │
-│  │  5. 绘制边界叠加层、Y 轴                      │  │
-│  └───────────────────────────────────────────┘  │
-│                                                 │
-│  纯虚接口 (子类实现):                            │
-│  - renderFullData(QImage&)    渲染完整数据到图像   │
-│  - dataDurationSec() const    数据总时长(秒)     │
-│                                                 │
-│  可选虚接口 (子类可覆盖):                         │
-│  - fullDataImageWidth()  const  默认: width()  │
-│  - fullDataImageHeight() const  默认: height() │
-└─────────────────────────────────────────────────┘
-```
+| 组件                                | 类型                                     | 状态                                                |
+|-----------------------------------|----------------------------------------|---------------------------------------------------|
+| `dsfw::widgets::PathSelector`     | QWidget（行编辑 + 浏览按钮 + 拖放 + SettingsKey） | **已存在**，用于 BuildDsPage、BuildCsvPage、WidgetGallery |
+| `dsfw::widgets::FilePathSelector` | QObject（Config 驱动 + SettingsKey）       | **已存在**，未被 apps 使用                                |
+| `dsfw::FileDialogHelper`          | QObject 静态方法封装                         | **被广泛使用**：约 15 处 apps 代码直接调用                      |
 
-#### 关键设计决策
+**问题**：PathSelector 提供了一致的表单级路径选择体验（行编辑 + 浏览按钮 + 拖放），但绝大多数页面仍然直接使用
+`FileDialogHelper::getXxx()` 静态方法，导致：
 
-**决策 1：视口变化不触发缓存重建**
+- 文件选择行为不一致（默认目录记忆、验证方式）
+- 无法提供统一的路径验证（无效路径红色边框提示）
+- 无法支持拖放选择
 
-当前架构中 `onViewportUpdate()` 设置 `m_cacheDirty = true`，导致每次缩放/平移都重建缓存。新架构中，完整图像已涵盖所有数据，视口变化仅改变 `srcRect` 的裁剪区域，无需重建。
+**涉及文件**（使用 FileDialogHelper 直接调用的页面）：
+`DictionaryPanel`, `ModelPathPanel`, `SlicerPage`, `MinLabelPage`, `LogPage`, `SliceExportDialog`, `BatchProcessDialog`,
+`ExportPage`, `WelcomePage`, `NewProjectDialog`, `GameAlignPage`(部分), `label-suite/main.cpp`
 
-**决策 2：drawContent() 从虚函数变为基类 final 实现**
+#### 债-5：文档引用不存在的接口
 
-所有子类不再需要 `drawContent()` 覆盖。基类统一实现：从 `m_fullDataImage` 中裁剪视口区域，绘制到 `chartContentRect()`。
+**已验证**：[overview.md](overview.md) Section 11 列出 11 个接口，经 Grep 验证：
 
-**决策 3：移除 RegionUpdate 和增量重建**
+| 文档中的接口           | 代码中是否存在 | 实际类名                           | 备注                        |
+|------------------|---------|--------------------------------|---------------------------|
+| IDocument        | 存在      | `dstools::IDocument`           | `dsfw/IDocument.h`        |
+| IModelProvider   | 存在      | `dstools::IModelProvider`      | `dsfw/IModelProvider.h`   |
+| IModelDownloader | **不存在** | —                              | 文档虚构                      |
+| IModelManager    | **不存在** | `dstools::ModelManager` 是具体类   | 文档中写成接口                   |
+| IG2PProvider     | 存在      | `dstools::IG2PProvider`        | `dsfw/IG2PProvider.h`     |
+| IExportFormat    | 存在      | `dstools::IExportFormat`       | `dsfw/IExportFormat.h`    |
+| IQualityMetrics  | **不存在** | `dsfw::QualityTypes` 仅类型定义     | 无接口定义                     |
+| ISliceDataSource | 存在      | `dsfw::ISliceDataSource`       | `dsfw/ISliceDataSource.h` |
+| IAudioPlayer     | 存在      | `dstools::audio::IAudioPlayer` | `dstools/IAudioPlayer.h`  |
+| IStepPlugin      | **不存在** | —                              | 文档虚构                      |
+| IInferenceEngine | 存在      | `dstools::IInferenceEngine`    | infer 层                   |
 
-由于完整图像一次性渲染，不再需要 `RegionUpdate` 结构体、`m_pendingRegion` 成员、`shiftCache()` 模板方法。
+**文档中还列出不存在的默认实现**：`StubModelDownloader`、`StubG2PProvider`、`StubExportFormat`、`StubQualityMetrics`、
+`StubStepPlugin` — 均未在源码中找到。实际实现为 `PinyinG2PProvider`、`HtsLabelExportFormat`、`SinsyXmlExportFormat`。
 
-**决策 4：PianoRollChartPanel 保持委托模式**
+**影响**：文档可信度降低，新开发者被误导。
 
-PianoRollChartPanel 内部使用 `PianoRollView` 子控件，通过 `renderFullData()` 委托给 `PianoRollView::render()`，但 PianoRollView 内部不在本次重构范围内。
+#### 债-6：Overview.md 仍使用旧编号体系
 
-### B.4 基类接口变更
+**已验证**：[overview.md](overview.md) Section 1 使用 P-01~P-19
+编号引用设计准则，但 [human-decisions.md](../../human-decisions.md) 已升级为 ARCH/CONCUR/ROBUST/INFRA/VIEW 体系。
+
+**影响**：两个文档编号不统一，交叉引用困难。
+
+#### 债-7：Overview.md 目录树重复条目
+
+**已验证**：
+
+| 行号                    | 问题                                                                                                      |
+|-----------------------|---------------------------------------------------------------------------------------------------------|
+| L503                  | `src/widgets/` 标注为 `dstools-widgets (INTERFACE, header-only)` — 实际路径是 `src/framework/widgets/ (SHARED)` |
+| L485-L501 和 L513-L537 | `src/framework/` 出现两次，第 2 次嵌套了 `infer/`（实际 `src/infer/` 是独立顶层目录）                                        |
+| L525-526              | `src/apps/shared/audio-visualizer/` — 实际路径为 `src/apps/shared/audio-visualizer/`，需要确认                    |
+
+#### 债-8：文档引用已删除的测试
+
+**已验证**：[test-design.md](../testing/test-design.md) L110 和 [build.md](../../guides/build.md) L208 引用
+`TestLocalFileIOProvider`，但 `IFileIOProvider` 已删除，测试已从 `CMakeLists.txt` 移除。
+
+#### 债-9：EncodingUtils 错误包含 kInterfaceVersion
+
+**已验证**：[EncodingUtils.h](../../src/framework/core/include/dsfw/EncodingUtils.h) L17：
+`static constexpr int kInterfaceVersion = 1;`
+
+`EncodingUtils` 是**静态工具类**（所有方法都是 static），不是抽象接口。`kInterfaceVersion` 约定仅用于抽象接口（`I` 前缀的纯虚类）。
+
+**影响**：违反 INFRA-19（接口版本化仅用于接口）。
+
+#### 债-10：魔法数字散布
+
+**已验证**：详见 [magic-numbers-audit.md](../magic-numbers-audit.md)，覆盖频谱图、功率图、波形图、钢琴卷帘编辑器、音高提取等模块。
+
+---
+
+## 2. 重构准则补充
+
+基于项目现状和 C++/Qt 最佳实践，在现有 `human-decisions.md` 准则基础上补充：
+
+### 2.1 补充架构准则
+
+#### ARCH-12：路径/编码统一模块原则
+
+**原则**：跨平台路径处理、编码转换、文件 I/O 由**一个模块的单个类**统一负责。消除重复枚举、重复功能。
+
+**适用**：`PathUtils` 和 `EncodingUtils` 合并为统一的 `dsfw::PathUtils`，吸收 `PathCompat` 的宽字符文件打开功能。
+
+#### ARCH-13：统一控件使用原则
+
+**原则**：项目已有的统一控件（如 `PathSelector`、`FilePathSelector`）必须优先使用。新增页面不得直接调用 `QFileDialog` 或
+`FileDialogHelper` 静态方法。
+
+**理由**：消除各应用文件选择行为不一致。PathSelector 提供内置的路径验证、拖放、SettingsKey 历史记录。
+
+#### ARCH-14：配置驱动原则
+
+**原则**：所有可调节的数值参数（阈值、尺寸、颜色等）必须通过 `AppSettings` + `SettingsKey<T>`
+配置化，禁止硬编码魔法数字。例外：数学常量、协议常量（如默认采样率）。
+
+### 2.2 补充基础准则
+
+#### INFRA-18：文档即代码原则
+
+**原则**：设计文档中引用的类名、方法名、文件路径必须与代码实际一致。每次重构后相关文档同步更新。
+
+#### INFRA-19：接口版本化仅在接口中使用
+
+**原则**：`kInterfaceVersion` 仅用于 `I` 前缀的纯虚接口类。具体工具类（如 `EncodingUtils`）不得有此常量。
+
+#### INFRA-20：测试文件与代码同步
+
+**原则**：删除被测代码时，必须同步删除对应测试文件和 CMake 注册。文档中对已删除测试的引用必须清理。
+
+### 2.3 补充并发准则
+
+#### CONCUR-04：文件 I/O 异步化
+
+**原则**：所有超过 50ms 的文件读写操作必须在后台线程执行，通过信号通知完成。`PathUtils::readFile`/`writeFile`
+保持同步用于小文件（<10KB），大文件操作通过 `AsyncTask` 包装。
+
+### 2.4 补充视图准则
+
+#### VIEW-19：路径选择控件统一
+
+**原则**：所有页面中的文件/目录选择必须使用 `PathSelector` 或 `FilePathSelector` 控件。`FileDialogHelper`
+降为内部实现细节，不直接暴露给页面代码。
+
+---
+
+## 3. 分阶段重构方案
+
+### 阶段总览
+
+| 阶段  | 名称                                                        | 风险 | 涉及范围                           | 回滚难度 |
+|-----|-----------------------------------------------------------|----|--------------------------------|------|
+| R1  | 底层统一：PathUtils 合并 EncodingUtils + PathCompat              | 中  | framework/core + 全项目引用         | 低    |
+| R2  | 文档清理：修正过时引用和不存在的接口                                        | 低  | docs/                          | 极低   |
+| R3  | 控件统一：推广 PathSelector/FilePathSelector 替换 FileDialogHelper | 中  | framework/widgets + apps       | 中    |
+| R4  | PIMPL 完善：PipelineContext::validate() 隔离 JSON              | 中  | framework/core                 | 中    |
+| R5  | EncodingUtils 清理：移除 kInterfaceVersion（已合并到 R1）            | —  | —                              | —    |
+| R6  | 魔法数字配置化                                                   | 中  | apps/shared                    | 中    |
+| R7  | 文档结构修正：overview.md 目录树和编号                                 | 低  | docs/                          | 极低   |
+| R8  | 测试文档同步：移除 TestLocalFileIOProvider 引用                      | 低  | docs/                          | 极低   |
+| R9  | label-suite 页面通用基类提取（WizardPageBase）                      | 中  | apps/label-suite               | 中    |
+| R10 | GameAlignPage QLineEdit → PathSelector                    | 低  | apps/label-suite               | 极低   |
+| R11 | audio-util/PathCompat.h 弃用包装层清理                           | 低  | infer/audio-util + libs/slicer | 低    |
+
+---
+
+### R1：底层统一 — PathUtils 合并 EncodingUtils + PathCompat + 清理 audio-util 弃用包装
+
+**目标**：消除 `PathUtils::TextEncoding` 和 `EncodingUtils::Encoding` 两个等价枚举，统一路径/编码功能入口，清理所有弃用包装层。
+
+**前置验证**：经 Grep 验证，`EncodingUtils` **仅 `PathUtils.cpp` 内部调用**（无外部调用方），PathUtils 已完全包装
+EncodingUtils 的 detect/toUtf8/fromUtf8。重构只需内联实现，无需全局搜索替换外部调用方。
+
+**范围**：
+
+- [PathUtils.h](../../src/framework/core/include/dsfw/PathUtils.h) — 合并后扩展
+- [PathUtils.cpp](../../src/framework/core/src/PathUtils.cpp) — 内联 EncodingUtils 实现
+- [EncodingUtils.h](../../src/framework/core/include/dsfw/EncodingUtils.h) — **删除**
+- [EncodingUtils.cpp](../../src/framework/core/src/EncodingUtils.cpp) — **删除**
+- [PathCompat.h](../../src/framework/core/include/dsfw/PathCompat.h) — **删除**（`openIfstream`/`openOfstream` 无直接调用方）
+- [audio-util/PathCompat.h](../../src/infer/audio-util/include/audio-util/PathCompat.h) — 迁移弃用函数调用方后删除
+- [TestPathUtils.cpp](../../src/tests/framework/TestPathUtils.cpp) — 合并 TestEncoding 用例
+- [TestEncoding.cpp](../../src/tests/framework/TestEncoding.cpp) — **删除**
+- CMakeLists.txt 测试注册 — 移除 TestEncoding
+
+**具体变更**：
+
+1. 将 `EncodingUtils` 的全部实现内联到 `PathUtils`：
+    - `EncodingUtils::detect()` → 已在 `PathUtils::detectTextEncoding()` 中委托 → 直接内联实现
+    - `EncodingUtils::toUtf8()` → 已在 `PathUtils::decodeText()` 中委托 → 直接内联
+    - `EncodingUtils::fromUtf8()` → 已在 `PathUtils::encodeText()` 中委托 → 直接内联
+    - `EncodingUtils::isGbkFirstByte()` / `isGbkSecondByte()` / `tryGbkHeuristic()` → 移入 `PathUtils` 私有区
+
+2. 删除 `EncodingUtils::Encoding` 枚举，统一使用 `PathUtils::TextEncoding`（删除 `EncodingUtils.cpp` 中的 static_cast）。
+
+3. 删除 `dsfw/PathCompat.h`（`openIfstream`/`openOfstream` 无任何直接调用方，仅在 audio-util 层有弃用包装）。
+
+4. 迁移 audio-util 弃用函数调用方到 PathUtils：
+    - [SlicerService.cpp](../../src/libs/slicer/SlicerService.cpp) — `pathToUtf8()` → `dsfw::PathUtils::toUtf8()`
+    - [Util.cpp](../../src/infer/audio-util/src/Util.cpp) — 同上
+    - [FlacDecoder.cpp](../../src/infer/audio-util/src/FlacDecoder.cpp) — 同上
+    - 删除 [audio-util/PathCompat.h](../../src/infer/audio-util/include/audio-util/PathCompat.h)
+
+5. 合并测试：将 `TestEncoding` 的测试用例移入 `TestPathUtils`。
+
+6. 文件删除清单：
+    - `EncodingUtils.h` / `EncodingUtils.cpp` / `PathCompat.h` / `TestEncoding.cpp`
+    - `audio-util/PathCompat.h`
+
+**验证**：
+
+- 全量编译通过（零 error）
+- `TestPathUtils` 全部用例通过
+- Grep 确认无残留 `EncodingUtils::` / `AudioUtil::pathToUtf8` 引用
+
+**风险**：中等。SlicerService/Util/FlacDecoder 的编码行为依赖正确迁移。
+
+---
+
+### R2：文档清理 — 修正过时引用和不存在的接口
+
+**目标**：修正 overview.md 中不存在的接口和默认实现列表。
+
+**范围**：[overview.md](overview.md) Section 1、Section 11、Section 15
+
+**具体变更**：
+
+1. Section 1（L9-L30）：将 P-01~P-19 旧编号更新为 ARCH/CONCUR/ROBUST/INFRA/VIEW 新编号，添加新旧编号映射说明。
+
+2. Section 11（L444-L458）表格修正为已验证状态：
+
+   | 接口 | 层级 | 实际实现 |
+      |------|------|---------|
+   | IDocument | core | DsDocumentAdapter (domain) |
+   | IModelProvider | core | FunAsrModelProvider, GameModelProvider, HuBERTModelProvider (libs) |
+   | IG2PProvider | core | PinyinG2PProvider (domain) |
+   | IExportFormat | core | HtsLabelExportFormat, SinsyXmlExportFormat (domain) |
+   | ISliceDataSource | core | ProjectDataSource (ds-labeler) |
+   | IAudioPlayer | audio | AudioPlayer (audio) |
+   | IInferenceEngine | infer | GameEngine, HuBERTEngine, RmvpeEngine, MoeEngine, FunAsrEngine |
+
+   删除：IModelDownloader, IModelManager（改为在备注中说明 ModelManager 是具体类）, IQualityMetrics（改为在备注中说明仅
+   QualityTypes 存在）, IStepPlugin。
+
+3. Section 15（L574-L576）：已更新为引用 refactoring-plan-v4.md（上次已完成）。
+
+**验证**：
+
+- 文档中所有类名经 Grep 验证存在于源码
+- 新旧编号映射与 human-decisions.md 一致
+
+**风险**：极低。仅文档修改。
+
+---
+
+### R3：控件统一 — 推广 PathSelector/FilePathSelector
+
+**目标**：将散落在各页面的 `FileDialogHelper::getXxx()` 直接调用替换为 `PathSelector` 或 `FilePathSelector`。
+
+**范围**：
+
+- 约 15 处 apps 代码（见债-4 的涉及文件列表）
+- `PathSelector` — 用于需要行编辑 + 浏览按钮的表单场景
+- `FilePathSelector` — 用于以代码方式触发文件选择的场景
+
+**具体变更**（按页面逐项替换）：
+
+| 页面                     | 当前做法                                                                                                          | 替换方案                      |
+|------------------------|---------------------------------------------------------------------------------------------------------------|---------------------------|
+| `ModelPathPanel` (2 处) | `FileDialogHelper::getExistingDirectory()` / `getOpenFileName()`                                              | `PathSelector`（表单场景）      |
+| `SlicerPage` (4 处)     | `FileDialogHelper::getOpenFileName()` / `getSaveFileName()` / `getOpenFileNames()` / `getExistingDirectory()` | `FilePathSelector`（对话框场景） |
+| `MinLabelPage`         | `FileDialogHelper::getExistingDirectory()`                                                                    | `FilePathSelector`        |
+| `LogPage`              | `FileDialogHelper::getSaveFileName()`                                                                         | `FilePathSelector`        |
+| `SliceExportDialog`    | `FileDialogHelper::getExistingDirectory()`                                                                    | `FilePathSelector`        |
+| `BatchProcessDialog`   | `FileDialogHelper::getSaveFileName()`                                                                         | `FilePathSelector`        |
+| `ExportPage`           | `FileDialogHelper::getExistingDirectory()`                                                                    | `FilePathSelector`        |
+| `WelcomePage`          | `FileDialogHelper::getOpenFileName()`                                                                         | `FilePathSelector`        |
+| `NewProjectDialog`     | `FileDialogHelper::getExistingDirectory()`                                                                    | `FilePathSelector`        |
+| `DictionaryPanel`      | `FileDialogHelper::getOpenFileName()`                                                                         | `PathSelector`            |
+| `label-suite/main.cpp` | `FileDialogHelper::getExistingDirectory()`                                                                    | `FilePathSelector`        |
+| `GameAlignPage`        | `FileDialogHelper::getOpenFileNames()`                                                                        | `FilePathSelector`        |
+
+**注意事项**：
+
+- 保留 `FileDialogHelper` 作为内部实现（PathSelector 和 FilePathSelector 内部可依赖它）
+- 不删除 `FileDialogHelper` 公共 API（保持向后兼容），但标记为 `[[deprecated]]`
+- 表单场景优先用 `PathSelector`（提供行编辑 + 验证 + 拖放），对话框场景用 `FilePathSelector`
+
+**验证**：
+
+- 全量编译通过
+- 各页面文件选择交互正常
+- 默认目录记忆（SettingsKey）功能正常
+
+**风险**：中等。逐页面替换，每页一个 commit，方便回滚。
+
+---
+
+### R4：PIMPL 完善 — PipelineContext::validate() 隔离 JSON
+
+**目标**：将 `PipelineContext::validate(const nlohmann::json &j)` 替换为基于字符串的版本。
+
+**范围**：
+
+- [PipelineContext.h](../../src/framework/core/include/dsfw/PipelineContext.h) L80-L81
+- [PipelineContext.cpp](../../src/framework/core/src/PipelineContext.cpp)
+
+**具体变更**：
+
+1. 替换公开方法签名：
+   ```cpp
+   // 旧（暴露 nlohmann::json）
+   [[nodiscard]] static Result<void> validate(const nlohmann::json &j);
+
+   // 新（使用 std::string）
+   [[nodiscard]] static Result<void> validateFromString(const std::string &jsonStr);
+   ```
+
+2. 内部实现：`validateFromString()` 解析 JSON 后调用私有 `validate(const nlohmann::json &j)` 方法。
+
+3. 将 `validate(const nlohmann::json &j)` 移到 private 区域。
+
+4. 更新所有调用方。
+
+**验证**：
+
+- 全量编译通过
+- 确认没有任何公开头文件暴露 `nlohmann::json` 类型（不含 `#include <nlohmann/json.hpp>` 也可编译使用 PipelineContext.h）
+- PipelineContext 相关测试通过
+
+**风险**：中等。需要全局搜索 `PipelineContext::validate(` 替换为 `PipelineContext::validateFromString(`。
+
+---
+
+### R5：EncodingUtils 清理 — 移除 kInterfaceVersion（已合并到 R1）
+
+**状态**：v4.2 已合并到 R1。R1 删除 EncodingUtils 后，`kInterfaceVersion` 自动消除。此阶段仅保留作为代号标记，不单独执行。
+
+**注**：如果 R1 后 EncodingUtils 仍有残留，再作为独立步骤执行。
+
+---
+
+### R6：魔法数字配置化
+
+**目标**：消除 [magic-numbers-audit.md](../magic-numbers-audit.md) 中的硬编码魔法数字。
+
+**范围**：
+
+- `src/apps/shared/settings/Keys.h` — 新增 SettingsKey 定义
+- 频谱图、功率图、波形图、钢琴卷帘编辑器 — 替换硬编码
+
+**具体变更**：
+
+1. 在 `Keys.h` 中新增 `namespace dstools::settings` 下 SettingsKey 声明。
+
+2. 各渲染组件在构造函数中读取 `AppSettings`，替换硬编码常量。
+
+3. 不新增设置界面（设置界面延后到后续需求）。
+
+**验证**：
+
+- 参数通过 AppSettings 可读写，默认值等于原硬编码值
+- 渲染效果不变
+
+**风险**：中等。需要确保 AppSettings 在渲染组件构造时可用。
+
+---
+
+### R7：文档结构修正 — overview.md 目录树和编号
+
+**目标**：修正 overview.md 的目录树错误和旧编号。
+
+**注**：如果 R2 已执行 Section 1 编号更新，则此阶段仅处理目录树。
+
+**范围**：[overview.md](overview.md) Section 12
+
+**具体变更**：
+
+1. 修正 `src/widgets/` → `src/framework/widgets/`（L503）
+2. 删除重复的 `src/framework/` 条目（L513-L521），将 infer/ 移到独立的 `src/infer/` 段
+3. 确认 `apps/shared/` 下子目录名称与文件系统一致
+
+**验证**：
+
+- 文档中所有目录路径经 LS 命令验证存在
+
+**风险**：极低。
+
+---
+
+### R8：测试文档同步 — 移除 TestLocalFileIOProvider 引用
+
+**目标**：清理 test-design.md 和 build.md 中对已删除测试的引用。
+
+**范围**：
+
+- [test-design.md](../testing/test-design.md) L69, L110
+- [build.md](../../guides/build.md) L208
+
+**具体变更**：
+
+1. test-design.md：删除 `TestLocalFileIOProvider.cpp` 条目和注释行
+2. build.md：从测试列表中移除 `TestLocalFileIOProvider`
+3. test-design.md：更新测试数量（19 单元测试 + 1 集成测试）
+
+**验证**：
+
+- 文档中所有测试名经 Grep 验证在 `src/tests/` 中存在
+
+**风险**：极低。
+
+---
+
+### R9：label-suite 页面通用基类提取 — WizardPageBase
+
+**目标**：消除 BuildDsPage / BuildCsvPage / GameAlignPage 三页面 ~70% 的重复代码，遵循 ARCH-01（单一职责）和 ARCH-04（合并 >
+60% 重叠模块）。
+
+**当前重合度分析**：
 
 ```cpp
-// ChartPanelBase.h — 新接口
+// 三个页面的共同结构（伪代码）
+class XxxPage : public QWidget, public IPageActions {
+    Q_OBJECT
+public:
+    void setWorkingDirectory(const QString &dir);
+    QString workingDirectory() const;
+    QMenuBar *createMenuBar(QWidget *parent) override;  // 统一：只有 Run 动作
 
-class ChartPanelBase : public QWidget, public IChartPanel {
 protected:
-    // ========== 新增纯虚方法 ==========
-    virtual void renderFullData(QImage& image) = 0;
-    virtual double dataDurationSec() const = 0;
+    QString m_workingDir;
+    dsfw::widgets::PathSelector *m_xxxPath = nullptr;
+    dsfw::widgets::RunProgressRow *m_runProgress = nullptr;
+    QTextEdit *m_log = nullptr;
+    QAction *m_runAction = nullptr;
 
-    // ========== 新增可选虚方法 ==========
-    virtual int fullDataImageWidth() const { return width(); }
-    virtual int fullDataImageHeight() const { return height(); }
-
-    // ========== 移除的虚方法 ==========
-    // rebuildCache(const RegionUpdate&) — 移除，由 renderFullData() 替代
-    // drawContent(QPainter&, const ChartCoordinate&) — 移除，基类实现
-
-    // ========== 新增成员 ==========
-    QImage m_fullDataImage;
-    bool m_fullDataDirty = true;
-
-    // ========== 修改的方法 ==========
-    void onViewportUpdate(const ChartCoordinate& conv, int pixelWidth) override {
-        m_converter = &conv;
-        m_dataPixelWidth = pixelWidth;
-        // 不再设置 m_cacheDirty = true
-        update();
-    }
-
-    void resizeEvent(QResizeEvent* event) override {
-        m_dataPixelWidth = width();
-        m_fullDataDirty = true;
-        QWidget::resizeEvent(event);
-    }
-
-    void paintEvent(QPaintEvent*) override {
-        ensureFullDataCache();
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing, false);
-
-        auto cr = chartContentRect();
-        if (cr.width() <= 0 || cr.height() <= 0) return;
-
-        painter.save();
-        painter.setClipRect(cr);
-
-        if (!m_fullDataImage.isNull() && m_converter) {
-            double totalDur = dataDurationSec();
-            if (totalDur > 0.0) {
-                double fracStart = m_converter->startSec() / totalDur;
-                double fracEnd = m_converter->endSec() / totalDur;
-                int srcX = static_cast<int>(fracStart * m_fullDataImage.width());
-                int srcW = std::max(1,
-                    static_cast<int>((fracEnd - fracStart) * m_fullDataImage.width()));
-                QRect srcRect(srcX, 0, srcW, m_fullDataImage.height());
-
-                if (supportsVerticalZoom() && m_amplitudeScale != 1.0) {
-                    painter.save();
-                    painter.translate(0, cr.height() / 2.0);
-                    painter.scale(1.0, m_amplitudeScale);
-                    painter.translate(0, -cr.height() / 2.0);
-                    painter.drawImage(cr, m_fullDataImage, srcRect);
-                    painter.restore();
-                } else {
-                    painter.drawImage(cr, m_fullDataImage, srcRect);
-                }
-            }
-        }
-
-        ChartCoordinate coord;
-        if (m_converter) {
-            coord.viewStart = m_converter->startSec();
-            coord.viewEnd = m_converter->endSec();
-            coord.pixelWidth = m_dataPixelWidth;
-        }
-        paintOutOfBoundsOverlay(painter, cr, coord);
-        painter.restore();
-
-        QRect axisRect(0, kYAxisPadding, yAxisWidth(), height() - 2 * kYAxisPadding);
-        if (axisRect.width() > 0) {
-            painter.save();
-            painter.setClipRect(axisRect);
-            paintYAxisContent(painter, axisRect);
-            painter.restore();
-        }
-    }
-
-    void ensureFullDataCache() {
-        if (!m_fullDataDirty) return;
-        int imgW = fullDataImageWidth();
-        int imgH = fullDataImageHeight();
-        if (imgW > 0 && imgH > 0) {
-            m_fullDataImage = QImage(imgW, imgH, QImage::Format_ARGB32);
-            m_fullDataImage.fill(Qt::transparent);
-            renderFullData(m_fullDataImage);
-        }
-        m_fullDataDirty = false;
-    }
+private:
+    void buildUi();     // 每个页面自己实现
+    void start();       // 每个页面自己实现
+    void cancel();      // 每个页面自己实现
 };
 ```
 
-### B.5 各子类适配要点
+**新增基类**：`WizardPageBase`（位置：`src/apps/label-suite/pages/WizardPageBase.h`）
 
-#### WaveformChartPanel
+```cpp
+class WizardPageBase : public QWidget, public IPageActions {
+    Q_OBJECT
+public:
+    explicit WizardPageBase(QWidget *parent = nullptr);
 
-- `renderFullData()`: 按列计算 min/max，4x 超采样宽度
-- `dataDurationSec()`: `m_samples.size() / m_sampleRate`
-- 移除：`rebuildCache()`, `drawContent()`, `drawWaveform()`, `rebuildWaveformCache()`, `m_yMax`, `m_yMin`, `m_rms`
+    void setWorkingDirectory(const QString &dir);
+    QString workingDirectory() const;
+    QMenuBar *createMenuBar(QWidget *parent) override;
 
-#### PowerChartPanel
+    // 子类必须实现
+    virtual void start() = 0;
+    virtual void cancel() = 0;
 
-- `renderFullData()`: 按列计算 RMS → dB，QPainterPath 绘制曲线
-- `dataDurationSec()`: 同 Waveform
-- 移除：`rebuildCache()`, `drawContent()`, `drawPower()`, `m_powerCache`
+protected:
+    QString m_workingDir;
+    dsfw::widgets::RunProgressRow *m_runProgress = nullptr;
+    QTextEdit *m_log = nullptr;
+    QAction *m_runAction = nullptr;
 
-#### MouthCurveChartPanel
+    void appendLog(const QString &msg);
+    void setRunning(bool running);
 
-- `renderFullData()`: 每个采样点一列，`timeToIndex()` 精确查找
-- `fullDataImageWidth()`: `m_curve.values.size()`（每个采样点一列）
-- **Bug 自动修复**：不再需要索引计算公式，直接使用 `timeToIndex()`
-- 移除：`rebuildCache()`（空实现）, `drawContent()`, `paintCurve()`
+private:
+    void buildUi();
+};
+```
 
-#### SpectrogramChartPanel
+**各页面变更**：
 
-- `renderFullData()`: 懒计算 FFT，双线性插值
-- `fullDataImageWidth()`: `min(m_totalFrames, 32767)`（QImage 限制）
-- `fullDataImageHeight()`: `m_numFreqBins`
-- 移除：`rebuildCache()`, `drawContent()`, `rebuildViewImage()`, `m_viewImage`
+| 页面            | 变更                                                                                                                                  |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| BuildDsPage   | 继承改为 `WizardPageBase`，删除 `m_runProgress`/`m_log`/`m_runAction`/`m_workingDir`/`buildUi()`/`setWorkingDirectory()`/`createMenuBar()` |
+| BuildCsvPage  | 同上                                                                                                                                  |
+| GameAlignPage | 同上，同时执行 R10（QLineEdit → PathSelector）                                                                                               |
 
-#### PianoRollChartPanel
+**注意事项**：
 
-- 保持委托模式：`renderFullData()` → `m_pianoRoll->render()`
-- 不改造 PianoRollView 内部实现
+- 三个页面的 `start()`/`cancel()` 各自保留（具体 pipeline 逻辑不同）
+- `buildUi()` 的差异化部分（各页面的表单字段）通过各自构造函数调用基类后的 `addFormRow()` 实现
 
-### B.6 架构变更对比
+**验证**：
 
-| 维度 | 当前架构 | 新架构 |
-|------|---------|--------|
-| `drawContent()` | 纯虚，子类各自实现 | 基类 final 实现（裁剪+blit） |
-| `rebuildCache()` | 虚函数，可选覆盖 | 移除，由 `renderFullData()` 替代 |
-| `RegionUpdate` | 用于增量渲染 | 移除 |
-| 视口变化 | 触发 `m_cacheDirty = true` → 重建缓存 | 仅改变 `srcRect`，不触发重建 |
-| 子类职责 | 管理缓存 + 处理视口 + 绘制 | 仅提供完整数据图像 |
-| 基类职责 | 事件分发 + 空壳虚方法 | 缓存管理 + 视口裁剪 + 变换 + 绘制 |
-| 代码量（子类） | 每子类 ~150-300 行 | 每子类 ~50-100 行 |
+- 全量编译通过
+- 三个页面运行效果不变
+- 进度条/日志/取消按钮行为一致
 
-### B.7 验收标准
+**风险**：中等。需要确保三个页面的 `createMenuBar()` 行为完全一致，GameAlignPage 的 Signal 连接方式可能有差异。
 
-1. 口型曲线随 Ctrl+滚轮缩放同步更新，不再消失
-2. 波形图、功率图、频谱图行为与重构前完全一致
-3. Shift+滚轮纵向缩放所有图表表现一致
-4. 拖动 MiniMap 平移视口，所有图表同步跟随
-5. `cmake --build --preset release` 编译通过
-6. 无新增 clang-tidy 警告
-7. 手动冒烟测试通过
+---
+
+### R10：GameAlignPage QLineEdit → PathSelector
+
+**目标**：消除 ARCH-13 违规 — GameAlignPage 已 include `PathSelector.h` 但使用 `QLineEdit`。
+
+**范围**：
+
+- [GameAlignPage.h](../../src/apps/label-suite/pages/GameAlignPage.h) — 替换 `QLineEdit *m_modelPath`
+- [GameAlignPage.cpp](../../src/apps/label-suite/pages/GameAlignPage.cpp) — 替换构造函数和 `start()` 中的读写
+
+**具体变更**：
+
+1. 头文件：`QLineEdit *m_modelPath` → `dsfw::widgets::PathSelector *m_modelPath`
+2. cpp：`m_modelPath = new QLineEdit` → `m_modelPath = new dsfw::widgets::PathSelector`
+3. `m_modelPath->text()` → `m_modelPath->currentPath()`（PathSelector 协议）
+4. 删除 `#include <QLineEdit>`（PathSelector 已包含）
+
+**验证**：编译通过，GameAlignPage 界面和行为不变（PathSelector 提供与 QLineEdit 等效的文本 + 浏览按钮）。
+
+**风险**：极低。
+
+---
+
+### R11：audio-util/PathCompat.h 弃用包装层清理
+
+**目标**：消除 `pathToUtf8` 的 **3 次重复实现**（`audio-util/PathCompat.h` 弃用包装 → `dsfw/PathCompat.h` →
+`dsfw/PathUtils::toUtf8()` 三重链路），直接迁移调用方。
+
+**注意**：此阶段的 `dsfw/PathCompat.h` 删除部分已由 R1 覆盖。如果 R1 已执行则仅处理 audio-util 侧。
+
+**范围**：
+
+- [SlicerService.cpp](../../src/libs/slicer/SlicerService.cpp) — 替换 `pathToUtf8()` 调用
+- [Util.cpp](../../src/infer/audio-util/src/Util.cpp) — 同上
+- [FlacDecoder.cpp](../../src/infer/audio-util/src/FlacDecoder.cpp) — 同上
+- [audio-util/PathCompat.h](../../src/infer/audio-util/include/audio-util/PathCompat.h) — **删除**
+
+**具体变更**：
+
+1. SlicerService.cpp：`AudioUtil::pathToUtf8(p)` → `dsfw::PathUtils::toUtf8(p)`
+2. Util.cpp：同上
+3. FlacDecoder.cpp：同上，且 `AudioUtil::openSndfile()` 已直接调用 `dsfw::PathUtils::toWide()`/`toUtf8()`，无需额外修改
+4. 删除整个 `audio-util/PathCompat.h`
+
+**验证**：编译通过，Slicer/Util/FlacDecoder 行为不变。
+
+**风险**：低。编码行为完全一致（`pathToUtf8` 内部就是 `PathUtils::toUtf8` 的弃用包装）。
+
+---
+
+## 4. 实施顺序与依赖关系
+
+```
+R1 (底层统一) ────── 前置依赖：无
+    │
+    ├── R2 (文档清理) ── 前置依赖：无，可与 R1 并行
+    │
+    ├── R3 (控件统一) ── 前置依赖：R1（PathUtils 稳定后）
+    │
+    ├── R4 (PIMPL 完善) ── 前置依赖：无，可与 R1 并行
+    │
+    ├── R5 (EncodingUtils kInterfaceVersion) ── v4.2 已合并到 R1，自动跳过
+    │
+    ├── R6 (魔法数字) ── 前置依赖：无，可与 R1 并行
+    │
+    ├── R7 (文档结构) ── 前置依赖：R2
+    │
+    ├── R8 (测试文档) ── 前置依赖：无，可与 R1 并行
+    │
+    ├── R9 (label-suite 页面基类) ── 前置依赖：R10（GameAlignPage 先迁移到 PathSelector）
+    │       │
+    │       └── R10 (GameAlignPage PathSelector) ── 前置依赖：R1, R3
+    │
+    └── R11 (audio-util PathCompat 清理) ── 前置依赖：R1（dsfw/PathCompat 已删除）
+```
+
+**推荐执行顺序**：R1 → R2 → {R3, R4, R6, R8, R11} 并行 → R10 → R9 → R7
+
+---
+
+## 5. 质量保证
+
+### 5.1 每阶段验证清单
+
+- [ ] `clang-format` 格式检查通过
+- [ ] 相关设计文档已同步更新
+- [ ] 新代码符合编码规范
+
+### 5.2 功能回归测试
+
+每个阶段完成后执行：
+
+1. **DsLabeler**：新建工程 → 导入音频 → 自动切片 → MinLabel → PhonemeLabeler → PitchLabeler → 导出 CSV/DS
+2. **LabelSuite**：打开 TextGrid → 编辑 → 保存；波形/频谱显示
+3. **数据安全**：工程文件 (.dsproj) 读写；标注文件 (.dstext) 读写
+
+### 5.3 回滚策略
+
+- 每阶段独立 Git 分支 `refactor/R{1-8}-v4`
+- 阶段完成并验证后合并到本地主分支
+- 不推送远程
+
+---
+
+## 6. 附录
+
+### A. 文档清理清单
+
+| 文档             | 行号        | 问题                                     | 修正方案                                 | 对应阶段 |
+|----------------|-----------|----------------------------------------|--------------------------------------|------|
+| overview.md    | L11-L30   | P-01~P-19 旧编号                          | 替换为 ARCH/CONCUR/ROBUST/INFRA/VIEW 体系 | R2   |
+| overview.md    | L450-L451 | IModelDownloader, IModelManager (接口形式) | 删除不存在的接口，ModelManager 转为备注           | R2   |
+| overview.md    | L453-L454 | StubExportFormat, StubQualityMetrics   | 替换为实际实现                              | R2   |
+| overview.md    | L454-L457 | IQualityMetrics, IStepPlugin           | 删除不存在的接口                             | R2   |
+| overview.md    | L503      | `src/widgets/` 路径错误                    | 修正为 `src/framework/widgets/`         | R7   |
+| overview.md    | L513-L537 | 重复 `src/framework/` 条目                 | 删除重复段，infer/ 独立                      | R7   |
+| test-design.md | L69, L110 | TestLocalFileIOProvider                | 删除引用                                 | R8   |
+| build.md       | L208      | TestLocalFileIOProvider                | 删除引用                                 | R8   |
+
+### B. 已删除/废弃项记录
+
+| 原名称                            | 删除原因             | 状态    |
+|--------------------------------|------------------|-------|
+| `IFileIOProvider`              | INFRA-02：仅 1 个实现 | 已删除   |
+| `ISettingsBackend`             | INFRA-02：仅 1 个实现 | 已删除   |
+| `ISlicerService`               | INFRA-02：仅 1 个实现 | 已删除   |
+| `EncodingUtils`                | R1：合并到 PathUtils | 计划删除  |
+| `PathCompat` (dsfw)            | R1：合并到 PathUtils | 计划删除  |
+| `PathCompat` (audio-util)      | R11：清理弃用包装层      | 计划删除  |
+| `TestLocalFileIOProvider` 文档引用 | 代码已删除            | 待清理文档 |
+
+### C. 与 human-decisions.md 准则的对照
+
+| 阶段  | 涉及的准则                                                          |
+|-----|----------------------------------------------------------------|
+| R1  | INFRA-01（唯一负责）、INFRA-06（路径工具统一）、INFRA-19（kInterfaceVersion 限制） |
+| R2  | INFRA-18（文档即代码）                                                |
+| R3  | ARCH-13（统一控件使用）、VIEW-19（选择控件统一）                                |
+| R4  | INFRA-13（PIMPL 隔离）                                             |
+| R5  | （已合并到 R1）                                                      |
+| R6  | ARCH-14（配置驱动）                                                  |
+| R7  | INFRA-18（文档即代码）                                                |
+| R8  | INFRA-20（测试与代码同步）                                              |
+| R9  | ARCH-01（单一职责）、ARCH-04（合并 >60% 重叠模块）                            |
+| R10 | ARCH-13（统一控件使用）                                                |
+| R11 | INFRA-01（唯一负责）                                                 |
+
+### D. 补充准则速查
+
+| 编号        | 领域 | 摘要                                          |
+|-----------|----|---------------------------------------------|
+| ARCH-12   | 架构 | 路径/编码统一模块：一个模块的单个类负责全部路径和编码功能               |
+| ARCH-13   | 架构 | 统一控件使用：优先使用已有统一控件，禁止裸调 FileDialog           |
+| ARCH-14   | 架构 | 配置驱动：可调参数通过 AppSettings+SettingsKey 配置化     |
+| INFRA-18  | 基础 | 文档即代码：文档引用必须与代码实际一致                         |
+| INFRA-19  | 基础 | 接口版本化仅接口：kInterfaceVersion 仅用于纯虚接口          |
+| INFRA-20  | 基础 | 测试代码同步：删除被测代码时同步清理测试和文档                     |
+| CONCUR-04 | 并发 | 文件 I/O 异步：>50ms 文件操作在后台线程执行                 |
+| VIEW-19   | 视图 | 路径选择控件统一：全部使用 PathSelector/FilePathSelector |
+
+### E. 记录但不处理的项目（后续版本跟踪）
+
+以下两项经分析后决定暂不纳入本次重构，理由和后续建议如下：
+
+| # | 发现                                                                                                                                                        | 不处理理由                                                                                          | 后续建议                                                                     |
+|---|-----------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| 1 | `MoveBoundaryCommand`(IBoundaryModel+TimePos) vs `MoveSlicePointCommand`(vector\<double\>+std::function) — 相同概念不同数据模型，SliceCommands 用回调刷新而非 QUndoStack 信号 | 两域有不同精度需求（µs vs s），统一需引入 IBoundaryModel 到切片域，影响面大                                              | 长期：SliceListPanel 适配 IBoundaryModel 后，SliceCommands 可合并到 chart-framework |
+| 2 | ExportPage 未继承 EditorPageBase，自行实现 IPageActions/IPageLifecycle                                                                                            | 当前两层体系有合理性：EditorPageBase（数据驱动编辑器）vs EditorContainerBase（音频可视化）。ExportPage 是"输出汇总"页，不属于任何编辑器类型 | 观察：如果未来更多非编辑器页面出现，考虑提取 `SimplePage` 基类                                   |

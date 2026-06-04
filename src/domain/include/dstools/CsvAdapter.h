@@ -12,8 +12,8 @@ class CsvAdapter : public IFormatAdapter {
 public:
     QString formatId() const override { return QStringLiteral("csv"); }
     QString displayName() const override { return QStringLiteral("Transcription CSV"); }
-    bool canImport() const override { return true; }
-    bool canExport() const override { return true; }
+    bool canImport() const noexcept override { return true; }
+    bool canExport() const noexcept override { return true; }
 
     Result<void> importToLayers(const QString &filePath, std::map<QString, LayerData> &layers,
                                 const ProcessorConfig &config) override;

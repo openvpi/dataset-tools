@@ -1,4 +1,4 @@
-#include "BuildCsvPage.h"
+﻿#include "BuildCsvPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -15,7 +15,7 @@
 
 namespace dstools::labeler {
 
-BuildCsvPage::BuildCsvPage(QWidget *parent) : QWidget(parent) {
+BuildCsvPage::BuildCsvPage(QWidget *parent) : WizardPageBase(parent) {
     buildUi();
 }
 
@@ -35,15 +35,7 @@ void BuildCsvPage::buildUi() {
 
     vLayout->addLayout(form);
 
-    m_runProgress = new dsfw::widgets::RunProgressRow(tr("Run"));
-    vLayout->addWidget(m_runProgress);
-
-    m_log = new QTextEdit;
-    m_log->setReadOnly(true);
-    vLayout->addWidget(m_log, 1);
-
-    m_runAction = new QAction(tr("Run Build CSV"), this);
-    m_runAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
+    buildCommonUi(vLayout, tr("Run"), tr("Run Build CSV"));
     auto runSlot = [this]() {
         if (m_workingDir.isEmpty()) {
             QMessageBox::warning(this, tr("Error"), tr("No working directory set."));
@@ -169,14 +161,6 @@ void BuildCsvPage::buildUi() {
     };
     connect(m_runProgress, &dsfw::widgets::RunProgressRow::runClicked, this, runSlot);
     connect(m_runAction, &QAction::triggered, this, runSlot);
-}
-
-void BuildCsvPage::setWorkingDirectory(const QString &dir) {
-    m_workingDir = dir;
-}
-
-QString BuildCsvPage::workingDirectory() const {
-    return m_workingDir;
 }
 
 } // namespace dstools::labeler

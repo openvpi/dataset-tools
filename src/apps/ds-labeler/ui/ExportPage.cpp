@@ -7,7 +7,7 @@
 #include "SlicePreviewModel.h"
 #include "core/ProjectDataSource.h"
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <QDateTime>
 #include <QDir>
@@ -395,7 +395,9 @@ namespace dstools {
     void ExportPage::setEnginePool(std::unique_ptr<EnginePool> pool) { m_enginePool = std::move(pool); }
 
     void ExportPage::onBrowseOutput() {
-        const QString dir = dsfw::FileDialogHelper::getExistingDirectory({this, QStringLiteral("选择导出目录")});
+        dsfw::widgets::FilePathSelector selector(
+            {dsfw::widgets::FilePathSelector::Mode::OpenDirectory, QStringLiteral("选择导出目录")}, this);
+        const QString dir = selector.exec();
         if (!dir.isEmpty()) {
             m_outputDir->setText(dir);
             updateExportButton();

@@ -2,7 +2,7 @@
 
 #include "SettingsSerializer.h"
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/PathSelector.h>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -123,68 +123,51 @@ QWidget *ModelPathPanel::createDeviceTab() {
     return w;
 }
 
-QWidget *ModelPathPanel::createModelConfigRow(const QString &label, QLineEdit *&pathEdit, QCheckBox *&forceCpu,
-                                              QPushButton *&testBtn) {
+QWidget *ModelPathPanel::createModelConfigRow(const QString &label, dsfw::widgets::PathSelector *&pathSelector,
+                                              QCheckBox *&forceCpu, QPushButton *&testBtn) {
     auto *group = new QGroupBox(label);
     auto *layout = new QVBoxLayout(group);
 
     auto *pathLayout = new QHBoxLayout;
-    pathEdit = new QLineEdit(group);
-    auto *browseBtn = new QPushButton(QStringLiteral("浏览..."), group);
+    pathSelector = new dsfw::widgets::PathSelector(dsfw::widgets::PathSelector::Directory, {}, {}, group);
     testBtn = new QPushButton(QStringLiteral("Test"), group);
     testBtn->setFixedWidth(50);
     testBtn->setToolTip(QStringLiteral("测试加载模型"));
-    pathLayout->addWidget(pathEdit, 1);
-    pathLayout->addWidget(browseBtn);
+    pathLayout->addWidget(pathSelector, 1);
     pathLayout->addWidget(testBtn);
     layout->addLayout(pathLayout);
 
     forceCpu = new QCheckBox(QStringLiteral("CPU 强制（此模型在 CPU 上运行）"), group);
     layout->addWidget(forceCpu);
 
-    connect(browseBtn, &QPushButton::clicked, this, [this, pathEdit]() {
-        const QString path = dsfw::FileDialogHelper::getExistingDirectory({this, QStringLiteral("选择模型目录")});
-        if (!path.isEmpty())
-            pathEdit->setText(path);
-    });
-
     return group;
 }
 
-QWidget *ModelPathPanel::createOnnxModelConfigRow(const QString &label, QLineEdit *&pathEdit, QCheckBox *&forceCpu,
-                                                  QPushButton *&testBtn) {
+QWidget *ModelPathPanel::createOnnxModelConfigRow(const QString &label, dsfw::widgets::PathSelector *&pathSelector,
+                                                  QCheckBox *&forceCpu, QPushButton *&testBtn) {
     auto *group = new QGroupBox(label);
     auto *layout = new QVBoxLayout(group);
 
     auto *pathLayout = new QHBoxLayout;
-    pathEdit = new QLineEdit(group);
-    auto *browseBtn = new QPushButton(QStringLiteral("浏览..."), group);
+    pathSelector = new dsfw::widgets::PathSelector(dsfw::widgets::PathSelector::OpenFile, {},
+                                                      QStringLiteral("ONNX 文件 (*.onnx);;所有文件 (*)"), group);
     testBtn = new QPushButton(QStringLiteral("Test"), group);
     testBtn->setFixedWidth(50);
     testBtn->setToolTip(QStringLiteral("测试加载模型"));
-    pathLayout->addWidget(pathEdit, 1);
-    pathLayout->addWidget(browseBtn);
+    pathLayout->addWidget(pathSelector, 1);
     pathLayout->addWidget(testBtn);
     layout->addLayout(pathLayout);
 
     forceCpu = new QCheckBox(QStringLiteral("CPU 强制（此模型在 CPU 上运行）"), group);
     layout->addWidget(forceCpu);
 
-    connect(browseBtn, &QPushButton::clicked, this, [this, pathEdit]() {
-        const QString path =
-            dsfw::FileDialogHelper::getOpenFileName({this, QStringLiteral("选择 ONNX 模型文件"), {},
-                                                     {QStringLiteral("ONNX 文件 (*.onnx)"),
-                                                      QStringLiteral("所有文件 (*)")}});
-        if (!path.isEmpty())
-            pathEdit->setText(path);
-    });
-
     return group;
 }
 
-void ModelPathPanel::onTestModel(const QString &modelKey, QLineEdit *pathEdit, QCheckBox *forceCpu) {
+void ModelPathPanel::onTestModel(const QString &modelKey, dsfw::widgets::PathSelector *pathSelector,
+                                   QCheckBox *forceCpu) {
     Q_UNUSED(modelKey)
-    QString modelPath = pathEdit->text().trimmed();
+    QString modelPath = pathSelector->path().trimmed();
     if (modelPath.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("测试加载"), QStringLiteral("请先设置模型路径。"));
         return;
@@ -372,11 +355,11 @@ QJsonObject ModelPathPanel::collectSettings() const {
     data["deviceIndex"] = m_deviceCombo->currentData().toInt();
 
     QJsonObject models;
-    models["asr"] = SettingsSerializer::modelToJson(m_asrModelPath, m_asrForceCpu, m_providerCombo);
-    models["phoneme_alignment"] = SettingsSerializer::modelToJson(m_faModelPath, m_faForceCpu, m_providerCombo);
-    models["pitch_extraction"] = SettingsSerializer::modelToJson(m_pitchModelPath, m_pitchForceCpu, m_providerCombo);
-    models["midi_transcription"] = SettingsSerializer::modelToJson(m_midiModelPath, m_midiForceCpu, m_providerCombo);
-    models["moe_curve"] = SettingsSerializer::modelToJson(m_moeModelPath, m_moeForceCpu, m_providerCombo);
+    models["asr"] = SettingsSerializer::modelToJson(m_asrModelPath->lineEdit(), m_asrForceCpu, m_providerCombo);
+    models["phoneme_alignment"] = SettingsSerializer::modelToJson(m_faModelPath->lineEdit(), m_faForceCpu, m_providerCombo);
+    models["pitch_extraction"] = SettingsSerializer::modelToJson(m_pitchModelPath->lineEdit(), m_pitchForceCpu, m_providerCombo);
+    models["midi_transcription"] = SettingsSerializer::modelToJson(m_midiModelPath->lineEdit(), m_midiForceCpu, m_providerCombo);
+    models["moe_curve"] = SettingsSerializer::modelToJson(m_moeModelPath->lineEdit(), m_moeForceCpu, m_providerCombo);
     data["taskModels"] = models;
 
     QJsonObject preload;
@@ -417,11 +400,11 @@ void ModelPathPanel::applySettings(const QJsonObject &data) {
     }
 
     const QJsonObject models = data["taskModels"].toObject();
-    SettingsSerializer::modelFromJson(models, QStringLiteral("asr"), m_asrModelPath, m_asrForceCpu);
-    SettingsSerializer::modelFromJson(models, QStringLiteral("phoneme_alignment"), m_faModelPath, m_faForceCpu);
-    SettingsSerializer::modelFromJson(models, QStringLiteral("pitch_extraction"), m_pitchModelPath, m_pitchForceCpu);
-    SettingsSerializer::modelFromJson(models, QStringLiteral("midi_transcription"), m_midiModelPath, m_midiForceCpu);
-    SettingsSerializer::modelFromJson(models, QStringLiteral("moe_curve"), m_moeModelPath, m_moeForceCpu);
+    SettingsSerializer::modelFromJson(models, QStringLiteral("asr"), m_asrModelPath->lineEdit(), m_asrForceCpu);
+    SettingsSerializer::modelFromJson(models, QStringLiteral("phoneme_alignment"), m_faModelPath->lineEdit(), m_faForceCpu);
+    SettingsSerializer::modelFromJson(models, QStringLiteral("pitch_extraction"), m_pitchModelPath->lineEdit(), m_pitchForceCpu);
+    SettingsSerializer::modelFromJson(models, QStringLiteral("midi_transcription"), m_midiModelPath->lineEdit(), m_midiForceCpu);
+    SettingsSerializer::modelFromJson(models, QStringLiteral("moe_curve"), m_moeModelPath->lineEdit(), m_moeForceCpu);
 
     const QJsonObject preload = data["preload"].toObject();
     SettingsSerializer::preloadFromJson(preload, QStringLiteral("phoneme_alignment"), m_faPreloadEnabled,
@@ -449,20 +432,20 @@ void ModelPathPanel::connectDirtySignals() {
     connect(m_providerCombo, &QComboBox::currentTextChanged, this, &ModelPathPanel::dirtyChanged);
     connect(m_deviceCombo, &QComboBox::currentIndexChanged, this, &ModelPathPanel::dirtyChanged);
 
-    connect(m_asrModelPath, &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
+    connect(m_asrModelPath->lineEdit(), &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
     connect(m_asrForceCpu, &QCheckBox::toggled, this, &ModelPathPanel::dirtyChanged);
 
-    connect(m_faModelPath, &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
+    connect(m_faModelPath->lineEdit(), &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
     connect(m_faForceCpu, &QCheckBox::toggled, this, &ModelPathPanel::dirtyChanged);
     connect(m_faPreloadEnabled, &QCheckBox::toggled, this, &ModelPathPanel::dirtyChanged);
     connect(m_faPreloadCount, &QSpinBox::valueChanged, this, &ModelPathPanel::dirtyChanged);
     connect(m_faNonSpeechPh, &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
 
-    connect(m_pitchModelPath, &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
+    connect(m_pitchModelPath->lineEdit(), &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
     connect(m_pitchForceCpu, &QCheckBox::toggled, this, &ModelPathPanel::dirtyChanged);
-    connect(m_midiModelPath, &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
+    connect(m_midiModelPath->lineEdit(), &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
     connect(m_midiForceCpu, &QCheckBox::toggled, this, &ModelPathPanel::dirtyChanged);
-    connect(m_moeModelPath, &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
+    connect(m_moeModelPath->lineEdit(), &QLineEdit::textChanged, this, &ModelPathPanel::dirtyChanged);
     connect(m_moeForceCpu, &QCheckBox::toggled, this, &ModelPathPanel::dirtyChanged);
     connect(m_pitchPreloadEnabled, &QCheckBox::toggled, this, &ModelPathPanel::dirtyChanged);
     connect(m_pitchPreloadCount, &QSpinBox::valueChanged, this, &ModelPathPanel::dirtyChanged);

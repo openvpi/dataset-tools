@@ -1,5 +1,4 @@
 #include <dsfw/FileLogSink.h>
-#include <dsfw/AppPaths.h>
 
 #include <QDateTime>
 #include <QDir>

@@ -5,7 +5,7 @@
 #include <dsfw/AppSettings.h>
 #include <dstools/DsProject.h>
 
-#include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/FilePathSelector.h>
 
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -83,8 +83,9 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
 void NewProjectDialog::onBrowseDir() {
     AppSettings settings(QStringLiteral("DsLabeler"));
     const QString lastDir = settings.get(settings::app::kLastProjectDir);
-    const QString dir = dsfw::FileDialogHelper::getExistingDirectory(
-        {this, QStringLiteral("选择工程保存位置"), lastDir});
+    dsfw::widgets::FilePathSelector selector(
+        {dsfw::widgets::FilePathSelector::Mode::OpenDirectory, QStringLiteral("选择工程保存位置"), {}, {}, lastDir}, this);
+    const QString dir = selector.exec();
     if (dir.isEmpty())
         return;
     m_saveDir = dir;

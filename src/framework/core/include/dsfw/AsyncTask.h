@@ -46,25 +46,25 @@ namespace dstools {
         }
 
         /// @brief Return the task's identifier.
-        const QString &identifier() const { return m_identifier; }
+        const QString &identifier() const noexcept { return m_identifier; }
 
         /// @brief Set the timeout duration for this task.
-        void setTimeout(std::chrono::milliseconds timeout) { m_timeout = timeout; }
+        void setTimeout(std::chrono::milliseconds timeout) noexcept { m_timeout = timeout; }
 
         /// @brief Get the current timeout setting.
-        std::chrono::milliseconds timeout() const { return m_timeout; }
+        std::chrono::milliseconds timeout() const noexcept { return m_timeout; }
 
         /// @brief Request cancellation. Subclasses should check isCanceled() periodically.
-        void requestCancel() { m_canceled.store(true, std::memory_order_release); }
+        void requestCancel() noexcept { m_canceled.store(true, std::memory_order_release); }
 
         /// @brief Check if cancellation has been requested.
-        [[nodiscard]] bool isCanceled() const { return m_canceled.load(std::memory_order_acquire); }
+        [[nodiscard]] bool isCanceled() const noexcept { return m_canceled.load(std::memory_order_acquire); }
 
         /// @brief Check if the task has completed.
-        [[nodiscard]] bool isFinished() const { return m_finished.load(std::memory_order_acquire); }
+        [[nodiscard]] bool isFinished() const noexcept { return m_finished.load(std::memory_order_acquire); }
 
         /// @brief Check if the task has exceeded its timeout. Subclasses should call this periodically.
-        [[nodiscard]] bool hasTimedOut() const {
+        [[nodiscard]] bool hasTimedOut() const noexcept {
             if (m_timeout == std::chrono::milliseconds::zero())
                 return false;
             return std::chrono::steady_clock::now() - m_startTime > m_timeout;

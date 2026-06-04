@@ -187,6 +187,15 @@ nlohmann::json PipelineContext::toJson() const {
     return j;
 }
 
+Result<void> PipelineContext::validateFromString(const std::string &jsonStr) {
+    try {
+        auto j = nlohmann::json::parse(jsonStr);
+        return validate(j);
+    } catch (const nlohmann::json::exception &e) {
+        return Result<void>::Error(std::string("PipelineContext: JSON parse error: ") + e.what());
+    }
+}
+
 Result<void> PipelineContext::validate(const nlohmann::json &j) {
     if (!j.is_object())
         return Result<void>::Error("PipelineContext: not a JSON object");

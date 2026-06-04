@@ -36,7 +36,7 @@ namespace Game
                                                                const std::vector<float> &noteDur, const float tol,
                                                                const bool applyWordUv) {
         if (noteSeq.size() != noteDur.size()) {
-            return dstools::Err("noteSeq and noteDur must have the same length");
+            return dstools::Err<std::vector<AlignedNote>>("noteSeq and noteDur must have the same length");
         }
         if (noteSeq.empty())
             return std::vector<AlignedNote>{};

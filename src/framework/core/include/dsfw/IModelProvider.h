@@ -20,19 +20,19 @@ namespace dstools {
         }
         constexpr explicit ModelTypeId(int id) : m_id(id) {
         }
-        constexpr int id() const {
+        constexpr int id() const noexcept {
             return m_id;
         }
-        constexpr bool isValid() const {
+        constexpr bool isValid() const noexcept {
             return m_id >= 0;
         }
-        constexpr bool operator==(const ModelTypeId &o) const {
+        constexpr bool operator==(const ModelTypeId &o) const noexcept {
             return m_id == o.m_id;
         }
-        constexpr bool operator!=(const ModelTypeId &o) const {
+        constexpr bool operator!=(const ModelTypeId &o) const noexcept {
             return m_id != o.m_id;
         }
-        constexpr bool operator<(const ModelTypeId &o) const {
+        constexpr bool operator<(const ModelTypeId &o) const noexcept {
             return m_id < o.m_id;
         }
 
