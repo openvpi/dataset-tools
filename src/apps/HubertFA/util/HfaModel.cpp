@@ -52,6 +52,7 @@ namespace HFA {
 #else
             m_model_session = new Ort::Session(m_env, model_Path.c_str(), m_session_options);
 #endif
+            m_valid = true;
         } catch (const Ort::Exception &e) {
             std::cout << "Failed to create session: " << e.what() << std::endl;
         }
@@ -64,6 +65,10 @@ namespace HFA {
 
     bool HfaModel::forward(const std::vector<std::vector<float>> &input_data, HfaLogits &result,
                            std::string &msg) const {
+        if (!m_valid || !m_model_session) {
+            msg = "Model session is not initialized";
+            return false;
+        }
         if (input_data.empty()) {
             msg = "输入数据不能为空";
             return false;

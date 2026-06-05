@@ -26,7 +26,7 @@ namespace HFA {
                        const std::vector<std::string> &non_speech_ph, WordList &words, std::string &msg) const;
 
         bool initialized() const {
-            return m_hfa != nullptr;
+            return m_hfa != nullptr && m_hfa->valid();
         }
 
     private:

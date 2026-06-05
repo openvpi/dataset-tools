@@ -83,6 +83,9 @@ namespace Some
         }
 
         auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, 44100);
+        if (sf_vio.data.byteArray.empty()) {
+            return false;
+        }
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
                          sf_vio.info.samplerate);

@@ -20,12 +20,14 @@ namespace HFA {
         explicit HfaModel(const std::filesystem::path &model_Path, ExecutionProvider provider, int device_id);
         ~HfaModel();
         bool forward(const std::vector<std::vector<float>> &input_data, HfaLogits &result, std::string &msg) const;
+        bool valid() const { return m_valid; }
 
     private:
         Ort::Env m_env;
         Ort::SessionOptions m_session_options;
         Ort::Session *m_model_session;
         Ort::AllocatorWithDefaultOptions m_allocator;
+        bool m_valid = false;
 
         const char *m_input_name = "waveform";
         const char *m_predictor_output_name[3] = {"ph_frame_logits", "ph_edge_logits", "cvnt_logits"};

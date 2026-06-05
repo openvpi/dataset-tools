@@ -55,10 +55,6 @@ namespace HFA {
         non_lexical_phonemes.insert(non_lexical_phonemes.begin(), "None");
         m_alignmentDecoder = new AlignmentDecoder(vocab_dict, mel_spec_config);
         m_nonLexicalDecoder = new NonLexicalDecoder(non_lexical_phonemes, mel_spec_config);
-
-        if (!m_hfa) {
-            qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";
-        }
     }
 
     HFA::~HFA() = default;
@@ -70,6 +66,9 @@ namespace HFA {
         }
 
         auto sf_vio = AudioUtil::resample_to_vio(wavPath, msg, 1, hfa_input_sample_rate);
+        if (sf_vio.data.byteArray.empty()) {
+            return false;
+        }
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
                          hfa_input_sample_rate);

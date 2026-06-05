@@ -100,6 +100,9 @@ namespace Game
 
         const auto tar_sr = m_gameModel->get_target_sample_rate();
         auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, tar_sr);
+        if (sf_vio.data.byteArray.empty()) {
+            return false;
+        }
 
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
                          sf_vio.info.samplerate);
