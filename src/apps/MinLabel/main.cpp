@@ -1,9 +1,7 @@
 #include "gui/MainWindow.h"
 
 #include <QApplication>
-#include <QMessageBox>
 
-#include <QBreakpadHandler.h>
 #include <cpp-pinyin/G2pglobal.h>
 
 #ifdef Q_OS_WINDOWS
@@ -21,14 +19,6 @@ bool isUserRoot() {
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
-
-    QBreakpadHandler handler;
-    handler.setDumpPath(a.applicationDirPath() + "/dumps");
-
-    QBreakpadHandler::UniqueExtraHandler = []() {
-        // Do something when crash occurs.
-        MessageBoxW(nullptr, L"Crash!!!", L"QBreakpad Demo", MB_OK | MB_ICONERROR);
-    };
 
     if (isUserRoot() && !QApplication::arguments().contains("--allow-root")) {
         QString title = QApplication::applicationName();
