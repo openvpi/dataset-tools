@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-namespace AudioUtil {
+namespace dsfw::signal {
     struct SlicerParams;
 }
 
@@ -31,7 +31,7 @@ namespace dstools {
                                   int minInterval, int hopSize, int maxSilKept = 5000);
 
         static std::vector<double> computeSlicePoints(const std::vector<float> &samples, int sampleRate,
-                                                      const AudioUtil::SlicerParams &params);
+                                                      const dsfw::signal::SlicerParams &params);
 
         static std::vector<float> loadAndMixAudio(const QString &filePath, int *outSampleRate);
     };

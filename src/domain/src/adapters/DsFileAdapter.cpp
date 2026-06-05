@@ -46,7 +46,6 @@ Result<void> DsFileAdapter::importToLayers(const QString &filePath,
         return Result<void>::Error("Sentence index out of range");
 
     const auto sv = doc.sentenceView(idx);
-    const auto &s = doc.sentence(idx);
 
     const double offset = sv.offset;
 
@@ -68,11 +67,16 @@ Result<void> DsFileAdapter::importToLayers(const QString &filePath,
         temp[QStringLiteral("midi")] = LayerData::fromJson({{"name", "midi"}, {"boundaries", boundaries.toJson()}});
     }
 
-    if (s.contains("f0_seq") && s.contains("f0_timestep")) {
+    if (!sv.f0Seq.isEmpty() && sv.f0Timestep > 0.0) {
         const double timestep = sv.f0Timestep;
+        const QStringList f0Values = sv.f0Seq.split(' ', Qt::SkipEmptyParts);
+        std::vector<double> f0Seq;
+        f0Seq.reserve(f0Values.size());
+        for (const auto &v : f0Values)
+            f0Seq.push_back(v.toDouble());
         temp[QStringLiteral("pitch")] = LayerData::fromJson({
             {"name", "pitch"},
-            {"f0_seq", s["f0_seq"]},
+            {"f0_seq", f0Seq},
             {"f0_timestep", timestep},
             {"offset", offset}});
     }

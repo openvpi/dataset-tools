@@ -17,10 +17,6 @@ private slots:
     void testLoadFileResultApi();
     void testSentenceAccess();
     void testSentenceViewAllFieldsRoundTrip();
-    void testNumberOrString_number();
-    void testNumberOrString_string();
-    void testNumberOrString_missing();
-    void testNumberOrString_invalidString();
     void testSetFilePath();
     void testSaveWithoutPath();
     void testLoadMalformedJson();
@@ -163,26 +159,6 @@ void TestDsDocument::testSentenceViewAllFieldsRoundTrip() {
     QCOMPARE(lsv.wordSpan, QString("1 3 4 4"));
     QCOMPARE(lsv.offset, 1.5);
     QCOMPARE(lsv.f0Timestep, 0.01);
-}
-
-void TestDsDocument::testNumberOrString_number() {
-    nlohmann::json obj = {{"offset", 1.5}};
-    QCOMPARE(DsDocument::numberOrString(obj, "offset", 0.0), 1.5);
-}
-
-void TestDsDocument::testNumberOrString_string() {
-    nlohmann::json obj = {{"offset", "2.5"}};
-    QCOMPARE(DsDocument::numberOrString(obj, "offset", 0.0), 2.5);
-}
-
-void TestDsDocument::testNumberOrString_missing() {
-    nlohmann::json obj = {{"other", 1.0}};
-    QCOMPARE(DsDocument::numberOrString(obj, "offset", 9.9), 9.9);
-}
-
-void TestDsDocument::testNumberOrString_invalidString() {
-    nlohmann::json obj = {{"offset", "not_a_number"}};
-    QCOMPARE(DsDocument::numberOrString(obj, "offset", 3.3), 3.3);
 }
 
 void TestDsDocument::testSetFilePath() {

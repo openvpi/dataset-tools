@@ -12,7 +12,7 @@ dstools_add_library(${PROJECT_NAME}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mouth-curve-chart>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../pitch-editor>
         DEPENDS
-        PUBLIC chart-framework dstools-domain dstools-audio dsfw-ui-core
+        PUBLIC chart-framework dstools-domain dsfw-audio dsfw-ui-core
         textgrid FFTW3::fftw3
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
         pitch-editor

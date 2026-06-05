@@ -5,8 +5,7 @@
 #include <filesystem>
 #include <functional>
 
-#include <audio-util/SndfileVio.h>
-#include <dstools/IInferenceEngine.h>
+#include <dsfw/infer/IInferenceEngine.h>
 #include <dstools/Result.h>
 #include <rmvpe-infer/Provider.h>
 #include <rmvpe-infer/RmvpeGlobal.h>
@@ -25,7 +24,7 @@ namespace Rmvpe
 
     /// @brief IInferenceEngine implementation for RMVPE-based pitch extraction
     ///        with cancellation support.
-    class RMVPE_INFER_EXPORT Rmvpe : public dstools::infer::IInferenceEngine {
+    class RMVPE_INFER_EXPORT Rmvpe : public dsfw::infer::IInferenceEngine {
     public:
         Rmvpe();
         /// @brief Constructs and loads the RMVPE model.

@@ -12,7 +12,7 @@ class QTreeWidgetItem;
 class QKeySequenceEdit;
 class QPushButton;
 
-namespace dstools {
+namespace dsfw {
     class AppSettings;
     template <typename T>
     struct SettingsKey;
@@ -37,7 +37,7 @@ namespace dsfw::widgets {
         /// @param settings Application settings instance.
         /// @param entries List of shortcut entries to edit.
         /// @param parent Parent widget.
-        explicit ShortcutEditorWidget(dstools::AppSettings *settings, const std::vector<ShortcutEntry> &entries,
+        explicit ShortcutEditorWidget(dsfw::AppSettings *settings, const std::vector<ShortcutEntry> &entries,
                                       QWidget *parent = nullptr);
         ~ShortcutEditorWidget() override;
 
@@ -45,7 +45,7 @@ namespace dsfw::widgets {
         /// @param settings Application settings instance.
         /// @param entries List of shortcut entries to edit.
         /// @param parent Parent widget for the dialog.
-        static void showDialog(dstools::AppSettings *settings, const std::vector<ShortcutEntry> &entries,
+        static void showDialog(dsfw::AppSettings *settings, const std::vector<ShortcutEntry> &entries,
                                QWidget *parent);
 
         /// @brief Commit any in-progress key sequence edit.
@@ -59,7 +59,7 @@ namespace dsfw::widgets {
         QString currentSequence(int entryIndex) const;
         int findConflict(int excludeIndex, const QString &sequence) const;
 
-        dstools::AppSettings *m_settings;
+        dsfw::AppSettings *m_settings;
         std::vector<ShortcutEntry> m_entries;
         QTreeWidget *m_tree;
         QPushButton *m_resetAllBtn;

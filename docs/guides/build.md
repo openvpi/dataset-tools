@@ -221,7 +221,7 @@ ctest --output-on-failure
 - `src/framework/widgets/` — 通用 GUI 组件动态库（dsfw-widgets）
 - `src/domain/` — DiffSinger 领域逻辑静态库（dstools-domain）
 - `src/framework/audio/` — 音频解码/播放静态库（dstools-audio）
-- `src/widgets/` — 领域 GUI 组件（INTERFACE, header-only）
+- `src/framework/widgets/` — 领域 GUI 组件（INTERFACE, header-only）
 - `src/libs/` — 领域逻辑库（静态库：slicer-lib, lyricfa-lib, hubertfa-lib, gameinfer-lib, rmvpepitch-lib, minlabel-lib, moelib, infer-bridge; header-only: textgrid）
 - `src/infer/` — 推理库（各自独立，共享 infer-common）
 - `src/apps/` — 应用可执行文件（LabelSuite 通用标注工具集 + DsLabeler DiffSinger 专用标注器 + dstools-cli + WidgetGallery + TestShell）
@@ -246,6 +246,179 @@ vcpkg 安装的 qwindowkit/qbreakpad 绑定了特定 Qt 版本。确保 `QT_DIR`
 ### vcpkg 包安装失败
 
 部分包 (qwindowkit, qbreakpad) 需要 Qt 路径才能编译。确认 `QT_DIR` 和 `VCPKG_KEEP_ENV_VARS` 已设置。
+
+## dsfw 外部集成
+
+以下指南面向将 dsfw 作为独立框架使用的外部项目。
+
+### CMake 集成
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(MyApp LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(dsfw REQUIRED)
+
+add_executable(MyApp main.cpp)
+target_link_libraries(MyApp PRIVATE
+    Qt6::Widgets
+    dsfw::core       # AppSettings, ServiceLocator, JsonHelper, etc.
+    dsfw::ui-core    # AppShell, Theme, IPageActions, IPageLifecycle, etc.
+)
+```
+
+`dsfw::core` 提供配置、JSON 工具、服务定位器和领域无关接口。
+`dsfw::ui-core` 提供 AppShell、Theme、FramelessHelper、IconNavBar 和页面接口。
+
+### 单页面应用
+
+单页面模式下侧边栏自动隐藏：
+
+```cpp
+#include <QApplication>
+#include <QLabel>
+#include <QMenuBar>
+#include <QVBoxLayout>
+
+#include <dsfw/AppShell.h>
+#include <dsfw/IPageActions.h>
+#include <dsfw/Theme.h>
+
+class HelloPage : public QWidget, public dstools::labeler::IPageActions {
+    Q_OBJECT
+    Q_INTERFACES(dstools::labeler::IPageActions)
+
+public:
+    explicit HelloPage(QWidget *parent = nullptr) : QWidget(parent) {
+        auto *layout = new QVBoxLayout(this);
+        layout->addWidget(new QLabel("Hello, dsfw!"));
+    }
+
+    QString windowTitle() const override { return "Hello World"; }
+
+    QMenuBar *createMenuBar(QWidget *parent) override {
+        auto *menuBar = new QMenuBar(parent);
+        auto *fileMenu = menuBar->addMenu("&File");
+        fileMenu->addAction("&Quit", qApp, &QApplication::quit, QKeySequence::Quit);
+        return menuBar;
+    }
+};
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+    app.setApplicationName("HelloDsfw");
+
+    dsfw::Theme::instance().init(app);
+
+    dsfw::AppShell shell;
+    shell.addPage(new HelloPage(&shell), "hello", {}, "Hello");
+    shell.resize(800, 600);
+    shell.show();
+
+    return app.exec();
+}
+
+#include "main.moc"
+```
+
+### 多页面应用
+
+添加 2 个以上页面时，`IconNavBar` 侧边栏自动显示：
+
+```cpp
+#include <QApplication>
+#include <QLabel>
+#include <QMenuBar>
+#include <QVBoxLayout>
+
+#include <dsfw/AppShell.h>
+#include <dsfw/IPageActions.h>
+#include <dsfw/IPageLifecycle.h>
+#include <dsfw/Theme.h>
+
+class SimplePage : public QWidget,
+                   public dstools::labeler::IPageActions,
+                   public dstools::labeler::IPageLifecycle {
+    Q_OBJECT
+    Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
+
+public:
+    SimplePage(const QString &title, QWidget *parent = nullptr)
+        : QWidget(parent), m_title(title) {
+        auto *layout = new QVBoxLayout(this);
+        m_label = new QLabel(this);
+        layout->addWidget(m_label);
+        updateLabel();
+    }
+
+    QString windowTitle() const override { return m_title; }
+    void onActivated() override { updateLabel(); }
+    void onDeactivated() override {}
+
+private:
+    void updateLabel() { m_label->setText(m_title + " is active"); }
+    QString m_title;
+    QLabel *m_label;
+};
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+    app.setApplicationName("MultiPageDemo");
+
+    dsfw::Theme::instance().init(app);
+
+    dsfw::AppShell shell;
+    shell.setWindowTitle("MultiPageDemo");
+
+    shell.addPage(new SimplePage("Editor", &shell),
+                  "editor", QIcon(":/icons/editor.svg"), "Editor");
+    shell.addPage(new SimplePage("Settings", &shell),
+                  "settings", QIcon(":/icons/settings.svg"), "Settings");
+
+    shell.resize(1024, 768);
+    shell.show();
+
+    return app.exec();
+}
+
+#include "main.moc"
+```
+
+页面切换时自动调用 `IPageLifecycle::onDeactivating()` → `onDeactivated()` → `onActivated()`，菜单栏和状态栏自动切换。
+
+### 关键 API
+
+**`dsfw::AppShell`** (`<dsfw/AppShell.h>`)：统一窗口壳，封装 FramelessHelper + 自定义标题栏 + IconNavBar + QStackedWidget。`addPage()` 注册页面。
+
+**`dsfw::Theme`** (`<dsfw/Theme.h>`)：单例主题管理器，支持 Dark/Light/FollowSystem。`Theme::instance().init(app)` 初始化，`themeChanged()` 信号动态更新。
+
+**`dstools::AppSettings`** (`<dsfw/AppSettings.h>`)：类型安全、响应式 JSON 配置。`SettingsKey<T>` 定义键，`get()`/`set()` 读写，`observe()` 监听变更。
+
+```cpp
+inline const dstools::SettingsKey<int> Volume("Audio/volume", 80);
+
+dstools::AppSettings settings("MyApp");
+settings.set(Volume, 90);
+int vol = settings.get(Volume);   // 90
+settings.observe(Volume, [](int v) { qDebug() << "Volume:" << v; });
+```
+
+**`dstools::ServiceLocator`** (`<dsfw/ServiceLocator.h>`)：全局类型安全服务注册表。
+
+```cpp
+dstools::ServiceLocator::set<IFileIOProvider>(new LocalFileIOProvider);
+auto *io = dstools::ServiceLocator::get<IFileIOProvider>();
+```
+
+**`dstools::labeler::IPageActions`** (`<dsfw/IPageActions.h>`)：页面接口，提供菜单、状态栏、窗口标题、保存/未保存跟踪、拖放。
+
+**`dstools::labeler::IPageLifecycle`** (`<dsfw/IPageLifecycle.h>`)：页面生命周期回调：`onActivated()`、`onDeactivating()`（可否决切换）、`onDeactivated()`、`onWorkingDirectoryChanged()`、`onShutdown()`。
+
+**`dstools::JsonHelper`** (`<dsfw/JsonHelper.h>`)：安全 `nlohmann::json` 封装，斜杠分隔路径查询、文件 I/O 错误报告、带默认值的类型化访问器。
 
 ### ONNX Runtime 下载失败
 

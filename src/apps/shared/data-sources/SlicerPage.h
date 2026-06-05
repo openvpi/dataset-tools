@@ -18,6 +18,7 @@
 #include <dstools/Constants.h>
 #include <dsfw/widgets/PlayWidget.h>
 #include <dsfw/widgets/ViewportController.h>
+#include <dsfw/audio/AudioBuffer.h>
 #include <map>
 #include <ui/SliceBoundaryModel.h>
 
@@ -102,9 +103,9 @@ namespace dstools {
         virtual void autoSliceFiles(const QStringList &filePaths);
         virtual void loadAudioFile(const QString &filePath);
 
-        int performBatchExport(const QString &outputDir, int digits, int sndFormat);
+        int performBatchExport(const QString &outputDir, int digits, dsfw::audio::SampleFormat sampleFmt);
 
-        static int bitDepthToSndFormat(SliceExportDialog::BitDepth bitDepth);
+        static dsfw::audio::SampleFormat bitDepthToSampleFormat(SliceExportDialog::BitDepth bitDepth);
 
         void keyPressEvent(QKeyEvent *event) override;
     };

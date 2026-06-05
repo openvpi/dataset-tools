@@ -11,7 +11,7 @@
 #include <dsfw/AppSettings.h>
 #include <dsfw/AppPaths.h>
 #include <dstools/ModelManager.h>
-#include <dsfw/InferenceModelProvider.h>
+#include <dstools/InferenceModelProvider.h>
 #include <dsfw/widgets/PlayWidget.h>
 #include <dsfw/widgets/ShortcutManager.h>
 #include <dsfw/widgets/ToastNotification.h>
@@ -39,6 +39,8 @@
 
 namespace dstools {
 
+#pragma region Construction / Destruction
+
 EditorPageBase::EditorPageBase(const QString &settingsGroup, QWidget *parent)
     : QWidget(parent), m_settings(settingsGroup) {
     m_shortcutManager = new dsfw::widgets::ShortcutManager(&m_settings, this);
@@ -53,7 +55,9 @@ double EditorPageBase::audioDurationSec(const DsTextDocument &doc) {
     return 0.0;
 }
 
-// ── Standard UI helpers (P3-A3) ───────────────────────────────────────────────
+#pragma endregion
+
+#pragma region Standard UI Helpers
 
 QMenu *EditorPageBase::addStandardFileMenu(QMenuBar *bar, QAction *saveAction) {
     auto *fileMenu = bar->addMenu(tr("文件(&F)"));
@@ -146,7 +150,9 @@ QJsonObject EditorPageBase::preloadConfig() const {
     return settingsData["preload"].toObject();
 }
 
-// ── Setup helpers ─────────────────────────────────────────────────────────────
+#pragma endregion
+
+#pragma region Setup Helpers
 
 void EditorPageBase::setupBaseLayout(QWidget *editorWidget) {
     m_sliceList = new SliceListPanel(this);
@@ -188,7 +194,9 @@ void EditorPageBase::setupNavigationActions() {
     });
 }
 
-// ── Data source ───────────────────────────────────────────────────────────────
+#pragma endregion
+
+#pragma region Data Source & Slice Selection
 
 void EditorPageBase::setDataSource(IEditorDataSource *source, AppSettingsBackend *settingsBackend) {
     m_source = source;
@@ -196,8 +204,6 @@ void EditorPageBase::setDataSource(IEditorDataSource *source, AppSettingsBackend
     if (m_sliceList)
         m_sliceList->setDataSource(source);
 }
-
-// ── Slice selection ───────────────────────────────────────────────────────────
 
 void EditorPageBase::onSliceSelected(const QString &sliceId) {
     autoSaveCurrentSlice();
@@ -215,7 +221,9 @@ void EditorPageBase::onSliceSelected(const QString &sliceId) {
     emit sliceChanged(sliceId);
 }
 
-// ── IPageActions ──────────────────────────────────────────────────────────────
+#pragma endregion
+
+#pragma region IPageActions / IPageLifecycle
 
 QString EditorPageBase::windowTitle() const {
     QString title = windowTitlePrefix();
@@ -236,8 +244,6 @@ void EditorPageBase::handleDragEnter(QDragEnterEvent *event) {
 void EditorPageBase::handleDrop(QDropEvent *event) {
     Q_UNUSED(event)
 }
-
-// ── IPageLifecycle ────────────────────────────────────────────────────────────
 
 void EditorPageBase::onActivated() {
     ++m_activationGeneration;
@@ -289,7 +295,9 @@ void EditorPageBase::onShutdown() {
     onShutdownImpl();
 }
 
-// ── PageBanner ────────────────────────────────────────────────────────────────
+#pragma endregion
+
+#pragma region PageBanner
 
 void EditorPageBase::showBanner(dsfw::widgets::BannerType type, const QString &message,
                                 const QStringList &buttonLabels) {
@@ -311,14 +319,14 @@ void EditorPageBase::hideBanner() {
         m_pageBanner->hide();
 }
 
-// ── Auto-infer ────────────────────────────────────────────────────────────────
+#pragma endregion
+
+#pragma region Auto-Infer
 
 static bool isAutoStep(const QString &stepName) {
     static const QSet<QString> manualSteps = {QString::fromUtf8(dstools::keys::steps::minLabel)};
     return !manualSteps.contains(stepName);
 }
-
-// ── Template method: onAutoInfer ─────────────────────────────────────────────
 
 void EditorPageBase::onAutoInfer() {
     runStandardAutoInferPreload();
@@ -396,7 +404,9 @@ int EditorPageBase::showAutoInferFailed(const QString &stepName, const QString &
     return -1;
 }
 
-// ── Dirty status bar ──────────────────────────────────────────────────────────
+#pragma endregion
+
+#pragma region Dirty Status
 
 void EditorPageBase::markLayersModified(const QStringList &layers) {
     if (!m_source || m_currentSliceId.isEmpty() || layers.isEmpty())
@@ -444,7 +454,9 @@ void EditorPageBase::updateDirtyStatusLabel(QLabel *label) {
     label->setText(text);
 }
 
-// ── Utility ───────────────────────────────────────────────────────────────────
+#pragma endregion
+
+#pragma region Utility
 
 bool EditorPageBase::maybeSave() {
     if (!isDirty())
@@ -539,6 +551,10 @@ void EditorPageBase::stopAutoSaveTimer() {
         m_autoSaveTimer->stop();
 }
 
+#pragma endregion
+
+#pragma region Async Engine Loading
+
 std::tuple<ModelManager *, ModelTypeId>
     EditorPageBase::loadModelForTask(const QString &taskKey, const QString &modelTypeName) {
         auto config = readModelConfig(settingsBackend(), taskKey);
@@ -613,6 +629,10 @@ ModelManager *EditorPageBase::ensureModelManager() {
     m_modelManager = &ModelManager::instance();
     return m_modelManager;
 }
+
+#pragma endregion
+
+#pragma region Batch Processing
 
 bool EditorPageBase::hasExistingResult(const QString &sliceId) const {
     Q_UNUSED(sliceId)
@@ -757,5 +777,7 @@ bool EditorPageBase::applyAndReload(const QString &sliceId, const DsTextDocument
         onSliceSelectedImpl(sliceId);
     return true;
 }
+
+#pragma endregion
 
 } // namespace dstools

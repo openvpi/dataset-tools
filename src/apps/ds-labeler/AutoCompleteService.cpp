@@ -2,8 +2,7 @@
 
 #include <dstools/PhNumCalculator.h>
 #include <dstools/PitchUtils.h>
-
-#include "InferBridge.h"
+#include <dsfw/PathUtils.h>
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -13,9 +12,7 @@ namespace dstools {
 
 AutoCompleteResult autoCompleteSlice(DsTextDocument doc,
                                      const QString &audioPath,
-                                     HFA::HFA *hfa,
-                                     Rmvpe::Rmvpe *rmvpe,
-                                     Game::Game *game,
+                                     dsfw::infer::IInferenceService *inferService,
                                      PhNumCalculator *phNumCalc) {
     AutoCompleteResult result;
     result.doc = std::move(doc);
@@ -53,7 +50,7 @@ AutoCompleteResult autoCompleteSlice(DsTextDocument doc,
             hasPitch = true;
     }
 
-    if (!hasPhoneme && hasGrapheme && hfa && hfa->isOpen() && !audioPath.isEmpty()) {
+    if (!hasPhoneme && hasGrapheme && inferService && inferService->hasForcedAlignment() && !audioPath.isEmpty()) {
         std::string lyricsText;
         for (const auto &text : graphemeTexts) {
             if (!lyricsText.empty())
@@ -61,10 +58,11 @@ AutoCompleteResult autoCompleteSlice(DsTextDocument doc,
             lyricsText += text.toStdString();
         }
 
-        HFA::WordList words;
+        std::vector<dsfw::infer::AlignedWord> words;
         std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-        auto faResult = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
-        if (faResult) {
+        auto audioFilePath = std::filesystem::path(audioPath.toStdWString());
+        bool faOk = inferService->runForcedAlignment(audioFilePath, "zh", nonSpeechPh, lyricsText, words);
+        if (faOk) {
             IntervalLayer phonemeLayer;
             phonemeLayer.name = QStringLiteral("phoneme");
             phonemeLayer.type = QStringLiteral("interval");
@@ -145,16 +143,15 @@ AutoCompleteResult autoCompleteSlice(DsTextDocument doc,
         }
     }
 
-    if (!hasPitch && rmvpe && rmvpe->is_open() && !audioPath.isEmpty()) {
-        std::vector<Rmvpe::RmvpeRes> results;
-        auto rmvpeResult = rmvpe->get_f0(audioPath.toStdWString(), 0.01f, results, nullptr);
-        if (rmvpeResult && !results.empty()) {
-            const auto &res = results[0];
-            std::vector<float> f0Mhz(res.f0.size());
-            for (size_t i = 0; i < res.f0.size(); ++i)
-                f0Mhz[i] = res.f0[i] * 1000.0f;
+    if (!hasPitch && inferService && inferService->hasPitchExtraction() && !audioPath.isEmpty()) {
+        dsfw::infer::PitchResult pitchResult;
+        auto audioFilePath = std::filesystem::path(audioPath.toStdWString());
+        bool pitchOk = inferService->runPitchExtraction(audioFilePath, 0.01f, pitchResult);
+        if (pitchOk && !pitchResult.f0.empty()) {
+            std::vector<float> f0Mhz(pitchResult.f0.size());
+            for (size_t i = 0; i < pitchResult.f0.size(); ++i)
+                f0Mhz[i] = pitchResult.f0[i] * 1000.0f;
 
-            float timestep = 0.01f;
             CurveLayer *pitchCurve = nullptr;
             for (auto &curve : result.doc.curves) {
                 if (curve.name == QStringLiteral("pitch")) {
@@ -168,15 +165,16 @@ AutoCompleteResult autoCompleteSlice(DsTextDocument doc,
                 pitchCurve->name = QStringLiteral("pitch");
             }
             pitchCurve->values = std::move(f0Mhz);
-            pitchCurve->timestep = timestep;
+            pitchCurve->timestep = pitchResult.timestep;
             result.modified = true;
         }
     }
 
-    if (!hasMidi && game && game->isOpen() && !audioPath.isEmpty()) {
-        std::vector<Game::GameNote> notes;
-        auto gameResult = game->getNotes(audioPath.toStdWString(), notes, nullptr);
-        if (gameResult && !notes.empty()) {
+    if (!hasMidi && inferService && inferService->hasMidiTranscription() && !audioPath.isEmpty()) {
+        std::vector<dsfw::infer::MidiNote> notes;
+        auto audioFilePath = std::filesystem::path(audioPath.toStdWString());
+        bool midiOk = inferService->runMidiTranscription(audioFilePath, notes);
+        if (midiOk && !notes.empty()) {
             IntervalLayer *midiLayer = nullptr;
             for (auto &layer : result.doc.layers) {
                 if (layer.name == QStringLiteral("midi")) {

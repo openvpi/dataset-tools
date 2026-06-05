@@ -5,6 +5,7 @@
 #include "ExportSettingsPanel.h"
 #include "ModelPathPanel.h"
 
+#include <QPointer>
 #include <QTabWidget>
 #include <QWidget>
 #include <dsfw/IPageActions.h>
@@ -42,7 +43,7 @@ private:
     void markDirty();
     void connectDirtySignals();
 
-    AppSettingsBackend *m_backend = nullptr;
+    QPointer<AppSettingsBackend> m_backend;
     QTabWidget *m_tabWidget = nullptr;
     bool m_dirty = false;
 

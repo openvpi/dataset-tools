@@ -10,7 +10,7 @@
 class QMenu;
 class QWidget;
 
-namespace dstools {
+namespace dsfw {
     class AppSettings;
 }
 
@@ -31,7 +31,7 @@ namespace dsfw {
         /// @brief Construct the manager backed by the given settings.
         /// @param settings AppSettings instance for persistence.
         /// @param parent Optional QObject parent.
-        explicit RecentFilesManager(dstools::AppSettings *settings, QObject *parent = nullptr);
+        explicit RecentFilesManager(dsfw::AppSettings *settings, QObject *parent = nullptr);
 
         /// @brief Add a file to the top of the list. Removes duplicates.
         /// @param filePath Absolute file path.
@@ -72,7 +72,7 @@ namespace dsfw {
         void save();
         void rebuildMenus();
 
-        dstools::AppSettings *m_settings = nullptr;
+        dsfw::AppSettings *m_settings = nullptr;
         QStringList m_files;
         int m_maxCount = 10;
         QList<QPointer<QMenu>> m_menus;

@@ -2,7 +2,7 @@
 /// @brief HuBERT-FA forced alignment engine.
 
 #pragma once
-#include <dstools/IInferenceEngine.h>
+#include <dsfw/infer/IInferenceEngine.h>
 #include <dstools/Result.h>
 #include <filesystem>
 #include <hubert-infer/AlignWord.h>
@@ -17,7 +17,7 @@
 
 namespace HFA {
 
-    class HUBERT_INFER_EXPORT HFA : public dstools::infer::IInferenceEngine {
+    class HUBERT_INFER_EXPORT HFA : public dsfw::infer::IInferenceEngine {
     public:
         HFA();
         explicit HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id);

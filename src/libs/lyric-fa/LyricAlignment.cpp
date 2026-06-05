@@ -2,7 +2,6 @@
 #include "MatchLyric.h"
 #include "Utils.h"
 
-#include <QApplication>
 #include <QFile>
 #include <QJsonObject>
 #include <QRegularExpression>

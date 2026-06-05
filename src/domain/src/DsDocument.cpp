@@ -109,32 +109,6 @@ bool DsDocument::isEmpty() const {
     return m_impl->sentences.empty();
 }
 
-nlohmann::json &DsDocument::sentence(int index) {
-    if (index < 0 || index >= static_cast<int>(m_impl->sentences.size())) {
-        static nlohmann::json s_empty;
-        qWarning() << "DsDocument::sentence: index" << index << "out of range [0," << m_impl->sentences.size() << ")";
-        return s_empty;
-    }
-    return m_impl->sentences[index];
-}
-
-const nlohmann::json &DsDocument::sentence(int index) const {
-    if (index < 0 || index >= static_cast<int>(m_impl->sentences.size())) {
-        static const nlohmann::json s_empty;
-        qWarning() << "DsDocument::sentence: index" << index << "out of range [0," << m_impl->sentences.size() << ")";
-        return s_empty;
-    }
-    return m_impl->sentences[index];
-}
-
-std::vector<nlohmann::json> &DsDocument::sentences() {
-    return m_impl->sentences;
-}
-
-const std::vector<nlohmann::json> &DsDocument::sentences() const {
-    return m_impl->sentences;
-}
-
 // ── Typed sentence access ─────────────────────────────────────────────
 
 static QString jsonStrField(const nlohmann::json &j, const char *key) {
@@ -267,23 +241,6 @@ void DsDocument::setFilePath(const QString &path) {
 }
 
 // ── Field helpers ─────────────────────────────────────────────────────
-
-double DsDocument::numberOrString(const nlohmann::json &obj, const std::string &key,
-                                  double defaultValue) {
-    if (!obj.is_object() || !obj.contains(key))
-        return defaultValue;
-
-    const auto &node = obj[key];
-    if (node.is_number()) {
-        return node.get<double>();
-    }
-    if (node.is_string()) {
-        bool ok = false;
-        double val = QString::fromStdString(node.get<std::string>()).toDouble(&ok);
-        return ok ? val : defaultValue;
-    }
-    return defaultValue;
-}
 
 double DsDocument::durationSec() const {
     double maxEnd = 0.0;

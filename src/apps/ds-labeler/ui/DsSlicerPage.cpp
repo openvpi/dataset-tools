@@ -15,9 +15,9 @@
 #include <dsfw/widgets/FileProgressTracker.h>
 #include <dsfw/widgets/ProgressDialog.h>
 
-#include <dstools/AudioDecoder.h>
+#include <dsfw/audio/AudioPipeline.h>
 
-#include <audio-util/Slicer.h>
+#include <dsfw/signal/Slicer.h>
 
 #include <QCheckBox>
 #include <QDialog>
@@ -34,20 +34,18 @@
 
 #include <QtConcurrent>
 
-#include <sndfile.hh>
-
 #include <algorithm>
 #include <cmath>
 
 namespace dstools {
 
-DsSlicerPage::DsSlicerPage(QWidget *parent) : SlicerPage(parent) {
+DsSlicerPage::DsSlicerPage(QWidget* parent) : SlicerPage(parent) {
     connectProjectSignals();
 }
 
 DsSlicerPage::~DsSlicerPage() = default;
 
-void DsSlicerPage::setDataSource(ProjectDataSource *source) {
+void DsSlicerPage::setDataSource(ProjectDataSource* source) {
     m_dataSource = source;
 }
 
@@ -55,12 +53,9 @@ void DsSlicerPage::connectProjectSignals() {
     QObject::disconnect(m_btnExportAudio, &QPushButton::clicked, this, &DsSlicerPage::onExportAudio);
     connect(m_btnExportAudio, &QPushButton::clicked, this, &DsSlicerPage::onExportMenu);
 
-    connect(m_audioFileList, &AudioFileListPanel::filesAdded, this, [this](const QStringList &) {
-        saveSlicerStateToProject();
-    });
-    connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() {
-        saveSlicerStateToProject();
-    });
+    connect(m_audioFileList, &AudioFileListPanel::filesAdded, this,
+            [this](const QStringList&) { saveSlicerStateToProject(); });
+    connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { saveSlicerStateToProject(); });
 }
 
 void DsSlicerPage::onAutoSlice() {
@@ -84,7 +79,7 @@ void DsSlicerPage::saveCurrentSlicePoints() {
 void DsSlicerPage::onExportMenu() {
     saveCurrentSlicePoints();
     int slicedCount = 0;
-    for (const auto &[path, points] : m_fileSlicePoints) {
+    for (const auto& [path, points] : m_fileSlicePoints) {
         if (!points.empty())
             ++slicedCount;
     }
@@ -102,12 +97,12 @@ void DsSlicerPage::onExportMenu() {
     QMessageBox msgBox(this);
     msgBox.setWindowTitle(tr("Export Sliced Audio"));
     msgBox.setText(tr("Choose export scope:"));
-    auto *btnCurrent = msgBox.addButton(tr("Current File"), QMessageBox::AcceptRole);
-    auto *btnAll = msgBox.addButton(tr("All Files (%1)").arg(slicedCount), QMessageBox::ActionRole);
+    auto* btnCurrent = msgBox.addButton(tr("Current File"), QMessageBox::AcceptRole);
+    auto* btnAll = msgBox.addButton(tr("All Files (%1)").arg(slicedCount), QMessageBox::ActionRole);
     msgBox.addButton(QMessageBox::Cancel);
 
     msgBox.exec();
-    auto *clicked = msgBox.clickedButton();
+    auto* clicked = msgBox.clickedButton();
     if (clicked == btnCurrent)
         onExportAudio();
     else if (clicked == btnAll)
@@ -120,7 +115,7 @@ void DsSlicerPage::onExportAudio() {
     if (!m_dataSource || !m_dataSource->project())
         return;
 
-    auto *project = m_dataSource->project();
+    auto* project = m_dataSource->project();
     const auto discarded = m_sliceListPanel->discardedIndices();
 
     int sr = m_sampleRate;
@@ -157,7 +152,7 @@ void DsSlicerPage::onExportAudio() {
         item.slices.push_back(std::move(slice));
         items.push_back(std::move(item));
 
-        auto *ctx = m_dataSource->context(sliceId);
+        auto* ctx = m_dataSource->context(sliceId);
         if (ctx) {
             ctx->itemId = sliceId;
             ctx->audioPath = item.audioSource;
@@ -174,8 +169,8 @@ void DsSlicerPage::onExportAudio() {
             dsCtx.status = PipelineContext::Status::Active;
 
             auto j = nlohmann::json::parse(dsCtx.toJsonString());
-            auto dsitemPath = std::filesystem::path(
-                QDir(dsitemDir).filePath(sliceId + QStringLiteral(".dsitem")).toStdWString());
+            auto dsitemPath =
+                std::filesystem::path(QDir(dsitemDir).filePath(sliceId + QStringLiteral(".dsitem")).toStdWString());
             JsonHelper::saveFile(dsitemPath, j);
         }
     }
@@ -192,15 +187,14 @@ void DsSlicerPage::onBatchExportAll() {
     saveCurrentSlicePoints();
 
     bool hasSlices = false;
-    for (const auto &[path, points] : m_fileSlicePoints) {
+    for (const auto& [path, points] : m_fileSlicePoints) {
         if (!points.empty()) {
             hasSlices = true;
             break;
         }
     }
     if (!hasSlices) {
-        QMessageBox::information(this, tr("Batch Export"),
-                                 tr("No files have been sliced. Slice audio files first."));
+        QMessageBox::information(this, tr("Batch Export"), tr("No files have been sliced. Slice audio files first."));
         return;
     }
 
@@ -218,39 +212,43 @@ void DsSlicerPage::onBatchExportAll() {
         dir.mkpath(outputDir);
 
     int digits = dlg.numDigits();
-    int sndFormat = bitDepthToSndFormat(dlg.bitDepth());
+    auto bitDepth = dlg.bitDepth();
+    auto sndFormat = bitDepth == SliceExportDialog::BitDepth::Float32 ? dsfw::audio::SampleFormat::Float32
+                   : bitDepth == SliceExportDialog::BitDepth::PCM32   ? dsfw::audio::SampleFormat::Int32
+                   :                                                     dsfw::audio::SampleFormat::Int16;
 
     int totalFiles = 0;
-    for (const auto &[path, points] : m_fileSlicePoints) {
+    for (const auto& [path, points] : m_fileSlicePoints) {
         if (!points.empty())
             ++totalFiles;
     }
 
-    auto *progressDlg = new dsfw::widgets::ProgressDialog(tr("Batch Export"), this);
+    auto* progressDlg = new dsfw::widgets::ProgressDialog(tr("Batch Export"), this);
     progressDlg->setRange(0, totalFiles);
     progressDlg->setLabelText(tr("Exporting %1 files...").arg(totalFiles));
     progressDlg->setCancelButtonEnabled(false);
 
     QPointer<DsSlicerPage> guard(this);
-    auto *watcher = new QFutureWatcher<int>(this);
+    auto* watcher = new QFutureWatcher<int>(this);
     connect(watcher, &QFutureWatcher<int>::finished, this, [this, watcher, progressDlg, outputDir, digits, guard]() {
         if (!guard)
             return;
         int totalExported = watcher->result();
 
         if (m_dataSource && m_dataSource->project()) {
-            auto *project = m_dataSource->project();
+            auto* project = m_dataSource->project();
             auto currentItems = project->items();
-            for (const auto &[audioPath, slicePoints] : m_fileSlicePoints) {
+            for (const auto& [audioPath, slicePoints] : m_fileSlicePoints) {
                 if (slicePoints.empty())
                     continue;
 
                 int sr = 0;
                 {
-                    dstools::audio::AudioDecoder decoder;
-                    if (!decoder.open(audioPath))
+                    auto pipeline = dsfw::audio::AudioPipeline::create();
+                    auto probeResult = pipeline.probe(audioPath.toStdString());
+                    if (!probeResult.ok())
                         continue;
-                    sr = decoder.format().sampleRate();
+                    sr = probeResult.value().sampleRate;
                 }
 
                 QString prefix = QFileInfo(audioPath).completeBaseName();
@@ -258,7 +256,7 @@ void DsSlicerPage::onBatchExportAll() {
                 for (int i = 0; i < numSegments; ++i) {
                     QString sliceId = QStringLiteral("%1_%2").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
                     bool exists = false;
-                    for (const auto &item : currentItems) {
+                    for (const auto& item : currentItems) {
                         if (item.id == sliceId) {
                             exists = true;
                             break;
@@ -268,8 +266,7 @@ void DsSlicerPage::onBatchExportAll() {
                         continue;
 
                     double startSec = (i == 0) ? 0.0 : slicePoints[i - 1];
-                    double endSec =
-                        (i < static_cast<int>(slicePoints.size())) ? slicePoints[i] : 0.0;
+                    double endSec = (i < static_cast<int>(slicePoints.size())) ? slicePoints[i] : 0.0;
                     if (endSec <= startSec)
                         continue;
 
@@ -293,8 +290,7 @@ void DsSlicerPage::onBatchExportAll() {
             emit m_dataSource->sliceListChanged();
 
             SlicerIntegrityGuard slicerGuard;
-            slicerGuard.recordExportedSlicePoints(
-                m_dataSource->workingDir(), m_fileSlicePoints);
+            slicerGuard.recordExportedSlicePoints(m_dataSource->workingDir(), m_fileSlicePoints);
         }
 
         progressDlg->close();
@@ -307,7 +303,8 @@ void DsSlicerPage::onBatchExportAll() {
     QPointer<DsSlicerPage> self(this);
 
     auto future = QtConcurrent::run([self, outputDir, digits, sndFormat]() {
-        if (!self) return -1;
+        if (!self)
+            return -1;
         return self->performBatchExport(outputDir, digits, sndFormat);
     });
     watcher->setFuture(future);
@@ -319,15 +316,15 @@ void DsSlicerPage::promptSliceUpdateIfNeeded() {
     if (!m_dataSource || !m_dataSource->project())
         return;
 
-    const auto &items = m_dataSource->project()->items();
+    const auto& items = m_dataSource->project()->items();
     if (items.empty())
         return;
 
     QStringList affectedFiles;
     std::vector<QString> affectedBaseNames;
-    for (const auto &[filePath, points] : m_fileSlicePoints) {
+    for (const auto& [filePath, points] : m_fileSlicePoints) {
         QString baseName = QFileInfo(filePath).completeBaseName();
-        for (const auto &item : items) {
+        for (const auto& item : items) {
             if (item.id.startsWith(baseName)) {
                 affectedFiles.append(filePath);
                 affectedBaseNames.push_back(baseName);
@@ -344,38 +341,36 @@ void DsSlicerPage::promptSliceUpdateIfNeeded() {
 
     QDialog dlg(this);
     dlg.setWindowTitle(QStringLiteral("切点已更新"));
-    auto *dlgLayout = new QVBoxLayout(&dlg);
+    auto* dlgLayout = new QVBoxLayout(&dlg);
 
-    auto *warnLabel =
-        new QLabel(QStringLiteral("以下音频文件的切点已更改，但已有导出的切片和标注数据。\n"
-                                  "重新切片将移除旧的切片和 dsitem，<b>已标注数据将丢失</b>。\n\n"
-                                  "选择需要重新切片的音频："),
-                   &dlg);
+    auto* warnLabel = new QLabel(QStringLiteral("以下音频文件的切点已更改，但已有导出的切片和标注数据。\n"
+                                                "重新切片将移除旧的切片和 dsitem，<b>已标注数据将丢失</b>。\n\n"
+                                                "选择需要重新切片的音频："),
+                                 &dlg);
     warnLabel->setWordWrap(true);
     dlgLayout->addWidget(warnLabel);
 
-    QHash<QString, FileIntegrityReport *> reportByBaseName;
-    for (auto &report : reports) {
+    QHash<QString, FileIntegrityReport*> reportByBaseName;
+    for (auto& report : reports) {
         reportByBaseName[report.baseName] = &report;
     }
 
-    QList<QCheckBox *> checkboxes;
-    for (const QString &file : affectedFiles) {
+    QList<QCheckBox*> checkboxes;
+    for (const QString& file : affectedFiles) {
         QString baseName = QFileInfo(file).completeBaseName();
-        auto *cb = new QCheckBox(QFileInfo(file).fileName(), &dlg);
+        auto* cb = new QCheckBox(QFileInfo(file).fileName(), &dlg);
         cb->setChecked(false);
         cb->setProperty("filePath", file);
         cb->setProperty("baseName", baseName);
         checkboxes.append(cb);
 
-        auto *fileLayout = new QVBoxLayout;
+        auto* fileLayout = new QVBoxLayout;
         fileLayout->addWidget(cb);
 
-        if (auto *report = reportByBaseName.value(baseName)) {
+        if (auto* report = reportByBaseName.value(baseName)) {
             QString summary = guard.dataLossSummary(*report);
             if (report->hasAnnotatedData()) {
-                auto *summaryLabel = new QLabel(
-                    QStringLiteral("    ↳ %1").arg(summary), &dlg);
+                auto* summaryLabel = new QLabel(QStringLiteral("    ↳ %1").arg(summary), &dlg);
                 summaryLabel->setStyleSheet(QStringLiteral("color: #e07030; font-size: 11px; margin-left: 20px;"));
                 fileLayout->addWidget(summaryLabel);
             }
@@ -384,9 +379,9 @@ void DsSlicerPage::promptSliceUpdateIfNeeded() {
         dlgLayout->addLayout(fileLayout);
     }
 
-    auto *btnLayout = new QHBoxLayout;
-    auto *btnSkip = new QPushButton(QStringLiteral("跳过"), &dlg);
-    auto *btnApply = new QPushButton(QStringLiteral("重新切片选中"), &dlg);
+    auto* btnLayout = new QHBoxLayout;
+    auto* btnSkip = new QPushButton(QStringLiteral("跳过"), &dlg);
+    auto* btnApply = new QPushButton(QStringLiteral("重新切片选中"), &dlg);
     btnLayout->addStretch();
     btnLayout->addWidget(btnSkip);
     btnLayout->addWidget(btnApply);
@@ -398,38 +393,39 @@ void DsSlicerPage::promptSliceUpdateIfNeeded() {
     if (dlg.exec() != QDialog::Accepted)
         return;
 
-    auto *project = m_dataSource->project();
+    auto* project = m_dataSource->project();
     auto currentItems = project->items();
     const QString workingDir = m_dataSource->workingDir();
 
-    for (auto *cb : checkboxes) {
+    for (auto* cb : checkboxes) {
         if (!cb->isChecked())
             continue;
 
         QString filePath = cb->property("filePath").toString();
         QString baseName = cb->property("baseName").toString();
 
-        if (auto *report = reportByBaseName.value(baseName)) {
-            for (auto &slice : report->slices) {
+        if (auto* report = reportByBaseName.value(baseName)) {
+            for (auto& slice : report->slices) {
                 QString backupPath;
                 guard.backupSlice(slice.dstextPath, backupPath);
 
                 QString dsitemPath =
                     QDir(ProjectPaths::dsItemsDir(workingDir)).filePath(slice.sliceId + QStringLiteral(".dsitem"));
                 if (QFile::exists(dsitemPath)) {
-                    QFile::copy(dsitemPath, SlicerIntegrityGuard::makeBackupPath(dsitemPath, QDateTime::currentDateTime()));
+                    QFile::copy(dsitemPath,
+                                SlicerIntegrityGuard::makeBackupPath(dsitemPath, QDateTime::currentDateTime()));
                 }
             }
         }
 
         currentItems.erase(std::remove_if(currentItems.begin(), currentItems.end(),
-                                          [&](const Item &item) { return item.id.startsWith(baseName); }),
+                                          [&](const Item& item) { return item.id.startsWith(baseName); }),
                            currentItems.end());
 
         QString dsitemDir = ProjectPaths::dsItemsDir(workingDir);
         QDir dir(dsitemDir);
         QStringList dsitemFiles = dir.entryList({baseName + QStringLiteral("*.dsitem")}, QDir::Files);
-        for (const QString &f : dsitemFiles)
+        for (const QString& f : dsitemFiles)
             QFile::remove(dir.absoluteFilePath(f));
     }
 
@@ -442,7 +438,7 @@ void DsSlicerPage::saveSlicerParamsToProject() {
     if (!m_dataSource || !m_dataSource->project())
         return;
 
-    auto *project = m_dataSource->project();
+    auto* project = m_dataSource->project();
     auto state = project->slicerState();
     state.params.threshold = m_thresholdSpin->value();
     state.params.minLength = m_minLengthSpin->value();
@@ -458,7 +454,7 @@ void DsSlicerPage::saveSlicerStateToProject() {
     if (!m_dataSource || !m_dataSource->project())
         return;
 
-    auto *project = m_dataSource->project();
+    auto* project = m_dataSource->project();
     auto state = project->slicerState();
     state.audioFiles = m_audioFileList->filePaths();
     state.slicePoints = m_fileSlicePoints;
@@ -467,13 +463,13 @@ void DsSlicerPage::saveSlicerStateToProject() {
     project->saveFile();
 }
 
-QMenuBar *DsSlicerPage::createMenuBar(QWidget *parent) {
-    auto *bar = SlicerPage::createMenuBar(parent);
+QMenuBar* DsSlicerPage::createMenuBar(QWidget* parent) {
+    auto* bar = SlicerPage::createMenuBar(parent);
 
-    auto *fileMenu = bar->findChild<QMenu *>();
+    auto* fileMenu = bar->findChild<QMenu*>();
     if (!fileMenu) {
-        for (auto *action : bar->actions()) {
-            if (auto *menu = action->menu()) {
+        for (auto* action : bar->actions()) {
+            if (auto* menu = action->menu()) {
                 fileMenu = menu;
                 break;
             }
@@ -493,20 +489,20 @@ void DsSlicerPage::onActivated() {
     if (!m_dataSource || !m_dataSource->project())
         return;
 
-    auto *project = m_dataSource->project();
+    auto* project = m_dataSource->project();
 
-    const auto &slicerParams = project->slicerState().params;
+    const auto& slicerParams = project->slicerState().params;
     m_thresholdSpin->setValue(slicerParams.threshold);
     m_minLengthSpin->setValue(slicerParams.minLength);
     m_minIntervalSpin->setValue(slicerParams.minInterval);
     m_hopSizeSpin->setValue(slicerParams.hopSize);
     m_maxSilenceSpin->setValue(slicerParams.maxSilence);
 
-    const auto &slicerState = project->slicerState();
+    const auto& slicerState = project->slicerState();
 
     if (!slicerState.audioFiles.isEmpty() && m_audioFileList->fileCount() == 0) {
         QStringList resolvedPaths;
-        for (const auto &relPath : slicerState.audioFiles) {
+        for (const auto& relPath : slicerState.audioFiles) {
             QString nativePath = relPath;
             if (QDir::isRelativePath(nativePath))
                 nativePath = QDir(project->workingDirectory()).absoluteFilePath(nativePath);
@@ -517,7 +513,7 @@ void DsSlicerPage::onActivated() {
             m_audioFileList->addFiles(resolvedPaths);
     }
 
-    for (const auto &[relPath, points] : slicerState.slicePoints) {
+    for (const auto& [relPath, points] : slicerState.slicePoints) {
         QString nativePath = relPath;
         if (QDir::isRelativePath(nativePath))
             nativePath = QDir(project->workingDirectory()).absoluteFilePath(nativePath);
@@ -540,11 +536,11 @@ void DsSlicerPage::onActivated() {
         }
     }
 
-    const auto &items = project->items();
+    const auto& items = project->items();
     if (items.empty())
         return;
 
-    const auto &firstItem = items[0];
+    const auto& firstItem = items[0];
     if (!firstItem.audioSource.isEmpty()) {
         QString audioPath = firstItem.audioSource;
         if (QDir::isRelativePath(audioPath))

@@ -11,7 +11,7 @@ namespace dstools {
 
     /// @brief Wraps a DsDocument reference to satisfy the IDocument interface,
     ///        delegating load/save/modified operations.
-    class DsDocumentAdapter : public IDocument {
+    class DsDocumentAdapter : public dsfw::IDocument {
     public:
         /// @brief Construct an adapter around the given document.
         /// @param doc Reference to the DsDocument to wrap.

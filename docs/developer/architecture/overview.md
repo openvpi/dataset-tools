@@ -6,28 +6,10 @@
 
 ---
 
-## 1. 设计准则（最高优先级）
+## 1. 设计准则
 
-以下准则约束所有框架和应用层代码，详见 [human-decisions.md](../human-decisions.md)（新版 ARCH/CONCUR/ROBUST/INFRA/VIEW 体系，旧 P-01~P-19 已废弃）
-和 [conventions.md](../guides/conventions.md)。
-
-| 编号           | 领域 | 准则           | 要求                                                 |
-|--------------|----|--------------|----------------------------------------------------|
-| **ARCH-01**  | 架构 | 模块职责单一       | 相同行为只存在一处；刷新/通知由容器统一分发，不散落在各消费者                    |
-| **ARCH-02**  | 架构 | 被动接口 + 容器通知  | 纯数据接口不加 QObject；变更通知由容器的 `invalidateXxx()` 负责      |
-| **CONCUR-01** | 并发 | 异步一切         | 超过 50ms 的操作禁止主线程同步执行；禁止 `processEvents` 反模式        |
-| **ROBUST-01** | 健壮 | 错误根因传播       | 错误消息必须追溯到根因，不得忽略 out-parameter 继续报二次错误             |
-| **ROBUST-02** | 健壮 | 异常边界隔离       | `Result<T>` 传播应用层错误；`try-catch` 仅限第三方库边界           |
-| **ARCH-03**  | 架构 | 接口稳定         | 公共头文件即契约；框架接口变更需考虑向后兼容                             |
-| **ROBUST-03** | 健壮 | 简洁可靠         | 遇错直接返回，不设计重试或回滚（除明确需求外）                            |
-| **INFRA-06** | 基础 | RAII 资源管理    | 所有资源通过 RAII 包装管理生命周期；禁止裸 new/delete、手动 lock/unlock |
-| **ARCH-05**  | 架构 | 组合优于继承       | 优先组合/委托复用功能，接口继承优于实现继承                             |
-| **ARCH-06**  | 架构 | 依赖倒置         | 高层模块依赖抽象接口而非具体实现                                   |
-| **ARCH-07**  | 架构 | 开闭原则         | 新增功能通过新增类/模块实现，不修改已稳定核心逻辑                          |
-| **ARCH-08**  | 架构 | 文档模型 + 适配器隔离 | 维护内部文档模型，所有文件格式通过 IFormatAdapter 对接；禁止业务代码直接操作文件   |
-
-**模式示例**：`AudioVisualizerContainer::invalidateBoundaryModel()` — 一次调用刷新 overlay + tier label + 所有
-chart，消费者无需知道内部有哪些 widget。
+设计准则详见 [human-decisions.md](../human-decisions.md)（ARCH/CONCUR/ROBUST/INFRA/VIEW 五领域体系），
+编码规范详见 [conventions.md](../guides/conventions.md)。
 
 ---
 
@@ -141,6 +123,7 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 │                      dsfw-widgets (SHARED DLL)                           │
 │  PlayWidget · FileProgressTracker · ProgressDialog · PropertyEditor     │
 │  SettingsDialog · LogViewer · RunProgressRow · PathSelector · ...        │
+│  RecentPathStore · FilePathSelector                                     │
 └────────────────────────────┬─────────────────────────────────────────────┘
                              │ PUBLIC
                 ┌────────────┼────────────┐
@@ -167,16 +150,14 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 │ Logger            │                    │
 │ IDocument         │                    │
 │ IModelProvider    │                    │
-│ IModelDownloader  │                    │
-│ IModelManager     │                    │
 │ IG2PProvider      │                    │
 │ IExportFormat     │                    │
-│ IQualityMetrics   │                    │
 │ IAlignmentService │                    │
 │ IAsrService       │                    │
 │ IPitchService     │                    │
 │ ITranscription-   │                    │
 │   Service         │                    │
+│ IInferenceService │                    │
 │ PipelineContext   │                    │
 │ PipelineRunner    │                    │
 │ ITaskProcessor    │                    │
@@ -234,7 +215,8 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 │  OnnxEnv / OnnxModelBase 源文件位于     │
 │  src/framework/infer/，通过 dsfw-core   │
 │  的 target_sources() 编译入 dsfw-core。 │
-│  IInferenceEngine 接口仍位于此层头文件。 │
+│  IInferenceEngine 接口位于 dsfw::infer  │
+│  命名空间（dsfw/infer/IInferenceEngine.h）│
 │                                        │
 │             │ PUBLIC                    │
 │  ┌──────────┼──────────┬──────────────┬──────────────┐│
@@ -271,7 +253,7 @@ JSON 工具 (JsonHelper，纯 nlohmann/json 封装)。无 Qt 依赖，可用于 
 ### dsfw-core (静态库)
 
 通用框架核心。类型安全配置 (AppSettings)、服务定位器 (ServiceLocator)、异步任务 (AsyncTask)、结构化日志 (Logger)
-、编码统一接口 (Encoding)、文档/文件/模型/导出/G2P/质量评估抽象接口 (IDocument, IModelManager, IModelDownloader 等)
+、编码统一接口 (TextEncoding)、文档/文件/导出/G2P 抽象接口 (IDocument, IG2PProvider, IExportFormat 等)
 、后端服务接口 (IAlignmentService, IAsrService, IPitchService, ITranscriptionService)。
 
 依赖：dsfw-base, dstools-types, Qt Core/Network, nlohmann_json
@@ -418,26 +400,7 @@ target_link_libraries(myapp PRIVATE dsfw::core dsfw::ui-core)
 
 ## 10. 命名规范
 
-| 模块                   | CMake target                               | namespace                                                                                                                                                                                                                                                       | include 前缀                    |
-|----------------------|--------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
-| dsfw-types           | dsfw::types                                | dstools                                                                                                                                                                                                                                                         | `<dstools/Result.h>`          |
-| dsfw-base            | dsfw::base                                 | dstools                                                                                                                                                                                                                                                         | `<dsfw/JsonHelper.h>`         |
-| dsfw-signal          | dsfw::signal                               | dsfw::signal                                                                                                                                                                                                                                                    | `<dsfw/signal/curve_tools.h>` |
-| dsfw-core            | dsfw::core                                 | dstools (AppSettings, ServiceLocator, AsyncTask, PipelineContext, 等), dsfw (AppPaths, PathUtils, CrashHandler, CrashSafeGuard, FileLogSink, SingleInstanceGuard, TranslationManager, IQualityMetrics, QualityTypes, ISliceDataSource, string_utils, CommonKeys) | `<dsfw/AppSettings.h>`        |
-| dstools-audio        | dstools::audio                             | dstools::audio                                                                                                                                                                                                                                                  | `<dstools/AudioDecoder.h>`    |
-| dsfw-ui-core         | dsfw::ui-core                              | dsfw (AppShell, Theme, IconNavBar, FramelessHelper), dsfw::widgets (LogPanelWidget), dstools::labeler (IPageActions, IPageLifecycle)                                                                                                                            | `<dsfw/AppShell.h>`           |
-| dsfw-widgets         | dsfw::widgets                              | dsfw::widgets                                                                                                                                                                                                                                                   | `<dsfw/widgets/PlayWidget.h>` |
-| dstools-infer-common¹ | —                                       | dstools::infer                                                                                                                                                                                                                                                   | —                             |
-| dstools-domain       | dstools-domain                             | dstools                                                                                                                                                                                                                                                         | `<dstools/DsDocument.h>`      |
-
-```
-框架: #include <dsfw/AppSettings.h>        namespace dstools
-框架: #include <dsfw/AppShell.h>           namespace dsfw
-框架: #include <dsfw/widgets/...>          namespace dsfw::widgets
-框架: #include <dsfw/signal/curve_tools.h>  namespace dsfw::signal
-框架: #include <dstools/AudioDecoder.h>     namespace dstools::audio
-应用: #include <dstools/DsDocument.h>       namespace dstools
-```
+命名规范详见 [conventions.md §2](../guides/conventions.md#2-命名规范)。
 
 ---
 
@@ -560,16 +523,3 @@ Header-Only (2): dstools-types, textgrid (no build output)
 CI 验证模块独立构建。`find_package(dsfw)` 集成测试存在。
 
 ---
-
-## 14. 迁移状态
-
-| 阶段                                 | 状态                  |
-|------------------------------------|---------------------|
-| 接口泛化 (DocumentFormat/ModelType 枚举) | ✅ 已完成               |
-| 独立仓库                               | ⏳ 待定（当前单仓库模式，ADR-8） |
-
----
-
-## 15. 已知架构问题
-
-详见 [refactoring-plan-v4.md](refactoring-plan-v4.md)（包含完整审计、补充准则和分阶段重构方案）。

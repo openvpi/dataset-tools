@@ -5,10 +5,9 @@
 #include <QMap>
 #include <QString>
 #include <QStringList>
+#include <dsfw/AppSettings.h>
 
 namespace dstools {
-
-class AppSettings;
 
 namespace chart {
 

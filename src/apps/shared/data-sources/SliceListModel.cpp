@@ -160,9 +160,7 @@ void SliceListModel::setSliceLoadError(const QString &sliceId, const QString &er
 }
 
 QString SliceListModel::ensureSelection(AppSettings &settings) {
-    static const SettingsKey<QString> kLastSlice("State/lastSlice", "");
-
-    QString lastSlice = settings.get(kLastSlice);
+    QString lastSlice = settings.get(settings::kLastSlice);
     if (!lastSlice.isEmpty()) {
         setCurrentSlice(lastSlice);
         if (currentSliceId() == lastSlice)
@@ -182,8 +180,7 @@ QString SliceListModel::ensureSelection(AppSettings &settings) {
 }
 
 void SliceListModel::saveSelection(AppSettings &settings) const {
-    static const SettingsKey<QString> kLastSlice("State/lastSlice", "");
-    settings.set(kLastSlice, currentSliceId());
+    settings.set(settings::kLastSlice, currentSliceId());
 }
 
 void SliceListModel::setSlicerMode(bool enabled) {

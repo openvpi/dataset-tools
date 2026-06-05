@@ -35,10 +35,9 @@ QWidget *ExportSettingsPanel::createDisplayTab() {
                        "常用参考值：40（贴近）, 200（适中）, 800（缩远）。"));
     scaleLayout->addRow(QStringLiteral("默认 spx："), m_defaultResolutionSpin);
 
-    static const dstools::SettingsKey<int> kDefaultResolution("AudioVisualizer/defaultResolution", 0);
     static dstools::AppSettings s_avSettings(QStringLiteral("AudioVisualizer"));
     s_avSettings.reload();
-    m_defaultResolutionSpin->setValue(s_avSettings.get(kDefaultResolution));
+    m_defaultResolutionSpin->setValue(s_avSettings.get(settings::kDefaultResolution));
 
     layout->addWidget(scaleGroup);
 
@@ -123,12 +122,10 @@ QWidget *ExportSettingsPanel::createGeneralTab() {
         {QStringLiteral("spectrogram"), QStringLiteral("频谱图")},
     };
 
-    static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
-    static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
     static dstools::AppSettings s_chartSettings("AudioVisualizer");
     s_chartSettings.reload();
-    QString savedOrder = s_chartSettings.get(kChartOrder);
-    QString savedVisible = s_chartSettings.get(kChartVisible);
+    QString savedOrder = s_chartSettings.get(settings::kChartOrder);
+    QString savedVisible = s_chartSettings.get(settings::kChartVisible);
     QSet<QString> visibleSet;
     if (!savedVisible.isEmpty()) {
         const QStringList visibleIds = savedVisible.split(QLatin1Char(','), Qt::SkipEmptyParts);
@@ -254,11 +251,9 @@ void ExportSettingsPanel::collectAndSaveChartLayout() {
         if (item->checkState() == Qt::Checked)
             visible.append(id);
     }
-    static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
-    static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
     static dstools::AppSettings s_chartSettings("AudioVisualizer");
-    s_chartSettings.set(kChartOrder, order.join(QLatin1Char(',')));
-    s_chartSettings.set(kChartVisible, visible.join(QLatin1Char(',')));
+    s_chartSettings.set(settings::kChartOrder, order.join(QLatin1Char(',')));
+    s_chartSettings.set(settings::kChartVisible, visible.join(QLatin1Char(',')));
 }
 
 void ExportSettingsPanel::collectAndSaveLanguage() {
@@ -271,9 +266,8 @@ void ExportSettingsPanel::collectAndSaveLanguage() {
 
 void ExportSettingsPanel::collectAndSaveDefaultResolution() {
     if (m_defaultResolutionSpin) {
-        static const dstools::SettingsKey<int> kKey("AudioVisualizer/defaultResolution", 0);
         static dstools::AppSettings s(QStringLiteral("AudioVisualizer"));
-        s.set(kKey, m_defaultResolutionSpin->value());
+        s.set(settings::kDefaultResolution, m_defaultResolutionSpin->value());
     }
 }
 

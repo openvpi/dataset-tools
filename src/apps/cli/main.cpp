@@ -11,9 +11,9 @@
 #include <syscmdline/command.h>
 
 #include <InferBridge.h>
-#include <audio-util/Util.h>
+#include <dsfw/audio/AudioPipeline.h>
+#include <dsfw/audio/AudioFileWriter.h>
 #include <nlohmann/json.hpp>
-#include <sndfile.hh>
 
 #include <fstream>
 
@@ -216,13 +216,34 @@ static int cmdHfa(const ParseResult &result) {
     }
 
     if (!saveWavPath.isEmpty() && modelSampleRate > 0) {
-        std::string errMsg;
-        auto sf_vio = AudioUtil::resample_to_vio(wavStdPath, errMsg, 1, modelSampleRate);
-        if (!errMsg.empty()) {
-            std::cerr << "Resample error: " << errMsg << std::endl;
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(wavStdPath), modelSampleRate);
+        if (!result.ok()) {
+            std::cerr << "Decode error: " << result.error() << std::endl;
             return 1;
         }
-        AudioUtil::write_vio_to_wav(sf_vio, dsfw::PathUtils::toStdPath(saveWavPath), 1);
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+
+        const auto saveStdPath = dsfw::PathUtils::toStdPath(saveWavPath);
+        dsfw::audio::WriteConfig wcfg;
+        wcfg.sampleRate = modelSampleRate;
+        wcfg.channelCount = 1;
+        wcfg.format = dsfw::audio::SampleFormat::Int16;
+        dsfw::audio::AudioFileWriter writer;
+        auto openResult = writer.open(dsfw::PathUtils::toUtf8(saveStdPath), wcfg);
+        if (!openResult.ok()) {
+            std::cerr << "Failed to write WAV: " << openResult.error() << std::endl;
+            return 1;
+        }
+        // Convert float32 to int16
+        std::vector<int16_t> int16Samples(floats.size());
+        for (size_t i = 0; i < floats.size(); ++i) {
+            const float clamped = std::max(-1.0f, std::min(1.0f, floats[i]));
+            int16Samples[i] = static_cast<int16_t>(clamped * 32767.0f);
+        }
+        writer.writeInt16s(int16Samples.data(), static_cast<int64_t>(int16Samples.size()));
+        writer.close();
     }
 
     std::string lyrics;

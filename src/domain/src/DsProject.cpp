@@ -17,6 +17,33 @@
 
 namespace dstools {
 
+// ── PIMPL ─────────────────────────────────────────────────────────────
+
+struct DsProject::Impl {
+    QString m_filePath;
+    QString m_workingDirectory;
+    std::vector<Item> m_items;
+    SlicerState m_slicerState;
+    ExportConfig m_exportConfig;
+    nlohmann::json m_extraFields; // preserve unknown fields for round-trip
+};
+
+// ── Construction / destruction ────────────────────────────────────────
+
+DsProject::DsProject()
+    : m_impl(std::make_unique<Impl>()) {}
+
+DsProject::~DsProject() = default;
+
+DsProject::DsProject(DsProject&& other) noexcept
+    : m_impl(std::move(other.m_impl)) {}
+
+DsProject& DsProject::operator=(DsProject&& other) noexcept {
+    if (this != &other)
+        m_impl = std::move(other.m_impl);
+    return *this;
+}
+
 // ── Slice parsing ─────────────────────────────────────────────────────
 
 static Slice parseSlice(const nlohmann::json& j) {
@@ -131,8 +158,8 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
         return Result<DsProject>::Error("Project file must be a JSON object");
     }
 
-    proj.m_filePath = path;
-    proj.m_extraFields = json;
+    proj.m_impl->m_filePath = path;
+    proj.m_impl->m_extraFields = json;
 
     // Version check
     if (json.contains("version") && json["version"].is_string()) {
@@ -146,7 +173,7 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
     }
 
     if (json.contains("workingDirectory") && json["workingDirectory"].is_string())
-        proj.m_workingDirectory =
+        proj.m_impl->m_workingDirectory =
             dsfw::PathUtils::toNativeSeparators(QString::fromStdString(json["workingDirectory"].get<std::string>()));
 
     if (json.contains("defaults") && json["defaults"].is_object()) {
@@ -154,23 +181,23 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
 
         // Legacy hopSize/sampleRate → migrate to exportConfig
         if (def.contains("hopSize") && def["hopSize"].is_number_integer())
-            proj.m_exportConfig.hopSize = def["hopSize"].get<int>();
+            proj.m_impl->m_exportConfig.hopSize = def["hopSize"].get<int>();
         if (def.contains("sampleRate") && def["sampleRate"].is_number_integer())
-            proj.m_exportConfig.sampleRate = def["sampleRate"].get<int>();
+            proj.m_impl->m_exportConfig.sampleRate = def["sampleRate"].get<int>();
 
         // v3 slicer config → migrate to slicer.params
         if (def.contains("slicer") && def["slicer"].is_object()) {
             const auto& sl = def["slicer"];
             if (sl.contains("threshold") && sl["threshold"].is_number())
-                proj.m_slicerState.params.threshold = sl["threshold"].get<double>();
+                proj.m_impl->m_slicerState.params.threshold = sl["threshold"].get<double>();
             if (sl.contains("minLength") && sl["minLength"].is_number_integer())
-                proj.m_slicerState.params.minLength = sl["minLength"].get<int>();
+                proj.m_impl->m_slicerState.params.minLength = sl["minLength"].get<int>();
             if (sl.contains("minInterval") && sl["minInterval"].is_number_integer())
-                proj.m_slicerState.params.minInterval = sl["minInterval"].get<int>();
+                proj.m_impl->m_slicerState.params.minInterval = sl["minInterval"].get<int>();
             if (sl.contains("hopSize") && sl["hopSize"].is_number_integer())
-                proj.m_slicerState.params.hopSize = sl["hopSize"].get<int>();
+                proj.m_impl->m_slicerState.params.hopSize = sl["hopSize"].get<int>();
             if (sl.contains("maxSilence") && sl["maxSilence"].is_number_integer())
-                proj.m_slicerState.params.maxSilence = sl["maxSilence"].get<int>();
+                proj.m_impl->m_slicerState.params.maxSilence = sl["maxSilence"].get<int>();
         }
 
         // v3 export config → migrate to top-level export
@@ -179,23 +206,23 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
             if (exp.contains("formats") && exp["formats"].is_array()) {
                 for (const auto& f : exp["formats"])
                     if (f.is_string())
-                        proj.m_exportConfig.formats.append(QString::fromStdString(f.get<std::string>()));
+                        proj.m_impl->m_exportConfig.formats.append(QString::fromStdString(f.get<std::string>()));
             }
             if (exp.contains("hopSize") && exp["hopSize"].is_number_integer())
-                proj.m_exportConfig.hopSize = exp["hopSize"].get<int>();
+                proj.m_impl->m_exportConfig.hopSize = exp["hopSize"].get<int>();
             if (exp.contains("sampleRate") && exp["sampleRate"].is_number_integer())
-                proj.m_exportConfig.sampleRate = exp["sampleRate"].get<int>();
+                proj.m_impl->m_exportConfig.sampleRate = exp["sampleRate"].get<int>();
             if (exp.contains("resampleRate") && exp["resampleRate"].is_number_integer())
-                proj.m_exportConfig.resampleRate = exp["resampleRate"].get<int>();
+                proj.m_impl->m_exportConfig.resampleRate = exp["resampleRate"].get<int>();
             if (exp.contains("includeDiscarded") && exp["includeDiscarded"].is_boolean())
-                proj.m_exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
+                proj.m_impl->m_exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
         }
     }
 
     // Parse items
     if (json.contains("items") && json["items"].is_array()) {
         for (const auto& ij : json["items"])
-            proj.m_items.push_back(parseItem(ij));
+            proj.m_impl->m_items.push_back(parseItem(ij));
     }
 
     // Parse slicer state
@@ -204,20 +231,20 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
         if (sl.contains("params") && sl["params"].is_object()) {
             const auto& p = sl["params"];
             if (p.contains("threshold") && p["threshold"].is_number())
-                proj.m_slicerState.params.threshold = p["threshold"].get<double>();
+                proj.m_impl->m_slicerState.params.threshold = p["threshold"].get<double>();
             if (p.contains("minLength") && p["minLength"].is_number_integer())
-                proj.m_slicerState.params.minLength = p["minLength"].get<int>();
+                proj.m_impl->m_slicerState.params.minLength = p["minLength"].get<int>();
             if (p.contains("minInterval") && p["minInterval"].is_number_integer())
-                proj.m_slicerState.params.minInterval = p["minInterval"].get<int>();
+                proj.m_impl->m_slicerState.params.minInterval = p["minInterval"].get<int>();
             if (p.contains("hopSize") && p["hopSize"].is_number_integer())
-                proj.m_slicerState.params.hopSize = p["hopSize"].get<int>();
+                proj.m_impl->m_slicerState.params.hopSize = p["hopSize"].get<int>();
             if (p.contains("maxSilence") && p["maxSilence"].is_number_integer())
-                proj.m_slicerState.params.maxSilence = p["maxSilence"].get<int>();
+                proj.m_impl->m_slicerState.params.maxSilence = p["maxSilence"].get<int>();
         }
         if (sl.contains("audioFiles") && sl["audioFiles"].is_array()) {
             for (const auto& f : sl["audioFiles"])
                 if (f.is_string())
-                    proj.m_slicerState.audioFiles.append(
+                    proj.m_impl->m_slicerState.audioFiles.append(
                         dsfw::PathUtils::toNativeSeparators(QString::fromStdString(f.get<std::string>())));
         }
         if (sl.contains("slicePoints") && sl["slicePoints"].is_object()) {
@@ -227,7 +254,7 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
                     for (const auto& v : *it)
                         if (v.is_number())
                             points.push_back(v.get<double>());
-                    proj.m_slicerState
+                    proj.m_impl->m_slicerState
                         .slicePoints[dsfw::PathUtils::toNativeSeparators(QString::fromStdString(it.key()))] =
                         std::move(points);
                 }
@@ -241,20 +268,20 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
         if (exp.contains("formats") && exp["formats"].is_array()) {
             for (const auto& f : exp["formats"])
                 if (f.is_string())
-                    proj.m_exportConfig.formats.append(QString::fromStdString(f.get<std::string>()));
+                    proj.m_impl->m_exportConfig.formats.append(QString::fromStdString(f.get<std::string>()));
         }
         if (exp.contains("hopSize") && exp["hopSize"].is_number_integer())
-            proj.m_exportConfig.hopSize = exp["hopSize"].get<int>();
+            proj.m_impl->m_exportConfig.hopSize = exp["hopSize"].get<int>();
         if (exp.contains("sampleRate") && exp["sampleRate"].is_number_integer())
-            proj.m_exportConfig.sampleRate = exp["sampleRate"].get<int>();
+            proj.m_impl->m_exportConfig.sampleRate = exp["sampleRate"].get<int>();
         if (exp.contains("resampleRate") && exp["resampleRate"].is_number_integer())
-            proj.m_exportConfig.resampleRate = exp["resampleRate"].get<int>();
+            proj.m_impl->m_exportConfig.resampleRate = exp["resampleRate"].get<int>();
         if (exp.contains("includeDiscarded") && exp["includeDiscarded"].is_boolean())
-            proj.m_exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
+            proj.m_impl->m_exportConfig.includeDiscarded = exp["includeDiscarded"].get<bool>();
     }
 
     // Deduplicate export formats (defaults.export + top-level export may overlap)
-    proj.m_exportConfig.formats.removeDuplicates();
+    proj.m_impl->m_exportConfig.formats.removeDuplicates();
 
     auto consistencyResult = proj.validateSliceConsistency();
     if (!consistencyResult.ok()) {
@@ -277,7 +304,7 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
 
 Result<void> DsProject::saveFile(const QString& path) const {
 
-    QString targetPath = path.isEmpty() ? m_filePath : path;
+    QString targetPath = path.isEmpty() ? m_impl->m_filePath : path;
     if (targetPath.isEmpty()) {
         return Result<void>::Error("No file path specified");
     }
@@ -286,35 +313,35 @@ Result<void> DsProject::saveFile(const QString& path) const {
     if (!backupResult)
         DSFW_LOG_WARN("io", ("DsProject::saveFile: backup failed: " + backupResult.error()).c_str());
 
-    nlohmann::json json = m_extraFields.is_object() ? m_extraFields : nlohmann::json::object();
+    nlohmann::json json = m_impl->m_extraFields.is_object() ? m_impl->m_extraFields : nlohmann::json::object();
 
     // Remove deprecated 'defaults' section from round-trip data
     json.erase("defaults");
 
     json["version"] = "3.1.0";
 
-    if (!m_workingDirectory.isEmpty())
-        json["workingDirectory"] = dsfw::PathUtils::toPosixSeparators(m_workingDirectory).toStdString();
+    if (!m_impl->m_workingDirectory.isEmpty())
+        json["workingDirectory"] = dsfw::PathUtils::toPosixSeparators(m_impl->m_workingDirectory).toStdString();
 
     // Slicer state (params + audioFiles + slicePoints)
     {
         nlohmann::json slicer = nlohmann::json::object();
 
         nlohmann::json params = nlohmann::json::object();
-        params["threshold"] = m_slicerState.params.threshold;
-        params["minLength"] = m_slicerState.params.minLength;
-        params["minInterval"] = m_slicerState.params.minInterval;
-        params["hopSize"] = m_slicerState.params.hopSize;
-        params["maxSilence"] = m_slicerState.params.maxSilence;
+        params["threshold"] = m_impl->m_slicerState.params.threshold;
+        params["minLength"] = m_impl->m_slicerState.params.minLength;
+        params["minInterval"] = m_impl->m_slicerState.params.minInterval;
+        params["hopSize"] = m_impl->m_slicerState.params.hopSize;
+        params["maxSilence"] = m_impl->m_slicerState.params.maxSilence;
         slicer["params"] = params;
 
         nlohmann::json audioFiles = nlohmann::json::array();
-        for (const auto& f : m_slicerState.audioFiles)
+        for (const auto& f : m_impl->m_slicerState.audioFiles)
             audioFiles.push_back(dsfw::PathUtils::toPosixSeparators(f).toStdString());
         slicer["audioFiles"] = audioFiles;
 
         nlohmann::json slicePoints = nlohmann::json::object();
-        for (const auto& [filePath, points] : m_slicerState.slicePoints) {
+        for (const auto& [filePath, points] : m_impl->m_slicerState.slicePoints) {
             if (points.empty())
                 continue;
             nlohmann::json arr = nlohmann::json::array();
@@ -329,22 +356,22 @@ Result<void> DsProject::saveFile(const QString& path) const {
     // Export config
     {
         nlohmann::json exp = nlohmann::json::object();
-        if (!m_exportConfig.formats.isEmpty()) {
+        if (!m_impl->m_exportConfig.formats.isEmpty()) {
             nlohmann::json fmtArr = nlohmann::json::array();
-            for (const auto& f : m_exportConfig.formats)
+            for (const auto& f : m_impl->m_exportConfig.formats)
                 fmtArr.push_back(f.toStdString());
             exp["formats"] = fmtArr;
         }
-        exp["hopSize"] = m_exportConfig.hopSize;
-        exp["sampleRate"] = m_exportConfig.sampleRate;
-        exp["resampleRate"] = m_exportConfig.resampleRate;
-        exp["includeDiscarded"] = m_exportConfig.includeDiscarded;
+        exp["hopSize"] = m_impl->m_exportConfig.hopSize;
+        exp["sampleRate"] = m_impl->m_exportConfig.sampleRate;
+        exp["resampleRate"] = m_impl->m_exportConfig.resampleRate;
+        exp["includeDiscarded"] = m_impl->m_exportConfig.includeDiscarded;
         json["export"] = exp;
     }
 
     // Items
     nlohmann::json items = nlohmann::json::array();
-    for (const auto& item : m_items)
+    for (const auto& item : m_impl->m_items)
         items.push_back(serializeItem(item));
     json["items"] = items;
 
@@ -363,12 +390,12 @@ Result<void> DsProject::saveFile(const QString& path) const {
 // ── Validation ────────────────────────────────────────────────────────
 
 Result<void> DsProject::validateSliceConsistency() const {
-    if (m_items.empty())
+    if (m_impl->m_items.empty())
         return Result<void>::Ok();
 
     QStringList issues;
 
-    for (const auto& [originalPath, points] : m_slicerState.slicePoints) {
+    for (const auto& [originalPath, points] : m_impl->m_slicerState.slicePoints) {
         if (points.empty())
             continue;
 
@@ -376,7 +403,7 @@ Result<void> DsProject::validateSliceConsistency() const {
         int expectedSegments = static_cast<int>(points.size()) + 1;
 
         int actualSegments = 0;
-        for (const auto& item : m_items) {
+        for (const auto& item : m_impl->m_items) {
             if (item.id.startsWith(baseName))
                 ++actualSegments;
         }
@@ -391,7 +418,7 @@ Result<void> DsProject::validateSliceConsistency() const {
             constexpr double kToleranceUs = 1000.0;
             bool mismatch = false;
             int segIdx = 0;
-            for (const auto& item : m_items) {
+            for (const auto& item : m_impl->m_items) {
                 if (!item.id.startsWith(baseName))
                     continue;
                 if (item.slices.empty())
@@ -409,11 +436,11 @@ Result<void> DsProject::validateSliceConsistency() const {
         }
     }
 
-    for (const auto& audioFile : m_slicerState.audioFiles) {
+    for (const auto& audioFile : m_impl->m_slicerState.audioFiles) {
         QString resolved = audioFile;
         if (QDir::isRelativePath(resolved))
-            resolved = QDir(m_workingDirectory).absoluteFilePath(resolved);
-        if (m_slicerState.slicePoints.find(resolved) == m_slicerState.slicePoints.end()) {
+            resolved = QDir(m_impl->m_workingDirectory).absoluteFilePath(resolved);
+        if (m_impl->m_slicerState.slicePoints.find(resolved) == m_impl->m_slicerState.slicePoints.end()) {
             issues.append(QFileInfo(audioFile).fileName() + QStringLiteral(" (未切片)"));
         }
     }
@@ -431,8 +458,8 @@ std::vector<QString> DsProject::validateExternalPaths() const {
     auto resolvePath = [&](const QString& p) -> QString {
         if (p.isEmpty())
             return {};
-        if (QDir::isRelativePath(p) && !m_workingDirectory.isEmpty()) {
-            return QDir(m_workingDirectory).absoluteFilePath(p);
+        if (QDir::isRelativePath(p) && !m_impl->m_workingDirectory.isEmpty()) {
+            return QDir(m_impl->m_workingDirectory).absoluteFilePath(p);
         }
         return p;
     };
@@ -449,11 +476,11 @@ std::vector<QString> DsProject::validateExternalPaths() const {
         }
     };
 
-    for (const auto& item : m_items) {
+    for (const auto& item : m_impl->m_items) {
         checkFile(item.audioSource);
     }
 
-    for (const auto& audioFile : m_slicerState.audioFiles) {
+    for (const auto& audioFile : m_impl->m_slicerState.audioFiles) {
         checkFile(audioFile);
     }
 
@@ -463,39 +490,39 @@ std::vector<QString> DsProject::validateExternalPaths() const {
 // ── Properties ────────────────────────────────────────────────────────
 
 QString DsProject::workingDirectory() const {
-    return m_workingDirectory;
+    return m_impl->m_workingDirectory;
 }
 
 void DsProject::setWorkingDirectory(const QString& dir) {
-    m_workingDirectory = dir;
+    m_impl->m_workingDirectory = dir;
 }
 
 const QString& DsProject::filePath() const {
-    return m_filePath;
+    return m_impl->m_filePath;
 }
 
 const std::vector<Item>& DsProject::items() const {
-    return m_items;
+    return m_impl->m_items;
 }
 
 void DsProject::setItems(std::vector<Item> items) {
-    m_items = std::move(items);
+    m_impl->m_items = std::move(items);
 }
 
 const SlicerState& DsProject::slicerState() const {
-    return m_slicerState;
+    return m_impl->m_slicerState;
 }
 
 void DsProject::setSlicerState(SlicerState state) {
-    m_slicerState = std::move(state);
+    m_impl->m_slicerState = std::move(state);
 }
 
 const ExportConfig& DsProject::exportConfig() const {
-    return m_exportConfig;
+    return m_impl->m_exportConfig;
 }
 
 void DsProject::setExportConfig(ExportConfig config) {
-    m_exportConfig = std::move(config);
+    m_impl->m_exportConfig = std::move(config);
 }
 
 } // namespace dstools

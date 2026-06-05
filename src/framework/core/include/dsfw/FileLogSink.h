@@ -11,7 +11,7 @@ namespace dsfw {
     /// @param logDir Directory to store log files.
     /// @param appName Application name used in the log filename.
     /// @return Configured log sink.
-    dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName);
+    dsfw::LogSink createFileLogSink(const QString &logDir, const QString &appName);
 
     /// @brief Delete log files older than the specified age.
     /// @param logDir Directory containing log files.

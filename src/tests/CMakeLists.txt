@@ -17,10 +17,6 @@ if (TARGET TestRmvpe)
     add_test(NAME TestRmvpe COMMAND TestRmvpe)
 endif ()
 
-if (TARGET TestAudioUtil)
-    add_test(NAME TestAudioUtil COMMAND TestAudioUtil)
-endif ()
-
 # ── Unit tests (always built when BUILD_TESTS=ON) ────────────────────────────
 add_subdirectory(types)
 add_subdirectory(framework)

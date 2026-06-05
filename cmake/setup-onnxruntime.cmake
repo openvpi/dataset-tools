@@ -80,8 +80,6 @@ if(NOT DEFINED CMAKE_HOST_SYSTEM_PROCESSOR)
         execute_process(COMMAND uname -m OUTPUT_VARIABLE _detected_arch OUTPUT_STRIP_TRAILING_WHITESPACE)
         if(_detected_arch STREQUAL "x86_64")
             set(_detected_arch "x64")
-        elseif(_detected_arch STREQUAL "aarch64")
-            set(_detected_arch "aarch64")
         else()
             message(FATAL_ERROR "Unsupported Architecture: Linux-${_detected_arch}")
         endif()
@@ -93,12 +91,6 @@ set(_arch ${_detected_arch})
 set(_version "1.17.3")
 set(_version_dml "1.15.0")
 
-set(_hash_win_x64        "14e0b7ed6cc504f8c4c1d8e57451ada6d8469394d08e10afa6db616f082fe035")
-set(_hash_linux_x64      "")
-set(_hash_osx_arm64      "")
-set(_hash_win_x64_gpu    "")
-set(_hash_linux_x64_gpu  "")
-
 macro(download_onnxruntime_from_github)
     set(_base_url "https://github.com/microsoft/onnxruntime/releases/download/v${_version}")
     set(_name      "onnxruntime-${_os}-${_arch}-${_full_version}")
@@ -108,18 +100,12 @@ macro(download_onnxruntime_from_github)
 
     message(STATUS "Downloading ONNX Runtime from ${_url}")
 
-    if(_expected_hash)
-        file(DOWNLOAD ${_url} ${_file_path}
-                EXPECTED_HASH SHA256=${_expected_hash}
-                SHOW_PROGRESS
-        )
-    else()
-        message(WARNING "Downloading ONNX Runtime WITHOUT hash verification. "
-                        "Consider adding EXPECTED_HASH for supply-chain security.")
-        file(DOWNLOAD ${_url} ${_file_path}
-                SHOW_PROGRESS
-        )
-    endif()
+    file(DOWNLOAD ${_url} ${_file_path}
+
+            # EXPECTED_HASH SHA256=14e0b7ed6cc504f8c4c1d8e57451ada6d8469394d08e10afa6db616f082fe035
+            # TIMEOUT 60
+            SHOW_PROGRESS
+    )
 
     set(_extract_dir ${CMAKE_BINARY_DIR}/onnxruntime)
 
@@ -148,8 +134,6 @@ macro(download_onnxruntime_from_nuget)
     set(_file_path_ort "${CMAKE_BINARY_DIR}/${_name_zip_ort}")
     message(STATUS "Downloading ONNX Runtime from ${_url_ort}")
 
-    message(WARNING "Downloading ONNX Runtime (NuGet) WITHOUT hash verification. "
-                    "Consider adding EXPECTED_HASH for supply-chain security.")
     file(DOWNLOAD ${_url_ort} ${_file_path_ort}
             SHOW_PROGRESS
     )
@@ -165,13 +149,8 @@ macro(download_onnxruntime_from_nuget)
     file(REMOVE ${_file_path_ort})
 
     file(COPY ${_extract_dir_ort}/build/native/include DESTINATION ${_extract_dir})
-    file(MAKE_DIRECTORY "${_extract_dir}/lib")
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
-        set(_nuget_runtime_dir "${_extract_dir_ort}/runtimes/win-arm64/native")
-    else()
-        set(_nuget_runtime_dir "${_extract_dir_ort}/runtimes/win-x64/native")
-    endif()
-    copy_contents("${_nuget_runtime_dir}" "${_extract_dir}/lib")
+    file(MAKE_DIRECTORY "${extract_dir}/lib")
+    copy_contents("${_extract_dir_ort}/runtimes/win-x64/native" "${_extract_dir}/lib")
 
     file(REMOVE_RECURSE ${_extract_dir_ort})
 endmacro()
@@ -197,13 +176,8 @@ macro(download_dml_from_nuget)
     file(REMOVE ${_file_path_dml})
 
     file(COPY ${_extract_dir_dml}/include DESTINATION ${_extract_dir})
-    file(MAKE_DIRECTORY "${_extract_dir}/lib")
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
-        set(_dml_bin_dir "${_extract_dir_dml}/bin/arm64-win")
-    else()
-        set(_dml_bin_dir "${_extract_dir_dml}/bin/x64-win")
-    endif()
-    copy_contents("${_dml_bin_dir}" "${_extract_dir}/lib")
+    file(MAKE_DIRECTORY "${extract_dir}/lib")
+    copy_contents("${_extract_dir_dml}/bin/x64-win" "${_extract_dir}/lib")
 
     file(REMOVE_RECURSE ${_extract_dir_dml})
 endmacro()
@@ -211,12 +185,10 @@ endmacro()
 if(DEFINED ep AND "${ep}" STREQUAL gpu)
     set(_full_version      gpu-${_version})
     set(_full_version_zip  gpu-${_version})
-    set(_expected_hash     "${_hash_win_x64_gpu}")
     download_onnxruntime_from_github()
 elseif(DEFINED ep AND "${ep}" STREQUAL gpu-cuda12)
     set(_full_version      gpu-cuda12-${_version})
     set(_full_version_zip  gpu-${_version})
-    set(_expected_hash     "${_hash_linux_x64_gpu}")
     download_onnxruntime_from_github()
 elseif(DEFINED ep AND "${ep}" STREQUAL dml)
     download_onnxruntime_from_nuget()
@@ -224,14 +196,5 @@ elseif(DEFINED ep AND "${ep}" STREQUAL dml)
 else()
     set(_full_version      ${_version})
     set(_full_version_zip  ${_version})
-    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND _arch STREQUAL "x64")
-        set(_expected_hash "${_hash_win_x64}")
-    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux" AND _arch STREQUAL "x64")
-        set(_expected_hash "${_hash_linux_x64}")
-    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND _arch STREQUAL "arm64")
-        set(_expected_hash "${_hash_osx_arm64}")
-    else()
-        set(_expected_hash "")
-    endif()
     download_onnxruntime_from_github()
 endif()

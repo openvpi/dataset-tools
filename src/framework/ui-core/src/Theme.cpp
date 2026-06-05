@@ -1,6 +1,7 @@
 #include <dsfw/Theme.h>
 
 #include <dsfw/AppSettings.h>
+#include <dsfw/CommonKeys.h>
 #include <dsfw/Log.h>
 
 #include <QActionGroup>
@@ -11,8 +12,6 @@
 #include <QStyleHints>
 
 namespace dsfw {
-
-    static const dstools::SettingsKey<int> kThemeModeKey("General/themeMode", 0);
 
     static Theme::Palette makeDarkPalette() {
         Theme::Palette p;
@@ -181,12 +180,12 @@ namespace dsfw {
     Theme::Theme(QObject *parent) : QObject(parent) {
     }
 
-    void Theme::init(QApplication &app, Mode defaultMode, dstools::AppSettings *settings) {
+    void Theme::init(QApplication &app, Mode defaultMode, dsfw::AppSettings *settings) {
         m_app = &app;
         m_settings = settings;
 
         if (m_settings) {
-            m_mode = static_cast<Mode>(m_settings->get(kThemeModeKey));
+            m_mode = static_cast<Mode>(m_settings->get(CommonKeys::ThemeMode));
         } else {
             m_mode = defaultMode;
         }
@@ -204,7 +203,7 @@ namespace dsfw {
         m_mode = mode;
 
         if (m_settings) {
-            m_settings->set(kThemeModeKey, static_cast<int>(mode));
+            m_settings->set(CommonKeys::ThemeMode, static_cast<int>(mode));
         }
 
         applyTheme(resolveIsDark());

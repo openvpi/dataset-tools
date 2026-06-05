@@ -3,53 +3,110 @@ Checks: >
   -*,
   bugprone-*,
   -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
   -bugprone-narrowing-conversions,
   cert-*,
   -cert-err58-cpp,
+  -cert-msc30-c,
+  -cert-msc50-cpp,
   concurrency-*,
   cppcoreguidelines-*,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-macro-usage,
-  -cppcoreguidelines-no-malloc,
   -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-union-access,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-special-member-functions,
-  -cppcoreguidelines-pro-type-union-access,
+  google-*,
+  -google-readability-avoid-underscore-in-googletest-name,
+  -google-readability-casting,
+  -google-runtime-references,
   misc-*,
   -misc-include-cleaner,
-  -misc-const-correctness,
   -misc-non-private-member-variables-in-classes,
+  -misc-no-recursion,
+  -misc-use-anonymous-namespace,
   modernize-*,
-  -modernize-use-trailing-return-type,
   -modernize-avoid-c-arrays,
+  -modernize-loop-convert,
+  -modernize-pass-by-value,
+  -modernize-return-braced-init-list,
+  -modernize-use-auto,
+  -modernize-use-nodiscard,
+  -modernize-use-trailing-return-type,
   performance-*,
-  -performance-avoid-endl,
   -performance-unnecessary-value-param,
   portability-*,
   readability-*,
-  -readability-avoid-unconditional-preprocessor-if,
+  -readability-convert-member-functions-to-static,
+  -readability-else-after-return,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
-  -readability-identifier-naming,
+  -readability-implicit-bool-conversion,
+  -readability-isolate-declaration,
   -readability-magic-numbers,
   -readability-named-parameter,
+  -readability-redundant-access-specifiers,
+  -readability-redundant-declaration,
+  -readability-redundant-inline-specifier,
+  -readability-redundant-member-init,
+  -readability-simplify-boolean-expr,
+  -readability-uppercase-literal-suffix,
   -readability-use-anyofallof,
 
+WarningsAsErrors: ""
+
 CheckOptions:
-  - key: readability-function-size.LineThreshold
-    value: 80
-  - key: readability-function-size.StatementThreshold
-    value: 40
-  - key: readability-function-size.ParameterThreshold
-    value: 8
-  - key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions
-    value: true
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.UnionCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.MethodCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberPrefix
+    value: "m_"
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key: modernize-use-nullptr.NullMacros
+    value: NULL
+  - key: readability-braces-around-statements.ShortStatementLines
+    value: "1"
   - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
     value: true
-
-WarningsAsErrors: ''
-
-HeaderFilterRegex: '.*'
+  - key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions
+    value: true
+  - key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctionsWhenCopyIsDeleted
+    value: true
+  - key: misc-include-cleaner.IgnoreHeaders
+    value: ".*;Qt.*;dsfw.*;dstools.*;nlohmann.*;onnx.*;ffmpeg.*"

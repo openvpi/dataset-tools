@@ -1,6 +1,6 @@
 #include <dsfw/widgets/FilePathSelector.h>
-#include <dsfw/AppSettings.h>
 #include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/RecentPathStore.h>
 
 #include <QDir>
 #include <QFileInfo>
@@ -20,9 +20,7 @@ QStringList FilePathSelector::selectedPaths() const {
 }
 
 QString FilePathSelector::exec() {
-    static dstools::AppSettings s_settings(QStringLiteral("FilePathSelector"));
-
-    const QString recentPath = loadRecentPath();
+    const QString recentPath = RecentPathStore::load(m_config.settingsKey);
 
     FileDialogHelper::Options opts;
     opts.parent = qobject_cast<QWidget *>(parent());
@@ -62,30 +60,13 @@ QString FilePathSelector::exec() {
     }
 
     if (!m_selectedPath.isEmpty()) {
-        saveRecentPath(m_selectedPath);
+        RecentPathStore::save(m_config.settingsKey, m_selectedPath);
         emit pathSelected(m_selectedPath);
         if (!m_selectedPaths.isEmpty())
             emit pathsSelected(m_selectedPaths);
     }
 
     return m_selectedPath;
-}
-
-QString FilePathSelector::loadRecentPath() const {
-    static dstools::AppSettings s_settings(QStringLiteral("FilePathSelector"));
-    if (m_config.settingsKey.isEmpty())
-        return {};
-    return s_settings.getRawString(m_config.settingsKey.toUtf8().constData(), {});
-}
-
-void FilePathSelector::saveRecentPath(const QString &path) {
-    static dstools::AppSettings s_settings(QStringLiteral("FilePathSelector"));
-    if (m_config.settingsKey.isEmpty())
-        return;
-
-    const QFileInfo info(path);
-    const QString dir = info.isDir() ? path : info.absolutePath();
-    s_settings.setRawString(m_config.settingsKey.toUtf8().constData(), dir);
 }
 
 } // namespace dsfw::widgets

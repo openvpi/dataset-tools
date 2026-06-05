@@ -1,7 +1,7 @@
 #include <dsfw/widgets/PathSelector.h>
 
-#include <dsfw/AppSettings.h>
 #include <dsfw/FileDialogHelper.h>
+#include <dsfw/widgets/RecentPathStore.h>
 
 #include <QDir>
 #include <QDragEnterEvent>
@@ -71,6 +71,14 @@ void PathSelector::setPlaceholder(const QString &text) {
     m_lineEdit->setPlaceholderText(text);
 }
 
+void PathSelector::setDefaultSuffix(const QString &suffix) {
+    m_defaultSuffix = suffix;
+}
+
+void PathSelector::setDialogTitle(const QString &title) {
+    m_dialogTitle = title;
+}
+
 PathSelector::Mode PathSelector::mode() const {
     return m_mode;
 }
@@ -115,14 +123,15 @@ void PathSelector::dropEvent(QDropEvent *event) {
 void PathSelector::onBrowseClicked() {
     dsfw::FileDialogHelper::Options opts;
     opts.parent = this;
-    opts.title = m_label->text();
+    opts.title = m_dialogTitle.isEmpty() ? m_label->text() : m_dialogTitle;
     opts.nameFilters = {m_filter};
+    opts.defaultSuffix = m_defaultSuffix;
 
     QString defaultDir;
     if (!path().isEmpty()) {
         defaultDir = QFileInfo(path()).absolutePath();
     } else {
-        defaultDir = loadRecentDir();
+        defaultDir = RecentPathStore::load(m_settingsKey);
     }
     opts.defaultDir = defaultDir;
 
@@ -145,20 +154,8 @@ void PathSelector::onBrowseClicked() {
     }
 }
 
-QString PathSelector::loadRecentDir() const {
-    if (m_settingsKey.isEmpty())
-        return {};
-    static dstools::AppSettings s_settings(QStringLiteral("PathSelector"));
-    return s_settings.getRawString(m_settingsKey.toUtf8().constData(), {});
-}
-
 void PathSelector::saveRecentDir(const QString &path) {
-    if (m_settingsKey.isEmpty())
-        return;
-    static dstools::AppSettings s_settings(QStringLiteral("PathSelector"));
-    const QFileInfo info(path);
-    const QString dir = info.isDir() ? path : info.absolutePath();
-    s_settings.setRawString(m_settingsKey.toUtf8().constData(), dir);
+    RecentPathStore::save(m_settingsKey, path);
 }
 
 } // namespace dsfw::widgets

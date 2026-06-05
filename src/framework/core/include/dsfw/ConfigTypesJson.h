@@ -3,7 +3,7 @@
 #include <dsfw/ConfigTypes.h>
 #include <nlohmann/json.hpp>
 
-namespace dstools {
+namespace dsfw {
 
     inline nlohmann::json configValueToJson(const ConfigValue &cv) {
         if (auto *p = std::get_if<bool>(&cv.value))
@@ -95,4 +95,10 @@ namespace dstools {
         return j;
     }
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::configMapFromJson;
+    using dsfw::configMapToJson;
+}

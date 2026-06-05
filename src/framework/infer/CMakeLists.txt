@@ -33,7 +33,15 @@ dstools_add_library(${PROJECT_NAME}
         STATIC
         EXPORT_SET dsfwTargets
         DEPENDS
-        PUBLIC dstools-types::dstools-types onnxruntime nlohmann_json::nlohmann_json Qt${QT_VERSION_MAJOR}::Core
+        PUBLIC dsfw-core dstools-types::dstools-types onnxruntime nlohmann_json::nlohmann_json Qt${QT_VERSION_MAJOR}::Core
         INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
+
+if (ONNXRUNTIME_ENABLE_DML)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ONNXRUNTIME_ENABLE_DML)
+endif ()
+
+if (ONNXRUNTIME_ENABLE_CUDA)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ONNXRUNTIME_ENABLE_CUDA)
+endif ()

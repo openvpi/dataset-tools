@@ -19,32 +19,31 @@ namespace dstools {
 // ─── FormatAdapterInit ────────────────────────────────────────────────────────
 
 void registerDomainFormatAdapters() {
-    auto &registry = FormatAdapterRegistry::instance();
+    auto& registry = dsfw::FormatAdapterRegistry::instance();
     registry.registerAdapter(std::make_unique<TextGridAdapter>());
     registry.registerAdapter(std::make_unique<CsvAdapter>());
     registry.registerAdapter(std::make_unique<DsFileAdapter>());
     registry.registerAdapter(std::make_unique<LabAdapter>());
 }
 
-Result<void> exportContextsToCsv(const std::vector<PipelineContext> &contexts,
-                                  const QString &outputPath,
-                                  const ProcessorConfig &config) {
+Result<void> exportContextsToCsv(const std::vector<PipelineContext>& contexts, const QString& outputPath,
+                                 const ProcessorConfig& config) {
     return CsvAdapter::batchExport(contexts, outputPath, config);
 }
 
 // ─── Import validation helper ─────────────────────────────────────────────────
 
-static Result<void> validateLayerData(const std::map<QString, LayerData> &layers) {
+static Result<void> validateLayerData(const std::map<QString, LayerData>& layers) {
     if (layers.empty())
         return Result<void>::Error("import produced no layers");
-    for (const auto &[key, val] : layers) {
+    for (const auto& [key, val] : layers) {
         if (val.empty())
             return Result<void>::Error(QString("layer '%1' is empty").arg(key).toStdString());
         try {
             const auto j = val.toJson();
             if (j.is_null())
                 return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key).toStdString());
-        } catch (const std::exception &e) {
+        } catch (const std::exception& e) {
             return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()).toStdString());
         }
     }
@@ -53,14 +52,13 @@ static Result<void> validateLayerData(const std::map<QString, LayerData> &layers
 
 // ─── TextGridAdapter ──────────────────────────────────────────────────────────
 
-Result<void> TextGridAdapter::importToLayers(const QString &filePath,
-                                             std::map<QString, LayerData> &layers,
-                                             const ProcessorConfig & /*config*/) {
+Result<void> TextGridAdapter::importToLayers(const QString& filePath, std::map<QString, LayerData>& layers,
+                                             const ProcessorConfig& /*config*/) {
     auto rowResult = TextGridToCsv::extractFromTextGrid(filePath);
     if (!rowResult.ok())
         return Result<void>::Error(rowResult.error());
 
-    const auto &row = rowResult.value();
+    const auto& row = rowResult.value();
 
     const QStringList phones = row.phSeq.split(' ', Qt::SkipEmptyParts);
     const QStringList durs = row.phDur.split(' ', Qt::SkipEmptyParts);
@@ -75,7 +73,7 @@ Result<void> TextGridAdapter::importToLayers(const QString &filePath,
     if (!row.phNum.isEmpty()) {
         const QStringList nums = row.phNum.split(' ', Qt::SkipEmptyParts);
         nlohmann::json phNumArr = nlohmann::json::array();
-        for (const auto &n : nums)
+        for (const auto& n : nums)
             phNumArr.push_back(n.toInt());
         temp[QStringLiteral("ph_num")] = LayerData::fromJson(phNumArr);
     }
@@ -88,17 +86,15 @@ Result<void> TextGridAdapter::importToLayers(const QString &filePath,
     return Result<void>::Ok();
 }
 
-Result<void> TextGridAdapter::exportFromLayers(const std::map<QString, LayerData> & /*layers*/,
-                                               const QString & /*outputPath*/,
-                                               const ProcessorConfig & /*config*/) {
+Result<void> TextGridAdapter::exportFromLayers(const std::map<QString, LayerData>& /*layers*/,
+                                               const QString& /*outputPath*/, const ProcessorConfig& /*config*/) {
     return Result<void>::Error("TextGrid export not implemented");
 }
 
 // ─── LabAdapter ───────────────────────────────────────────────────────────────
 
-Result<void> LabAdapter::importToLayers(const QString &filePath,
-                                        std::map<QString, LayerData> &layers,
-                                        const ProcessorConfig & /*config*/) {
+Result<void> LabAdapter::importToLayers(const QString& filePath, std::map<QString, LayerData>& layers,
+                                        const ProcessorConfig& /*config*/) {
     auto textResult = dsfw::PathUtils::readFile(filePath);
     if (!textResult.ok())
         return Result<void>::Error(textResult.error());
@@ -109,7 +105,7 @@ Result<void> LabAdapter::importToLayers(const QString &filePath,
 
     nlohmann::json boundaries = nlohmann::json::array();
     int id = 1;
-    for (const auto &syl : syllables) {
+    for (const auto& syl : syllables) {
         boundaries.push_back({{"id", id}, {"pos", 0}, {"text", syl.toStdString()}});
         ++id;
     }
@@ -127,17 +123,16 @@ Result<void> LabAdapter::importToLayers(const QString &filePath,
     return Result<void>::Ok();
 }
 
-Result<void> LabAdapter::exportFromLayers(const std::map<QString, LayerData> &layers,
-                                          const QString &outputPath,
-                                          const ProcessorConfig & /*config*/) {
+Result<void> LabAdapter::exportFromLayers(const std::map<QString, LayerData>& layers, const QString& outputPath,
+                                          const ProcessorConfig& /*config*/) {
     auto it = layers.find(QStringLiteral("grapheme"));
     if (it == layers.end())
         return Result<void>::Error("No grapheme layer found");
 
     const nlohmann::json layerJson = it->second.toJson();
-    const auto &boundaries = layerJson["boundaries"];
+    const auto& boundaries = layerJson["boundaries"];
     QStringList texts;
-    for (const auto &b : boundaries) {
+    for (const auto& b : boundaries) {
         const auto text = QString::fromStdString(b.value("text", ""));
         if (!text.isEmpty())
             texts.append(text);

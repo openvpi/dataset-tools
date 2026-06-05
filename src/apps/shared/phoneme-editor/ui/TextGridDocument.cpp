@@ -233,15 +233,11 @@ TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, Ti
         nextBoundary = tier->GetMaxTime();
     }
 
-    // Allow boundaries to reach adjacent boundary positions (zero-width interval),
-    // so overlapped boundaries can be separated by dragging either direction.
-    // kEpsilon is a single time-unit guard against floating-point noise
-    // that could cross a boundary into the next interval.
-    constexpr double kEpsilon = 0.000001;
-    double minClamp = prevBoundary;
-    double maxClamp = nextBoundary;
-    if (boundaryIndex < count)
-        maxClamp = nextBoundary - kEpsilon;
+    // Boundary minimum gap: 1e-5 seconds = 0.01ms, prevents floating-point overlap
+    static constexpr double kMinBoundaryGapSec = 1e-5;
+
+    double minClamp = (boundaryIndex == 0) ? prevBoundary : prevBoundary + kMinBoundaryGapSec;
+    double maxClamp = (boundaryIndex == count) ? nextBoundary : nextBoundary - kMinBoundaryGapSec;
 
     double clamped = std::clamp(proposedSec, minClamp, maxClamp);
     return secToUs(clamped);

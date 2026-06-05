@@ -7,12 +7,11 @@
 
 #include <vector>
 
-#include <audio-util/Util.h>
+#include <dsfw/audio/AudioPipeline.h>
 
 #include <iostream>
 
 
-namespace fs = std::filesystem;
 using dstools::JsonHelper;
 
 namespace HFA {
@@ -30,7 +29,7 @@ namespace HFA {
         unload();
 
         try {
-            const fs::path config_file = model_folder / "config.json";
+            const std::filesystem::path config_file = model_folder / "config.json";
             auto configResult = JsonHelper::loadFile(config_file);
             if (!configResult) {
                 return dstools::Err(configResult.error());
@@ -44,10 +43,10 @@ namespace HFA {
             auto mel_spec_config = std::move(melResult.value());
             hfa_input_sample_rate = static_cast<int>(mel_spec_config.at("sample_rate"));
 
-            const fs::path model_path = model_folder / "model.onnx";
+            const std::filesystem::path model_path = model_folder / "model.onnx";
             m_hfa = std::make_unique<HfaModel>(model_path, provider, device_id);
 
-            const fs::path vocab_file = model_folder / "vocab.json";
+            const std::filesystem::path vocab_file = model_folder / "vocab.json";
             auto vocabResult = JsonHelper::loadFile(vocab_file);
             if (!vocabResult) {
                 unload();
@@ -59,9 +58,9 @@ namespace HFA {
             for (const auto &[language, dict_node] : dictionaries.items()) {
                 if (!dict_node.is_null()) {
                     auto dict_path_str = dict_node.get<std::string>();
-                    fs::path dict_path = model_folder / dict_path_str;
+                    std::filesystem::path dict_path = model_folder / dict_path_str;
 
-                    if (!fs::exists(dict_path)) {
+                    if (!std::filesystem::exists(dict_path)) {
                         std::cerr << dsfw::PathUtils::toUtf8(dict_path) << " does not exist" << std::endl;
                     } else {
                         auto dictResult = DictionaryG2P::load(dict_path, language);
@@ -133,39 +132,30 @@ namespace HFA {
                                 " (audio: " +
                                 dsfw::PathUtils::toUtf8(wavPath) + ")");
         }
-        if (!fs::exists(wavPath)) {
+        if (!std::filesystem::exists(wavPath)) {
             return dstools::Err("Empty lyrics text provided for forced alignment"
                                 " (audio: " +
                                 dsfw::PathUtils::toUtf8(wavPath) + ")");
         }
 
-        std::string msg;
-        auto sf_vio = AudioUtil::resample_to_vio(wavPath, msg, 1, hfa_input_sample_rate);
-
-        if (!msg.empty()) {
-            return dstools::Err("Failed to resample audio: " + msg + " (path: " + dsfw::PathUtils::toUtf8(wavPath) + ")");
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(wavPath), hfa_input_sample_rate);
+        if (!result.ok()) {
+            return dstools::Err("Failed to decode audio: " + result.error() +
+                                " (path: " + dsfw::PathUtils::toUtf8(wavPath) + ")");
         }
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        std::vector<float> audio(floats.begin(), floats.end());
 
-        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1,
-                         hfa_input_sample_rate);
-        if (!sf) {
-            return dstools::Err("Failed to open resampled audio for HFA"
-                                " (path: " +
-                                dsfw::PathUtils::toUtf8(wavPath) + ")");
-        }
-        const auto totalSize = sf.frames();
-
+        const auto totalSize = audio.size();
         if (totalSize == 0) {
             return dstools::Err("Audio file contains 0 samples after resampling, cannot run forced alignment"
                                 " (path: " +
                                 dsfw::PathUtils::toUtf8(wavPath) + ")");
         }
 
-        std::vector<float> audio(totalSize);
-        sf.seek(0, SEEK_SET);
-        sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
-
-        const float wav_length = static_cast<float>(sf.frames()) / hfa_input_sample_rate;
+        const float wav_length = static_cast<float>(audio.size()) / hfa_input_sample_rate;
 
         if (wav_length > 60) {
             return dstools::Err(
@@ -191,9 +181,10 @@ namespace HFA {
                 return dstools::Err("Language dictionary not found: " + language);
             }
 
+            std::string alignMsg;
             if (!m_alignmentDecoder->decode(hfaRes.ph_frame_logits, hfaRes.ph_edge_logits, wav_length, ph_seq, words,
-                                            msg, word_seq, ph_idx_to_word_idx, true))
-                return dstools::Err(msg);
+                                            alignMsg, word_seq, ph_idx_to_word_idx, true))
+                return dstools::Err(alignMsg);
             const auto word_lists = m_nonLexicalDecoder->decode(hfaRes.cvnt_logits, wav_length, non_speech_ph);
 
             for (const auto &word_list : word_lists)
@@ -215,7 +206,7 @@ namespace HFA {
     dstools::Result<void> HFA::recognize(std::filesystem::path wavPath, const std::string &language,
                                          const std::vector<std::string> &non_speech_ph, WordList &words) const {
         const auto labPath = std::filesystem::path(wavPath).replace_extension(".lab");
-        if (!fs::exists(labPath)) {
+        if (!std::filesystem::exists(labPath)) {
             return dstools::Err("Lab does not exist: " + dsfw::PathUtils::toUtf8(labPath));
         }
 

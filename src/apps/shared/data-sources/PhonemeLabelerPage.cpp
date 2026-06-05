@@ -18,7 +18,7 @@
 #include <QMessageBox>
 #include <dstools/ModelManager.h>
 #include <dsfw/IModelProvider.h>
-#include <dsfw/InferenceModelProvider.h>
+#include <dstools/InferenceModelProvider.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsKeys.h>
@@ -52,7 +52,7 @@ struct FaLayerResult {
     std::vector<LayerDependency> dependencies;
 };
 
-static FaLayerResult buildFaLayers(const HFA::WordList &words) {
+static FaLayerResult buildFaLayers(const HFA::WordList& words) {
     FaLayerResult r;
     r.graphemeLayer.name = QString::fromUtf8(dstools::keys::layers::grapheme);
     r.graphemeLayer.type = QStringLiteral("interval");
@@ -66,7 +66,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     std::vector<WordIds> wordIdList;
     int nextId = 1;
 
-    for (const auto &word : words) {
+    for (const auto& word : words) {
         if (word.phones.empty())
             continue;
 
@@ -80,7 +80,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
         r.graphemeLayer.boundaries.push_back(std::move(graphemeStart));
 
         for (size_t pi = 0; pi < word.phones.size(); ++pi) {
-            const auto &phone = word.phones[pi];
+            const auto& phone = word.phones[pi];
 
             Boundary phoneB;
             phoneB.id = nextId++;
@@ -99,15 +99,14 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     }
 
     for (size_t wi = 0; wi < wordIdList.size(); ++wi) {
-        const auto &ids = wordIdList[wi];
+        const auto& ids = wordIdList[wi];
 
         LayerDependency dep;
         dep.parentLayerName = QString::fromUtf8(dstools::keys::layers::grapheme);
         dep.childLayerName = QString::fromUtf8(dstools::keys::layers::phoneme);
         dep.parentStartBoundaryId = ids.graphemeStartId;
-        dep.parentEndBoundaryId = (wi + 1 < wordIdList.size())
-                                      ? wordIdList[wi + 1].graphemeStartId
-                                      : ids.graphemeStartId;
+        dep.parentEndBoundaryId =
+            (wi + 1 < wordIdList.size()) ? wordIdList[wi + 1].graphemeStartId : ids.graphemeStartId;
 
         if (!ids.phoneBoundaryIds.empty()) {
             dep.childStartBoundaryId = ids.phoneBoundaryIds.front();
@@ -121,8 +120,7 @@ static FaLayerResult buildFaLayers(const HFA::WordList &words) {
     return r;
 }
 
-PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
-    : EditorPageBase("PhonemeLabeler", parent) {
+PhonemeLabelerPage::PhonemeLabelerPage(QWidget* parent) : EditorPageBase("PhonemeLabeler", parent) {
     m_editor = new phonemelabeler::PhonemeEditor(this);
 
     setupBaseLayout(m_editor);
@@ -144,37 +142,33 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget *parent)
     connect(m_actExtractMidi, &QAction::triggered, this, &PhonemeLabelerPage::onExtractMidi);
     m_editor->toolbar()->addAction(m_actExtractMidi);
 
-    shortcutManager()->bind(m_editor->saveAction(), dstools::settings::kShortcutSave,
-                            tr("Save"), tr("File"));
-    shortcutManager()->bind(m_editor->undoAction(), dstools::settings::kShortcutUndo,
-                            tr("Undo"), tr("Edit"));
-    shortcutManager()->bind(m_editor->redoAction(), dstools::settings::kShortcutRedo,
-                            tr("Redo"), tr("Edit"));
-    shortcutManager()->bind(m_faAction, dstools::settings::kShortcutFA,
-                            tr("Force Align"), tr("Processing"));
-    shortcutManager()->bind(m_editor->playPauseAction(), dstools::settings::kShortcutPlayPause,
-                            tr("Play/Pause"), tr("Playback"));
+    shortcutManager()->bind(m_editor->saveAction(), dstools::settings::kShortcutSave, tr("Save"), tr("File"));
+    shortcutManager()->bind(m_editor->undoAction(), dstools::settings::kShortcutUndo, tr("Undo"), tr("Edit"));
+    shortcutManager()->bind(m_editor->redoAction(), dstools::settings::kShortcutRedo, tr("Redo"), tr("Edit"));
+    shortcutManager()->bind(m_faAction, dstools::settings::kShortcutFA, tr("Force Align"), tr("Processing"));
+    shortcutManager()->bind(m_editor->playPauseAction(), dstools::settings::kShortcutPlayPause, tr("Play/Pause"),
+                            tr("Playback"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
     shortcutManager()->setEnabled(false);
 
-    connect(m_editor->saveAction(), &QAction::triggered,
-            this, [this]() { saveCurrentSlice(); updateDirtyIndicator(); });
-    connect(m_editor->document(), &phonemelabeler::TextGridDocument::modifiedChanged,
-            this, [this]() { updateDirtyIndicator(); });
+    connect(m_editor->saveAction(), &QAction::triggered, this, [this]() {
+        saveCurrentSlice();
+        updateDirtyIndicator();
+    });
+    connect(m_editor->document(), &phonemelabeler::TextGridDocument::modifiedChanged, this,
+            [this]() { updateDirtyIndicator(); });
 
     m_moeProcessor = new MoeCurveProcessor(this);
-    connect(m_moeProcessor, &MoeCurveProcessor::curveReady, this,
-            [this](const MouthCurve &curve) {
-                if (m_editor && m_editor->mouthCurveChart()) {
-                    m_editor->container()->setChartVisible(QStringLiteral("mouthCurve"), true);
-                    m_editor->mouthCurveChart()->setData(curve);
-                }
-            });
-    connect(m_moeProcessor, &MoeCurveProcessor::errorOccurred, this,
-            [](const QString &error) {
-                DSFW_LOG_WARN("moe", ("MOE inference error: " + error.toStdString()).c_str());
-            });
+    connect(m_moeProcessor, &MoeCurveProcessor::curveReady, this, [this](const MouthCurve& curve) {
+        if (m_editor && m_editor->mouthCurveChart()) {
+            m_editor->container()->setChartVisible(QStringLiteral("mouthCurve"), true);
+            m_editor->mouthCurveChart()->setData(curve);
+        }
+    });
+    connect(m_moeProcessor, &MoeCurveProcessor::errorOccurred, this, [](const QString& error) {
+        DSFW_LOG_WARN("moe", ("MOE inference error: " + error.toStdString()).c_str());
+    });
 }
 
 PhonemeLabelerPage::~PhonemeLabelerPage() = default;
@@ -196,11 +190,13 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
     if (!m_editor->document() || !m_editor->document()->isModified())
         return true;
 
-    auto *doc = m_editor->document();
+    auto* doc = m_editor->document();
 
     auto result = source()->loadSlice(currentSliceId());
     if (!result) {
-        DSFW_LOG_ERROR("phoneme", ("Failed to load slice for save: " + currentSliceId().toStdString() + " - " + result.error()).c_str());
+        DSFW_LOG_ERROR(
+            "phoneme",
+            ("Failed to load slice for save: " + currentSliceId().toStdString() + " - " + result.error()).c_str());
         return false;
     }
     DsTextDocument dstext = std::move(result.value());
@@ -208,7 +204,7 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
     auto editorLayers = doc->toDsText();
 
     QStringList modifiedLayers;
-    for (const auto &editorLayer : editorLayers) {
+    for (const auto& editorLayer : editorLayers) {
         modifiedLayers.append(editorLayer.name);
     }
     DsTextDocBridge::mergeIntervalLayers(dstext, editorLayers);
@@ -217,13 +213,12 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
 
     auto saveResult = source()->saveSlice(currentSliceId(), dstext);
     if (!saveResult) {
-        QMessageBox::warning(this, tr("Save Failed"),
-                             QString::fromStdString(saveResult.error()));
+        QMessageBox::warning(this, tr("Save Failed"), QString::fromStdString(saveResult.error()));
         return false;
     }
 
     markLayersModified(modifiedLayers);
-    for (const auto &layerName : modifiedLayers) {
+    for (const auto& layerName : modifiedLayers) {
         setLayerManuallyEdited(layerName, true);
         if (layerName == QString::fromUtf8(dstools::keys::layers::phoneme))
             addEditedStep(QStringLiteral("phoneme_review"));
@@ -231,19 +226,19 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
     return true;
 }
 
-void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
+void PhonemeLabelerPage::onSliceSelectedImpl(const QString& sliceId) {
     aliveToken(QStringLiteral("moe_curve")).invalidate();
 
     const QString audioPath = source()->validatedAudioPath(sliceId);
 
     auto result = source()->loadSlice(sliceId);
     if (result && !result.value().layers.empty()) {
-        const auto &doc = result.value();
+        const auto& doc = result.value();
 
         QList<IntervalLayer> layers;
-        for (const auto &layer : doc.layers) {
-            if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme)
-                || layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
+        for (const auto& layer : doc.layers) {
+            if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) ||
+                layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
                 layers.append(layer);
         }
 
@@ -300,7 +295,7 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     if (m_moeProcessor && settingsBackend() && !audioPath.isEmpty()) {
         auto cfg = readModelConfig(settingsBackend(), QStringLiteral("moe_curve"));
         if (!cfg.modelPath.isEmpty()) {
-            auto &token = aliveToken(QStringLiteral("moe_curve"));
+            auto& token = aliveToken(QStringLiteral("moe_curve"));
             if (!token.isValid())
                 token.create();
             m_moeProcessor->setModelPath(std::filesystem::path(cfg.modelPath.toStdWString()));
@@ -309,11 +304,11 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     }
 }
 
-    void PhonemeLabelerPage::onDeactivatedImpl() {
+void PhonemeLabelerPage::onDeactivatedImpl() {
     enginePool()->invalidate(QLatin1String(dstools::keys::engines::phonemeAlignment));
     aliveToken(QStringLiteral("moe_curve")).invalidate();
     bool hadFA = m_hfa != nullptr || isBatchRunning();
-    m_hfa = nullptr;
+    m_hfa.reset();
     if (m_editor && m_editor->playWidget())
         m_editor->playWidget()->setPlaying(false);
     setBatchRunning(false);
@@ -324,7 +319,7 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString &sliceId) {
     }
 }
 
-BatchSliceResult PhonemeLabelerPage::processSlice(const QString &sliceId) {
+BatchSliceResult PhonemeLabelerPage::processSlice(const QString& sliceId) {
     Q_UNUSED(sliceId)
     BatchSliceResult result;
     result.status = BatchSliceResult::Error;
@@ -344,7 +339,8 @@ void PhonemeLabelerPage::restoreExtraSplitters() {
 }
 
 void PhonemeLabelerPage::saveExtraSplitters() {
-    settings().set(dstools::settings::kEditorSplitterState, QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
+    settings().set(dstools::settings::kEditorSplitterState,
+                   QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
     m_editor->saveChartVisibility();
     m_editor->saveViewportResolution();
 }
@@ -358,7 +354,7 @@ void PhonemeLabelerPage::onAutoInferPreloadEngines() {
     }
 }
 
-void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList &dirty) {
+void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
     bool needAutoFA = dirty.contains(QString::fromUtf8(dstools::keys::layers::phoneme));
 
     if (!needAutoFA && !currentSliceId().isEmpty()) {
@@ -366,7 +362,7 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList &dirty) {
         if (result) {
             bool hasGrapheme = false;
             bool hasPhoneme = false;
-            for (const auto &layer : result.value().layers) {
+            for (const auto& layer : result.value().layers) {
                 if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) && !layer.boundaries.empty())
                     hasGrapheme = true;
                 if (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme) && !layer.boundaries.empty())
@@ -379,10 +375,8 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList &dirty) {
 
     if (needAutoFA) {
         if (source()->isLayerManuallyEdited(currentSliceId(), QString::fromUtf8(dstools::keys::layers::phoneme))) {
-            dsfw::widgets::ToastNotification::show(
-                this, dsfw::widgets::ToastType::Info,
-                tr("已跳过手动编辑的音素层，请手动重新对齐"),
-                4000);
+            dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                                   tr("已跳过手动编辑的音素层，请手动重新对齐"), 4000);
         } else {
             source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(dstools::keys::layers::phoneme)});
 
@@ -396,7 +390,7 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList &dirty) {
                 return;
             }
             bool hasGraphemeForFA = false;
-            for (const auto &layer : loadResult.value().layers) {
+            for (const auto& layer : loadResult.value().layers) {
                 if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) && !layer.boundaries.empty()) {
                     hasGraphemeForFA = true;
                     break;
@@ -412,15 +406,13 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList &dirty) {
                     return;
                 m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment));
                 if (m_hfa && !isBatchRunning()) {
-                    dsfw::widgets::ToastNotification::show(
-                        this, dsfw::widgets::ToastType::Info,
-                        tr("Auto force-aligning..."), 3000);
+                    dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                                           tr("Auto force-aligning..."), 3000);
                     runFaForSlice(currentSliceId());
                 } else {
                     dsfw::widgets::ToastNotification::show(
                         this, dsfw::widgets::ToastType::Warning,
-                        tr("Phoneme layer outdated, please run force align manually"),
-                        3000);
+                        tr("Phoneme layer outdated, please run force align manually"), 3000);
                 }
             });
         }
@@ -429,10 +421,10 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList &dirty) {
 
 // ── IPageActions ──────────────────────────────────────────────────────────────
 
-QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
-    auto *bar = buildStandardMenuBar(parent, m_editor->saveAction(), m_editor->undoAction(), m_editor->redoAction());
+QMenuBar* PhonemeLabelerPage::createMenuBar(QWidget* parent) {
+    auto* bar = buildStandardMenuBar(parent, m_editor->saveAction(), m_editor->undoAction(), m_editor->redoAction());
 
-    auto *processMenu = bar->addMenu(tr("&Processing"));
+    auto* processMenu = bar->addMenu(tr("&Processing"));
     processMenu->addAction(m_faAction);
     processMenu->addSeparator();
     processMenu->addAction(m_actExtractF0);
@@ -440,26 +432,25 @@ QMenuBar *PhonemeLabelerPage::createMenuBar(QWidget *parent) {
     processMenu->addSeparator();
     processMenu->addAction(tr("Batch Force Align..."), this, &PhonemeLabelerPage::onBatchFA);
 
-    QList<QAction *> zoomActions;
-    for (auto *act : m_editor->viewActions()) {
-        if (act) zoomActions.append(act);
+    QList<QAction*> zoomActions;
+    for (auto* act : m_editor->viewActions()) {
+        if (act)
+            zoomActions.append(act);
     }
-    auto *viewMenu = addStandardViewMenu(bar, zoomActions);
+    auto* viewMenu = addStandardViewMenu(bar, zoomActions);
     viewMenu->addMenu(m_editor->spectrogramColorMenu());
 
     return bar;
 }
 
-QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
-    auto *container = new QWidget(parent);
+QWidget* PhonemeLabelerPage::createStatusBarContent(QWidget* parent) {
+    auto* container = new QWidget(parent);
     auto builder = buildStandardStatusBar(container);
 
-    auto *posLabel = builder.addLabel(QStringLiteral("0.000s"));
+    auto* posLabel = builder.addLabel(QStringLiteral("0.000s"));
 
     builder.connect(m_editor, &phonemelabeler::PhonemeEditor::positionChanged, posLabel,
-                    [posLabel](double sec) {
-        posLabel->setText(QString::number(sec, 'f', 3) + "s");
-    });
+                    [posLabel](double sec) { posLabel->setText(QString::number(sec, 'f', 3) + "s"); });
 
     return container;
 }
@@ -471,11 +462,11 @@ QWidget *PhonemeLabelerPage::createStatusBarContent(QWidget *parent) {
 /// applyFaResult now creates a separate grapheme layer, preserving the
 /// original grapheme for re-running FA.
 /// Returns empty string when grapheme layer is absent or empty.
-static QString readFaInput(const DsTextDocument &doc) {
+static QString readFaInput(const DsTextDocument& doc) {
     QStringList parts;
-    const IntervalLayer *graphemeLayer = nullptr;
-    const IntervalLayer *phonemeLayer = nullptr;
-    for (const auto &layer : doc.layers) {
+    const IntervalLayer* graphemeLayer = nullptr;
+    const IntervalLayer* phonemeLayer = nullptr;
+    for (const auto& layer : doc.layers) {
         if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme))
             graphemeLayer = &layer;
         else if (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
@@ -483,29 +474,28 @@ static QString readFaInput(const DsTextDocument &doc) {
     }
     if (graphemeLayer) {
         static const QStringList kNonSpeech = {QStringLiteral("SP"), QStringLiteral("AP")};
-        for (const auto &b : graphemeLayer->boundaries) {
+        for (const auto& b : graphemeLayer->boundaries) {
             if (!b.text.isEmpty() && !kNonSpeech.contains(b.text))
                 parts << b.text;
         }
         if (graphemeLayer && phonemeLayer) {
-            for (const auto &dep : doc.dependencies) {
+            for (const auto& dep : doc.dependencies) {
                 bool valid = dep.parentLayerIndex >= 0 && dep.childLayerIndex >= 0;
                 if (!valid)
                     valid = !dep.parentLayerName.isEmpty() && !dep.childLayerName.isEmpty();
                 if (valid) {
-                    for (const auto &gb : graphemeLayer->boundaries) {
+                    for (const auto& gb : graphemeLayer->boundaries) {
                         bool found = false;
-                        for (const auto &pb : phonemeLayer->boundaries) {
+                        for (const auto& pb : phonemeLayer->boundaries) {
                             if (gb.pos == pb.pos) {
                                 found = true;
                                 break;
                             }
                         }
                         if (!found) {
-                            DSFW_LOG_WARN("fa",
-                                ("Grapheme boundary '" + gb.text.toStdString()
-                                 + "' pos=" + std::to_string(gb.pos)
-                                 + " not aligned with any phoneme boundary").c_str());
+                            DSFW_LOG_WARN("fa", ("Grapheme boundary '" + gb.text.toStdString() + "' pos=" +
+                                                 std::to_string(gb.pos) + " not aligned with any phoneme boundary")
+                                                    .c_str());
                         }
                     }
                     break;
@@ -518,38 +508,37 @@ static QString readFaInput(const DsTextDocument &doc) {
 
 // ── FA engine ─────────────────────────────────────────────────────────────────
 
-    void PhonemeLabelerPage::onEngineInvalidated(const QString &taskKey) {
-        enginePool()->invalidate(taskKey);
-        if (taskKey == QLatin1String(dstools::keys::engines::phonemeAlignment)) {
-            m_hfa = nullptr;
-            DSFW_LOG_WARN("fa", "FA task cancelled: model invalidated");
-        }
+void PhonemeLabelerPage::onEngineInvalidated(const QString& taskKey) {
+    enginePool()->invalidate(taskKey);
+    if (taskKey == QLatin1String(dstools::keys::engines::phonemeAlignment)) {
+        m_hfa.reset();
+        DSFW_LOG_WARN("fa", "FA task cancelled: model invalidated");
     }
+}
 
-    void PhonemeLabelerPage::onRunFA() {
+void PhonemeLabelerPage::onRunFA() {
     if (currentSliceId().isEmpty()) {
-        QMessageBox::information(this, tr("Force Align"),
-                                 tr("Please select a slice first."));
+        QMessageBox::information(this, tr("Force Align"), tr("Please select a slice first."));
         return;
     }
 
     m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment));
     if (!enginePool()->isOpen<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment))) {
-        QMessageBox::warning(this, tr("Force Align"),
-                             tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
+        QMessageBox::warning(
+            this, tr("Force Align"),
+            tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
         return;
     }
 
     if (isBatchRunning()) {
-        QMessageBox::information(this, tr("Force Align"),
-                                 tr("Force alignment is running, please wait."));
+        QMessageBox::information(this, tr("Force Align"), tr("Force alignment is running, please wait."));
         return;
     }
 
     runFaForSlice(currentSliceId());
 }
 
-void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
+void PhonemeLabelerPage::runFaForSlice(const QString& sliceId) {
     if (!source())
         return;
 
@@ -557,21 +546,20 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     if (audioPath.isEmpty()) {
         if (source()->audioPath(sliceId).isEmpty()) {
             DSFW_LOG_ERROR("fa", ("FA pipeline error [audio]: no audio file - " + sliceId.toStdString()).c_str());
-            QMessageBox::warning(this, tr("Force Align"),
-                                 tr("Current slice has no audio file."));
+            QMessageBox::warning(this, tr("Force Align"), tr("Current slice has no audio file."));
         }
         return;
     }
 
     auto loadResult = source()->loadSlice(sliceId);
     if (!loadResult) {
-        DSFW_LOG_ERROR("fa", ("FA pipeline error [load]: unable to load slice data - " + sliceId.toStdString()).c_str());
-        QMessageBox::warning(this, tr("Force Align"),
-                             tr("Unable to load slice data."));
+        DSFW_LOG_ERROR("fa",
+                       ("FA pipeline error [load]: unable to load slice data - " + sliceId.toStdString()).c_str());
+        QMessageBox::warning(this, tr("Force Align"), tr("Unable to load slice data."));
         return;
     }
 
-    const auto &doc = loadResult.value();
+    const auto& doc = loadResult.value();
 
     QString lyricsQStr = readFaInput(doc);
     if (lyricsQStr.isEmpty()) {
@@ -586,25 +574,24 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
     std::vector<std::string> nonSpeechPh;
     if (settingsBackend()) {
         auto cfg = settingsBackend()->load()["faConfig"].toObject();
-        QString nsStr = cfg.contains("nonSpeechPh") && cfg["nonSpeechPh"].isString()
-            ? cfg["nonSpeechPh"].toString() : QStringLiteral("AP, SP");
+        QString nsStr = cfg.contains("nonSpeechPh") && cfg["nonSpeechPh"].isString() ? cfg["nonSpeechPh"].toString()
+                                                                                     : QStringLiteral("AP, SP");
         const auto parts = nsStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
-        for (const auto &p : parts)
+        for (const auto& p : parts)
             nonSpeechPh.push_back(p.trimmed().toStdString());
     }
     if (nonSpeechPh.empty())
         nonSpeechPh = {"AP", "SP"};
-    DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString()
-                          + " | audio: " + audioPath.toStdString()
-                          + " | language: zh"
-                          + " | nonSpeechPh: AP SP"
-                          + " | lyrics: " + lyricsText).c_str());
-    auto *hfa = m_hfa;
+    DSFW_LOG_INFO("fa", ("FA started: " + sliceId.toStdString() + " | audio: " + audioPath.toStdString() +
+                         " | language: zh" + " | nonSpeechPh: AP SP" + " | lyrics: " + lyricsText)
+                            .c_str());
+    std::weak_ptr<HFA::HFA> weakHfa = m_hfa;
 
-    runAsyncTask<HFA::WordList>(QLatin1String(dstools::keys::engines::phonemeAlignment), sliceId,
-        [hfa, audioPath, lyricsText = std::move(lyricsText),
-         nonSpeechPh = std::move(nonSpeechPh)]
-        (const std::shared_ptr<std::atomic<bool>> &) -> Result<HFA::WordList> {
+    runAsyncTask<HFA::WordList>(
+        QLatin1String(dstools::keys::engines::phonemeAlignment), sliceId,
+        [weakHfa, audioPath, lyricsText = std::move(lyricsText),
+         nonSpeechPh = std::move(nonSpeechPh)](const std::shared_ptr<std::atomic<bool>>&) -> Result<HFA::WordList> {
+            auto hfa = weakHfa.lock();
             if (!hfa)
                 return Err<HFA::WordList>("FA engine is null");
             HFA::WordList words;
@@ -613,43 +600,43 @@ void PhonemeLabelerPage::runFaForSlice(const QString &sliceId) {
                 return std::move(words);
             return Err<HFA::WordList>(result.error());
         },
-        [this](const QString &sliceId, const Result<HFA::WordList> &result) {
+        [this](const QString& sliceId, const Result<HFA::WordList>& result) {
             setBatchRunning(false);
 
             if (result) {
                 auto faResult = buildFaLayers(result.value());
 
                 std::string phonemeDetail;
-                for (const auto &b : faResult.phonemeLayer.boundaries) {
-                    if (!phonemeDetail.empty()) phonemeDetail += ", ";
+                for (const auto& b : faResult.phonemeLayer.boundaries) {
+                    if (!phonemeDetail.empty())
+                        phonemeDetail += ", ";
                     phonemeDetail += b.text.toStdString() + "@" + std::to_string(usToSec(b.pos));
                 }
-                DSFW_LOG_INFO("fa", ("FA completed: " + sliceId.toStdString()
-                                      + " | phonemes: " + std::to_string(faResult.phonemeLayer.boundaries.size())
-                                      + " | bindings: " + std::to_string(faResult.groups.size())
-                                      + " | detail: [" + phonemeDetail + "]").c_str());
+                DSFW_LOG_INFO("fa", ("FA completed: " + sliceId.toStdString() +
+                                     " | phonemes: " + std::to_string(faResult.phonemeLayer.boundaries.size()) +
+                                     " | bindings: " + std::to_string(faResult.groups.size()) + " | detail: [" +
+                                     phonemeDetail + "]")
+                                        .c_str());
 
                 QList<IntervalLayer> layers;
                 layers.push_back(std::move(faResult.graphemeLayer));
                 layers.push_back(std::move(faResult.phonemeLayer));
 
                 applyFaResult(sliceId, layers, faResult.groups, faResult.dependencies);
-                dsfw::widgets::ToastNotification::show(
-                    this, dsfw::widgets::ToastType::Info,
-                    tr("Force alignment completed"), 3000);
+                dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
+                                                       tr("Force alignment completed"), 3000);
             } else {
-                DSFW_LOG_ERROR("fa", ("FA pipeline error [inference]: " + sliceId.toStdString() + " - " + result.error()).c_str());
+                DSFW_LOG_ERROR(
+                    "fa", ("FA pipeline error [inference]: " + sliceId.toStdString() + " - " + result.error()).c_str());
                 QMessageBox::warning(this, tr("Force Align"),
-                                     tr("Force alignment failed: %1")
-                                         .arg(QString::fromStdString(result.error())));
+                                     tr("Force alignment failed: %1").arg(QString::fromStdString(result.error())));
             }
         });
 }
 
-void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
-                                        const QList<IntervalLayer> &layers,
-                                        const std::vector<BindingGroup> &groups,
-                                        const std::vector<LayerDependency> &dependencies) {
+void PhonemeLabelerPage::applyFaResult(const QString& sliceId, const QList<IntervalLayer>& layers,
+                                       const std::vector<BindingGroup>& groups,
+                                       const std::vector<LayerDependency>& dependencies) {
     if (!source())
         return;
 
@@ -665,7 +652,7 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
 
     if (!dependencies.empty()) {
         doc.dependencies = dependencies;
-        for (auto &dep : doc.dependencies) {
+        for (auto& dep : doc.dependencies) {
             if (dep.parentLayerIndex < 0 && !dep.parentLayerName.isEmpty()) {
                 for (int i = 0; i < static_cast<int>(doc.layers.size()); ++i) {
                     if (doc.layers[i].name == dep.parentLayerName) {
@@ -696,40 +683,38 @@ void PhonemeLabelerPage::applyFaResult(const QString &sliceId,
 
 void PhonemeLabelerPage::onBatchFA() {
     if (!source()) {
-        QMessageBox::warning(this, tr("Batch Force Align"),
-                             tr("Please open a project first."));
+        QMessageBox::warning(this, tr("Batch Force Align"), tr("Please open a project first."));
         return;
     }
 
     m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment));
     if (!enginePool()->isOpen<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment))) {
-        QMessageBox::warning(this, tr("Force Align"),
-                             tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
+        QMessageBox::warning(
+            this, tr("Force Align"),
+            tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
         return;
     }
 
     if (isBatchRunning()) {
-        QMessageBox::information(this, tr("Batch Force Align"),
-                                 tr("Force alignment is running, please wait."));
+        QMessageBox::information(this, tr("Batch Force Align"), tr("Force alignment is running, please wait."));
         return;
     }
 
     const auto ids = source()->sliceIds();
     if (ids.isEmpty()) {
         DSFW_LOG_WARN("fa", "Batch FA skipped: no slices");
-        QMessageBox::information(this, tr("Batch Force Align"),
-                                 tr("No slices to process."));
+        QMessageBox::information(this, tr("Batch Force Align"), tr("No slices to process."));
         return;
     }
 
-    auto *dlg = new BatchProcessDialog(tr("Batch Force Align"), this);
+    auto* dlg = new BatchProcessDialog(tr("Batch Force Align"), this);
     dlg->setAttribute(Qt::WA_DeleteOnClose);
 
-    auto *skipExisting = new QCheckBox(tr("Skip slices with existing phoneme alignment"), dlg);
+    auto* skipExisting = new QCheckBox(tr("Skip slices with existing phoneme alignment"), dlg);
     skipExisting->setChecked(true);
     dlg->addParamWidget(skipExisting);
 
-    auto *langCombo = new QComboBox(dlg);
+    auto* langCombo = new QComboBox(dlg);
     langCombo->addItem(tr("Chinese"), QStringLiteral("zh"));
     langCombo->addItem(tr("Japanese"), QStringLiteral("ja"));
     langCombo->addItem(tr("English"), QStringLiteral("en"));
@@ -737,150 +722,168 @@ void PhonemeLabelerPage::onBatchFA() {
 
     dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
 
-    auto *hfa = m_hfa;
+    auto* hfa = m_hfa.get();
     auto hfaAlive = aliveToken(QLatin1String(dstools::keys::engines::phonemeAlignment)).token();
-    auto *src = source();
+    auto* src = source();
     QPointer<PhonemeLabelerPage> guard(this);
 
-    connect(dlg, &BatchProcessDialog::started, this,
-            [dlg, hfa, hfaAlive, src, ids, guard, skipExisting, langCombo, this]() {
-        if (!guard) {
-            dlg->finish(0, 0, 0);
-            return;
-        }
-        guard->setBatchRunning(true);
-        bool skip = skipExisting->isChecked();
-        QString lang = langCombo->currentData().toString();
-        std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-        if (settingsBackend()) {
-            auto cfg = settingsBackend()->load()["faConfig"].toObject();
-            QString nsStr = cfg.contains("nonSpeechPh") && cfg["nonSpeechPh"].isString()
-                ? cfg["nonSpeechPh"].toString() : QStringLiteral("AP, SP");
-            const auto parts = nsStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
-            nonSpeechPh.clear();
-            for (const auto &p : parts)
-                nonSpeechPh.push_back(p.trimmed().toStdString());
-        }
-
-        (void) QtConcurrent::run([dlg, hfa, hfaAlive, src, ids, guard, skip, lang, nonSpeechPh]() {
-            if (!hfaAlive || !*hfaAlive)
+    connect(
+        dlg, &BatchProcessDialog::started, this,
+        [dlg, hfa, hfaAlive, src, ids, guard, skipExisting, langCombo, this]() {
+            if (!guard) {
+                dlg->finish(0, 0, 0);
                 return;
-            if (!hfa)
-                return;
-            int processed = 0;
-            int skipped = 0;
-            int errors = 0;
-            int idx = 0;
-            for (const auto &sliceId : ids) {
-                if (!*hfaAlive || dlg->isCancelled())
-                    break;
+            }
+            guard->setBatchRunning(true);
+            bool skip = skipExisting->isChecked();
+            QString lang = langCombo->currentData().toString();
+            std::vector<std::string> nonSpeechPh = {"AP", "SP"};
+            if (settingsBackend()) {
+                auto cfg = settingsBackend()->load()["faConfig"].toObject();
+                QString nsStr = cfg.contains("nonSpeechPh") && cfg["nonSpeechPh"].isString()
+                                    ? cfg["nonSpeechPh"].toString()
+                                    : QStringLiteral("AP, SP");
+                const auto parts = nsStr.split(QLatin1Char(','), Qt::SkipEmptyParts);
+                nonSpeechPh.clear();
+                for (const auto& p : parts)
+                    nonSpeechPh.push_back(p.trimmed().toStdString());
+            }
 
-                QMetaObject::invokeMethod(dlg, [dlg, idx, total = ids.size()]() {
-                    dlg->setProgress(idx, total);
-                }, Qt::QueuedConnection);
+            (void)QtConcurrent::run([dlg, hfa, hfaAlive, src, ids, guard, skip, lang, nonSpeechPh]() {
+                if (!hfaAlive || !*hfaAlive)
+                    return;
+                if (!hfa)
+                    return;
+                int processed = 0;
+                int skipped = 0;
+                int errors = 0;
+                int idx = 0;
+                for (const auto& sliceId : ids) {
+                    if (!*hfaAlive || dlg->isCancelled())
+                        break;
 
-                QString audioPath = src->validatedAudioPath(sliceId);
-                if (audioPath.isEmpty()) {
-                    ++skipped;
-                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
-                        dlg->appendLog(tr("[SKIP] %1 (missing audio)").arg(sliceId));
-                    }, Qt::QueuedConnection);
-                    ++idx;
-                    continue;
-                }
+                    QMetaObject::invokeMethod(
+                        dlg, [dlg, idx, total = ids.size()]() { dlg->setProgress(idx, total); }, Qt::QueuedConnection);
 
-                auto loadResult = src->loadSlice(sliceId);
-                if (!loadResult) {
-                    ++errors;
-                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
-                        dlg->appendLog(tr("[ERROR] %1 (load failed)").arg(sliceId));
-                    }, Qt::QueuedConnection);
-                    ++idx;
-                    continue;
-                }
-
-                const auto &doc = loadResult.value();
-
-                QString lyricsQStr = readFaInput(doc);
-                if (lyricsQStr.isEmpty()) {
-                    ++skipped;
-                    QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
-                        dlg->appendLog(tr("[SKIP] %1 (no lyrics)").arg(sliceId));
-                    }, Qt::QueuedConnection);
-                    ++idx;
-                    continue;
-                }
-
-                if (skip) {
-                    bool hasPhoneme = false;
-                    for (const auto &layer : doc.layers) {
-                        if (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme) && !layer.boundaries.empty()) {
-                            hasPhoneme = true;
-                            break;
-                        }
-                    }
-                    if (hasPhoneme) {
+                    QString audioPath = src->validatedAudioPath(sliceId);
+                    if (audioPath.isEmpty()) {
                         ++skipped;
-                        QMetaObject::invokeMethod(dlg, [dlg, sliceId]() {
-                            dlg->appendLog(tr("[SKIP] %1 (existing alignment)").arg(sliceId));
-                        }, Qt::QueuedConnection);
+                        QMetaObject::invokeMethod(
+                            dlg, [dlg, sliceId]() { dlg->appendLog(tr("[SKIP] %1 (missing audio)").arg(sliceId)); },
+                            Qt::QueuedConnection);
                         ++idx;
                         continue;
                     }
-                }
 
-                HFA::WordList words;
-                std::string lyricsText = lyricsQStr.toStdString();
-
-                auto sidStr = sliceId.toStdString();
-                auto langStr = lang.toStdString();
-
-                DSFW_LOG_INFO("fa", ("Batch FA started: " + sidStr
-                                      + " | language: " + langStr
-                                      + " | lyrics: " + lyricsText).c_str());
-                auto result = hfa->recognize(audioPath.toStdWString(), langStr, nonSpeechPh, lyricsText, words);
-                if (result) {
-                    auto faResult = buildFaLayers(words);
-
-                    std::string phonemeDetail;
-                    for (const auto &b : faResult.phonemeLayer.boundaries) {
-                        if (!phonemeDetail.empty()) phonemeDetail += ", ";
-                        phonemeDetail += b.text.toStdString() + "@" + std::to_string(usToSec(b.pos));
+                    auto loadResult = src->loadSlice(sliceId);
+                    if (!loadResult) {
+                        ++errors;
+                        QMetaObject::invokeMethod(
+                            dlg, [dlg, sliceId]() { dlg->appendLog(tr("[ERROR] %1 (load failed)").arg(sliceId)); },
+                            Qt::QueuedConnection);
+                        ++idx;
+                        continue;
                     }
-                    DSFW_LOG_INFO("fa", ("Batch FA completed: " + sidStr
-                                          + " | phonemes: " + std::to_string(faResult.phonemeLayer.boundaries.size())
-                                          + " | detail: [" + phonemeDetail + "]").c_str());
 
-                    QList<IntervalLayer> layers;
-                    layers.push_back(std::move(faResult.graphemeLayer));
-                    layers.push_back(std::move(faResult.phonemeLayer));
+                    const auto& doc = loadResult.value();
 
-                    QMetaObject::invokeMethod(guard.data(), [guard, sliceId, layers, groups = std::move(faResult.groups), deps = std::move(faResult.dependencies)]() {
-                        if (guard)
-                            guard->applyFaResult(sliceId, layers, groups, deps);
-                    }, Qt::QueuedConnection);
-                    QMetaObject::invokeMethod(dlg, [dlg, sliceId, phoneCount = faResult.phonemeLayer.boundaries.size()]() {
-                        dlg->appendLog(tr("[OK] %1: %2 phonemes").arg(sliceId).arg(phoneCount));
-                    }, Qt::QueuedConnection);
-                    ++processed;
-                } else {
-                    DSFW_LOG_ERROR("fa", ("Batch FA failed: " + sidStr + " - " + result.error()).c_str());
-                    ++errors;
-                    QMetaObject::invokeMethod(dlg, [dlg, sliceId, errMsg = result.error()]() {
-                        dlg->appendLog(tr("[ERROR] %1: %2").arg(sliceId, QString::fromStdString(errMsg)));
-                    }, Qt::QueuedConnection);
+                    QString lyricsQStr = readFaInput(doc);
+                    if (lyricsQStr.isEmpty()) {
+                        ++skipped;
+                        QMetaObject::invokeMethod(
+                            dlg, [dlg, sliceId]() { dlg->appendLog(tr("[SKIP] %1 (no lyrics)").arg(sliceId)); },
+                            Qt::QueuedConnection);
+                        ++idx;
+                        continue;
+                    }
+
+                    if (skip) {
+                        bool hasPhoneme = false;
+                        for (const auto& layer : doc.layers) {
+                            if (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme) &&
+                                !layer.boundaries.empty()) {
+                                hasPhoneme = true;
+                                break;
+                            }
+                        }
+                        if (hasPhoneme) {
+                            ++skipped;
+                            QMetaObject::invokeMethod(
+                                dlg,
+                                [dlg, sliceId]() { dlg->appendLog(tr("[SKIP] %1 (existing alignment)").arg(sliceId)); },
+                                Qt::QueuedConnection);
+                            ++idx;
+                            continue;
+                        }
+                    }
+
+                    HFA::WordList words;
+                    std::string lyricsText = lyricsQStr.toStdString();
+
+                    auto sidStr = sliceId.toStdString();
+                    auto langStr = lang.toStdString();
+
+                    DSFW_LOG_INFO(
+                        "fa", ("Batch FA started: " + sidStr + " | language: " + langStr + " | lyrics: " + lyricsText)
+                                  .c_str());
+                    auto result = hfa->recognize(audioPath.toStdWString(), langStr, nonSpeechPh, lyricsText, words);
+                    if (result) {
+                        auto faResult = buildFaLayers(words);
+
+                        std::string phonemeDetail;
+                        for (const auto& b : faResult.phonemeLayer.boundaries) {
+                            if (!phonemeDetail.empty())
+                                phonemeDetail += ", ";
+                            phonemeDetail += b.text.toStdString() + "@" + std::to_string(usToSec(b.pos));
+                        }
+                        DSFW_LOG_INFO("fa", ("Batch FA completed: " + sidStr +
+                                             " | phonemes: " + std::to_string(faResult.phonemeLayer.boundaries.size()) +
+                                             " | detail: [" + phonemeDetail + "]")
+                                                .c_str());
+
+                        QList<IntervalLayer> layers;
+                        layers.push_back(std::move(faResult.graphemeLayer));
+                        layers.push_back(std::move(faResult.phonemeLayer));
+
+                        QMetaObject::invokeMethod(
+                            guard.data(),
+                            [guard, sliceId, layers, groups = std::move(faResult.groups),
+                             deps = std::move(faResult.dependencies)]() {
+                                if (guard)
+                                    guard->applyFaResult(sliceId, layers, groups, deps);
+                            },
+                            Qt::QueuedConnection);
+                        QMetaObject::invokeMethod(
+                            dlg,
+                            [dlg, sliceId, phoneCount = faResult.phonemeLayer.boundaries.size()]() {
+                                dlg->appendLog(tr("[OK] %1: %2 phonemes").arg(sliceId).arg(phoneCount));
+                            },
+                            Qt::QueuedConnection);
+                        ++processed;
+                    } else {
+                        DSFW_LOG_ERROR("fa", ("Batch FA failed: " + sidStr + " - " + result.error()).c_str());
+                        ++errors;
+                        QMetaObject::invokeMethod(
+                            dlg,
+                            [dlg, sliceId, errMsg = result.error()]() {
+                                dlg->appendLog(tr("[ERROR] %1: %2").arg(sliceId, QString::fromStdString(errMsg)));
+                            },
+                            Qt::QueuedConnection);
+                    }
+                    ++idx;
                 }
-                ++idx;
-            }
-            QMetaObject::invokeMethod(dlg, [dlg, processed, skipped, errors]() {
-                dlg->finish(processed, skipped, errors);
-            }, Qt::QueuedConnection);
-            QMetaObject::invokeMethod(guard.data(), [guard]() {
-                if (guard)
-                    guard->setBatchRunning(false);
-            }, Qt::QueuedConnection);
+                QMetaObject::invokeMethod(
+                    dlg, [dlg, processed, skipped, errors]() { dlg->finish(processed, skipped, errors); },
+                    Qt::QueuedConnection);
+                QMetaObject::invokeMethod(
+                    guard.data(),
+                    [guard]() {
+                        if (guard)
+                            guard->setBatchRunning(false);
+                    },
+                    Qt::QueuedConnection);
+            });
         });
-    });
 
     connect(dlg, &BatchProcessDialog::cancelled, this, [guard, hfaAlive]() {
         if (hfaAlive)
@@ -897,7 +900,8 @@ void PhonemeLabelerPage::updateProgress() {
 }
 
 void PhonemeLabelerPage::onExtractF0() {
-    if (!m_editor) return;
+    if (!m_editor)
+        return;
 
     const QString audioPath = source() ? source()->validatedAudioPath(currentSliceId()) : QString{};
     if (audioPath.isEmpty()) {
@@ -905,23 +909,24 @@ void PhonemeLabelerPage::onExtractF0() {
         return;
     }
 
-    if (!settingsBackend()) return;
+    if (!settingsBackend())
+        return;
     auto cfg = readModelConfig(settingsBackend(), QStringLiteral("rmvpe"));
     if (cfg.modelPath.isEmpty()) {
         QMessageBox::warning(this, tr("Extract F0"), tr("RMVPE model not configured."));
         return;
     }
 
-    ExecutionProvider provider = ExecutionProvider::DML;
+    auto provider = dsfw::infer::ExecutionProvider::DML;
     int deviceId = 0;
 
-    auto rmvpeProbe = InferBridge::probeRmvpeEngine<Rmvpe::Rmvpe>(
-        std::filesystem::path(cfg.modelPath.toStdWString()), provider, deviceId);
+    auto rmvpeProbe = InferBridge::probeRmvpeEngine<Rmvpe::Rmvpe>(std::filesystem::path(cfg.modelPath.toStdWString()),
+                                                                  provider, deviceId);
     if (!rmvpeProbe.success()) {
         QMessageBox::warning(this, tr("Extract F0"), tr("Failed to load RMVPE model."));
         return;
     }
-    auto &rmvpe = *rmvpeProbe.engine;
+    auto& rmvpe = *rmvpeProbe.engine;
 
     std::vector<Rmvpe::RmvpeRes> results;
     auto result = rmvpe.get_f0(std::filesystem::path(audioPath.toStdWString()), 0.3f, results, nullptr);
@@ -945,7 +950,8 @@ void PhonemeLabelerPage::onExtractF0() {
 }
 
 void PhonemeLabelerPage::onExtractMidi() {
-    if (!m_editor) return;
+    if (!m_editor)
+        return;
 
     const QString audioPath = source() ? source()->validatedAudioPath(currentSliceId()) : QString{};
     if (audioPath.isEmpty()) {
@@ -953,24 +959,25 @@ void PhonemeLabelerPage::onExtractMidi() {
         return;
     }
 
-    if (!settingsBackend()) return;
+    if (!settingsBackend())
+        return;
     auto cfg = readModelConfig(settingsBackend(), QStringLiteral("game"));
     if (cfg.modelPath.isEmpty()) {
         QMessageBox::warning(this, tr("Extract MIDI"), tr("GAME model not configured."));
         return;
     }
 
-    ExecutionProvider provider = ExecutionProvider::DML;
+    auto provider = dsfw::infer::ExecutionProvider::DML;
     int deviceId = 0;
 
-    auto gameProbe = InferBridge::probeGameEngine<Game::Game>(
-        std::filesystem::path(cfg.modelPath.toStdWString()), provider, deviceId);
+    auto gameProbe = InferBridge::probeGameEngine<Game::Game>(std::filesystem::path(cfg.modelPath.toStdWString()),
+                                                              provider, deviceId);
     if (!gameProbe.success()) {
         QMessageBox::warning(this, tr("Extract MIDI"),
                              tr("Failed to load GAME model: %1").arg(QString::fromStdString(gameProbe.error)));
         return;
     }
-    auto &game = *gameProbe.engine;
+    auto& game = *gameProbe.engine;
 
     std::vector<Game::GameNote> gameNotes;
     auto result = game.getNotes(std::filesystem::path(audioPath.toStdWString()), gameNotes, nullptr);
@@ -986,8 +993,9 @@ void PhonemeLabelerPage::onExtractMidi() {
     auto dsFile = std::make_shared<dstools::pitchlabeler::DsPitchDocument>();
     dsFile->offset = 0;
 
-    for (const auto &gn : gameNotes) {
-        if (!gn.voiced) continue;
+    for (const auto& gn : gameNotes) {
+        if (!gn.voiced)
+            continue;
         dstools::pitchlabeler::Note note;
         note.name = dstools::midiToNoteName(static_cast<int>(gn.pitch));
         note.duration = secToUs(static_cast<double>(gn.duration));
@@ -1002,11 +1010,11 @@ void PhonemeLabelerPage::onExtractMidi() {
     m_editor->setPianoRollVisible(true);
 }
 
-void PhonemeLabelerPage::loadFaResultIntoEditor(const DsTextDocument &doc) {
+void PhonemeLabelerPage::loadFaResultIntoEditor(const DsTextDocument& doc) {
     QList<IntervalLayer> layers;
-    for (const auto &layer : doc.layers) {
-        if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme)
-            || layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
+    for (const auto& layer : doc.layers) {
+        if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) ||
+            layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
             layers.append(layer);
     }
 

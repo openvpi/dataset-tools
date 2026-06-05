@@ -1,6 +1,6 @@
 #include <QTest>
-#include <dstools/AudioDecoder.h>
-#include <dstools/WaveFormat.h>
+#include <dsfw/audio/AudioPipeline.h>
+#include <dsfw/audio/AudioFormatInfo.h>
 
 #include <QDir>
 #include <QTemporaryDir>
@@ -9,25 +9,30 @@
 
 #include <cmath>
 
-using namespace dstools::audio;
+using namespace dsfw::audio;
 
 class TestAudioProcessing : public QObject {
     Q_OBJECT
 
-    static QString generateSineWav(const QString &dir, int sampleRate, int channels,
-                                    float frequency, float durationSec, int bitDepth = 16) {
-        QString filename = QStringLiteral("sine_%1_%2_%3bit.wav")
-                               .arg(sampleRate)
-                               .arg(channels)
-                               .arg(bitDepth);
+    static QString generateSineWav(const QString& dir, int sampleRate, int channels, float frequency, float durationSec,
+                                   int bitDepth = 16) {
+        QString filename = QStringLiteral("sine_%1_%2_%3bit.wav").arg(sampleRate).arg(channels).arg(bitDepth);
         QString filepath = QDir(dir).filePath(filename);
 
         int sndFormat = SF_FORMAT_WAV;
         switch (bitDepth) {
-            case 16: sndFormat |= SF_FORMAT_PCM_16; break;
-            case 24: sndFormat |= SF_FORMAT_PCM_24; break;
-            case 32: sndFormat |= SF_FORMAT_PCM_32; break;
-            default: sndFormat |= SF_FORMAT_FLOAT; break;
+            case 16:
+                sndFormat |= SF_FORMAT_PCM_16;
+                break;
+            case 24:
+                sndFormat |= SF_FORMAT_PCM_24;
+                break;
+            case 32:
+                sndFormat |= SF_FORMAT_PCM_32;
+                break;
+            default:
+                sndFormat |= SF_FORMAT_FLOAT;
+                break;
         }
 
 #ifdef _WIN32
@@ -49,185 +54,119 @@ class TestAudioProcessing : public QObject {
     }
 
 private slots:
-    void testWaveFormatDefault() {
-        WaveFormat fmt;
-        QCOMPARE(fmt.sampleRate(), 44100);
-        QCOMPARE(fmt.bitsPerSample(), 16);
-        QCOMPARE(fmt.channels(), 2);
+    void testProbeNonExistent() {
+        auto pipeline = AudioPipeline::create();
+        auto result = pipeline.probe("/nonexistent/file.wav");
+        QVERIFY(!result.ok());
     }
 
-    void testWaveFormatCustom() {
-        WaveFormat fmt(22050, 32, 1);
-        QCOMPARE(fmt.sampleRate(), 22050);
-        QCOMPARE(fmt.bitsPerSample(), 32);
-        QCOMPARE(fmt.channels(), 1);
-    }
-
-    void testWaveFormatBlockAlign() {
-        WaveFormat fmt(44100, 16, 2);
-        QCOMPARE(fmt.blockAlign(), 4);
-    }
-
-    void testWaveFormatBlockAlignMono() {
-        WaveFormat fmt(44100, 24, 1);
-        QCOMPARE(fmt.blockAlign(), 3);
-    }
-
-    void testWaveFormatAvgBytesPerSec() {
-        WaveFormat fmt(44100, 16, 2);
-        QCOMPARE(fmt.averageBytesPerSecond(), 44100 * 4);
-    }
-
-    void testWaveFormatAvgBytesPerSecMono32() {
-        WaveFormat fmt(22050, 32, 1);
-        QCOMPARE(fmt.averageBytesPerSecond(), 22050 * 4);
-    }
-
-    void testAudioDecoderOpenNonExistent() {
-        AudioDecoder decoder;
-        QVERIFY(!decoder.open(QStringLiteral("/nonexistent/file.wav")));
-        QVERIFY(!decoder.isOpen());
-    }
-
-    void testAudioDecoderOpenAndClose() {
+    void testProbeWav() {
         QTemporaryDir tmpDir;
         QVERIFY(tmpDir.isValid());
         QString wavPath = generateSineWav(tmpDir.path(), 44100, 2, 440.0f, 1.0f);
 
-        AudioDecoder decoder;
-        QVERIFY(decoder.open(wavPath));
-        QVERIFY(decoder.isOpen());
+        auto pipeline = AudioPipeline::create();
+        auto result = pipeline.probe(wavPath.toStdString());
+        QVERIFY(result.ok());
 
-        WaveFormat fmt = decoder.format();
-        QCOMPARE(fmt.sampleRate(), 44100);
-        QCOMPARE(fmt.channels(), 2);
-
-        decoder.close();
-        QVERIFY(!decoder.isOpen());
+        auto fmt = result.value();
+        QCOMPARE(fmt.sampleRate, 44100);
+        QCOMPARE(fmt.channelCount, 2);
+        QVERIFY(fmt.durationSec > 0.0);
     }
 
-    void testAudioDecoderReadFloatSamples() {
+    void testDecodeToMonoFloat() {
         QTemporaryDir tmpDir;
         QVERIFY(tmpDir.isValid());
         QString wavPath = generateSineWav(tmpDir.path(), 22050, 1, 440.0f, 0.5f, 16);
 
-        AudioDecoder decoder;
-        QVERIFY(decoder.open(wavPath));
+        auto pipeline = AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(wavPath.toStdString(), 22050);
+        QVERIFY(result.ok());
 
-        std::vector<float> buffer(22050);
-        int read = decoder.read(buffer.data(), 0, 22050);
-        QVERIFY(read > 0);
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        QVERIFY(floats.size() > 0);
 
         bool hasNonZero = false;
-        for (int i = 0; i < read; ++i) {
-            if (std::abs(buffer[i]) > 1e-6f) {
+        for (auto s : floats) {
+            if (std::abs(s) > 1e-6f) {
                 hasNonZero = true;
                 break;
             }
         }
         QVERIFY(hasNonZero);
-
-        decoder.close();
     }
 
-    void testAudioDecoderReadStereo() {
+    void testDecodeStereoToMono() {
         QTemporaryDir tmpDir;
         QVERIFY(tmpDir.isValid());
         QString wavPath = generateSineWav(tmpDir.path(), 44100, 2, 440.0f, 1.0f);
 
-        AudioDecoder decoder;
-        QVERIFY(decoder.open(wavPath));
+        auto pipeline = AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(wavPath.toStdString(), 44100);
+        QVERIFY(result.ok());
 
-        WaveFormat fmt = decoder.format();
-        QCOMPARE(fmt.channels(), 2);
-
-        std::vector<float> buffer(4096);
-        int read = decoder.read(buffer.data(), 0, 4096);
-        QVERIFY(read > 0);
-
-        decoder.close();
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        QVERIFY(floats.size() > 0);
     }
 
-    void testAudioDecoderLength() {
+    void testDecodeToMonoFloatResample() {
         QTemporaryDir tmpDir;
         QVERIFY(tmpDir.isValid());
-        QString wavPath = generateSineWav(tmpDir.path(), 44100, 1, 440.0f, 1.0f);
+        QString wavPath = generateSineWav(tmpDir.path(), 44100, 1, 440.0f, 0.5f);
 
-        AudioDecoder decoder;
-        QVERIFY(decoder.open(wavPath));
+        auto pipeline = AudioPipeline::create();
+        auto probeResult = pipeline.probe(wavPath.toStdString());
+        QVERIFY(probeResult.ok());
+        QCOMPARE(probeResult.value().sampleRate, 44100);
 
-        qint64 len = decoder.length();
-        QVERIFY(len > 0);
-
-        decoder.close();
+        auto decodeResult = pipeline.decodeToMonoFloat(wavPath.toStdString(), 22050);
+        QVERIFY(decodeResult.ok());
+        auto buffer = decodeResult.value();
+        QVERIFY(buffer.floats().size() > 0);
     }
 
-    void testAudioDecoderPosition() {
-        QTemporaryDir tmpDir;
-        QVERIFY(tmpDir.isValid());
-        QString wavPath = generateSineWav(tmpDir.path(), 44100, 1, 440.0f, 1.0f);
-
-        AudioDecoder decoder;
-        QVERIFY(decoder.open(wavPath));
-
-        qint64 initialPos = decoder.position();
-        QCOMPARE(initialPos, 0);
-
-        std::vector<float> buffer(1024);
-        decoder.read(buffer.data(), 0, 1024);
-
-        qint64 afterRead = decoder.position();
-        QVERIFY(afterRead >= 0);
-
-        decoder.close();
-    }
-
-    void testAudioDecoderDifferentSampleRates() {
+    void testDecodeDifferentSampleRates() {
         QTemporaryDir tmpDir;
         QVERIFY(tmpDir.isValid());
 
         for (int sr : {22050, 44100, 48000}) {
             QString wavPath = generateSineWav(tmpDir.path(), sr, 1, 440.0f, 0.5f);
-            AudioDecoder decoder;
-            QVERIFY2(decoder.open(wavPath), qPrintable(QStringLiteral("Failed to open %1Hz WAV").arg(sr)));
+            auto pipeline = AudioPipeline::create();
+            auto result = pipeline.decodeToMonoFloat(wavPath.toStdString(), sr);
+            QVERIFY2(result.ok(), qPrintable(QStringLiteral("Failed to decode %1Hz WAV").arg(sr)));
 
-            WaveFormat fmt = decoder.format();
-            QCOMPARE(fmt.sampleRate(), 44100);
-
-            decoder.close();
+            auto buffer = result.value();
+            QVERIFY(buffer.floats().size() > 0);
         }
     }
 
-    void testAudioDecoder24BitWav() {
+    void testDecode24BitWav() {
         QTemporaryDir tmpDir;
         QVERIFY(tmpDir.isValid());
         QString wavPath = generateSineWav(tmpDir.path(), 44100, 1, 440.0f, 0.5f, 24);
 
-        AudioDecoder decoder;
-        QVERIFY(decoder.open(wavPath));
-        QVERIFY(decoder.isOpen());
+        auto pipeline = AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(wavPath.toStdString(), 44100);
+        QVERIFY(result.ok());
 
-        std::vector<float> buffer(4096);
-        int read = decoder.read(buffer.data(), 0, 4096);
-        QVERIFY(read > 0);
-
-        decoder.close();
+        auto buffer = result.value();
+        QVERIFY(buffer.floats().size() > 0);
     }
 
-    void testAudioDecoderFloatWav() {
+    void testDecodeFloatWav() {
         QTemporaryDir tmpDir;
         QVERIFY(tmpDir.isValid());
         QString wavPath = generateSineWav(tmpDir.path(), 44100, 1, 440.0f, 0.5f, 32);
 
-        AudioDecoder decoder;
-        QVERIFY(decoder.open(wavPath));
-        QVERIFY(decoder.isOpen());
+        auto pipeline = AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(wavPath.toStdString(), 44100);
+        QVERIFY(result.ok());
 
-        std::vector<float> buffer(4096);
-        int read = decoder.read(buffer.data(), 0, 4096);
-        QVERIFY(read > 0);
-
-        decoder.close();
+        auto buffer = result.value();
+        QVERIFY(buffer.floats().size() > 0);
     }
 };
 

@@ -319,5 +319,24 @@ double WaveformChartPanel::dataDurationSec() const {
     return static_cast<double>(m_samples.size()) / (m_sampleRate * 2.0);
 }
 
+int WaveformChartPanel::optimalRenderWidth() const {
+    if (m_samples.empty() || m_sampleRate <= 0) return width() * 4;
+
+    int widgetWidth = width();
+    if (widgetWidth <= 0) return 4;
+
+    // Use visible duration from the converter for adaptive precision
+    double visibleDuration = 0.0;
+    if (m_converter) {
+        visibleDuration = m_converter->endSec() - m_converter->startSec();
+    }
+    if (visibleDuration <= 0) return widgetWidth * 4;
+
+    // At least 0.5 pixels per sample at the visible zoom level to avoid aliasing
+    static constexpr double kMinPixelsPerSample = 0.5;
+    int minWidth = static_cast<int>(visibleDuration * m_sampleRate * kMinPixelsPerSample);
+    return std::max(widgetWidth * 4, minWidth);
+}
+
 } // namespace chart
 } // namespace dstools

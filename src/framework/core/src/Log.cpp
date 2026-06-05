@@ -8,7 +8,7 @@
 #include <chrono>
 #include <deque>
 
-namespace dstools {
+namespace dsfw {
 
 const char *logLevelLabel(LogLevel level) {
     switch (level) {
@@ -150,4 +150,4 @@ void Logger::clearRingBuffer() {
     g_ringBuffer.entries.clear();
 }
 
-} // namespace dstools
+} // namespace dsfw

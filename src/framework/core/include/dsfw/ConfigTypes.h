@@ -6,7 +6,7 @@
 #include <variant>
 #include <vector>
 
-namespace dstools {
+namespace dsfw {
 
     struct ConfigValue {
         using ValueType = std::variant<bool, int64_t, double, QString,
@@ -106,4 +106,15 @@ namespace dstools {
         return it != m.end() ? it->second.asStringList() : def;
     }
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::ConfigValue;
+    using dsfw::ConfigMap;
+    using dsfw::configValueString;
+    using dsfw::configValueInt;
+    using dsfw::configValueBool;
+    using dsfw::configValueDouble;
+    using dsfw::configValueStringList;
+}

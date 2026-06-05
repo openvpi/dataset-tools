@@ -16,7 +16,7 @@ struct FileLogState {
     QMutex mutex;
 };
 
-dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName) {
+dsfw::LogSink createFileLogSink(const QString &logDir, const QString &appName) {
     QDir dir(logDir);
     if (!dir.exists())
         dir.mkpath(QStringLiteral("."));
@@ -28,20 +28,20 @@ dstools::LogSink createFileLogSink(const QString &logDir, const QString &appName
     state->file = std::make_unique<QFile>(fileName);
     if (!state->file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         state->file.reset();
-        return [](const dstools::LogEntry &) {};
+        return [](const dsfw::LogEntry &) {};
     }
 
-    return [state](const dstools::LogEntry &entry) {
+    return [state](const dsfw::LogEntry &entry) {
         QMutexLocker locker(&state->mutex);
         if (!state->file || !state->file->isOpen()) return;
 
         const char *levelStr = "TRACE";
         switch (entry.level) {
-            case dstools::LogLevel::Debug: levelStr = "DEBUG"; break;
-            case dstools::LogLevel::Info: levelStr = "INFO"; break;
-            case dstools::LogLevel::Warning: levelStr = "WARN"; break;
-            case dstools::LogLevel::Error: levelStr = "ERROR"; break;
-            case dstools::LogLevel::Fatal: levelStr = "FATAL"; break;
+            case dsfw::LogLevel::Debug: levelStr = "DEBUG"; break;
+            case dsfw::LogLevel::Info: levelStr = "INFO"; break;
+            case dsfw::LogLevel::Warning: levelStr = "WARN"; break;
+            case dsfw::LogLevel::Error: levelStr = "ERROR"; break;
+            case dsfw::LogLevel::Fatal: levelStr = "FATAL"; break;
             default: break;
         }
 

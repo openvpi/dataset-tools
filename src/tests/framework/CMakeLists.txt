@@ -47,22 +47,34 @@ target_link_libraries(TestMockInference PRIVATE
 )
 add_test(NAME TestMockInference COMMAND TestMockInference)
 
-# OnnxModelBase validation tests (depends on dsfw-core)
+# OnnxModelBase validation tests (depends on infer-common for include path and static methods)
 add_executable(TestOnnxModelBase TestOnnxModelBase.cpp)
 target_link_libraries(TestOnnxModelBase PRIVATE
-        dsfw-core
+        infer-common
         Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestOnnxModelBase COMMAND TestOnnxModelBase)
 
-# Audio processing tests (depends on dstools-audio + sndfile for fixture generation)
+# Audio processing tests (depends on dsfw-audio + sndfile for fixture generation)
+find_package(SndFile CONFIG REQUIRED)
 add_executable(TestAudioProcessing TestAudioProcessing.cpp)
 target_link_libraries(TestAudioProcessing PRIVATE
-        dstools-audio
+        dsfw-audio
         dstools-domain
+        SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestAudioProcessing COMMAND TestAudioProcessing)
+
+# Audio pipeline edge-case tests (empty/corrupt files, segment decode)
+add_executable(TestAudioPipelineEdgeCases TestAudioPipelineEdgeCases.cpp)
+target_link_libraries(TestAudioPipelineEdgeCases PRIVATE
+        dsfw-audio
+        dstools-domain
+        SndFile::sndfile
+        Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestAudioPipelineEdgeCases COMMAND TestAudioPipelineEdgeCases)
 
 # ── Integration tests (require QApplication / UI components) ─────────────────
 if (BUILD_INTEGRATION_TESTS)

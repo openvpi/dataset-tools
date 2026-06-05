@@ -636,9 +636,11 @@ namespace dstools {
 
             void PianoRollView::render(QPainter &painter, const chart::ChartCoordinate &coord) {
                 auto rs = buildRenderState();
-                rs.coord = coord;
-                rs.coord.scrollX = m_coord.scrollX;
-                rs.coord.scrollY = m_coord.scrollY;
+                // Use parent's viewStart/viewEnd for time range but keep our own coordinate
+                // (vScale, contentTop, pixelWidth) for consistent layout. The parent's paintEvent
+                // is hidden by our own paintEvent fill, but we keep this path for full-data rendering.
+                rs.coord.viewStart = coord.viewStart;
+                rs.coord.viewEnd = coord.viewEnd;
                 int w = width() - m_configScrollBarSize;
                 int h = height();
                 PianoRollRenderer::drawGrid(painter, w, h, rs);
@@ -846,7 +848,7 @@ namespace dstools {
                 double endSec = m_viewport ? m_viewport->endSec() : startSec + 1.0;
                 m_coord.viewStart = startSec;
                 m_coord.viewEnd = endSec;
-                m_coord.pixelWidth = width();
+                m_coord.pixelWidth = width() - m_configScrollBarSize;
                 m_coord.vScale = m_vScale;
                 m_coord.contentTop = 0;
                 m_coord.scrollX = 0.0;

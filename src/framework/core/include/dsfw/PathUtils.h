@@ -5,6 +5,7 @@
 #include <QString>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 
@@ -36,6 +37,12 @@ public:
 
     static FILE* openFile(const QString& path, const char* mode);
 
+    static std::ifstream openIfstream(const std::filesystem::path& path,
+                                      std::ios::openmode mode = std::ios::in);
+
+    static std::ofstream openOfstream(const std::filesystem::path& path,
+                                      std::ios::openmode mode = std::ios::out);
+
     static bool hasNonAscii(const QString& path);
 
     static QString toNativeSeparators(const QString& path);
@@ -56,19 +63,24 @@ public:
 
     static QByteArray encodeText(const QString& text, TextEncoding encoding);
 
-    static dstools::Result<QString> readFile(const QString& path);
+    static dsfw::Result<QString> readFile(const QString& path);
 
-    static dstools::Result<QString> readFile(const std::string& path);
+    static dsfw::Result<QString> readFile(const std::string& path);
 
-    static dstools::Result<void> writeFile(const QString& path, const QString& text,
+    static dsfw::Result<void> writeFile(const QString& path, const QString& text,
                                            TextEncoding encoding = TextEncoding::Utf8);
 
-    static dstools::Result<void> writeFile(const std::string& path, const QString& text,
+    static dsfw::Result<void> writeFile(const std::string& path, const QString& text,
                                            TextEncoding encoding = TextEncoding::Utf8);
 
-    static dstools::Result<uint32_t> crc32(const std::filesystem::path& path);
+    static dsfw::Result<uint32_t> crc32(const std::filesystem::path& path);
 
     static uint32_t crc32(const uint8_t* data, size_t size);
 };
 
 } // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::PathUtils;
+}

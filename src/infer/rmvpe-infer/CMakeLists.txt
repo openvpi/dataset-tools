@@ -13,5 +13,4 @@ dstools_add_infer_library(${PROJECT_NAME}
 )
 
 # Library-specific dependencies
-find_package(SndFile CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME} PUBLIC SndFile::sndfile audio-util dsfw-core)
+target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-audio dsfw-core infer-common)

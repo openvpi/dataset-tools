@@ -190,10 +190,9 @@ const auto testFile = fixtureDir + "/sample.textgrid";
 
 ```cpp
 class StubG2PProvider : public IG2PProvider { ... };
-class StubModelDownloader : public IModelDownloader { ... };
 ```
 
-框架已提供 `StubG2PProvider`、`StubExportFormat`、`StubQualityMetrics`、`StubModelDownloader` 等。
+框架已提供 `StubG2PProvider` 等。
 
 ---
 

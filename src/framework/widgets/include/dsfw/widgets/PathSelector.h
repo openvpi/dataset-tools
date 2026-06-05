@@ -28,6 +28,14 @@ namespace dsfw::widgets {
         explicit PathSelector(Mode mode, const QString &label, const QString &filter = {}, QWidget *parent = nullptr,
                               const QString &settingsKey = {});
 
+        /// @brief Set the default suffix for save file dialogs.
+        /// @param suffix Default file suffix (e.g., "wav").
+        void setDefaultSuffix(const QString &suffix);
+
+        /// @brief Set the dialog title (overrides label text in file dialogs).
+        /// @param title Dialog title text.
+        void setDialogTitle(const QString &title);
+
         /// @brief Get the currently selected path.
         /// @return Selected path string.
         QString path() const;
@@ -59,12 +67,13 @@ namespace dsfw::widgets {
 
     private:
         void onBrowseClicked();
-        QString loadRecentDir() const;
         void saveRecentDir(const QString &path);
 
         Mode m_mode;
         QString m_filter;
         QString m_settingsKey;
+        QString m_defaultSuffix;
+        QString m_dialogTitle;
         QLabel *m_label;
         QLineEdit *m_lineEdit;
         QPushButton *m_browseBtn;

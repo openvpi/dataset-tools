@@ -1,13 +1,11 @@
 #include <game-infer/Game.h>
 
 #include <dsfw/PathUtils.h>
-#include <sndfile.hh>
-
 #include <algorithm>
 #include <cmath>
 
-#include <audio-util/Slicer.h>
-#include <audio-util/Util.h>
+#include <dsfw/audio/AudioPipeline.h>
+#include <dsfw/signal/Slicer.h>
 #include <game-infer/DiffSingerParser.h>
 #include <game-infer/GameModel.h>
 #include "NoteUtils.h"
@@ -98,7 +96,7 @@ namespace Game
         return midi_data;
     }
 
-    static uint64_t calculateSumOfDifferences(const AudioUtil::MarkerList &markers) {
+    static uint64_t calculateSumOfDifferences(const dsfw::signal::MarkerList &markers) {
         uint64_t sum = 0;
         for (const auto &[fst, snd] : markers) {
             sum += snd - fst;
@@ -114,25 +112,16 @@ namespace Game
         }
 
         const auto tar_sr = m_gameModel->targetSampleRate();
-        std::string msg;
-        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, tar_sr);
-
-        if (!msg.empty()) {
-            return dstools::Err("Failed to resample audio for Game inference: " + msg);
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(filepath), tar_sr);
+        if (!result.ok()) {
+            return dstools::Err("Failed to decode audio for Game inference: " + result.error());
         }
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        std::vector<float> audio(floats.begin(), floats.end());
 
-        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
-                         sf_vio.info.samplerate);
-        if (!sf) {
-            return dstools::Err("Failed to open resampled audio for Game inference");
-        }
-        const auto totalSize = sf.frames();
-
-        std::vector<float> audio(totalSize);
-        sf.seek(0, SEEK_SET);
-        sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
-
-        const AudioUtil::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
+        const dsfw::signal::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
         const auto chunks = slicer.slice(audio);
 
         if (chunks.empty()) {
@@ -156,18 +145,17 @@ namespace Game
                     "s.\nPlease check whether the accompaniment has been removed from the current audio.");
             }
 
-            if (frameCount <= 0 || beginFrame > totalSize || endFrame > totalSize) {
+            if (frameCount <= 0 || beginFrame + frameCount > static_cast<int64_t>(audio.size())) {
                 continue;
             }
 
-            sf.seek(beginFrame, SEEK_SET);
-            std::vector<float> tmp(frameCount);
-            sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+            std::vector<float> tmp(audio.begin() + beginFrame, audio.begin() + beginFrame + frameCount);
 
             std::vector<bool> boundaries;
             std::vector<float> durations;
             std::vector<float> presence;
             std::vector<float> scores;
+            std::string msg;
 
             const bool success = m_gameModel->forward(tmp, boundaries, durations, presence, scores, msg);
             if (!success)
@@ -200,25 +188,16 @@ namespace Game
         }
 
         const auto tar_sr = m_gameModel->targetSampleRate();
-        std::string msg;
-        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, tar_sr);
-
-        if (!msg.empty()) {
-            return dstools::Err("Failed to resample audio for Game inference: " + msg);
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(filepath), tar_sr);
+        if (!result.ok()) {
+            return dstools::Err("Failed to decode audio for Game inference: " + result.error());
         }
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        std::vector<float> audio(floats.begin(), floats.end());
 
-        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sf_vio.info.channels,
-                         sf_vio.info.samplerate);
-        if (!sf) {
-            return dstools::Err("Failed to open resampled audio for Game inference");
-        }
-        const auto totalSize = sf.frames();
-
-        std::vector<float> audio(totalSize);
-        sf.seek(0, SEEK_SET);
-        sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
-
-        const AudioUtil::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
+        const dsfw::signal::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
         const auto chunks = slicer.slice(audio);
         if (chunks.empty()) {
             return dstools::Err("slicer: no audio chunks for output!");
@@ -241,18 +220,17 @@ namespace Game
                     "s.\nPlease check whether the accompaniment has been removed from the current audio.");
             }
 
-            if (frameCount <= 0 || beginFrame > totalSize || endFrame > totalSize) {
+            if (frameCount <= 0 || beginFrame + frameCount > static_cast<int64_t>(audio.size())) {
                 continue;
             }
 
-            sf.seek(beginFrame, SEEK_SET);
-            std::vector<float> tmp(frameCount);
-            sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
+            std::vector<float> tmp(audio.begin() + beginFrame, audio.begin() + beginFrame + frameCount);
 
             std::vector<bool> boundaries;
             std::vector<float> durations;
             std::vector<float> presence;
             std::vector<float> scores;
+            std::string msg;
 
             const bool success = m_gameModel->forward(tmp, boundaries, durations, presence, scores, msg);
             if (!success)
@@ -344,21 +322,15 @@ namespace Game
         const auto knownDurations = wordDurations(words);
 
         const auto tarSr = m_gameModel->targetSampleRate();
-        std::string audioMsg;
-        auto sfVio = AudioUtil::resample_to_vio(input.wavPath, audioMsg, 1, tarSr);
-        if (!audioMsg.empty() && sfVio.data.byteArray.empty()) {
-            return dstools::Err("Failed to load audio '" + dsfw::PathUtils::toUtf8(input.wavPath) + "': " + audioMsg);
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(input.wavPath), tarSr);
+        if (!result.ok()) {
+            return dstools::Err("Failed to load audio '" + dsfw::PathUtils::toUtf8(input.wavPath) + "': " +
+                                result.error());
         }
-
-        SndfileHandle sf(sfVio.vio, &sfVio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, sfVio.info.channels,
-                         sfVio.info.samplerate);
-        if (!sf) {
-            return dstools::Err("Failed to open resampled audio for Game inference: " + audioMsg);
-        }
-        const auto totalSize = sf.frames();
-        std::vector<float> waveform(totalSize);
-        sf.seek(0, SEEK_SET);
-        sf.read(waveform.data(), static_cast<sf_count_t>(waveform.size()));
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        std::vector<float> waveform(floats.begin(), floats.end());
 
         std::vector<float> durations, presence, scores;
         std::string msg;

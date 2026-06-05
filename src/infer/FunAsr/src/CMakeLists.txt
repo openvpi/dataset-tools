@@ -18,6 +18,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${PROJECT_DIR}/src/infer/onnxruntime/include
 )
 
 find_package(FFTW3 CONFIG REQUIRED)
@@ -34,4 +35,4 @@ else ()
     set(EXTRA_LIBS pthread)
 endif ()
 
-target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core ${EXTRA_LIBS})
+target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core infer-common ${EXTRA_LIBS})

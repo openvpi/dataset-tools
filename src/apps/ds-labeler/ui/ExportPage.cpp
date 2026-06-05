@@ -1,6 +1,7 @@
 #include "ExportPage.h"
 
 #include "AutoCompleteService.h"
+#include "CompositeInferenceService.h"
 #include "EnginePool.h"
 #include "ExportService.h"
 #include "InferBridge.h"
@@ -48,7 +49,7 @@ namespace dstools {
 
     ExportPage::ExportPage(QWidget *parent) : QWidget(parent) {
         m_phNumCalc = std::make_unique<PhNumCalculator>();
-        m_previewData = std::make_unique<SlicePreviewModel>();
+        m_previewData = std::make_shared<SlicePreviewModel>();
         buildUi();
     }
 
@@ -362,7 +363,7 @@ namespace dstools {
         m_previewData->invalidate();
 
         QPointer<ExportPage> guard(this);
-        auto *preview = m_previewData.get();
+        auto preview = m_previewData;  // shared_ptr copy — safe across threads
 
         (void)QtConcurrent::run([guard, preview]() {
             preview->refresh();
@@ -440,11 +441,12 @@ namespace dstools {
         return;
 
     QString audioPath = m_source->audioPath(sliceId);
-        auto *hfa = m_enginePool ? m_enginePool->acquire<HFA::HFA>(QStringLiteral("phoneme_alignment")) : nullptr;
-        auto *rmvpe = m_enginePool ? m_enginePool->acquire<Rmvpe::Rmvpe>(QStringLiteral("pitch_extraction")) : nullptr;
-        auto *game = m_enginePool ? m_enginePool->acquire<Game::Game>(QStringLiteral("midi_transcription")) : nullptr;
+        auto hfa = m_enginePool ? m_enginePool->acquire<HFA::HFA>(QStringLiteral("phoneme_alignment")) : nullptr;
+        auto rmvpe = m_enginePool ? m_enginePool->acquire<Rmvpe::Rmvpe>(QStringLiteral("pitch_extraction")) : nullptr;
+        auto game = m_enginePool ? m_enginePool->acquire<Game::Game>(QStringLiteral("midi_transcription")) : nullptr;
+        dstools::CompositeInferenceService inferService(hfa.get(), rmvpe.get(), game.get());
         auto outcome = dstools::autoCompleteSlice(std::move(result.value()), audioPath,
-                                                  hfa, rmvpe, game, m_phNumCalc.get());
+                                                  &inferService, m_phNumCalc.get());
     if (outcome.modified) {
         if (auto res = m_source->saveSlice(sliceId, outcome.doc); !res.ok())
             DSFW_LOG_ERROR("export", ("Failed to save slice after autoComplete: " + sliceId.toStdString() + " - " + res.error()).c_str());
@@ -619,9 +621,9 @@ namespace dstools {
             m_btnExport->setEnabled(false);
 
             // Capture engine pointers and source for use in background thread.
-            auto *hfa = m_enginePool ? m_enginePool->acquire<HFA::HFA>(QStringLiteral("phoneme_alignment")) : nullptr;
-            auto *rmvpe = m_enginePool ? m_enginePool->acquire<Rmvpe::Rmvpe>(QStringLiteral("pitch_extraction")) : nullptr;
-            auto *game = m_enginePool ? m_enginePool->acquire<Game::Game>(QStringLiteral("midi_transcription")) : nullptr;
+            auto hfa = m_enginePool ? m_enginePool->acquire<HFA::HFA>(QStringLiteral("phoneme_alignment")) : nullptr;
+            auto rmvpe = m_enginePool ? m_enginePool->acquire<Rmvpe::Rmvpe>(QStringLiteral("pitch_extraction")) : nullptr;
+            auto game = m_enginePool ? m_enginePool->acquire<Game::Game>(QStringLiteral("midi_transcription")) : nullptr;
             auto *phNumCalc = m_phNumCalc.get();
             auto enginesAlive = m_enginePool ? m_enginePool->aliveToken(QStringLiteral("export")) : nullptr;
             auto *src = m_source;
@@ -661,7 +663,8 @@ namespace dstools {
 
                         DsTextDocument doc = std::move(result.value());
                         QString audioPath = src->audioPath(sliceId);
-                        auto outcome = dstools::autoCompleteSlice(std::move(doc), audioPath, hfa, rmvpe, game, phNumCalc);
+                        dstools::CompositeInferenceService inferService(hfa.get(), rmvpe.get(), game.get());
+                        auto outcome = dstools::autoCompleteSlice(std::move(doc), audioPath, &inferService, phNumCalc);
                         if (outcome.modified)
                             modifiedDocs[sliceId] = std::move(outcome.doc);
 

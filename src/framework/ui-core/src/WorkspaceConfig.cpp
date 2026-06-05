@@ -1,5 +1,6 @@
 #include <dsfw/WorkspaceConfig.h>
 #include <dsfw/AppSettings.h>
+#include <dsfw/CommonKeys.h>
 
 #include <QSplitter>
 #include <QJsonDocument>
@@ -9,25 +10,22 @@
 
 namespace dsfw {
 
-static const dstools::SettingsKey<QString> kWorkspaceLayout("Workspace/layout", "{}");
-static const dstools::SettingsKey<int> kIconSize("Workspace/iconSize", 24);
-
-WorkspaceConfig::WorkspaceConfig(dstools::AppSettings *settings)
+WorkspaceConfig::WorkspaceConfig(dsfw::AppSettings *settings)
     : m_settings(settings) {}
 
 int WorkspaceConfig::iconSize() const {
-    return m_settings ? m_settings->get(kIconSize) : 24;
+    return m_settings ? m_settings->get(CommonKeys::WorkspaceIconSize) : 24;
 }
 
 void WorkspaceConfig::setIconSize(int size) {
     if (m_settings)
-        m_settings->set(kIconSize, size);
+        m_settings->set(CommonKeys::WorkspaceIconSize, size);
 }
 
 void WorkspaceConfig::saveSplitterState(const QString &key, QSplitter *splitter) {
     if (!m_settings || !splitter) return;
 
-    auto layoutStr = m_settings->get(kWorkspaceLayout);
+    auto layoutStr = m_settings->get(CommonKeys::WorkspaceLayout);
     auto j = nlohmann::json::parse(layoutStr.toStdString(), nullptr, false);
     if (j.is_discarded()) j = nlohmann::json::object();
 
@@ -35,13 +33,13 @@ void WorkspaceConfig::saveSplitterState(const QString &key, QSplitter *splitter)
         j["splitters"] = nlohmann::json::object();
     j["splitters"][key.toStdString()] = splitter->saveState().toBase64().toStdString();
 
-    m_settings->set(kWorkspaceLayout, QString::fromStdString(j.dump()));
+    m_settings->set(CommonKeys::WorkspaceLayout, QString::fromStdString(j.dump()));
 }
 
 void WorkspaceConfig::restoreSplitterState(const QString &key, QSplitter *splitter) {
     if (!m_settings || !splitter) return;
 
-    auto layoutStr = m_settings->get(kWorkspaceLayout);
+    auto layoutStr = m_settings->get(CommonKeys::WorkspaceLayout);
     auto j = nlohmann::json::parse(layoutStr.toStdString(), nullptr, false);
     if (j.is_discarded()) return;
     if (!j.contains("splitters")) return;
@@ -58,7 +56,7 @@ void WorkspaceConfig::restoreSplitterState(const QString &key, QSplitter *splitt
 void WorkspaceConfig::saveSidebarCollapsed(const QString &key, bool collapsed) {
     if (!m_settings) return;
 
-    auto layoutStr = m_settings->get(kWorkspaceLayout);
+    auto layoutStr = m_settings->get(CommonKeys::WorkspaceLayout);
     auto j = nlohmann::json::parse(layoutStr.toStdString(), nullptr, false);
     if (j.is_discarded()) j = nlohmann::json::object();
 
@@ -66,13 +64,13 @@ void WorkspaceConfig::saveSidebarCollapsed(const QString &key, bool collapsed) {
         j["sidebars"] = nlohmann::json::object();
     j["sidebars"][key.toStdString()] = collapsed;
 
-    m_settings->set(kWorkspaceLayout, QString::fromStdString(j.dump()));
+    m_settings->set(CommonKeys::WorkspaceLayout, QString::fromStdString(j.dump()));
 }
 
 bool WorkspaceConfig::restoreSidebarCollapsed(const QString &key, bool defaultVal) const {
     if (!m_settings) return defaultVal;
 
-    auto layoutStr = m_settings->get(kWorkspaceLayout);
+    auto layoutStr = m_settings->get(CommonKeys::WorkspaceLayout);
     auto j = nlohmann::json::parse(layoutStr.toStdString(), nullptr, false);
     if (j.is_discarded()) return defaultVal;
     if (!j.contains("sidebars")) return defaultVal;

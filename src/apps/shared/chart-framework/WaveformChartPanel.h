@@ -27,10 +27,11 @@ namespace dstools {
             void renderFullData(QImage &image) override;
             double dataDurationSec() const override;
 
-            // F-02: 4x 超采样以获得更好缩放质量
+            // F-02: 自适应渲染宽度，基于数据分辨率动态调整
             int fullDataImageWidth() const override {
-                return width() * 4;
+                return optimalRenderWidth();
             }
+            int optimalRenderWidth() const override;
 
         private:
             void loadConfigParams();

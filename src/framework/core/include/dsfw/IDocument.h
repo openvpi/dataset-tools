@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <string>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Abstract document interface supporting modified tracking and file persistence.
     class IDocument {
@@ -33,4 +33,9 @@ namespace dstools {
         [[nodiscard]] virtual Result<void> saveAs(const std::filesystem::path &path) = 0;
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::IDocument;
+}

@@ -12,7 +12,7 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 
-namespace dstools {
+namespace dsfw {
 
 PipelineRunner::PipelineRunner(QObject* parent) : QObject(parent) {
 }
@@ -264,4 +264,4 @@ bool PipelineRunner::hasLatestSnapshot(const QString& snapshotDir) {
     return !entries.isEmpty();
 }
 
-} // namespace dstools
+} // namespace dsfw

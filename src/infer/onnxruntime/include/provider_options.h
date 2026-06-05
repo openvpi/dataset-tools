@@ -9,10 +9,10 @@
 
 namespace onnxruntime {
 
-    // data types for execution provider options
+// data types for execution provider options
 
-    using ProviderOptions = std::unordered_map<std::string, std::string>;
-    using ProviderOptionsVector = std::vector<ProviderOptions>;
-    using ProviderOptionsMap = std::unordered_map<std::string, ProviderOptions>;
+using ProviderOptions = std::unordered_map<std::string, std::string>;
+using ProviderOptionsVector = std::vector<ProviderOptions>;
+using ProviderOptionsMap = std::unordered_map<std::string, ProviderOptions>;
 
-} // namespace onnxruntime
+}  // namespace onnxruntime

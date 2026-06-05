@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(Qt6 COMPONENTS Core Gui Widgets)
+find_dependency(dsfw CONFIG)
+find_dependency(dstools-domain CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/dstoolsUiCoreTargets.cmake")
+
+check_required_components(dstools-ui-core)

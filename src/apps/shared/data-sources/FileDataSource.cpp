@@ -143,7 +143,7 @@ Result<DsTextDocument> FileDataSource::loadSlice(const QString& sliceId) {
     if (m_formatId.isEmpty())
         return DsTextDocument::load(m_annotationPath);
 
-    auto* adapter = FormatAdapterRegistry::instance().adapter(m_formatId);
+    auto* adapter = dsfw::FormatAdapterRegistry::instance().adapter(m_formatId);
     if (!adapter || !adapter->canImport())
         return DsTextDocument::load(m_annotationPath);
 
@@ -176,7 +176,7 @@ Result<void> FileDataSource::saveSlice(const QString& sliceId, const DsTextDocum
         return result;
     }
 
-    auto* adapter = FormatAdapterRegistry::instance().adapter(m_formatId);
+    auto* adapter = dsfw::FormatAdapterRegistry::instance().adapter(m_formatId);
     if (!adapter || !adapter->canExport()) {
         QFileInfo fi(m_annotationPath);
         QString dstextPath = fi.absolutePath() + QLatin1Char('/') + fi.completeBaseName() + QStringLiteral(".dstext");

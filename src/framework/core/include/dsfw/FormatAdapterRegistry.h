@@ -7,7 +7,7 @@
 #include <memory>
 #include <mutex>
 
-namespace dstools {
+namespace dsfw {
 
     class FormatAdapterRegistry {
     public:
@@ -23,4 +23,4 @@ namespace dstools {
         std::map<QString, std::unique_ptr<IFormatAdapter>> m_adapters;
     };
 
-} // namespace dstools
+} // namespace dsfw

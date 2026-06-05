@@ -4,7 +4,7 @@
 > 合并自 `docs/decisions/principles.md`、原 `docs/human-decisions.md`，按领域分类整理为完整体系。
 > 与任何其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-06-01（新增 INFRA-13~17：PIMPL 隔离、接口版本化、信号签名规范、不可变配置快照、测试边界）
+> 最后更新：2026-06-06（重构 Phase 1~5 完成：IInferenceService 接口、命名空间迁移、封装改进、路径控件统一、原子写入辅助）
 
 ---
 
@@ -472,7 +472,7 @@ Runtime、FFmpeg 等），将外部异常转为 `Result<T>::Error()`。每个 `c
 
 **原文**：P-08
 
-**原则**：ServiceLocator 仅用于**真正的全局服务**（如 `IModelManager`、`IG2PProvider`、`FormatAdapterRegistry`）。页面级资源（如
+**原则**：ServiceLocator 仅用于**真正的全局服务**（如 `ModelManager`、`IG2PProvider`、`FormatAdapterRegistry`）。页面级资源（如
 `IAudioPlayer`、widget 实例）不得通过 ServiceLocator 全局共享。
 
 **判断标准**：
@@ -1118,5 +1118,10 @@ public:
 | FA 层级输出        | buildFaLayers 只输出 word.start 边界    | D-42：输出完整 start/end 边界 + LayerDependency 结构                                             |
 | PitchLabel 工具栏 | PitchLabelerPage 仅有菜单栏             | D-43：添加 QToolBar 含 F0/GAME 按钮                                                           |
 | 边界线渲染          | ChartPanelBase 内部绘制边界线             | 统一由 BoundaryOverlayWidget + BoundaryLineRenderer 绘制；移除 ChartPanelBase::drawBoundaries() |
+| 推理引擎依赖         | ExportService/AutoCompleteService 直接依赖 HFA/RMVPE/GAME 具体类型 | ARCH-06：引入 IInferenceService 接口 + CompositeInferenceService 组合模式，消除具体引擎依赖 |
+| 推理命名空间         | IInferenceEngine 在 dstools 命名空间     | 迁移到 dsfw::infer 命名空间，框架层接口不应在应用命名空间 |
+| PitchLabelerPage 封装 | rmvpeRef()/gameRef() 返回引用，外部可修改私有成员 | 删除引用访问器，添加 acquireEngines() 封装获取 + rmvpe()/game() 只读访问器 |
+| 路径控件记忆         | PathSelector/FilePathSelector 各自独立实现最近路径记忆 | 提取 RecentPathStore 共享类，统一存储组名 "PathSelector" |
+| SlicerPage 原子写入 | 设计文档称 AudioFileWriter 内部已原子写入，rename 冗余 | 实际 AudioFileWriter 无原子写入，tmp+rename 模式必要；提取 writeSliceAtomically 辅助函数消除重复 |
 
 ---

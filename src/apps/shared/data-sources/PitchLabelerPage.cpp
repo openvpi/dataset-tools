@@ -20,7 +20,7 @@
 #include <dsfw/CommonKeys.h>
 #include <dstools/ModelManager.h>
 #include <dsfw/IModelProvider.h>
-#include <dsfw/InferenceModelProvider.h>
+#include <dstools/InferenceModelProvider.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/CurveTools.h>
@@ -29,7 +29,8 @@
 #include <dstools/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 #include <dstools/PitchUtils.h>
-#include <sndfile.hh>
+#include <dsfw/audio/AudioPipeline.h>
+#include <dsfw/PathUtils.h>
 
 struct PitchExtractionData {
     std::vector<float> f0Mhz;
@@ -99,8 +100,8 @@ bool PitchLabelerPage::isDirty() const {
 void PitchLabelerPage::onDeactivatedImpl() {
     enginePool()->invalidate(QLatin1String(dstools::keys::engines::pitchExtraction));
     enginePool()->invalidate(QLatin1String(dstools::keys::engines::midiTranscription));
-    m_rmvpe = nullptr;
-    m_game = nullptr;
+    m_rmvpe.reset();
+    m_game.reset();
 }
 
 void PitchLabelerPage::saveExtraSplitters() {
@@ -252,11 +253,18 @@ QWidget* PitchLabelerPage::createStatusBarContent(QWidget* parent) {
 void PitchLabelerPage::onEngineInvalidated(const QString& taskKey) {
     enginePool()->invalidate(taskKey);
     if (taskKey == QLatin1String(dstools::keys::engines::pitchExtraction)) {
-        m_rmvpe = nullptr;
+        m_rmvpe.reset();
         DSFW_LOG_WARN("infer", "Pitch extraction task cancelled: model invalidated");
     } else if (taskKey == QLatin1String(dstools::keys::engines::midiTranscription)) {
-        m_game = nullptr;
+        m_game.reset();
         DSFW_LOG_WARN("infer", "MIDI transcription task cancelled: model invalidated");
+    }
+}
+
+void PitchLabelerPage::acquireEngines() {
+    if (auto* pool = enginePool()) {
+        m_rmvpe = pool->acquire<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
+        m_game = pool->acquire<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
     }
 }
 
@@ -511,11 +519,12 @@ void PitchLabelerPage::runPitchExtraction(const QString& sliceId) {
     m_extractPitchAction->setEnabled(false);
     m_extractMidiAction->setEnabled(false);
     DSFW_LOG_INFO("infer", ("Pitch extraction started: " + sliceId.toStdString()).c_str());
-    auto* rmvpe = m_rmvpe;
+    std::weak_ptr<Rmvpe::Rmvpe> weakRmvpe = m_rmvpe;
 
     runAsyncTask<PitchExtractionData>(
         QLatin1String(dstools::keys::engines::pitchExtraction), sliceId,
-        [rmvpe, audioPath](const std::shared_ptr<std::atomic<bool>>&) -> Result<PitchExtractionData> {
+        [weakRmvpe, audioPath](const std::shared_ptr<std::atomic<bool>>&) -> Result<PitchExtractionData> {
+            auto rmvpe = weakRmvpe.lock();
             if (!rmvpe)
                 return Err<PitchExtractionData>("RMVPE engine is null");
             std::vector<Rmvpe::RmvpeRes> results;
@@ -527,15 +536,11 @@ void PitchLabelerPage::runPitchExtraction(const QString& sliceId) {
                     mergedF0[i] = res.f0[i] * 1000.0f;
                 }
                 PitchExtractionData data;
-#ifdef _WIN32
-                auto pathStr = audioPath.toStdWString();
-#else
-                auto pathStr = audioPath.toStdString();
-#endif
-                SndfileHandle sf(pathStr.c_str());
-                if (sf && sf.samplerate() > 0) {
-                    const int sampleRate = sf.samplerate();
-                    const int64_t audioFrames = sf.frames();
+                auto pipeline = dsfw::audio::AudioPipeline::create();
+                auto probeResult = pipeline.probe(dsfw::PathUtils::toUtf8(dsfw::PathUtils::toStdPath(audioPath)));
+                if (probeResult.ok()) {
+                    const int sampleRate = probeResult.value().sampleRate;
+                    const int64_t audioFrames = probeResult.value().totalFrameCount;
                     const TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
                     const int alignLength = expectedFrameCount(audioFrames, constants::kDefaultHopSize);
                     data.f0Mhz = resampleCurve(mergedF0, secToUs(0.01), dstTimestepUs, alignLength);
@@ -581,7 +586,7 @@ void PitchLabelerPage::runMidiTranscription(const QString& sliceId, const Game::
     m_extractMidiAction->setEnabled(false);
     DSFW_LOG_INFO("infer",
                   ("MIDI transcription started: " + sliceId.toStdString() + (alignInput ? " (align)" : "")).c_str());
-    auto* game = m_game;
+    std::weak_ptr<Game::Game> weakGame = m_game;
     bool useAlign = (alignInput != nullptr);
     auto capturedInput = useAlign ? std::make_shared<Game::AlignInput>(*alignInput) : nullptr;
 
@@ -612,8 +617,9 @@ void PitchLabelerPage::runMidiTranscription(const QString& sliceId, const Game::
 
     runAsyncTask<std::vector<Game::GameNote>>(
         QLatin1String(dstools::keys::engines::midiTranscription), sliceId,
-        [game, audioPath, useAlign, capturedInput, options = std::move(options)](
+        [weakGame, audioPath, useAlign, capturedInput, options = std::move(options)](
             const std::shared_ptr<std::atomic<bool>>&) -> Result<std::vector<Game::GameNote>> {
+            auto game = weakGame.lock();
             if (!game)
                 return Err<std::vector<Game::GameNote>>("Game engine is null");
             std::vector<Game::GameNote> notes;

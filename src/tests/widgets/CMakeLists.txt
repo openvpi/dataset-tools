@@ -32,3 +32,11 @@ target_link_libraries(TestAudioVisualizerContainer PRIVATE
 )
 
 add_test(NAME TestAudioVisualizerContainer COMMAND TestAudioVisualizerContainer)
+
+# RecentPathStore unit test (no GUI needed, but depends on dsfw-widgets)
+add_executable(TestRecentPathStore TestRecentPathStore.cpp)
+target_link_libraries(TestRecentPathStore PRIVATE
+        dsfw-core
+        Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestRecentPathStore COMMAND TestRecentPathStore)

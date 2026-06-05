@@ -3,7 +3,7 @@
 #include <QCoreApplication>
 #include <QMetaObject>
 
-namespace dstools {
+namespace dsfw {
 
 LogNotifier &LogNotifier::instance() {
     static LogNotifier s_instance;
@@ -30,4 +30,4 @@ LogSink LogNotifier::sink() {
     };
 }
 
-} // namespace dstools
+} // namespace dsfw

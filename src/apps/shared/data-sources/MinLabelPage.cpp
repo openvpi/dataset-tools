@@ -8,6 +8,7 @@
 #include "ModelConfigHelper.h"
 #include "Keys.h"
 #include "SliceListPanel.h"
+#include "../settings/Keys.h"
 #include "EnginePool.h"
 
 #include <dsfw/widgets/FilePathSelector.h>
@@ -345,7 +346,7 @@ namespace dstools {
     void MinLabelPage::onDeactivatedImpl() {
         enginePool()->invalidate(QStringLiteral("asr"));
         aliveToken(QStringLiteral("match_lyric")).invalidate();
-        m_asr = nullptr;
+        m_asr.reset();
     }
 
     // ── IPageActions ──────────────────────────────────────────────────────────────
@@ -422,7 +423,7 @@ namespace dstools {
     void MinLabelPage::onEngineInvalidated(const QString &taskKey) {
         enginePool()->invalidate(taskKey);
         if (taskKey == QStringLiteral("asr")) {
-            m_asr = nullptr;
+            m_asr.reset();
             DSFW_LOG_WARN("infer", "ASR task cancelled: model invalidated");
         }
     }
@@ -461,11 +462,12 @@ namespace dstools {
 
         setBatchRunning(true);
         DSFW_LOG_INFO("infer", ("ASR started: " + sliceId.toStdString()).c_str());
-        auto *asr = m_asr;
+        std::weak_ptr<LyricFA::Asr> weakAsr = m_asr;
 
         runAsyncTask<QString>(
             QStringLiteral("asr"), sliceId,
-            [asr, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> Result<QString> {
+            [weakAsr, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> Result<QString> {
+                auto asr = weakAsr.lock();
                 if (!asr)
                     return Err<QString>("ASR engine is null");
                 std::string msg;
@@ -656,8 +658,7 @@ namespace dstools {
         if (m_matchLyric && m_matchLyric->isInitialized())
             return;
 
-        static const dstools::SettingsKey<QString> kLyricDir("LyricFA/libraryPath", {});
-        QString lyricDir = settings().get(kLyricDir);
+        QString lyricDir = settings().get(settings::kLyricDir);
 
         if (lyricDir.isEmpty() || !QDir(lyricDir).exists()) {
             dsfw::widgets::FilePathSelector selector(
@@ -666,7 +667,7 @@ namespace dstools {
             lyricDir = selector.exec();
             if (lyricDir.isEmpty())
                 return;
-            settings().set(kLyricDir, lyricDir);
+            settings().set(settings::kLyricDir, lyricDir);
         }
 
         if (!m_matchLyric)

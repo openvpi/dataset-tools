@@ -6,7 +6,7 @@
 #include <QSet>
 #include <QtCore/QDebug>
 
-namespace dstools {
+namespace dsfw {
 
 TaskProcessorRegistry &TaskProcessorRegistry::instance() {
     static TaskProcessorRegistry s_instance;
@@ -110,11 +110,11 @@ QStringList TaskProcessorRegistry::availableTasks() const noexcept {
     return result;
 }
 
-} // namespace dstools
+} // namespace dsfw
 
 // ─── PassthroughProcessor implementation ──────────────────────────────────────
 
-namespace dstools {
+namespace dsfw {
 
 QString PassthroughProcessor::processorId() const {
     return QStringLiteral("passthrough");
@@ -128,7 +128,7 @@ TaskSpec PassthroughProcessor::taskSpec() const {
     return {QStringLiteral("passthrough"), {}, {}};
 }
 
-Result<void> PassthroughProcessor::initialize(ModelManager &, const ProcessorConfig &) {
+Result<void> PassthroughProcessor::initialize(dstools::ModelManager &, const ProcessorConfig &) {
     return Result<void>::Ok();
 }
 
@@ -146,4 +146,4 @@ static TaskProcessorRegistry::Registrar<PassthroughProcessor> s_passthroughReg(
     QStringLiteral("passthrough"), QStringLiteral("passthrough"));
 #endif
 
-} // namespace dstools
+} // namespace dsfw

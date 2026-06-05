@@ -13,7 +13,7 @@
 #include <dsfw/ConfigTypes.h>
 #include <dstools/Result.h>
 #include <map>
-#include <nlohmann/json.hpp>
+#include <memory>
 #include <vector>
 
 namespace dstools {
@@ -79,7 +79,12 @@ struct Item {
 /// In-memory representation of a .dsproj project file.
 class DsProject {
 public:
-    DsProject() = default;
+    DsProject();
+    ~DsProject();
+    DsProject(DsProject&&) noexcept;
+    DsProject& operator=(DsProject&&) noexcept;
+    DsProject(const DsProject&) = delete;
+    DsProject& operator=(const DsProject&) = delete;
 
     // ── File I/O ──────────────────────────────────────────────────────
 
@@ -123,12 +128,8 @@ public:
     void setExportConfig(ExportConfig config);
 
 private:
-    QString m_filePath;
-    QString m_workingDirectory;
-    std::vector<Item> m_items;
-    SlicerState m_slicerState;
-    ExportConfig m_exportConfig;
-    nlohmann::json m_extraFields; // preserve unknown fields for round-trip
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 } // namespace dstools

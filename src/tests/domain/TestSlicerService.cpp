@@ -6,7 +6,7 @@
 
 #include <QtTest/QtTest>
 
-#include <audio-util/Slicer.h>
+#include <dsfw/signal/Slicer.h>
 
 #include <cmath>
 
@@ -16,14 +16,14 @@ class TestSlicerService : public QObject {
 private slots:
     void testComputeSlicePointsEmptySamples() {
         std::vector<float> samples;
-        AudioUtil::SlicerParams params;
+        dsfw::signal::SlicerParams params;
         auto points = dstools::SlicerService::computeSlicePoints(samples, 44100, params);
         QVERIFY(points.empty());
     }
 
     void testComputeSlicePointsZeroSampleRate() {
         std::vector<float> samples(44100, 0.0f);
-        AudioUtil::SlicerParams params;
+        dsfw::signal::SlicerParams params;
         auto points = dstools::SlicerService::computeSlicePoints(samples, 0, params);
         QVERIFY(points.empty());
     }
@@ -31,7 +31,7 @@ private slots:
     void testComputeSlicePointsSilence() {
         int sr = 44100;
         std::vector<float> samples(sr * 5, 0.0f);
-        AudioUtil::SlicerParams params;
+        dsfw::signal::SlicerParams params;
         params.threshold = -40.0;
         params.minLength = 4000;
         auto points = dstools::SlicerService::computeSlicePoints(samples, sr, params);
@@ -55,7 +55,7 @@ private slots:
             samples[i] = 0.9f * std::sin(2.0 * M_PI * 440.0 * i / sr);
         }
 
-        AudioUtil::SlicerParams params;
+        dsfw::signal::SlicerParams params;
         params.threshold = -30.0;
         params.minLength = 500;
         params.minInterval = 200;

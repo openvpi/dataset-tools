@@ -1,7 +1,7 @@
 #include <dsfw/ServiceLocator.h>
 #include <dsfw/FormatAdapterRegistry.h>
 
-namespace dstools {
+namespace dsfw {
 
 std::unordered_map<std::type_index, std::any> &ServiceLocator::services() {
     static std::unordered_map<std::type_index, std::any> s;
@@ -24,11 +24,11 @@ void ServiceLocator::resetFormatAdapterRegistry() {
     reset<FormatAdapterRegistry>();
 }
 
-} // namespace dstools
+} // namespace dsfw
 
 // ─── FormatAdapterRegistry implementation ─────────────────────────────────────
 
-namespace dstools {
+namespace dsfw {
 
 FormatAdapterRegistry &FormatAdapterRegistry::instance() {
     static FormatAdapterRegistry s_instance;
@@ -60,4 +60,4 @@ QStringList FormatAdapterRegistry::availableFormats() const noexcept {
     return result;
 }
 
-} // namespace dstools
+} // namespace dsfw

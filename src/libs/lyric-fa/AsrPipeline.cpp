@@ -6,14 +6,11 @@
 #include <dsfw/Log.h>
 #include <dsfw/PathUtils.h>
 
-#include <QApplication>
 #include <QBuffer>
-#include <sndfile.hh>
-
 #include <Audio.h>
 
-#include <audio-util/Slicer.h>
-#include <audio-util/Util.h>
+#include <dsfw/signal/Slicer.h>
+#include <dsfw/audio/AudioPipeline.h>
 
 #include <dsfw/TaskProcessorRegistry.h>
 
@@ -47,20 +44,17 @@ namespace LyricFA {
         if (!m_asrHandle) {
             return false;
         }
-        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, kAsrChannels, kAsrSampleRate);
-
-        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_FLOAT, kAsrChannels, kAsrSampleRate);
-        if (!sf) {
-            msg = "Failed to open resampled audio for ASR";
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(filepath), kAsrSampleRate);
+        if (!result.ok()) {
+            msg = "Failed to decode audio for ASR: " + result.error();
             return false;
         }
-        const auto totalSize = sf.frames();
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        std::vector<float> audio(floats.begin(), floats.end());
 
-        std::vector<float> audio(totalSize);
-        sf.seek(0, SEEK_SET);
-        sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
-
-        const AudioUtil::Slicer slicer(kSlicerWindowSize, kSlicerThreshold, kSlicerMinLength, kSlicerMinInterval, kSlicerHopSize, kSlicerMaxSilKept, kSlicerMinSilKept);
+        const dsfw::signal::Slicer slicer(kSlicerWindowSize, kSlicerThreshold, kSlicerMinLength, kSlicerMinInterval, kSlicerHopSize, kSlicerMaxSilKept, kSlicerMinSilKept);
         const auto chunks = slicer.slice(audio);
 
         if (chunks.empty()) {
@@ -72,15 +66,13 @@ namespace LyricFA {
             const auto beginFrame = fst;
             const auto endFrame = snd;
             const auto frameCount = endFrame - beginFrame;
-            if (frameCount <= 0 || beginFrame > totalSize || endFrame > totalSize) {
+            if (frameCount <= 0 || beginFrame + frameCount > static_cast<int64_t>(audio.size())) {
                 continue;
             }
 
-            sf.seek(beginFrame, SEEK_SET);
-            std::vector<float> tmp(frameCount);
+            std::vector<float> tmp(audio.begin() + beginFrame, audio.begin() + beginFrame + frameCount);
 
-            if (const auto bytesWritten = sf.read(tmp.data(), static_cast<sf_count_t>(tmp.size()));
-                bytesWritten > kMaxChunkDurationSec * kAsrSampleRate) {
+            if (static_cast<int64_t>(tmp.size()) > kMaxChunkDurationSec * kAsrSampleRate) {
                 msg = "The audio contains continuous pronunciation segments that exceed 60 seconds. Please manually "
                       "segment and rerun the recognition program.";
                 return false;

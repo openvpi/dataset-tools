@@ -2,7 +2,7 @@
 
 #include <dstools/ModelManager.h>
 #include <dsfw/IModelProvider.h>
-#include <dsfw/InferenceModelProvider.h>
+#include <dstools/InferenceModelProvider.h>
 
 #include <FunAsrModelProvider.h>
 #include <game-infer/Game.h>

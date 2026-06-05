@@ -6,7 +6,7 @@
 
 #include <cstdint>
 #include <dstools/ExecutionProvider.h>
-#include <dstools/IInferenceEngine.h>
+#include <dsfw/infer/IInferenceEngine.h>
 #include <dstools/Result.h>
 #include <filesystem>
 #include <functional>
@@ -20,7 +20,7 @@ namespace Moe {
         std::vector<float> curve;
     };
 
-    class MOE_INFER_EXPORT Moe : public dstools::infer::IInferenceEngine {
+    class MOE_INFER_EXPORT Moe : public dsfw::infer::IInferenceEngine {
     public:
         Moe();
         explicit Moe(const std::filesystem::path &modelPath, dstools::infer::ExecutionProvider provider, int deviceId);

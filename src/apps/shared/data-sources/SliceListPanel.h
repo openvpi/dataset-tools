@@ -5,6 +5,7 @@
 #include <QListView>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <dsfw/AppSettings.h>
 #include <vector>
 
 namespace dsfw::widgets {
@@ -14,7 +15,6 @@ namespace dsfw::widgets {
 namespace dstools {
 
     class IEditorDataSource;
-    class AppSettings;
 
     class SliceListPanel : public QWidget {
         Q_OBJECT

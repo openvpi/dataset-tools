@@ -44,7 +44,7 @@ namespace dstools {
         void applyBatchResult(const QString &sliceId, const BatchSliceResult &result) override;
 
     private:
-        LyricFA::Asr *m_asr = nullptr;
+        std::shared_ptr<LyricFA::Asr> m_asr;
 
         Minlabel::MinLabelEditor *m_editor = nullptr;
         bool m_dirty = false;

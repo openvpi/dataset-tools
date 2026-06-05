@@ -93,7 +93,7 @@ namespace dstools {
         QPushButton *m_clearFilterBtn = nullptr;
         QLabel *m_loadingLabel = nullptr;
         bool m_previewLoading = false;
-        std::unique_ptr<SlicePreviewModel> m_previewData;
+        std::shared_ptr<SlicePreviewModel> m_previewData;
 
         // Validation
         QLabel *m_validationLabel = nullptr;

@@ -8,7 +8,7 @@
 #include <typeindex>
 #include <unordered_map>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Global service locator for registering and retrieving shared service instances.
     ///
@@ -70,4 +70,9 @@ namespace dstools {
         static std::unordered_map<std::type_index, std::any> &services();
     };
 
+}
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::ServiceLocator;
 }

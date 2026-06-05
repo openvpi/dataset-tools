@@ -9,7 +9,7 @@
 #include <dsfw/AsyncTask.h>
 #include <dsfw/ITaskProcessor.h>
 #include <dstools/ExecutionProvider.h>
-#include <dstools/IInferenceEngine.h>
+#include <dsfw/infer/IInferenceEngine.h>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -57,7 +57,7 @@ namespace LyricFA {
         ILyricFileLoader *m_loader = nullptr;
     };
 
-    class FunAsrAdapter : public dstools::infer::IInferenceEngine {
+    class FunAsrAdapter : public dsfw::infer::IInferenceEngine {
     public:
         FunAsrAdapter() = default;
         ~FunAsrAdapter() override;

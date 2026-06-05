@@ -5,7 +5,7 @@
 #include <dsfw/IPageLifecycle.h>
 #include <dsfw/widgets/TaskWindow.h>
 
-namespace dstools {
+namespace dsfw {
 
     class PipelineRunner;
 
@@ -32,7 +32,7 @@ namespace dstools::labeler {
         void onWorkingDirectoryChanged(const QString &newDir) override;
         void onShutdown() override;
 
-        void connectPipelineRunner(dstools::PipelineRunner *runner);
+        void connectPipelineRunner(dsfw::PipelineRunner *runner);
 
     private:
         void setupSliceContextMenu();

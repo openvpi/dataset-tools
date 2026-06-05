@@ -8,7 +8,6 @@ set(FORBIDDEN_INCLUDES
     "hubert-infer/"
     "rmvpe-infer/"
     "game-infer/"
-    "audio-util/"
 )
 
 set(VIOLATIONS "")

@@ -31,6 +31,14 @@ inline const dstools::SettingsKey<int> kDefaultResolution{"AudioVisualizer/defau
 
 inline const dstools::SettingsKey<QString> kLastSlice{"State/lastSlice", ""};
 
+inline const dstools::SettingsKey<QString> kHSplitterState{"Layout/hSplitterState", ""};
+inline const dstools::SettingsKey<QString> kContentSplitterState{"Layout/contentSplitterState", ""};
+inline const dstools::SettingsKey<QString> kContainerSplitterState{"Layout/containerSplitterState", ""};
+inline const dstools::SettingsKey<QString> kLayoutChartOrder{"Layout/chartOrder", ""};
+inline const dstools::SettingsKey<bool> kSidebarCollapsed{"Layout/sidebarCollapsed", false};
+
+inline const dstools::SettingsKey<QString> kLyricDir{"LyricFA/libraryPath", ""};
+
 } // namespace dstools::settings
 
 namespace dstools::settings::pitch {

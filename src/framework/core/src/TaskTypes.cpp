@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-namespace dstools {
+namespace dsfw {
 
 LayerData LayerData::fromJson(const nlohmann::json &j) {
     return LayerData(j.dump());
@@ -14,4 +14,4 @@ nlohmann::json LayerData::toJson() const {
     return nlohmann::json::parse(json, nullptr, false);
 }
 
-} // namespace dstools
+} // namespace dsfw

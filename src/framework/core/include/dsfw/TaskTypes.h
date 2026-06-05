@@ -9,7 +9,7 @@
 #include <map>
 #include <string>
 
-namespace dstools {
+namespace dsfw {
 
 using ProcessorConfig = ConfigMap;
 
@@ -58,4 +58,14 @@ struct TaskOutput {
     std::map<QString, LayerData> layers; ///< slot name → layer data.
 };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::ProcessorConfig;
+    using dsfw::SlotSpec;
+    using dsfw::TaskSpec;
+    using dsfw::LayerData;
+    using dsfw::TaskInput;
+    using dsfw::TaskOutput;
+}

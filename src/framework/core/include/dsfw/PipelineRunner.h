@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace dstools {
+namespace dsfw {
 
     using ValidationCallback =
         std::function<PipelineContext::Status(const PipelineContext &ctx, const TaskSpec &spec, QString &reason)>;
@@ -73,4 +73,12 @@ namespace dstools {
                           int totalSteps);
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::PipelineRunner;
+    using dsfw::PipelineOptions;
+    using dsfw::StepConfig;
+    using dsfw::ValidationCallback;
+}

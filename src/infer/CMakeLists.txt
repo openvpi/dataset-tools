@@ -1,4 +1,3 @@
-add_subdirectory(audio-util)
 add_subdirectory(FunAsr)
 add_subdirectory(rmvpe-infer)
 add_subdirectory(game-infer)

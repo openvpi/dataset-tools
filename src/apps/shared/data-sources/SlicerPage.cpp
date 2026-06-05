@@ -3,6 +3,7 @@
 #include <dstools/AudacityMarkerAdapter.h>
 #include "AudioFileListPanel.h"
 #include "BoundaryDragController.h"
+#include "Keys.h"
 #include "SliceCommands.h"
 #include "SliceExportDialog.h"
 #include "SliceListPanel.h"
@@ -33,22 +34,68 @@
 #include <QVBoxLayout>
 #include <QtConcurrent>
 #include <algorithm>
-#include <audio-util/Slicer.h>
+#include <dsfw/signal/Slicer.h>
 #include <cmath>
 #include <dsfw/AppSettings.h>
 #include <dsfw/Log.h>
+#include <dsfw/audio/AudioPipeline.h>
 #include <dsfw/widgets/FileProgressTracker.h>
 #include <dsfw/widgets/ProgressDialog.h>
-#include <dstools/AudioDecoder.h>
-#include <dstools/WaveFormat.h>
-#include <sndfile.hh>
+#include <dsfw/audio/AudioFileWriter.h>
+#include <dsfw/PathUtils.h>
 #include <ui/SliceBoundaryModel.h>
 #include <SpectrogramChartPanel.h>
 #include <WaveformChartPanel.h>
 
 namespace dstools {
 
-SlicerPage::SlicerPage(QWidget *parent) : EditorContainerBase(QStringLiteral("Slicer"), parent), m_settings("Slicer") {
+namespace {
+
+/// @brief Write audio slice to file atomically (write to .tmp then rename).
+/// @return true on success, false on failure (shows warning for interactive context).
+bool writeSliceAtomically(const QString &filepath, const float *samples, int64_t frameCount,
+                          int sampleRate, dsfw::audio::SampleFormat sampleFmt, bool showWarning = true) {
+    QString tmppath = filepath + QStringLiteral(".tmp");
+    auto tmpPath8 = dsfw::PathUtils::toUtf8(dsfw::PathUtils::toStdPath(tmppath));
+
+    dsfw::audio::WriteConfig wcfg;
+    wcfg.sampleRate = sampleRate;
+    wcfg.channelCount = 1;
+    wcfg.format = sampleFmt;
+
+    dsfw::audio::AudioFileWriter writer;
+    auto openResult = writer.open(tmpPath8, wcfg);
+    if (!openResult.ok()) {
+        if (showWarning)
+            QMessageBox::warning(nullptr, SlicerPage::tr("Export Error"),
+                                 SlicerPage::tr("Failed to open file for writing: %1").arg(filepath));
+        return false;
+    }
+
+    auto writeResult = writer.writeFloats(samples, frameCount);
+    if (!writeResult.ok()) {
+        QFile::remove(tmppath);
+        if (showWarning)
+            QMessageBox::warning(nullptr, SlicerPage::tr("Export Error"),
+                                 SlicerPage::tr("Failed to write all samples to: %1").arg(filepath));
+        return false;
+    }
+    writer.close();
+
+    QFile::remove(filepath);
+    if (!QFile::rename(tmppath, filepath)) {
+        QFile::remove(tmppath);
+        if (showWarning)
+            QMessageBox::warning(nullptr, SlicerPage::tr("Export Error"),
+                                 SlicerPage::tr("Failed to finalize file: %1").arg(filepath));
+        return false;
+    }
+    return true;
+}
+
+} // anonymous namespace
+
+SlicerPage::SlicerPage(QWidget* parent) : EditorContainerBase(QStringLiteral("Slicer"), parent), m_settings("Slicer") {
     m_boundaryModel = std::make_unique<phonemelabeler::SliceBoundaryModel>();
     m_boundaryModel->setAllowOverlap(true);
     buildLayout();
@@ -57,10 +104,10 @@ SlicerPage::SlicerPage(QWidget *parent) : EditorContainerBase(QStringLiteral("Sl
     m_actUndo->setText(tr("&Undo"));
     m_actRedo->setText(tr("&Redo"));
     connectUndoRedo();
-    connect(m_undoStack, &QUndoStack::undoTextChanged, [this](const QString &text) {
+    connect(m_undoStack, &QUndoStack::undoTextChanged, [this](const QString& text) {
         m_actUndo->setText(tr("&Undo") + (text.isEmpty() ? QString() : (" (" + text + ")")));
     });
-    connect(m_undoStack, &QUndoStack::redoTextChanged, [this](const QString &text) {
+    connect(m_undoStack, &QUndoStack::redoTextChanged, [this](const QString& text) {
         m_actRedo->setText(tr("&Redo") + (text.isEmpty() ? QString() : (" (" + text + ")")));
     });
 }
@@ -75,8 +122,8 @@ void SlicerPage::buildLayout() {
     m_audioFileList->progressTracker()->setDisplayStyle(dsfw::widgets::FileProgressTracker::ProgressBarStyle);
     m_audioFileList->progressTracker()->setFormat(QStringLiteral("%1 / %2 已标注"));
 
-    auto *contentWidget = new QWidget(this);
-    auto *mainLayout = new QVBoxLayout(contentWidget);
+    auto* contentWidget = new QWidget(this);
+    auto* mainLayout = new QVBoxLayout(contentWidget);
     mainLayout->setContentsMargins(4, 4, 4, 4);
     mainLayout->setSpacing(4);
 
@@ -102,7 +149,7 @@ void SlicerPage::buildLayout() {
     m_toolbar->addSeparator();
 
     {
-        auto *spacer = new QWidget(m_toolbar);
+        auto* spacer = new QWidget(m_toolbar);
         spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         m_toolbar->addWidget(spacer);
         m_btnToggleSidebar = new QToolButton(m_toolbar);
@@ -118,13 +165,13 @@ void SlicerPage::buildLayout() {
 
     mainLayout->addWidget(m_toolbar);
 
-    auto *paramsWidget = new QWidget(contentWidget);
-    auto *paramsLayout = new QHBoxLayout(paramsWidget);
+    auto* paramsWidget = new QWidget(contentWidget);
+    auto* paramsLayout = new QHBoxLayout(paramsWidget);
     paramsLayout->setContentsMargins(4, 2, 4, 2);
     paramsLayout->setSpacing(6);
 
-    auto addParam = [&](const QString &label, QWidget *spin) {
-        auto *lbl = new QLabel(label, paramsWidget);
+    auto addParam = [&](const QString& label, QWidget* spin) {
+        auto* lbl = new QLabel(label, paramsWidget);
         lbl->setStyleSheet(QStringLiteral("color: #aaa; font-size: 11px;"));
         paramsLayout->addWidget(lbl);
         paramsLayout->addWidget(spin);
@@ -210,8 +257,8 @@ void SlicerPage::buildLayout() {
     };
     connect(m_waveformChart, &chart::WaveformChartPanel::boundaryDragging, this, onDragging);
     connect(m_spectrogramChart, &chart::SpectrogramChartPanel::boundaryDragging, this, onDragging);
-    
-    if (auto *dragController = m_container->dragController()) {
+
+    if (auto* dragController = m_container->dragController()) {
         dragController->setSnapEnabled(true);
         dragController->setBindingEnabled(false);
         dragController->setPixelSnapThreshold(10.0);
@@ -239,7 +286,7 @@ void SlicerPage::buildLayout() {
     m_hSplitter->setStretchFactor(0, 0);
     m_hSplitter->setStretchFactor(1, 1);
 
-    auto *topLayout = new QVBoxLayout(this);
+    auto* topLayout = new QVBoxLayout(this);
     topLayout->setContentsMargins(0, 0, 0, 0);
     topLayout->addWidget(m_hSplitter);
 }
@@ -265,7 +312,7 @@ void SlicerPage::connectSignals() {
         m_toolMode = ToolMode::Knife;
     });
 
-    connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString &filePath) {
+    connect(m_audioFileList, &AudioFileListPanel::fileSelected, this, [this](const QString& filePath) {
         saveCurrentSlicePoints();
         loadAudioFile(filePath);
         m_currentAudioPath = filePath;
@@ -282,7 +329,7 @@ void SlicerPage::connectSignals() {
     });
 
     connect(m_audioFileList, &AudioFileListPanel::filesAdded, this,
-            [this](const QStringList &paths) { autoSliceFiles(paths); });
+            [this](const QStringList& paths) { autoSliceFiles(paths); });
     connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); });
 
     connect(m_waveformChart, &chart::WaveformChartPanel::positionClicked, this, [this](double sec) {
@@ -295,20 +342,19 @@ void SlicerPage::connectSignals() {
         }
     });
 
-    connect(m_waveformChart, &chart::WaveformChartPanel::boundaryDragFinished,
-            this, [this](int, int boundaryIndex, dstools::TimePos) {
-        if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
-            m_slicePoints = m_boundaryModel->slicePointsSec();
-            refreshBoundaries();
-            updateSlicerListPanel();
-        }
-    });
-
-    connect(m_sliceListPanel, &SliceListPanel::sliceDoubleClicked, this,
-            [this](int, double startSec, double) {
-                double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
-                m_viewport->setViewRange(startSec, startSec + viewDuration);
+    connect(m_waveformChart, &chart::WaveformChartPanel::boundaryDragFinished, this,
+            [this](int, int boundaryIndex, dstools::TimePos) {
+                if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
+                    m_slicePoints = m_boundaryModel->slicePointsSec();
+                    refreshBoundaries();
+                    updateSlicerListPanel();
+                }
             });
+
+    connect(m_sliceListPanel, &SliceListPanel::sliceDoubleClicked, this, [this](int, double startSec, double) {
+        double viewDuration = m_viewport->state().endSec - m_viewport->state().startSec;
+        m_viewport->setViewRange(startSec, startSec + viewDuration);
+    });
 
     connect(m_sliceListPanel, &SliceListPanel::addSlicePointRequested, this, [this](double timeSec) {
         auto refreshFn = [this]() {
@@ -329,7 +375,8 @@ void SlicerPage::connectSignals() {
     });
 
     connect(m_btnToggleSidebar, &QToolButton::toggled, this, [this](bool checked) {
-        if (!m_contentSplitter) return;
+        if (!m_contentSplitter)
+            return;
         if (checked) {
             m_sidebarExpandedSize = m_contentSplitter->sizes();
             m_contentSplitter->setSizes({1, 0});
@@ -348,14 +395,14 @@ void SlicerPage::onAutoSlice() {
 
     int sr = m_sampleRate;
 
-    AudioUtil::SlicerParams params;
+    dsfw::signal::SlicerParams params;
     params.threshold = m_thresholdSpin->value();
     params.minLength = m_minLengthSpin->value();
     params.minInterval = m_minIntervalSpin->value();
     params.hopSize = m_hopSizeSpin->value();
     params.maxSilKept = m_maxSilenceSpin->value();
 
-    auto slicer = AudioUtil::Slicer::fromMilliseconds(sr, params);
+    auto slicer = dsfw::signal::Slicer::fromMilliseconds(sr, params);
     auto markers = slicer.slice(m_samples);
 
     std::vector<double> newPoints;
@@ -385,9 +432,10 @@ void SlicerPage::onAutoSlice() {
 }
 
 void SlicerPage::onImportMarkers() {
-    dsfw::widgets::FilePathSelector selector(
-        {dsfw::widgets::FilePathSelector::Mode::OpenFile, tr("Import Markers"),
-         {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}}, this);
+    dsfw::widgets::FilePathSelector selector({dsfw::widgets::FilePathSelector::Mode::OpenFile,
+                                              tr("Import Markers"),
+                                              {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}},
+                                             this);
     QString path = selector.exec();
     if (path.isEmpty())
         return;
@@ -415,9 +463,10 @@ void SlicerPage::onImportMarkers() {
 }
 
 void SlicerPage::onSaveMarkers() {
-    dsfw::widgets::FilePathSelector selector(
-        {dsfw::widgets::FilePathSelector::Mode::SaveFile, tr("Save Markers"),
-         {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}}, this);
+    dsfw::widgets::FilePathSelector selector({dsfw::widgets::FilePathSelector::Mode::SaveFile,
+                                              tr("Save Markers"),
+                                              {tr("Audacity Labels (*.txt)"), tr("All Files (*)")}},
+                                             this);
     QString path = selector.exec();
     if (path.isEmpty())
         return;
@@ -450,7 +499,7 @@ void SlicerPage::onExportAudio() {
     if (!dir.exists())
         dir.mkpath(outputDir);
 
-    const auto &samples = m_samples;
+    const auto& samples = m_samples;
     int sr = m_sampleRate;
     QString prefix = dlg.prefix();
     int digits = dlg.numDigits();
@@ -459,14 +508,14 @@ void SlicerPage::onExportAudio() {
     int numSegments = static_cast<int>(m_slicePoints.size()) + 1;
     for (int i = 0; i < numSegments; ++i) {
         double startSec = (i == 0) ? 0.0 : m_slicePoints[i - 1];
-        double endSec = (i < static_cast<int>(m_slicePoints.size())) ? m_slicePoints[i]
-                                                                     : static_cast<double>(samples.size()) / sr;
+        double endSec =
+            (i < static_cast<int>(m_slicePoints.size())) ? m_slicePoints[i] : static_cast<double>(samples.size()) / sr;
         int startSamp = static_cast<int>(startSec * sr);
         int endSamp = std::min(static_cast<int>(endSec * sr), static_cast<int>(samples.size()));
         segments.emplace_back(startSamp, endSamp);
     }
 
-    int sndFormat = bitDepthToSndFormat(dlg.bitDepth());
+    auto sampleFmt = bitDepthToSampleFormat(dlg.bitDepth());
 
     const auto discarded = m_sliceListPanel->discardedIndices();
     QSet<int> discardedSet(discarded.begin(), discarded.end());
@@ -487,33 +536,9 @@ void SlicerPage::onExportAudio() {
 
         QString filename = QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
         QString filepath = dir.filePath(filename);
-        QString tmppath = filepath + QStringLiteral(".tmp");
-
-#ifdef _WIN32
-        auto tmpPathStr = tmppath.toStdWString();
-#else
-        auto tmpPathStr = tmppath.toStdString();
-#endif
-        SndfileHandle wf(tmpPathStr.c_str(), SFM_WRITE, sndFormat, 1, sr);
-        if (!wf) {
-            QMessageBox::warning(this, tr("Export Error"), tr("Failed to open file for writing: %1").arg(filepath));
+        int64_t frameCount = end - start;
+        if (!writeSliceAtomically(filepath, samples.data() + start, frameCount, sr, sampleFmt))
             continue;
-        }
-
-        sf_count_t frameCount = end - start;
-        sf_count_t written = wf.write(samples.data() + start, frameCount);
-        if (written != frameCount) {
-            QFile::remove(tmppath);
-            QMessageBox::warning(this, tr("Export Error"), tr("Failed to write all samples to: %1").arg(filepath));
-            continue;
-        }
-
-        QFile::remove(filepath);
-        if (!QFile::rename(tmppath, filepath)) {
-            QFile::remove(tmppath);
-            QMessageBox::warning(this, tr("Export Error"), tr("Failed to finalize file: %1").arg(filepath));
-            continue;
-        }
         ++exported;
     }
 
@@ -530,34 +555,34 @@ void SlicerPage::refreshBoundaries() {
     m_container->invalidateBoundaryModel();
 }
 
-QMenuBar *SlicerPage::createMenuBar(QWidget *parent) {
-    auto *bar = new QMenuBar(parent);
+QMenuBar* SlicerPage::createMenuBar(QWidget* parent) {
+    auto* bar = new QMenuBar(parent);
 
-    auto *fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
+    auto* fileMenu = bar->addMenu(QStringLiteral("文件(&F)"));
     fileMenu->addAction(QStringLiteral("打开音频文件(&O)..."), this, &SlicerPage::onOpenAudioFiles);
     fileMenu->addAction(QStringLiteral("打开音频目录(&D)..."), this, &SlicerPage::onOpenAudioDirectory);
     fileMenu->addSeparator();
     fileMenu->addAction(QStringLiteral("退出(&X)"), this, [this]() {
-        if (auto *w = window())
+        if (auto* w = window())
             w->close();
     });
 
-    auto *editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
+    auto* editMenu = bar->addMenu(QStringLiteral("编辑(&E)"));
     editMenu->addAction(undoAction());
     editMenu->addAction(redoAction());
 
-    auto *processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
-    auto *actSlice = processMenu->addAction(QStringLiteral("自动切片"), this, &SlicerPage::onAutoSlice);
+    auto* processMenu = bar->addMenu(QStringLiteral("处理(&P)"));
+    auto* actSlice = processMenu->addAction(QStringLiteral("自动切片"), this, &SlicerPage::onAutoSlice);
     actSlice->setShortcut(QKeySequence(Qt::Key_S));
-    auto *actReSlice = processMenu->addAction(QStringLiteral("重新切片"), this, &SlicerPage::onAutoSlice);
+    auto* actReSlice = processMenu->addAction(QStringLiteral("重新切片"), this, &SlicerPage::onAutoSlice);
     actReSlice->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_S));
     processMenu->addSeparator();
-    auto *actImport = processMenu->addAction(QStringLiteral("导入切点..."), this, &SlicerPage::onImportMarkers);
+    auto* actImport = processMenu->addAction(QStringLiteral("导入切点..."), this, &SlicerPage::onImportMarkers);
     actImport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
-    auto *actSave = processMenu->addAction(QStringLiteral("保存切点..."), this, &SlicerPage::onSaveMarkers);
+    auto* actSave = processMenu->addAction(QStringLiteral("保存切点..."), this, &SlicerPage::onSaveMarkers);
     actSave->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_S));
     processMenu->addSeparator();
-    auto *actExport = processMenu->addAction(QStringLiteral("导出切片音频..."), this, &SlicerPage::onExportAudio);
+    auto* actExport = processMenu->addAction(QStringLiteral("导出切片音频..."), this, &SlicerPage::onExportAudio);
     actExport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
     processMenu->addAction(QStringLiteral("批量导出全部切片..."), this, &SlicerPage::onBatchExportAll);
 
@@ -569,25 +594,19 @@ QString SlicerPage::windowTitle() const {
 }
 
 void SlicerPage::onActivated() {
-    static const dstools::SettingsKey<QString> kHSplitterState("Layout/hSplitterState", "");
-    static const dstools::SettingsKey<QString> kContentSplitterState("Layout/contentSplitterState", "");
-    static const dstools::SettingsKey<QString> kSplitterState("Layout/containerSplitterState", "");
-    static const dstools::SettingsKey<QString> kChartOrder("Layout/chartOrder", "");
-    static const dstools::SettingsKey<bool> kSidebarCollapsed("Layout/sidebarCollapsed", false);
-
-    auto hState = m_settings.get(kHSplitterState);
+    auto hState = m_settings.get(settings::kHSplitterState);
     if (!hState.isEmpty())
         m_hSplitter->restoreState(QByteArray::fromBase64(hState.toUtf8()));
 
-    auto cState = m_settings.get(kContentSplitterState);
+    auto cState = m_settings.get(settings::kContentSplitterState);
     if (!cState.isEmpty() && m_contentSplitter)
         m_contentSplitter->restoreState(QByteArray::fromBase64(cState.toUtf8()));
 
-    auto sState = m_settings.get(kSplitterState);
+    auto sState = m_settings.get(settings::kContainerSplitterState);
     if (!sState.isEmpty())
         m_container->restoreSplitterState(QByteArray::fromBase64(sState.toUtf8()));
 
-    auto chartOrder = m_settings.get(kChartOrder);
+    auto chartOrder = m_settings.get(settings::kLayoutChartOrder);
     if (!chartOrder.isEmpty())
         m_container->setChartOrder(chartOrder.split(QLatin1Char(','), Qt::SkipEmptyParts));
 
@@ -596,7 +615,7 @@ void SlicerPage::onActivated() {
     m_container->restoreResolution();
     m_container->recomputeYAxisWidth();
 
-    bool sidebarCollapsed = m_settings.get(kSidebarCollapsed);
+    bool sidebarCollapsed = m_settings.get(settings::kSidebarCollapsed);
     if (m_btnToggleSidebar) {
         m_btnToggleSidebar->setChecked(sidebarCollapsed);
         if (sidebarCollapsed && m_contentSplitter) {
@@ -606,21 +625,15 @@ void SlicerPage::onActivated() {
 }
 
 bool SlicerPage::onDeactivating() {
-    static const dstools::SettingsKey<QString> kHSplitterState("Layout/hSplitterState", "");
-    static const dstools::SettingsKey<QString> kContentSplitterState("Layout/contentSplitterState", "");
-    static const dstools::SettingsKey<QString> kSplitterState("Layout/containerSplitterState", "");
-    static const dstools::SettingsKey<QString> kChartOrder("Layout/chartOrder", "");
-    static const dstools::SettingsKey<bool> kSidebarCollapsed("Layout/sidebarCollapsed", false);
-
     if (m_playWidget)
         m_playWidget->setPlaying(false);
 
-    m_settings.set(kHSplitterState, QString::fromLatin1(m_hSplitter->saveState().toBase64()));
+    m_settings.set(settings::kHSplitterState, QString::fromLatin1(m_hSplitter->saveState().toBase64()));
     if (m_contentSplitter)
-        m_settings.set(kContentSplitterState, QString::fromLatin1(m_contentSplitter->saveState().toBase64()));
-    m_settings.set(kSplitterState, QString::fromLatin1(m_container->saveSplitterState().toBase64()));
-    m_settings.set(kChartOrder, m_container->chartOrder().join(QLatin1Char(',')));
-    m_settings.set(kSidebarCollapsed, m_btnToggleSidebar ? m_btnToggleSidebar->isChecked() : false);
+        m_settings.set(settings::kContentSplitterState, QString::fromLatin1(m_contentSplitter->saveState().toBase64()));
+    m_settings.set(settings::kContainerSplitterState, QString::fromLatin1(m_container->saveSplitterState().toBase64()));
+    m_settings.set(settings::kLayoutChartOrder, m_container->chartOrder().join(QLatin1Char(',')));
+    m_settings.set(settings::kSidebarCollapsed, m_btnToggleSidebar ? m_btnToggleSidebar->isChecked() : false);
     m_container->saveChartVisibility();
     m_container->saveResolution();
 
@@ -631,8 +644,10 @@ bool SlicerPage::onDeactivating() {
 
 void SlicerPage::onOpenAudioFiles() {
     dsfw::widgets::FilePathSelector selector(
-        {dsfw::widgets::FilePathSelector::Mode::OpenFiles, QStringLiteral("选择音频文件"),
-         {QStringLiteral("音频文件 (*.wav *.mp3 *.flac *.m4a *.ogg *.opus)"), QStringLiteral("所有文件 (*)")}}, this);
+        {dsfw::widgets::FilePathSelector::Mode::OpenFiles,
+         QStringLiteral("选择音频文件"),
+         {QStringLiteral("音频文件 (*.wav *.mp3 *.flac *.m4a *.ogg *.opus)"), QStringLiteral("所有文件 (*)")}},
+        this);
     selector.exec();
     const QStringList files = selector.selectedPaths();
     if (!files.isEmpty())
@@ -659,7 +674,7 @@ void SlicerPage::updateSlicerListPanel() {
     m_sliceListPanel->setSliceData(m_slicePoints, totalDuration, prefix);
 }
 
-void SlicerPage::keyPressEvent(QKeyEvent *event) {
+void SlicerPage::keyPressEvent(QKeyEvent* event) {
     if (event->key() == Qt::Key_Space && m_playWidget) {
         m_playWidget->setPlaying(!m_playWidget->isPlaying());
         event->accept();
@@ -689,7 +704,7 @@ void SlicerPage::saveCurrentSlicePoints() {
     }
 }
 
-void SlicerPage::loadSlicePointsForFile(const QString &filePath) {
+void SlicerPage::loadSlicePointsForFile(const QString& filePath) {
     auto it = m_fileSlicePoints.find(filePath);
     if (it != m_fileSlicePoints.end()) {
         m_slicePoints = it->second;
@@ -701,62 +716,43 @@ void SlicerPage::loadSlicePointsForFile(const QString &filePath) {
 void SlicerPage::updateFileProgress() {
     int total = m_audioFileList->fileCount();
     int completed = 0;
-    for (const auto &[path, points] : m_fileSlicePoints) {
+    for (const auto& [path, points] : m_fileSlicePoints) {
         if (!points.empty())
             ++completed;
     }
     m_audioFileList->progressTracker()->setProgress(completed, total);
 }
 
-void SlicerPage::autoSliceFiles(const QStringList &filePaths) {
-    AudioUtil::SlicerParams params;
+void SlicerPage::autoSliceFiles(const QStringList& filePaths) {
+    dsfw::signal::SlicerParams params;
     params.threshold = m_thresholdSpin->value();
     params.minLength = m_minLengthSpin->value();
     params.minInterval = m_minIntervalSpin->value();
     params.hopSize = m_hopSizeSpin->value();
     params.maxSilKept = m_maxSilenceSpin->value();
 
-    for (const QString &filePath : filePaths) {
+    for (const QString& filePath : filePaths) {
         if (m_fileSlicePoints.count(filePath) && !m_fileSlicePoints[filePath].empty())
             continue;
 
-        dstools::audio::AudioDecoder decoder;
-        if (!decoder.open(filePath))
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto probeResult = pipeline.probe(filePath.toStdString());
+        if (!probeResult.ok())
+            continue;
+        int sr = probeResult.value().sampleRate;
+
+        auto decodeResult = pipeline.decodeToMonoFloat(filePath.toStdString(), sr);
+        if (!decodeResult.ok())
             continue;
 
-        auto fmt = decoder.format();
-        int sr = fmt.sampleRate();
-        int channels = fmt.channels();
-
-        std::vector<float> allSamples;
-        allSamples.reserve(decoder.length() / sizeof(float));
-        constexpr int kBufSize = 4096;
-        std::vector<float> buffer(kBufSize);
-        while (true) {
-            int read = decoder.read(buffer.data(), 0, kBufSize);
-            if (read <= 0)
-                break;
-            allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
-        }
-        decoder.close();
-
-        size_t numFrames = allSamples.size() / channels;
-        std::vector<float> mono(numFrames);
-        if (channels > 1) {
-            for (size_t i = 0; i < numFrames; ++i) {
-                float sum = 0.0f;
-                for (int c = 0; c < channels; ++c)
-                    sum += allSamples[i * channels + c];
-                mono[i] = sum / static_cast<float>(channels);
-            }
-        } else {
-            mono.assign(allSamples.begin(), allSamples.end());
-        }
+        auto audioBuffer = decodeResult.value();
+        auto floats = audioBuffer.floats();
+        std::vector<float> mono(floats.begin(), floats.end());
 
         if (mono.empty())
             continue;
 
-        auto slicer = AudioUtil::Slicer::fromMilliseconds(sr, params);
+        auto slicer = dsfw::signal::Slicer::fromMilliseconds(sr, params);
         auto markers = slicer.slice(mono);
 
         std::vector<double> newPoints;
@@ -780,54 +776,38 @@ void SlicerPage::autoSliceFiles(const QStringList &filePaths) {
     updateFileProgress();
 }
 
-int SlicerPage::bitDepthToSndFormat(SliceExportDialog::BitDepth bitDepth) {
+dsfw::audio::SampleFormat SlicerPage::bitDepthToSampleFormat(SliceExportDialog::BitDepth bitDepth) {
+    using BD = SliceExportDialog::BitDepth;
+    using SF = dsfw::audio::SampleFormat;
     switch (bitDepth) {
-    case SliceExportDialog::BitDepth::PCM16:  return SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-    case SliceExportDialog::BitDepth::PCM24:  return SF_FORMAT_WAV | SF_FORMAT_PCM_24;
-    case SliceExportDialog::BitDepth::PCM32:  return SF_FORMAT_WAV | SF_FORMAT_PCM_32;
-    case SliceExportDialog::BitDepth::Float32: return SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+        case BD::PCM16:   return SF::Int16;
+        case BD::PCM24:   return SF::Int32; // 24-bit stored as 32-bit
+        case BD::PCM32:   return SF::Int32;
+        case BD::Float32: return SF::Float32;
     }
-    return SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+    return SF::Float32;
 }
 
-int SlicerPage::performBatchExport(const QString &outputDir, int digits, int sndFormat) {
+int SlicerPage::performBatchExport(const QString& outputDir, int digits, dsfw::audio::SampleFormat sampleFmt) {
     int totalExported = 0;
 
-    for (const auto &[audioPath, slicePoints] : m_fileSlicePoints) {
+    for (const auto& [audioPath, slicePoints] : m_fileSlicePoints) {
         if (slicePoints.empty())
             continue;
 
-        dstools::audio::AudioDecoder decoder;
-        if (!decoder.open(audioPath))
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto probeResult = pipeline.probe(audioPath.toStdString());
+        if (!probeResult.ok())
+            continue;
+        int sr = probeResult.value().sampleRate;
+
+        auto decodeResult = pipeline.decodeToMonoFloat(audioPath.toStdString(), sr);
+        if (!decodeResult.ok())
             continue;
 
-        auto fmt = decoder.format();
-        int sr = fmt.sampleRate();
-        int channels = fmt.channels();
-
-        std::vector<float> allSamples;
-        constexpr int kBufSize = 4096;
-        std::vector<float> buffer(kBufSize);
-        while (true) {
-            int read = decoder.read(buffer.data(), 0, kBufSize);
-            if (read <= 0)
-                break;
-            allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
-        }
-        decoder.close();
-
-        size_t numFrames = allSamples.size() / channels;
-        std::vector<float> mono(numFrames);
-        if (channels > 1) {
-            for (size_t i = 0; i < numFrames; ++i) {
-                float sum = 0.0f;
-                for (int c = 0; c < channels; ++c)
-                    sum += allSamples[i * channels + c];
-                mono[i] = sum / static_cast<float>(channels);
-            }
-        } else {
-            mono.assign(allSamples.begin(), allSamples.end());
-        }
+        auto audioBuffer = decodeResult.value();
+        auto floats = audioBuffer.floats();
+        std::vector<float> mono(floats.begin(), floats.end());
 
         QDir dir(outputDir);
         QString prefix = QFileInfo(audioPath).completeBaseName();
@@ -843,29 +823,9 @@ int SlicerPage::performBatchExport(const QString &outputDir, int digits, int snd
 
             QString filename = QStringLiteral("%1_%2.wav").arg(prefix).arg(i + 1, digits, 10, QChar('0'));
             QString filepath = dir.filePath(filename);
-            QString tmppath = filepath + QStringLiteral(".tmp");
-
-#ifdef _WIN32
-            auto tmpPathStr = tmppath.toStdWString();
-#else
-            auto tmpPathStr = tmppath.toStdString();
-#endif
-            SndfileHandle wf(tmpPathStr.c_str(), SFM_WRITE, sndFormat, 1, sr);
-            if (!wf)
+            int64_t frameCount = endSamp - startSamp;
+            if (!writeSliceAtomically(filepath, mono.data() + startSamp, frameCount, sr, sampleFmt, false))
                 continue;
-
-            sf_count_t frameCount = endSamp - startSamp;
-            sf_count_t written = wf.write(mono.data() + startSamp, frameCount);
-            if (written != frameCount) {
-                QFile::remove(tmppath);
-                continue;
-            }
-
-            QFile::remove(filepath);
-            if (!QFile::rename(tmppath, filepath)) {
-                QFile::remove(tmppath);
-                continue;
-            }
             ++totalExported;
         }
     }
@@ -877,15 +837,14 @@ void SlicerPage::onBatchExportAll() {
     saveCurrentSlicePoints();
 
     bool hasSlices = false;
-    for (const auto &[path, points] : m_fileSlicePoints) {
+    for (const auto& [path, points] : m_fileSlicePoints) {
         if (!points.empty()) {
             hasSlices = true;
             break;
         }
     }
     if (!hasSlices) {
-        QMessageBox::information(this, tr("Batch Export"),
-                                 tr("No files have been sliced. Slice audio files first."));
+        QMessageBox::information(this, tr("Batch Export"), tr("No files have been sliced. Slice audio files first."));
         return;
     }
 
@@ -903,20 +862,20 @@ void SlicerPage::onBatchExportAll() {
         dir.mkpath(outputDir);
 
     int digits = dlg.numDigits();
-    int sndFormat = bitDepthToSndFormat(dlg.bitDepth());
+    auto sampleFmt = bitDepthToSampleFormat(dlg.bitDepth());
 
     int totalFiles = 0;
-    for (const auto &[path, points] : m_fileSlicePoints) {
+    for (const auto& [path, points] : m_fileSlicePoints) {
         if (!points.empty())
             ++totalFiles;
     }
 
-    auto *progressDlg = new dsfw::widgets::ProgressDialog(tr("Batch Export"), this);
+    auto* progressDlg = new dsfw::widgets::ProgressDialog(tr("Batch Export"), this);
     progressDlg->setRange(0, totalFiles);
     progressDlg->setLabelText(tr("Exporting %1 files...").arg(totalFiles));
     progressDlg->setCancelButtonEnabled(false);
 
-    auto *watcher = new QFutureWatcher<int>(this);
+    auto* watcher = new QFutureWatcher<int>(this);
     connect(watcher, &QFutureWatcher<int>::finished, this, [this, watcher, progressDlg, outputDir]() {
         int totalExported = watcher->result();
         progressDlg->close();
@@ -927,46 +886,30 @@ void SlicerPage::onBatchExportAll() {
     });
 
     QPointer<SlicerPage> guard(this);
-    auto future = QtConcurrent::run([guard, outputDir, digits, sndFormat]() {
-        if (!guard) return 0;
-        return guard->performBatchExport(outputDir, digits, sndFormat);
+    auto future = QtConcurrent::run([guard, outputDir, digits, sampleFmt]() {
+        if (!guard)
+            return 0;
+        return guard->performBatchExport(outputDir, digits, sampleFmt);
     });
     watcher->setFuture(future);
 
     progressDlg->exec();
 }
 
-void SlicerPage::loadAudioFile(const QString &filePath) {
-    dstools::audio::AudioDecoder decoder;
-    if (!decoder.open(filePath))
+void SlicerPage::loadAudioFile(const QString& filePath) {
+    auto pipeline = dsfw::audio::AudioPipeline::create();
+    auto probeResult = pipeline.probe(filePath.toStdString());
+    if (!probeResult.ok())
+        return;
+    m_sampleRate = probeResult.value().sampleRate;
+
+    auto decodeResult = pipeline.decodeToMonoFloat(filePath.toStdString(), m_sampleRate);
+    if (!decodeResult.ok())
         return;
 
-    auto fmt = decoder.format();
-    m_sampleRate = fmt.sampleRate();
-    int channels = fmt.channels();
-
-    std::vector<float> allSamples;
-    constexpr int kBufSize = 4096;
-    std::vector<float> buffer(kBufSize);
-    while (true) {
-        int read = decoder.read(buffer.data(), 0, kBufSize);
-        if (read <= 0) break;
-        allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
-    }
-    decoder.close();
-
-    if (channels > 1) {
-        size_t numFrames = allSamples.size() / channels;
-        m_samples.resize(numFrames);
-        for (size_t i = 0; i < numFrames; ++i) {
-            float sum = 0.0f;
-            for (int c = 0; c < channels; ++c)
-                sum += allSamples[i * channels + c];
-            m_samples[i] = sum / static_cast<float>(channels);
-        }
-    } else {
-        m_samples = std::move(allSamples);
-    }
+    auto audioBuffer = decodeResult.value();
+    auto floats = audioBuffer.floats();
+    m_samples.assign(floats.begin(), floats.end());
 
     m_playWidget->openFile(filePath);
 
@@ -980,8 +923,9 @@ void SlicerPage::loadAudioFile(const QString &filePath) {
     m_container->applyDefaultScale();
     {
         double dur = m_samples.empty() ? 0.0 : static_cast<double>(m_samples.size()) / m_sampleRate;
-        DSFW_LOG_INFO("audio", ("Loaded audio: " + filePath.toStdString()
-                      + " (" + std::to_string(dur) + "s @ " + std::to_string(m_sampleRate) + "Hz)").c_str());
+        DSFW_LOG_INFO("audio", ("Loaded audio: " + filePath.toStdString() + " (" + std::to_string(dur) + "s @ " +
+                                std::to_string(m_sampleRate) + "Hz)")
+                                   .c_str());
     }
 
     m_waveformChart->setAudioData(m_samples, m_sampleRate);

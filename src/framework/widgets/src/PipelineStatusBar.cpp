@@ -20,7 +20,7 @@ void PipelineStatusBar::setSteps(const QVector<StepInfo> &steps) {
     rebuild();
 }
 
-void PipelineStatusBar::setContext(const dstools::PipelineContext *ctx) {
+void PipelineStatusBar::setContext(const dsfw::PipelineContext *ctx) {
     m_ctx = ctx;
     rebuild();
 }
@@ -30,7 +30,7 @@ void PipelineStatusBar::clearContext() {
     rebuild();
 }
 
-QString PipelineStatusBar::statusChar(const StepInfo &step, const dstools::PipelineContext *ctx) {
+QString PipelineStatusBar::statusChar(const StepInfo &step, const dsfw::PipelineContext *ctx) {
     if (!ctx)
         return QStringLiteral("\u25CB");
 

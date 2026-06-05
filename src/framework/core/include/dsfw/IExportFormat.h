@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <string>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Abstract interface for dataset export formats (e.g. HTS labels, Sinsy XML).
     class IExportFormat {
@@ -41,4 +41,4 @@ namespace dstools {
                                        const std::filesystem::path &outputDir) = 0;
     };
 
-} // namespace dstools
+} // namespace dsfw

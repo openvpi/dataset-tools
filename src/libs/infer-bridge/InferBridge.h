@@ -5,7 +5,7 @@
 ///        EngineTraits specializations for use by apps through the libs layer.
 
 #include <dsfw/IModelProvider.h>
-#include <dsfw/InferenceModelProvider.h>
+#include <dstools/InferenceModelProvider.h>
 #include <AsrPipeline.h>
 #include <FunAsrModelProvider.h>
 #include <game-infer/Game.h>

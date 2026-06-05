@@ -1,7 +1,7 @@
 # Dataset Tools 编码规范与标准
 
-**版本**：1.3
-**日期**：2026-05-13
+**版本**：1.4
+**日期**：2026-06-05
 **适用范围**：所有向 dataset-tools 贡献代码的开发者
 
 ---
@@ -18,9 +18,9 @@
 
 | 项目 | 规范 | 示例 |
 |------|------|------|
-| 框架命名空间 | `dstools`（core 多数类）、`dsfw`（core 部分类：AppPaths, PathUtils, CrashHandler, CrashSafeGuard, FileLogSink, SingleInstanceGuard, TranslationManager, IQualityMetrics, QualityTypes, ISliceDataSource, string_utils, CommonKeys）、`dsfw::widgets`（widgets 组件）、`dsfw::signal`（信号处理）、`dsfw::CommonKeys`（通用配置键）、`dstools::audio`（音频）、`dstools::labeler`（页面接口 IPageActions/IPageLifecycle）、`dstools::infer`（推理） | `dstools::Result<T>` |
+| 框架命名空间 | `dsfw`（core 多数类：AppPaths, PathUtils, CrashHandler, CrashSafeGuard, FileLogSink, SingleInstanceGuard, TranslationManager, QualityTypes, ISliceDataSource, string_utils, CommonKeys）、`dsfw::widgets`（widgets 组件）、`dsfw::signal`（信号处理）、`dsfw::CommonKeys`（通用配置键）、`dsfw::infer`（推理接口 IInferenceEngine, IInferenceService）、`dstools::audio`（音频）、`dstools::labeler`（页面接口 IPageActions/IPageLifecycle） | `dsfw::Result<T>` |
 | 应用命名空间 | `dstools` | `dstools::DsDocument` |
-| 接口类 | `I[Name]` | `ITaskProcessor`, `IModelManager` |
+| 接口类 | `I[Name]` | `ITaskProcessor`, `IExportFormat` |
 | include 前缀 | `<dsfw/...>` (框架), `<dstools/...>` (领域/音频) | `#include <dsfw/AppSettings.h>` |
 | CMake target | `dsfw::[module]`（框架）、`dstools-infer-common::`（推理公共）、`dstools-domain`（领域） | `dsfw::core`, `dsfw::ui-core` |
 | 宏前缀 | `DSFW_` | `DSFW_LOG_INFO(...)` |
@@ -309,5 +309,21 @@ EditorPageBase            IFormatAdapter          QFile / JsonHelper / PathUtils
 
 ---
 
-**文档版本**: 1.3
-**最后更新**: 2026-05-13
+## §9 ChartConfig 图表参数配置化
+
+所有图表渲染参数通过 `ChartConfigRegistry` 统一管理，支持运行时修改和持久化存储。
+各图表在 `registerChartConfig()` 中注册参数，`loadConfigParams()` 中加载。
+
+| 图表类型 | 可配置参数数 |
+|----------|------------|
+| 频谱图 (Spectrogram) | 5 |
+| 功率图 (Power) | 3 |
+| 波形图 (Waveform) | 3 |
+| 钢琴卷帘 (PianoRoll) | 10 |
+| 音高提取 (Pitch) | 2 |
+| **合计** | **23** |
+
+---
+
+**文档版本**: 1.4
+**最后更新**: 2026-06-05

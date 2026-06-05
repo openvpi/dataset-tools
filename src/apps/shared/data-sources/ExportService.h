@@ -1,23 +1,11 @@
 #pragma once
 
 #include <QString>
+#include <dsfw/infer/IInferenceService.h>
 #include <dstools/Constants.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/TranscriptionCsv.h>
 #include <vector>
-
-namespace HFA {
-    class HFA;
-}
-
-namespace Rmvpe {
-    class Rmvpe;
-}
-
-namespace Game {
-    class Game;
-    struct GameNote;
-}
 
 namespace dstools {
 
@@ -62,11 +50,11 @@ namespace dstools {
     public:
         static ExportValidationResult validate(IEditorDataSource *source);
 
-        static void autoCompleteSlice(IEditorDataSource *source, const QString &sliceId, HFA::HFA *hfa,
-                                      Rmvpe::Rmvpe *rmvpe, Game::Game *game, PhNumCalculator *phNumCalc);
+        static void autoCompleteSlice(IEditorDataSource *source, const QString &sliceId,
+                                      dsfw::infer::IInferenceService *inferService, PhNumCalculator *phNumCalc);
 
-        static ExportResult exportDataset(IEditorDataSource *source, const ExportOptions &options, HFA::HFA *hfa,
-                                          Rmvpe::Rmvpe *rmvpe, Game::Game *game, PhNumCalculator *phNumCalc);
+        static ExportResult exportDataset(IEditorDataSource *source, const ExportOptions &options,
+                                          dsfw::infer::IInferenceService *inferService, PhNumCalculator *phNumCalc);
     };
 
 } // namespace dstools

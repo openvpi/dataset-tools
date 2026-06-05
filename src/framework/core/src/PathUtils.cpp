@@ -197,8 +197,8 @@ QString PathUtils::fromStdPath(const std::filesystem::path& path) {
 }
 
 std::string PathUtils::toUtf8(const std::filesystem::path& path) {
-    auto u8 = path.u8string();
-    return {u8.begin(), u8.end()};
+    const auto& u8 = path.u8string();
+    return {reinterpret_cast<const char*>(u8.data()), u8.size()};
 }
 
 std::wstring PathUtils::toWide(const std::filesystem::path& path) {
@@ -238,6 +238,22 @@ FILE* PathUtils::openFile(const QString& path, const char* mode) {
     return _wfopen(wPath.c_str(), wMode.c_str());
 #else
     return fopen(path.toUtf8().constData(), mode);
+#endif
+}
+
+std::ifstream PathUtils::openIfstream(const std::filesystem::path& path, std::ios::openmode mode) {
+#ifdef Q_OS_WIN
+    return std::ifstream(path.wstring(), mode);
+#else
+    return std::ifstream(path.string(), mode);
+#endif
+}
+
+std::ofstream PathUtils::openOfstream(const std::filesystem::path& path, std::ios::openmode mode) {
+#ifdef Q_OS_WIN
+    return std::ofstream(path.wstring(), mode);
+#else
+    return std::ofstream(path.string(), mode);
 #endif
 }
 
@@ -332,10 +348,10 @@ std::filesystem::path PathUtils::relativeTo(const std::filesystem::path& path, c
     return std::filesystem::relative(path, base);
 }
 
-dstools::Result<QString> PathUtils::readFile(const QString& path) {
+dsfw::Result<QString> PathUtils::readFile(const QString& path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
-        return dstools::Result<QString>::Error("Cannot open file: " + toUtf8(path.toStdString()));
+        return dsfw::Result<QString>::Error("Cannot open file: " + toUtf8(path.toStdString()));
 
     const QByteArray data = file.readAll();
     file.close();
@@ -347,17 +363,17 @@ dstools::Result<QString> PathUtils::readFile(const QString& path) {
     return decodeText(data, encoding);
 }
 
-dstools::Result<QString> PathUtils::readFile(const std::string& path) {
+dsfw::Result<QString> PathUtils::readFile(const std::string& path) {
     return readFile(QString::fromStdString(path));
 }
 
-dstools::Result<void> PathUtils::writeFile(const QString& path, const QString& text, TextEncoding encoding) {
+dsfw::Result<void> PathUtils::writeFile(const QString& path, const QString& text, TextEncoding encoding) {
     const QByteArray encoded = encodeText(text, encoding);
     const std::string content(encoded.constData(), encoded.size());
     return AtomicFileWriter::write(toStdPath(path), content);
 }
 
-dstools::Result<void> PathUtils::writeFile(const std::string& path, const QString& text, TextEncoding encoding) {
+dsfw::Result<void> PathUtils::writeFile(const std::string& path, const QString& text, TextEncoding encoding) {
     return writeFile(QString::fromStdString(path), text, encoding);
 }
 
@@ -397,10 +413,10 @@ uint32_t PathUtils::crc32(const uint8_t* data, size_t size) {
     return crc32Update(0, data, size);
 }
 
-dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path& path) {
+dsfw::Result<uint32_t> PathUtils::crc32(const std::filesystem::path& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
-        return dstools::Result<uint32_t>::Error("Failed to open file for CRC32: " + toUtf8(path));
+        return dsfw::Result<uint32_t>::Error("Failed to open file for CRC32: " + toUtf8(path));
     }
 
     constexpr size_t kBufSize = 65536;
@@ -411,10 +427,10 @@ dstools::Result<uint32_t> PathUtils::crc32(const std::filesystem::path& path) {
     }
 
     if (file.bad()) {
-        return dstools::Result<uint32_t>::Error("Read error during CRC32: " + toUtf8(path));
+        return dsfw::Result<uint32_t>::Error("Read error during CRC32: " + toUtf8(path));
     }
 
-    return dstools::Result<uint32_t>::Ok(crc);
+    return dsfw::Result<uint32_t>::Ok(crc);
 }
 
 } // namespace dsfw

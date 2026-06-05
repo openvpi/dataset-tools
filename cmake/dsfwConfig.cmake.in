@@ -44,7 +44,7 @@ unset(_dsfw_val)
 # so that consumers can use dsfw::core instead of dsfw::dsfw-core, etc.
 # Requires CMake >= 3.18 for ALIAS of IMPORTED targets.
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
-    foreach(_dsfw_tgt dsfw-base dsfw-core dsfw-ui-core dstools-audio dsfw-widgets)
+    foreach(_dsfw_tgt dsfw-base dsfw-core dsfw-ui-core dsfw-audio dsfw-widgets)
         if(TARGET dsfw::${_dsfw_tgt})
             set_target_properties(dsfw::${_dsfw_tgt} PROPERTIES IMPORTED_GLOBAL TRUE)
         endif()
@@ -54,7 +54,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
         "dsfw::base=dsfw::dsfw-base"
         "dsfw::core=dsfw::dsfw-core"
         "dsfw::ui-core=dsfw::dsfw-ui-core"
-        "dsfw::audio=dsfw::dstools-audio"
+        "dsfw::audio=dsfw::dsfw-audio"
         "dsfw::widgets=dsfw::dsfw-widgets"
     )
     foreach(_dsfw_pair IN LISTS _dsfw_alias_pairs)

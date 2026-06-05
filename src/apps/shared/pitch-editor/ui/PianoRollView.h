@@ -20,11 +20,10 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <dsfw/AppSettings.h>
 #include <dstools/DsPitchDocument.h>
 
 namespace dstools {
-    class AppSettings;
-
     namespace pitchlabeler {
 
 
@@ -60,6 +59,7 @@ namespace dstools {
 
                 void setContentLeftMargin(int margin) {
                     m_contentLeftMargin = margin;
+                    m_configPianoWidth = margin;
                     m_inputHandler.setContentLeftMargin(margin);
                 }
 

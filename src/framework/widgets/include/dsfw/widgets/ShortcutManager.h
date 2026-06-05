@@ -19,14 +19,14 @@ namespace dsfw::widgets {
         /// @brief Construct a ShortcutManager.
         /// @param settings Application settings for shortcut persistence.
         /// @param parent Parent QObject.
-        explicit ShortcutManager(dstools::AppSettings *settings, QObject *parent = nullptr);
+        explicit ShortcutManager(dsfw::AppSettings *settings, QObject *parent = nullptr);
 
         /// @brief Bind a QAction to a settings key for shortcut customization.
         /// @param action Action to bind.
         /// @param key Settings key storing the shortcut sequence.
         /// @param displayName Human-readable name shown in the editor.
         /// @param category Category grouping for the editor.
-        void bind(QAction *action, const dstools::SettingsKey<QString> &key, const QString &displayName,
+        void bind(QAction *action, const dsfw::SettingsKey<QString> &key, const QString &displayName,
                   const QString &category);
 
         /// @brief Apply all saved shortcuts to their bound actions.
@@ -58,7 +58,7 @@ namespace dsfw::widgets {
             QString category;
         };
         QList<Binding> m_bindings;
-        dstools::AppSettings *m_settings;
+        dsfw::AppSettings *m_settings;
     };
 
 } // namespace dsfw::widgets

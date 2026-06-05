@@ -88,25 +88,10 @@ namespace dstools {
         void addRawSentence(const std::string &jsonStr);
         void setRawSentence(int index, const std::string &jsonStr);
 
-        // ── Deprecated access (transitional) ──────────────────────────────
-
-        [[deprecated("Use sentenceView() instead")]]
-        nlohmann::json &sentence(int index);
-        [[deprecated("Use sentenceView() instead")]]
-        const nlohmann::json &sentence(int index) const;
-
-        [[deprecated("Use addSentenceView() or addRawSentence() instead")]]
-        std::vector<nlohmann::json> &sentences();
-        [[deprecated("Use sentenceView() instead")]]
-        const std::vector<nlohmann::json> &sentences() const;
+        // ── Field helpers ──────────────────────────────────────────────────
 
         const QString &filePath() const;
         void setFilePath(const QString &path);
-
-        // ── Field helpers (number-or-string ambiguity) ────────────────────
-
-        [[deprecated("Use SentenceView::offset instead")]]
-        static double numberOrString(const nlohmann::json &obj, const std::string &key, double defaultValue = 0.0);
 
         double durationSec() const;
 

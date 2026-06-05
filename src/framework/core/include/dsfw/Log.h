@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Log severity levels.
     enum class LogLevel { Trace, Debug, Info, Warning, Error, Fatal };
@@ -29,11 +29,11 @@ namespace dstools {
         [[nodiscard]] std::string toString() const;
     };
 
-} // namespace dstools
+} // namespace dsfw
 
-Q_DECLARE_METATYPE(dstools::LogEntry)
+Q_DECLARE_METATYPE(dsfw::LogEntry)
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Log severity to human-readable label.
     [[nodiscard]] const char *logLevelLabel(LogLevel level);
@@ -101,12 +101,20 @@ namespace dstools {
         mutable std::mutex m_mutex;
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility: keep Logger, LogLevel, LogEntry, LogSink available in dstools namespace
+namespace dstools {
+    using dsfw::Logger;
+    using dsfw::LogLevel;
+    using dsfw::LogEntry;
+    using dsfw::LogSink;
+}
 
 // ── Convenience macros ──────────────────────────────────────────────────
-#define DSFW_LOG(level, cat, msg) ::dstools::Logger::instance().log(level, cat, msg)
-#define DSFW_LOG_TRACE(cat, msg)  DSFW_LOG(::dstools::LogLevel::Trace, cat, msg)
-#define DSFW_LOG_DEBUG(cat, msg)  DSFW_LOG(::dstools::LogLevel::Debug, cat, msg)
-#define DSFW_LOG_INFO(cat, msg)   DSFW_LOG(::dstools::LogLevel::Info, cat, msg)
-#define DSFW_LOG_WARN(cat, msg)   DSFW_LOG(::dstools::LogLevel::Warning, cat, msg)
-#define DSFW_LOG_ERROR(cat, msg)  DSFW_LOG(::dstools::LogLevel::Error, cat, msg)
+#define DSFW_LOG(level, cat, msg) ::dsfw::Logger::instance().log(level, cat, msg)
+#define DSFW_LOG_TRACE(cat, msg)  DSFW_LOG(::dsfw::LogLevel::Trace, cat, msg)
+#define DSFW_LOG_DEBUG(cat, msg)  DSFW_LOG(::dsfw::LogLevel::Debug, cat, msg)
+#define DSFW_LOG_INFO(cat, msg)   DSFW_LOG(::dsfw::LogLevel::Info, cat, msg)
+#define DSFW_LOG_WARN(cat, msg)   DSFW_LOG(::dsfw::LogLevel::Warning, cat, msg)
+#define DSFW_LOG_ERROR(cat, msg)  DSFW_LOG(::dsfw::LogLevel::Error, cat, msg)

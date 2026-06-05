@@ -5,15 +5,12 @@
 #include <QFileInfo>
 #include <QMenu>
 #include <dsfw/AppSettings.h>
+#include <dsfw/CommonKeys.h>
 #include <dsfw/RecentFilesManager.h>
-
-namespace {
-    const dstools::SettingsKey<QString> kRecentFiles("General/recentFiles", QString());
-}
 
 namespace dsfw {
 
-    RecentFilesManager::RecentFilesManager(dstools::AppSettings *settings, QObject *parent) :
+    RecentFilesManager::RecentFilesManager(dsfw::AppSettings *settings, QObject *parent) :
         QObject(parent), m_settings(settings) {
         load();
     }
@@ -90,7 +87,7 @@ namespace dsfw {
     }
 
     void RecentFilesManager::load() {
-        const QString raw = m_settings->get(kRecentFiles);
+        const QString raw = m_settings->get(CommonKeys::RecentFiles);
         if (raw.isEmpty()) {
             m_files.clear();
             return;
@@ -102,7 +99,7 @@ namespace dsfw {
     }
 
     void RecentFilesManager::save() {
-        m_settings->set(kRecentFiles, m_files.join(QLatin1Char('|')));
+        m_settings->set(CommonKeys::RecentFiles, m_files.join(QLatin1Char('|')));
     }
 
     void RecentFilesManager::rebuildMenus() {

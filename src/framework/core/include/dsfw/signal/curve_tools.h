@@ -12,13 +12,13 @@ namespace dsfw::signal {
     // 1. Resampling
     // ═══════════════════════════════════════════════════════════════════
 
-    std::vector<float> resampleCurve(const std::vector<float> &values, dstools::TimePos srcTimestep,
-                                     dstools::TimePos dstTimestep, int alignLength = 0);
+    std::vector<float> resampleCurve(const std::vector<float> &values, dsfw::TimePos srcTimestep,
+                                     dsfw::TimePos dstTimestep, int alignLength = 0);
 
-    std::vector<double> resampleCurveF(const std::vector<double> &values, dstools::TimePos srcTimestep,
-                                       dstools::TimePos dstTimestep, int alignLength = 0);
+    std::vector<double> resampleCurveF(const std::vector<double> &values, dsfw::TimePos srcTimestep,
+                                       dsfw::TimePos dstTimestep, int alignLength = 0);
 
-    inline dstools::TimePos hopSizeToTimestep(int hopSize, int sampleRate) {
+    inline dsfw::TimePos hopSizeToTimestep(int hopSize, int sampleRate) {
         return std::llround(static_cast<double>(hopSize) / sampleRate * 1e6);
     }
 

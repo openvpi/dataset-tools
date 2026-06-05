@@ -33,9 +33,6 @@ signals:
     void pathsSelected(const QStringList &paths);
 
 private:
-    QString loadRecentPath() const;
-    void saveRecentPath(const QString &path);
-
     Config m_config;
     QString m_selectedPath;
     QStringList m_selectedPaths;

@@ -1,6 +1,6 @@
 #include <dsfw/PipelineValidators.h>
 
-namespace dstools {
+namespace dsfw {
 
 ValidationCallback makeMinFieldValidator(const QString &layerName,
                                           const QString &fieldName,
@@ -76,4 +76,4 @@ ValidationCallback makeRangeFieldValidator(const QString &layerName,
     };
 }
 
-} // namespace dstools
+} // namespace dsfw

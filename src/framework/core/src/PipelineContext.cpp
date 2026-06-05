@@ -5,7 +5,7 @@
 #include <QSet>
 #include <queue>
 
-namespace dstools {
+namespace dsfw {
 
 // Layer dependency DAG: modified layer → downstream layers that become dirty.
 // Based on pipeline.md §3.1 I/O contract:
@@ -367,4 +367,4 @@ Result<PipelineContext> PipelineContext::fromJsonString(const std::string &jsonS
     return fromJson(j);
 }
 
-} // namespace dstools
+} // namespace dsfw

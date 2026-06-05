@@ -8,7 +8,8 @@
 #include <dstools/PitchUtils.h>
 #include <dstools/DsKeys.h>
 #include <dstools/TimePos.h>
-#include <sndfile.hh>
+#include <dsfw/audio/AudioPipeline.h>
+#include <dsfw/PathUtils.h>
 
 namespace dstools {
 
@@ -28,15 +29,11 @@ namespace dstools {
             mergedF0[i] = res.f0[i] * 1000.0f;
         }
 
-#ifdef _WIN32
-        auto pathStr = audioPath.toStdWString();
-#else
-        auto pathStr = audioPath.toStdString();
-#endif
-        const SndfileHandle sf(pathStr.c_str());
-        if (sf && sf.samplerate() > 0) {
-            const int sampleRate = sf.samplerate();
-            const int64_t audioFrames = sf.frames();
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto probeResult = pipeline.probe(dsfw::PathUtils::toUtf8(dsfw::PathUtils::toStdPath(audioPath)));
+        if (probeResult.ok()) {
+            const int sampleRate = probeResult.value().sampleRate;
+            const int64_t audioFrames = probeResult.value().totalFrameCount;
 
             const TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
             const int alignLength = expectedFrameCount(audioFrames, constants::kDefaultHopSize);
@@ -83,6 +80,41 @@ namespace dstools {
     }
 
     void PitchExtractionService::applyMidiToDocument(DsTextDocument &doc, const std::vector<Game::GameNote> &notes) {
+        if (notes.empty())
+            return;
+
+        IntervalLayer *midiLayer = nullptr;
+        for (auto &layer : doc.layers) {
+            if (layer.name == QString::fromUtf8(dstools::keys::layers::midi)) {
+                midiLayer = &layer;
+                break;
+            }
+        }
+        if (!midiLayer) {
+            doc.layers.push_back({});
+            midiLayer = &doc.layers.back();
+            midiLayer->name = QString::fromUtf8(dstools::keys::layers::midi);
+            midiLayer->type = QString::fromUtf8(dstools::keys::layers::note);
+        }
+
+        midiLayer->boundaries.clear();
+        int id = 1;
+        for (const auto &gn : notes) {
+            pitchlabeler::Note n;
+            n.start = static_cast<int64_t>(gn.onset * 1000000.0);
+            n.duration = static_cast<int64_t>(gn.duration * 1000000.0);
+            n.name = gn.voiced ? midiToNoteString(static_cast<double>(gn.pitch)) : QStringLiteral("rest");
+
+            Boundary b;
+            b.id = id++;
+            b.pos = n.start;
+            b.text = pitchlabeler::DsPitchDocument::serializeNote(n);
+            midiLayer->boundaries.push_back(std::move(b));
+        }
+    }
+
+    void PitchExtractionService::applyMidiToDocument(DsTextDocument &doc,
+                                                      const std::vector<dsfw::infer::MidiNote> &notes) {
         if (notes.empty())
             return;
 

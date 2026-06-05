@@ -10,7 +10,7 @@
 #include <memory>
 #include <mutex>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Factory function type for creating processor instances.
     using ProcessorFactory = std::function<std::unique_ptr<ITaskProcessor>()>;
@@ -59,4 +59,9 @@ namespace dstools {
         std::map<QString, TaskSpec> m_taskSpecBaselines;
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::TaskProcessorRegistry;
+}

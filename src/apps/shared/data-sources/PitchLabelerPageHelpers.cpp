@@ -21,7 +21,8 @@
 #include <dstools/CurveTools.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/PitchUtils.h>
-#include <sndfile.hh>
+#include <dsfw/audio/AudioPipeline.h>
+#include <dsfw/PathUtils.h>
 
 namespace dstools {
 
@@ -164,8 +165,7 @@ namespace dstools {
             return;
         }
 
-        page->rmvpeRef() = page->enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
-        page->gameRef() = page->enginePool()->acquire<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
+        page->acquireEngines();
 
         bool hasRmvpe = page->enginePool()->isOpen<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
         bool hasGame = page->enginePool()->isOpen<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
@@ -216,8 +216,8 @@ namespace dstools {
 
         dlg->appendLog(QObject::tr("总切片数: %1").arg(ids.size()));
 
-        auto *rmvpe = page->rmvpeRef();
-        auto *game = page->gameRef();
+        auto rmvpe = page->enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
+        auto game = page->enginePool()->acquire<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
         auto rmvpeAlive = page->aliveToken(QLatin1String(dstools::keys::engines::pitchExtraction)).token();
         auto gameAlive = page->aliveToken(QLatin1String(dstools::keys::engines::midiTranscription)).token();
         auto *src = source;
@@ -314,15 +314,11 @@ namespace dstools {
                                         f0Mhz[i] = res.f0[i] * 1000.0f;
                                     }
                                     float timestep = 0.01f;
-#ifdef _WIN32
-                                    auto pathStrB = audioPath.toStdWString();
-#else
-                                    auto pathStrB = audioPath.toStdString();
-#endif
-                                    SndfileHandle sf(pathStrB.c_str());
-                                    if (sf && sf.samplerate() > 0) {
-                                        const int sampleRate = sf.samplerate();
-                                        const int64_t audioFrames = sf.frames();
+                                    auto pipeline = dsfw::audio::AudioPipeline::create();
+                                    auto probeResult = pipeline.probe(dsfw::PathUtils::toUtf8(dsfw::PathUtils::toStdPath(audioPath)));
+                                    if (probeResult.ok()) {
+                                        const int sampleRate = probeResult.value().sampleRate;
+                                        const int64_t audioFrames = probeResult.value().totalFrameCount;
                                         const TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
                                         const int alignLength = expectedFrameCount(audioFrames, constants::kDefaultHopSize);
                                         f0Mhz = resampleCurve(f0Mhz, secToUs(0.01), dstTimestepUs, alignLength);

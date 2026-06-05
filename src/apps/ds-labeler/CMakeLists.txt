@@ -2,17 +2,15 @@ project(DsLabeler VERSION 0.1.0.0)
 
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Concurrent REQUIRED)
 find_package(cpp-pinyin CONFIG REQUIRED)
-find_package(SndFile CONFIG REQUIRED)
 
 dstools_add_executable(${PROJECT_NAME}
         VERSION ${PROJECT_VERSION}
         AUTOMOC AUTORCC
         DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
         DEPENDS
-        PRIVATE dstools-ui-core dstools-domain dsfw-widgets
+        PRIVATE dstools-ui-core dstools-domain dsfw-signal dsfw-widgets
         min-label-editor phoneme-editor pitch-editor settings-page
         data-sources log-page infer-bridge unified-editor
-        SndFile::sndfile
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 

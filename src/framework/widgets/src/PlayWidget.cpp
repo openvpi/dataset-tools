@@ -1,6 +1,6 @@
 #include <dsfw/widgets/PlayWidget.h>
-#include <dstools/IAudioPlayer.h>
-#include <dstools/AudioPlayer.h>
+#include <dsfw/audio/IAudioPlayerAdapter.h>
+#include <dsfw/audio/AudioPlayerAdapter.h>
 #include <dsfw/Log.h>
 
 #include <algorithm>
@@ -29,7 +29,7 @@ PlayWidget::PlayWidget(QWidget *parent) : QWidget(parent) {
     initUI();
 }
 
-PlayWidget::PlayWidget(dstools::audio::IAudioPlayer *player, QWidget *parent) : QWidget(parent) {
+PlayWidget::PlayWidget(dsfw::audio::IAudioPlayerAdapter *player, QWidget *parent) : QWidget(parent) {
     m_player = player;
     m_valid = (m_player != nullptr);
     initUI();
@@ -83,9 +83,9 @@ void PlayWidget::initUI() {
         connect(m_devBtn, &QPushButton::clicked, this, &PlayWidget::onDevClicked);
         connect(m_slider, &QSlider::sliderReleased, this, &PlayWidget::onSliderReleased);
         connect(m_deviceActionGroup, &QActionGroup::triggered, this, &PlayWidget::onDeviceAction);
-        connect(m_player, &dstools::audio::IAudioPlayer::stateChanged,
+        connect(m_player, &dsfw::audio::IAudioPlayerAdapter::stateChanged,
                 this, &PlayWidget::onPlaybackStateChanged);
-        connect(m_player, &dstools::audio::IAudioPlayer::deviceChanged,
+        connect(m_player, &dsfw::audio::IAudioPlayerAdapter::deviceChanged,
                 this, &PlayWidget::onDeviceChanged);
         reloadDevices();
     } else {
@@ -97,7 +97,7 @@ void PlayWidget::initUI() {
 }
 
 void PlayWidget::initAudio() {
-    m_ownedPlayer = std::make_unique<dstools::audio::AudioPlayer>();
+    m_ownedPlayer = std::make_unique<dsfw::audio::AudioPlayerAdapter>();
     m_player = m_ownedPlayer.get();
 
     if (!m_player->isOpen() && !m_player->setup(44100, 2, 1024)) {
@@ -125,7 +125,8 @@ void PlayWidget::openFile(const QString &path) {
     m_player->stop();
     m_player->close();
     m_filename = path;
-    if (m_player->open(path)) {
+    auto result = m_player->open(path.toStdWString());
+    if (result.ok()) {
         m_fileLabel->setText(QFileInfo(path).fileName());
         reloadSliderStatus();
     } else {
@@ -239,12 +240,17 @@ void PlayWidget::timerEvent(QTimerEvent *event) {
             reloadSliderStatus();
             double posSec = static_cast<double>(estimatedTimeMs()) / 1000.0;
             if (m_hasRange) {
-                posSec = std::clamp(posSec, m_rangeStart, m_rangeEnd);
-                emit playheadChanged(posSec);
-                // Use actual decoder position for accurate range termination
-                // to avoid premature stopping for short intervals
+                double displayPos = std::clamp(posSec, m_rangeStart, m_rangeEnd);
+                emit playheadChanged(displayPos);
                 double decoderPos = m_player->isOpen() ? m_player->position() : -1.0;
-                if ((decoderPos >= 0 && decoderPos >= m_rangeEnd) || posSec >= m_rangeEnd + 0.1) {
+                double rangeDuration = m_rangeEnd - m_rangeStart;
+                // For short ranges, the decoder position advances past m_rangeEnd immediately
+                // because the SDL callback reads ahead. Only stop when wall-clock time has also
+                // passed the range, ensuring the audio buffer is actually played.
+                bool decoderExceeded = decoderPos >= 0 && decoderPos >= m_rangeEnd
+                                       && posSec >= m_rangeStart + std::max(rangeDuration, 0.05);
+                bool timeExceeded = posSec >= m_rangeEnd + 0.1;
+                if (decoderExceeded || timeExceeded) {
                     m_player->stop();
                     reloadButtonStatus();
                 }
@@ -369,7 +375,7 @@ void PlayWidget::onDeviceAction(QAction *action) {
     m_player->setDevice(action->text());
 }
 
-void PlayWidget::onPlaybackStateChanged() {
+void PlayWidget::onPlaybackStateChanged(dsfw::audio::IAudioPlayerAdapter::State) {
     reloadButtonStatus();
 }
 

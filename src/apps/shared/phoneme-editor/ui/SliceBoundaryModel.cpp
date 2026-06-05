@@ -57,10 +57,12 @@ namespace dstools {
                                       ? m_pointsSec[boundaryIndex + 1]
                                       : m_durationSec;
 
-            constexpr double kEpsilon = 0.000001;
-            double minClamp = prevBoundary;
+            // Boundary minimum gap: 1e-5 seconds = 0.01ms, prevents floating-point overlap
+            static constexpr double kMinBoundaryGapSec = 1e-5;
+
+            double minClamp = (boundaryIndex == 0) ? prevBoundary : prevBoundary + kMinBoundaryGapSec;
             double maxClamp =
-                (boundaryIndex + 1 < static_cast<int>(m_pointsSec.size())) ? nextBoundary - kEpsilon : nextBoundary;
+                (boundaryIndex + 1 < static_cast<int>(m_pointsSec.size())) ? nextBoundary - kMinBoundaryGapSec : nextBoundary;
             double clamped = std::clamp(proposedSec, minClamp, maxClamp);
             return static_cast<TimePos>(clamped * kUsPerSec);
         }

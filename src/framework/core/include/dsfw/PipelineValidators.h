@@ -5,7 +5,7 @@
 #include <dsfw/TaskTypes.h>
 #include <QString>
 
-namespace dstools {
+namespace dsfw {
 
 ValidationCallback makeMinFieldValidator(const QString &layerName,
                                           const QString &fieldName,
@@ -32,4 +32,14 @@ inline ValidationCallback makePitchCoverageValidator(const QString &layerName, d
     return makeMinFieldValidator(layerName, QStringLiteral("coverage"), minCoverage);
 }
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::makeSliceLengthValidator;
+    using dsfw::makeMinFieldValidator;
+    using dsfw::makeMaxFieldValidator;
+    using dsfw::makeRangeFieldValidator;
+    using dsfw::makeAlignmentQualityValidator;
+    using dsfw::makePitchCoverageValidator;
+}

@@ -12,4 +12,4 @@ dstools_add_infer_library(${PROJECT_NAME}
         RC_COPYRIGHT "Copyright (C) 2025"
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core)
+target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core infer-common)

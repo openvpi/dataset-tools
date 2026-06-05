@@ -7,8 +7,7 @@
 #include <dstools/ProjectPaths.h>
 #include <dstools/CsvAdapter.h>
 #include <dstools/DsKeys.h>
-
-#include "InferBridge.h"
+#include <dsfw/PathUtils.h>
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -119,8 +118,8 @@ ExportValidationResult ExportService::validate(IEditorDataSource *source) {
 }
 
 void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &sliceId,
-                                       HFA::HFA *hfa, Rmvpe::Rmvpe *rmvpe,
-                                       Game::Game *game, PhNumCalculator *phNumCalc) {
+                                       dsfw::infer::IInferenceService *inferService,
+                                       PhNumCalculator *phNumCalc) {
     if (!source)
         return;
 
@@ -165,16 +164,17 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
 
     QString audioPath = source->validatedAudioPath(sliceId);
 
-    if (!hasPhoneme && hasGrapheme && hfa && hfa->isOpen() && !audioPath.isEmpty()) {
-        HFA::WordList words;
+    if (!hasPhoneme && hasGrapheme && inferService && inferService->hasForcedAlignment() && !audioPath.isEmpty()) {
         std::string lyricsText;
         for (const auto &text : graphemeTexts) {
             if (!lyricsText.empty()) lyricsText += " ";
             lyricsText += text.toStdString();
         }
 
+        std::vector<dsfw::infer::AlignedWord> words;
         std::vector<std::string> nonSpeechPh = {"AP", "SP"};
-        auto faResult = hfa->recognize(audioPath.toStdWString(), "zh", nonSpeechPh, lyricsText, words);
+        auto audioFilePath = std::filesystem::path(audioPath.toStdWString());
+        auto faResult = inferService->runForcedAlignment(audioFilePath, "zh", nonSpeechPh, lyricsText, words);
         if (faResult) {
             IntervalLayer phonemeLayer;
             phonemeLayer.name = QString::fromUtf8(dstools::keys::layers::phoneme);
@@ -184,7 +184,7 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
                 for (const auto &phone : word.phones) {
                     Boundary b;
                     b.id = id++;
-                    b.pos = phone.start;
+                    b.pos = secToUs(phone.start);
                     b.text = QString::fromStdString(phone.text);
                     phonemeLayer.boundaries.push_back(std::move(b));
                 }
@@ -192,7 +192,7 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
             if (!phonemeLayer.boundaries.empty()) {
                 Boundary endB;
                 endB.id = id;
-                endB.pos = words.back().phones.back().end;
+                endB.pos = secToUs(words.back().phones.back().end);
                 endB.text = QString();
                 phonemeLayer.boundaries.push_back(std::move(endB));
             }
@@ -250,17 +250,24 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
         }
     }
 
-    if (!hasPitch && rmvpe && rmvpe->is_open() && !audioPath.isEmpty()) {
-        auto pitchResult = PitchExtractionService::extractPitch(rmvpe, audioPath);
-        if (!pitchResult.f0Mhz.empty()) {
-            PitchExtractionService::applyPitchToDocument(doc, pitchResult.f0Mhz, pitchResult.timestep);
+    if (!hasPitch && inferService && inferService->hasPitchExtraction() && !audioPath.isEmpty()) {
+        dsfw::infer::PitchResult pitchResult;
+        auto audioFilePath = std::filesystem::path(audioPath.toStdWString());
+        bool pitchOk = inferService->runPitchExtraction(audioFilePath, 0.01f, pitchResult);
+        if (pitchOk && !pitchResult.f0.empty()) {
+            std::vector<float> f0Mhz(pitchResult.f0.size());
+            for (size_t i = 0; i < pitchResult.f0.size(); ++i)
+                f0Mhz[i] = pitchResult.f0[i] * 1000.0f;
+            PitchExtractionService::applyPitchToDocument(doc, f0Mhz, pitchResult.timestep);
         }
     }
 
-    if (!hasMidi && game && game->isOpen() && !audioPath.isEmpty()) {
-        auto midiResult = PitchExtractionService::transcribeMidi(game, audioPath);
-        if (!midiResult.notes.empty()) {
-            PitchExtractionService::applyMidiToDocument(doc, midiResult.notes);
+    if (!hasMidi && inferService && inferService->hasMidiTranscription() && !audioPath.isEmpty()) {
+        std::vector<dsfw::infer::MidiNote> notes;
+        auto audioFilePath = std::filesystem::path(audioPath.toStdWString());
+        bool midiOk = inferService->runMidiTranscription(audioFilePath, notes);
+        if (midiOk && !notes.empty()) {
+            PitchExtractionService::applyMidiToDocument(doc, notes);
         }
     }
 
@@ -271,8 +278,8 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
 }
 
 ExportResult ExportService::exportDataset(IEditorDataSource *source, const ExportOptions &options,
-                                           HFA::HFA *, Rmvpe::Rmvpe *,
-                                           Game::Game *, PhNumCalculator *) {
+                                           dsfw::infer::IInferenceService *,
+                                           PhNumCalculator *) {
     ExportResult result;
     if (!source)
         return result;

@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <cstdint>
+#include <dsfw/infer/IInferenceService.h>
 #include <dstools/DsTextTypes.h>
 #include <vector>
 
@@ -34,6 +35,7 @@ namespace dstools {
         static void applyPitchToDocument(DsTextDocument &doc, const std::vector<float> &f0Mhz, float timestep);
 
         static void applyMidiToDocument(DsTextDocument &doc, const std::vector<Game::GameNote> &notes);
+        static void applyMidiToDocument(DsTextDocument &doc, const std::vector<dsfw::infer::MidiNote> &notes);
     };
 
 } // namespace dstools

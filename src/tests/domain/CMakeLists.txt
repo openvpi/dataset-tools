@@ -30,6 +30,7 @@ foreach (test_name ${DOMAIN_TESTS})
     target_link_libraries(${test_name} PRIVATE
             dstools-domain
             dsfw-base
+            dsfw-signal
             Qt${QT_VERSION_MAJOR}::Test
     )
     add_test(NAME ${test_name} COMMAND ${test_name})
@@ -80,5 +81,20 @@ target_link_libraries(TestDsTextDocBridgeRoundtrip PRIVATE
 )
 add_test(NAME TestDsTextDocBridgeRoundtrip COMMAND TestDsTextDocBridgeRoundtrip)
 set_tests_properties(TestDsTextDocBridgeRoundtrip PROPERTIES
+        ENVIRONMENT "${QT_TEST_ENV}"
+)
+
+# CompositeInferenceService test (null-engine behavior)
+add_executable(TestCompositeInferenceService TestCompositeInferenceService.cpp)
+target_include_directories(TestCompositeInferenceService PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/apps/shared/data-sources
+)
+target_link_libraries(TestCompositeInferenceService PRIVATE
+        data-sources
+        infer-common
+        Qt${QT_VERSION_MAJOR}::Test
+)
+add_test(NAME TestCompositeInferenceService COMMAND TestCompositeInferenceService)
+set_tests_properties(TestCompositeInferenceService PROPERTIES
         ENVIRONMENT "${QT_TEST_ENV}"
 )

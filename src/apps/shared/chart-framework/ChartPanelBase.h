@@ -90,6 +90,11 @@ namespace dstools {
             /// @brief Height of the full-data image. Default: widget height().
             virtual int fullDataImageHeight() const { return height(); }
 
+            /// @brief Compute optimal render width for the full-data image.
+            ///        Default: widget width * 4 (4x oversampling).
+            ///        Subclasses can override to adapt based on data resolution and visible range.
+            virtual int optimalRenderWidth() const { return width() * 4; }
+
             // ========== 现有虚方法 ==========
             virtual void rebuildCache(const RegionUpdate &region) {
                 Q_UNUSED(region)

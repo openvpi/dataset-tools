@@ -73,6 +73,39 @@ void MouthCurveChartPanel::paintYAxisContent(QPainter& painter, const QRect& cha
     paintYAxisTicks(painter, innerRect, kCurveMin, kCurveMax, kYTickCount, 2);
 }
 
+// Catmull-Rom cubic spline interpolation.
+// Returns the interpolated value between p1 and p2 at parameter t in [0,1].
+static float catmullRom(float p0, float p1, float p2, float p3, float t) {
+    float t2 = t * t;
+    float t3 = t2 * t;
+    return 0.5f * ((2.0f * p1) + (-p0 + p2) * t + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2 +
+                   (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
+}
+
+// Cubic-interpolated value lookup from the curve data, with boundary fallback to linear.
+static float cubicValueAt(const std::vector<float>& values, double indexF) {
+    int n = static_cast<int>(values.size());
+    if (n == 0)
+        return 0.0f;
+    int i = static_cast<int>(indexF);
+    float frac = static_cast<float>(indexF - i);
+
+    // Fall back to linear interpolation at boundaries (not enough neighbors for cubic)
+    if (i < 0) {
+        return values.front();
+    }
+    if (i >= n - 1) {
+        return values.back();
+    }
+    if (i < 1 || i >= n - 2) {
+        // Linear fallback
+        return values[i] * (1.0f - frac) + values[i + 1] * frac;
+    }
+
+    // Catmull-Rom cubic interpolation using 4 surrounding points
+    return catmullRom(values[i - 1], values[i], values[i + 1], values[i + 2], frac);
+}
+
 void MouthCurveChartPanel::paintCurve(QPainter& painter) {
     int yaw = yAxisWidth();
     QRect chartRect = chartContentRect();
@@ -81,11 +114,12 @@ void MouthCurveChartPanel::paintCurve(QPainter& painter) {
     if (cols <= 0)
         return;
 
+    if (!m_converter)
+        return;
+
     double totalDur = dataDurationSec();
     if (totalDur <= 0.0)
         return;
-
-    int dataSize = static_cast<int>(m_curve.values.size());
 
     painter.save();
     painter.setClipRect(chartRect);
@@ -93,25 +127,50 @@ void MouthCurveChartPanel::paintCurve(QPainter& painter) {
     QPainterPath path;
     bool started = false;
 
-    for (int col = 0; col < cols; ++col) {
-        double t = m_converter->startSec() +
-                   (m_converter->endSec() - m_converter->startSec()) * static_cast<double>(col) / cols;
+    double viewStart = m_converter->startSec();
+    double viewEnd = m_converter->endSec();
+    double viewDuration = viewEnd - viewStart;
 
-        int curveIdx = static_cast<int>(t / totalDur * dataSize);
-        if (curveIdx < 0 || curveIdx >= dataSize)
-            continue;
+    const auto timestepUs = static_cast<double>(m_curve.timestep);
+    const auto& values = m_curve.values;
 
-        float val = m_curve.values[curveIdx] * static_cast<float>(m_amplitudeScale);
-        val = std::clamp(val, kCurveMin, kCurveMax);
+    if (timestepUs <= 0.0 || values.size() < 2) {
+        // Fallback to linear interpolation for sparse data
+        for (int col = 0; col < cols; ++col) {
+            double t = viewStart + viewDuration * static_cast<double>(col) / cols;
+            if (t < 0.0 || t > totalDur)
+                continue;
 
-        int x = yaw + col;
-        int y = chartRect.bottom() - static_cast<int>(val / (kCurveMax - kCurveMin) * chartRect.height());
+            float val = m_curve.getValueAtTime(secToUs(t)) * static_cast<float>(m_amplitudeScale);
 
-        if (!started) {
-            path.moveTo(x, y);
-            started = true;
-        } else {
-            path.lineTo(x, y);
+            int x = yaw + col;
+            int y = chartRect.bottom() - static_cast<int>(val / (kCurveMax - kCurveMin) * chartRect.height());
+
+            if (!started) {
+                path.moveTo(x, y);
+                started = true;
+            } else {
+                path.lineTo(x, y);
+            }
+        }
+    } else {
+        for (int col = 0; col < cols; ++col) {
+            double t = viewStart + viewDuration * static_cast<double>(col) / cols;
+            if (t < 0.0 || t > totalDur)
+                continue;
+
+            double indexF = secToUs(t) / timestepUs;
+            float val = cubicValueAt(values, indexF) * static_cast<float>(m_amplitudeScale);
+
+            int x = yaw + col;
+            int y = chartRect.bottom() - static_cast<int>(val / (kCurveMax - kCurveMin) * chartRect.height());
+
+            if (!started) {
+                path.moveTo(x, y);
+                started = true;
+            } else {
+                path.lineTo(x, y);
+            }
         }
     }
 

@@ -6,7 +6,7 @@
 #include <QObject>
 #include <dsfw/Log.h>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief QObject wrapper that receives log entries and emits them as Qt signals.
     ///
@@ -29,11 +29,16 @@ namespace dstools {
 
     signals:
         /// @brief Emitted on the receiver's thread when a log entry arrives.
-        void entryAdded(const dstools::LogEntry &entry);
+        void entryAdded(const dsfw::LogEntry &entry);
 
     private:
         explicit LogNotifier(QObject *parent = nullptr);
         ~LogNotifier() override = default;
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::LogNotifier;
+}

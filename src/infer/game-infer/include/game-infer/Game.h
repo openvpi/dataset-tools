@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
+#include <dsfw/infer/IInferenceEngine.h>
 #include <dstools/ExecutionProvider.h>
-#include <dstools/IInferenceEngine.h>
 #include <dstools/Result.h>
 
 #include "GameGlobal.h"
@@ -57,7 +57,7 @@ namespace Game
 
 
     /// @brief IInferenceEngine implementation for ONNX-based audio transcription, MIDI export, and phoneme alignment.
-    class GAME_INFER_EXPORT Game : public dstools::infer::IInferenceEngine {
+    class GAME_INFER_EXPORT Game : public dsfw::infer::IInferenceEngine {
     public:
         Game();
         Game(Game &&) noexcept = default;

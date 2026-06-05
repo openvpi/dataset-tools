@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Abstract interface for G2P conversion backends (e.g. Pinyin, Romaji).
     class IG2PProvider {
@@ -34,4 +34,9 @@ namespace dstools {
         [[nodiscard]] virtual Result<G2PResult> convertWord(const std::string &word, const std::string &langCode) = 0;
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::IG2PProvider;
+}

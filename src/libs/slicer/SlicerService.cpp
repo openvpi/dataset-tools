@@ -1,58 +1,45 @@
 #include "SlicerService.h"
 
-#include <audio-util/SndfileHelper.h>
-#include <audio-util/Slicer.h>
+#include <dsfw/audio/AudioPipeline.h>
+#include <dsfw/signal/Slicer.h>
 #include <dsfw/PathUtils.h>
-#include <dstools/AudioDecoder.h>
 
 #include <QFileInfo>
 
 namespace dstools {
 
-Result<SliceResult> SlicerService::slice(const QString &audioPath, double threshold, int minLength,
-                                          int minInterval, int hopSize, int maxSilKept) {
+Result<SliceResult> SlicerService::slice(const QString& audioPath, double threshold, int minLength, int minInterval,
+                                         int hopSize, int maxSilKept) {
     if (!QFileInfo::exists(audioPath)) {
         return Result<SliceResult>::Error("Audio file does not exist: " + audioPath.toStdString());
     }
 
     std::filesystem::path path = audioPath.toStdWString();
-    SndfileHandle sf = AudioUtil::openSndfile(path);
-    if (sf.error()) {
-        return Result<SliceResult>::Error("Failed to open audio file: " + dsfw::PathUtils::toUtf8(path));
+    auto pipeline = dsfw::audio::AudioPipeline::create();
+    auto probeResult = pipeline.probe(dsfw::PathUtils::toUtf8(path));
+    if (!probeResult.ok()) {
+        return Result<SliceResult>::Error("Failed to probe audio file: " + probeResult.error());
     }
+    int sampleRate = probeResult.value().sampleRate;
 
-    int sampleRate = sf.samplerate();
+    auto decodeResult = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(path), sampleRate);
+    if (!decodeResult.ok()) {
+        return Result<SliceResult>::Error("Failed to decode audio: " + decodeResult.error());
+    }
+    auto buffer = decodeResult.value();
+    auto floats = buffer.floats();
+    std::vector<float> monoSamples(floats.begin(), floats.end());
 
-    AudioUtil::SlicerParams params;
+    dsfw::signal::SlicerParams params;
     params.threshold = threshold;
     params.minLength = minLength;
     params.minInterval = minInterval;
     params.hopSize = hopSize;
     params.maxSilKept = maxSilKept;
 
-    auto slicer = AudioUtil::Slicer::fromMilliseconds(sampleRate, params);
-    if (slicer.errorCode() != AudioUtil::SlicerError::Ok) {
+    auto slicer = dsfw::signal::Slicer::fromMilliseconds(sampleRate, params);
+    if (slicer.errorCode() != dsfw::signal::SlicerError::Ok) {
         return Result<SliceResult>::Error(slicer.errorMessage());
-    }
-
-    sf.seek(0, SEEK_SET);
-    qint64 frames = sf.frames();
-    int channels = sf.channels();
-
-    std::vector<float> interleaved(frames * channels);
-    sf.readf(interleaved.data(), frames);
-
-    std::vector<float> monoSamples(frames);
-    if (channels == 1) {
-        monoSamples = std::move(interleaved);
-    } else {
-        for (qint64 i = 0; i < frames; ++i) {
-            double sum = 0.0;
-            for (int ch = 0; ch < channels; ++ch) {
-                sum += interleaved[i * channels + ch];
-            }
-            monoSamples[i] = static_cast<float>(sum / channels);
-        }
     }
 
     auto markers = slicer.slice(monoSamples);
@@ -60,19 +47,19 @@ Result<SliceResult> SlicerService::slice(const QString &audioPath, double thresh
     SliceResult result;
     result.sampleRate = sampleRate;
     result.chunks.reserve(markers.size());
-    for (const auto &marker : markers) {
+    for (const auto& marker : markers) {
         result.chunks.emplace_back(marker.first, marker.second);
     }
 
     return Result<SliceResult>::Ok(std::move(result));
 }
 
-std::vector<double> SlicerService::computeSlicePoints(const std::vector<float> &samples, int sampleRate,
-                                                       const AudioUtil::SlicerParams &params) {
+std::vector<double> SlicerService::computeSlicePoints(const std::vector<float>& samples, int sampleRate,
+                                                      const dsfw::signal::SlicerParams& params) {
     if (samples.empty() || sampleRate <= 0)
         return {};
 
-    auto slicer = AudioUtil::Slicer::fromMilliseconds(sampleRate, params);
+    auto slicer = dsfw::signal::Slicer::fromMilliseconds(sampleRate, params);
     auto markers = slicer.slice(samples);
 
     std::vector<double> newPoints;
@@ -86,42 +73,24 @@ std::vector<double> SlicerService::computeSlicePoints(const std::vector<float> &
     return newPoints;
 }
 
-std::vector<float> SlicerService::loadAndMixAudio(const QString &filePath, int *outSampleRate) {
-    audio::AudioDecoder decoder;
-    if (!decoder.open(filePath))
+std::vector<float> SlicerService::loadAndMixAudio(const QString& filePath, int* outSampleRate) {
+    auto pipeline = dsfw::audio::AudioPipeline::create();
+    std::filesystem::path path = filePath.toStdWString();
+    auto probeResult = pipeline.probe(dsfw::PathUtils::toUtf8(path));
+    if (!probeResult.ok())
         return {};
+    int sr = probeResult.value().sampleRate;
 
-    auto fmt = decoder.format();
-    int sr = fmt.sampleRate();
-    int channels = fmt.channels();
+    auto decodeResult = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(path), sr);
+    if (!decodeResult.ok())
+        return {};
 
     if (outSampleRate)
         *outSampleRate = sr;
 
-    std::vector<float> allSamples;
-    allSamples.reserve(decoder.length() / sizeof(float));
-    constexpr int kBufSize = 4096;
-    std::vector<float> buffer(kBufSize);
-    while (true) {
-        int read = decoder.read(buffer.data(), 0, kBufSize);
-        if (read <= 0)
-            break;
-        allSamples.insert(allSamples.end(), buffer.begin(), buffer.begin() + read);
-    }
-    decoder.close();
-
-    if (channels > 1) {
-        size_t numFrames = allSamples.size() / channels;
-        std::vector<float> mono(numFrames);
-        for (size_t i = 0; i < numFrames; ++i) {
-            float sum = 0.0f;
-            for (int c = 0; c < channels; ++c)
-                sum += allSamples[i * channels + c];
-            mono[i] = sum / static_cast<float>(channels);
-        }
-        return mono;
-    }
-    return allSamples;
+    auto buffer = decodeResult.value();
+    auto floats = buffer.floats();
+    return std::vector<float>(floats.begin(), floats.end());
 }
 
 } // namespace dstools

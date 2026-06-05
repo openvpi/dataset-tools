@@ -24,7 +24,7 @@ enum Column {
 
 static constexpr int EntryIndexRole = Qt::UserRole + 1;
 
-ShortcutEditorWidget::ShortcutEditorWidget(dstools::AppSettings *settings,
+ShortcutEditorWidget::ShortcutEditorWidget(dsfw::AppSettings *settings,
                                            const std::vector<ShortcutEntry> &entries,
                                            QWidget *parent)
     : QWidget(parent), m_settings(settings), m_entries(entries) {
@@ -110,7 +110,7 @@ ShortcutEditorWidget::~ShortcutEditorWidget() {
 static constexpr int kDialogWidth = 520;
 static constexpr int kDialogHeight = 420;
 
-void ShortcutEditorWidget::showDialog(dstools::AppSettings *settings,
+void ShortcutEditorWidget::showDialog(dsfw::AppSettings *settings,
                                       const std::vector<ShortcutEntry> &entries,
                                       QWidget *parent) {
     QDialog dlg(parent);
@@ -177,7 +177,7 @@ void ShortcutEditorWidget::buildTree() {
 
 QString ShortcutEditorWidget::currentSequence(int entryIndex) const {
     const auto &entry = m_entries[entryIndex];
-    dstools::SettingsKey<QString> key(entry.settingsKeyPath, entry.defaultSequence);
+    dsfw::SettingsKey<QString> key(entry.settingsKeyPath, entry.defaultSequence);
     return m_settings->get(key);
 }
 
@@ -206,7 +206,7 @@ void ShortcutEditorWidget::applyShortcut(int entryIndex, const QString &newSeque
         if (result != QMessageBox::Yes)
             return;
         const auto &conflictEntry = m_entries[conflict];
-        dstools::SettingsKey<QString> conflictKey(conflictEntry.settingsKeyPath,
+        dsfw::SettingsKey<QString> conflictKey(conflictEntry.settingsKeyPath,
                                                   conflictEntry.defaultSequence);
         m_settings->set(conflictKey, QString());
         if (m_entryItems[conflict])
@@ -214,7 +214,7 @@ void ShortcutEditorWidget::applyShortcut(int entryIndex, const QString &newSeque
     }
 
     const auto &entry = m_entries[entryIndex];
-    dstools::SettingsKey<QString> key(entry.settingsKeyPath, entry.defaultSequence);
+    dsfw::SettingsKey<QString> key(entry.settingsKeyPath, entry.defaultSequence);
     m_settings->set(key, newSequence);
     if (m_entryItems[entryIndex])
         m_entryItems[entryIndex]->setText(ColShortcut, newSequence);
@@ -228,7 +228,7 @@ void ShortcutEditorWidget::resetEntry(int entryIndex) {
 void ShortcutEditorWidget::resetAll() {
     for (int i = 0; i < static_cast<int>(m_entries.size()); ++i) {
         const auto &entry = m_entries[i];
-        dstools::SettingsKey<QString> key(entry.settingsKeyPath, entry.defaultSequence);
+        dsfw::SettingsKey<QString> key(entry.settingsKeyPath, entry.defaultSequence);
         m_settings->set(key, entry.defaultSequence);
         if (m_entryItems[i])
             m_entryItems[i]->setText(ColShortcut, entry.defaultSequence);

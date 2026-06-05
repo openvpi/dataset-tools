@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QIcon>
 #include <QStringList>
+#include <dsfw/AppSettings.h>
 #include <vector>
 
 namespace dsfw::widgets {
@@ -12,7 +13,6 @@ namespace dsfw::widgets {
 namespace dstools {
 
     class IEditorDataSource;
-    class AppSettings;
 
     class SliceListModel : public QAbstractListModel {
         Q_OBJECT

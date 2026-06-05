@@ -5,7 +5,7 @@
 #include <dstools/Result.h>
 #include <map>
 
-namespace dstools {
+namespace dsfw {
 
     class IFormatAdapter {
     public:
@@ -31,4 +31,9 @@ namespace dstools {
                                               const QString &outputPath, const ProcessorConfig &config) = 0;
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::IFormatAdapter;
+}

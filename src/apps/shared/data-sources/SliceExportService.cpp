@@ -1,10 +1,9 @@
 #include "SliceExportService.h"
 
 #include <dsfw/PathUtils.h>
+#include <dsfw/audio/AudioFileWriter.h>
 
 #include <QDir>
-
-#include <sndfile.hh>
 
 #include <algorithm>
 
@@ -22,12 +21,12 @@ SliceExportResult SliceExportService::exportSlices(const std::vector<float> &sam
     if (!dir.exists())
         dir.mkpath(options.outputDir);
 
-    int sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+    dsfw::audio::SampleFormat sampleFmt = dsfw::audio::SampleFormat::Float32;
     switch (options.bitDepth) {
-        case 16: sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_16; break;
-        case 24: sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_24; break;
-        case 32: sndFormat = SF_FORMAT_WAV | SF_FORMAT_PCM_32; break;
-        default: sndFormat = SF_FORMAT_WAV | SF_FORMAT_FLOAT; break;
+        case 16: sampleFmt = dsfw::audio::SampleFormat::Int16; break;
+        case 24: sampleFmt = dsfw::audio::SampleFormat::Int32; break;
+        case 32: sampleFmt = dsfw::audio::SampleFormat::Int32; break;
+        default: sampleFmt = dsfw::audio::SampleFormat::Float32; break;
     }
 
     int numSegments = static_cast<int>(slicePoints.size()) + 1;
@@ -43,24 +42,26 @@ SliceExportResult SliceExportService::exportSlices(const std::vector<float> &sam
 
         QString filename = QStringLiteral("%1_%2.wav").arg(options.prefix).arg(i + 1, options.numDigits, 10, QChar('0'));
         QString filepath = dir.filePath(filename);
+        auto path8 = dsfw::PathUtils::toUtf8(dsfw::PathUtils::toStdPath(filepath));
 
-#ifdef _WIN32
-        auto pathStr = filepath.toStdWString();
-#else
-        auto pathStr = filepath.toStdString();
-#endif
-        SndfileHandle wf(pathStr.c_str(), SFM_WRITE, sndFormat, options.channels, sampleRate);
-        if (!wf) {
+        dsfw::audio::WriteConfig wcfg;
+        wcfg.sampleRate = sampleRate;
+        wcfg.channelCount = options.channels;
+        wcfg.format = sampleFmt;
+        dsfw::audio::AudioFileWriter writer;
+        auto openResult = writer.open(path8, wcfg);
+        if (!openResult.ok()) {
             result.errors.append(filepath);
             continue;
         }
 
-        sf_count_t frameCount = endSamp - startSamp;
-        sf_count_t written = wf.write(samples.data() + startSamp, frameCount);
-        if (written != frameCount) {
+        int64_t frameCount = endSamp - startSamp;
+        auto writeResult = writer.writeFloats(samples.data() + startSamp, frameCount);
+        if (!writeResult.ok()) {
             result.errors.append(filepath);
             continue;
         }
+        writer.close();
 
         bool isDiscarded = std::find(options.discardedIndices.begin(), options.discardedIndices.end(), i) !=
                            options.discardedIndices.end();

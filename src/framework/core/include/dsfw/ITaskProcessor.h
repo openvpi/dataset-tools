@@ -8,8 +8,10 @@
 #include <memory>
 
 namespace dstools {
-
     class ModelManager;
+}
+
+namespace dsfw {
 
     /// @brief Unified processor interface replacing per-domain service interfaces.
     ///
@@ -52,7 +54,7 @@ namespace dstools {
         /// @param mm Model manager for model lifecycle.
         /// @param modelConfig Engine-specific model configuration.
         /// @return Success or error.
-        [[nodiscard]] virtual Result<void> initialize(ModelManager &mm, const ProcessorConfig &modelConfig) = 0;
+        [[nodiscard]] virtual Result<void> initialize(dstools::ModelManager &mm, const ProcessorConfig &modelConfig) = 0;
 
         /// @brief Release processor internal state.
         /// Models are managed by ModelManager; this releases processor-specific resources.
@@ -64,4 +66,9 @@ namespace dstools {
         [[nodiscard]] virtual Result<TaskOutput> process(const TaskInput &input) = 0;
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::ITaskProcessor;
+}

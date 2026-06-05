@@ -8,7 +8,7 @@
 #include <atomic>
 #include <chrono>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Abstract base for tasks executed on QThreadPool with signal-based results.
     ///
@@ -92,4 +92,9 @@ namespace dstools {
         std::chrono::milliseconds m_timeout{kDefaultTimeout};
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::AsyncTask;
+}

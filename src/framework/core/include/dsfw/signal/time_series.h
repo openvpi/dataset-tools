@@ -11,13 +11,13 @@ namespace dsfw::signal {
 
     template <typename T, int64_t DefaultTimestepUs = 0>
     struct TimeSeries {
-        dstools::TimePos timestep = DefaultTimestepUs;
+        dsfw::TimePos timestep = DefaultTimestepUs;
         std::vector<T> values;
 
-        dstools::TimePos totalDuration() const {
+        dsfw::TimePos totalDuration() const {
             if (values.empty())
                 return 0;
-            return static_cast<dstools::TimePos>(values.size()) * timestep;
+            return static_cast<dsfw::TimePos>(values.size()) * timestep;
         }
 
         int count() const {
@@ -32,7 +32,7 @@ namespace dsfw::signal {
             return count();
         }
 
-        T getValueAtTime(dstools::TimePos timeUs) const {
+        T getValueAtTime(dsfw::TimePos timeUs) const {
             if (values.empty() || timestep <= 0)
                 return T{};
             double index = static_cast<double>(timeUs) / static_cast<double>(timestep);
@@ -50,7 +50,7 @@ namespace dsfw::signal {
             }
         }
 
-        std::vector<T> getRange(dstools::TimePos startTimeUs, dstools::TimePos endTimeUs) const {
+        std::vector<T> getRange(dsfw::TimePos startTimeUs, dsfw::TimePos endTimeUs) const {
             if (values.empty() || timestep <= 0)
                 return {};
             int startIdx = static_cast<int>(startTimeUs / timestep);
@@ -62,7 +62,7 @@ namespace dsfw::signal {
             return std::vector<T>(values.begin() + startIdx, values.begin() + endIdx);
         }
 
-        void setRange(dstools::TimePos startTimeUs, const std::vector<T> &newValues) {
+        void setRange(dsfw::TimePos startTimeUs, const std::vector<T> &newValues) {
             if (values.empty() || timestep <= 0)
                 return;
             int startIdx = static_cast<int>(startTimeUs / timestep);
@@ -79,7 +79,7 @@ namespace dsfw::signal {
         }
 
         double durationSec() const {
-            return dstools::usToSec(totalDuration());
+            return dsfw::usToSec(totalDuration());
         }
     };
 

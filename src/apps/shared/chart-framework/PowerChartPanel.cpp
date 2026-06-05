@@ -299,7 +299,6 @@ void PowerChartPanel::renderFullData(QImage &image) {
     QPainter painter(&image);
     painter.setRenderHint(QPainter::Antialiasing, true);
 
-    double samplesPerCol = static_cast<double>(m_samples.size()) / imgW;
     int halfWindow = m_configWindowSize / 2;
 
     // Render RMS curve: compute RMS for each column, convert to dB, draw as path

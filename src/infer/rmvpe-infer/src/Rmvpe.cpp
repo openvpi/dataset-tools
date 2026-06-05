@@ -1,11 +1,9 @@
 #include <rmvpe-infer/Rmvpe.h>
 #include <dsfw/PathUtils.h>
 
-#include <sndfile.hh>
-
 #include <iostream>
 
-#include <audio-util/Util.h>
+#include <dsfw/audio/AudioPipeline.h>
 #include <rmvpe-infer/RmvpeModel.h>
 
 namespace Rmvpe
@@ -85,23 +83,16 @@ namespace Rmvpe
             return dstools::Err("RMVPE model not loaded");
         }
 
+        auto pipeline = dsfw::audio::AudioPipeline::create();
+        auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(filepath), 16000);
+        if (!result.ok()) {
+            return dstools::Err("Failed to decode audio for RMVPE: " + result.error());
+        }
+        auto buffer = result.value();
+        auto floats = buffer.floats();
+        std::vector<float> audio(floats.begin(), floats.end());
+
         std::string msg;
-        auto sf_vio = AudioUtil::resample_to_vio(filepath, msg, 1, 16000);
-
-        if (!msg.empty()) {
-            return dstools::Err("Failed to resample audio for RMVPE: " + msg);
-        }
-
-        SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, 16000);
-        if (!sf) {
-            return dstools::Err("Failed to open resampled audio for RMVPE");
-        }
-        const auto totalSize = sf.frames();
-
-        std::vector<float> audio(totalSize);
-        sf.seek(0, SEEK_SET);
-        sf.read(audio.data(), static_cast<sf_count_t>(audio.size()));
-
         RmvpeRes tempRes;
         tempRes.offset = 0.0f;
         const bool success = m_rmvpe->forward(audio, threshold, tempRes.f0, tempRes.uv, msg);

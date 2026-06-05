@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Result of a single word's G2P conversion.
     struct G2PResult {
@@ -14,4 +14,9 @@ namespace dstools {
         std::vector<std::string> phonemes; ///< Converted phoneme sequence.
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::G2PResult;
+}

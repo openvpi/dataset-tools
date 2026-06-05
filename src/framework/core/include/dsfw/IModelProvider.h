@@ -11,7 +11,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace dstools {
+namespace dsfw {
 
     /// @brief Extensible model type identifier (replaces fixed enum).
     class ModelTypeId {
@@ -101,4 +101,13 @@ namespace dstools {
         }
     };
 
+}
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::IModelProvider;
+    using dsfw::ModelTypeId;
+    using dsfw::ModelStatus;
+    using dsfw::ModelProgressCallback;
+    using dsfw::registerModelType;
 }

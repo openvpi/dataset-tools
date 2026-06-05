@@ -15,7 +15,7 @@
 #include <map>
 #include <vector>
 
-namespace dstools {
+namespace dsfw {
 
     struct StepRecord {
         QString stepName;
@@ -88,4 +88,10 @@ private:
         [[nodiscard]] static Result<void> validate(const nlohmann::json &j);
     };
 
-} // namespace dstools
+} // namespace dsfw
+
+// Backward compatibility
+namespace dstools {
+    using dsfw::PipelineContext;
+    using dsfw::StepRecord;
+}

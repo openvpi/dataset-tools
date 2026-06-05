@@ -21,7 +21,7 @@
 #include <dsfw/TaskTypes.h>
 #include <dsfw/widgets/WidgetsGlobal.h>
 
-namespace dstools {
+namespace dsfw {
     struct PipelineContext;
     struct StepRecord;
 }
@@ -41,7 +41,7 @@ public:
     explicit PipelineStatusBar(QWidget *parent = nullptr);
 
     void setSteps(const QVector<StepInfo> &steps);
-    void setContext(const dstools::PipelineContext *ctx);
+    void setContext(const dsfw::PipelineContext *ctx);
     void clearContext();
 
 signals:
@@ -52,11 +52,11 @@ protected:
 
 private:
     void rebuild();
-    static QString statusChar(const StepInfo &step, const dstools::PipelineContext *ctx);
+    static QString statusChar(const StepInfo &step, const dsfw::PipelineContext *ctx);
 
     QHBoxLayout *m_layout = nullptr;
     QVector<StepInfo> m_steps;
-    const dstools::PipelineContext *m_ctx = nullptr;
+    const dsfw::PipelineContext *m_ctx = nullptr;
     QVector<QLabel *> m_labels;
 };
 

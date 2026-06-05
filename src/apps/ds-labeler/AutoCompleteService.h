@@ -1,19 +1,8 @@
 #pragma once
 
 #include <QString>
+#include <dsfw/infer/IInferenceService.h>
 #include <dstools/DsTextTypes.h>
-
-namespace HFA {
-    class HFA;
-}
-
-namespace Rmvpe {
-    class Rmvpe;
-}
-
-namespace Game {
-    class Game;
-}
 
 namespace dstools {
 
@@ -24,7 +13,8 @@ namespace dstools {
         bool modified = false;
     };
 
-    AutoCompleteResult autoCompleteSlice(DsTextDocument doc, const QString &audioPath, HFA::HFA *hfa,
-                                         Rmvpe::Rmvpe *rmvpe, Game::Game *game, PhNumCalculator *phNumCalc);
+    AutoCompleteResult autoCompleteSlice(DsTextDocument doc, const QString &audioPath,
+                                         dsfw::infer::IInferenceService *inferService,
+                                         PhNumCalculator *phNumCalc);
 
 } // namespace dstools
