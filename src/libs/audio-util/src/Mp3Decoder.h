@@ -6,7 +6,7 @@
 
 namespace AudioUtil
 {
-    void write_mp3_to_vio(const std::filesystem::path &filepath, SF_VIO &sf_vio);
+    bool write_mp3_to_vio(const std::filesystem::path &filepath, SF_VIO &sf_vio, std::string &msg);
 } // namespace AudioUtil
 
 #endif // MP3DECODER_H

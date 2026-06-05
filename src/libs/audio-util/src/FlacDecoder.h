@@ -7,7 +7,7 @@
 
 namespace AudioUtil
 {
-    void write_flac_to_vio(const std::filesystem::path &filepath, SF_VIO &sf_vio);
+    bool write_flac_to_vio(const std::filesystem::path &filepath, SF_VIO &sf_vio, std::string &msg);
 } // namespace AudioUtil
 
 #endif // FLACDECODER_H

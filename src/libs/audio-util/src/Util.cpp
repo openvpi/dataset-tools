@@ -17,10 +17,14 @@ namespace AudioUtil
         if (extension == ".wav") {
             // WAV文件直接使用SndfileHandle打开
         } else if (extension == ".mp3") {
-            write_mp3_to_vio(filepath, sf_vio_in);
+            if (!write_mp3_to_vio(filepath, sf_vio_in, msg)) {
+                return {};
+            }
             sf_vio_in.data.seek = 0;
         } else if (extension == ".flac") {
-            write_flac_to_vio(filepath, sf_vio_in);
+            if (!write_flac_to_vio(filepath, sf_vio_in, msg)) {
+                return {};
+            }
             sf_vio_in.data.seek = 0;
         } else {
             msg = "Unsupported file format: " + filepath.string();
@@ -38,7 +42,18 @@ namespace AudioUtil
             sf_vio_in.info.format = srcHandle.format();
             sf_vio_in.info.channels = srcHandle.channels();
             sf_vio_in.info.samplerate = srcHandle.samplerate();
+
+            if (sf_vio_in.info.frames <= 0 || sf_vio_in.info.samplerate <= 0 || sf_vio_in.info.channels <= 0) {
+                msg = "Invalid or empty WAV file: " + filepath.string();
+                return {};
+            }
         } else {
+            if (sf_vio_in.data.byteArray.empty()) {
+                if (msg.empty()) {
+                    msg = "Failed to decode audio: " + filepath.string();
+                }
+                return {};
+            }
             srcHandle = SndfileHandle(sf_vio_in.vio, &sf_vio_in.data, SFM_READ, sf_vio_in.info.format,
                                       sf_vio_in.info.channels, sf_vio_in.info.samplerate);
             if (!srcHandle) {
@@ -171,6 +186,10 @@ namespace AudioUtil
             }
 
             if (frames_read <= 0) {
+                if (total_input_frames == 0) {
+                    msg = "No audio data could be read from: " + filepath.string();
+                    processing_error = true;
+                }
                 break;
             }
 
@@ -206,7 +225,7 @@ namespace AudioUtil
                                      &output_frames_done);
 
                 if (error) {
-                    std::cout << "Error during resampling: " << soxr_strerror(error) << std::endl;
+                    msg = "Error during resampling: " + std::string(soxr_strerror(error));
                     processing_error = true;
                     break;
                 }
@@ -270,7 +289,7 @@ namespace AudioUtil
                     const sf_count_t written = dstHandle.writef(processed_buffer.data(), output_frames);
 
                     if (written != static_cast<sf_count_t>(output_frames)) {
-                        std::cout << "Error writing to output VIO" << std::endl;
+                        msg = "Error writing to output VIO";
                         processing_error = true;
                         break;
                     }
@@ -292,7 +311,7 @@ namespace AudioUtil
                                      &output_frames_done);
 
                 if (error) {
-                    std::cout << "Error during resampling flush: " << soxr_strerror(error) << std::endl;
+                    msg = "Error during resampling flush: " + std::string(soxr_strerror(error));
                     processing_error = true;
                     break;
                 }
@@ -347,7 +366,7 @@ namespace AudioUtil
                     const sf_count_t written = dstHandle.writef(processed_buffer.data(), output_frames);
 
                     if (written != static_cast<sf_count_t>(output_frames)) {
-                        std::cout << "Error writing to output VIO during flush" << std::endl;
+                        msg = "Error writing to output VIO during flush";
                         processing_error = true;
                         break;
                     }
@@ -365,7 +384,9 @@ namespace AudioUtil
         }
 
         if (processing_error) {
-            msg = "Processing error occurred during resampling";
+            if (msg.empty()) {
+                msg = "Processing error occurred during resampling";
+            }
             return {};
         }
 
