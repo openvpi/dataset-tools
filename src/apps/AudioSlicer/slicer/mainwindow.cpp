@@ -125,7 +125,7 @@ void MainWindow::slot_addAudioFiles() {
         return;
     }
 
-    QStringList paths = QFileDialog::getOpenFileNames(this, "Select Audio Files", ".", "Wave Files (*.wav)");
+    QStringList paths = QFileDialog::getOpenFileNames(this, "Select Audio Files", ".", "Audio Files (*.wav *.flac);;Wave Files (*.wav);;FLAC Files (*.flac)");
     for (const QString &path : paths) {
         addSingleAudioFile(path);
     }
@@ -141,7 +141,7 @@ void MainWindow::slot_addFolder() {
     if (!dir.exists()) {
         return;
     }
-    QStringList files = dir.entryList({"*.wav"}, QDir::Files);
+    QStringList files = dir.entryList({"*.wav", "*.flac"}, QDir::Files);
     for (const QString &name : files) {
         QString fullPath = path + QDir::separator() + name;
         addSingleAudioFile(fullPath);
@@ -343,6 +343,7 @@ void MainWindow::slot_oneInfo(const QString &infomsg) {
 
 void MainWindow::slot_oneError(const QString &errmsg) {
     logMessage("[ERROR] " + errmsg);
+    QMessageBox::critical(this, "Error", errmsg);
 }
 
 void MainWindow::slot_oneFailed(const QString &filename, int listIndex) {
@@ -447,19 +448,19 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
     auto urls = event->mimeData()->urls();
-    bool has_wav = false;
+    bool has_audio = false;
     for (const auto &url : urls) {
         if (!url.isLocalFile()) {
             continue;
         }
         auto path = url.toLocalFile();
         auto ext = QFileInfo(path).suffix();
-        if (ext.compare("wav", Qt::CaseInsensitive) == 0) {
-            has_wav = true;
+        if (ext.compare("wav", Qt::CaseInsensitive) == 0 || ext.compare("flac", Qt::CaseInsensitive) == 0) {
+            has_audio = true;
             break;
         }
     }
-    if (has_wav) {
+    if (has_audio) {
         event->accept();
     }
 }
@@ -472,7 +473,7 @@ void MainWindow::dropEvent(QDropEvent *event) {
         }
         auto path = url.toLocalFile();
         auto ext = QFileInfo(path).suffix();
-        if (ext.compare("wav", Qt::CaseInsensitive) != 0) {
+        if (ext.compare("wav", Qt::CaseInsensitive) != 0 && ext.compare("flac", Qt::CaseInsensitive) != 0) {
             continue;
         }
 

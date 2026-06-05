@@ -55,7 +55,8 @@ namespace AsyncTask {
     void AsyncTaskWindow::addFiles(const QStringList &paths) const {
         for (const QString &path : paths) {
             QFileInfo info(path);
-            if (info.suffix().compare("wav", Qt::CaseInsensitive) == 0) {
+            const QString suffix = info.suffix().toLower();
+            if (suffix == "wav" || suffix == "mp3" || suffix == "flac") {
                 auto *item = new QListWidgetItem(info.fileName());
                 item->setData(Qt::UserRole + 1, path);
                 m_taskList->addItem(item);
@@ -182,7 +183,8 @@ namespace AsyncTask {
 
     void AsyncTaskWindow::slot_addFile() {
         const QStringList paths = QFileDialog::getOpenFileNames(
-            this, "添加文件", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation), "音频文件 (*.wav)");
+            this, "添加文件", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
+            "音频文件 (*.wav *.mp3 *.flac);;WAV 文件 (*.wav);;MP3 文件 (*.mp3);;FLAC 文件 (*.flac)");
         if (!paths.isEmpty()) {
             addFiles(paths);
         }
