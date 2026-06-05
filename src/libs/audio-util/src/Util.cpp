@@ -1,5 +1,6 @@
 #include <audio-util/Util.h>
 
+#include <cctype>
 #include <iostream>
 #include <memory>
 #include <soxr.h>
@@ -11,7 +12,10 @@ namespace AudioUtil
     SF_VIO resample_to_vio(const std::filesystem::path &filepath, std::string &msg, const int tar_channel,
                            const int tar_samplerate) {
         SF_VIO sf_vio_in;
-        const std::string extension = filepath.extension().string();
+        std::string extension = filepath.extension().string();
+        for (auto &c : extension) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
 
         // 处理不同格式的音频文件
         if (extension == ".wav") {
