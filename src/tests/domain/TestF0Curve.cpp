@@ -1,6 +1,6 @@
 #include <QTest>
 #include <dstools/F0Curve.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 using namespace dstools;
 

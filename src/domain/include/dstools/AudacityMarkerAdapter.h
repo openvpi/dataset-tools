@@ -4,7 +4,7 @@
 #pragma once
 
 #include <QString>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <vector>
 
 namespace dstools {

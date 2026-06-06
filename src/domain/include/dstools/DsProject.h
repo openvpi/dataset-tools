@@ -7,11 +7,11 @@
 /// inference parameters, items and slices. Preserves unknown JSON fields
 /// for forward compatibility.
 
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <QString>
 #include <QStringList>
 #include <dsfw/ConfigTypes.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <map>
 #include <memory>
 #include <vector>
@@ -104,6 +104,11 @@ public:
     /// Relative paths are resolved against the working directory.
     /// Returns a list of missing paths (empty if all exist).
     [[nodiscard]] std::vector<QString> validateExternalPaths() const;
+
+    /// Validate schema integrity of the in-memory project data.
+    /// Checks required fields, types, and constraints.
+    /// Returns Error() with a description of the first issue found.
+    [[nodiscard]] Result<void> validateSchema() const;
 
     // ── Properties ────────────────────────────────────────────────────
 

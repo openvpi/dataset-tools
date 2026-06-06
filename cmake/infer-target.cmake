@@ -67,7 +67,7 @@ function(dstools_add_infer_library _target)
     endif()
 
     # ORT path (kept for legacy references in some libs)
-    set(ONNX_RUNTIME_PATH ${PROJECT_DIR}/src/infer/onnxruntime PARENT_SCOPE)
+    set(ONNX_RUNTIME_PATH ${PROJECT_DIR}/src/engine/engines/onnxruntime PARENT_SCOPE)
 
     # Windows RC
     if(WIN32 AND _INF_RC_DESCRIPTION)

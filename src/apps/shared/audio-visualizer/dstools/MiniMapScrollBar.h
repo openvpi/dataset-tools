@@ -8,7 +8,7 @@
 /// the viewport; dragging its left/right edges zooms.
 
 #include <QWidget>
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dsfw/widgets/ViewportController.h>
 #include <vector>
 

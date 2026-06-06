@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QFile>
+#include <QFileInfo>
 #include <QTextStream>
 
 #include <chrono>
@@ -130,6 +131,53 @@ LogSink Logger::fileSink(const std::string &filePath) {
         if (file.open(QIODevice::Append | QIODevice::Text)) {
             QTextStream stream(&file);
             stream << QString::fromStdString(entry.toString()) << "\n";
+        }
+    };
+}
+
+LogSink Logger::rotatingFileSink(const std::string &filePath, int64_t maxSizeBytes, int maxBackups) {
+    // Shared mutable state for rotation tracking
+    struct RotatingState {
+        std::string path;
+        int64_t maxSize;
+        int maxBackups;
+        int64_t currentSize = 0;
+        std::mutex mutex;
+
+        explicit RotatingState(std::string p, int64_t sz, int backups)
+            : path(std::move(p)), maxSize(sz), maxBackups(backups) {
+            // Initialize currentSize from existing file
+            QFileInfo fi(QString::fromStdString(path));
+            if (fi.exists())
+                currentSize = fi.size();
+        }
+    };
+    auto state = std::make_shared<RotatingState>(filePath, maxSizeBytes, maxBackups);
+
+    return [state](const LogEntry &entry) {
+        std::lock_guard lock(state->mutex);
+        const auto line = QString::fromStdString(entry.toString()) + "\n";
+        const auto lineBytes = line.toUtf8().size();
+
+        // Rotate if adding this line would exceed the limit
+        if (state->currentSize > 0 && state->currentSize + lineBytes > state->maxSize) {
+            const QString basePath = QString::fromStdString(state->path);
+            // Remove oldest backup
+            QFile::remove(basePath + "." + QString::number(state->maxBackups));
+            // Shift backups: .2 → .3, .1 → .2, file → .1
+            for (int i = state->maxBackups - 1; i >= 1; --i) {
+                QFile::rename(basePath + "." + QString::number(i),
+                              basePath + "." + QString::number(i + 1));
+            }
+            QFile::rename(basePath, basePath + ".1");
+            state->currentSize = 0;
+        }
+
+        QFile file(QString::fromStdString(state->path));
+        if (file.open(QIODevice::Append | QIODevice::Text)) {
+            QTextStream stream(&file);
+            stream << line;
+            state->currentSize += lineBytes;
         }
     };
 }

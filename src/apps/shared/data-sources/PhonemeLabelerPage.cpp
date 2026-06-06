@@ -23,7 +23,7 @@
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsKeys.h>
 #include <dstools/DsTextTypes.h>
-#include <dstools/ExecutionProvider.h>
+#include <dsfw/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 #include <dstools/PitchUtils.h>
 #include <filesystem>

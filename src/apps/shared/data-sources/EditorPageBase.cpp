@@ -16,7 +16,7 @@
 #include <dsfw/widgets/ShortcutManager.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dsfw/Theme.h>
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dstools/DsKeys.h>
 #include <QDragEnterEvent>
 #include <QDropEvent>

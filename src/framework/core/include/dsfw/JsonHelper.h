@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <sstream>
@@ -17,7 +17,7 @@ inline void from_json(const nlohmann::json &j, QString &s) {
 }
 #endif
 
-namespace dstools {
+namespace dsfw {
 
     class JsonHelper {
     public:
@@ -96,4 +96,4 @@ namespace dstools {
         }
     };
 
-} // namespace dstools
+} // namespace dsfw

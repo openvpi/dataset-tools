@@ -19,8 +19,8 @@
 #include <QWheelEvent>
 #include <algorithm>
 #include <dsfw/widgets/PlayWidget.h>
-#include <dstools/Constants.h>
-#include <dstools/TimePos.h>
+#include <dsfw/Constants.h>
+#include <dsfw/TimePos.h>
 
 namespace dstools {
 

@@ -37,11 +37,11 @@
 #include <dsfw/PipelineRunner.h>
 #include <dsfw/Theme.h>
 #include <dstools/CsvAdapter.h>
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dstools/DsDocument.h>
 #include <dstools/DsProject.h>
 #include <dstools/DsTextTypes.h>
-#include <dstools/ExecutionProvider.h>
+#include <dsfw/ExecutionProvider.h>
 #include <dstools/PhNumCalculator.h>
 #include <dstools/ProjectPaths.h>
 

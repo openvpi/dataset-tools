@@ -2,7 +2,7 @@
 
 #include <QString>
 #include <QUndoCommand>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <memory>
 #include <vector>
 #include <dstools/DsPitchDocument.h>

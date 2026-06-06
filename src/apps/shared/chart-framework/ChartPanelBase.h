@@ -7,9 +7,9 @@
 #include <QPoint>
 #include <QWidget>
 #include <cstring>
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dsfw/widgets/PlayWidget.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <utility>
 #include <vector>
 

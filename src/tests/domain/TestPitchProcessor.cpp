@@ -3,16 +3,16 @@
 #include "PitchProcessor.h"
 #include <dstools/DsPitchDocument.h>
 
-#include <dstools/CurveTools.h>
-#include <dstools/TimePos.h>
+#include <dsfw/signal/curve_tools.h>
+#include <dsfw/TimePos.h>
 
 using namespace dstools::pitchlabeler;
 using namespace dstools::pitchlabeler::ui;
 using dstools::secToUs;
 using dstools::usToSec;
 using dstools::usToMs;
-using dstools::hzToMhz;
-using dstools::mhzToHz;
+using dsfw::signal::hzToMhz;
+using dsfw::signal::mhzToHz;
 
 class TestPitchProcessor : public QObject {
     Q_OBJECT

@@ -4,7 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <dstools/CurveTools.h>
+#include <dsfw/signal/curve_tools.h>
 #include <set>
 
 namespace dstools {
@@ -12,7 +12,7 @@ namespace dstools {
         namespace ui {
 
             std::vector<double> PitchProcessor::movingAverage(const std::vector<double> &values, int window) {
-                return dstools::movingAverage(values, window, true);
+                return dsfw::signal::movingAverage(values, window, true);
             }
 
             double PitchProcessor::getRestMidi(const DsPitchDocument &ds, int index) {
@@ -80,7 +80,7 @@ namespace dstools {
                     if (window % 2 == 0)
                         window++;
 
-                    auto centerline = dstools::movingAverage(segHz, window, true);
+                    auto centerline = dsfw::signal::movingAverage(segHz, window, true);
 
                     std::vector<double> newVals = segHz;
                     for (int i = 0; i < n; ++i) {
@@ -94,7 +94,7 @@ namespace dstools {
                     }
 
                     int crossfade = std::clamp(n / 8, 3, n / 2);
-                    dstools::smoothstepCrossfade(newVals, segHz, crossfade);
+                    dsfw::signal::smoothstepCrossfade(newVals, segHz, crossfade);
 
                     for (int i = 0; i < n; ++i) {
                         if (startIdx + i < static_cast<int>(f0.values.size())) {

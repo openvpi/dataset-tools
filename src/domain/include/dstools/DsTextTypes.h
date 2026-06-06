@@ -2,8 +2,8 @@
 
 #include <QString>
 #include <QStringList>
-#include <dstools/Result.h>
-#include <dstools/TimePos.h>
+#include <dsfw/Result.h>
+#include <dsfw/TimePos.h>
 #include <dstools/Version.h>
 #include <vector>
 

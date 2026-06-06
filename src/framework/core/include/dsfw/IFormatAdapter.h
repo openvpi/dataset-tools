@@ -2,7 +2,7 @@
 
 #include <QString>
 #include <dsfw/TaskTypes.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <map>
 
 namespace dsfw {
@@ -32,8 +32,3 @@ namespace dsfw {
     };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::IFormatAdapter;
-}

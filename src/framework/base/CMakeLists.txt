@@ -1,7 +1,7 @@
 project(dsfw-base)
 
 if (NOT TARGET dsfw::types)
-    find_package(dstools-types CONFIG REQUIRED)
+    find_package(dsfw-types CONFIG REQUIRED)
 endif ()
 
 find_package(nlohmann_json CONFIG REQUIRED)

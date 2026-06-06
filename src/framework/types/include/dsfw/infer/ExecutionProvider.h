@@ -8,8 +8,3 @@ namespace dsfw::infer {
     enum class ExecutionProvider { CPU = 0, DML = 1, CUDA = 2 };
 
 } // namespace dsfw::infer
-
-// Backward compatibility
-namespace dstools::infer {
-    using dsfw::infer::ExecutionProvider;
-}

@@ -3,7 +3,7 @@
 #include <QString>
 #include <dsfw/PipelineContext.h>
 #include <dsfw/TaskTypes.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <vector>
 
 namespace dstools {

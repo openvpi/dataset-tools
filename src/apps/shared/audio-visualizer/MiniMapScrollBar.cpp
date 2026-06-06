@@ -1,6 +1,6 @@
 #include "dstools/MiniMapScrollBar.h"
 
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 
 #include <QMouseEvent>
 #include <QPainter>

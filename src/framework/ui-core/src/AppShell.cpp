@@ -1,4 +1,5 @@
 #include <dsfw/AppShell.h>
+#include <dsfw/AppSettings.h>
 #include <dsfw/AudioPlaybackManager.h>
 #include <dsfw/IPlaybackEvents.h>
 #include <dsfw/CommonKeys.h>
@@ -25,12 +26,31 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QTimer>
+#include <QVector>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
 
 namespace dsfw {
+
+// PIMPL: private implementation struct
+struct AppShell::Impl {
+    struct PageEntry {
+        QWidget* widget = nullptr;
+        QString id;
+    };
+
+    IconNavBar* navBar = nullptr;
+    QStackedWidget* stack = nullptr;
+    QVector<PageEntry> pages;
+    QList<QAction*> globalActions;
+    QString workingDir;
+    QMenuBar* menuBar = nullptr;
+    AppSettings* settings = nullptr;
+    AudioPlaybackManager* audioManager = nullptr;
+    bool geometryRestored = false;
+};
 
 // Strip accelerator markers for menu title comparison.
 // Handles both "&File" and "File(&F)" styles.
@@ -73,7 +93,7 @@ static void installMenuPopupRaiseFix(QMenuBar* menuBar) {
 #endif
 }
 
-AppShell::AppShell(QWidget* parent) : QMainWindow(parent) {
+AppShell::AppShell(QWidget* parent) : QMainWindow(parent), m_impl(std::make_unique<Impl>()) {
     setAcceptDrops(true);
 
     auto* central = new QWidget;
@@ -81,12 +101,12 @@ AppShell::AppShell(QWidget* parent) : QMainWindow(parent) {
     hLayout->setContentsMargins(0, 0, 0, 0);
     hLayout->setSpacing(0);
 
-    m_navBar = new IconNavBar(this);
+    m_impl->navBar = new IconNavBar(this);
 
-    m_stack = new QStackedWidget(this);
+    m_impl->stack = new QStackedWidget(this);
 
-    hLayout->addWidget(m_navBar);
-    hLayout->addWidget(m_stack, 1);
+    hLayout->addWidget(m_impl->navBar);
+    hLayout->addWidget(m_impl->stack, 1);
 
     setCentralWidget(central);
 
@@ -94,21 +114,25 @@ AppShell::AppShell(QWidget* parent) : QMainWindow(parent) {
     dstools::Logger::instance().addSink(dstools::LogNotifier::instance().sink());
     dstools::Logger::instance().addSink(dstools::Logger::qtMessageSink());
 
-    m_audioManager = new AudioPlaybackManager(this);
+    m_impl->audioManager = new AudioPlaybackManager(this);
 
-    m_navBar->hide();
+    m_impl->navBar->hide();
 
-    m_menuBar = new QMenuBar(this);
-    setMenuBar(m_menuBar);
+    m_impl->menuBar = new QMenuBar(this);
+    setMenuBar(m_impl->menuBar);
 
-    connect(m_navBar, &IconNavBar::currentChanged, this, &AppShell::onPageSwitched);
+    connect(m_impl->navBar, &IconNavBar::currentChanged, this, &AppShell::onPageSwitched);
 
     FramelessHelper::apply(this);
 }
 
 AppShell::~AppShell() {
     setMenuWidget(nullptr);
-    m_menuBar = nullptr;
+    m_impl->menuBar = nullptr;
+}
+
+AudioPlaybackManager* AppShell::audioPlaybackManager() const {
+    return m_impl->audioManager;
 }
 
 int AppShell::addPage(QWidget* page, const QString& id, const QIcon& icon, const QString& label) {
@@ -119,13 +143,13 @@ int AppShell::addPage(QWidget* page, const QString& id, const QIcon& icon, const
     auto* actions = qobject_cast<dsfw::IPageActions*>(page);
     Q_UNUSED(actions); // Not required, but expected
 
-    const int idx = m_pages.size();
-    m_pages.append({page, id});
-    m_stack->addWidget(page);
-    m_navBar->addItem(icon, label);
+    const int idx = m_impl->pages.size();
+    m_impl->pages.append({page, id});
+    m_impl->stack->addWidget(page);
+    m_impl->navBar->addItem(icon, label);
 
     // Show/hide nav bar based on page count
-    m_navBar->setVisible(m_pages.size() > 1);
+    m_impl->navBar->setVisible(m_impl->pages.size() > 1);
 
     // Auto-connect PlayWidget signals to AudioPlaybackManager via IPlaybackEvents interface
     // Uses compile-time type-safe connections through dsfw-core interface
@@ -139,7 +163,7 @@ int AppShell::addPage(QWidget* page, const QString& id, const QIcon& icon, const
     }
 
     // Auto-select first page
-    if (m_pages.size() == 1) {
+    if (m_impl->pages.size() == 1) {
         setCurrentPage(0);
     }
 
@@ -147,48 +171,48 @@ int AppShell::addPage(QWidget* page, const QString& id, const QIcon& icon, const
 }
 
 int AppShell::pageCount() const {
-    return m_pages.size();
+    return m_impl->pages.size();
 }
 
 int AppShell::currentPageIndex() const {
-    return m_stack->currentIndex();
+    return m_impl->stack->currentIndex();
 }
 
 QWidget* AppShell::currentPage() const {
-    return m_stack->currentWidget();
+    return m_impl->stack->currentWidget();
 }
 
 QWidget* AppShell::pageAt(int index) const {
-    if (index < 0 || index >= m_pages.size())
+    if (index < 0 || index >= m_impl->pages.size())
         return nullptr;
-    return m_pages[index].widget;
+    return m_impl->pages[index].widget;
 }
 
 void AppShell::setCurrentPage(int index) {
-    if (index < 0 || index >= m_pages.size())
+    if (index < 0 || index >= m_impl->pages.size())
         return;
-    m_navBar->setCurrentIndex(index);
+    m_impl->navBar->setCurrentIndex(index);
     // onPageSwitched will be called via signal
 }
 
 void AppShell::addGlobalMenuActions(const QList<QAction*>& actions) {
-    m_globalActions.append(actions);
+    m_impl->globalActions.append(actions);
     rebuildMenuBar();
 }
 
 void AppShell::setWorkingDirectory(const QString& dir) {
-    if (m_workingDir == dir)
+    if (m_impl->workingDir == dir)
         return;
-    m_workingDir = dir;
+    m_impl->workingDir = dir;
 
     // Propagate to all pages
-    for (const auto& entry : m_pages) {
+    for (const auto& entry : m_impl->pages) {
         if (auto* actions = qobject_cast<dsfw::IPageActions*>(entry.widget))
             actions->setWorkingDirectory(dir);
     }
 
     // Notify pages of directory change
-    for (const auto& entry : m_pages) {
+    for (const auto& entry : m_impl->pages) {
         if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(entry.widget))
             lifecycle->onWorkingDirectoryChanged(dir);
     }
@@ -197,43 +221,43 @@ void AppShell::setWorkingDirectory(const QString& dir) {
 }
 
 QString AppShell::workingDirectory() const {
-    return m_workingDir;
+    return m_impl->workingDir;
 }
 
 void AppShell::setSettings(AppSettings* settings) {
-    m_settings = settings;
+    m_impl->settings = settings;
 }
 
 void AppShell::showEvent(QShowEvent* event) {
     QMainWindow::showEvent(event);
-    if (!m_geometryRestored && m_settings) {
-        m_geometryRestored = true;
-        dsfw::WorkspaceConfig ws(m_settings);
+    if (!m_impl->geometryRestored && m_impl->settings) {
+        m_impl->geometryRestored = true;
+        dsfw::WorkspaceConfig ws(m_impl->settings);
         int iconSize = ws.iconSize();
         if (iconSize > 0)
-            m_navBar->setIconSize(iconSize);
-        auto geomB64 = m_settings->get(dsfw::CommonKeys::WindowGeometry);
+            m_impl->navBar->setIconSize(iconSize);
+        auto geomB64 = m_impl->settings->get(dsfw::CommonKeys::WindowGeometry);
         if (!geomB64.isEmpty())
             restoreGeometry(QByteArray::fromBase64(geomB64.toUtf8()));
-        auto stateB64 = m_settings->get(dsfw::CommonKeys::WindowState);
+        auto stateB64 = m_impl->settings->get(dsfw::CommonKeys::WindowState);
         if (!stateB64.isEmpty())
             restoreState(QByteArray::fromBase64(stateB64.toUtf8()));
     }
 }
 
 void AppShell::onPageSwitched(int index) {
-    if (index < 0 || index >= m_pages.size())
+    if (index < 0 || index >= m_impl->pages.size())
         return;
 
     // Deactivate old page
-    auto* oldPage = m_stack->currentWidget();
-    if (oldPage && oldPage != m_pages[index].widget) {
+    auto* oldPage = m_impl->stack->currentWidget();
+    if (oldPage && oldPage != m_impl->pages[index].widget) {
         if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(oldPage)) {
             if (!lifecycle->onDeactivating()) {
                 // Veto — revert nav bar selection
-                m_navBar->blockSignals(true);
-                m_navBar->setCurrentIndex(m_stack->currentIndex());
-                m_navBar->blockSignals(false);
+                m_impl->navBar->blockSignals(true);
+                m_impl->navBar->setCurrentIndex(m_impl->stack->currentIndex());
+                m_impl->navBar->blockSignals(false);
                 return;
             }
             lifecycle->onDeactivated();
@@ -241,14 +265,14 @@ void AppShell::onPageSwitched(int index) {
     }
 
     // Switch stack
-    m_stack->setCurrentIndex(index);
+    m_impl->stack->setCurrentIndex(index);
 
     // Rebuild menu and status bar
     rebuildMenuBar();
     rebuildStatusBar();
 
     // Activate new page
-    auto* newPage = m_pages[index].widget;
+    auto* newPage = m_impl->pages[index].widget;
     if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(newPage)) {
         lifecycle->onActivated();
     }
@@ -267,9 +291,9 @@ void AppShell::rebuildMenuBar() {
     // Clear all actions but keep the persistent QMenuBar widget alive.
     // Calling setMenuBar() would replace the menu widget that FramelessHelper
     // installed as the custom title bar, destroying the frameless window.
-    m_menuBar->clear();
+    m_impl->menuBar->clear();
 
-    auto* page = m_stack->currentWidget();
+    auto* page = m_impl->stack->currentWidget();
     auto* actions = page ? qobject_cast<dsfw::IPageActions*>(page) : nullptr;
 
     // Let the current page populate menus
@@ -282,7 +306,7 @@ void AppShell::rebuildMenuBar() {
             // breaks popup z-order on frameless (QWK) windows.
             for (auto* srcAction : pageBar->actions()) {
                 if (auto* srcMenu = srcAction->menu()) {
-                    auto* dstMenu = m_menuBar->addMenu(srcMenu->title());
+                    auto* dstMenu = m_impl->menuBar->addMenu(srcMenu->title());
                     // Move all actions (including sub-menus) from srcMenu → dstMenu.
                     // Re-parent each action so it survives pageBar deletion.
                     const auto srcActions = srcMenu->actions();
@@ -292,10 +316,10 @@ void AppShell::rebuildMenuBar() {
                         dstMenu->addAction(a);
                     }
                 } else if (srcAction->isSeparator()) {
-                    m_menuBar->addSeparator();
+                    m_impl->menuBar->addSeparator();
                 } else {
-                    srcAction->setParent(m_menuBar);
-                    m_menuBar->addAction(srcAction);
+                    srcAction->setParent(m_impl->menuBar);
+                    m_impl->menuBar->addAction(srcAction);
                 }
             }
             // pageBar is a child of |this| (AppShell). After all actions have
@@ -309,21 +333,21 @@ void AppShell::rebuildMenuBar() {
     // If a global action owns a QMenu whose title matches a page menu (e.g. both
     // named "File"), merge the global menu's items into the top of the page menu
     // instead of creating a duplicate top-level menu.
-    if (!m_globalActions.isEmpty()) {
+    if (!m_impl->globalActions.isEmpty()) {
         // Build lookup: stripped title → page menu action
         QHash<QString, QAction*> pageMenuByTitle;
-        for (auto* a : m_menuBar->actions()) {
+        for (auto* a : m_impl->menuBar->actions()) {
             if (a->menu())
                 pageMenuByTitle.insert(menuTitleKey(a->menu()->title()), a);
         }
 
-        QAction* firstAction = m_menuBar->actions().isEmpty() ? nullptr : m_menuBar->actions().first();
+        QAction* firstAction = m_impl->menuBar->actions().isEmpty() ? nullptr : m_impl->menuBar->actions().first();
 
-        for (auto* ga : m_globalActions) {
+        for (auto* ga : m_impl->globalActions) {
             auto* globalMenu = ga->menu();
             if (!globalMenu) {
                 // Plain action — prepend as before
-                m_menuBar->insertAction(firstAction, ga);
+                m_impl->menuBar->insertAction(firstAction, ga);
                 continue;
             }
 
@@ -342,13 +366,13 @@ void AppShell::rebuildMenuBar() {
                     pageMenu->insertSeparator(insertBefore);
             } else {
                 // No matching page menu — prepend as a standalone top-level menu
-                m_menuBar->insertAction(firstAction, ga);
+                m_impl->menuBar->insertAction(firstAction, ga);
             }
         }
     }
 
     // Fix QMenu popup z-order on Windows frameless windows (QWK).
-    installMenuPopupRaiseFix(m_menuBar);
+    installMenuPopupRaiseFix(m_impl->menuBar);
 }
 
 void AppShell::rebuildStatusBar() {
@@ -366,14 +390,14 @@ void AppShell::rebuildStatusBar() {
         child->deleteLater();
     }
 
-    auto* page = m_stack->currentWidget();
+    auto* page = m_impl->stack->currentWidget();
     if (auto* actions = qobject_cast<dsfw::IPageActions*>(page)) {
         actions->createStatusBarContent(sb);
     }
 }
 
 bool AppShell::hasAnyUnsavedChanges() const {
-    for (const auto& entry : m_pages) {
+    for (const auto& entry : m_impl->pages) {
         if (auto* actions = qobject_cast<dsfw::IPageActions*>(entry.widget))
             if (actions->hasUnsavedChanges())
                 return true;
@@ -383,17 +407,17 @@ bool AppShell::hasAnyUnsavedChanges() const {
 
 void AppShell::onChildPlayRequested() {
     if (auto* w = qobject_cast<QWidget*>(sender()))
-        m_audioManager->requestPlay(w);
+        m_impl->audioManager->requestPlay(w);
 }
 
 void AppShell::onChildPlayStopped() {
     if (auto* w = qobject_cast<QWidget*>(sender()))
-        m_audioManager->releasePlay(w);
+        m_impl->audioManager->releasePlay(w);
 }
 
 void AppShell::closeEvent(QCloseEvent* event) {
     // Check active page lifecycle veto
-    if (auto* page = m_stack->currentWidget()) {
+    if (auto* page = m_impl->stack->currentWidget()) {
         if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(page)) {
             if (!lifecycle->onDeactivating()) {
                 event->ignore();
@@ -414,30 +438,30 @@ void AppShell::closeEvent(QCloseEvent* event) {
     }
 
     // Stop all audio playback before shutdown
-    if (m_audioManager)
-        m_audioManager->stopAll();
+    if (m_impl->audioManager)
+        m_impl->audioManager->stopAll();
 
     // Dispatch shutdown to all pages
-    for (const auto& entry : m_pages) {
+    for (const auto& entry : m_impl->pages) {
         if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(entry.widget))
             lifecycle->onShutdown();
     }
 
     // Save window geometry and state
-    if (m_settings) {
-        m_settings->set(dsfw::CommonKeys::WindowGeometry, QString::fromLatin1(saveGeometry().toBase64()));
-        m_settings->set(dsfw::CommonKeys::WindowState, QString::fromLatin1(saveState().toBase64()));
-        dsfw::WorkspaceConfig ws(m_settings);
-        ws.setIconSize(m_navBar->iconSize());
+    if (m_impl->settings) {
+        m_impl->settings->set(dsfw::CommonKeys::WindowGeometry, QString::fromLatin1(saveGeometry().toBase64()));
+        m_impl->settings->set(dsfw::CommonKeys::WindowState, QString::fromLatin1(saveState().toBase64()));
+        dsfw::WorkspaceConfig ws(m_impl->settings);
+        ws.setIconSize(m_impl->navBar->iconSize());
         ws.saveAll();
-        m_settings->flush();
+        m_impl->settings->flush();
     }
 
     event->accept();
 }
 
 void AppShell::dragEnterEvent(QDragEnterEvent* event) {
-    if (auto* page = m_stack->currentWidget()) {
+    if (auto* page = m_impl->stack->currentWidget()) {
         if (auto* actions = qobject_cast<dsfw::IPageActions*>(page)) {
             if (actions->supportsDragDrop()) {
                 actions->handleDragEnter(event);
@@ -449,7 +473,7 @@ void AppShell::dragEnterEvent(QDragEnterEvent* event) {
 }
 
 void AppShell::dropEvent(QDropEvent* event) {
-    if (auto* page = m_stack->currentWidget()) {
+    if (auto* page = m_impl->stack->currentWidget()) {
         if (auto* actions = qobject_cast<dsfw::IPageActions*>(page)) {
             if (actions->supportsDragDrop()) {
                 actions->handleDrop(event);

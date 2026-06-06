@@ -4,7 +4,9 @@ project(audio-visualizer LANGUAGES CXX)
 dstools_add_library(${PROJECT_NAME}
         STATIC
         AUTOMOC
+        NAMESPACE dstools::shared::visualizer
+        EXPORT_SET dstoolsSharedTargets
         DEPENDS
-        PUBLIC chart-framework dsfw-core dsfw-ui-core dsfw-widgets mouth-curve-chart phoneme-editor
+        PUBLIC dstools::shared::chart dsfw-core dsfw-ui-core dsfw-widgets dstools::shared::mouth-curve dstools::shared::phoneme
         PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
 )

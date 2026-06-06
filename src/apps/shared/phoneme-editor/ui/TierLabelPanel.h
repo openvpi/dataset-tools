@@ -7,7 +7,7 @@
 #include <QFont>
 #include <QString>
 #include <QWidget>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <dsfw/widgets/ViewportController.h>
 #include <vector>
 

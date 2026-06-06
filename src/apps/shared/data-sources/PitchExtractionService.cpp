@@ -2,16 +2,20 @@
 
 #include "InferBridge.h"
 
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dstools/DsPitchDocument.h>
-#include <dstools/CurveTools.h>
+#include <dsfw/signal/curve_tools.h>
 #include <dstools/PitchUtils.h>
 #include <dstools/DsKeys.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <dsfw/audio/AudioPipeline.h>
 #include <dsfw/PathUtils.h>
 
 namespace dstools {
+
+    using dsfw::signal::expectedFrameCount;
+    using dsfw::signal::hopSizeToTimestep;
+    using dsfw::signal::resampleCurve;
 
     PitchExtractionResult PitchExtractionService::extractPitch(Rmvpe::Rmvpe *rmvpe, const QString &audioPath) {
         PitchExtractionResult result;

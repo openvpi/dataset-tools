@@ -1,7 +1,7 @@
 #include <QTest>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
-using namespace dstools;
+using namespace dsfw;
 
 class TestTimePos : public QObject {
     Q_OBJECT

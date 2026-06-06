@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QUndoCommand>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 namespace dstools {
     namespace dstools {

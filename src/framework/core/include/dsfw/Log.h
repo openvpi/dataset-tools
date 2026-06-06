@@ -84,6 +84,15 @@ namespace dsfw {
         /// @param filePath Absolute path to the log file.
         static LogSink fileSink(const std::string &filePath);
 
+        /// @brief Create a sink that writes entries to a rotating log file.
+        /// When the file exceeds maxSize, it is renamed to filePath.1, filePath.2, etc.
+        /// @param filePath Absolute path to the log file.
+        /// @param maxSizeBytes Maximum size in bytes before rotation (default 10 MB).
+        /// @param maxBackups Maximum number of backup files to retain (default 5).
+        static LogSink rotatingFileSink(const std::string &filePath,
+                                        int64_t maxSizeBytes = 10 * 1024 * 1024,
+                                        int maxBackups = 5);
+
         // ── Recent entries (for UI consumption) ─────────────────────────────
 
         /// @brief Snapshot of recent log entries from the ring buffer.
@@ -102,14 +111,6 @@ namespace dsfw {
     };
 
 } // namespace dsfw
-
-// Backward compatibility: keep Logger, LogLevel, LogEntry, LogSink available in dstools namespace
-namespace dstools {
-    using dsfw::Logger;
-    using dsfw::LogLevel;
-    using dsfw::LogEntry;
-    using dsfw::LogSink;
-}
 
 // ── Convenience macros ──────────────────────────────────────────────────
 #define DSFW_LOG(level, cat, msg) ::dsfw::Logger::instance().log(level, cat, msg)

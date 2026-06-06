@@ -25,6 +25,10 @@ Result<void> PipelineRunner::run(const PipelineOptions& opts, std::vector<Pipeli
                                  std::shared_ptr<std::atomic<bool>> cancelToken) {
     const int totalSteps = static_cast<int>(opts.steps.size());
 
+    // Clean up orphaned snapshots from a previous interrupted run before starting
+    if (!opts.snapshotDir.isEmpty())
+        cleanupOrphanedSnapshots(opts.snapshotDir);
+
     saveSnapshot(opts, contexts, 0, totalSteps);
 
     for (int stepIdx = 0; stepIdx < totalSteps; ++stepIdx) {
@@ -220,7 +224,7 @@ Result<std::pair<std::vector<PipelineContext>, int>> PipelineRunner::loadLatestS
         return Result<std::pair<std::vector<PipelineContext>, int>>::Error("No snapshots found");
 
     const auto& latest = entries.first();
-    auto loadResult = dstools::JsonHelper::loadFile(dsfw::PathUtils::toStdPath(latest.absoluteFilePath()));
+    auto loadResult = dsfw::JsonHelper::loadFile(dsfw::PathUtils::toStdPath(latest.absoluteFilePath()));
     if (!loadResult.ok())
         return Result<std::pair<std::vector<PipelineContext>, int>>::Error("Failed to read snapshot: " +
                                                                            loadResult.error());
@@ -262,6 +266,18 @@ bool PipelineRunner::hasLatestSnapshot(const QString& snapshotDir) {
     const auto filters = QStringList{QStringLiteral("step_*.json")};
     const auto entries = dir.entryInfoList(filters, QDir::Files, QDir::Name);
     return !entries.isEmpty();
+}
+
+void PipelineRunner::cleanupOrphanedSnapshots(const QString& snapshotDir) {
+    QDir dir(snapshotDir);
+    if (!dir.exists())
+        return;
+
+    const auto filters = QStringList{QStringLiteral("step_*.json")};
+    const auto entries = dir.entryInfoList(filters, QDir::Files);
+    for (const auto& entry : entries) {
+        QFile::remove(entry.absoluteFilePath());
+    }
 }
 
 } // namespace dsfw

@@ -6,7 +6,7 @@
 #include <MoveBoundaryCommand.h>
 #include <QString>
 #include <QUndoCommand>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <vector>
 
 namespace dstools {

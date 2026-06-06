@@ -1,0 +1,66 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/cmake-build-${presetName}",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "ONNXRUNTIME_ENABLE_DML": "ON"
+      },
+      "environment": {
+        "VCPKG_KEEP_ENV_VARS": "QT_DIR;Qt6_DIR"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "displayName": "Debug",
+      "description": "Debug build (Ninja, MSVC, vcpkg)",
+      "binaryDir": "${sourceDir}/cmake-build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "Release",
+      "description": "Release build (Ninja, MSVC, vcpkg)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "release-cli",
+      "inherits": "base",
+      "displayName": "Release CLI",
+      "description": "Release build for CLI (separate build dir)",
+      "binaryDir": "${sourceDir}/cmake-build-release-cli",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "release-cli",
+      "configurePreset": "release-cli"
+    }
+  ]
+}

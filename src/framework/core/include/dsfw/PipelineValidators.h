@@ -33,13 +33,3 @@ inline ValidationCallback makePitchCoverageValidator(const QString &layerName, d
 }
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::makeSliceLengthValidator;
-    using dsfw::makeMinFieldValidator;
-    using dsfw::makeMaxFieldValidator;
-    using dsfw::makeRangeFieldValidator;
-    using dsfw::makeAlignmentQualityValidator;
-    using dsfw::makePitchCoverageValidator;
-}

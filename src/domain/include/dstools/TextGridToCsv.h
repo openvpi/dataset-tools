@@ -5,7 +5,7 @@
 
 #include <QString>
 #include <dstools/TranscriptionCsv.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <vector>
 
 namespace dstools {

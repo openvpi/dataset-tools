@@ -7,7 +7,7 @@ using dstools::dstools::IBoundaryModel;
 #include <QObject>
 #include <QString>
 #include <dstools/DsTextTypes.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <memory>
 #include <textgrid.hpp>
 #include <vector>

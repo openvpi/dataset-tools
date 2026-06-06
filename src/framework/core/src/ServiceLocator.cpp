@@ -1,5 +1,4 @@
 #include <dsfw/ServiceLocator.h>
-#include <dsfw/FormatAdapterRegistry.h>
 
 namespace dsfw {
 
@@ -12,21 +11,11 @@ void ServiceLocator::resetAll() {
     services().clear();
 }
 
-FormatAdapterRegistry *ServiceLocator::formatAdapterRegistry() {
-    return get<FormatAdapterRegistry>();
-}
-
-void ServiceLocator::setFormatAdapterRegistry(FormatAdapterRegistry *registry) {
-    set<FormatAdapterRegistry>(registry);
-}
-
-void ServiceLocator::resetFormatAdapterRegistry() {
-    reset<FormatAdapterRegistry>();
-}
-
 } // namespace dsfw
 
 // ─── FormatAdapterRegistry implementation ─────────────────────────────────────
+
+#include <dsfw/FormatAdapterRegistry.h>
 
 namespace dsfw {
 

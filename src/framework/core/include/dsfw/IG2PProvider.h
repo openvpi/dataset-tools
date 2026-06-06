@@ -4,7 +4,7 @@
 /// @brief Grapheme-to-phoneme provider interface.
 
 #include <dsfw/G2PTypes.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <string>
 #include <vector>
 
@@ -35,8 +35,3 @@ namespace dsfw {
     };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::IG2PProvider;
-}

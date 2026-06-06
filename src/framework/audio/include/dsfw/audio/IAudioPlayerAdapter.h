@@ -5,7 +5,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <filesystem>
 
 namespace dsfw::audio {

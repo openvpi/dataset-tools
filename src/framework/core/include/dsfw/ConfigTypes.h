@@ -107,14 +107,3 @@ namespace dsfw {
     }
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::ConfigValue;
-    using dsfw::ConfigMap;
-    using dsfw::configValueString;
-    using dsfw::configValueInt;
-    using dsfw::configValueBool;
-    using dsfw::configValueDouble;
-    using dsfw::configValueStringList;
-}

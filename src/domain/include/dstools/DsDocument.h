@@ -34,7 +34,7 @@
 /// @endcode
 
 #include <QString>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <vector>

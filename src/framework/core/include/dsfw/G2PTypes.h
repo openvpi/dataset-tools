@@ -15,8 +15,3 @@ namespace dsfw {
     };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::G2PResult;
-}

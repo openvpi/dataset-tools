@@ -3,7 +3,7 @@
 /// @brief Abstract interface for inference engine implementations.
 
 #include <cstdint>
-#include <dstools/ExecutionProvider.h>
+#include <dsfw/ExecutionProvider.h>
 #include <dsfw/Result.h>
 #include <filesystem>
 #include <string>

@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <dsfw/IModelProvider.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <map>
 #include <memory>
 #include <mutex>

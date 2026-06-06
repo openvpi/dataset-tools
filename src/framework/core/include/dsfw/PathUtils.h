@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 
 #include <QString>
 #include <cstdint>
@@ -55,6 +55,15 @@ public:
 
     static bool isSubPath(const std::filesystem::path& parent, const std::filesystem::path& child) noexcept;
 
+    static bool isPathWithinSandbox(const std::filesystem::path& path, const std::filesystem::path& root) noexcept;
+
+    static dsfw::Result<std::filesystem::path> sanitizePath(const std::filesystem::path& userPath,
+                                                              const std::filesystem::path& root);
+
+    static dsfw::Result<std::filesystem::path> validatePath(const std::filesystem::path& path,
+                                                              const std::filesystem::path& root,
+                                                              bool allowAbsolute = false);
+
     static std::filesystem::path relativeTo(const std::filesystem::path& path, const std::filesystem::path& base);
 
     static TextEncoding detectTextEncoding(const QByteArray& data);
@@ -79,8 +88,3 @@ public:
 };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::PathUtils;
-}

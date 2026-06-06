@@ -15,7 +15,7 @@
 #include <QUndoStack>
 #include <QVector>
 #include <dstools/PitchUtils.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <dsfw/widgets/ViewportController.h>
 #include <map>
 #include <memory>

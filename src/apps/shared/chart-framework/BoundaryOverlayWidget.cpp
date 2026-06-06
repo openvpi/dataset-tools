@@ -1,7 +1,7 @@
 #include "BoundaryOverlayWidget.h"
 #include "IBoundaryModel.h"
 
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 #include <algorithm>
 #include <cmath>

@@ -2,7 +2,7 @@
 
 #include <QListWidget>
 #include <QWidget>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <dsfw/widgets/ViewportController.h>
 
 namespace dstools {

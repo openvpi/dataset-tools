@@ -24,7 +24,7 @@ target_include_directories(TestAudioVisualizerContainer PRIVATE
 )
 
 target_link_libraries(TestAudioVisualizerContainer PRIVATE
-        audio-visualizer
+        dstools::shared::visualizer
         dsfw-widgets
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets

@@ -3,7 +3,7 @@
 
 #include <dsfw/Log.h>
 #include <dsfw/PathUtils.h>
-#include <dsfw/TaskProcessorRegistry.h>
+#include <dstools/TaskProcessorRegistry.h>
 #include <dstools/DsKeys.h>
 #include <dstools/ModelManager.h>
 

@@ -3,6 +3,8 @@ project(log-page)
 dstools_add_library(${PROJECT_NAME}
         STATIC
         AUTOMOC
+        NAMESPACE dstools::shared::log
+        EXPORT_SET dstoolsSharedTargets
         DEPENDS
         PUBLIC dstools-ui-core dstools-domain dsfw-widgets Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets
 )

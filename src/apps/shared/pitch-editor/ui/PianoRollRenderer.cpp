@@ -4,7 +4,7 @@
 
 #include <QPainterPath>
 
-#include <dstools/CurveTools.h>
+#include <dsfw/signal/curve_tools.h>
 #include <dstools/PitchUtils.h>
 #include <dsfw/Theme.h>
 
@@ -362,7 +362,7 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
     double offsetSec = usToSec(s.dsFile->offset);
 
     auto mhzToMidi = [](int32_t mhz) -> double {
-        double hz = dstools::mhzToHz(mhz);
+        double hz = dsfw::signal::mhzToHz(mhz);
         return (hz > 0.0) ? 12.0 * std::log2(hz / 440.0) + 69.0 : 0.0;
     };
 

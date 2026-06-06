@@ -1,7 +1,8 @@
 #include <QTest>
-#include <dstools/CurveTools.h>
+#include <dsfw/signal/curve_tools.h>
 
 using namespace dstools;
+using namespace dsfw::signal;
 
 class TestCurveTools : public QObject {
     Q_OBJECT

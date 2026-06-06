@@ -70,7 +70,7 @@ public:
             return;
         }
 
-        auto loadResult = dstools::JsonHelper::loadFile(path);
+        auto loadResult = dsfw::JsonHelper::loadFile(path);
         if (!loadResult) {
             DSFW_LOG_WARN("app", ("AppSettings: " + loadResult.error()).c_str());
             m_data = nlohmann::json::object();
@@ -99,7 +99,7 @@ public:
         constexpr int kCurrentVersion = 1;
 
         int storedVersion = 0;
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, "General/settingsVersion")) {
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, "General/settingsVersion")) {
             if (node->is_number_integer()) {
                 storedVersion = node->get<int>();
             }
@@ -112,7 +112,7 @@ public:
     }
 
     QString getString(const char *path, const QString &defaultValue) const {
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, path)) {
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, path)) {
             if (node->is_string())
                 return QString::fromStdString(node->get<std::string>());
         }
@@ -120,7 +120,7 @@ public:
     }
 
     int getInt(const char *path, int defaultValue) const {
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, path)) {
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, path)) {
             if (node->is_number_integer())
                 return node->get<int>();
         }
@@ -128,7 +128,7 @@ public:
     }
 
     double getDouble(const char *path, double defaultValue) const {
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, path)) {
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, path)) {
             if (node->is_number())
                 return node->get<double>();
         }
@@ -136,7 +136,7 @@ public:
     }
 
     float getFloat(const char *path, float defaultValue) const {
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, path)) {
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, path)) {
             if (node->is_number())
                 return node->get<float>();
         }
@@ -144,7 +144,7 @@ public:
     }
 
     bool getBool(const char *path, bool defaultValue) const {
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, path)) {
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, path)) {
             if (node->is_boolean())
                 return node->get<bool>();
         }
@@ -152,7 +152,7 @@ public:
     }
 
     std::string getStdString(const char *path, const std::string &defaultValue) const {
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, path)) {
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, path)) {
             if (node->is_string())
                 return node->get<std::string>();
         }
@@ -185,7 +185,7 @@ public:
     }
 
     bool hasKey(const char *path) const {
-        return dstools::JsonHelper::resolve(m_data, path) != nullptr;
+        return dsfw::JsonHelper::resolve(m_data, path) != nullptr;
     }
 
     bool eraseKey(const char *path) {
@@ -213,7 +213,7 @@ public:
     }
 
     QString getRawString(const char *path, const QString &fallback) const {
-        if (const auto *node = dstools::JsonHelper::resolve(m_data, path))
+        if (const auto *node = dsfw::JsonHelper::resolve(m_data, path))
             return QString::fromStdString(node->dump());
         return fallback;
     }

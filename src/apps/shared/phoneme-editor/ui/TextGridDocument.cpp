@@ -1,6 +1,6 @@
 #include "TextGridDocument.h"
 
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dstools/DsKeys.h>
 
 #include <QRegularExpression>

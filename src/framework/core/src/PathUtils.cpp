@@ -7,6 +7,7 @@
 #include <QStringDecoder>
 #include <QStringEncoder>
 
+#include <algorithm>
 #include <array>
 #include <fstream>
 
@@ -342,6 +343,59 @@ bool PathUtils::isSubPath(const std::filesystem::path& parent, const std::filesy
             return false;
     }
     return itParent == canonParent.end();
+}
+
+bool PathUtils::isPathWithinSandbox(const std::filesystem::path& path, const std::filesystem::path& root) noexcept {
+    return isSubPath(root, path);
+}
+
+dsfw::Result<std::filesystem::path> PathUtils::sanitizePath(const std::filesystem::path& userPath,
+                                                              const std::filesystem::path& root) {
+    // Reject empty paths
+    if (userPath.empty())
+        return dsfw::Result<std::filesystem::path>::Error("Path is empty");
+
+    // Reject paths with null bytes
+    const auto& u8 = userPath.u8string();
+    if (std::find(u8.begin(), u8.end(), '\0') != u8.end())
+        return dsfw::Result<std::filesystem::path>::Error("Path contains null byte");
+
+    // Reject ".." segments at the start (before canonicalization)
+    auto normalized = userPath.lexically_normal();
+    if (!normalized.empty() && normalized.begin()->string() == "..")
+        return dsfw::Result<std::filesystem::path>::Error("Path escapes sandbox");
+
+    const auto joined = root / userPath;
+    const auto canonical = canonicalOrNull(joined);
+    if (!canonical)
+        return dsfw::Result<std::filesystem::path>::Error("Path does not exist or cannot be resolved");
+
+    if (!isSubPath(root, *canonical))
+        return dsfw::Result<std::filesystem::path>::Error("Path traversal detected: " + toUtf8(userPath));
+
+    return dsfw::Result<std::filesystem::path>::Ok(*canonical);
+}
+
+dsfw::Result<std::filesystem::path> PathUtils::validatePath(const std::filesystem::path& path,
+                                                              const std::filesystem::path& root,
+                                                              bool allowAbsolute) {
+    if (path.empty())
+        return dsfw::Result<std::filesystem::path>::Error("Path is empty");
+
+    if (path.is_absolute()) {
+        if (!allowAbsolute)
+            return dsfw::Result<std::filesystem::path>::Error("Absolute paths are not allowed");
+
+        if (!isPathWithinSandbox(path, root))
+            return dsfw::Result<std::filesystem::path>::Error("Path is outside the sandbox");
+
+        const auto canonical = canonicalOrNull(path);
+        if (!canonical)
+            return dsfw::Result<std::filesystem::path>::Error("Path does not exist or cannot be resolved");
+        return dsfw::Result<std::filesystem::path>::Ok(*canonical);
+    }
+
+    return sanitizePath(path, root);
 }
 
 std::filesystem::path PathUtils::relativeTo(const std::filesystem::path& path, const std::filesystem::path& base) {

@@ -96,9 +96,3 @@ namespace dsfw {
     }
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::configMapFromJson;
-    using dsfw::configMapToJson;
-}

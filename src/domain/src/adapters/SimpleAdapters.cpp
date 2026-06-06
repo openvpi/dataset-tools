@@ -8,22 +8,24 @@
 #include "PhonemeLayerBuilder.h"
 
 #include <dstools/TextGridToCsv.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 #include <dsfw/PathUtils.h>
 
 #include <QRegularExpression>
+
+// ─── Self-registration ────────────────────────────────────────────────────────
+
+REGISTER_FORMAT_ADAPTER(dstools::TextGridAdapter);
+REGISTER_FORMAT_ADAPTER(dstools::LabAdapter);
 
 namespace dstools {
 
 // ─── FormatAdapterInit ────────────────────────────────────────────────────────
 
 void registerDomainFormatAdapters() {
-    auto& registry = dsfw::FormatAdapterRegistry::instance();
-    registry.registerAdapter(std::make_unique<TextGridAdapter>());
-    registry.registerAdapter(std::make_unique<CsvAdapter>());
-    registry.registerAdapter(std::make_unique<DsFileAdapter>());
-    registry.registerAdapter(std::make_unique<LabAdapter>());
+    // Adapters are now self-registered via REGISTER_FORMAT_ADAPTER macro.
+    // This function is kept for backward compatibility.
 }
 
 Result<void> exportContextsToCsv(const std::vector<PipelineContext>& contexts, const QString& outputPath,

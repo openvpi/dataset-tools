@@ -2,7 +2,7 @@
 
 #include <QString>
 #include <dsfw/infer/IInferenceService.h>
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/TranscriptionCsv.h>
 #include <vector>

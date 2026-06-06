@@ -9,7 +9,7 @@
 #include "Keys.h"
 #include "SliceListPanel.h"
 
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dstools/DsPitchDocument.h>
 #include <QCheckBox>
 #include <QJsonObject>
@@ -23,10 +23,10 @@
 #include <dsfw/infer/InferenceModelProvider.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
-#include <dstools/CurveTools.h>
+#include <dsfw/signal/curve_tools.h>
 #include <dstools/DsKeys.h>
 #include <dstools/DsTextTypes.h>
-#include <dstools/ExecutionProvider.h>
+#include <dsfw/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 #include <dstools/PitchUtils.h>
 #include <dsfw/audio/AudioPipeline.h>
@@ -38,6 +38,10 @@ struct PitchExtractionData {
 };
 
 namespace dstools {
+
+using dsfw::signal::expectedFrameCount;
+using dsfw::signal::hopSizeToTimestep;
+using dsfw::signal::resampleCurve;
 
 PitchLabelerPage::PitchLabelerPage(QWidget* parent) : EditorPageBase("PitchLabeler", parent) {
     m_editor = new pitchlabeler::PitchEditor(this);

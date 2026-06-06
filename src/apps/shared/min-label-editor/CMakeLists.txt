@@ -6,6 +6,8 @@ find_package(cpp-kana CONFIG REQUIRED)
 dstools_add_library(${PROJECT_NAME}
         STATIC
         AUTOMOC
+        NAMESPACE dstools::shared::min-label
+        EXPORT_SET dstoolsSharedTargets
         DEPENDS
         PUBLIC dstools-domain dsfw-widgets
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets

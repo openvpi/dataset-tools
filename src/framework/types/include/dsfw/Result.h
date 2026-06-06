@@ -222,10 +222,3 @@ namespace dsfw {
     }
 
 } // namespace dsfw
-
-// Backward compatibility: keep Result and helper functions available in dstools namespace
-namespace dstools {
-    using dsfw::Result;
-    using dsfw::Ok;
-    using dsfw::Err;
-}

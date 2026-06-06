@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <dstools/PitchUtils.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <memory>
 #include <set>
 #include <vector>

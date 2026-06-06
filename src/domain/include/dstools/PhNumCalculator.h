@@ -8,7 +8,7 @@
 #include <QString>
 #include <vector>
 
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 
 namespace dstools {
 

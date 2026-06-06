@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dstools/DsTextTypes.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 #include <QString>
 #include <string>

@@ -2,7 +2,7 @@
 
 #include <QStringList>
 #include <dsfw/TaskTypes.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 namespace dstools {
 

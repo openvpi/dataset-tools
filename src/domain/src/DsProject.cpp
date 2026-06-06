@@ -4,7 +4,7 @@
 #include <dsfw/JsonHelper.h>
 #include <dsfw/Log.h>
 #include <dsfw/PathUtils.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 
 #include <QDir>
 #include <QFile>
@@ -172,6 +172,15 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
         }
     }
 
+    // Config version check (for schema migration, introduced in configVersion=1)
+    int configVersion = 0;
+    if (json.contains("configVersion") && json["configVersion"].is_number_integer()) {
+        configVersion = json["configVersion"].get<int>();
+    }
+    if (configVersion < 1) {
+        DSFW_LOG_INFO("io", "DsProject::load: legacy config format (configVersion < 1), applying compat rules");
+    }
+
     if (json.contains("workingDirectory") && json["workingDirectory"].is_string())
         proj.m_impl->m_workingDirectory =
             dsfw::PathUtils::toNativeSeparators(QString::fromStdString(json["workingDirectory"].get<std::string>()));
@@ -319,6 +328,7 @@ Result<void> DsProject::saveFile(const QString& path) const {
     json.erase("defaults");
 
     json["version"] = "3.1.0";
+    json["configVersion"] = 1;
 
     if (!m_impl->m_workingDirectory.isEmpty())
         json["workingDirectory"] = dsfw::PathUtils::toPosixSeparators(m_impl->m_workingDirectory).toStdString();
@@ -485,6 +495,50 @@ std::vector<QString> DsProject::validateExternalPaths() const {
     }
 
     return missing;
+}
+
+Result<void> DsProject::validateSchema() const {
+    // Check required top-level fields
+    if (m_impl->m_filePath.isEmpty())
+        return Result<void>::Error("Project file path is empty");
+
+    // Check items
+    for (size_t i = 0; i < m_impl->m_items.size(); ++i) {
+        const auto& item = m_impl->m_items[i];
+        if (item.id.isEmpty())
+            return Result<void>::Error("Item[" + std::to_string(i) + "] has empty id");
+
+        for (size_t j = 0; j < item.slices.size(); ++j) {
+            const auto& slice = item.slices[j];
+            if (slice.id.isEmpty())
+                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                                           item.id.toStdString() + "' has empty id");
+            if (slice.inPos < 0)
+                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                                           item.id.toStdString() + "' has negative inPos");
+            if (slice.outPos < 0)
+                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                                           item.id.toStdString() + "' has negative outPos");
+            if (slice.inPos > slice.outPos)
+                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                                           item.id.toStdString() + "' has inPos > outPos");
+        }
+    }
+
+    // Check slicer params
+    const auto& sp = m_impl->m_slicerState.params;
+    if (sp.minLength <= 0)
+        return Result<void>::Error("Slicer minLength must be positive");
+    if (sp.hopSize <= 0)
+        return Result<void>::Error("Slicer hopSize must be positive");
+
+    // Check export config
+    if (m_impl->m_exportConfig.hopSize <= 0)
+        return Result<void>::Error("Export hopSize must be positive");
+    if (m_impl->m_exportConfig.sampleRate <= 0)
+        return Result<void>::Error("Export sampleRate must be positive");
+
+    return Result<void>::Ok();
 }
 
 // ── Properties ────────────────────────────────────────────────────────

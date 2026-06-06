@@ -42,7 +42,7 @@ if (WIN32)
     ")
 
     # Copy ONNX Runtime DLLs (not tracked by CMake target dependencies)
-    set(_ORT_LIB_DIR "${PROJECT_DIR}/src/infer/onnxruntime/lib")
+    set(_ORT_LIB_DIR "${PROJECT_DIR}/src/engine/engines/onnxruntime/lib")
     if(IS_DIRECTORY "${_ORT_LIB_DIR}")
         install(CODE "
             file(GLOB _ort_dlls \"${_ORT_LIB_DIR}/*.dll\")

@@ -1,6 +1,7 @@
 #include "LogPage.h"
 
-#include <dsfw/LogNotifier.h>
+#include <dstools/LogNotifier.h>
+#include <dsfw/Log.h>
 #include <dsfw/widgets/LogViewer.h>
 
 #include <dsfw/widgets/FilePathSelector.h>

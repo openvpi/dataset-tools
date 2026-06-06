@@ -7,7 +7,7 @@
 #include <Qt>
 #include <cstdint>
 #include <dstools/PitchUtils.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <functional>
 #include <map>
 #include <memory>

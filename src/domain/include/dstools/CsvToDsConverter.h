@@ -5,8 +5,8 @@
 /// Equivalent to Python convert_ds.py csv2ds/ds2csv.
 
 #include <QString>
-#include <dstools/Constants.h>
-#include <dstools/Result.h>
+#include <dsfw/Constants.h>
+#include <dsfw/Result.h>
 #include <dstools/TranscriptionCsv.h>
 #include <functional>
 #include <vector>

@@ -3,12 +3,12 @@
 /// @file AppShell.h
 /// @brief Unified application window shell with icon sidebar navigation and page management.
 
-#include "dsfw/AppSettings.h"
 #include "dsfw/widgets/ToastNotification.h"
 
 #include <QList>
 #include <QMainWindow>
-#include <QVector>
+
+#include <memory>
 
 class QStackedWidget;
 class QStatusBar;
@@ -18,6 +18,7 @@ class QShowEvent;
 
 namespace dsfw {
 
+class AppSettings;
 class IconNavBar;
 class AudioPlaybackManager;
 
@@ -90,7 +91,7 @@ public:
     void showToast(widgets::ToastType type, const QString& message, int timeoutMs = 3000);
 
     /// @brief Return the audio playback arbitration manager.
-    AudioPlaybackManager* audioPlaybackManager() const { return m_audioManager; }
+    AudioPlaybackManager* audioPlaybackManager() const;
 
 private slots:
     void onChildPlayRequested();
@@ -116,20 +117,8 @@ private:
     void rebuildStatusBar();
     bool hasAnyUnsavedChanges() const;
 
-    struct PageEntry {
-        QWidget* widget = nullptr;
-        QString id;
-    };
-
-    IconNavBar* m_navBar = nullptr;
-    QStackedWidget* m_stack = nullptr;
-    QVector<PageEntry> m_pages;
-    QList<QAction*> m_globalActions;
-    QString m_workingDir;
-    QMenuBar* m_menuBar = nullptr;
-    AppSettings* m_settings = nullptr;
-    AudioPlaybackManager* m_audioManager = nullptr;
-    bool m_geometryRestored = false;
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 } // namespace dsfw

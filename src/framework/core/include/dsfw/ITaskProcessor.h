@@ -4,7 +4,7 @@
 /// @brief Unified interface for all model-backed processing tasks.
 
 #include <dsfw/TaskTypes.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <memory>
 
 namespace dstools {
@@ -67,8 +67,3 @@ namespace dsfw {
     };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::ITaskProcessor;
-}

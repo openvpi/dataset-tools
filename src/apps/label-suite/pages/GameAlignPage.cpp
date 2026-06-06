@@ -1,4 +1,4 @@
-﻿#include "GameAlignPage.h"
+#include "GameAlignPage.h"
 
 #include <QComboBox>
 #include <QDir>
@@ -10,7 +10,7 @@
 #include <QVBoxLayout>
 
 #include <dsfw/PathUtils.h>
-#include <dsfw/PipelineContext.h>
+#include <dstools/PipelineContext.h>
 #include <dsfw/PipelineRunner.h>
 #include <dsfw/PipelineValidators.h>
 #include <dsfw/widgets/PathSelector.h>

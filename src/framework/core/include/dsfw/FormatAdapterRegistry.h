@@ -23,4 +23,16 @@ namespace dsfw {
         std::map<QString, std::unique_ptr<IFormatAdapter>> m_adapters;
     };
 
+    /// RAII helper that registers a format adapter on construction.
+    struct FormatAdapterRegistrar {
+        explicit FormatAdapterRegistrar(std::unique_ptr<IFormatAdapter> adapter) {
+            FormatAdapterRegistry::instance().registerAdapter(std::move(adapter));
+        }
+    };
+
 } // namespace dsfw
+
+/// @brief Statically register a format adapter so it is discovered automatically.
+/// Place this macro in the adapter's .cpp file.
+#define REGISTER_FORMAT_ADAPTER(AdapterClass) \
+    static dsfw::FormatAdapterRegistrar _registrar_##AdapterClass(std::make_unique<AdapterClass>())

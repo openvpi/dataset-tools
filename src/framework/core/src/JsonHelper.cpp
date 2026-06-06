@@ -2,7 +2,7 @@
 #include <dsfw/JsonHelper.h>
 #include <dsfw/PathUtils.h>
 
-namespace dstools {
+namespace dsfw {
 
     Result<nlohmann::json> JsonHelper::loadFile(const std::filesystem::path &path) {
         auto file = dsfw::PathUtils::openIfstream(path);

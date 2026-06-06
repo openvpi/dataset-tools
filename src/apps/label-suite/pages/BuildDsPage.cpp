@@ -1,4 +1,4 @@
-﻿#include "BuildDsPage.h"
+#include "BuildDsPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -6,10 +6,10 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-#include <dsfw/PipelineContext.h>
+#include <dstools/PipelineContext.h>
 #include <dsfw/PipelineRunner.h>
 #include <dsfw/PipelineValidators.h>
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dstools/CsvAdapter.h>
 #include <dstools/ProjectPaths.h>
 #include <dstools/TranscriptionCsv.h>

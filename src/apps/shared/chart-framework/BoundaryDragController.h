@@ -3,7 +3,7 @@
 #include "ChartCoordinate.h"
 
 #include <QObject>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <vector>
 
 class QUndoStack;

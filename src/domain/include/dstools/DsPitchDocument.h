@@ -3,8 +3,8 @@
 #include <QJsonObject>
 #include <QString>
 #include <dstools/F0Curve.h>
-#include <dstools/Result.h>
-#include <dstools/TimePos.h>
+#include <dsfw/Result.h>
+#include <dsfw/TimePos.h>
 #include <optional>
 #include <vector>
 

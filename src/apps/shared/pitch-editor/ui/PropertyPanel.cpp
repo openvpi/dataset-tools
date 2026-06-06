@@ -1,6 +1,6 @@
 #include "PropertyPanel.h"
 #include <dstools/PitchUtils.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>

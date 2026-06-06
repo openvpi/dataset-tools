@@ -85,9 +85,3 @@ constexpr std::string_view errorCodeMessage(ErrorCode code) {
 }
 
 } // namespace dsfw
-
-// Backward compatibility: keep ErrorCode available in dstools namespace
-namespace dstools {
-    using dsfw::ErrorCode;
-    using dsfw::errorCodeMessage;
-}

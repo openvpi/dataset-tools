@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "$note": "",
+  "dependencies": [
+    {
+      "name": "ffmpeg",
+      "default-features": false,
+      "features": [
+        "avcodec",
+        "avformat",
+        "swresample",
+        "mp3lame",
+        "vorbis"
+      ]
+    },
+    "syscmdline",
+    "sdl2",
+    "fftw3",
+    "cpp-pinyin",
+    "cpp-kana",
+    "soxr",
+    "wolf-midi",
+    "libsndfile",
+    "nlohmann-json",
+    {
+      "name": "qwindowkit",
+      "features": [
+        "widgets"
+      ]
+    }
+  ]
+}

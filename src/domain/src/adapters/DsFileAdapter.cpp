@@ -3,7 +3,9 @@
 
 #include <dsfw/ConfigTypes.h>
 #include <dstools/DsDocument.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
+
+REGISTER_FORMAT_ADAPTER(dstools::DsFileAdapter);
 
 namespace dstools {
 

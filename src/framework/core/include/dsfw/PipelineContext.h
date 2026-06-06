@@ -10,8 +10,8 @@
 #include <QString>
 #include <QStringList>
 #include <dsfw/TaskTypes.h>
-#include <dstools/Result.h>
-#include <dstools/TimePos.h>
+#include <dsfw/Result.h>
+#include <dsfw/TimePos.h>
 #include <map>
 #include <vector>
 
@@ -89,9 +89,3 @@ private:
     };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::PipelineContext;
-    using dsfw::StepRecord;
-}

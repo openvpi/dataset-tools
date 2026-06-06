@@ -6,7 +6,7 @@
 #include <QPainter>
 #include <QWidget>
 #include <dsfw/widgets/PlayWidget.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <dsfw/widgets/ViewportController.h>
 #include <dstools/DsPitchDocument.h>
 

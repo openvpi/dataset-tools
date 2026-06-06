@@ -9,8 +9,8 @@ dstools_add_executable(${PROJECT_NAME}
         DEPLOY WIN32_EXECUTABLE MACOSX_BUNDLE WINRC
         DEPENDS
         PRIVATE dstools-ui-core dstools-domain dsfw-signal dsfw-widgets
-        min-label-editor phoneme-editor pitch-editor settings-page
-        data-sources log-page infer-bridge unified-editor
+        dstools::shared::min-label dstools::shared::phoneme dstools::shared::pitch dstools::shared::settings
+        dstools::shared::data-sources dstools::shared::log infer-bridge unified-editor
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Concurrent
 )
 

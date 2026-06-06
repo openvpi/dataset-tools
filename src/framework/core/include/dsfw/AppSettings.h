@@ -295,9 +295,3 @@ inline void AppSettings::setShortcut(const SettingsKey<QString>& key, const QStr
 }
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::AppSettings;
-    using dsfw::SettingsKey;
-}

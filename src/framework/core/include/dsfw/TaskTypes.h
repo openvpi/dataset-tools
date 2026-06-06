@@ -59,13 +59,3 @@ struct TaskOutput {
 };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::ProcessorConfig;
-    using dsfw::SlotSpec;
-    using dsfw::TaskSpec;
-    using dsfw::LayerData;
-    using dsfw::TaskInput;
-    using dsfw::TaskOutput;
-}

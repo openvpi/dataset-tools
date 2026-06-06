@@ -1,0 +1,20 @@
+#pragma once
+
+/// @file version.h.in
+/// @brief CMake-generated version header.
+/// Configured via cmake/generate_version_header.cmake.
+
+#define @PROJECT_NAME_UPPER@_VERSION_MAJOR @VERSION_MAJOR@
+#define @PROJECT_NAME_UPPER@_VERSION_MINOR @VERSION_MINOR@
+#define @PROJECT_NAME_UPPER@_VERSION_PATCH @VERSION_PATCH@
+#define @PROJECT_NAME_UPPER@_VERSION_BUILD @VERSION_BUILD@
+
+#define @PROJECT_NAME_UPPER@_VERSION_STRING "@VERSION_STRING@"
+
+namespace @NAMESPACE@ {
+    inline constexpr int kVersionMajor = @VERSION_MAJOR@;
+    inline constexpr int kVersionMinor = @VERSION_MINOR@;
+    inline constexpr int kVersionPatch = @VERSION_PATCH@;
+    inline constexpr int kVersionBuild = @VERSION_BUILD@;
+    inline constexpr const char* kVersionString = "@VERSION_STRING@";
+}

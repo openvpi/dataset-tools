@@ -99,7 +99,7 @@ CMakeSettings.json
 *.sublime-*
 setup-vcpkg.json
 setup-vcpkg-temp*
-/src/libs/onnxruntime/
+/src/engine/adapters/onnxruntime/
 docs/api/
 build-stdout.txt
 build-stderr.txt

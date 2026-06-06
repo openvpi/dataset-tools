@@ -1,4 +1,3 @@
-#include <dstools/CurveTools.h>
 #include <dstools/PitchUtils.h>
 
 #include <dsfw/signal/music_math.h>

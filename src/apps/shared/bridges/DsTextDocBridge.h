@@ -2,8 +2,8 @@
 
 #include <dstools/DsPitchDocument.h>
 #include <dstools/DsTextTypes.h>
-#include <dstools/Result.h>
-#include <dstools/TimePos.h>
+#include <dsfw/Result.h>
+#include <dsfw/TimePos.h>
 #include <QList>
 #include <memory>
 

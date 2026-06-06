@@ -40,13 +40,8 @@ add_subdirectory(domain)
 # Application shared UI layer
 add_subdirectory(ui-core)
 
-# Inference engines (third-party)
-set(CMAKE_FOLDER "Libraries/Infer")
-add_subdirectory(infer)
-
-# Inference adapters
-set(CMAKE_FOLDER "Libraries/Libs")
-add_subdirectory(libs)
+# Inference engines and adapters
+add_subdirectory(engine)
 
 # Applications
 set(CMAKE_FOLDER "Applications")

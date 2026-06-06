@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QString>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 namespace dstools {
     namespace dstools {

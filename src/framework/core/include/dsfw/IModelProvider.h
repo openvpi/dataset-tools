@@ -5,7 +5,7 @@
 
 #include <QString>
 #include <cstdint>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -101,13 +101,4 @@ namespace dsfw {
         }
     };
 
-}
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::IModelProvider;
-    using dsfw::ModelTypeId;
-    using dsfw::ModelStatus;
-    using dsfw::ModelProgressCallback;
-    using dsfw::registerModelType;
 }

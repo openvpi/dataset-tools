@@ -15,7 +15,7 @@
 #include <dsfw/AppSettings.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
-#include <dstools/Constants.h>
+#include <dsfw/Constants.h>
 #include <dsfw/widgets/PlayWidget.h>
 #include <dsfw/widgets/ViewportController.h>
 #include <dsfw/audio/AudioBuffer.h>

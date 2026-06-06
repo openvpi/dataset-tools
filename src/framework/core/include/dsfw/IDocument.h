@@ -3,7 +3,7 @@
 /// @file IDocument.h
 /// @brief Document model interface for load/save operations.
 
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <filesystem>
 #include <string>
 
@@ -34,8 +34,3 @@ namespace dsfw {
     };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::IDocument;
-}

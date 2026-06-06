@@ -4,7 +4,6 @@
 /// @brief Type-safe global service registry for dependency injection.
 
 #include <any>
-#include <dsfw/FormatAdapterRegistry.h>
 #include <typeindex>
 #include <unordered_map>
 
@@ -16,13 +15,13 @@ namespace dsfw {
     /// The locator does not own the service instances; callers manage lifetime.
     ///
     /// @code
-/// // Prefer instance() for singletons:
-/// auto *mgr = &ModelManager::instance();
-///
-/// // ServiceLocator for multi-implementation registries:
-/// ServiceLocator::set<ITaskProcessor>(myProcessor);
-/// auto *proc = ServiceLocator::get<ITaskProcessor>();
-/// @endcode
+    /// // Prefer instance() for singletons:
+    /// auto *mgr = &ModelManager::instance();
+    ///
+    /// // ServiceLocator for multi-implementation registries:
+    /// ServiceLocator::set<ITaskProcessor>(myProcessor);
+    /// auto *proc = ServiceLocator::get<ITaskProcessor>();
+    /// @endcode
     ///
     /// @note Not thread-safe. Register services before starting worker threads.
     class ServiceLocator {
@@ -57,22 +56,8 @@ namespace dsfw {
         /// @brief Remove all service registrations.
         static void resetAll();
 
-        /// @brief Convenience: get the registered FormatAdapterRegistry.
-        /// @return Pointer to the registry, or nullptr.
-        static FormatAdapterRegistry *formatAdapterRegistry();
-        /// @brief Convenience: register a FormatAdapterRegistry.
-        /// @param registry Pointer to the registry (caller retains ownership).
-        static void setFormatAdapterRegistry(FormatAdapterRegistry *registry);
-        /// @brief Convenience: remove the FormatAdapterRegistry registration.
-        static void resetFormatAdapterRegistry();
-
     private:
         static std::unordered_map<std::type_index, std::any> &services();
     };
 
-}
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::ServiceLocator;
 }

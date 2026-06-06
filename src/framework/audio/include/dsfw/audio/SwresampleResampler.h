@@ -4,7 +4,7 @@
 
 #include <dsfw/audio/AudioBuffer.h>
 #include <dsfw/audio/ResampleConfig.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <memory>
 
 namespace dsfw::audio {

@@ -42,7 +42,7 @@ endforeach ()
 # PitchProcessor test (links data-sources which includes pitch-editor)
 add_executable(TestPitchProcessor TestPitchProcessor.cpp)
 target_link_libraries(TestPitchProcessor PRIVATE
-        data-sources
+        dstools::shared::data-sources
         Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestPitchProcessor COMMAND TestPitchProcessor)
@@ -52,7 +52,7 @@ set_tests_properties(TestPitchProcessor PROPERTIES
 
 add_executable(TestPitchExtractionService TestPitchExtractionService.cpp)
 target_link_libraries(TestPitchExtractionService PRIVATE
-        data-sources
+        dstools::shared::data-sources
         game-infer
         Qt${QT_VERSION_MAJOR}::Test
 )
@@ -63,7 +63,7 @@ set_tests_properties(TestPitchExtractionService PROPERTIES
 
 add_executable(TestSlicerService TestSlicerService.cpp)
 target_link_libraries(TestSlicerService PRIVATE
-        data-sources
+        dstools::shared::data-sources
         slicer-lib
         Qt${QT_VERSION_MAJOR}::Test
 )
@@ -76,7 +76,7 @@ add_executable(TestDsTextDocBridgeRoundtrip TestDsTextDocBridgeRoundtrip.cpp)
 target_link_libraries(TestDsTextDocBridgeRoundtrip PRIVATE
         dstools-domain
         dsfw-base
-        shared-bridges
+        dstools::shared::bridges
         Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestDsTextDocBridgeRoundtrip COMMAND TestDsTextDocBridgeRoundtrip)
@@ -90,7 +90,7 @@ target_include_directories(TestCompositeInferenceService PRIVATE
         ${CMAKE_SOURCE_DIR}/src/apps/shared/data-sources
 )
 target_link_libraries(TestCompositeInferenceService PRIVATE
-        data-sources
+        dstools::shared::data-sources
         dsfw-infer
         Qt${QT_VERSION_MAJOR}::Test
 )

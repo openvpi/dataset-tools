@@ -1,6 +1,6 @@
 #include "EntryListPanel.h"
 #include "TextGridDocument.h"
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <dsfw/widgets/ViewportController.h>
 
 #include <QVBoxLayout>

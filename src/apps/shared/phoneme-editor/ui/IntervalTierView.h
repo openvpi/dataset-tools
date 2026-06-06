@@ -9,7 +9,7 @@
 #include <QPoint>
 #include <QVector>
 #include <QWidget>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <dsfw/widgets/ViewportController.h>
 
 class QPainter;

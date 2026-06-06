@@ -3,7 +3,7 @@
 #include <dsfw/PathUtils.h>
 #include <dstools/DsKeys.h>
 #include <dstools/DsTextTypes.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include "DsTextDocBridge.h"
 
 using namespace dstools;

@@ -5,7 +5,7 @@
 #include "ui/PropertyPanel.h"
 #include "ui/commands/NoteCommands.h"
 
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include "../audio-visualizer/AudioVisualizerContainer.h"
 #include "../audio-visualizer/dstools/MiniMapScrollBar.h"
 #include <WaveformChartPanel.h>

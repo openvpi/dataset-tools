@@ -22,7 +22,7 @@
 #include <dsfw/widgets/PipelineStatusBar.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/IEditorDataSource.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <dsfw/widgets/ShortcutManager.h>
 #include "IEnginePoolHost.h"
 #include <functional>

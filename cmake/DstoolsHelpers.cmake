@@ -15,10 +15,10 @@
     )
 
     # Interface (header-only) library:
-    dstools_add_library(dstools-types
+    dstools_add_library(dsfw-types
         INTERFACE
         NAMESPACE dsfw::types
-        EXPORT_SET dstools-typesTargets
+        EXPORT_SET dsfw-typesTargets
     )
 
     # Application executable with deploy and platform settings:

@@ -1,12 +1,12 @@
 project(dsfw-infer)
 
 if (NOT TARGET dsfw::types)
-    find_package(dstools-types CONFIG REQUIRED)
+    find_package(dsfw-types CONFIG REQUIRED)
 endif ()
 
 if (NOT TARGET onnxruntime)
     add_library(onnxruntime INTERFACE IMPORTED)
-    set(_ORT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../infer/onnxruntime")
+    set(_ORT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../engine/engines/onnxruntime")
     target_include_directories(onnxruntime INTERFACE
             $<BUILD_INTERFACE:${_ORT_ROOT}/include>
     )

@@ -3,7 +3,7 @@
 #include <PitchExtractionService.h>
 #include <game-infer/Game.h>
 #include <dstools/DsTextTypes.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 class TestPitchExtractionService : public QObject {
     Q_OBJECT

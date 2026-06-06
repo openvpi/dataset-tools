@@ -17,14 +17,18 @@
 #include <dsfw/IModelProvider.h>
 #include <dsfw/Log.h>
 #include <dsfw/widgets/ToastNotification.h>
-#include <dstools/Constants.h>
-#include <dstools/CurveTools.h>
+#include <dsfw/Constants.h>
+#include <dsfw/signal/curve_tools.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/PitchUtils.h>
 #include <dsfw/audio/AudioPipeline.h>
 #include <dsfw/PathUtils.h>
 
 namespace dstools {
+
+    using dsfw::signal::expectedFrameCount;
+    using dsfw::signal::hopSizeToTimestep;
+    using dsfw::signal::resampleCurve;
 
     void pitchLabelerApplyPitchResult(IEditorDataSource *source, std::shared_ptr<pitchlabeler::DsPitchDocument> &currentFile,
                                       pitchlabeler::PitchEditor *editor, const QString &sliceId,

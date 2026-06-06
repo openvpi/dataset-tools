@@ -4,7 +4,7 @@
 #include <dsfw/IFormatAdapter.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/DsKeys.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 #include <QFileInfo>
 

@@ -7,7 +7,7 @@
 #include <dsfw/audio/FfmpegAudioDecoder.h>
 #include <dsfw/audio/SwresampleResampler.h>
 #include <dsfw/audio/ResampleConfig.h>
-#include <dstools/Result.h>
+#include <dsfw/Result.h>
 #include <memory>
 #include <string>
 

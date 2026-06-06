@@ -8,7 +8,7 @@
 #include <QSet>
 #include <cstdint>
 #include <dstools/PitchUtils.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 #include <map>
 #include <memory>
 #include <set>

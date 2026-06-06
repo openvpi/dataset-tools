@@ -12,7 +12,7 @@
 #include "commands/NoteCommands.h"
 
 #include <dstools/PitchUtils.h>
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 #include <cmath>
 #include <algorithm>

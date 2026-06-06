@@ -56,6 +56,10 @@ namespace dsfw {
         /// Clean up old snapshots, keeping only the kMaxSnapshots most recent.
         static void cleanupOldSnapshots(const QString &snapshotDir);
 
+        /// Clean up all orphaned snapshot files from a previous interrupted run.
+        /// Call this on application startup to remove stale snapshots.
+        static void cleanupOrphanedSnapshots(const QString &snapshotDir);
+
         /// Check if any snapshot files exist in the given directory.
         /// Use this to detect residual snapshots from a previous interrupted run.
         [[nodiscard]] static bool hasLatestSnapshot(const QString &snapshotDir);
@@ -74,11 +78,3 @@ namespace dsfw {
     };
 
 } // namespace dsfw
-
-// Backward compatibility
-namespace dstools {
-    using dsfw::PipelineRunner;
-    using dsfw::PipelineOptions;
-    using dsfw::StepConfig;
-    using dsfw::ValidationCallback;
-}

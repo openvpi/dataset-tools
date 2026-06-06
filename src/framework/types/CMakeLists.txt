@@ -1,4 +1,4 @@
-project(dstools-types)
+project(dsfw-types)
 
 dstools_add_library(${PROJECT_NAME}
         INTERFACE
@@ -18,13 +18,13 @@ if (NOT DSTOOLS_DEPLOY_MODE)
     )
 
     configure_package_config_file(
-            "${PROJECT_CMAKE_MODULES_DIR}/dstools-typesConfig.cmake.in"
-            "${CMAKE_CURRENT_BINARY_DIR}/dstools-typesConfig.cmake"
+            "${PROJECT_CMAKE_MODULES_DIR}/dsfw-typesConfig.cmake.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/dsfw-typesConfig.cmake"
             INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     )
 
     install(FILES
-            "${CMAKE_CURRENT_BINARY_DIR}/dstools-typesConfig.cmake"
+            "${CMAKE_CURRENT_BINARY_DIR}/dsfw-typesConfig.cmake"
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     )
 endif ()

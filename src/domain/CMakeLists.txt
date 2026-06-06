@@ -19,7 +19,7 @@ dstools_add_library(${PROJECT_NAME}
         NAMESPACE dstools::domain
         EXPORT_SET dstoolsDomainTargets
         DEPENDS
-        PUBLIC dsfw-core dstools-types
+        PUBLIC dsfw-core dsfw-types
         Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
         PRIVATE textgrid dsfw-audio
         INCLUDE_DIRS

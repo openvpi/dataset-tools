@@ -1,7 +1,7 @@
 project(dsfw-core)
 
 if (NOT TARGET dsfw::types)
-    find_package(dstools-types CONFIG REQUIRED)
+    find_package(dsfw-types CONFIG REQUIRED)
 endif ()
 
 if (NOT TARGET Qt6::Core)

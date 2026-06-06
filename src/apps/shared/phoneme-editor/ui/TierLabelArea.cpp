@@ -2,7 +2,7 @@
 
 #include "IBoundaryModel.h"
 
-#include <dstools/TimePos.h>
+#include <dsfw/TimePos.h>
 
 namespace dstools {
 
