@@ -18,7 +18,7 @@ namespace dstools {
             ///
             /// Maps DsPitchDocument notes to IBoundaryModel interface for use with AudioVisualizerContainer.
             /// Each note has two boundaries (start and end), allowing boundary drag interaction.
-            class NoteBoundaryModel : public QObject, public chart::IBoundaryModel {
+            class NoteBoundaryModel : public QObject, public dstools::IBoundaryModel {
                 Q_OBJECT
 
             public:

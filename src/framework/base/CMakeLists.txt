@@ -1,6 +1,6 @@
 project(dsfw-base)
 
-if (NOT TARGET dstools-types::dstools-types)
+if (NOT TARGET dsfw::types)
     find_package(dstools-types CONFIG REQUIRED)
 endif ()
 
@@ -11,5 +11,5 @@ dstools_add_library(${PROJECT_NAME}
         NAMESPACE dsfw::base
         EXPORT_SET dsfwTargets
         DEPENDS
-        PUBLIC dstools-types::dstools-types nlohmann_json::nlohmann_json
+        PUBLIC dsfw::types nlohmann_json::nlohmann_json
 )

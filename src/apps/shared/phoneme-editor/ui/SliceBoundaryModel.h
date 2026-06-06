@@ -5,7 +5,7 @@
 
 #include "IBoundaryModel.h"
 
-using dstools::chart::IBoundaryModel;
+using dstools::dstools::IBoundaryModel;
 
 #include <vector>
 
@@ -58,7 +58,7 @@ namespace dstools {
 
             [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
                                                     TimePos proposedTime) const override;
-            [[nodiscard]] std::vector<dstools::chart::OutOfBoundsRange> getOutOfBoundsRanges(
+            [[nodiscard]] std::vector<dstools::dstools::OutOfBoundsRange> getOutOfBoundsRanges(
                 int tierIndex) const override;
             [[nodiscard]] TimePos snapToNearestBoundary(int tierIndex, TimePos proposedTime,
                                                         TimePos snapThreshold) const override;

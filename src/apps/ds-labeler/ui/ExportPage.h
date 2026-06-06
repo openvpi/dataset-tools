@@ -29,9 +29,9 @@ namespace dstools {
     ///
     /// Validates data completeness, auto-completes missing steps, and exports
     /// the dataset in MakeDiffSinger-compatible format.
-    class ExportPage : public QWidget, public labeler::IPageActions, public labeler::IPageLifecycle {
+    class ExportPage : public QWidget, public dsfw::IPageActions, public dsfw::IPageLifecycle {
         Q_OBJECT
-        Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
+        Q_INTERFACES(dsfw::IPageActions dsfw::IPageLifecycle)
 
     public:
         explicit ExportPage(QWidget *parent = nullptr);

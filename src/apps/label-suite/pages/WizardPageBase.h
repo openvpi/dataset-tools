@@ -11,9 +11,9 @@ namespace dstools::labeler {
 
 /// Base class for label-suite wizard pages providing common UI structure:
 /// working directory management, RunProgressRow, log output, and optional Run QAction.
-class WizardPageBase : public QWidget, public IPageActions {
+class WizardPageBase : public QWidget, public dsfw::IPageActions {
     Q_OBJECT
-    Q_INTERFACES(dstools::labeler::IPageActions)
+    Q_INTERFACES(dsfw::IPageActions)
 
 public:
     explicit WizardPageBase(QWidget *parent = nullptr);

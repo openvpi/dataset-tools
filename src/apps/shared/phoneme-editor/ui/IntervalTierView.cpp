@@ -13,7 +13,7 @@
 
 #include <dsfw/Theme.h>
 
-using dstools::chart::MoveBoundaryCommand;
+using dstools::dstools::MoveBoundaryCommand;
 
 namespace dstools {
 namespace phonemelabeler {

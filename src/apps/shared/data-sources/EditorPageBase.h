@@ -56,9 +56,9 @@ namespace dstools {
         QString skipExistingLabel;
     };
 
-    class EditorPageBase : public QWidget, public IEnginePoolHost, public labeler::IPageActions, public labeler::IPageLifecycle {
+    class EditorPageBase : public QWidget, public IEnginePoolHost, public dsfw::IPageActions, public dsfw::IPageLifecycle {
         Q_OBJECT
-        Q_INTERFACES(dstools::IEnginePoolHost dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
+        Q_INTERFACES(dstools::IEnginePoolHost dsfw::IPageActions dsfw::IPageLifecycle)
 
     public:
         explicit EditorPageBase(const QString &settingsGroup, QWidget *parent = nullptr);

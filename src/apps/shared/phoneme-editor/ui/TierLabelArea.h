@@ -8,10 +8,10 @@
 
 namespace dstools {
 
-    namespace chart {
+    namespace dstools {
         class IBoundaryModel;
     }
-    using chart::IBoundaryModel;
+    using dstools::IBoundaryModel;
 
     using dsfw::widgets::ViewportController;
     using dsfw::widgets::ViewportState;
@@ -52,7 +52,7 @@ namespace dstools {
         double m_viewEnd = 10.0;
 
         [[nodiscard]] double timeToX(double time) const;
-        [[nodiscard]] chart::ChartCoordinate buildCoordinate() const;
+        [[nodiscard]] dstools::ChartCoordinate buildCoordinate() const;
     };
 
 } // namespace dstools

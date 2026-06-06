@@ -16,7 +16,7 @@
 class QUndoStack;
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         using dsfw::widgets::ViewportController;
 
@@ -182,5 +182,5 @@ namespace dstools {
             static constexpr int kBoundaryHitWidth = 12;
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

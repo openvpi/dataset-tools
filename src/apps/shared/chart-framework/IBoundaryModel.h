@@ -4,7 +4,7 @@
 #include <dstools/TimePos.h>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         struct OutOfBoundsRange {
             double startSec;
@@ -69,5 +69,5 @@ namespace dstools {
             }
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

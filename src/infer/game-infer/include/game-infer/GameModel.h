@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <dstools/ExecutionProvider.h>
-#include <dstools/OnnxModelBase.h>
+#include <dsfw/infer/OnnxModelBase.h>
 
 #include "GameGlobal.h"
 

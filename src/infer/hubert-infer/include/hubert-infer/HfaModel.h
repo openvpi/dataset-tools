@@ -2,7 +2,7 @@
 /// @brief ONNX Runtime model for HuBERT-FA inference.
 
 #pragma once
-#include <dstools/OnnxModelBase.h>
+#include <dsfw/infer/OnnxModelBase.h>
 #include <filesystem>
 #include <hubert-infer/HubertInferGlobal.h>
 #include <hubert-infer/Provider.h>

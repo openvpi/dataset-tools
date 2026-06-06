@@ -2,7 +2,7 @@ project(dstools-types)
 
 dstools_add_library(${PROJECT_NAME}
         INTERFACE
-        NAMESPACE dstools-types::dstools-types
+        NAMESPACE dsfw::types
         EXPORT_SET ${PROJECT_NAME}Targets
 )
 

@@ -5,7 +5,7 @@
 #include <QWidget>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         class PowerChartPanel : public ChartPanelBase {
             Q_OBJECT
@@ -41,5 +41,5 @@ namespace dstools {
             std::vector<float> m_powerCache;
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

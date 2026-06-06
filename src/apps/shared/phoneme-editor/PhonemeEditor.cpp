@@ -119,7 +119,7 @@ void PhonemeEditor::setPianoRollVisible(bool visible) {
 }
 
 void PhonemeEditor::setSpectrogramColorStyle(const QString &styleName) {
-    m_spectrogramChart->setColorPalette(chart::SpectrogramColorPalette::fromName(styleName));
+    m_spectrogramChart->setColorPalette(dstools::SpectrogramColorPalette::fromName(styleName));
 }
 
 void PhonemeEditor::saveChartVisibility() {
@@ -196,7 +196,7 @@ void PhonemeEditor::buildActions() {
     m_spectrogramColorMenu = new QMenu(tr("Spectrogram &Color"), this);
     m_spectrogramColorGroup = new QActionGroup(this);
     m_spectrogramColorGroup->setExclusive(true);
-    for (const auto &palette : chart::SpectrogramColorPalette::builtinPresets()) {
+    for (const auto &palette : dstools::SpectrogramColorPalette::builtinPresets()) {
         QAction *act = m_spectrogramColorMenu->addAction(palette.name());
         act->setCheckable(true);
         m_spectrogramColorGroup->addAction(act);
@@ -360,11 +360,11 @@ void PhonemeEditor::connectSignals() {
     // Direct connections here would cause duplicate setViewport() calls.
 
     // Sync menu action checked state with widget visibility (for external visibility changes)
-    connect(m_powerChart, &chart::PowerChartPanel::visibleStateChanged, this, [this](bool visible) {
+    connect(m_powerChart, &dstools::PowerChartPanel::visibleStateChanged, this, [this](bool visible) {
         m_actTogglePower->setChecked(visible);
         emit powerVisibilityChanged(visible);
     });
-    connect(m_spectrogramChart, &chart::SpectrogramChartPanel::visibleStateChanged, this, [this](bool visible) {
+    connect(m_spectrogramChart, &dstools::SpectrogramChartPanel::visibleStateChanged, this, [this](bool visible) {
         m_actToggleSpectrogram->setChecked(visible);
         emit spectrogramVisibilityChanged(visible);
     });
@@ -470,18 +470,18 @@ void PhonemeEditor::connectSignals() {
         if (newIndex < 0) newIndex = 0;
         m_entryListPanel->selectEntry(newIndex);
     };
-    connect(m_waveformChart, &chart::WaveformChartPanel::entryScrollRequested, this, scrollEntry);
-    connect(m_powerChart, &chart::PowerChartPanel::entryScrollRequested, this, scrollEntry);
-    connect(m_spectrogramChart, &chart::SpectrogramChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_waveformChart, &dstools::WaveformChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_powerChart, &dstools::PowerChartPanel::entryScrollRequested, this, scrollEntry);
+    connect(m_spectrogramChart, &dstools::SpectrogramChartPanel::entryScrollRequested, this, scrollEntry);
 
     auto *boundaryOverlay2 = m_container->boundaryOverlay();
 
     // Hover/drag state -> boundary overlay
-    connect(m_waveformChart, &chart::WaveformChartPanel::hoveredBoundaryChanged,
+    connect(m_waveformChart, &dstools::WaveformChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
-    connect(m_powerChart, &chart::PowerChartPanel::hoveredBoundaryChanged,
+    connect(m_powerChart, &dstools::PowerChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
-    connect(m_spectrogramChart, &chart::SpectrogramChartPanel::hoveredBoundaryChanged,
+    connect(m_spectrogramChart, &dstools::SpectrogramChartPanel::hoveredBoundaryChanged,
             boundaryOverlay2, &BoundaryOverlayWidget::setHoveredBoundary);
 
     connect(m_tierEditWidget, &TierEditWidget::tierHoveredBoundaryChanged, this,

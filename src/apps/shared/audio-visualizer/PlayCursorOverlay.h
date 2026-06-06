@@ -20,7 +20,7 @@ namespace dstools {
         void setPlayheadPosition(double positionSec);
         void setViewStart(double startSec);
         void setViewEnd(double endSec);
-        void setCoordConverter(const chart::ChartCoordinate *conv) {
+        void setCoordConverter(const dstools::ChartCoordinate *conv) {
             m_converter = conv;
         }
 
@@ -34,7 +34,7 @@ namespace dstools {
         double m_viewStart = 0.0;
         double m_viewEnd = 10.0;
 
-        const chart::ChartCoordinate *m_converter = nullptr;
+        const dstools::ChartCoordinate *m_converter = nullptr;
     };
 
 } // namespace dstools

@@ -16,7 +16,7 @@ namespace pitchlabeler {
 namespace ui {
 
 /// Piano roll chart panel that wraps PianoRollView in ChartPanelBase architecture
-class PianoRollChartPanel : public chart::ChartPanelBase {
+class PianoRollChartPanel : public dstools::ChartPanelBase {
     Q_OBJECT
 
 public:
@@ -26,12 +26,12 @@ public:
 
     void setDsPitchDocument(std::shared_ptr<DsPitchDocument> file);
     void setUndoStack(QUndoStack* stack);
-    void setBoundaryModel(chart::IBoundaryModel* model);
+    void setBoundaryModel(dstools::IBoundaryModel* model);
 
     PianoRollView* pianoRollView() const { return m_pianoRoll; }
 
-    void drawContent(QPainter& painter, const chart::ChartCoordinate& coord) override;
-    void onViewportUpdate(const chart::ChartCoordinate& conv, int pixelWidth) override;
+    void drawContent(QPainter& painter, const dstools::ChartCoordinate& coord) override;
+    void onViewportUpdate(const dstools::ChartCoordinate& conv, int pixelWidth) override;
     void onBoundaryModelInvalidated() override;
     void paintYAxisContent(QPainter& painter, const QRect& rect) override;
 

@@ -6,9 +6,10 @@ find_package(SDL2 CONFIG REQUIRED)
 dstools_add_library(${PROJECT_NAME}
     STATIC
     AUTOMOC
+    NAMESPACE dsfw::audio
     EXPORT_SET dsfwTargets
     DEPENDS
-    PUBLIC dstools-types Qt${QT_VERSION_MAJOR}::Core
+    PUBLIC dsfw::types Qt${QT_VERSION_MAJOR}::Core
     PRIVATE dsfw-core SDL2::SDL2
 )
 

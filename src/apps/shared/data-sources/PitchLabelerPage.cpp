@@ -20,7 +20,7 @@
 #include <dsfw/CommonKeys.h>
 #include <dstools/ModelManager.h>
 #include <dsfw/IModelProvider.h>
-#include <dstools/InferenceModelProvider.h>
+#include <dsfw/infer/InferenceModelProvider.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/CurveTools.h>

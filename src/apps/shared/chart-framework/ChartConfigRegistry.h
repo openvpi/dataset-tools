@@ -9,7 +9,7 @@
 
 namespace dstools {
 
-namespace chart {
+namespace dstools {
 
 class ChartConfigRegistry {
 public:
@@ -43,5 +43,5 @@ private:
     QMap<QString, QMap<QString, QVariant>> m_overrides;
 };
 
-} // namespace chart
+} // namespace dstools
 } // namespace dstools

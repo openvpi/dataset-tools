@@ -13,4 +13,4 @@ dstools_add_infer_library(${PROJECT_NAME}
 )
 
 # Library-specific dependencies
-target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-audio dsfw-core infer-common)
+target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-audio dsfw-core dsfw-infer)

@@ -20,21 +20,21 @@ void MouthCurveChartPanel::registerChartConfig() {
         return;
     registered = true;
 
-    chart::ChartConfigDescriptor desc;
+    dstools::ChartConfigDescriptor desc;
     desc.chartId = QStringLiteral("mouthCurve");
     desc.displayName = QStringLiteral("口型曲线图");
     desc.params = {
-        {QStringLiteral("amplitudeMin"), QStringLiteral("最小振幅"), chart::ParamType::Double, QVariant(0.5),
+        {QStringLiteral("amplitudeMin"), QStringLiteral("最小振幅"), dstools::ParamType::Double, QVariant(0.5),
          QVariant(0.1), QVariant(5.0), QStringLiteral(""), 1, QStringLiteral("口型曲线垂直缩放下限。越小曲线越扁。")},
-        {QStringLiteral("amplitudeMax"), QStringLiteral("最大振幅"), chart::ParamType::Double, QVariant(10.0),
+        {QStringLiteral("amplitudeMax"), QStringLiteral("最大振幅"), dstools::ParamType::Double, QVariant(10.0),
          QVariant(2.0), QVariant(50.0), QStringLiteral(""), 1,
          QStringLiteral("口型曲线垂直缩放上限。越大曲线波动越平缓。")},
     };
-    chart::ChartConfigRegistry::instance().registerChart(desc);
+    dstools::ChartConfigRegistry::instance().registerChart(desc);
 }
 
 void MouthCurveChartPanel::loadConfigParams() {
-    auto& reg = chart::ChartConfigRegistry::instance();
+    auto& reg = dstools::ChartConfigRegistry::instance();
     m_configAmplitudeMin = reg.value(QStringLiteral("mouthCurve"), QStringLiteral("amplitudeMin")).toDouble();
     m_configAmplitudeMax = reg.value(QStringLiteral("mouthCurve"), QStringLiteral("amplitudeMax")).toDouble();
 }
@@ -53,11 +53,11 @@ void MouthCurveChartPanel::setData(const MouthCurve& curve) {
     update();
 }
 
-void MouthCurveChartPanel::rebuildCache(const chart::RegionUpdate& region) {
+void MouthCurveChartPanel::rebuildCache(const dstools::RegionUpdate& region) {
     Q_UNUSED(region)
 }
 
-void MouthCurveChartPanel::drawContent(QPainter& painter, const chart::ChartCoordinate& coord) {
+void MouthCurveChartPanel::drawContent(QPainter& painter, const dstools::ChartCoordinate& coord) {
     Q_UNUSED(coord)
     if (m_curve.isEmpty()) {
         drawEmptyState(painter, QStringLiteral("No mouth curve data"));
@@ -68,7 +68,7 @@ void MouthCurveChartPanel::drawContent(QPainter& painter, const chart::ChartCoor
 }
 
 void MouthCurveChartPanel::paintYAxisContent(QPainter& painter, const QRect& chartRect) {
-    constexpr int kPadding = chart::ChartPanelBase::kYAxisPadding;
+    constexpr int kPadding = dstools::ChartPanelBase::kYAxisPadding;
     QRect innerRect(chartRect.x(), chartRect.y() + kPadding, chartRect.width(), chartRect.height() - 2 * kPadding);
     paintYAxisTicks(painter, innerRect, kCurveMin, kCurveMax, kYTickCount, 2);
 }

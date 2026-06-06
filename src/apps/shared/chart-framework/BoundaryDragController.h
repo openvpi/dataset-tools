@@ -9,7 +9,7 @@
 class QUndoStack;
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         class IBoundaryModel;
 
@@ -101,5 +101,5 @@ namespace dstools {
             std::vector<TimePos> m_partnerStartTimes;
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

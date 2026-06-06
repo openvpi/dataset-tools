@@ -209,7 +209,7 @@ void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel* model) {
     m_boundaryOverlay->setBoundaryModel(model);
 
     for (auto& entry : m_charts) {
-        if (auto* panel = qobject_cast<chart::ChartPanelBase*>(entry.widget))
+        if (auto* panel = qobject_cast<dstools::ChartPanelBase*>(entry.widget))
             panel->setBoundaryModel(model);
     }
 
@@ -388,7 +388,7 @@ void AudioVisualizerContainer::refreshYAxisLabels() {
         QWidget* child = m_chartSplitter->widget(i);
         if (!child->isVisible())
             continue;
-        auto* panel = qobject_cast<chart::ChartPanelBase*>(child);
+        auto* panel = qobject_cast<dstools::ChartPanelBase*>(child);
         if (!panel)
             continue;
 
@@ -404,9 +404,9 @@ void AudioVisualizerContainer::refreshYAxisLabels() {
         labelWidget->setFixedHeight(childHeight);
         labelWidget->show();
 
-        if (auto* base = qobject_cast<chart::ChartPanelBase*>(child)) {
+        if (auto* base = qobject_cast<dstools::ChartPanelBase*>(child)) {
             QWidget* label = labelWidget;
-            connect(base, &chart::ChartPanelBase::verticalContentScrolled, label, [label]() { label->update(); });
+            connect(base, &dstools::ChartPanelBase::verticalContentScrolled, label, [label]() { label->update(); });
         }
 
         m_yAxisLabels.append(labelWidget);
@@ -673,12 +673,12 @@ void AudioVisualizerContainer::addChart(const QString& id, QWidget* widget, int 
     // Auto-set drag controller on chart widgets that support it (reduces boilerplate
     // in page assembly code; see refactoring-roadmap-v2.md §7.7).
     if (m_dragController) {
-        if (auto* panel = qobject_cast<chart::ChartPanelBase*>(widget))
+        if (auto* panel = qobject_cast<dstools::ChartPanelBase*>(widget))
             panel->setDragController(m_dragController);
     }
 
     if (m_boundaryModel) {
-        if (auto* panel = qobject_cast<chart::ChartPanelBase*>(widget))
+        if (auto* panel = qobject_cast<dstools::ChartPanelBase*>(widget))
             panel->setBoundaryModel(m_boundaryModel);
     }
 
@@ -927,7 +927,7 @@ void AudioVisualizerContainer::connectViewportToWidget(QWidget* widget) {
     connect(m_viewport, &ViewportController::viewportChanged, this, [safeWidget, this](const ViewportState& state) {
         if (!safeWidget)
             return;
-        if (auto* panel = qobject_cast<chart::ChartPanelBase*>(safeWidget.data())) {
+        if (auto* panel = qobject_cast<dstools::ChartPanelBase*>(safeWidget.data())) {
             panel->onViewportUpdate(m_coordConverter, safeWidget->width());
         }
     });
@@ -960,7 +960,7 @@ void AudioVisualizerContainer::forEachChartWidget(const std::function<void(QWidg
 
 void AudioVisualizerContainer::notifyChartsPlayhead(double sec) {
     forEachChartWidget([sec](QWidget* w) {
-        if (auto* panel = qobject_cast<chart::ChartPanelBase*>(w))
+        if (auto* panel = qobject_cast<dstools::ChartPanelBase*>(w))
             panel->setPlayhead(sec);
     });
 }

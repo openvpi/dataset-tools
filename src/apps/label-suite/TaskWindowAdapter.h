@@ -13,9 +13,9 @@ namespace dsfw {
 
 namespace dstools::labeler {
 
-    class TaskWindowAdapter : public QWidget, public IPageActions, public IPageLifecycle {
+    class TaskWindowAdapter : public QWidget, public dsfw::IPageActions, public dsfw::IPageLifecycle {
         Q_OBJECT
-        Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
+        Q_INTERFACES(dsfw::IPageActions dsfw::IPageLifecycle)
     public:
         explicit TaskWindowAdapter(dsfw::widgets::TaskWindow *page, QWidget *parent = nullptr);
         ~TaskWindowAdapter() override;

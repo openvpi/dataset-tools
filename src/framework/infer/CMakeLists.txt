@@ -1,6 +1,6 @@
-project(infer-common)
+project(dsfw-infer)
 
-if (NOT TARGET dstools-types::dstools-types)
+if (NOT TARGET dsfw::types)
     find_package(dstools-types CONFIG REQUIRED)
 endif ()
 
@@ -31,9 +31,10 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 dstools_add_library(${PROJECT_NAME}
         STATIC
+        NAMESPACE dsfw::infer
         EXPORT_SET dsfwTargets
         DEPENDS
-        PUBLIC dsfw-core dstools-types::dstools-types onnxruntime nlohmann_json::nlohmann_json Qt${QT_VERSION_MAJOR}::Core
+        PUBLIC dsfw-core dsfw::types onnxruntime nlohmann_json::nlohmann_json Qt${QT_VERSION_MAJOR}::Core
         INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )

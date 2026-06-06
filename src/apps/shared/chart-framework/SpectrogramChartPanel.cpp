@@ -15,7 +15,7 @@
 #endif
 
 namespace dstools {
-namespace chart {
+namespace dstools {
 
 SpectrogramChartPanel::SpectrogramChartPanel(ViewportController *viewport, QWidget *parent)
     : ChartPanelBase(QStringLiteral("spectrogram"), viewport, parent)
@@ -439,5 +439,5 @@ double SpectrogramChartPanel::dataDurationSec() const {
     return static_cast<double>(m_samples.size()) / (m_sampleRate * 2.0);
 }
 
-} // namespace chart
+} // namespace dstools
 } // namespace dstools

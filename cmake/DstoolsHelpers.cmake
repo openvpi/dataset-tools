@@ -10,14 +10,14 @@
         NAMESPACE dsfw::core
         EXPORT_SET dsfwTargets
         DEPENDS
-            PUBLIC dsfw-base dstools-types::dstools-types Qt6::Core Qt6::Network nlohmann_json::nlohmann_json
+            PUBLIC dsfw-base dsfw::types Qt6::Core Qt6::Network nlohmann_json::nlohmann_json
             PRIVATE $<$<PLATFORM_ID:Windows>:dbghelp>
     )
 
     # Interface (header-only) library:
     dstools_add_library(dstools-types
         INTERFACE
-        NAMESPACE dstools-types::dstools-types
+        NAMESPACE dsfw::types
         EXPORT_SET dstools-typesTargets
     )
 

@@ -12,7 +12,7 @@
 #include <cmath>
 
 namespace dstools {
-namespace chart {
+namespace dstools {
 
 WaveformChartPanel::WaveformChartPanel(ViewportController *viewport, QWidget *parent)
     : ChartPanelBase(QStringLiteral("waveform"), viewport, parent)
@@ -338,5 +338,5 @@ int WaveformChartPanel::optimalRenderWidth() const {
     return std::max(widgetWidth * 4, minWidth);
 }
 
-} // namespace chart
+} // namespace dstools
 } // namespace dstools

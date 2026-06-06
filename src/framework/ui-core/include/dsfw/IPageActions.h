@@ -12,7 +12,7 @@ class QDragEnterEvent;
 class QDropEvent;
 class QWidget;
 
-namespace dstools::labeler {
+namespace dsfw {
 
     /// @brief Interface for pages that contribute menus, status bar content, and drag-drop handling.
     ///
@@ -74,7 +74,7 @@ namespace dstools::labeler {
         }
     };
 
-} // namespace dstools::labeler
+} // namespace dsfw
 
-#define LABELER_PAGE_ACTIONS_IID "dstools.labeler.IPageActions"
-Q_DECLARE_INTERFACE(dstools::labeler::IPageActions, LABELER_PAGE_ACTIONS_IID)
+#define LABELER_PAGE_ACTIONS_IID "dsfw.IPageActions"
+Q_DECLARE_INTERFACE(dsfw::IPageActions, LABELER_PAGE_ACTIONS_IID)

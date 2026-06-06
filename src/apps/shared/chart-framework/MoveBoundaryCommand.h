@@ -4,7 +4,7 @@
 #include <dstools/TimePos.h>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         class IBoundaryModel;
 
@@ -29,5 +29,5 @@ namespace dstools {
             TimePos m_newTime;
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

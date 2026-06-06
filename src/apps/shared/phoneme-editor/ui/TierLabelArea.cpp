@@ -75,8 +75,8 @@ namespace dstools {
         return buildCoordinate().timeToX(time);
     }
 
-    chart::ChartCoordinate TierLabelArea::buildCoordinate() const {
-        chart::ChartCoordinate coord;
+    dstools::ChartCoordinate TierLabelArea::buildCoordinate() const {
+        dstools::ChartCoordinate coord;
         coord.viewStart = m_viewStart;
         coord.viewEnd = m_viewEnd;
         coord.pixelWidth = width();

@@ -11,7 +11,7 @@
 #include <dsfw/AppSettings.h>
 #include <dsfw/AppPaths.h>
 #include <dstools/ModelManager.h>
-#include <dstools/InferenceModelProvider.h>
+#include <dsfw/infer/InferenceModelProvider.h>
 #include <dsfw/widgets/PlayWidget.h>
 #include <dsfw/widgets/ShortcutManager.h>
 #include <dsfw/widgets/ToastNotification.h>

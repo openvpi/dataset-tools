@@ -9,7 +9,7 @@
 #include <dsfw/widgets/ViewportController.h>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
@@ -70,5 +70,5 @@ namespace dstools {
             QTimer m_playheadHideTimer;
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

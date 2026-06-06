@@ -17,15 +17,15 @@ void PianoRollChartPanel::registerChartConfig() {
         return;
     registered = true;
 
-    chart::ChartConfigDescriptor desc;
+    dstools::ChartConfigDescriptor desc;
     desc.chartId = QStringLiteral("pianoroll");
     desc.displayName = QStringLiteral("钢琴窗");
     desc.params = {};
-    chart::ChartConfigRegistry::instance().registerChart(desc);
+    dstools::ChartConfigRegistry::instance().registerChart(desc);
 }
 
 PianoRollChartPanel::PianoRollChartPanel(dsfw::widgets::ViewportController* vc, QWidget* parent)
-    : chart::ChartPanelBase("pianoroll", vc, parent), m_pianoRoll(new PianoRollView(this)) {
+    : dstools::ChartPanelBase("pianoroll", vc, parent), m_pianoRoll(new PianoRollView(this)) {
     // Set up piano roll
     m_pianoRoll->setViewportController(vc);
     m_pianoRoll->setContentLeftMargin(0);
@@ -56,17 +56,17 @@ void PianoRollChartPanel::setUndoStack(QUndoStack* stack) {
     m_pianoRoll->setUndoStack(stack);
 }
 
-void PianoRollChartPanel::setBoundaryModel(chart::IBoundaryModel* model) {
+void PianoRollChartPanel::setBoundaryModel(dstools::IBoundaryModel* model) {
     // Note: PianoRollView doesn't use boundary model directly
     // This is for future integration with NoteBoundaryModel
     ChartPanelBase::setBoundaryModel(model);
 }
 
-void PianoRollChartPanel::drawContent(QPainter& painter, const chart::ChartCoordinate& coord) {
+void PianoRollChartPanel::drawContent(QPainter& painter, const dstools::ChartCoordinate& coord) {
     m_pianoRoll->render(painter, coord);
 }
 
-void PianoRollChartPanel::onViewportUpdate(const chart::ChartCoordinate& conv, int pixelWidth) {
+void PianoRollChartPanel::onViewportUpdate(const dstools::ChartCoordinate& conv, int pixelWidth) {
     ChartPanelBase::onViewportUpdate(conv, pixelWidth);
 }
 

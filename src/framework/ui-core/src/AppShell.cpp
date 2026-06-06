@@ -116,7 +116,7 @@ int AppShell::addPage(QWidget* page, const QString& id, const QIcon& icon, const
         return -1;
 
     // Verify page implements IPageActions
-    auto* actions = qobject_cast<dstools::labeler::IPageActions*>(page);
+    auto* actions = qobject_cast<dsfw::IPageActions*>(page);
     Q_UNUSED(actions); // Not required, but expected
 
     const int idx = m_pages.size();
@@ -183,13 +183,13 @@ void AppShell::setWorkingDirectory(const QString& dir) {
 
     // Propagate to all pages
     for (const auto& entry : m_pages) {
-        if (auto* actions = qobject_cast<dstools::labeler::IPageActions*>(entry.widget))
+        if (auto* actions = qobject_cast<dsfw::IPageActions*>(entry.widget))
             actions->setWorkingDirectory(dir);
     }
 
     // Notify pages of directory change
     for (const auto& entry : m_pages) {
-        if (auto* lifecycle = qobject_cast<dstools::labeler::IPageLifecycle*>(entry.widget))
+        if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(entry.widget))
             lifecycle->onWorkingDirectoryChanged(dir);
     }
 
@@ -228,7 +228,7 @@ void AppShell::onPageSwitched(int index) {
     // Deactivate old page
     auto* oldPage = m_stack->currentWidget();
     if (oldPage && oldPage != m_pages[index].widget) {
-        if (auto* lifecycle = qobject_cast<dstools::labeler::IPageLifecycle*>(oldPage)) {
+        if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(oldPage)) {
             if (!lifecycle->onDeactivating()) {
                 // Veto — revert nav bar selection
                 m_navBar->blockSignals(true);
@@ -249,12 +249,12 @@ void AppShell::onPageSwitched(int index) {
 
     // Activate new page
     auto* newPage = m_pages[index].widget;
-    if (auto* lifecycle = qobject_cast<dstools::labeler::IPageLifecycle*>(newPage)) {
+    if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(newPage)) {
         lifecycle->onActivated();
     }
 
     // Update window title
-    if (auto* actions = qobject_cast<dstools::labeler::IPageActions*>(newPage)) {
+    if (auto* actions = qobject_cast<dsfw::IPageActions*>(newPage)) {
         const auto title = actions->windowTitle();
         if (!title.isEmpty())
             setWindowTitle(title);
@@ -270,7 +270,7 @@ void AppShell::rebuildMenuBar() {
     m_menuBar->clear();
 
     auto* page = m_stack->currentWidget();
-    auto* actions = page ? qobject_cast<dstools::labeler::IPageActions*>(page) : nullptr;
+    auto* actions = page ? qobject_cast<dsfw::IPageActions*>(page) : nullptr;
 
     // Let the current page populate menus
     if (actions) {
@@ -367,14 +367,14 @@ void AppShell::rebuildStatusBar() {
     }
 
     auto* page = m_stack->currentWidget();
-    if (auto* actions = qobject_cast<dstools::labeler::IPageActions*>(page)) {
+    if (auto* actions = qobject_cast<dsfw::IPageActions*>(page)) {
         actions->createStatusBarContent(sb);
     }
 }
 
 bool AppShell::hasAnyUnsavedChanges() const {
     for (const auto& entry : m_pages) {
-        if (auto* actions = qobject_cast<dstools::labeler::IPageActions*>(entry.widget))
+        if (auto* actions = qobject_cast<dsfw::IPageActions*>(entry.widget))
             if (actions->hasUnsavedChanges())
                 return true;
     }
@@ -394,7 +394,7 @@ void AppShell::onChildPlayStopped() {
 void AppShell::closeEvent(QCloseEvent* event) {
     // Check active page lifecycle veto
     if (auto* page = m_stack->currentWidget()) {
-        if (auto* lifecycle = qobject_cast<dstools::labeler::IPageLifecycle*>(page)) {
+        if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(page)) {
             if (!lifecycle->onDeactivating()) {
                 event->ignore();
                 return;
@@ -419,7 +419,7 @@ void AppShell::closeEvent(QCloseEvent* event) {
 
     // Dispatch shutdown to all pages
     for (const auto& entry : m_pages) {
-        if (auto* lifecycle = qobject_cast<dstools::labeler::IPageLifecycle*>(entry.widget))
+        if (auto* lifecycle = qobject_cast<dsfw::IPageLifecycle*>(entry.widget))
             lifecycle->onShutdown();
     }
 
@@ -438,7 +438,7 @@ void AppShell::closeEvent(QCloseEvent* event) {
 
 void AppShell::dragEnterEvent(QDragEnterEvent* event) {
     if (auto* page = m_stack->currentWidget()) {
-        if (auto* actions = qobject_cast<dstools::labeler::IPageActions*>(page)) {
+        if (auto* actions = qobject_cast<dsfw::IPageActions*>(page)) {
             if (actions->supportsDragDrop()) {
                 actions->handleDragEnter(event);
                 return;
@@ -450,7 +450,7 @@ void AppShell::dragEnterEvent(QDragEnterEvent* event) {
 
 void AppShell::dropEvent(QDropEvent* event) {
     if (auto* page = m_stack->currentWidget()) {
-        if (auto* actions = qobject_cast<dstools::labeler::IPageActions*>(page)) {
+        if (auto* actions = qobject_cast<dsfw::IPageActions*>(page)) {
             if (actions->supportsDragDrop()) {
                 actions->handleDrop(event);
                 return;

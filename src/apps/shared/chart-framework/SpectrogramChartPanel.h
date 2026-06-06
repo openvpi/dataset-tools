@@ -8,7 +8,7 @@
 #include <fftw3.h>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         class SpectrogramChartPanel : public ChartPanelBase {
             Q_OBJECT
@@ -70,5 +70,5 @@ namespace dstools {
             SpectrogramColorPalette m_palette{SpectrogramColorPalette::orangeYellow()};
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

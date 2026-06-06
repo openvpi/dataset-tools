@@ -9,7 +9,7 @@ set(TYPES_TESTS
 foreach (test_name ${TYPES_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
     target_link_libraries(${test_name} PRIVATE
-            dstools-types::dstools-types
+            dsfw::types
             Qt${QT_VERSION_MAJOR}::Test
     )
     add_test(NAME ${test_name} COMMAND ${test_name})

@@ -47,10 +47,10 @@ target_link_libraries(TestMockInference PRIVATE
 )
 add_test(NAME TestMockInference COMMAND TestMockInference)
 
-# OnnxModelBase validation tests (depends on infer-common for include path and static methods)
+# OnnxModelBase validation tests (depends on dsfw-infer for include path and static methods)
 add_executable(TestOnnxModelBase TestOnnxModelBase.cpp)
 target_link_libraries(TestOnnxModelBase PRIVATE
-        infer-common
+        dsfw-infer
         Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestOnnxModelBase COMMAND TestOnnxModelBase)

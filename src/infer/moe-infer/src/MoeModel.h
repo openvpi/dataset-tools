@@ -3,7 +3,7 @@
 
 #pragma once
 #include <cstdint>
-#include <dstools/OnnxModelBase.h>
+#include <dsfw/infer/OnnxModelBase.h>
 #include <filesystem>
 #include <memory>
 #include <string>

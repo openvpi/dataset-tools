@@ -5,7 +5,7 @@
 ///        EngineTraits specializations for use by apps through the libs layer.
 
 #include <dsfw/IModelProvider.h>
-#include <dstools/InferenceModelProvider.h>
+#include <dsfw/infer/InferenceModelProvider.h>
 #include <AsrPipeline.h>
 #include <FunAsrModelProvider.h>
 #include <game-infer/Game.h>
@@ -62,7 +62,7 @@ namespace dstools {
 #include <string>
 #include <type_traits>
 
-namespace InferBridge {
+namespace dstools {
 
     template <typename Engine>
     struct ProbeResult {
@@ -96,4 +96,4 @@ namespace InferBridge {
         return {std::nullopt, result.error()};
     }
 
-} // namespace InferBridge
+} // namespace dstools

@@ -17,13 +17,13 @@
 class QVBoxLayout;
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
         class BoundaryDragController;
     }
     namespace phonemelabeler {
 
-        using dstools::chart::ChartCoordinate;
-        using dstools::chart::BoundaryDragController;
+        using dstools::dstools::ChartCoordinate;
+        using dstools::dstools::BoundaryDragController;
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
 

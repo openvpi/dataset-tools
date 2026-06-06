@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         class SpectrogramColorPalette {
         public:
@@ -153,5 +153,5 @@ namespace dstools {
             std::vector<QRgb> m_lut;
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

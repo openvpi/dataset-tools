@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdint>
 
-namespace dsfw::music {
+namespace dsfw::signal {
 
     constexpr const char *kNoteNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
@@ -36,4 +36,4 @@ namespace dsfw::music {
         return 440.0 * std::pow(2.0, (midi - 69.0) / 12.0);
     }
 
-} // namespace dsfw::music
+} // namespace dsfw::signal

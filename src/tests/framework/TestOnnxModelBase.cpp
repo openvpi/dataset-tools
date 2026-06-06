@@ -1,5 +1,5 @@
 #include <QTest>
-#include <dstools/OnnxModelBase.h>
+#include <dsfw/infer/OnnxModelBase.h>
 
 #include <QTemporaryDir>
 

@@ -18,7 +18,7 @@
 #include <QMessageBox>
 #include <dstools/ModelManager.h>
 #include <dsfw/IModelProvider.h>
-#include <dstools/InferenceModelProvider.h>
+#include <dsfw/infer/InferenceModelProvider.h>
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsKeys.h>
@@ -920,7 +920,7 @@ void PhonemeLabelerPage::onExtractF0() {
     auto provider = dsfw::infer::ExecutionProvider::DML;
     int deviceId = 0;
 
-    auto rmvpeProbe = InferBridge::probeRmvpeEngine<Rmvpe::Rmvpe>(std::filesystem::path(cfg.modelPath.toStdWString()),
+    auto rmvpeProbe = dstools::probeRmvpeEngine<Rmvpe::Rmvpe>(std::filesystem::path(cfg.modelPath.toStdWString()),
                                                                   provider, deviceId);
     if (!rmvpeProbe.success()) {
         QMessageBox::warning(this, tr("Extract F0"), tr("Failed to load RMVPE model."));
@@ -970,7 +970,7 @@ void PhonemeLabelerPage::onExtractMidi() {
     auto provider = dsfw::infer::ExecutionProvider::DML;
     int deviceId = 0;
 
-    auto gameProbe = InferBridge::probeGameEngine<Game::Game>(std::filesystem::path(cfg.modelPath.toStdWString()),
+    auto gameProbe = dstools::probeGameEngine<Game::Game>(std::filesystem::path(cfg.modelPath.toStdWString()),
                                                               provider, deviceId);
     if (!gameProbe.success()) {
         QMessageBox::warning(this, tr("Extract MIDI"),

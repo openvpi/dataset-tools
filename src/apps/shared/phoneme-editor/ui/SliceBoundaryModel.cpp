@@ -111,11 +111,11 @@ namespace dstools {
             return static_cast<TimePos>(bestTime * kUsPerSec);
         }
 
-        std::vector<dstools::chart::OutOfBoundsRange> SliceBoundaryModel::getOutOfBoundsRanges(int tierIndex) const {
+        std::vector<dstools::dstools::OutOfBoundsRange> SliceBoundaryModel::getOutOfBoundsRanges(int tierIndex) const {
             if (tierIndex != 0 || m_pointsSec.size() < 2)
                 return {};
 
-            std::vector<dstools::chart::OutOfBoundsRange> ranges;
+            std::vector<dstools::dstools::OutOfBoundsRange> ranges;
             double prev = 0.0;
             for (size_t i = 0; i < m_pointsSec.size(); ++i) {
                 if (m_pointsSec[i] < prev) {

@@ -634,7 +634,7 @@ namespace dstools {
  // ============================================================================
             // Rendering
 
-            void PianoRollView::render(QPainter &painter, const chart::ChartCoordinate &coord) {
+            void PianoRollView::render(QPainter &painter, const dstools::ChartCoordinate &coord) {
                 auto rs = buildRenderState();
                 // Use parent's viewStart/viewEnd for time range but keep our own coordinate
                 // (vScale, contentTop, pixelWidth) for consistent layout. The parent's paintEvent
@@ -865,11 +865,11 @@ namespace dstools {
             // Phoneme boundary model
             // ============================================================================
 
-            void PianoRollView::setBoundaryModel(chart::IBoundaryModel *model) {
+            void PianoRollView::setBoundaryModel(dstools::IBoundaryModel *model) {
                 m_phonemeBoundaryModel = model;
             }
 
-            chart::IBoundaryModel *PianoRollView::boundaryModel() const {
+            dstools::IBoundaryModel *PianoRollView::boundaryModel() const {
                 return m_phonemeBoundaryModel;
             }
 

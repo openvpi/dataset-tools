@@ -30,21 +30,21 @@ qt_standard_project_setup()
 
 add_custom_target(DeployedTargets)
 
-# Shared types (header-only, must come before everything)
-set(CMAKE_FOLDER "Libraries/Framework")
-add_subdirectory(types)
-
-# Framework layers
+# Framework layer (all dsfw::* targets: types, base, core, signal, infer, audio, ui-core, widgets)
 add_subdirectory(framework)
 
-# Shared layers (must come before apps)
+# Domain layer
 set(CMAKE_FOLDER "Libraries")
 add_subdirectory(domain)
+
+# Application shared UI layer
 add_subdirectory(ui-core)
 
+# Inference engines (third-party)
 set(CMAKE_FOLDER "Libraries/Infer")
 add_subdirectory(infer)
 
+# Inference adapters
 set(CMAKE_FOLDER "Libraries/Libs")
 add_subdirectory(libs)
 
@@ -52,6 +52,7 @@ add_subdirectory(libs)
 set(CMAKE_FOLDER "Applications")
 add_subdirectory(apps)
 
+# Tests
 if (BUILD_TESTS)
     set(CMAKE_FOLDER "Tests")
     add_subdirectory(tests)

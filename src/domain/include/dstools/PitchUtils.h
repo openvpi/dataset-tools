@@ -7,11 +7,11 @@
 namespace dstools {
 
     inline double freqToMidi(double freq) {
-        return dsfw::music::freqToMidi(freq);
+        return dsfw::signal::freqToMidi(freq);
     }
 
     inline double midiToFreq(double midi) {
-        return dsfw::music::midiToFreq(midi);
+        return dsfw::signal::midiToFreq(midi);
     }
 
     struct NotePitch {

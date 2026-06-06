@@ -91,7 +91,7 @@ target_include_directories(TestCompositeInferenceService PRIVATE
 )
 target_link_libraries(TestCompositeInferenceService PRIVATE
         data-sources
-        infer-common
+        dsfw-infer
         Qt${QT_VERSION_MAJOR}::Test
 )
 add_test(NAME TestCompositeInferenceService COMMAND TestCompositeInferenceService)

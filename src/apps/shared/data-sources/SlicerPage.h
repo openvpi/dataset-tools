@@ -27,9 +27,9 @@ namespace dstools {
     class AudioFileListPanel;
     class SliceListPanel;
 
-    class SlicerPage : public EditorContainerBase, public labeler::IPageActions, public labeler::IPageLifecycle {
+    class SlicerPage : public EditorContainerBase, public dsfw::IPageActions, public dsfw::IPageLifecycle {
         Q_OBJECT
-        Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
+        Q_INTERFACES(dsfw::IPageActions dsfw::IPageLifecycle)
 
     public:
         explicit SlicerPage(QWidget *parent = nullptr);

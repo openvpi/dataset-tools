@@ -2,7 +2,7 @@
 
 #include "IBoundaryModel.h"
 
-using dstools::chart::IBoundaryModel;
+using dstools::dstools::IBoundaryModel;
 
 #include <QObject>
 #include <QString>

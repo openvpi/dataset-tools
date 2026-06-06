@@ -5,7 +5,7 @@
 #include <QWidget>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         class WaveformChartPanel : public ChartPanelBase {
             Q_OBJECT
@@ -54,5 +54,5 @@ namespace dstools {
             std::vector<float> m_loudnessMask;
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

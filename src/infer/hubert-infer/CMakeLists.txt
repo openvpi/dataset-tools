@@ -13,5 +13,5 @@ dstools_add_infer_library(${PROJECT_NAME}
 
 # Library-specific dependencies
 find_package(nlohmann_json REQUIRED)
-target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core dsfw-audio infer-common)
+target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core dsfw-audio dsfw-infer)
 target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)

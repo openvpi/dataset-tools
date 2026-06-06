@@ -60,7 +60,7 @@ namespace dstools {
                 bool abComparisonActive = false;
                 const std::vector<float> *originalF0 = nullptr;
 
-                chart::ChartCoordinate coord; // Unified coordinate interface
+                dstools::ChartCoordinate coord; // Unified coordinate interface
 
                 // Layout constants (configurable via ChartConfigRegistry)
                 static constexpr int RulerHeight = 0;

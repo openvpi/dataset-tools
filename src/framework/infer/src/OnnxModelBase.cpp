@@ -1,9 +1,9 @@
 #include <dsfw/PathUtils.h>
-#include <dstools/OnnxModelBase.h>
+#include <dsfw/infer/OnnxModelBase.h>
 
 #include <fstream>
 
-namespace dstools::infer {
+namespace dsfw::infer {
 
     Result<void> OnnxModelBase::validateModelFile(const std::filesystem::path &modelPath) {
         std::error_code ec;
@@ -100,4 +100,4 @@ namespace dstools::infer {
             m_activeRunOptions->SetTerminate();
     }
 
-} // namespace dstools::infer
+} // namespace dsfw::infer

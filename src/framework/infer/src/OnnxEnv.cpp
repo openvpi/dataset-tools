@@ -1,5 +1,5 @@
-#include <dstools/OnnxEnv.h>
-#include <dstools/OnnxModelBase.h>
+#include <dsfw/infer/OnnxEnv.h>
+#include <dsfw/infer/OnnxModelBase.h>
 
 #include <onnxruntime_cxx_api.h>
 
@@ -10,7 +10,7 @@
 #include <dml_provider_factory.h>
 #endif
 
-namespace dstools::infer {
+namespace dsfw::infer {
 
 static Ort::Env* s_customEnv = nullptr;
 
@@ -128,4 +128,4 @@ std::unique_ptr<Ort::Session> OnnxEnv::createSession(const std::wstring& modelPa
     }
 }
 
-} // namespace dstools::infer
+} // namespace dsfw::infer

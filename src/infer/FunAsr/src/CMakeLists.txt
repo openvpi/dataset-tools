@@ -35,4 +35,4 @@ else ()
     set(EXTRA_LIBS pthread)
 endif ()
 
-target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core infer-common ${EXTRA_LIBS})
+target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-core dsfw-infer ${EXTRA_LIBS})

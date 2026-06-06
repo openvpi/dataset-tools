@@ -4,7 +4,7 @@
 #include <dsfw/widgets/ViewportController.h>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         using dsfw::widgets::ViewportState;
 
@@ -92,5 +92,5 @@ namespace dstools {
             }
         };
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

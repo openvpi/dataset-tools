@@ -7,7 +7,7 @@
 
 namespace dstools {
 
-    class MouthCurveChartPanel : public chart::ChartPanelBase {
+    class MouthCurveChartPanel : public dstools::ChartPanelBase {
         Q_OBJECT
     public:
         explicit MouthCurveChartPanel(dsfw::widgets::ViewportController *viewport, QWidget *parent = nullptr);
@@ -17,8 +17,8 @@ namespace dstools {
         void setData(const MouthCurve &curve);
 
     protected:
-        void drawContent(QPainter &painter, const chart::ChartCoordinate &coord) override;
-        void rebuildCache(const chart::RegionUpdate &region) override;
+        void drawContent(QPainter &painter, const dstools::ChartCoordinate &coord) override;
+        void rebuildCache(const dstools::RegionUpdate &region) override;
         bool supportsVerticalZoom() const override {
             return true;
         }

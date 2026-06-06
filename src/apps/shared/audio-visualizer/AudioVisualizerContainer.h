@@ -27,15 +27,15 @@ class QUndoStack;
 
 namespace dstools {
 
-    namespace chart {
+    namespace dstools {
         class IBoundaryModel;
         class BoundaryOverlayWidget;
         class BoundaryDragController;
-    } // namespace chart
+    } // namespace dstools
 
-    using chart::BoundaryDragController;
-    using chart::BoundaryOverlayWidget;
-    using chart::IBoundaryModel;
+    using dstools::BoundaryDragController;
+    using dstools::BoundaryOverlayWidget;
+    using dstools::IBoundaryModel;
     using TimeRulerWidget = dsfw::widgets::TimeRulerWidget;
 
     class TierLabelArea;
@@ -94,7 +94,7 @@ namespace dstools {
         /// Used for tier radio buttons (phoneme mode).
         void setTierRadioPanel(QWidget *panel);
 
-        const chart::ChartCoordinate &coordConverter() const {
+        const dstools::ChartCoordinate &coordConverter() const {
             return m_coordConverter;
         }
 
@@ -207,7 +207,7 @@ namespace dstools {
         void clearChartsPlayhead();
 
         dsfw::widgets::ViewportController *m_viewport = nullptr;
-        chart::ChartCoordinate m_coordConverter;
+        dstools::ChartCoordinate m_coordConverter;
         IBoundaryModel *m_boundaryModel = nullptr;
         BoundaryDragController *m_dragController = nullptr;
         BoundaryOverlayWidget *m_boundaryOverlay = nullptr;

@@ -15,4 +15,4 @@ dstools_add_infer_library(${PROJECT_NAME}
 # Library-specific dependencies
 find_package(nlohmann_json REQUIRED)
 find_package(wolf-midi CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-audio nlohmann_json::nlohmann_json wolf-midi::wolf-midi dsfw-core dsfw-signal infer-common)
+target_link_libraries(${PROJECT_NAME} PUBLIC dsfw-audio nlohmann_json::nlohmann_json wolf-midi::wolf-midi dsfw-core dsfw-signal dsfw-infer)

@@ -18,9 +18,9 @@ namespace dstools {
     ///
     /// Provides buttons to create a new project or open an existing one,
     /// plus a list of recently opened projects.
-    class WelcomePage : public QWidget, public labeler::IPageActions, public labeler::IPageLifecycle {
+    class WelcomePage : public QWidget, public dsfw::IPageActions, public dsfw::IPageLifecycle {
         Q_OBJECT
-        Q_INTERFACES(dstools::labeler::IPageActions dstools::labeler::IPageLifecycle)
+        Q_INTERFACES(dsfw::IPageActions dsfw::IPageLifecycle)
 
     public:
         explicit WelcomePage(QWidget *parent = nullptr);

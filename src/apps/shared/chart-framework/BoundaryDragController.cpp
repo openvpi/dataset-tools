@@ -9,7 +9,7 @@
 #include <cmath>
 
 namespace dstools {
-namespace chart {
+namespace dstools {
 
 BoundaryDragController::BoundaryDragController(QObject *parent)
     : QObject(parent) {
@@ -225,5 +225,5 @@ std::vector<AlignedBoundary> BoundaryDragController::findPartners(
     return result;
 }
 
-} // namespace chart
+} // namespace dstools
 } // namespace dstools

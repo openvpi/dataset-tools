@@ -125,22 +125,22 @@ void EditorContainerBase::setViewportResolutionKey(const QString &key) {
 }
 
 void EditorContainerBase::addWaveformChart(int tierIndex, int panelIndex, double stretch) {
-    chart::WaveformChartPanel::registerChartConfig();
-    m_waveformChart = new chart::WaveformChartPanel(m_viewport, m_container);
+    dstools::WaveformChartPanel::registerChartConfig();
+    m_waveformChart = new dstools::WaveformChartPanel(m_viewport, m_container);
     m_waveformChart->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("waveform"), m_waveformChart, tierIndex, panelIndex, stretch);
 }
 
 void EditorContainerBase::addSpectrogramChart(int tierIndex, int panelIndex, double stretch) {
-    chart::SpectrogramChartPanel::registerChartConfig();
-    m_spectrogramChart = new chart::SpectrogramChartPanel(m_viewport, m_container);
+    dstools::SpectrogramChartPanel::registerChartConfig();
+    m_spectrogramChart = new dstools::SpectrogramChartPanel(m_viewport, m_container);
     m_spectrogramChart->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("spectrogram"), m_spectrogramChart, tierIndex, panelIndex, stretch);
 }
 
 void EditorContainerBase::addPowerChart(int tierIndex, int panelIndex, double stretch) {
-    chart::PowerChartPanel::registerChartConfig();
-    m_powerChart = new chart::PowerChartPanel(m_viewport, m_container);
+    dstools::PowerChartPanel::registerChartConfig();
+    m_powerChart = new dstools::PowerChartPanel(m_viewport, m_container);
     m_powerChart->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("power"), m_powerChart, tierIndex, panelIndex, stretch);
 }
@@ -152,7 +152,7 @@ void EditorContainerBase::addMouthCurveChart(int tierIndex, int panelIndex, doub
     m_container->addChart(QStringLiteral("mouthCurve"), m_mouthCurveChart, tierIndex, panelIndex, stretch);
 }
 
-void EditorContainerBase::setAllChartsBoundaryModel(chart::IBoundaryModel *model) {
+void EditorContainerBase::setAllChartsBoundaryModel(dstools::IBoundaryModel *model) {
     if (m_waveformChart)
         m_waveformChart->setBoundaryModel(model);
     if (m_spectrogramChart)

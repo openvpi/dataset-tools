@@ -1,6 +1,6 @@
 project(dsfw-core)
 
-if (NOT TARGET dstools-types::dstools-types)
+if (NOT TARGET dsfw::types)
     find_package(dstools-types CONFIG REQUIRED)
 endif ()
 
@@ -23,7 +23,7 @@ dstools_add_library(${PROJECT_NAME}
         NAMESPACE dsfw::core
         EXPORT_SET dsfwTargets
         DEPENDS
-        PUBLIC dsfw-base dstools-types::dstools-types Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
+        PUBLIC dsfw-base dsfw::types Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
         PRIVATE $<$<PLATFORM_ID:Windows>:dbghelp> Qt${QT_VERSION_MAJOR}::Widgets
         INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>

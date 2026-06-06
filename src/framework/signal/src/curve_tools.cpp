@@ -259,14 +259,14 @@ std::vector<double> mhzToHzBatch(const std::vector<int32_t>& mhz) {
 std::vector<double> hzToMidiBatch(const std::vector<double>& hz) {
     std::vector<double> out(hz.size());
     for (size_t i = 0; i < hz.size(); ++i)
-        out[i] = (hz[i] <= 0.0) ? 0.0 : dsfw::music::freqToMidi(hz[i]);
+        out[i] = (hz[i] <= 0.0) ? 0.0 : dsfw::signal::freqToMidi(hz[i]);
     return out;
 }
 
 std::vector<double> midiToHzBatch(const std::vector<double>& midi) {
     std::vector<double> out(midi.size());
     for (size_t i = 0; i < midi.size(); ++i)
-        out[i] = dsfw::music::midiToFreq(midi[i]);
+        out[i] = dsfw::signal::midiToFreq(midi[i]);
     return out;
 }
 
@@ -274,7 +274,7 @@ std::vector<double> mhzToMidiBatch(const std::vector<int32_t>& mhz) {
     std::vector<double> out(mhz.size());
     for (size_t i = 0; i < mhz.size(); ++i) {
         const double hz = dsfw::mhzToHz(mhz[i]);
-        out[i] = (hz <= 0.0) ? 0.0 : dsfw::music::freqToMidi(hz);
+        out[i] = (hz <= 0.0) ? 0.0 : dsfw::signal::freqToMidi(hz);
     }
     return out;
 }

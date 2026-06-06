@@ -4,7 +4,7 @@
 #include <QString>
 
 namespace dstools {
-namespace chart {
+namespace dstools {
 
 MoveBoundaryCommand::MoveBoundaryCommand(IBoundaryModel *model, int tierIndex,
                                        int boundaryIndex, TimePos oldTime, TimePos newTime,
@@ -41,5 +41,5 @@ bool MoveBoundaryCommand::mergeWith(const QUndoCommand *other) {
     return true;
 }
 
-} // namespace chart
+} // namespace dstools
 } // namespace dstools

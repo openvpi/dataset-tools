@@ -10,7 +10,7 @@
 #include <cstring>
 
 namespace dstools {
-namespace chart {
+namespace dstools {
 
 PowerChartPanel::PowerChartPanel(ViewportController *viewport, QWidget *parent)
     : ChartPanelBase(QStringLiteral("power"), viewport, parent)
@@ -365,5 +365,5 @@ double PowerChartPanel::dataDurationSec() const {
     return static_cast<double>(m_samples.size()) / (m_sampleRate * 2.0);
 }
 
-} // namespace chart
+} // namespace dstools
 } // namespace dstools

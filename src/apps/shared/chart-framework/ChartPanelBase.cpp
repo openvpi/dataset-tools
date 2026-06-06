@@ -18,7 +18,7 @@
 #include <limits>
 
 namespace dstools {
-    namespace chart {
+    namespace dstools {
 
         ChartPanelBase::ChartPanelBase(const QString &id, ViewportController *viewport, QWidget *parent) :
             QWidget(parent), m_id(id), m_viewport(viewport) {
@@ -325,5 +325,5 @@ namespace dstools {
             m_playWidget->setPlaying(true);
         }
 
-    } // namespace chart
+    } // namespace dstools
 } // namespace dstools

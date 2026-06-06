@@ -5,7 +5,7 @@ dstools_add_library(${PROJECT_NAME}
     NAMESPACE dsfw::signal
     EXPORT_SET dsfwTargets
     DEPENDS
-    PUBLIC dsfw-core dstools-types::dstools-types
+    PUBLIC dsfw-core dsfw::types
 )
 
 # Optional: xsimd for vectorized calculations

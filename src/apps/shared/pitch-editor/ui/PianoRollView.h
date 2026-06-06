@@ -86,8 +86,8 @@ namespace dstools {
                 }
 
                 // Boundary model
-                void setBoundaryModel(chart::IBoundaryModel *model);
-                chart::IBoundaryModel *boundaryModel() const;
+                void setBoundaryModel(dstools::IBoundaryModel *model);
+                dstools::IBoundaryModel *boundaryModel() const;
 
                 ///// Config persistence (following SlurCutter F0Widget pattern)
                 void loadConfig(dstools::AppSettings &settings);
@@ -121,7 +121,7 @@ namespace dstools {
                 RenderState buildRenderState() const;
 
                 /// Render the piano roll content using the given coordinate
-                void render(QPainter &painter, const chart::ChartCoordinate &coord);
+                void render(QPainter &painter, const dstools::ChartCoordinate &coord);
 
                 /// Update the unified coordinate from viewport state
                 void updateCoord();
@@ -171,7 +171,7 @@ namespace dstools {
                 double m_configModSensitivity = 80.0;
 
                 // Unified coordinate (from ChartCoordinate)
-                chart::ChartCoordinate m_coord;
+                dstools::ChartCoordinate m_coord;
 
                 // Scroll bar (vertical only; horizontal scroll via ViewportController)
                 QScrollBar *m_vScrollBar = nullptr;
@@ -206,7 +206,7 @@ namespace dstools {
                 std::unique_ptr<NoteBoundaryModel> m_boundaryModel;
 
                 /// External phoneme boundary model for split/merge operations
-                chart::IBoundaryModel *m_phonemeBoundaryModel = nullptr;
+                dstools::IBoundaryModel *m_phonemeBoundaryModel = nullptr;
                 int m_draggingBoundaryIndex = -1;
                 bool m_isDraggingBoundary = false;
 

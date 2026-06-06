@@ -17,7 +17,7 @@ namespace dstools {
 
     class AudioVisualizerContainer;
 
-    namespace chart {
+    namespace dstools {
         class WaveformChartPanel;
         class SpectrogramChartPanel;
         class PowerChartPanel;
@@ -42,13 +42,13 @@ namespace dstools {
             return m_playWidget;
         }
 
-        chart::WaveformChartPanel *waveformChart() const {
+        dstools::WaveformChartPanel *waveformChart() const {
             return m_waveformChart;
         }
-        chart::SpectrogramChartPanel *spectrogramChart() const {
+        dstools::SpectrogramChartPanel *spectrogramChart() const {
             return m_spectrogramChart;
         }
-        chart::PowerChartPanel *powerChart() const {
+        dstools::PowerChartPanel *powerChart() const {
             return m_powerChart;
         }
         MouthCurveChartPanel *mouthCurveChart() const {
@@ -84,7 +84,7 @@ namespace dstools {
         void addSpectrogramChart(int tierIndex, int panelIndex, double stretch);
         void addPowerChart(int tierIndex, int panelIndex, double stretch);
         void addMouthCurveChart(int tierIndex, int panelIndex, double stretch);
-        void setAllChartsBoundaryModel(chart::IBoundaryModel *model);
+        void setAllChartsBoundaryModel(dstools::IBoundaryModel *model);
 
         void setMouthCurveData(const MouthCurve &curve);
 
@@ -101,9 +101,9 @@ namespace dstools {
         dsfw::widgets::ViewportController *m_viewport = nullptr;
         dsfw::widgets::PlayWidget *m_playWidget = nullptr;
 
-        chart::WaveformChartPanel *m_waveformChart = nullptr;
-        chart::SpectrogramChartPanel *m_spectrogramChart = nullptr;
-        chart::PowerChartPanel *m_powerChart = nullptr;
+        dstools::WaveformChartPanel *m_waveformChart = nullptr;
+        dstools::SpectrogramChartPanel *m_spectrogramChart = nullptr;
+        dstools::PowerChartPanel *m_powerChart = nullptr;
         MouthCurveChartPanel *m_mouthCurveChart = nullptr;
 
         int m_defaultResolution = 800;

@@ -5,7 +5,7 @@
 
 #include <QString>
 
-namespace dstools::labeler {
+namespace dsfw {
 
     /// @brief Page lifecycle interface.
     ///
@@ -40,7 +40,7 @@ namespace dstools::labeler {
         }
     };
 
-} // namespace dstools::labeler
+} // namespace dsfw
 
-#define LABELER_PAGE_LIFECYCLE_IID "dstools.labeler.IPageLifecycle"
-Q_DECLARE_INTERFACE(dstools::labeler::IPageLifecycle, LABELER_PAGE_LIFECYCLE_IID)
+#define LABELER_PAGE_LIFECYCLE_IID "dsfw.IPageLifecycle"
+Q_DECLARE_INTERFACE(dsfw::IPageLifecycle, LABELER_PAGE_LIFECYCLE_IID)

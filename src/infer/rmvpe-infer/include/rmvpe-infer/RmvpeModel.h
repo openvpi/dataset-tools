@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <dstools/OnnxModelBase.h>
+#include <dsfw/infer/OnnxModelBase.h>
 
 namespace Rmvpe
 {

@@ -255,8 +255,8 @@ void SlicerPage::buildLayout() {
         m_slicePoints = m_boundaryModel->slicePointsSec();
         updateSlicerListPanel();
     };
-    connect(m_waveformChart, &chart::WaveformChartPanel::boundaryDragging, this, onDragging);
-    connect(m_spectrogramChart, &chart::SpectrogramChartPanel::boundaryDragging, this, onDragging);
+    connect(m_waveformChart, &dstools::WaveformChartPanel::boundaryDragging, this, onDragging);
+    connect(m_spectrogramChart, &dstools::SpectrogramChartPanel::boundaryDragging, this, onDragging);
 
     if (auto* dragController = m_container->dragController()) {
         dragController->setSnapEnabled(true);
@@ -332,7 +332,7 @@ void SlicerPage::connectSignals() {
             [this](const QStringList& paths) { autoSliceFiles(paths); });
     connect(m_audioFileList, &AudioFileListPanel::filesRemoved, this, [this]() { updateFileProgress(); });
 
-    connect(m_waveformChart, &chart::WaveformChartPanel::positionClicked, this, [this](double sec) {
+    connect(m_waveformChart, &dstools::WaveformChartPanel::positionClicked, this, [this](double sec) {
         if (m_toolMode == ToolMode::Knife) {
             auto refreshFn = [this]() {
                 refreshBoundaries();
@@ -342,7 +342,7 @@ void SlicerPage::connectSignals() {
         }
     });
 
-    connect(m_waveformChart, &chart::WaveformChartPanel::boundaryDragFinished, this,
+    connect(m_waveformChart, &dstools::WaveformChartPanel::boundaryDragFinished, this,
             [this](int, int boundaryIndex, dstools::TimePos) {
                 if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
                     m_slicePoints = m_boundaryModel->slicePointsSec();

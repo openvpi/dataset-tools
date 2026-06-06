@@ -63,7 +63,7 @@ NotePitch parseNoteName(const QString &noteStr) {
     while (semitones < 0)   { semitones += 12; octaveOffset--; }
     octave += octaveOffset;
 
-    result.name = QString::fromUtf8(dsfw::music::semitoneName(semitones));
+    result.name = QString::fromUtf8(dsfw::signal::semitoneName(semitones));
     result.octave = octave;
     result.cents = cents;
     result.midiNumber = (octave + 1) * 12 + semitones + cents / 100.0;
@@ -76,7 +76,7 @@ QString midiToNoteName(int midiNote) {
         return QString();
     midiNote -= kMidiNoteOffset;
     return QString("%1%2")
-        .arg(QLatin1String(dsfw::music::semitoneName(midiNote % 12)))
+        .arg(QLatin1String(dsfw::signal::semitoneName(midiNote % 12)))
         .arg(midiNote / 12);
 }
 
@@ -89,9 +89,9 @@ QString midiToNoteString(double midiFloat) {
     int noteIdx = midiInt % 12;
     int octave = midiInt / 12 - 1;
     if (cents == 0)
-        return QString("%1%2").arg(QLatin1String(dsfw::music::semitoneName(noteIdx))).arg(octave);
+        return QString("%1%2").arg(QLatin1String(dsfw::signal::semitoneName(noteIdx))).arg(octave);
     return QString("%1%2%3%4")
-        .arg(QLatin1String(dsfw::music::semitoneName(noteIdx)))
+        .arg(QLatin1String(dsfw::signal::semitoneName(noteIdx)))
         .arg(octave)
         .arg(cents > 0 ? "+" : "")
         .arg(cents);
