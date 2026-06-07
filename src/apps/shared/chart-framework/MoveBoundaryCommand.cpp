@@ -7,6 +7,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 MoveBoundaryCommand::MoveBoundaryCommand(IBoundaryModel *model, int tierIndex,
                                        int boundaryIndex, TimePos oldTime, TimePos newTime,
                                        QUndoCommand *parent)

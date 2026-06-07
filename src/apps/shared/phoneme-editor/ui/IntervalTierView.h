@@ -16,14 +16,11 @@ class QPainter;
 class QUndoStack;
 
 namespace dstools {
-    using namespace dsfw;
     class BoundaryDragController;
     namespace phonemelabeler {
         using ::dstools::ChartCoordinate;
 
         using ::dstools::BoundaryDragController;
-        using dsfw::widgets::ViewportController;
-        using dsfw::widgets::ViewportState;
 
         /// @brief Renders a single TextGrid interval tier with boundary dragging,
         ///        interval selection, keyboard navigation, and binding-aware multi-tier editing.
@@ -39,9 +36,9 @@ namespace dstools {
             /// @param bindingMgr Boundary binding manager for cross-tier linking.
             /// @param parent Optional parent widget.
             explicit IntervalTierView(int tierIndex, TextGridDocument *doc, QUndoStack *undoStack,
-                                      ViewportController *viewport, BoundaryDragController *dragController,
+                                      dsfw::widgets::ViewportController *viewport, BoundaryDragController *dragController,
                                       QWidget *parent = nullptr);
-            void setViewport(const ViewportState &state);
+            void setViewport(const dsfw::widgets::ViewportState &state);
             ~IntervalTierView() override = default;
 
             /// @brief Updates the viewport state for rendering.
@@ -74,7 +71,7 @@ namespace dstools {
 
             /// @brief Adjusts the selected boundary position by a time delta.
             /// @param deltaSec Time adjustment in seconds.
-            void adjustSelectedBoundary(TimePos deltaUs);
+            void adjustSelectedBoundary(dsfw::TimePos deltaUs);
 
         signals:
             /// @brief Emitted when an interval is clicked.
@@ -127,7 +124,7 @@ namespace dstools {
             int m_tierIndex;                                    ///< Tier index in the document.
             TextGridDocument *m_doc = nullptr;                  ///< Associated document.
             QUndoStack *m_undoStack = nullptr;                  ///< Undo stack for commands.
-            ViewportController *m_viewport = nullptr;           ///< Viewport controller.
+            dsfw::widgets::ViewportController *m_viewport = nullptr;           ///< Viewport controller.
             BoundaryDragController *m_dragController = nullptr; ///< Drag controller.
 
             double m_viewStart = 0.0;                     ///< Visible range start in seconds.

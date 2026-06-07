@@ -4,6 +4,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 dsfw::LayerData buildBoundaries(const QStringList& items, const QStringList& durs, dsfw::TimePos initialPos) {
     nlohmann::json boundaries = nlohmann::json::array();
     dsfw::TimePos cumPos = initialPos;

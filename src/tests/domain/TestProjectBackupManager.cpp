@@ -9,6 +9,7 @@
 
 using namespace dstools;
 using namespace dsfw;
+using namespace dsfw;
 
 class TestProjectBackupManager : public QObject {
     Q_OBJECT

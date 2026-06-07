@@ -49,6 +49,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 namespace {
 
 /// @brief Write audio slice to file atomically (write to .tmp then rename).

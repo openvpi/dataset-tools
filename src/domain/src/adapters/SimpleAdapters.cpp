@@ -23,6 +23,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 // ─── FormatAdapterInit ────────────────────────────────────────────────────────
 
 void registerDomainFormatAdapters() {

@@ -19,8 +19,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
-
 /// @brief Configuration for a task's model backend.
 struct TaskModelConfig {
     QString processorId;       ///< Processor implementation (e.g. "hubert-fa", "rmvpe").
@@ -28,7 +26,7 @@ struct TaskModelConfig {
     QString provider = "cpu";  ///< Execution provider: "cpu", "dml", or "cuda".
     int deviceId = 0;          ///< GPU device index.
     bool forceCpu = false;     ///< Override global provider to force CPU for this model.
-    ConfigMap extra;           ///< Engine-specific parameters.
+    dsfw::ConfigMap extra;           ///< Engine-specific parameters.
 };
 
 /// @brief Export configuration.
@@ -65,7 +63,7 @@ struct Slice {
     QString status = QStringLiteral("active");  ///< "active", "discarded", "error"
     QString discardReason;
     QString discardedAt;  ///< Step at which the slice was discarded.
-    ConfigMap extra;      ///< Preserve unknown fields.
+    dsfw::ConfigMap extra;      ///< Preserve unknown fields.
 };
 
 /// @brief An audio item containing one or more slices.
@@ -76,7 +74,7 @@ struct Item {
     QString language;
     QString audioSource;  ///< Path to audio file (native format, relative or absolute).
     std::vector<Slice> slices;
-    ConfigMap extra;  ///< Preserve unknown fields.
+    dsfw::ConfigMap extra;  ///< Preserve unknown fields.
 };
 
 /// In-memory representation of a .dsproj project file.

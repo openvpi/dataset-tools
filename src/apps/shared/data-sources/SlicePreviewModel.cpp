@@ -11,6 +11,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 void SlicePreviewModel::setDataSource(IEditorDataSource *source) {
     m_source = source;
     invalidate();

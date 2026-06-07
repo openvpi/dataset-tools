@@ -7,6 +7,7 @@
 
 using namespace dsfw;
 using namespace dstools;
+using namespace dsfw;
 
 class TestSlicerProcessor : public QObject {
     Q_OBJECT

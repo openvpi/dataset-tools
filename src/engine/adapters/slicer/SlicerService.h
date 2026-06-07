@@ -17,8 +17,6 @@ class SndfileHandle;
 
 namespace dstools {
 
-    using namespace dsfw;
-
     struct SliceResult {
         std::vector<std::pair<int64_t, int64_t>> chunks;
         int sampleRate = 0;
@@ -29,7 +27,7 @@ namespace dstools {
         SlicerService() = default;
         ~SlicerService() = default;
 
-        Result<SliceResult> slice(const QString &audioPath, double threshold, int minLength,
+        dsfw::Result<SliceResult> slice(const QString &audioPath, double threshold, int minLength,
                                   int minInterval, int hopSize, int maxSilKept = 5000);
 
         static std::vector<double> computeSlicePoints(const std::vector<float> &samples, int sampleRate,

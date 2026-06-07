@@ -41,10 +41,10 @@ namespace dstools {
         }
 
         /// Access/load PipelineContext for a slice (lazy-loaded, cached).
-        [[nodiscard]] PipelineContext *context(const QString &sliceId);
+        [[nodiscard]] dsfw::PipelineContext *context(const QString &sliceId);
 
         /// Save PipelineContext for a slice to disk.
-        [[nodiscard]] Result<void> saveContext(const QString &sliceId);
+        [[nodiscard]] dsfw::Result<void> saveContext(const QString &sliceId);
 
         /// Re-scan audio file availability and emit audioAvailabilityChanged if changed.
         void rescanAudioAvailability();
@@ -52,8 +52,8 @@ namespace dstools {
         // IEditorDataSource
         [[nodiscard]] int getSliceCount() const override;
         [[nodiscard]] QStringList sliceIds() const override;
-        [[nodiscard]] Result<DsTextDocument> loadSlice(const QString &sliceId) override;
-        [[nodiscard]] Result<void> saveSlice(const QString &sliceId, const DsTextDocument &doc) override;
+        [[nodiscard]] dsfw::Result<DsTextDocument> loadSlice(const QString &sliceId) override;
+        [[nodiscard]] dsfw::Result<void> saveSlice(const QString &sliceId, const DsTextDocument &doc) override;
         [[nodiscard]] QString audioPath(const QString &sliceId) const override;
         [[nodiscard]] bool audioExists(const QString &sliceId) const override;
         [[nodiscard]] double sliceDuration(const QString &sliceId) const override;
@@ -67,7 +67,7 @@ namespace dstools {
     private:
         DsProject *m_project = nullptr;
         QString m_workingDir;
-        std::map<QString, PipelineContext> m_contexts;
+        std::map<QString, dsfw::PipelineContext> m_contexts;
         mutable QMutex m_contextsMutex;
 
         mutable QSet<QString> m_missingAudioIds;

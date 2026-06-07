@@ -12,6 +12,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 RmvpePitchProcessor::RmvpePitchProcessor() = default;
 RmvpePitchProcessor::~RmvpePitchProcessor() = default;
 

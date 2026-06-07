@@ -12,11 +12,10 @@ namespace dstools {
 
 
         namespace ui {
-            using namespace dsfw;
 
             class SplitNoteCommand : public QUndoCommand {
             public:
-                SplitNoteCommand(std::shared_ptr<DsPitchDocument> dsFile, int noteIndex, TimePos splitTime,
+                SplitNoteCommand(std::shared_ptr<DsPitchDocument> dsFile, int noteIndex, dsfw::TimePos splitTime,
                                  QUndoCommand *parent = nullptr);
 
                 void undo() override;
@@ -25,10 +24,10 @@ namespace dstools {
             private:
                 std::shared_ptr<DsPitchDocument> m_dsFile;
                 int m_noteIndex;
-                TimePos m_splitTime;
+                dsfw::TimePos m_splitTime;
                 struct NoteSnapshot {
                     QString name;
-                    TimePos duration;
+                    dsfw::TimePos duration;
                     int slur;
                     QString glide;
                 };
@@ -48,7 +47,7 @@ namespace dstools {
                 int m_firstIndex;
                 struct NoteSnapshot {
                     QString name;
-                    TimePos duration;
+                    dsfw::TimePos duration;
                     int slur;
                     QString glide;
                 };

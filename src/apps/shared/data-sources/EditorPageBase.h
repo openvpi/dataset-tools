@@ -329,7 +329,7 @@ namespace dstools {
         /// Handles the common pattern: readConfig → loadModel → registerOrGetModelType.
         /// @return (ModelManager*, typeId) on success, (nullptr, 0) on failure.
         ///         Caller owns the lifetime of the returned ModelManager* (same as ensureModelManager).
-        std::tuple<ModelManager *, ModelTypeId> loadModelForTask(const QString &taskKey,
+        std::tuple<ModelManager *, dsfw::ModelTypeId> loadModelForTask(const QString &taskKey,
                                                                  const QString &modelTypeName = {}) override;
 
         /// Load an inference engine asynchronously in a background thread.
@@ -358,12 +358,12 @@ namespace dstools {
         /// @param sliceId  Current slice ID (for logging, etc.).
         /// @param backgroundWork  Blocking work on worker thread.
         ///        Receives shared_ptr<atomic<bool>> for cancellation check.
-        ///        Should return Result<T>.
+        ///        Should return dsfw::Result<T>.
         /// @param onComplete  Called on main thread with the result.
         template <typename T = void>
         void runAsyncTask(const QString &taskKey, const QString &sliceId,
-                          std::function<Result<T>(const std::shared_ptr<std::atomic<bool>> &)> backgroundWork,
-                          std::function<void(const QString &, const Result<T> &)> onComplete) {
+                          std::function<dsfw::Result<T>(const std::shared_ptr<std::atomic<bool>> &)> backgroundWork,
+                          std::function<void(const QString &, const dsfw::Result<T> &)> onComplete) {
             auto alive = aliveToken(taskKey).token();
             QPointer<EditorPageBase> guard(this);
 
@@ -372,14 +372,14 @@ namespace dstools {
                 if (!alive || !*alive)
                     return;
 
-                Result<T> result = Err<T>(std::string("Not executed"));
+                dsfw::Result<T> result = dsfw::Err<T>(std::string("Not executed"));
                 try {
                     if (backgroundWork)
                         result = backgroundWork(alive);
                 } catch (const std::exception &e) {
                     DSFW_LOG_ERROR("infer",
                                    ("Async task exception: " + sliceId.toStdString() + " - " + e.what()).c_str());
-                    result = Err<T>(std::string("Exception: ") + e.what());
+                    result = dsfw::Err<T>(std::string("Exception: ") + e.what());
                 }
 
                 if (!guard)

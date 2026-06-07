@@ -9,8 +9,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
-
 /// @brief Bridge between DsTextDocument (internal model) and DsPitchDocument (pitch-labeler domain).
 ///
 /// Provides bidirectional conversion and roundtrip verification between the
@@ -29,20 +27,20 @@ public:
     /// Extracts F0 curve, MIDI notes, and phoneme boundaries.
     /// @param totalDurationUs  Total audio duration in microseconds (for computing phone durations).
     static std::shared_ptr<pitchlabeler::DsPitchDocument> toPitchDoc(const DsTextDocument& doc,
-                                                                     TimePos totalDurationUs);
+                                                                     dsfw::TimePos totalDurationUs);
 
     /// Apply pitch-labeler results back into a DsTextDocument.
     /// Updates F0 curve, MIDI boundaries, and phoneme boundaries in-place.
-    [[nodiscard]] static Result<void> fromPitchDoc(DsTextDocument& doc, const pitchlabeler::DsPitchDocument& pdoc);
+    [[nodiscard]] static dsfw::Result<void> fromPitchDoc(DsTextDocument& doc, const pitchlabeler::DsPitchDocument& pdoc);
 
     /// Verify that interval layers survive a roundtrip (original vs restored).
     /// Checks layer count, names, boundary count, and boundary positions.
-    [[nodiscard]] static Result<void> verifyLayerRoundtrip(const DsTextDocument& original,
+    [[nodiscard]] static dsfw::Result<void> verifyLayerRoundtrip(const DsTextDocument& original,
                                                            const DsTextDocument& restored);
 
     /// Verify that pitch document data survives a roundtrip.
     /// Checks F0 value count and MIDI boundary count.
-    [[nodiscard]] static Result<void> verifyPitchDocRoundtrip(const DsTextDocument& original,
+    [[nodiscard]] static dsfw::Result<void> verifyPitchDocRoundtrip(const DsTextDocument& original,
                                                               const pitchlabeler::DsPitchDocument& restored);
 };
 

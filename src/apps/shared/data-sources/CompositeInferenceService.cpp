@@ -6,6 +6,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 CompositeInferenceService::CompositeInferenceService(HFA::HFA *hfa, Rmvpe::Rmvpe *rmvpe, Game::Game *game)
     : m_hfa(hfa), m_rmvpe(rmvpe), m_game(game) {
 }

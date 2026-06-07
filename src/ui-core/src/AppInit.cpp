@@ -25,6 +25,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 std::vector<AppInit::InitHook> &AppInit::hooks() {
     static std::vector<InitHook> s_hooks;
     return s_hooks;

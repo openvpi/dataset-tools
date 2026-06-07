@@ -17,14 +17,11 @@
 class QVBoxLayout;
 
 namespace dstools {
-    using namespace dsfw;
     class BoundaryDragController;
     namespace phonemelabeler {
         using ::dstools::ChartCoordinate;
 
         using ::dstools::BoundaryDragController;
-        using dsfw::widgets::ViewportController;
-        using dsfw::widgets::ViewportState;
 
         class IntervalTierView;
 
@@ -40,7 +37,7 @@ namespace dstools {
             /// @param viewport Viewport controller for time synchronization.
             /// @param bindingMgr Boundary binding manager.
             /// @param parent Optional parent widget.
-            TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack, ViewportController *viewport,
+            TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack, dsfw::widgets::ViewportController *viewport,
                            BoundaryDragController *dragController, QWidget *parent = nullptr);
             ~TierEditWidget() override;
 
@@ -50,7 +47,7 @@ namespace dstools {
 
             /// @brief Updates the viewport state for all tier views.
             /// @param state New viewport state.
-            void setViewport(const ViewportState &state);
+            void setViewport(const dsfw::widgets::ViewportState &state);
             void setCoordConverter(const ChartCoordinate *conv);
             void setYAxisWidth(int w); ///< 设置单选按钮区域宽度
             QWidget *radioButtonContainer() const { return m_radioButtonContainer; }
@@ -58,7 +55,7 @@ namespace dstools {
         public slots:
             /// @brief Slot invoked when the viewport changes.
             /// @param state New viewport state.
-            void onViewportChanged(const ViewportState &state);
+            void onViewportChanged(const dsfw::widgets::ViewportState &state);
             void rebuildTierViews(); ///< Recreates IntervalTierView widgets for all tiers.
 
         signals:
@@ -85,7 +82,7 @@ namespace dstools {
 
             TextGridDocument *m_document = nullptr;             ///< Associated document.
             QUndoStack *m_undoStack = nullptr;                  ///< Undo stack.
-            ViewportController *m_viewport = nullptr;           ///< Viewport controller.
+            dsfw::widgets::ViewportController *m_viewport = nullptr;           ///< Viewport controller.
             BoundaryDragController *m_dragController = nullptr; ///< Drag controller.
 
             QVBoxLayout *m_layout = nullptr;         ///< Layout for tier views.

@@ -26,6 +26,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
     using dsfw::signal::expectedFrameCount;
     using dsfw::signal::hopSizeToTimestep;
     using dsfw::signal::resampleCurve;

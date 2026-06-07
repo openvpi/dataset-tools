@@ -19,6 +19,9 @@
 
 namespace dstools {
 
+using namespace dsfw;
+using dsfw::widgets::ViewportController;
+
         using namespace dsfw;
 
         ChartPanelBase::ChartPanelBase(const QString &id, ViewportController *viewport, QWidget *parent) :

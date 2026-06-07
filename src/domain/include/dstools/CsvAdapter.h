@@ -6,8 +6,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
-
 struct TranscriptionRow;
 
 class CsvAdapter : public dsfw::IFormatAdapter {
@@ -17,18 +15,18 @@ public:
     bool canImport() const noexcept override { return true; }
     bool canExport() const noexcept override { return true; }
 
-    Result<void> importToLayers(const QString& filePath, std::map<QString, LayerData>& layers,
-                                const ProcessorConfig& config) override;
+    dsfw::Result<void> importToLayers(const QString& filePath, std::map<QString, dsfw::LayerData>& layers,
+                                const dsfw::ProcessorConfig& config) override;
 
-    Result<void> exportFromLayers(const std::map<QString, LayerData>& layers, const QString& outputPath,
-                                  const ProcessorConfig& config) override;
+    dsfw::Result<void> exportFromLayers(const std::map<QString, dsfw::LayerData>& layers, const QString& outputPath,
+                                  const dsfw::ProcessorConfig& config) override;
 
-    static Result<void> batchExport(const std::vector<PipelineContext>& contexts, const QString& outputPath,
-                                    const ProcessorConfig& config = {});
+    static dsfw::Result<void> batchExport(const std::vector<dsfw::PipelineContext>& contexts, const QString& outputPath,
+                                    const dsfw::ProcessorConfig& config = {});
 
-    static Result<void> writeRows(const QString& outputPath, const std::vector<TranscriptionRow>& rows);
+    static dsfw::Result<void> writeRows(const QString& outputPath, const std::vector<TranscriptionRow>& rows);
 
-    static Result<void> readRows(const QString& filePath, std::vector<TranscriptionRow>& rows);
+    static dsfw::Result<void> readRows(const QString& filePath, std::vector<TranscriptionRow>& rows);
 };
 
 } // namespace dstools

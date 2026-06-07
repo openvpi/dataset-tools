@@ -7,10 +7,8 @@
 
 namespace dstools {
 
-    using namespace dsfw;
-
     /// @brief Wraps PhNumCalculator as an ITaskProcessor for the task framework.
-    class AddPhNumProcessor : public ITaskProcessor {
+    class AddPhNumProcessor : public dsfw::ITaskProcessor {
     public:
         QString processorId() const override {
             return QStringLiteral("add-ph-num");
@@ -18,10 +16,10 @@ namespace dstools {
         QString displayName() const override {
             return QStringLiteral("Add Phoneme Count");
         }
-        TaskSpec taskSpec() const override;
-        Result<void> initialize(ModelManager &mm, const ProcessorConfig &config) override;
+        dsfw::TaskSpec taskSpec() const override;
+        dsfw::Result<void> initialize(ModelManager &mm, const dsfw::ProcessorConfig &config) override;
         void release() override;
-        Result<TaskOutput> process(const TaskInput &input) override;
+        dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &input) override;
     };
 
 } // namespace dstools

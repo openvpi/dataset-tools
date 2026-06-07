@@ -55,7 +55,7 @@ public:
 
     virtual ModelManager *ensureModelManager() = 0;
     virtual EngineAliveToken &aliveToken(const QString &key) = 0;
-    virtual std::tuple<ModelManager *, ModelTypeId> loadModelForTask(const QString &taskKey,
+    virtual std::tuple<ModelManager *, dsfw::ModelTypeId> loadModelForTask(const QString &taskKey,
                                                                       const QString &modelTypeName = {}) = 0;
     virtual void onEngineInvalidated(const QString &taskKey) = 0;
     virtual QObject *asQObject() = 0;

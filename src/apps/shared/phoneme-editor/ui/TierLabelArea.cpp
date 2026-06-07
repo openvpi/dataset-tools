@@ -5,6 +5,8 @@
 #include <dsfw/TimePos.h>
 
 namespace dstools {
+
+using namespace dsfw;
 using namespace dsfw;
 
     TierLabelArea::TierLabelArea(QWidget *parent) : QWidget(parent) {

@@ -12,6 +12,8 @@
 
 namespace dstools::labeler {
 
+using namespace dsfw;
+
     static const char *stepNames[] = {
         "Slice", "ASR", "Label", "Align", "Phone", "CSV", "MIDI", "DS", "Pitch",
     };

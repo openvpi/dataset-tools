@@ -13,6 +13,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 ProjectDataSource::ProjectDataSource(QObject *parent) : IEditorDataSource(parent) {}
 
 void ProjectDataSource::setProject(DsProject *project, const QString &workingDir) {

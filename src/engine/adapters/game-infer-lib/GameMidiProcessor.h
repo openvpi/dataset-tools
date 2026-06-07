@@ -13,33 +13,31 @@ namespace Game {
 
 namespace dstools {
 
-    using namespace dsfw;
-
     /// @brief ITaskProcessor implementation for GAME audio-to-MIDI transcription.
     ///
     /// Wraps the GAME engine as a single ModelTypeId (ADR-14: not split into sub-models).
     /// Exposes 5 configurable parameters via capabilities() replacing dynamic_cast setters.
-    class GameMidiProcessor : public ITaskProcessor {
+    class GameMidiProcessor : public dsfw::ITaskProcessor {
     public:
         GameMidiProcessor();
         ~GameMidiProcessor() override;
 
         QString processorId() const override;
         QString displayName() const override;
-        TaskSpec taskSpec() const override;
-        ProcessorConfig capabilities() const noexcept override;
+        dsfw::TaskSpec taskSpec() const override;
+        dsfw::ProcessorConfig capabilities() const noexcept override;
 
-        Result<void> initialize(ModelManager &mm, const ProcessorConfig &modelConfig) override;
+        dsfw::Result<void> initialize(ModelManager &mm, const dsfw::ProcessorConfig &modelConfig) override;
         void release() override;
 
-        Result<TaskOutput> process(const TaskInput &input) override;
+        dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &input) override;
 
     private:
         /// @brief Generate D3PM timestep schedule (linspace from 0 to 1).
         static std::vector<float> generateD3pmTimesteps(int nSteps);
 
         /// @brief Apply configuration parameters to the engine.
-        void applyConfig(const ProcessorConfig &config) const;
+        void applyConfig(const dsfw::ProcessorConfig &config) const;
 
         std::shared_ptr<Game::Game> m_game;
         mutable std::mutex m_mutex;

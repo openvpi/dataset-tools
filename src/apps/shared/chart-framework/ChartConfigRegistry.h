@@ -9,8 +9,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
-
 class ChartConfigRegistry {
 public:
     ChartConfigRegistry(const ChartConfigRegistry &) = delete;
@@ -19,7 +17,7 @@ public:
     static ChartConfigRegistry &instance();
 
     void registerChart(const ChartConfigDescriptor &descriptor);
-    void setSettings(AppSettings *settings);
+    void setSettings(dsfw::AppSettings *settings);
 
     [[nodiscard]] QStringList chartIds() const;
     [[nodiscard]] std::vector<ChartParamDescriptor> descriptorsFor(const QString &chartId) const;
@@ -38,7 +36,7 @@ private:
     [[nodiscard]] QVariant defaultValue(const QString &chartId, const QString &paramKey) const;
     [[nodiscard]] const ChartParamDescriptor *findParam(const QString &chartId, const QString &paramKey) const;
 
-    AppSettings *m_settings = nullptr;
+    dsfw::AppSettings *m_settings = nullptr;
     QMap<QString, ChartConfigDescriptor> m_charts;
     QMap<QString, QMap<QString, QVariant>> m_overrides;
 };

@@ -10,6 +10,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
     using namespace dsfw;
 
     static TaskProcessorRegistry::Registrar<HubertAlignmentProcessor> s_reg(QStringLiteral("phoneme_alignment"),

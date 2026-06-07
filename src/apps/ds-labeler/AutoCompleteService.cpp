@@ -9,6 +9,8 @@
 #include <QStringList>
 
 namespace dstools {
+
+using namespace dsfw;
     using namespace dsfw;
 
 AutoCompleteResult autoCompleteSlice(DsTextDocument doc,

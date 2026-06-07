@@ -12,6 +12,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 BoundaryDragController::BoundaryDragController(QObject *parent)
     : QObject(parent) {
 }

@@ -11,6 +11,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 QWidget *MinLabelPageDescriptor::create(dsfw::AppShell *shell, IEditorDataSource *dataSource,
                                         AppSettingsBackend *settingsBackend) const {
     auto *page = new MinLabelPage(shell);

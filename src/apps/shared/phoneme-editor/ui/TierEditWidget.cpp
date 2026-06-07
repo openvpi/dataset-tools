@@ -15,8 +15,12 @@
 #include <dsfw/widgets/ViewportController.h>
 
 namespace dstools {
+
+using namespace dsfw;
     namespace phonemelabeler {
         using namespace dsfw;
+        using dsfw::widgets::ViewportController;
+        using dsfw::widgets::ViewportState;
 
         TierEditWidget::TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack, ViewportController *viewport,
                                        BoundaryDragController *dragController, QWidget *parent) :

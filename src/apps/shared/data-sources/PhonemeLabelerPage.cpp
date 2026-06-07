@@ -31,6 +31,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 // ---------------------------------------------------------------------------
 // Build grapheme + phoneme layers with BindingGroups from HFA WordList.
 //

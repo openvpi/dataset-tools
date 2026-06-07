@@ -13,6 +13,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
     std::vector<FileIntegrityReport> SlicerIntegrityGuard::scanAffectedSlices(
         const QString &workingDir, const std::vector<QString> &affectedBaseNames) {
         std::vector<FileIntegrityReport> reports;

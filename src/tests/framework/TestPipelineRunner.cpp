@@ -7,6 +7,7 @@
 
 using namespace dsfw;
 using namespace dstools;
+using namespace dsfw;
 
 // Simple mock processor that copies input layer to output layer
 class MockProcessor : public ITaskProcessor {

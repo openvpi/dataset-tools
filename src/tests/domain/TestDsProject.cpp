@@ -4,6 +4,7 @@
 #include <dstools/DsProject.h>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestDsProject : public QObject {
     Q_OBJECT

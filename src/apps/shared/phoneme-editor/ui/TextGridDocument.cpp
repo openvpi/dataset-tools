@@ -11,6 +11,8 @@
 #include <map>
 
 namespace dstools {
+
+using namespace dsfw;
 namespace phonemelabeler {
 using namespace dsfw;
 

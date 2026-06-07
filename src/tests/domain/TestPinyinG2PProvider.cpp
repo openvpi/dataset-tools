@@ -4,6 +4,7 @@
 #include <dsfw/IG2PProvider.h>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestPinyinG2PProvider : public QObject {
     Q_OBJECT

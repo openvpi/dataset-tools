@@ -5,6 +5,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 void PageFactory::registerPages(
     dsfw::AppShell *shell,
     IEditorDataSource *dataSource,

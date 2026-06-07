@@ -13,6 +13,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 PowerChartPanel::PowerChartPanel(ViewportController *viewport, QWidget *parent)
     : ChartPanelBase(QStringLiteral("power"), viewport, parent)
 {

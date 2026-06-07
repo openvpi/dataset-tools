@@ -13,7 +13,6 @@
 #include <vector>
 
 namespace dstools {
-using namespace dsfw;
 
     class MiniMapScrollBar : public QWidget {
         Q_OBJECT

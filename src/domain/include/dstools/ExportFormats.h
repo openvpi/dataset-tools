@@ -7,8 +7,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
-
 /// @brief Exports dataset items to HTS-style label files.
 class HtsLabelExportFormat : public dsfw::IExportFormat {
 public:
@@ -23,14 +21,14 @@ public:
     /// @param workingDir Working directory for intermediate data.
     /// @param outputPath Destination file path.
     /// @return Success or an error description.
-    Result<void> exportItem(const std::filesystem::path& sourceFile, const std::filesystem::path& workingDir,
+    dsfw::Result<void> exportItem(const std::filesystem::path& sourceFile, const std::filesystem::path& workingDir,
                             const std::filesystem::path& outputPath) override;
 
     /// @brief Export all items in a directory to HTS label files.
     /// @param workingDir Directory containing source items.
     /// @param outputDir Destination directory.
     /// @return Success or an error description.
-    Result<void> exportAll(const std::filesystem::path& workingDir, const std::filesystem::path& outputDir) override;
+    dsfw::Result<void> exportAll(const std::filesystem::path& workingDir, const std::filesystem::path& outputDir) override;
 };
 
 /// @brief Exports dataset items to Sinsy XML format.
@@ -47,14 +45,14 @@ public:
     /// @param workingDir Working directory for intermediate data.
     /// @param outputPath Destination file path.
     /// @return Success or an error description.
-    Result<void> exportItem(const std::filesystem::path& sourceFile, const std::filesystem::path& workingDir,
+    dsfw::Result<void> exportItem(const std::filesystem::path& sourceFile, const std::filesystem::path& workingDir,
                             const std::filesystem::path& outputPath) override;
 
     /// @brief Export all items in a directory to Sinsy XML files.
     /// @param workingDir Directory containing source items.
     /// @param outputDir Destination directory.
     /// @return Success or an error description.
-    Result<void> exportAll(const std::filesystem::path& workingDir, const std::filesystem::path& outputDir) override;
+    dsfw::Result<void> exportAll(const std::filesystem::path& workingDir, const std::filesystem::path& outputDir) override;
 };
 
 } // namespace dstools

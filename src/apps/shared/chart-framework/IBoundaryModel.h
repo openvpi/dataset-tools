@@ -5,8 +5,6 @@
 
 namespace dstools {
 
-        using namespace dsfw;
-
         struct OutOfBoundsRange {
             double startSec;
             double endSec;
@@ -28,11 +26,11 @@ namespace dstools {
 
             [[nodiscard]] virtual int boundaryCount(int tierIndex) const = 0;
 
-            [[nodiscard]] virtual TimePos boundaryTime(int tierIndex, int boundaryIndex) const = 0;
+            [[nodiscard]] virtual dsfw::TimePos boundaryTime(int tierIndex, int boundaryIndex) const = 0;
 
-            virtual void moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) = 0;
+            virtual void moveBoundary(int tierIndex, int boundaryIndex, dsfw::TimePos newTime) = 0;
 
-            [[nodiscard]] virtual TimePos totalDuration() const = 0;
+            [[nodiscard]] virtual dsfw::TimePos totalDuration() const = 0;
 
             [[nodiscard]] virtual bool supportsBinding() const {
                 return false;
@@ -46,13 +44,13 @@ namespace dstools {
                 return {};
             }
 
-            [[nodiscard]] virtual TimePos clampBoundaryTime(int /*tierIndex*/, int /*boundaryIndex*/,
-                                                            TimePos proposedTime) const {
+            [[nodiscard]] virtual dsfw::TimePos clampBoundaryTime(int /*tierIndex*/, int /*boundaryIndex*/,
+                                                            dsfw::TimePos proposedTime) const {
                 return proposedTime;
             }
 
-            [[nodiscard]] virtual TimePos snapToNearestBoundary(int /*tierIndex*/, TimePos proposedTime,
-                                                                TimePos /*snapThreshold*/) const {
+            [[nodiscard]] virtual dsfw::TimePos snapToNearestBoundary(int /*tierIndex*/, dsfw::TimePos proposedTime,
+                                                                dsfw::TimePos /*snapThreshold*/) const {
                 return proposedTime;
             }
 
@@ -60,12 +58,12 @@ namespace dstools {
                 return {};
             }
 
-            [[nodiscard]] virtual TimePos snapToNearestBoundaryPixels(int tierIndex, TimePos proposedTime,
+            [[nodiscard]] virtual dsfw::TimePos snapToNearestBoundaryPixels(int tierIndex, dsfw::TimePos proposedTime,
                                                                       double pixelsPerSecond,
                                                                       double pixelThreshold) const {
                 if (pixelsPerSecond <= 0)
                     return proposedTime;
-                TimePos timeThreshold = static_cast<TimePos>(pixelThreshold / pixelsPerSecond * 1000000.0);
+                dsfw::TimePos timeThreshold = static_cast<dsfw::TimePos>(pixelThreshold / pixelsPerSecond * 1000000.0);
                 return snapToNearestBoundary(tierIndex, proposedTime, timeThreshold);
             }
         };

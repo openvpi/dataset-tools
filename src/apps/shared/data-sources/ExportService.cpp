@@ -19,6 +19,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 ExportValidationResult ExportService::validate(IEditorDataSource *source) {
     ExportValidationResult result;
     if (!source)

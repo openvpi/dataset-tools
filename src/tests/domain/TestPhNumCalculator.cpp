@@ -4,6 +4,7 @@
 #include <dstools/TranscriptionCsv.h>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestPhNumCalculator : public QObject {
     Q_OBJECT

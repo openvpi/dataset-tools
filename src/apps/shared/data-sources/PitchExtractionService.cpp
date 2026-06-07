@@ -12,6 +12,8 @@
 #include <dsfw/PathUtils.h>
 
 namespace dstools {
+
+using namespace dsfw;
     using namespace dsfw;
 
     using dsfw::signal::expectedFrameCount;

@@ -8,6 +8,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 ChartConfigRegistry &ChartConfigRegistry::instance() {
     static ChartConfigRegistry inst;
     return inst;

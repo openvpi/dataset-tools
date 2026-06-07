@@ -9,8 +9,6 @@
 
 namespace dstools {
 
-    using namespace dsfw;
-
     class IEditorDataSource : public dsfw::ISliceDataSource {
         Q_OBJECT
 
@@ -22,14 +20,14 @@ namespace dstools {
 
         [[nodiscard]] virtual QStringList sliceIds() const = 0;
 
-        [[nodiscard]] virtual PipelineContext *context(const QString &sliceId) {
+        [[nodiscard]] virtual dsfw::PipelineContext *context(const QString &sliceId) {
             Q_UNUSED(sliceId)
             return nullptr;
         }
 
-        [[nodiscard]] virtual Result<DsTextDocument> loadSlice(const QString &sliceId) = 0;
+        [[nodiscard]] virtual dsfw::Result<DsTextDocument> loadSlice(const QString &sliceId) = 0;
 
-        [[nodiscard]] virtual Result<void> saveSlice(const QString &sliceId, const DsTextDocument &doc) = 0;
+        [[nodiscard]] virtual dsfw::Result<void> saveSlice(const QString &sliceId, const DsTextDocument &doc) = 0;
 
         virtual void setLayerManuallyEdited(const QString &sliceId, const QString &layer, bool edited) {
             Q_UNUSED(sliceId)

@@ -7,6 +7,8 @@
 
 namespace dstools::labeler {
 
+using namespace dsfw;
+
 TaskWindowAdapter::TaskWindowAdapter(dsfw::widgets::TaskWindow *page, QWidget *parent)
     : QWidget(parent), m_page(page) {
     auto *layout = new QVBoxLayout(this);

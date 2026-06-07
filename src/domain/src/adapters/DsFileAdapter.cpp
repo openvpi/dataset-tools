@@ -10,6 +10,8 @@ REGISTER_FORMAT_ADAPTER(dstools::DsFileAdapter);
 
 namespace dstools {
 
+using namespace dsfw;
+
 namespace {
 
 dsfw::Result<void> validateLayerData(const std::map<QString, dsfw::LayerData>& layers) {

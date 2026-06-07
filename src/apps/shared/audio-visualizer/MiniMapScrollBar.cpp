@@ -11,6 +11,8 @@
 #include <cmath>
 
 namespace dstools {
+
+using namespace dsfw;
 using namespace dsfw;
 
 using dsfw::widgets::ViewportController;

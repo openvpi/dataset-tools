@@ -5,6 +5,7 @@
 
 using namespace dsfw;
 using namespace dstools;
+using namespace dsfw;
 
 class MockPitchProcessor : public ITaskProcessor {
 public:

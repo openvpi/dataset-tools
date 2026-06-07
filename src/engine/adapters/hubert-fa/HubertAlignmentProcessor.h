@@ -15,23 +15,21 @@ namespace HFA {
 
 namespace dstools {
 
-    using namespace dsfw;
-
     /// @brief ITaskProcessor implementation for HuBERT-FA phoneme alignment.
-    class HubertAlignmentProcessor : public ITaskProcessor {
+    class HubertAlignmentProcessor : public dsfw::ITaskProcessor {
     public:
         HubertAlignmentProcessor();
         ~HubertAlignmentProcessor() override;
 
         QString processorId() const override;
         QString displayName() const override;
-        TaskSpec taskSpec() const override;
-        ProcessorConfig capabilities() const noexcept override;
+        dsfw::TaskSpec taskSpec() const override;
+        dsfw::ProcessorConfig capabilities() const noexcept override;
 
-        Result<void> initialize(ModelManager &mm, const ProcessorConfig &modelConfig) override;
+        dsfw::Result<void> initialize(ModelManager &mm, const dsfw::ProcessorConfig &modelConfig) override;
         void release() override;
 
-        Result<TaskOutput> process(const TaskInput &input) override;
+        dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &input) override;
 
     private:
         std::unique_ptr<HFA::HFA> m_hfa;

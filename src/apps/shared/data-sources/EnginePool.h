@@ -130,7 +130,7 @@ private:
         if (!result)
             return nullptr;
 
-        auto typeId = registerModelType(modelKey.toStdString());
+        auto typeId = dsfw::registerModelType(modelKey.toStdString());
 
         auto* provider = m_mgr->provider(typeId);
         auto* typedProvider = dynamic_cast<typename Traits::ProviderType*>(provider);

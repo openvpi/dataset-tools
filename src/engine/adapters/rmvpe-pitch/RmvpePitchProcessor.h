@@ -13,22 +13,20 @@ namespace Rmvpe {
 
 namespace dstools {
 
-    using namespace dsfw;
-
     /// @brief ITaskProcessor implementation for RMVPE F0 pitch extraction.
-    class RmvpePitchProcessor : public ITaskProcessor {
+    class RmvpePitchProcessor : public dsfw::ITaskProcessor {
     public:
         RmvpePitchProcessor();
         ~RmvpePitchProcessor() override;
 
         QString processorId() const override;
         QString displayName() const override;
-        TaskSpec taskSpec() const override;
+        dsfw::TaskSpec taskSpec() const override;
 
-        Result<void> initialize(ModelManager &mm, const ProcessorConfig &modelConfig) override;
+        dsfw::Result<void> initialize(ModelManager &mm, const dsfw::ProcessorConfig &modelConfig) override;
         void release() override;
 
-        Result<TaskOutput> process(const TaskInput &input) override;
+        dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &input) override;
 
     private:
         std::unique_ptr<Rmvpe::Rmvpe> m_rmvpe; ///< RMVPE engine instance.

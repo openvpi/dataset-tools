@@ -22,6 +22,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 BatchProcessDialog::BatchProcessDialog(const QString& title, QWidget* parent) : QDialog(parent) {
     setWindowTitle(title);
     setMinimumSize(520, 420);

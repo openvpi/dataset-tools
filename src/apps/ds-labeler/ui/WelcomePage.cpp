@@ -22,6 +22,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 static constexpr int kMaxRecentProjects = 10;
 
 static void writeRecentProjects(const QStringList& list) {

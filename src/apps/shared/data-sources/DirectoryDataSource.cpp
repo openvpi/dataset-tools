@@ -7,6 +7,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 DirectoryDataSource::DirectoryDataSource(QObject *parent)
     : IEditorDataSource(parent) {}
 

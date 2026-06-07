@@ -16,8 +16,12 @@
 using ::dstools::MoveBoundaryCommand;
 
 namespace dstools {
+
+using namespace dsfw;
 namespace phonemelabeler {
 using namespace dsfw;
+using dsfw::widgets::ViewportController;
+using dsfw::widgets::ViewportState;
 
 IntervalTierView::IntervalTierView(int tierIndex, TextGridDocument *doc,
                                      QUndoStack *undoStack, ViewportController *viewport,

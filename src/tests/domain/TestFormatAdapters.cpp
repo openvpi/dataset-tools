@@ -10,6 +10,7 @@
 
 using namespace dsfw;
 using namespace dstools;
+using namespace dsfw;
 
 class TestFormatAdapters : public QObject {
     Q_OBJECT

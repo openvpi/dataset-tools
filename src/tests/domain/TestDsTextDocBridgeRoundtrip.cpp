@@ -7,6 +7,7 @@
 #include "DsTextDocBridge.h"
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestDsTextDocBridgeRoundtrip : public QObject {
     Q_OBJECT

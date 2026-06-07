@@ -13,8 +13,6 @@
 
 namespace dstools {
 
-    using namespace dsfw;
-
     class CsvToDsConverter {
     public:
         struct Options {
@@ -27,21 +25,21 @@ namespace dstools {
             float maxF0 = constants::kDefaultMaxF0;
         };
 
-        using F0Callback = std::function<Result<std::vector<float>>(const QString &wavPath)>;
+        using F0Callback = std::function<dsfw::Result<std::vector<float>>(const QString &wavPath)>;
 
         using ProgressCallback = std::function<void(int current, int total, const QString &name)>;
 
-        [[nodiscard]] static Result<void> convert(const Options &opts, F0Callback f0Callback,
+        [[nodiscard]] static dsfw::Result<void> convert(const Options &opts, F0Callback f0Callback,
                                                   ProgressCallback progress);
 
-        [[nodiscard]] static Result<void> convertFromMemory(const std::vector<TranscriptionRow> &rows,
+        [[nodiscard]] static dsfw::Result<void> convertFromMemory(const std::vector<TranscriptionRow> &rows,
                                                             const Options &opts, F0Callback f0Callback,
                                                             ProgressCallback progress);
 
         /// Reverse: .ds directory → CSV.
         /// Two-pass: Pass 1 = .ds with .wav, Pass 2 = lone .ds (multi-sentence).
         /// Does NOT output note_slur (matching Python behavior).
-        [[nodiscard]] static Result<void> dsToCsv(const QString &dsDir, const QString &csvPath);
+        [[nodiscard]] static dsfw::Result<void> dsToCsv(const QString &dsDir, const QString &csvPath);
     };
 
 } // namespace dstools

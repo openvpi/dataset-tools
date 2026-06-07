@@ -11,6 +11,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 // Self-register with the task processor registry.
 static TaskProcessorRegistry::Registrar<GameMidiProcessor> s_reg(
     QStringLiteral("midi_transcription"), QStringLiteral("game"));

@@ -15,6 +15,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 WaveformChartPanel::WaveformChartPanel(ViewportController *viewport, QWidget *parent)
     : ChartPanelBase(QStringLiteral("waveform"), viewport, parent)
 {

@@ -9,6 +9,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 SliceListPanel::SliceListPanel(QWidget *parent) : QWidget(parent) {
     m_model = new SliceListModel(this);
 

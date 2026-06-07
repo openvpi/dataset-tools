@@ -39,6 +39,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 DsSlicerPage::DsSlicerPage(QWidget* parent) : SlicerPage(parent) {
     connectProjectSignals();
 }

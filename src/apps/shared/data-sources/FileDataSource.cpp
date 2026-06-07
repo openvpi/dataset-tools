@@ -12,6 +12,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 namespace {
 
 QString formatIdFromExtension(const QString& filePath) {

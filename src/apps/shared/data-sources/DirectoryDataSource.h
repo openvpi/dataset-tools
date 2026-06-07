@@ -19,8 +19,8 @@ namespace dstools {
 
         int getSliceCount() const override;
         QStringList sliceIds() const override;
-        [[nodiscard]] Result<DsTextDocument> loadSlice(const QString &sliceId) override;
-        [[nodiscard]] Result<void> saveSlice(const QString &sliceId, const DsTextDocument &doc) override;
+        [[nodiscard]] dsfw::Result<DsTextDocument> loadSlice(const QString &sliceId) override;
+        [[nodiscard]] dsfw::Result<void> saveSlice(const QString &sliceId, const DsTextDocument &doc) override;
         QString audioPath(const QString &sliceId) const override;
 
     private:

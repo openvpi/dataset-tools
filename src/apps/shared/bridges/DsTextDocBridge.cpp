@@ -3,6 +3,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 QList<IntervalLayer> DsTextDocBridge::extractIntervalLayers(const DsTextDocument& doc) {
     QList<IntervalLayer> result;
     for (const auto& layer : doc.layers) {

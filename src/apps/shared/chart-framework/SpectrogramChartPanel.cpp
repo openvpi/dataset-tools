@@ -18,6 +18,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 SpectrogramChartPanel::SpectrogramChartPanel(ViewportController *viewport, QWidget *parent)
     : ChartPanelBase(QStringLiteral("spectrogram"), viewport, parent)
 {

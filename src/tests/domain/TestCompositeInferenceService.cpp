@@ -3,6 +3,7 @@
 
 using namespace dsfw;
 using namespace dstools;
+using namespace dsfw;
 
 class TestCompositeInferenceService : public QObject {
     Q_OBJECT

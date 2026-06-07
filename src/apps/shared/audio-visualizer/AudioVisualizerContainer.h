@@ -27,7 +27,6 @@ class QUndoStack;
 
 namespace dstools {
 
-    using namespace dsfw;
     class IBoundaryModel;
     class BoundaryOverlayWidget;
     class BoundaryDragController;
@@ -35,8 +34,7 @@ namespace dstools {
     using ::dstools::BoundaryDragController;
     using ::dstools::BoundaryOverlayWidget;
     using ::dstools::IBoundaryModel;
-    using namespace dsfw;
-    using TimeRulerWidget = dsfw::widgets::TimeRulerWidget;
+    using dsfw::widgets::TimeRulerWidget;
 
     class TierLabelArea;
     class MiniMapScrollBar;
@@ -133,7 +131,7 @@ namespace dstools {
         /// Return the shared global AppSettings used for chart layout persistence
         /// (chartOrder + chartVisible).  Both AudioVisualizerContainer and
         /// SettingsPage must use this instance so they read/write the same store.
-        static AppSettings &chartLayoutSettings();
+        static dsfw::AppSettings &chartLayoutSettings();
 
         /// Set visibility of a chart widget by id.
         /// Hidden charts are excluded from the splitter layout.
@@ -229,7 +227,7 @@ namespace dstools {
         QStringList m_chartOrder;
         QSet<QString> m_hiddenCharts; ///< Chart IDs that are currently hidden
 
-        AppSettings m_settings;
+        dsfw::AppSettings m_settings;
         QString m_resolutionKey;
         bool m_needsFitOnResize = false;   ///< fitToWindow was deferred because width was 0
         QByteArray m_pendingSplitterState; ///< splitter state deferred until layout is valid

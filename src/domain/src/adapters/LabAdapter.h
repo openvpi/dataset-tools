@@ -4,9 +4,7 @@
 
 namespace dstools {
 
-    using namespace dsfw;
-
-    class LabAdapter : public IFormatAdapter {
+    class LabAdapter : public dsfw::IFormatAdapter {
     public:
         QString formatId() const override {
             return QStringLiteral("lab");
@@ -21,11 +19,11 @@ namespace dstools {
             return true;
         }
 
-        Result<void> importToLayers(const QString &filePath, std::map<QString, LayerData> &layers,
-                                    const ProcessorConfig &config) override;
+        dsfw::Result<void> importToLayers(const QString &filePath, std::map<QString, dsfw::LayerData> &layers,
+                                    const dsfw::ProcessorConfig &config) override;
 
-        Result<void> exportFromLayers(const std::map<QString, LayerData> &layers, const QString &outputPath,
-                                      const ProcessorConfig &config) override;
+        dsfw::Result<void> exportFromLayers(const std::map<QString, dsfw::LayerData> &layers, const QString &outputPath,
+                                      const dsfw::ProcessorConfig &config) override;
     };
 
 } // namespace dstools

@@ -18,6 +18,8 @@
 #include <dstools/ProjectPaths.h>
 
 namespace dstools::labeler {
+
+using namespace dsfw;
     using namespace dsfw;
 
 GameAlignPage::GameAlignPage(QWidget* parent) : WizardPageBase(parent) {

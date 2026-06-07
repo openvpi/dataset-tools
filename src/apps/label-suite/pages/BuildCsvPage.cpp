@@ -15,6 +15,8 @@
 
 namespace dstools::labeler {
 
+using namespace dsfw;
+
 BuildCsvPage::BuildCsvPage(QWidget *parent) : WizardPageBase(parent) {
     buildUi();
 }

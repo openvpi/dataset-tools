@@ -39,6 +39,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 #pragma region Construction / Destruction
 
 EditorPageBase::EditorPageBase(const QString &settingsGroup, QWidget *parent)

@@ -11,6 +11,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 SliceListModel::SliceListModel(QObject *parent) : QAbstractListModel(parent) {}
 
 int SliceListModel::rowCount(const QModelIndex &parent) const {

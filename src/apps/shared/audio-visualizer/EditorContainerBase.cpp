@@ -17,6 +17,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 EditorContainerBase::EditorContainerBase(const QString &settingsGroup, QWidget *parent)
     : AudioEditorWidgetBase(parent), m_settingsGroup(settingsGroup) {
     m_playWidget = new dsfw::widgets::PlayWidget(this);

@@ -23,6 +23,8 @@
 #include <dsfw/TimePos.h>
 
 namespace dstools {
+
+using namespace dsfw;
 using namespace dsfw;
 
 using dsfw::widgets::PlayWidget;

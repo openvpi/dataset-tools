@@ -12,6 +12,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 static std::map<QString, LayerData> phonemeRowToLayers(const TranscriptionRow &row) {
     std::map<QString, LayerData> temp;
     const QStringList phones = row.phSeq.split(' ', Qt::SkipEmptyParts);

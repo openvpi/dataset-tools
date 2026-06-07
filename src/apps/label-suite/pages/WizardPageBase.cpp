@@ -4,6 +4,8 @@
 
 namespace dstools::labeler {
 
+using namespace dsfw;
+
 WizardPageBase::WizardPageBase(QWidget *parent) : QWidget(parent) {}
 
 void WizardPageBase::setWorkingDirectory(const QString &dir) {

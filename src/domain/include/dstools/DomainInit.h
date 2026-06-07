@@ -8,11 +8,9 @@
 
 namespace dstools {
 
-    using namespace dsfw;
+void registerDomainFormatAdapters();
 
-    void registerDomainFormatAdapters();
-
-    Result<void> exportContextsToCsv(const std::vector<PipelineContext> &contexts, const QString &outputPath,
-                                     const ProcessorConfig &config = {});
+    dsfw::Result<void> exportContextsToCsv(const std::vector<dsfw::PipelineContext> &contexts, const QString &outputPath,
+                                     const dsfw::ProcessorConfig &config = {});
 
 } // namespace dstools

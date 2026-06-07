@@ -4,6 +4,7 @@
 
 using namespace dsfw;
 using namespace dstools;
+using namespace dsfw;
 
 class TestDsTextDocument : public QObject {
     Q_OBJECT

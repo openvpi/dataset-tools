@@ -4,6 +4,7 @@
 #include <cmath>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestPitchUtils : public QObject {
     Q_OBJECT

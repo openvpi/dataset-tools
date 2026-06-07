@@ -10,14 +10,12 @@ class QUndoStack;
 
 namespace dstools {
 
-        using namespace dsfw;
-
         class IBoundaryModel;
 
         struct AlignedBoundary {
             int tierIndex;
             int boundaryIndex;
-            TimePos time;
+            dsfw::TimePos time;
         };
 
         class BoundaryDragController : public QObject {
@@ -28,8 +26,8 @@ namespace dstools {
 
             void setBindingEnabled(bool enabled);
             void setSnapEnabled(bool enabled);
-            void setToleranceUs(TimePos toleranceUs);
-            void setSnapThresholdUs(TimePos thresholdUs);
+            void setToleranceUs(dsfw::TimePos toleranceUs);
+            void setSnapThresholdUs(dsfw::TimePos thresholdUs);
             void setCoordConverter(const ChartCoordinate *conv, int pixelWidth);
             void setPixelSnapThreshold(double pixelThreshold);
 
@@ -39,7 +37,7 @@ namespace dstools {
             [[nodiscard]] bool isSnapEnabled() const {
                 return m_snapEnabled;
             }
-            [[nodiscard]] TimePos snapThresholdUs() const {
+            [[nodiscard]] dsfw::TimePos snapThresholdUs() const {
                 return m_snapThresholdUs;
             }
             [[nodiscard]] double pixelSnapThreshold() const {
@@ -58,9 +56,9 @@ namespace dstools {
 
             void startDrag(int tierIndex, int boundaryIndex, IBoundaryModel *model);
 
-            void updateDrag(TimePos proposedTime);
+            void updateDrag(dsfw::TimePos proposedTime);
 
-            void endDrag(TimePos finalTime, QUndoStack *undoStack);
+            void endDrag(dsfw::TimePos finalTime, QUndoStack *undoStack);
 
             void cancelDrag();
 
@@ -70,8 +68,8 @@ namespace dstools {
 
         signals:
             void dragStarted(int tierIndex, int boundaryIndex);
-            void dragging(int tierIndex, int boundaryIndex, TimePos currentTime);
-            void dragFinished(int tierIndex, int boundaryIndex, TimePos finalTime);
+            void dragging(int tierIndex, int boundaryIndex, dsfw::TimePos currentTime);
+            void dragFinished(int tierIndex, int boundaryIndex, dsfw::TimePos finalTime);
             void bindingEnabledChanged(bool enabled);
             void snapEnabledChanged(bool enabled);
 
@@ -86,8 +84,8 @@ namespace dstools {
 
             bool m_bindingEnabled = true;
             bool m_snapEnabled = true;
-            TimePos m_toleranceUs = 5000;
-            TimePos m_snapThresholdUs = 5000;
+            dsfw::TimePos m_toleranceUs = 5000;
+            dsfw::TimePos m_snapThresholdUs = 5000;
             const ChartCoordinate *m_converter = nullptr;
             int m_pixelWidth = 0;
             double m_pixelSnapThreshold = 10.0;
@@ -95,11 +93,11 @@ namespace dstools {
             bool m_dragging = false;
             int m_draggedTier = -1;
             int m_draggedBoundary = -1;
-            TimePos m_dragStartTime = 0;
+            dsfw::TimePos m_dragStartTime = 0;
             IBoundaryModel *m_model = nullptr;
 
             std::vector<AlignedBoundary> m_partners;
-            std::vector<TimePos> m_partnerStartTimes;
+            std::vector<dsfw::TimePos> m_partnerStartTimes;
         };
 
     } // namespace dstools

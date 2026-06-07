@@ -3,6 +3,7 @@
 #include <dstools/TranscriptionCsv.h>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestTranscriptionCsv : public QObject {
     Q_OBJECT

@@ -47,6 +47,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
     ExportPage::ExportPage(QWidget *parent) : QWidget(parent) {
         m_phNumCalc = std::make_unique<PhNumCalculator>();
         m_previewData = std::make_shared<SlicePreviewModel>();

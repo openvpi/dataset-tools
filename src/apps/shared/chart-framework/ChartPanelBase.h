@@ -17,10 +17,6 @@ class QUndoStack;
 
 namespace dstools {
 
-        using namespace dsfw;
-
-        using dsfw::widgets::ViewportController;
-
         class IBoundaryModel;
         class BoundaryDragController;
 
@@ -28,7 +24,7 @@ namespace dstools {
             Q_OBJECT
 
         public:
-            explicit ChartPanelBase(const QString &id, ViewportController *viewport, QWidget *parent = nullptr);
+            explicit ChartPanelBase(const QString &id, dsfw::widgets::ViewportController *viewport, QWidget *parent = nullptr);
 
             QString chartId() const override {
                 return m_id;
@@ -172,7 +168,7 @@ namespace dstools {
             void playSegmentBetween(double startSec, double endSec);
 
             QString m_id;
-            ViewportController *m_viewport = nullptr;
+            dsfw::widgets::ViewportController *m_viewport = nullptr;
             IBoundaryModel *m_boundaryModel = nullptr;
             BoundaryDragController *m_dragController = nullptr;
             dsfw::widgets::PlayWidget *m_playWidget = nullptr;

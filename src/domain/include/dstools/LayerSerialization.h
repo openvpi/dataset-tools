@@ -8,10 +8,8 @@
 
 namespace dstools {
 
-    using namespace dsfw;
+    dsfw::Result<LayerDataVariant> parseLayerData(const dsfw::LayerData &data, const QString &layerType);
 
-    Result<LayerDataVariant> parseLayerData(const LayerData &data, const QString &layerType);
-
-    LayerData serializeLayerData(const LayerDataVariant &variant);
+    dsfw::LayerData serializeLayerData(const LayerDataVariant &variant);
 
 } // namespace dstools

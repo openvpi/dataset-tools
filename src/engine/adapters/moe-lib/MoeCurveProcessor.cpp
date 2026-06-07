@@ -12,6 +12,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 MoeCurveProcessor::MoeCurveProcessor(QObject* parent) : QObject(parent) {
 }
 

@@ -10,6 +10,8 @@ namespace dstools {
 
 using namespace dsfw;
 
+using namespace dsfw;
+
 Result<SliceResult> SlicerService::slice(const QString& audioPath, double threshold, int minLength, int minInterval,
                                          int hopSize, int maxSilKept) {
     if (!QFileInfo::exists(audioPath)) {

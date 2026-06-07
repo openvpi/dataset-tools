@@ -5,14 +5,12 @@
 
 namespace dstools {
 
-        using namespace dsfw;
-
         class IBoundaryModel;
 
         class MoveBoundaryCommand : public QUndoCommand {
         public:
-            MoveBoundaryCommand(IBoundaryModel *model, int tierIndex, int boundaryIndex, TimePos oldTime,
-                                TimePos newTime, QUndoCommand *parent = nullptr);
+            MoveBoundaryCommand(IBoundaryModel *model, int tierIndex, int boundaryIndex, dsfw::TimePos oldTime,
+                                dsfw::TimePos newTime, QUndoCommand *parent = nullptr);
 
             void redo() override;
             void undo() override;
@@ -26,8 +24,8 @@ namespace dstools {
             IBoundaryModel *m_model;
             int m_tierIndex;
             int m_boundaryIndex;
-            TimePos m_oldTime;
-            TimePos m_newTime;
+            dsfw::TimePos m_oldTime;
+            dsfw::TimePos m_newTime;
         };
 
     } // namespace dstools

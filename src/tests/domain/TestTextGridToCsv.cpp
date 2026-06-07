@@ -5,6 +5,7 @@
 #include <dstools/TextGridToCsv.h>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestTextGridToCsv : public QObject {
     Q_OBJECT

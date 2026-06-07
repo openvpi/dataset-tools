@@ -2,6 +2,7 @@
 #include <dstools/ModelManager.h>
 
 using namespace dstools;
+using namespace dsfw;
 
 static const auto TestCustomType = registerModelType("Custom");
 static const auto TestAsrType = registerModelType("Asr");

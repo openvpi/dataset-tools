@@ -14,7 +14,6 @@ using ::dstools::IBoundaryModel;
 
 namespace dstools {
     namespace phonemelabeler {
-        using namespace dsfw;
 
         class TextGridDocument : public QObject, public IBoundaryModel {
             Q_OBJECT
@@ -25,7 +24,7 @@ namespace dstools {
             /// Build an in-memory TextGrid from dstext IntervalLayers.
             /// @param layers  IntervalLayer list from DsTextDocument.
             /// @param duration Total audio duration in microseconds (sets maxTime).
-            void loadFromDsText(const QList<IntervalLayer> &layers, TimePos duration);
+            void loadFromDsText(const QList<IntervalLayer> &layers, dsfw::TimePos duration);
 
             /// Export all tiers as dstext IntervalLayers.
             QList<IntervalLayer> toDsText() const;
@@ -42,23 +41,23 @@ namespace dstools {
             [[nodiscard]] const textgrid::IntervalTier *intervalTier(int index) const;
             [[nodiscard]] const textgrid::PointTier *pointTier(int index) const;
 
-            [[nodiscard]] TimePos totalDuration() const override;
+            [[nodiscard]] dsfw::TimePos totalDuration() const override;
 
             [[nodiscard]] QString tierName(int index) const override;
             [[nodiscard]] bool isIntervalTier(int index) const;
 
-            void moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) override;
+            void moveBoundary(int tierIndex, int boundaryIndex, dsfw::TimePos newTime) override;
             void setIntervalText(int tierIndex, int intervalIndex, const QString &text);
-            void insertBoundary(int tierIndex, TimePos time);
+            void insertBoundary(int tierIndex, dsfw::TimePos time);
             void removeBoundary(int tierIndex, int boundaryIndex);
 
-            [[nodiscard]] TimePos boundaryTime(int tierIndex, int boundaryIndex) const override;
+            [[nodiscard]] dsfw::TimePos boundaryTime(int tierIndex, int boundaryIndex) const override;
             [[nodiscard]] int boundaryCount(int tierIndex) const override;
             [[nodiscard]] int intervalCount(int tierIndex) const;
 
             [[nodiscard]] QString intervalText(int tierIndex, int intervalIndex) const override;
-            [[nodiscard]] TimePos intervalStart(int tierIndex, int intervalIndex) const;
-            [[nodiscard]] TimePos intervalEnd(int tierIndex, int intervalIndex) const;
+            [[nodiscard]] dsfw::TimePos intervalStart(int tierIndex, int intervalIndex) const;
+            [[nodiscard]] dsfw::TimePos intervalEnd(int tierIndex, int intervalIndex) const;
 
             [[nodiscard]] int activeTierIndex() const override {
                 return m_activeTierIndex;
@@ -76,11 +75,11 @@ namespace dstools {
             [[nodiscard]] bool isTierReadOnly(int tierIndex) const;
             void setTierReadOnly(int tierIndex, bool readOnly);
 
-            [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
-                                                    TimePos proposedTime) const override;
-            [[nodiscard]] TimePos snapToNearestBoundary(int tierIndex, TimePos proposedTime,
-                                                        TimePos snapThreshold) const override;
-            [[nodiscard]] TimePos snapToNearestBoundaryPixels(int tierIndex, TimePos proposedTime,
+            [[nodiscard]] dsfw::TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
+                                                    dsfw::TimePos proposedTime) const override;
+            [[nodiscard]] dsfw::TimePos snapToNearestBoundary(int tierIndex, dsfw::TimePos proposedTime,
+                                                        dsfw::TimePos snapThreshold) const override;
+            [[nodiscard]] dsfw::TimePos snapToNearestBoundaryPixels(int tierIndex, dsfw::TimePos proposedTime,
                                                               double pixelsPerSecond,
                                                               double pixelThreshold) const override;
 
@@ -104,7 +103,7 @@ namespace dstools {
 
         signals:
             void documentChanged();
-            void boundaryMoved(int tierIndex, int boundaryIndex, TimePos newTime);
+            void boundaryMoved(int tierIndex, int boundaryIndex, dsfw::TimePos newTime);
             void intervalTextChanged(int tierIndex, int intervalIndex);
             void boundaryInserted(int tierIndex, int boundaryIndex);
             void boundaryRemoved(int tierIndex, int boundaryIndex);

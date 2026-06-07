@@ -6,6 +6,7 @@
 #include <cmath>
 
 using namespace dstools;
+using namespace dsfw;
 
 class TestDsDocument : public QObject {
     Q_OBJECT

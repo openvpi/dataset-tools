@@ -11,7 +11,6 @@
 
 namespace dstools {
     namespace phonemelabeler {
-        using namespace dsfw;
 
         class TextGridDocument;
 
@@ -55,7 +54,7 @@ namespace dstools {
 
         class InsertBoundaryCommand : public QUndoCommand {
         public:
-            InsertBoundaryCommand(TextGridDocument *doc, int tierIndex, TimePos time, QUndoCommand *parent = nullptr);
+            InsertBoundaryCommand(TextGridDocument *doc, int tierIndex, dsfw::TimePos time, QUndoCommand *parent = nullptr);
 
             void redo() override;
             void undo() override;
@@ -67,7 +66,7 @@ namespace dstools {
         private:
             TextGridDocument *m_doc;
             int m_tierIndex;
-            TimePos m_time;
+            dsfw::TimePos m_time;
             int m_insertedBoundaryIndex;
         };
 
@@ -89,7 +88,7 @@ namespace dstools {
             TextGridDocument *m_doc;
             int m_tierIndex;
             int m_boundaryIndex;
-            TimePos m_savedTime;
+            dsfw::TimePos m_savedTime;
         };
 
     } // namespace phonemelabeler

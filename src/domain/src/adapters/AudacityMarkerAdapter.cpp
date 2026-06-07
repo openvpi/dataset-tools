@@ -10,6 +10,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 dsfw::Result<std::vector<double>> AudacityMarkerAdapter::read(const QString& path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {

@@ -10,14 +10,12 @@
 
 namespace dstools {
 
-using namespace dsfw;
-
 /// TextGrid → TranscriptionRow 转换
 class TextGridToCsv {
 public:
-    [[nodiscard]] static Result<TranscriptionRow> extractFromTextGrid(const QString& tgPath);
+    [[nodiscard]] static dsfw::Result<TranscriptionRow> extractFromTextGrid(const QString& tgPath);
 
-    [[nodiscard]] static Result<std::vector<TranscriptionRow>> extractDirectory(const QString& dir);
+    [[nodiscard]] static dsfw::Result<std::vector<TranscriptionRow>> extractDirectory(const QString& dir);
 };
 
 } // namespace dstools

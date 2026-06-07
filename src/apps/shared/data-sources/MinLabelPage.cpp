@@ -37,6 +37,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     MinLabelPage::MinLabelPage(QWidget *parent) : EditorPageBase("MinLabel", parent) {
         setBatchTaskKey(QStringLiteral("asr"));
         m_editor = new Minlabel::MinLabelEditor(this);

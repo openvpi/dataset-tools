@@ -22,6 +22,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 NewProjectDialog::NewProjectDialog(QWidget *parent)
     : QDialog(parent) {
     setWindowTitle(QStringLiteral("新建工程"));

@@ -13,7 +13,6 @@ namespace dstools {
 
 
         namespace ui {
-            using namespace dsfw;
 
             /// @brief Boundary model adapter for DsPitchDocument notes (MIDI pitch boundaries).
             ///
@@ -45,9 +44,9 @@ namespace dstools {
                     return 0;
                 }
                 [[nodiscard]] int boundaryCount(int tierIndex) const override;
-                [[nodiscard]] TimePos boundaryTime(int tierIndex, int boundaryIndex) const override;
-                void moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) override;
-                [[nodiscard]] TimePos totalDuration() const override;
+                [[nodiscard]] dsfw::TimePos boundaryTime(int tierIndex, int boundaryIndex) const override;
+                void moveBoundary(int tierIndex, int boundaryIndex, dsfw::TimePos newTime) override;
+                [[nodiscard]] dsfw::TimePos totalDuration() const override;
                 [[nodiscard]] bool supportsBinding() const override {
                     return false;
                 }
@@ -55,10 +54,10 @@ namespace dstools {
                     return true;
                 }
 
-                [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
-                                                        TimePos proposedTime) const override;
-                [[nodiscard]] TimePos snapToNearestBoundary(int tierIndex, TimePos proposedTime,
-                                                            TimePos snapThreshold) const override;
+                [[nodiscard]] dsfw::TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
+                                                        dsfw::TimePos proposedTime) const override;
+                [[nodiscard]] dsfw::TimePos snapToNearestBoundary(int tierIndex, dsfw::TimePos proposedTime,
+                                                            dsfw::TimePos snapThreshold) const override;
 
             signals:
                 /// @brief Emitted when a note boundary is changed (during drag preview).

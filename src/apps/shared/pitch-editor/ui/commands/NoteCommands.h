@@ -12,7 +12,6 @@ namespace dstools {
 
 
         namespace ui {
-            using namespace dsfw;
 
             class DeleteNotesCommand : public QUndoCommand {
             public:
@@ -27,7 +26,7 @@ namespace dstools {
                 std::vector<int> m_indices;
                 struct NoteSnapshot {
                     QString name;
-                    TimePos duration;
+                    dsfw::TimePos duration;
                     int slur;
                     QString glide;
                 };
@@ -90,7 +89,7 @@ namespace dstools {
                 int m_idx;
                 struct NoteSnapshot {
                     QString name;
-                    TimePos duration;
+                    dsfw::TimePos duration;
                     int slur;
                     QString glide;
                 };

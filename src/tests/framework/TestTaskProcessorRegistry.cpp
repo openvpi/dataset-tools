@@ -3,6 +3,7 @@
 
 using namespace dsfw;
 using namespace dstools;
+using namespace dsfw;
 
 class DummyProcessor : public ITaskProcessor {
 public:

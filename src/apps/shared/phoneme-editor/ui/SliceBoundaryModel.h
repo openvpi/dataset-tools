@@ -12,7 +12,6 @@ using ::dstools::OutOfBoundsRange;
 
 namespace dstools {
     namespace phonemelabeler {
-        using namespace dsfw;
 
         /// @brief Single-tier boundary model backed by a sorted vector of time points.
         ///
@@ -48,9 +47,9 @@ namespace dstools {
                 return 0;
             }
             [[nodiscard]] int boundaryCount(int tierIndex) const override;
-            [[nodiscard]] TimePos boundaryTime(int tierIndex, int boundaryIndex) const override;
-            void moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) override;
-            [[nodiscard]] TimePos totalDuration() const override;
+            [[nodiscard]] dsfw::TimePos boundaryTime(int tierIndex, int boundaryIndex) const override;
+            void moveBoundary(int tierIndex, int boundaryIndex, dsfw::TimePos newTime) override;
+            [[nodiscard]] dsfw::TimePos totalDuration() const override;
             [[nodiscard]] bool supportsBinding() const override {
                 return false;
             }
@@ -58,13 +57,13 @@ namespace dstools {
                 return true;
             }
 
-            [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
-                                                    TimePos proposedTime) const override;
+            [[nodiscard]] dsfw::TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
+                                                    dsfw::TimePos proposedTime) const override;
             [[nodiscard]] std::vector<OutOfBoundsRange> getOutOfBoundsRanges(
                 int tierIndex) const override;
-            [[nodiscard]] TimePos snapToNearestBoundary(int tierIndex, TimePos proposedTime,
-                                                        TimePos snapThreshold) const override;
-            [[nodiscard]] TimePos snapToNearestBoundaryPixels(int tierIndex, TimePos proposedTime,
+            [[nodiscard]] dsfw::TimePos snapToNearestBoundary(int tierIndex, dsfw::TimePos proposedTime,
+                                                        dsfw::TimePos snapThreshold) const override;
+            [[nodiscard]] dsfw::TimePos snapToNearestBoundaryPixels(int tierIndex, dsfw::TimePos proposedTime,
                                                               double pixelsPerSecond,
                                                               double pixelThreshold) const override;
 

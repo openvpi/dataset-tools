@@ -9,6 +9,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 SliceExportResult SliceExportService::exportSlices(const std::vector<float> &samples, int sampleRate,
                                                     const std::vector<double> &slicePoints,
                                                     const SliceExportOptions &options) {

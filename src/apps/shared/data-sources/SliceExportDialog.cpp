@@ -13,6 +13,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
     SliceExportDialog::SliceExportDialog(QWidget *parent) : QDialog(parent) {
         setWindowTitle(tr("Export Slice Audio"));
         setMinimumWidth(400);
