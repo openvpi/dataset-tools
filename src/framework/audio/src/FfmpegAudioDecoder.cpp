@@ -1,4 +1,5 @@
 #include <dsfw/audio/FfmpegAudioDecoder.h>
+#include "FfmpegUtils.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -13,14 +14,7 @@ extern "C" {
 #include <vector>
 
 namespace dsfw::audio {
-
-namespace {
-    /// @brief Convert FFmpeg error code to human-readable string.
-    std::string ffmpegError(int err) {
-        char buf[AV_ERROR_MAX_STRING_SIZE];
-        return av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, err);
-    }
-} // anonymous namespace
+using internal::ffmpegError;
 
 struct FfmpegAudioDecoder::Impl {
     AVFormatContext* fmtCtx = nullptr;

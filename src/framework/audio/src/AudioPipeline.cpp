@@ -37,8 +37,8 @@ namespace dsfw::audio {
         return AudioPipeline(std::make_unique<FfmpegAudioDecoder>(), std::make_unique<SwresampleResampler>());
     }
 
-    AudioPipeline::AudioPipeline(std::unique_ptr<FfmpegAudioDecoder> decoder,
-                                 std::unique_ptr<SwresampleResampler> resampler)
+    AudioPipeline::AudioPipeline(std::unique_ptr<IAudioDecoder> decoder,
+                             std::unique_ptr<IAudioResampler> resampler)
         : m_decoder(std::move(decoder)), m_resampler(std::move(resampler)) {
     }
 

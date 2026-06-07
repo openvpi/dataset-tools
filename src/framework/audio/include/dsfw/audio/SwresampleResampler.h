@@ -3,6 +3,7 @@
 /// @brief FFmpeg libswresample-based resampler implementation (PIMPL).
 
 #include <dsfw/audio/AudioBuffer.h>
+#include <dsfw/audio/IAudioResampler.h>
 #include <dsfw/audio/ResampleConfig.h>
 #include <dsfw/Result.h>
 #include <memory>
@@ -12,7 +13,7 @@ namespace dsfw::audio {
     /// @brief Resampler using FFmpeg libswresample.
     ///
     /// Uses FFmpeg internally via PIMPL (INFRA-13).
-    class SwresampleResampler {
+    class SwresampleResampler : public IAudioResampler {
     public:
         SwresampleResampler();
         ~SwresampleResampler();
@@ -24,7 +25,7 @@ namespace dsfw::audio {
         SwresampleResampler &operator=(SwresampleResampler &&) noexcept;
 
         dsfw::Result<AudioBuffer> convert(const AudioBuffer &input, int inputSampleRate,
-                                             const ResampleConfig &config);
+                                             const ResampleConfig &config) override;
 
         /// @brief Convenience: resample to mono float32 at target rate.
         dsfw::Result<AudioBuffer> toMonoFloat(const AudioBuffer &input, int inputSampleRate, int targetSampleRate) {

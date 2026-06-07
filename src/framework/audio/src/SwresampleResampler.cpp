@@ -1,4 +1,5 @@
 #include <dsfw/audio/SwresampleResampler.h>
+#include "FfmpegUtils.h"
 
 extern "C" {
 #include <libavutil/channel_layout.h>
@@ -13,34 +14,11 @@ extern "C" {
 #include <vector>
 
 namespace dsfw::audio {
+using internal::ffmpegError;
+using internal::fromAVSampleFormat;
+using internal::toAVSampleFormat;
 
     namespace {
-        /// @brief Convert FFmpeg error code to human-readable string.
-        std::string ffmpegError(int err) {
-            char buf[AV_ERROR_MAX_STRING_SIZE];
-            return av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, err);
-        }
-        AVSampleFormat toAVSampleFormat(SampleFormat fmt) {
-            switch (fmt) {
-            case SampleFormat::Float32: return AV_SAMPLE_FMT_FLT;
-            case SampleFormat::Int16:   return AV_SAMPLE_FMT_S16;
-            case SampleFormat::Int32:   return AV_SAMPLE_FMT_S32;
-            default: return AV_SAMPLE_FMT_FLT;
-            }
-        }
-
-        SampleFormat fromAVSampleFormat(AVSampleFormat fmt) {
-            switch (fmt) {
-            case AV_SAMPLE_FMT_FLT:
-            case AV_SAMPLE_FMT_FLTP: return SampleFormat::Float32;
-            case AV_SAMPLE_FMT_S16:
-            case AV_SAMPLE_FMT_S16P: return SampleFormat::Int16;
-            case AV_SAMPLE_FMT_S32:
-            case AV_SAMPLE_FMT_S32P: return SampleFormat::Int32;
-            default: return SampleFormat::Float32;
-            }
-        }
-
         int qualityToAvFlags(ResampleQuality quality) {
             switch (quality) {
             case ResampleQuality::Draft:  return 0;

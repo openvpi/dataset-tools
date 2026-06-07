@@ -6,7 +6,7 @@ dstools_add_library(${PROJECT_NAME}
         NAMESPACE dsfw::widgets
         EXPORT_SET dsfwTargets
         DEPENDS
-        PUBLIC dsfw-core dsfw-audio Qt${QT_VERSION_MAJOR}::Widgets
+        PUBLIC dsfw-core dsfw-audio-playback Qt${QT_VERSION_MAJOR}::Widgets
         PRIVATE dsfw-ui-core
         DEFINITIONS
         PRIVATE DSFW_WIDGETS_BUILD

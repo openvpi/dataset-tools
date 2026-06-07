@@ -4,7 +4,7 @@
 > 合并自 `docs/decisions/principles.md`、原 `docs/human-decisions.md`，按领域分类整理为完整体系。
 > 与任何其他设计文档冲突时，以本文档为准。
 >
-> 最后更新：2026-06-06（重构 Phase 1~5 完成：IInferenceService 接口、命名空间迁移、封装改进、路径控件统一、原子写入辅助）
+> 最后更新：2026-06-08（重构阶段一完成：消除 33 个头文件的 using namespace dsfw 命名空间污染；阶段二完成：更新 audio-library-design.md 文档状态）
 
 ---
 

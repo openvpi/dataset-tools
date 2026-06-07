@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <span>
+#include <variant>
 #include <vector>
 
 namespace dsfw::audio {
@@ -30,6 +31,10 @@ namespace dsfw::audio {
     ///
     /// Memory layout: interleaved samples (channel 0, channel 1, ..., channel 0, channel 1, ...)
     /// Total samples = frameCount * channelCount
+    ///
+    /// Supports two storage modes:
+    /// - Owned: buffer owns the data via std::vector<uint8_t> (mutable access)
+    /// - View: non-owning reference to external data via std::span<const uint8_t> (read-only, zero-copy)
     class AudioBuffer {
     public:
         // -- Factory methods --
@@ -43,8 +48,9 @@ namespace dsfw::audio {
         static AudioBuffer fromCopy(const void *data, int64_t frameCount, int channelCount,
                                     SampleFormat format);
 
-        /// @brief Create a view (non-owning) over external data.
+        /// @brief Create a non-owning view over external data (zero-copy).
         ///        Caller must ensure data lifetime exceeds buffer usage.
+        ///        View buffers are read-only; mutation methods will assert.
         static AudioBuffer fromView(const void *data, int64_t frameCount, int channelCount,
                                     SampleFormat format);
 
@@ -58,48 +64,59 @@ namespace dsfw::audio {
         [[nodiscard]] int channelCount() const { return m_channelCount; }
         [[nodiscard]] SampleFormat format() const { return m_format; }
         [[nodiscard]] int64_t sampleCount() const { return m_frameCount * m_channelCount; }
-        [[nodiscard]] size_t byteSize() const { return m_data.size(); }
-        [[nodiscard]] bool isView() const { return m_isView; }
-        [[nodiscard]] bool empty() const { return m_data.empty(); }
+        [[nodiscard]] size_t byteSize() const;
+        [[nodiscard]] bool isView() const;
+        [[nodiscard]] bool empty() const { return byteSize() == 0; }
 
         /// @brief Duration in seconds at given sample rate.
         [[nodiscard]] double durationSec(int sampleRate) const;
 
-        // -- Data access --
+        // -- Data access (const) --
 
-        [[nodiscard]] const uint8_t *rawData() const { return m_data.data(); }
-        [[nodiscard]] uint8_t *rawData() { return m_data.data(); }
+        [[nodiscard]] const uint8_t *rawData() const;
 
         /// @brief Get float samples (asserts Float32 format).
         [[nodiscard]] std::span<const float> floats() const;
-        [[nodiscard]] std::span<float> floats();
 
         /// @brief Get int16 samples (asserts Int16 format).
         [[nodiscard]] std::span<const int16_t> int16s() const;
-        [[nodiscard]] std::span<int16_t> int16s();
 
         /// @brief Access a single channel as float.
         [[nodiscard]] float sampleAt(int64_t frame, int channel) const;
 
+        // -- Data access (mutable, owned buffers only) --
+
+        [[nodiscard]] uint8_t *rawData();
+
+        /// @brief Get mutable float samples (asserts Float32 format, owned mode).
+        [[nodiscard]] std::span<float> floats();
+
+        /// @brief Get mutable int16 samples (asserts Int16 format, owned mode).
+        [[nodiscard]] std::span<int16_t> int16s();
+
         // -- Utility --
 
-        /// @brief Zero all samples.
+        /// @brief Zero all samples (owned buffers only).
         void zero();
 
-        /// @brief Create a deep copy.
+        /// @brief Create a deep copy (always owned).
         [[nodiscard]] AudioBuffer clone() const;
 
-        /// @brief Slice a range of frames (zero-copy if view, copy if owned).
+        /// @brief Slice a range of frames (zero-copy sub-span if view, copy if owned).
         [[nodiscard]] AudioBuffer slice(int64_t startFrame, int64_t frameCount) const;
 
     private:
         AudioBuffer() = default;
 
-        std::vector<uint8_t> m_data;
+        using DataStorage = std::variant<std::vector<uint8_t>, std::span<const uint8_t>>;
+
+        [[nodiscard]] const uint8_t *dataPtr() const;
+        [[nodiscard]] uint8_t *dataPtrMutable();
+
+        DataStorage m_data;
         int64_t m_frameCount = 0;
         int m_channelCount = 0;
         SampleFormat m_format = SampleFormat::Unknown;
-        bool m_isView = false;
     };
 
 } // namespace dsfw::audio

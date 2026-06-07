@@ -4,6 +4,7 @@
 
 #include <dsfw/audio/AudioBuffer.h>
 #include <dsfw/audio/AudioFormatInfo.h>
+#include <dsfw/audio/IAudioDecoder.h>
 #include <dsfw/Result.h>
 #include <memory>
 #include <string>
@@ -14,7 +15,7 @@ namespace dsfw::audio {
     ///
     /// Uses FFmpeg internally via PIMPL (INFRA-13).
     /// Outputs source format (no built-in resampling) — use SwresampleResampler separately.
-    class FfmpegAudioDecoder {
+    class FfmpegAudioDecoder : public IAudioDecoder {
     public:
         FfmpegAudioDecoder();
         ~FfmpegAudioDecoder();
@@ -25,15 +26,15 @@ namespace dsfw::audio {
         FfmpegAudioDecoder(FfmpegAudioDecoder &&) noexcept;
         FfmpegAudioDecoder &operator=(FfmpegAudioDecoder &&) noexcept;
 
-        dsfw::Result<AudioFormatInfo> probe(const std::string &path);
-        dsfw::Result<void> open(const std::string &path);
-        void close();
+        dsfw::Result<AudioFormatInfo> probe(const std::string &path) override;
+        dsfw::Result<void> open(const std::string &path) override;
+        void close() override;
         [[nodiscard]] bool isOpen() const;
         [[nodiscard]] const AudioFormatInfo &formatInfo() const;
         dsfw::Result<AudioBuffer> decodeAll();
         dsfw::Result<AudioBuffer> decodeSegment(double startSec, double endSec);
-        dsfw::Result<AudioBuffer> read(int64_t frameCount);
-        dsfw::Result<void> seekToTime(double sec);
+        dsfw::Result<AudioBuffer> read(int64_t frameCount) override;
+        dsfw::Result<void> seekToTime(double sec) override;
         [[nodiscard]] double currentTime() const;
         [[nodiscard]] double totalDuration() const;
 

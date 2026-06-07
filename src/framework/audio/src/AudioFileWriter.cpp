@@ -1,4 +1,5 @@
 #include <dsfw/audio/AudioFileWriter.h>
+#include "FfmpegUtils.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -11,26 +12,8 @@ extern "C" {
 #include <cstring>
 
 namespace dsfw::audio {
-
-namespace {
-    std::string ffmpegError(int err) {
-        char buf[AV_ERROR_MAX_STRING_SIZE];
-        return av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, err);
-    }
-
-    AVSampleFormat toAvSampleFormat(SampleFormat fmt) {
-        switch (fmt) {
-        case SampleFormat::Float32:
-            return AV_SAMPLE_FMT_FLT;
-        case SampleFormat::Int16:
-            return AV_SAMPLE_FMT_S16;
-        case SampleFormat::Int32:
-            return AV_SAMPLE_FMT_S32;
-        default:
-            return AV_SAMPLE_FMT_NONE;
-        }
-    }
-} // anonymous namespace
+using internal::ffmpegError;
+using internal::toAVSampleFormat;
 
 struct AudioFileWriter::Impl {
     AVFormatContext *fmtCtx = nullptr;
@@ -183,7 +166,7 @@ dsfw::Result<void> AudioFileWriter::open(const std::string &path, const WriteCon
     }
 
     // Setup resampler if input format differs from encoder format
-    AVSampleFormat inputFmt = toAvSampleFormat(cfg.format);
+    AVSampleFormat inputFmt = toAVSampleFormat(cfg.format);
     if (inputFmt != d->encoderFmt || inputFmt == AV_SAMPLE_FMT_NONE) {
         swr_alloc_set_opts2(&d->swrCtx, &d->codecCtx->ch_layout, d->encoderFmt,
                             cfg.sampleRate, &d->codecCtx->ch_layout, inputFmt == AV_SAMPLE_FMT_NONE ? AV_SAMPLE_FMT_FLT : inputFmt,

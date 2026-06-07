@@ -79,7 +79,7 @@ static void test_from_view() {
     TEST_ASSERT(buf.isView(), "isView");
     TEST_ASSERT(!buf.empty(), "empty");
 
-    auto floats = buf.floats();
+    auto floats = std::as_const(buf).floats();
     TEST_ASSERT(std::abs(floats[0] - 0.1f) < 0.001f, "floats[0]");
     TEST_PASS("from_view");
 }
