@@ -2,7 +2,7 @@
 
 #include "InferBridge.h"
 
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dstools/DsPitchDocument.h>
 #include <dsfw/signal/curve_tools.h>
 #include <dstools/PitchUtils.h>
@@ -12,6 +12,7 @@
 #include <dsfw/PathUtils.h>
 
 namespace dstools {
+    using namespace dsfw;
 
     using dsfw::signal::expectedFrameCount;
     using dsfw::signal::hopSizeToTimestep;

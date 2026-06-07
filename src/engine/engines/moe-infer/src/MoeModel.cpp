@@ -6,7 +6,7 @@
 
 namespace Moe
 {
-    MoeModel::MoeModel(const std::filesystem::path &modelPath, dstools::infer::ExecutionProvider provider, int deviceId)
+    MoeModel::MoeModel(const std::filesystem::path &modelPath, dsfw::infer::ExecutionProvider provider, int deviceId)
         : CancellableOnnxModel(provider, deviceId) {
 #if defined(_M_IX86) || defined(__i386__)
         m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
@@ -24,9 +24,9 @@ namespace Moe
         CancellableOnnxModel::terminate();
     }
 
-    dstools::Result<std::vector<float>> MoeModel::predict(const float *waveform, int64_t numSamples) {
+    dsfw::Result<std::vector<float>> MoeModel::predict(const float *waveform, int64_t numSamples) {
         if (!m_session) {
-            return dstools::Result<std::vector<float>>::Error("Session is not initialized.");
+            return dsfw::Result<std::vector<float>>::Error("Session is not initialized.");
         }
 
         try {
@@ -57,10 +57,10 @@ namespace Moe
             auto elemCount = outputTensors.front().GetTensorTypeAndShapeInfo().GetElementCount();
 
             std::vector<float> curve(curveData, curveData + elemCount);
-            return dstools::Result<std::vector<float>>::Ok(std::move(curve));
+            return dsfw::Result<std::vector<float>>::Ok(std::move(curve));
 
         } catch (const Ort::Exception &e) {
-            return dstools::Result<std::vector<float>>::Error(
+            return dsfw::Result<std::vector<float>>::Error(
                 std::string("Error during MOE model inference: ") + e.what());
         }
     }

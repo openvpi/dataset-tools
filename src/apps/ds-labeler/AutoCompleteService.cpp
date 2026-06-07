@@ -9,6 +9,7 @@
 #include <QStringList>
 
 namespace dstools {
+    using namespace dsfw;
 
 AutoCompleteResult autoCompleteSlice(DsTextDocument doc,
                                      const QString &audioPath,

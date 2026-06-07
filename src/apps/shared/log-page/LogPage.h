@@ -29,7 +29,7 @@ namespace dstools {
         void onDeactivated() override;
 
     private:
-        void appendEntry(const dstools::LogEntry &entry);
+        void appendEntry(const dsfw::LogEntry &entry);
         void rebuildCategoryFilter();
         void applyCategoryFilter();
         void exportToFile();

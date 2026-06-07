@@ -16,7 +16,7 @@ namespace Rmvpe
 {
     /// @brief CancellableOnnxModel that runs the RMVPE ONNX model to extract F0
     ///        and voicing from waveform data.
-    class RMVPE_INFER_EXPORT RmvpeModel : public dstools::infer::CancellableOnnxModel {
+    class RMVPE_INFER_EXPORT RmvpeModel : public dsfw::infer::CancellableOnnxModel {
     public:
         /// @brief Constructs and loads the RMVPE ONNX model.
         /// @param modelPath Path to the ONNX model file.

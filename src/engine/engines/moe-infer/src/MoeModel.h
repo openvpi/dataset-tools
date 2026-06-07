@@ -10,9 +10,9 @@
 #include <vector>
 
 namespace Moe {
-    class MoeModel : public dstools::infer::CancellableOnnxModel {
+    class MoeModel : public dsfw::infer::CancellableOnnxModel {
     public:
-        explicit MoeModel(const std::filesystem::path &modelPath, dstools::infer::ExecutionProvider provider,
+        explicit MoeModel(const std::filesystem::path &modelPath, dsfw::infer::ExecutionProvider provider,
                           int deviceId);
         ~MoeModel();
 
@@ -23,7 +23,7 @@ namespace Moe {
             return m_initFailed;
         }
 
-        dstools::Result<std::vector<float>> predict(const float *waveform, int64_t numSamples);
+        dsfw::Result<std::vector<float>> predict(const float *waveform, int64_t numSamples);
 
         void terminate();
 

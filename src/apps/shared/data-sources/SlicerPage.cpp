@@ -343,7 +343,7 @@ void SlicerPage::connectSignals() {
     });
 
     connect(m_waveformChart, &dstools::WaveformChartPanel::boundaryDragFinished, this,
-            [this](int, int boundaryIndex, dstools::TimePos) {
+            [this](int, int boundaryIndex, dsfw::TimePos) {
                 if (boundaryIndex >= 0 && boundaryIndex < static_cast<int>(m_slicePoints.size())) {
                     m_slicePoints = m_boundaryModel->slicePointsSec();
                     refreshBoundaries();

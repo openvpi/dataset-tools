@@ -5,6 +5,7 @@
 
 #include <dsfw/TaskProcessorRegistry.h>
 
+using namespace dsfw;
 using namespace dstools;
 
 class TestSlicerProcessor : public QObject {

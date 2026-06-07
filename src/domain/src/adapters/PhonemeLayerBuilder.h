@@ -6,6 +6,6 @@
 
 namespace dstools {
 
-    LayerData buildBoundaries(const QStringList &items, const QStringList &durs, TimePos initialPos);
+dsfw::LayerData buildBoundaries(const QStringList& items, const QStringList& durs, dsfw::TimePos initialPos);
 
-} // namespace dstools
+}  // namespace dstools

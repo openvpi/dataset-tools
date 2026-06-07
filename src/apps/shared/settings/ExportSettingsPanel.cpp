@@ -15,6 +15,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 ExportSettingsPanel::ExportSettingsPanel(QWidget *parent) : QWidget(parent) {}
 
 QWidget *ExportSettingsPanel::createDisplayTab() {
@@ -35,7 +37,7 @@ QWidget *ExportSettingsPanel::createDisplayTab() {
                        "常用参考值：40（贴近）, 200（适中）, 800（缩远）。"));
     scaleLayout->addRow(QStringLiteral("默认 spx："), m_defaultResolutionSpin);
 
-    static dstools::AppSettings s_avSettings(QStringLiteral("AudioVisualizer"));
+    static dsfw::AppSettings s_avSettings(QStringLiteral("AudioVisualizer"));
     s_avSettings.reload();
     m_defaultResolutionSpin->setValue(s_avSettings.get(settings::kDefaultResolution));
 
@@ -95,7 +97,7 @@ QWidget *ExportSettingsPanel::createGeneralTab() {
     m_autoSaveInterval->setToolTip(QStringLiteral("自动保存间隔（10-300秒）"));
     autoSaveLayout->addRow(QStringLiteral("间隔："), m_autoSaveInterval);
 
-    dstools::AppSettings appSettings("Editor");
+    dsfw::AppSettings appSettings("Editor");
     appSettings.reload();
     m_autoSaveEnabled->setChecked(appSettings.get(dstools::settings::kAutoSaveEnabled));
     m_autoSaveInterval->setValue(appSettings.get(dstools::settings::kAutoSaveIntervalMs) / 1000);
@@ -122,7 +124,7 @@ QWidget *ExportSettingsPanel::createGeneralTab() {
         {QStringLiteral("spectrogram"), QStringLiteral("频谱图")},
     };
 
-    static dstools::AppSettings s_chartSettings("AudioVisualizer");
+    static dsfw::AppSettings s_chartSettings("AudioVisualizer");
     s_chartSettings.reload();
     QString savedOrder = s_chartSettings.get(settings::kChartOrder);
     QString savedVisible = s_chartSettings.get(settings::kChartVisible);
@@ -232,7 +234,7 @@ QWidget *ExportSettingsPanel::createPreprocessTab() {
 
 void ExportSettingsPanel::collectAndSaveAutoSave() {
     if (m_autoSaveEnabled) {
-        static dstools::AppSettings s_editorSettings("Editor");
+        static dsfw::AppSettings s_editorSettings("Editor");
         s_editorSettings.set(dstools::settings::kAutoSaveEnabled, m_autoSaveEnabled->isChecked());
         s_editorSettings.set(dstools::settings::kAutoSaveIntervalMs, m_autoSaveInterval->value() * 1000);
     }
@@ -251,7 +253,7 @@ void ExportSettingsPanel::collectAndSaveChartLayout() {
         if (item->checkState() == Qt::Checked)
             visible.append(id);
     }
-    static dstools::AppSettings s_chartSettings("AudioVisualizer");
+    static dsfw::AppSettings s_chartSettings("AudioVisualizer");
     s_chartSettings.set(settings::kChartOrder, order.join(QLatin1Char(',')));
     s_chartSettings.set(settings::kChartVisible, visible.join(QLatin1Char(',')));
 }
@@ -266,7 +268,7 @@ void ExportSettingsPanel::collectAndSaveLanguage() {
 
 void ExportSettingsPanel::collectAndSaveDefaultResolution() {
     if (m_defaultResolutionSpin) {
-        static dstools::AppSettings s(QStringLiteral("AudioVisualizer"));
+        static dsfw::AppSettings s(QStringLiteral("AudioVisualizer"));
         s.set(settings::kDefaultResolution, m_defaultResolutionSpin->value());
     }
 }

@@ -11,9 +11,8 @@
 #include <string>
 #include <vector>
 
-#include <dsfw/infer/IInferenceEngine.h>
-#include <dsfw/ExecutionProvider.h>
 #include <dsfw/Result.h>
+#include <dsfw/infer/IInferenceEngine.h>
 
 #include "GameGlobal.h"
 #include "GameModel.h"
@@ -22,7 +21,6 @@
 
 namespace Game
 {
-    using ExecutionProvider = dstools::infer::ExecutionProvider;
 
     /// @brief MIDI note output with quantized timing.
     struct GameMidi {
@@ -69,15 +67,15 @@ namespace Game
         /// @param provider Execution provider (CPU, DirectML, etc.).
         /// @param device_id Device index for GPU providers.
         /// @return Result indicating success or failure.
-        dstools::Result<void> loadModel(const std::filesystem::path &modelPath, ExecutionProvider provider,
-                                        int device_id) const;
+        dsfw::Result<void> loadModel(const std::filesystem::path &modelPath, dsfw::infer::ExecutionProvider provider,
+                                     int device_id) const;
 
         /// @brief Check whether a model is loaded.
         /// @return True if a model is currently loaded.
         bool isOpen() const override;
         const char *engineName() const override;
-        dstools::Result<void> load(const std::filesystem::path &modelPath, ExecutionProvider provider,
-                                   int deviceId) override;
+        dsfw::Result<void> load(const std::filesystem::path &modelPath, dsfw::infer::ExecutionProvider provider,
+                                int deviceId) override;
         void unload() override;
         int64_t estimatedMemoryBytes() const override;
 
@@ -104,9 +102,8 @@ namespace Game
         /// @param progressChanged Progress callback receiving percentage (0–100).
         /// @param max_audio_length Maximum audio length in seconds.
         /// @return Result indicating success or failure.
-        dstools::Result<void> getMidi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, float tempo,
-                                      const std::function<void(int)> &progressChanged,
-                                      int max_audio_length = 600) const;
+        dsfw::Result<void> getMidi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis, float tempo,
+                                   const std::function<void(int)> &progressChanged, int max_audio_length = 600) const;
 
         /// @brief Transcribe audio to continuous note events.
         /// @param filepath Path to the input audio file.
@@ -114,17 +111,16 @@ namespace Game
         /// @param progressChanged Progress callback receiving percentage (0–100).
         /// @param max_audio_length Maximum audio length in seconds.
         /// @return Result indicating success or failure.
-        dstools::Result<void> getNotes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
-                                       const std::function<void(int)> &progressChanged,
-                                       int max_audio_length = 600) const;
+        dsfw::Result<void> getNotes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
+                                    const std::function<void(int)> &progressChanged, int max_audio_length = 600) const;
 
         /// @brief Align phonemes to detected notes.
         /// @param input Alignment input data.
         /// @param options Alignment configuration.
         /// @param output Output aligned notes.
         /// @return Result indicating success or failure.
-        dstools::Result<void> align(const AlignInput &input, const AlignOptions &options,
-                                    std::vector<AlignedNote> &output) const;
+        dsfw::Result<void> align(const AlignInput &input, const AlignOptions &options,
+                                 std::vector<AlignedNote> &output) const;
 
         /// @brief Align phonemes from a CSV file and save results.
         /// @param csvPath Path to the input CSV file.
@@ -134,9 +130,9 @@ namespace Game
         /// @param options Alignment configuration.
         /// @param progressChanged Progress callback receiving percentage (0–100).
         /// @return Result indicating success or failure.
-        dstools::Result<void> alignCSV(const std::filesystem::path &csvPath, const std::filesystem::path &savePath,
-                                       const std::string &saveFilename, bool overwrite, const AlignOptions &options,
-                                       const std::function<void(int)> &progressChanged = nullptr) const;
+        dsfw::Result<void> alignCSV(const std::filesystem::path &csvPath, const std::filesystem::path &savePath,
+                                    const std::string &saveFilename, bool overwrite, const AlignOptions &options,
+                                    const std::function<void(int)> &progressChanged = nullptr) const;
 
         /// @brief Set segmenter threshold.
         /// @param threshold Segmentation threshold value.

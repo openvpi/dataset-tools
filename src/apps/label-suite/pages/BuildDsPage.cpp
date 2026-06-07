@@ -6,10 +6,10 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-#include <dstools/PipelineContext.h>
+#include <dsfw/PipelineContext.h>
 #include <dsfw/PipelineRunner.h>
 #include <dsfw/PipelineValidators.h>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dstools/CsvAdapter.h>
 #include <dstools/ProjectPaths.h>
 #include <dstools/TranscriptionCsv.h>

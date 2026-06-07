@@ -8,10 +8,8 @@
 
 namespace dstools {
 
-    namespace dstools {
-        class IBoundaryModel;
-    }
-    using dstools::IBoundaryModel;
+    class IBoundaryModel;
+    using ::dstools::IBoundaryModel;
 
     using dsfw::widgets::ViewportController;
     using dsfw::widgets::ViewportState;

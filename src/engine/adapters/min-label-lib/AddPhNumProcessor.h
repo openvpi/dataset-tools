@@ -7,6 +7,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     /// @brief Wraps PhNumCalculator as an ITaskProcessor for the task framework.
     class AddPhNumProcessor : public ITaskProcessor {
     public:

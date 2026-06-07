@@ -2,12 +2,15 @@
 #include "PhonemeLayerBuilder.h"
 
 #include <dsfw/ConfigTypes.h>
+#include <dsfw/FormatAdapterRegistry.h>
 #include <dstools/TranscriptionCsv.h>
 #include <dsfw/TimePos.h>
 
 REGISTER_FORMAT_ADAPTER(dstools::CsvAdapter);
 
 namespace dstools {
+
+using namespace dsfw;
 
 static std::map<QString, LayerData> phonemeRowToLayers(const TranscriptionRow &row) {
     std::map<QString, LayerData> temp;

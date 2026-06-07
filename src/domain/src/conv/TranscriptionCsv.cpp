@@ -6,6 +6,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 // ── CSV parsing helpers ──────────────────────────────────────────────
 
 namespace {

@@ -6,7 +6,7 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-#include <dstools/PipelineContext.h>
+#include <dsfw/PipelineContext.h>
 #include <dsfw/PipelineRunner.h>
 #include <dsfw/PipelineValidators.h>
 
@@ -64,19 +64,19 @@ void BuildCsvPage::buildUi() {
 
         m_log->append(tr("Found %1 TextGrid file(s).").arg(tgFiles.size()));
 
-        std::vector<dstools::PipelineContext> contexts;
+        std::vector<dsfw::PipelineContext> contexts;
         for (const QString &fileName : tgFiles) {
             const QString filePath = QDir(tgDir).filePath(fileName);
             const QString stem = QFileInfo(fileName).completeBaseName();
 
-            dstools::PipelineContext ctx;
+            dsfw::PipelineContext ctx;
             ctx.itemId = stem;
             ctx.audioPath = filePath;
             contexts.push_back(std::move(ctx));
         }
 
-        dstools::PipelineOptions opts;
-        dstools::StepConfig step;
+        dsfw::PipelineOptions opts;
+        dsfw::StepConfig step;
         step.taskName = QStringLiteral("build_csv");
         step.processorId = QStringLiteral("passthrough");
         step.importFormat = QStringLiteral("textgrid");
@@ -87,13 +87,13 @@ void BuildCsvPage::buildUi() {
         opts.workingDir = m_workingDir;
         opts.snapshotDir = ProjectPaths::buildCsvDir(m_workingDir) + QStringLiteral("/snapshots");
 
-        if (dstools::PipelineRunner::hasLatestSnapshot(opts.snapshotDir)) {
+        if (dsfw::PipelineRunner::hasLatestSnapshot(opts.snapshotDir)) {
             auto answer = QMessageBox::question(
                 this, tr("Recover Interrupted Build"),
                 tr("An interrupted build was detected. Do you want to recover the previous progress?"),
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
             if (answer == QMessageBox::Yes) {
-                auto recoveryResult = dstools::PipelineRunner::loadLatestSnapshot(opts.snapshotDir);
+                auto recoveryResult = dsfw::PipelineRunner::loadLatestSnapshot(opts.snapshotDir);
                 if (recoveryResult.ok()) {
                     auto &[recoveredCtxs, recoveredStep] = recoveryResult.value();
                     m_log->append(tr("Recovered %1 item(s) from step %2.")
@@ -105,12 +105,12 @@ void BuildCsvPage::buildUi() {
                                       .arg(QString::fromStdString(recoveryResult.error())));
                 }
             } else {
-                dstools::PipelineRunner::cleanupOldSnapshots(opts.snapshotDir);
+                dsfw::PipelineRunner::cleanupOldSnapshots(opts.snapshotDir);
             }
         }
 
-        dstools::PipelineRunner runner;
-        QObject::connect(&runner, &dstools::PipelineRunner::progress,
+        dsfw::PipelineRunner runner;
+        QObject::connect(&runner, &dsfw::PipelineRunner::progress,
                          this, [this](int, int item, int total, const QString &) {
                              if (total > 0)
                                  m_runProgress->setProgress(item * 100 / total);
@@ -127,7 +127,7 @@ void BuildCsvPage::buildUi() {
         int processed = 0;
         int skipped = 0;
         for (const auto &ctx : contexts) {
-            if (ctx.status == dstools::PipelineContext::Status::Active) {
+            if (ctx.status == dsfw::PipelineContext::Status::Active) {
                 m_log->append(tr("  [OK] %1").arg(ctx.itemId));
                 ++processed;
             } else {

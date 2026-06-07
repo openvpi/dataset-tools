@@ -8,7 +8,6 @@
 #include <fftw3.h>
 
 namespace dstools {
-    namespace dstools {
 
         class SpectrogramChartPanel : public ChartPanelBase {
             Q_OBJECT
@@ -71,4 +70,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

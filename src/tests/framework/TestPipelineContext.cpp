@@ -1,7 +1,7 @@
 #include <QTest>
 #include <dsfw/PipelineContext.h>
 
-using namespace dstools;
+using namespace dsfw;
 
 class TestPipelineContext : public QObject {
     Q_OBJECT

@@ -8,6 +8,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     void registerDomainFormatAdapters();
 
     Result<void> exportContextsToCsv(const std::vector<PipelineContext> &contexts, const QString &outputPath,

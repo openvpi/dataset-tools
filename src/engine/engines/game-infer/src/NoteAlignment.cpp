@@ -31,12 +31,12 @@ namespace Game
         return bestIdx;
     }
 
-    dstools::Result<std::vector<AlignedNote>> alignNotesToWords(const std::vector<WordInfo> &words,
+    dsfw::Result<std::vector<AlignedNote>> alignNotesToWords(const std::vector<WordInfo> &words,
                                                                const std::vector<std::string> &noteSeq,
                                                                const std::vector<float> &noteDur, const float tol,
                                                                const bool applyWordUv) {
         if (noteSeq.size() != noteDur.size()) {
-            return dstools::Err<std::vector<AlignedNote>>("noteSeq and noteDur must have the same length");
+            return dsfw::Err<std::vector<AlignedNote>>("noteSeq and noteDur must have the same length");
         }
         if (noteSeq.empty())
             return std::vector<AlignedNote>{};

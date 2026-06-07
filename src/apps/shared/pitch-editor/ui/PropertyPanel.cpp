@@ -14,9 +14,10 @@
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
+using namespace dsfw;
 
-using dstools::NotePitch;
-using dstools::parseNoteName;
+using ::dstools::NotePitch;
+using ::dstools::parseNoteName;
 
 // ============================================================================
 // Helpers

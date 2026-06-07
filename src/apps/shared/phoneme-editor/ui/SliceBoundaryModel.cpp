@@ -7,6 +7,7 @@
 
 namespace dstools {
     namespace phonemelabeler {
+        using namespace dsfw;
 
         static constexpr int64_t kUsPerSec = 1000000;
 
@@ -111,11 +112,11 @@ namespace dstools {
             return static_cast<TimePos>(bestTime * kUsPerSec);
         }
 
-        std::vector<dstools::dstools::OutOfBoundsRange> SliceBoundaryModel::getOutOfBoundsRanges(int tierIndex) const {
+        std::vector<OutOfBoundsRange> SliceBoundaryModel::getOutOfBoundsRanges(int tierIndex) const {
             if (tierIndex != 0 || m_pointsSec.size() < 2)
                 return {};
 
-            std::vector<dstools::dstools::OutOfBoundsRange> ranges;
+            std::vector<OutOfBoundsRange> ranges;
             double prev = 0.0;
             for (size_t i = 0; i < m_pointsSec.size(); ++i) {
                 if (m_pointsSec[i] < prev) {

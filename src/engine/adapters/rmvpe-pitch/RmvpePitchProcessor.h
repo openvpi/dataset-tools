@@ -13,6 +13,8 @@ namespace Rmvpe {
 
 namespace dstools {
 
+    using namespace dsfw;
+
     /// @brief ITaskProcessor implementation for RMVPE F0 pitch extraction.
     class RmvpePitchProcessor : public ITaskProcessor {
     public:

@@ -17,6 +17,8 @@ class SndfileHandle;
 
 namespace dstools {
 
+    using namespace dsfw;
+
     struct SliceResult {
         std::vector<std::pair<int64_t, int64_t>> chunks;
         int sampleRate = 0;

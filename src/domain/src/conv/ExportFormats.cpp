@@ -6,6 +6,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     const char *HtsLabelExportFormat::formatName() const {
         return "HTS Labels";
     }

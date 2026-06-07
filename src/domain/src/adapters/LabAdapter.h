@@ -4,6 +4,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     class LabAdapter : public IFormatAdapter {
     public:
         QString formatId() const override {

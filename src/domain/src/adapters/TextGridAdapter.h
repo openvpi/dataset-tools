@@ -4,6 +4,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     class TextGridAdapter : public IFormatAdapter {
     public:
         QString formatId() const override {

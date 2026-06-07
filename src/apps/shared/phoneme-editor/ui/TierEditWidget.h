@@ -17,13 +17,12 @@
 class QVBoxLayout;
 
 namespace dstools {
-    namespace dstools {
-        class BoundaryDragController;
-    }
+    using namespace dsfw;
+    class BoundaryDragController;
     namespace phonemelabeler {
+        using ::dstools::ChartCoordinate;
 
-        using dstools::dstools::ChartCoordinate;
-        using dstools::dstools::BoundaryDragController;
+        using ::dstools::BoundaryDragController;
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
 
@@ -75,7 +74,7 @@ namespace dstools {
             /// @brief Emitted when a tier view requests audio playback of an interval.
             /// @param startTime Interval start time in microseconds.
             /// @param endTime Interval end time in microseconds.
-            void requestPlayback(TimePos startTime, TimePos endTime);
+            void requestPlayback(dsfw::TimePos startTime, dsfw::TimePos endTime);
 
         protected:
             void resizeEvent(QResizeEvent *event) override;

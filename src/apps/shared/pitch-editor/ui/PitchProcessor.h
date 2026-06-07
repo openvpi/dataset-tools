@@ -14,10 +14,10 @@ namespace dstools {
 
         namespace ui {
 
-            using dstools::freqToMidi;
-            using dstools::midiToFreq;
-            using dstools::parseNoteName;
-            using dstools::shiftNoteCents;
+            using ::dstools::freqToMidi;
+            using ::dstools::midiToFreq;
+            using ::dstools::parseNoteName;
+            using ::dstools::shiftNoteCents;
 
             class PitchProcessor {
             public:

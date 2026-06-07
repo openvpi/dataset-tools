@@ -14,12 +14,13 @@
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
+using namespace dsfw;
 
-using dstools::parseNoteName;
-using dstools::midiToNoteName;
-using dstools::midiToNoteString;
-using dstools::midiToFreq;
-using dstools::freqToMidi;
+using ::dstools::parseNoteName;
+using ::dstools::midiToNoteName;
+using ::dstools::midiToNoteString;
+using ::dstools::midiToFreq;
+using ::dstools::freqToMidi;
 
 // ============================================================================
 // Timescale level table (mirrors TimeRulerWidget's kLevels + findLevel)
@@ -362,7 +363,7 @@ void PianoRollRenderer::drawF0Curve(QPainter &p, int w, int h, const RenderState
     double offsetSec = usToSec(s.dsFile->offset);
 
     auto mhzToMidi = [](int32_t mhz) -> double {
-        double hz = dsfw::signal::mhzToHz(mhz);
+        double hz = dsfw::mhzToHz(mhz);
         return (hz > 0.0) ? 12.0 * std::log2(hz / 440.0) + 69.0 : 0.0;
     };
 

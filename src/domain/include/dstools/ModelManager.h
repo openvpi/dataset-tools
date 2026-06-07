@@ -11,6 +11,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     struct TaskModelConfig;
 
     class ModelManager : public QObject {

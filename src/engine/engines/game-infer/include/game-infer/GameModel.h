@@ -10,14 +10,13 @@
 #include <string>
 #include <vector>
 
-#include <dsfw/ExecutionProvider.h>
 #include <dsfw/infer/OnnxModelBase.h>
 
 #include "GameGlobal.h"
+#include "dsfw/infer/InferenceModelProvider.h"
 
 namespace Game
 {
-    using ExecutionProvider = dstools::infer::ExecutionProvider;
 
     /// @brief Input data for a single inference slice.
     struct InferenceInput {
@@ -39,7 +38,7 @@ namespace Game
     };
 
     /// @brief CancellableOnnxModel with 4-stage ONNX pipeline (encoder, segmenter, bd2dur/dur2bd, estimator).
-    class GAME_INFER_EXPORT GameModel : public dstools::infer::CancellableOnnxModel {
+    class GAME_INFER_EXPORT GameModel : public dsfw::infer::CancellableOnnxModel {
     public:
         GameModel();
         ~GameModel();
@@ -66,7 +65,7 @@ namespace Game
         /// @param device_id Device index for GPU providers.
         /// @param msg Output error message on failure.
         /// @return True on success.
-        bool loadModel(const std::filesystem::path &modelPath, ExecutionProvider provider, int device_id,
+        bool loadModel(const std::filesystem::path &modelPath, dsfw::infer::ExecutionProvider provider, int device_id,
                        std::string &msg);
 
         /// @brief Check whether a model is loaded.

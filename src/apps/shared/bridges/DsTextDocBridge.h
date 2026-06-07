@@ -9,6 +9,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 /// @brief Bridge between DsTextDocument (internal model) and DsPitchDocument (pitch-labeler domain).
 ///
 /// Provides bidirectional conversion and roundtrip verification between the

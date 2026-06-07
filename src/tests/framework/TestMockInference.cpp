@@ -3,6 +3,7 @@
 #include <dsfw/PipelineContext.h>
 #include <dsfw/TaskProcessorRegistry.h>
 
+using namespace dsfw;
 using namespace dstools;
 
 class MockPitchProcessor : public ITaskProcessor {

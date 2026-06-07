@@ -22,7 +22,7 @@ private slots:
         QCOMPARE(doc.curves[0].values[0], 440000.0f);
         QCOMPARE(doc.curves[0].values[1], 0.0f);
         QCOMPARE(doc.curves[0].values[2], 450000.0f);
-        QCOMPARE(doc.curves[0].timestep, dstools::secToUs(0.005));
+        QCOMPARE(doc.curves[0].timestep, dsfw::secToUs(0.005));
     }
 
     void testApplyPitchToDocumentReplacesExisting() {
@@ -39,7 +39,7 @@ private slots:
         QCOMPARE(doc.curves.size(), 1u);
         QCOMPARE(doc.curves[0].values.size(), 3u);
         QCOMPARE(doc.curves[0].values[0], 440000.0f);
-        QCOMPARE(doc.curves[0].timestep, dstools::secToUs(0.005));
+        QCOMPARE(doc.curves[0].timestep, dsfw::secToUs(0.005));
     }
 
     void testApplyPitchToDocumentEmptyF0() {

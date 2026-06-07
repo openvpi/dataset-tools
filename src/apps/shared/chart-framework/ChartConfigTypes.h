@@ -5,7 +5,6 @@
 #include <vector>
 
 namespace dstools {
-namespace dstools {
 
 enum class ParamType {
     Int,
@@ -30,5 +29,4 @@ struct ChartConfigDescriptor {
     std::vector<ChartParamDescriptor> params;
 };
 
-} // namespace dstools
 } // namespace dstools

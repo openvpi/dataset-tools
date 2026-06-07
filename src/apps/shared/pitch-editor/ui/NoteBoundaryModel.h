@@ -13,6 +13,7 @@ namespace dstools {
 
 
         namespace ui {
+            using namespace dsfw;
 
             /// @brief Boundary model adapter for DsPitchDocument notes (MIDI pitch boundaries).
             ///

@@ -6,6 +6,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 struct TranscriptionRow;
 
 class CsvAdapter : public dsfw::IFormatAdapter {

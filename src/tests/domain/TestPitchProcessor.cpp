@@ -8,11 +8,11 @@
 
 using namespace dstools::pitchlabeler;
 using namespace dstools::pitchlabeler::ui;
-using dstools::secToUs;
-using dstools::usToSec;
-using dstools::usToMs;
-using dsfw::signal::hzToMhz;
-using dsfw::signal::mhzToHz;
+using dsfw::secToUs;
+using dsfw::usToSec;
+using dsfw::usToMs;
+using dsfw::hzToMhz;
+using dsfw::mhzToHz;
 
 class TestPitchProcessor : public QObject {
     Q_OBJECT
@@ -22,7 +22,7 @@ private:
                              double f0HzValue = 261.6) {
         DsPitchDocument ds;
         ds.offset = 0;
-        dstools::TimePos t = 0;
+        dsfw::TimePos t = 0;
         for (const auto &name : noteNames) {
             Note n;
             n.name = name;

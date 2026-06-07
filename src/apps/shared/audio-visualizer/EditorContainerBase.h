@@ -17,11 +17,9 @@ namespace dstools {
 
     class AudioVisualizerContainer;
 
-    namespace dstools {
-        class WaveformChartPanel;
-        class SpectrogramChartPanel;
-        class PowerChartPanel;
-    }
+    class WaveformChartPanel;
+    class SpectrogramChartPanel;
+    class PowerChartPanel;
     namespace phonemelabeler {
         class MouthCurveChartPanel;
     }

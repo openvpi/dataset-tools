@@ -13,7 +13,8 @@
 #include <dsfw/Theme.h>
 
 namespace dstools {
-namespace dstools {
+
+using namespace dsfw;
 
 BoundaryOverlayWidget::BoundaryOverlayWidget(ViewportController *viewport, QWidget *parent)
     : QWidget(parent), m_viewport(viewport)
@@ -211,5 +212,4 @@ void BoundaryOverlayWidget::repositionOverSplitter() {
     raise();
 }
 
-} // namespace dstools
 } // namespace dstools

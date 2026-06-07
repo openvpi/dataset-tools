@@ -13,10 +13,11 @@
 
 #include <dsfw/Theme.h>
 
-using dstools::dstools::MoveBoundaryCommand;
+using ::dstools::MoveBoundaryCommand;
 
 namespace dstools {
 namespace phonemelabeler {
+using namespace dsfw;
 
 IntervalTierView::IntervalTierView(int tierIndex, TextGridDocument *doc,
                                      QUndoStack *undoStack, ViewportController *viewport,

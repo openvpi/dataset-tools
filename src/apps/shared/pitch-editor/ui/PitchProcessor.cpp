@@ -10,6 +10,7 @@
 namespace dstools {
     namespace pitchlabeler {
         namespace ui {
+            using namespace dsfw;
 
             std::vector<double> PitchProcessor::movingAverage(const std::vector<double> &values, int window) {
                 return dsfw::signal::movingAverage(values, window, true);

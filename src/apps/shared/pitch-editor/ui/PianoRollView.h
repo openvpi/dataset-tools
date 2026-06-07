@@ -29,13 +29,13 @@ namespace dstools {
 
         namespace ui {
 
-            using dstools::freqToMidi;
-            using dstools::midiToFreq;
-            using dstools::midiToNoteName;
-            using dstools::midiToNoteString;
-            using dstools::NotePitch;
-            using dstools::parseNoteName;
-            using dstools::shiftNoteCents;
+            using ::dstools::freqToMidi;
+            using ::dstools::midiToFreq;
+            using ::dstools::midiToNoteName;
+            using ::dstools::midiToNoteString;
+            using ::dstools::NotePitch;
+            using ::dstools::parseNoteName;
+            using ::dstools::shiftNoteCents;
 
             /// Piano roll view for editing notes and F0
             class PianoRollView : public QFrame {
@@ -90,8 +90,8 @@ namespace dstools {
                 dstools::IBoundaryModel *boundaryModel() const;
 
                 ///// Config persistence (following SlurCutter F0Widget pattern)
-                void loadConfig(dstools::AppSettings &settings);
-                void pullConfig(dstools::AppSettings &settings) const;
+                void loadConfig(dsfw::AppSettings &settings);
+                void pullConfig(dsfw::AppSettings &settings) const;
 
                 /// Set layout config from ChartConfigRegistry
                 void setLayoutConfig(int pianoWidth, int scrollBarSize, int minMidi, int maxMidi,

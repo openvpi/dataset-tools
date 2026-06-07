@@ -9,7 +9,7 @@
 #include "Keys.h"
 #include "SliceListPanel.h"
 
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dstools/DsPitchDocument.h>
 #include <QCheckBox>
 #include <QJsonObject>
@@ -26,7 +26,7 @@
 #include <dsfw/signal/curve_tools.h>
 #include <dstools/DsKeys.h>
 #include <dstools/DsTextTypes.h>
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 #include <dstools/PitchUtils.h>
 #include <dsfw/audio/AudioPipeline.h>
@@ -65,20 +65,20 @@ PitchLabelerPage::PitchLabelerPage(QWidget* parent) : EditorPageBase("PitchLabel
     tb->addAction(m_editor->zoomInAction());
     tb->addAction(m_editor->zoomOutAction());
 
-    shortcutManager()->bind(m_editor->saveAction(), dstools::settings::kShortcutSave, tr("Save"), tr("File"));
-    shortcutManager()->bind(m_editor->undoAction(), dstools::settings::kShortcutUndo, tr("Undo"), tr("Edit"));
-    shortcutManager()->bind(m_editor->redoAction(), dstools::settings::kShortcutRedo, tr("Redo"), tr("Edit"));
-    shortcutManager()->bind(m_editor->zoomInAction(), dstools::settings::kShortcutZoomIn, tr("Zoom In"), tr("View"));
-    shortcutManager()->bind(m_editor->zoomOutAction(), dstools::settings::kShortcutZoomOut, tr("Zoom Out"), tr("View"));
-    shortcutManager()->bind(m_editor->zoomResetAction(), dstools::settings::kShortcutZoomReset, tr("Reset Zoom"),
+    shortcutManager()->bind(m_editor->saveAction(), ::dstools::settings::kShortcutSave, tr("Save"), tr("File"));
+    shortcutManager()->bind(m_editor->undoAction(), ::dstools::settings::kShortcutUndo, tr("Undo"), tr("Edit"));
+    shortcutManager()->bind(m_editor->redoAction(), ::dstools::settings::kShortcutRedo, tr("Redo"), tr("Edit"));
+    shortcutManager()->bind(m_editor->zoomInAction(), ::dstools::settings::kShortcutZoomIn, tr("Zoom In"), tr("View"));
+    shortcutManager()->bind(m_editor->zoomOutAction(), ::dstools::settings::kShortcutZoomOut, tr("Zoom Out"), tr("View"));
+    shortcutManager()->bind(m_editor->zoomResetAction(), ::dstools::settings::kShortcutZoomReset, tr("Reset Zoom"),
                             tr("View"));
-    shortcutManager()->bind(m_editor->abCompareAction(), dstools::settings::kShortcutABCompare, tr("A/B Compare"),
+    shortcutManager()->bind(m_editor->abCompareAction(), ::dstools::settings::kShortcutABCompare, tr("A/B Compare"),
                             tr("Tools"));
-    shortcutManager()->bind(m_extractPitchAction, dstools::settings::kShortcutExtractPitch, tr("Extract Pitch"),
+    shortcutManager()->bind(m_extractPitchAction, ::dstools::settings::kShortcutExtractPitch, tr("Extract Pitch"),
                             tr("Processing"));
-    shortcutManager()->bind(m_extractMidiAction, dstools::settings::kShortcutExtractMidi, tr("Extract MIDI"),
+    shortcutManager()->bind(m_extractMidiAction, ::dstools::settings::kShortcutExtractMidi, tr("Extract MIDI"),
                             tr("Processing"));
-    shortcutManager()->bind(m_editor->playPauseAction(), dstools::settings::kShortcutPlayPause, tr("Play/Pause"),
+    shortcutManager()->bind(m_editor->playPauseAction(), ::dstools::settings::kShortcutPlayPause, tr("Play/Pause"),
                             tr("Playback"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
@@ -102,8 +102,8 @@ bool PitchLabelerPage::isDirty() const {
 }
 
 void PitchLabelerPage::onDeactivatedImpl() {
-    enginePool()->invalidate(QLatin1String(dstools::keys::engines::pitchExtraction));
-    enginePool()->invalidate(QLatin1String(dstools::keys::engines::midiTranscription));
+    enginePool()->invalidate(QLatin1String(::dstools::keys::engines::pitchExtraction));
+    enginePool()->invalidate(QLatin1String(::dstools::keys::engines::midiTranscription));
     m_rmvpe.reset();
     m_game.reset();
 }
@@ -111,7 +111,7 @@ void PitchLabelerPage::onDeactivatedImpl() {
 void PitchLabelerPage::saveExtraSplitters() {
     if (m_editor) {
         m_editor->saveViewportResolution();
-        settings().set(dstools::settings::kEditorSplitterState,
+        settings().set(::dstools::settings::kEditorSplitterState,
                        QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
     }
 }
@@ -119,7 +119,7 @@ void PitchLabelerPage::saveExtraSplitters() {
 void PitchLabelerPage::restoreExtraSplitters() {
     if (m_editor) {
         m_editor->restoreViewportResolution();
-        auto state = settings().get(dstools::settings::kEditorSplitterState);
+        auto state = settings().get(::dstools::settings::kEditorSplitterState);
         if (!state.isEmpty())
             m_editor->restoreSplitterState(QByteArray::fromBase64(state.toUtf8()));
     }
@@ -198,16 +198,16 @@ bool PitchLabelerPage::saveCurrentSlice() {
     }
 
     QStringList modifiedLayers;
-    modifiedLayers.append(QString::fromUtf8(dstools::keys::layers::pitch));
+    modifiedLayers.append(QString::fromUtf8(::dstools::keys::layers::pitch));
     if (!m_currentFile->notes.empty())
-        modifiedLayers.append(QString::fromUtf8(dstools::keys::layers::midi));
+        modifiedLayers.append(QString::fromUtf8(::dstools::keys::layers::midi));
     markLayersModified(modifiedLayers);
 
     for (const auto& layerName : modifiedLayers) {
         setLayerManuallyEdited(layerName, true);
-        if (layerName == QString::fromUtf8(dstools::keys::layers::pitch))
+        if (layerName == QString::fromUtf8(::dstools::keys::layers::pitch))
             addEditedStep(QStringLiteral("pitch_review"));
-        else if (layerName == QString::fromUtf8(dstools::keys::layers::midi))
+        else if (layerName == QString::fromUtf8(::dstools::keys::layers::midi))
             addEditedStep(QStringLiteral("midi_review"));
     }
 
@@ -256,10 +256,10 @@ QWidget* PitchLabelerPage::createStatusBarContent(QWidget* parent) {
 
 void PitchLabelerPage::onEngineInvalidated(const QString& taskKey) {
     enginePool()->invalidate(taskKey);
-    if (taskKey == QLatin1String(dstools::keys::engines::pitchExtraction)) {
+    if (taskKey == QLatin1String(::dstools::keys::engines::pitchExtraction)) {
         m_rmvpe.reset();
         DSFW_LOG_WARN("infer", "Pitch extraction task cancelled: model invalidated");
-    } else if (taskKey == QLatin1String(dstools::keys::engines::midiTranscription)) {
+    } else if (taskKey == QLatin1String(::dstools::keys::engines::midiTranscription)) {
         m_game.reset();
         DSFW_LOG_WARN("infer", "MIDI transcription task cancelled: model invalidated");
     }
@@ -267,36 +267,36 @@ void PitchLabelerPage::onEngineInvalidated(const QString& taskKey) {
 
 void PitchLabelerPage::acquireEngines() {
     if (auto* pool = enginePool()) {
-        m_rmvpe = pool->acquire<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
-        m_game = pool->acquire<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
+        m_rmvpe = pool->acquire<Rmvpe::Rmvpe>(QLatin1String(::dstools::keys::engines::pitchExtraction));
+        m_game = pool->acquire<Game::Game>(QLatin1String(::dstools::keys::engines::midiTranscription));
     }
 }
 
 void PitchLabelerPage::onAutoInferPreloadEngines() {
     auto preload = preloadConfig();
     if (!preload.isEmpty()) {
-        auto pitchPreload = preload[dstools::keys::engines::pitchExtraction].toObject();
+        auto pitchPreload = preload[::dstools::keys::engines::pitchExtraction].toObject();
         if (pitchPreload["enabled"].toBool(false))
-            enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
+            enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(::dstools::keys::engines::pitchExtraction));
 
-        auto midiPreload = preload[dstools::keys::engines::midiTranscription].toObject();
+        auto midiPreload = preload[::dstools::keys::engines::midiTranscription].toObject();
         if (midiPreload["enabled"].toBool(false))
-            enginePool()->acquire<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
+            enginePool()->acquire<Game::Game>(QLatin1String(::dstools::keys::engines::midiTranscription));
     }
 }
 
 void PitchLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
-    bool needPitch = dirty.contains(QString::fromUtf8(dstools::keys::layers::pitch));
-    bool needMidi = dirty.contains(QString::fromUtf8(dstools::keys::layers::midi));
+    bool needPitch = dirty.contains(QString::fromUtf8(::dstools::keys::layers::pitch));
+    bool needMidi = dirty.contains(QString::fromUtf8(::dstools::keys::layers::midi));
 
     if (needPitch) {
-        if (source()->isLayerManuallyEdited(currentSliceId(), QString::fromUtf8(dstools::keys::layers::pitch))) {
+        if (source()->isLayerManuallyEdited(currentSliceId(), QString::fromUtf8(::dstools::keys::layers::pitch))) {
             dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info, tr("已跳过手动编辑的F0层"),
                                                    4000);
-            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(dstools::keys::layers::pitch)});
+            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(::dstools::keys::layers::pitch)});
         } else {
-            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(dstools::keys::layers::pitch)});
-            m_rmvpe = enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
+            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(::dstools::keys::layers::pitch)});
+            m_rmvpe = enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(::dstools::keys::engines::pitchExtraction));
             if (m_rmvpe && !isBatchRunning()) {
                 dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info, tr("自动提取音高..."),
                                                        3000);
@@ -309,13 +309,13 @@ void PitchLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
     }
 
     if (needMidi) {
-        if (source()->isLayerManuallyEdited(currentSliceId(), QString::fromUtf8(dstools::keys::layers::midi))) {
+        if (source()->isLayerManuallyEdited(currentSliceId(), QString::fromUtf8(::dstools::keys::layers::midi))) {
             dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info, tr("已跳过手动编辑的MIDI层"),
                                                    4000);
-            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(dstools::keys::layers::midi)});
+            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(::dstools::keys::layers::midi)});
         } else {
-            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(dstools::keys::layers::midi)});
-            m_game = enginePool()->acquire<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
+            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(::dstools::keys::layers::midi)});
+            m_game = enginePool()->acquire<Game::Game>(QLatin1String(::dstools::keys::engines::midiTranscription));
             if (m_game && !isBatchRunning()) {
                 dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info, tr("自动转写 MIDI..."),
                                                        3000);
@@ -327,17 +327,17 @@ void PitchLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
         }
     }
 
-    bool needPhNum = dirty.contains(QString::fromUtf8(dstools::keys::layers::phNum));
+    bool needPhNum = dirty.contains(QString::fromUtf8(::dstools::keys::layers::phNum));
     if (!needPhNum) {
         auto docResult = source()->loadSlice(currentSliceId());
         if (docResult) {
             bool hasPhoneme = false;
             bool hasPhNum = false;
             for (const auto& layer : docResult.value().layers) {
-                if (layer.name.contains(QString::fromUtf8(dstools::keys::layers::phoneme), Qt::CaseInsensitive) &&
+                if (layer.name.contains(QString::fromUtf8(::dstools::keys::layers::phoneme), Qt::CaseInsensitive) &&
                     !layer.boundaries.empty())
                     hasPhoneme = true;
-                if (layer.name == QString::fromUtf8(dstools::keys::layers::phNum) && !layer.boundaries.empty())
+                if (layer.name == QString::fromUtf8(::dstools::keys::layers::phNum) && !layer.boundaries.empty())
                     hasPhNum = true;
             }
             if (hasPhoneme && !hasPhNum)
@@ -346,7 +346,7 @@ void PitchLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
     }
 
     if (needPhNum) {
-        source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(dstools::keys::layers::phNum)});
+        source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(::dstools::keys::layers::phNum)});
         loadPhNumCalculator();
         if (m_phNumCalc.isLoaded()) {
             dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info, tr("自动计算发音数..."), 3000);
@@ -361,7 +361,7 @@ void PitchLabelerPage::onExtractPitch() {
         return;
     }
 
-    auto engineKey = QLatin1String(dstools::keys::engines::pitchExtraction);
+    auto engineKey = QLatin1String(::dstools::keys::engines::pitchExtraction);
     m_rmvpe = enginePool()->acquire<Rmvpe::Rmvpe>(engineKey);
     if (!enginePool()->isOpen<Rmvpe::Rmvpe>(engineKey)) {
         QMessageBox::warning(this, tr("提取音高"), tr("RMVPE 模型未加载。请在设置中配置模型路径。"));
@@ -382,7 +382,7 @@ bool PitchLabelerPage::resolveAlignInputWithPhNum(Game::AlignInput& alignInput) 
         auto loadResult = source()->loadSlice(currentSliceId());
         if (loadResult) {
             for (const auto& layer : loadResult.value().layers) {
-                if (layer.name == QString::fromUtf8(dstools::keys::layers::phNum) && !layer.boundaries.empty()) {
+                if (layer.name == QString::fromUtf8(::dstools::keys::layers::phNum) && !layer.boundaries.empty()) {
                     for (const auto& b : layer.boundaries) {
                         bool ok = false;
                         int val = b.text.toInt(&ok);
@@ -452,7 +452,7 @@ void PitchLabelerPage::onExtractMidi() {
         return;
     }
 
-    auto midiEngineKey = QLatin1String(dstools::keys::engines::midiTranscription);
+    auto midiEngineKey = QLatin1String(::dstools::keys::engines::midiTranscription);
     m_game = enginePool()->acquire<Game::Game>(midiEngineKey);
     if (!enginePool()->isOpen<Game::Game>(midiEngineKey)) {
         QMessageBox::warning(this, tr("提取 MIDI"), tr("GAME 模型未加载。请在设置中配置模型路径。"));
@@ -483,7 +483,7 @@ bool PitchLabelerPage::buildAlignInput(Game::AlignInput& outAlignInput) const {
         return false;
     const auto& doc = loadResult.value();
     for (const auto& layer : doc.layers) {
-        if (layer.name.contains(QString::fromUtf8(dstools::keys::layers::phoneme), Qt::CaseInsensitive) &&
+        if (layer.name.contains(QString::fromUtf8(::dstools::keys::layers::phoneme), Qt::CaseInsensitive) &&
             !layer.boundaries.empty()) {
             const auto& bnd = layer.boundaries;
             for (size_t i = 0; i < bnd.size(); ++i) {
@@ -526,7 +526,7 @@ void PitchLabelerPage::runPitchExtraction(const QString& sliceId) {
     std::weak_ptr<Rmvpe::Rmvpe> weakRmvpe = m_rmvpe;
 
     runAsyncTask<PitchExtractionData>(
-        QLatin1String(dstools::keys::engines::pitchExtraction), sliceId,
+        QLatin1String(::dstools::keys::engines::pitchExtraction), sliceId,
         [weakRmvpe, audioPath](const std::shared_ptr<std::atomic<bool>>&) -> Result<PitchExtractionData> {
             auto rmvpe = weakRmvpe.lock();
             if (!rmvpe)
@@ -620,7 +620,7 @@ void PitchLabelerPage::runMidiTranscription(const QString& sliceId, const Game::
     }
 
     runAsyncTask<std::vector<Game::GameNote>>(
-        QLatin1String(dstools::keys::engines::midiTranscription), sliceId,
+        QLatin1String(::dstools::keys::engines::midiTranscription), sliceId,
         [weakGame, audioPath, useAlign, capturedInput, options = std::move(options)](
             const std::shared_ptr<std::atomic<bool>>&) -> Result<std::vector<Game::GameNote>> {
             auto game = weakGame.lock();
@@ -639,7 +639,7 @@ void PitchLabelerPage::runMidiTranscription(const QString& sliceId, const Game::
                         bool isRest = an.name.empty() || an.name == "rest";
                         gn.voiced = !isRest;
                         if (!isRest) {
-                            auto parsed = dstools::parseNoteName(QString::fromStdString(an.name));
+                            auto parsed = ::dstools::parseNoteName(QString::fromStdString(an.name));
                             gn.pitch = parsed.valid ? parsed.midiNumber : 60.0f;
                         } else {
                             gn.pitch = 0.0f;
@@ -733,7 +733,7 @@ void PitchLabelerPage::runAddPhNum(const QString& sliceId) {
 
     QStringList phSeq;
     for (const auto& layer : doc.layers) {
-        if (layer.name.contains(QString::fromUtf8(dstools::keys::layers::phoneme), Qt::CaseInsensitive)) {
+        if (layer.name.contains(QString::fromUtf8(::dstools::keys::layers::phoneme), Qt::CaseInsensitive)) {
             for (const auto& b : layer.boundaries) {
                 if (!b.text.isEmpty())
                     phSeq << b.text;
@@ -751,7 +751,7 @@ void PitchLabelerPage::runAddPhNum(const QString& sliceId) {
         const QString& phNumStr = calcResult.value();
         IntervalLayer* phNumLayer = nullptr;
         for (auto& layer : doc.layers) {
-            if (layer.name == QString::fromUtf8(dstools::keys::layers::phNum)) {
+            if (layer.name == QString::fromUtf8(::dstools::keys::layers::phNum)) {
                 phNumLayer = &layer;
                 break;
             }
@@ -759,7 +759,7 @@ void PitchLabelerPage::runAddPhNum(const QString& sliceId) {
         if (!phNumLayer) {
             doc.layers.push_back({});
             phNumLayer = &doc.layers.back();
-            phNumLayer->name = QString::fromUtf8(dstools::keys::layers::phNum);
+            phNumLayer->name = QString::fromUtf8(::dstools::keys::layers::phNum);
             phNumLayer->type = QStringLiteral("attribute");
         }
 
@@ -805,14 +805,14 @@ void PitchLabelerPage::updateProgress() {
         if (result) {
             bool hasPitch = false;
             for (const auto& curve : result.value().curves) {
-                if (curve.name == QString::fromUtf8(dstools::keys::layers::pitch) && !curve.values.empty()) {
+                if (curve.name == QString::fromUtf8(::dstools::keys::layers::pitch) && !curve.values.empty()) {
                     hasPitch = true;
                     break;
                 }
             }
             bool hasMidi = false;
             for (const auto& layer : result.value().layers) {
-                if (layer.name == QString::fromUtf8(dstools::keys::layers::midi) && !layer.boundaries.empty()) {
+                if (layer.name == QString::fromUtf8(::dstools::keys::layers::midi) && !layer.boundaries.empty()) {
                     hasMidi = true;
                     break;
                 }

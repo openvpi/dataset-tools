@@ -27,10 +27,10 @@ QString MinLabelService::removeTone(const QString &labContent) {
     return inputList.join(" ");
 }
 
-dstools::Result<LabelData> MinLabelService::loadLabel(const QString &jsonFilePath) {
+dsfw::Result<LabelData> MinLabelService::loadLabel(const QString &jsonFilePath) {
     auto jResult = dsfw::JsonHelper::loadFile(jsonFilePath.toStdString());
     if (!jResult)
-        return dstools::Result<LabelData>::Error(jResult.error());
+        return dsfw::Result<LabelData>::Error(jResult.error());
 
     const auto &j = jResult.value();
     LabelData data;
@@ -38,10 +38,10 @@ dstools::Result<LabelData> MinLabelService::loadLabel(const QString &jsonFilePat
     data.rawText = QString::fromStdString(j.value("raw_text", std::string{}));
     data.labWithoutTone = QString::fromStdString(j.value("lab_without_tone", std::string{}));
     data.isCheck = j.value("isCheck", false);
-    return dstools::Result<LabelData>::Ok(std::move(data));
+    return dsfw::Result<LabelData>::Ok(std::move(data));
 }
 
-dstools::Result<void> MinLabelService::saveLabel(const QString &jsonFilePath, const QString &labFilePath,
+dsfw::Result<void> MinLabelService::saveLabel(const QString &jsonFilePath, const QString &labFilePath,
                                         const LabelData &data) {
     static const QRegularExpression multiSpace("\\s+");
 
@@ -56,21 +56,21 @@ dstools::Result<void> MinLabelService::saveLabel(const QString &jsonFilePath, co
 
     auto jsonResult = dsfw::JsonHelper::saveFile(jsonFilePath.toStdString(), writeData);
     if (!jsonResult)
-        return dstools::Result<void>::Error(jsonResult.error());
+        return dsfw::Result<void>::Error(jsonResult.error());
 
     if (!labFilePath.isEmpty() && !labContent.isEmpty()) {
         QFile labFile(labFilePath);
         if (!labFile.open(QIODevice::WriteOnly | QIODevice::Text))
-            return dstools::Result<void>::Error("Failed to write lab file: " + labFilePath.toStdString());
+            return dsfw::Result<void>::Error("Failed to write lab file: " + labFilePath.toStdString());
         QTextStream labIn(&labFile);
         labIn << labContent;
         labFile.close();
     }
 
-    return dstools::Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-dstools::Result<ConvertResult> MinLabelService::convertLabToJson(const QString &dirName) {
+dsfw::Result<ConvertResult> MinLabelService::convertLabToJson(const QString &dirName) {
     const QDir directory(dirName);
     QFileInfoList fileInfoList = directory.entryInfoList(QDir::Files);
 
@@ -112,7 +112,7 @@ dstools::Result<ConvertResult> MinLabelService::convertLabToJson(const QString &
         result.count++;
     }
 
-    return dstools::Result<ConvertResult>::Ok(std::move(result));
+    return dsfw::Result<ConvertResult>::Ok(std::move(result));
 }
 
 } // namespace Minlabel

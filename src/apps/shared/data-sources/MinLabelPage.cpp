@@ -32,7 +32,7 @@
 #include <dsfw/Theme.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsTextTypes.h>
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 
 namespace dstools {

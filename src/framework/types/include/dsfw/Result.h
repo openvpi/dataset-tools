@@ -1,6 +1,6 @@
 #pragma once
 /// @file Result.h
-/// @brief Canonical include for Result<T>. Also available as <dstools/Result.h>.
+/// @brief Canonical include for Result<T>.
 
 #include "ErrorCode.h"
 #include <optional>

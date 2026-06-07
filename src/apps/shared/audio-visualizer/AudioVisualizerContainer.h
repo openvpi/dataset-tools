@@ -27,15 +27,15 @@ class QUndoStack;
 
 namespace dstools {
 
-    namespace dstools {
-        class IBoundaryModel;
-        class BoundaryOverlayWidget;
-        class BoundaryDragController;
-    } // namespace dstools
+    using namespace dsfw;
+    class IBoundaryModel;
+    class BoundaryOverlayWidget;
+    class BoundaryDragController;
 
-    using dstools::BoundaryDragController;
-    using dstools::BoundaryOverlayWidget;
-    using dstools::IBoundaryModel;
+    using ::dstools::BoundaryDragController;
+    using ::dstools::BoundaryOverlayWidget;
+    using ::dstools::IBoundaryModel;
+    using namespace dsfw;
     using TimeRulerWidget = dsfw::widgets::TimeRulerWidget;
 
     class TierLabelArea;

@@ -1,6 +1,6 @@
-#include "dstools/MiniMapScrollBar.h"
+#include "MiniMapScrollBar.h"
 
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -11,6 +11,7 @@
 #include <cmath>
 
 namespace dstools {
+using namespace dsfw;
 
 using dsfw::widgets::ViewportController;
 using dsfw::widgets::ViewportState;

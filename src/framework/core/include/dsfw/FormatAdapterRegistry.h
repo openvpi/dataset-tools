@@ -34,5 +34,7 @@ namespace dsfw {
 
 /// @brief Statically register a format adapter so it is discovered automatically.
 /// Place this macro in the adapter's .cpp file.
+#define REG_CONCAT_IMPL(x, y) x##y
+#define REG_CONCAT(x, y) REG_CONCAT_IMPL(x, y)
 #define REGISTER_FORMAT_ADAPTER(AdapterClass) \
-    static dsfw::FormatAdapterRegistrar _registrar_##AdapterClass(std::make_unique<AdapterClass>())
+    static dsfw::FormatAdapterRegistrar REG_CONCAT(_reg_fa_, __LINE__)(std::make_unique<AdapterClass>())

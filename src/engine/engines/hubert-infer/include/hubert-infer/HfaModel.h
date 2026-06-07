@@ -20,7 +20,7 @@ namespace HFA {
     };
 
     /// @brief OnnxModelBase subclass that loads and runs the HuBERT-FA ONNX model.
-    class HUBERT_INFER_EXPORT HfaModel : public dstools::infer::OnnxModelBase {
+    class HUBERT_INFER_EXPORT HfaModel : public dsfw::infer::OnnxModelBase {
     public:
         /// @brief Constructs and loads the HFA ONNX model.
         /// @param model_Path Path to the ONNX model file.

@@ -15,7 +15,7 @@
 #include <dsfw/AppSettings.h>
 #include <dsfw/IPageActions.h>
 #include <dsfw/IPageLifecycle.h>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dsfw/widgets/PlayWidget.h>
 #include <dsfw/widgets/ViewportController.h>
 #include <dsfw/audio/AudioBuffer.h>
@@ -82,7 +82,7 @@ namespace dstools {
         std::map<QString, std::vector<double>> m_fileSlicePoints;
         QString m_currentAudioPath;
 
-        dstools::AppSettings m_settings;
+        dsfw::AppSettings m_settings;
 
         QList<int> m_sidebarExpandedSize;
 

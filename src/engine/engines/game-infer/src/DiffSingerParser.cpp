@@ -88,17 +88,17 @@ namespace Game
         return values;
     }
 
-    dstools::Result<std::vector<DiffSingerItem>> parseDiffSingerCSV(const std::filesystem::path &csvPath,
+    dsfw::Result<std::vector<DiffSingerItem>> parseDiffSingerCSV(const std::filesystem::path &csvPath,
                                                     const std::vector<std::string> &audioExtensions) {
         std::ifstream file(csvPath, std::ios::in);
         if (!file.is_open()) {
-            return dstools::Err<std::vector<DiffSingerItem>>("Cannot open CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err<std::vector<DiffSingerItem>>("Cannot open CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
         }
 
         // Read header
         std::string headerLine;
         if (!std::getline(file, headerLine)) {
-            return dstools::Err<std::vector<DiffSingerItem>>("Empty CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err<std::vector<DiffSingerItem>>("Empty CSV file: " + dsfw::PathUtils::toUtf8(csvPath));
         }
         // Strip BOM if present
         if (headerLine.size() >= 3 && headerLine[0] == '\xEF' && headerLine[1] == '\xBB' && headerLine[2] == '\xBF') {
@@ -125,13 +125,13 @@ namespace Game
         }
 
         if (nameIdx < 0)
-            return dstools::Err<std::vector<DiffSingerItem>>("CSV missing 'name' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err<std::vector<DiffSingerItem>>("CSV missing 'name' column: " + dsfw::PathUtils::toUtf8(csvPath));
         if (phSeqIdx < 0)
-            return dstools::Err<std::vector<DiffSingerItem>>("CSV missing 'ph_seq' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err<std::vector<DiffSingerItem>>("CSV missing 'ph_seq' column: " + dsfw::PathUtils::toUtf8(csvPath));
         if (phDurIdx < 0)
-            return dstools::Err<std::vector<DiffSingerItem>>("CSV missing 'ph_dur' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err<std::vector<DiffSingerItem>>("CSV missing 'ph_dur' column: " + dsfw::PathUtils::toUtf8(csvPath));
         if (phNumIdx < 0)
-            return dstools::Err<std::vector<DiffSingerItem>>("CSV missing 'ph_num' column: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err<std::vector<DiffSingerItem>>("CSV missing 'ph_num' column: " + dsfw::PathUtils::toUtf8(csvPath));
 
         const auto parentDir = csvPath.parent_path();
 
@@ -169,7 +169,7 @@ namespace Game
                 }
             }
             if (!found) {
-                return dstools::Err<std::vector<DiffSingerItem>>("Waveform file not found for item '" + item.name + "' in " +
+                return dsfw::Err<std::vector<DiffSingerItem>>("Waveform file not found for item '" + item.name + "' in " +
                                          dsfw::PathUtils::toUtf8(csvPath));
             }
 
@@ -177,16 +177,16 @@ namespace Game
         }
 
         if (items.empty()) {
-            return dstools::Err<std::vector<DiffSingerItem>>("No items found in CSV: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err<std::vector<DiffSingerItem>>("No items found in CSV: " + dsfw::PathUtils::toUtf8(csvPath));
         }
 
         return items;
     }
 
-    dstools::Result<void> writeDiffSingerCSV(const std::filesystem::path &csvPath, const std::vector<DiffSingerItem> &items,
+    dsfw::Result<void> writeDiffSingerCSV(const std::filesystem::path &csvPath, const std::vector<DiffSingerItem> &items,
                             const std::vector<std::vector<AlignedNote>> &alignResults) {
         if (items.size() != alignResults.size()) {
-            return dstools::Err("items and alignResults must have the same length");
+            return dsfw::Err("items and alignResults must have the same length");
         }
 
         // Build column order: start from original, ensure note_seq/note_dur/note_slur present, remove note_glide
@@ -215,7 +215,7 @@ namespace Game
 
         std::ofstream file(csvPath, std::ios::out | std::ios::trunc);
         if (!file.is_open()) {
-            return dstools::Err("Cannot open output CSV: " + dsfw::PathUtils::toUtf8(csvPath));
+            return dsfw::Err("Cannot open output CSV: " + dsfw::PathUtils::toUtf8(csvPath));
         }
 
         // Write header
@@ -266,7 +266,7 @@ namespace Game
             }
             file << "\n";
         }
-        return dstools::Ok();
+        return dsfw::Ok();
     }
 
 } // namespace Game

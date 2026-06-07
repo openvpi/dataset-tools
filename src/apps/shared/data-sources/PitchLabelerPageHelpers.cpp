@@ -17,7 +17,7 @@
 #include <dsfw/IModelProvider.h>
 #include <dsfw/Log.h>
 #include <dsfw/widgets/ToastNotification.h>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dsfw/signal/curve_tools.h>
 #include <dstools/DsTextTypes.h>
 #include <dstools/PitchUtils.h>
@@ -62,7 +62,7 @@ namespace dstools {
 
         CurveLayer *pitchCurve = nullptr;
         for (auto &curve : doc.curves) {
-            if (curve.name == QString::fromUtf8(dstools::keys::layers::pitch)) {
+            if (curve.name == QString::fromUtf8(::dstools::keys::layers::pitch)) {
                 pitchCurve = &curve;
                 break;
             }
@@ -70,7 +70,7 @@ namespace dstools {
         if (!pitchCurve) {
             doc.curves.push_back({});
             pitchCurve = &doc.curves.back();
-            pitchCurve->name = QString::fromUtf8(dstools::keys::layers::pitch);
+            pitchCurve->name = QString::fromUtf8(::dstools::keys::layers::pitch);
         }
         pitchCurve->values = f0;
         pitchCurve->timestep = secToUs(static_cast<double>(timestep));
@@ -102,7 +102,7 @@ namespace dstools {
         if (!notes.empty()) {
             IntervalLayer *midiLayer = nullptr;
             for (auto &layer : doc.layers) {
-                if (layer.name == QString::fromUtf8(dstools::keys::layers::midi)) {
+                if (layer.name == QString::fromUtf8(::dstools::keys::layers::midi)) {
                     midiLayer = &layer;
                     break;
                 }
@@ -110,8 +110,8 @@ namespace dstools {
             if (!midiLayer) {
                 doc.layers.push_back({});
                 midiLayer = &doc.layers.back();
-                midiLayer->name = QString::fromUtf8(dstools::keys::layers::midi);
-                midiLayer->type = QString::fromUtf8(dstools::keys::layers::note);
+                midiLayer->name = QString::fromUtf8(::dstools::keys::layers::midi);
+                midiLayer->type = QString::fromUtf8(::dstools::keys::layers::note);
             }
 
             midiLayer->boundaries.clear();
@@ -130,7 +130,7 @@ namespace dstools {
             }
         } else {
             doc.layers.erase(std::remove_if(doc.layers.begin(), doc.layers.end(),
-                                            [](const IntervalLayer &l) { return l.name == QString::fromUtf8(dstools::keys::layers::midi); }),
+                                            [](const IntervalLayer &l) { return l.name == QString::fromUtf8(::dstools::keys::layers::midi); }),
                              doc.layers.end());
         }
 
@@ -144,7 +144,7 @@ namespace dstools {
             return;
         }
 
-        source->clearDirtyLayers(sliceId, {QString::fromUtf8(dstools::keys::layers::midi)});
+        source->clearDirtyLayers(sliceId, {QString::fromUtf8(::dstools::keys::layers::midi)});
 
         if (!currentFile)
             currentFile = std::make_shared<pitchlabeler::DsPitchDocument>();
@@ -171,8 +171,8 @@ namespace dstools {
 
         page->acquireEngines();
 
-        bool hasRmvpe = page->enginePool()->isOpen<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
-        bool hasGame = page->enginePool()->isOpen<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
+        bool hasRmvpe = page->enginePool()->isOpen<Rmvpe::Rmvpe>(QLatin1String(::dstools::keys::engines::pitchExtraction));
+        bool hasGame = page->enginePool()->isOpen<Game::Game>(QLatin1String(::dstools::keys::engines::midiTranscription));
 
         if (!hasRmvpe && !hasGame) {
             QMessageBox::warning(page, QObject::tr("批量提取"),
@@ -220,10 +220,10 @@ namespace dstools {
 
         dlg->appendLog(QObject::tr("总切片数: %1").arg(ids.size()));
 
-        auto rmvpe = page->enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(dstools::keys::engines::pitchExtraction));
-        auto game = page->enginePool()->acquire<Game::Game>(QLatin1String(dstools::keys::engines::midiTranscription));
-        auto rmvpeAlive = page->aliveToken(QLatin1String(dstools::keys::engines::pitchExtraction)).token();
-        auto gameAlive = page->aliveToken(QLatin1String(dstools::keys::engines::midiTranscription)).token();
+        auto rmvpe = page->enginePool()->acquire<Rmvpe::Rmvpe>(QLatin1String(::dstools::keys::engines::pitchExtraction));
+        auto game = page->enginePool()->acquire<Game::Game>(QLatin1String(::dstools::keys::engines::midiTranscription));
+        auto rmvpeAlive = page->aliveToken(QLatin1String(::dstools::keys::engines::pitchExtraction)).token();
+        auto gameAlive = page->aliveToken(QLatin1String(::dstools::keys::engines::midiTranscription)).token();
         auto *src = source;
         QPointer<PitchLabelerPage> guard(page);
         page->loadPhNumCalculator();
@@ -279,14 +279,14 @@ namespace dstools {
                                 if (result) {
                                     bool hasData = false;
                                     for (const auto &curve : result.value().curves) {
-                                        if (curve.name == QString::fromUtf8(dstools::keys::layers::pitch) && !curve.values.empty()) {
+                                        if (curve.name == QString::fromUtf8(::dstools::keys::layers::pitch) && !curve.values.empty()) {
                                             hasData = true;
                                             break;
                                         }
                                     }
                                     if (!hasData) {
                                         for (const auto &layer : result.value().layers) {
-                                            if (layer.name == QString::fromUtf8(dstools::keys::layers::midi) && !layer.boundaries.empty()) {
+                                            if (layer.name == QString::fromUtf8(::dstools::keys::layers::midi) && !layer.boundaries.empty()) {
                                                 hasData = true;
                                                 break;
                                             }
@@ -360,7 +360,7 @@ namespace dstools {
                                 if (loadResult) {
                                     const auto &doc = loadResult.value();
                                     for (const auto &layer : doc.layers) {
-                                        if (layer.name.contains(QString::fromUtf8(dstools::keys::layers::phoneme), Qt::CaseInsensitive) &&
+                                        if (layer.name.contains(QString::fromUtf8(::dstools::keys::layers::phoneme), Qt::CaseInsensitive) &&
                                             !layer.boundaries.empty()) {
                                             const auto &bnd = layer.boundaries;
                                             for (size_t i = 0; i < bnd.size(); ++i) {
@@ -376,7 +376,7 @@ namespace dstools {
                                             if (!alignInput.phSeq.empty()) {
                                                 bool hasPhNum = false;
                                                 for (const auto &l : doc.layers) {
-                                                    if (l.name == QString::fromUtf8(dstools::keys::layers::phNum) && !l.boundaries.empty()) {
+                                                    if (l.name == QString::fromUtf8(::dstools::keys::layers::phNum) && !l.boundaries.empty()) {
                                                         for (const auto &b : l.boundaries) {
                                                             bool ok = false;
                                                             int val = b.text.toInt(&ok);
@@ -452,7 +452,7 @@ namespace dstools {
                                 }
 
                                 std::vector<Game::GameNote> notes;
-                                dstools::Result<void> midiResult = Err("Not executed");
+                                dsfw::Result<void> midiResult = dsfw::Err("Not executed");
 
                                 if (useAlign) {
                                     alignInput.wavPath = std::filesystem::path(audioPath.toStdWString());
@@ -466,7 +466,7 @@ namespace dstools {
                                             bool isRest = an.name.empty() || an.name == "rest";
                                             gn.voiced = !isRest;
                                             if (!isRest) {
-                                                auto parsed = dstools::parseNoteName(QString::fromStdString(an.name));
+                                                auto parsed = ::dstools::parseNoteName(QString::fromStdString(an.name));
                                                 gn.pitch = parsed.valid ? parsed.midiNumber : 60.0f;
                                             } else {
                                                 gn.pitch = 0.0f;

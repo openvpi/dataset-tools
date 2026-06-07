@@ -81,8 +81,8 @@ public:
     void setABComparisonActive(bool active);
 
     // --- Configuration ---
-    void loadConfig(dstools::AppSettings& settings);
-    void pullConfig(dstools::AppSettings& settings);
+    void loadConfig(dsfw::AppSettings& settings);
+    void pullConfig(dsfw::AppSettings& settings);
 
 signals:
     void fileEdited();

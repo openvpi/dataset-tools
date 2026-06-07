@@ -1,10 +1,10 @@
+#include <dsfw/ConfigTypesJson.h>
 #include <dstools/DsProject.h>
 #include <dstools/ProjectBackupManager.h>
-#include <dsfw/ConfigTypesJson.h>
+#include <dsfw/Result.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/Log.h>
 #include <dsfw/PathUtils.h>
-#include <dsfw/Result.h>
 
 #include <QDir>
 #include <QFile>
@@ -15,7 +15,11 @@
 #include <filesystem>
 #include <unordered_set>
 
+using dsfw::JsonHelper;
+
 namespace dstools {
+
+using namespace dsfw;
 
 // ── PIMPL ─────────────────────────────────────────────────────────────
 

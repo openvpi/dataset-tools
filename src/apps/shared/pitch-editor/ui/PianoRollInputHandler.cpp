@@ -20,9 +20,10 @@
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
+using namespace dsfw;
 
-using dstools::parseNoteName;
-using dstools::shiftNoteCents;
+using ::dstools::parseNoteName;
+using ::dstools::shiftNoteCents;
 
 PianoRollInputHandler::PianoRollInputHandler() = default;
 

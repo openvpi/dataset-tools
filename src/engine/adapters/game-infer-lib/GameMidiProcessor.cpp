@@ -5,9 +5,11 @@
 #include <dsfw/ConfigTypes.h>
 #include <dsfw/PathUtils.h>
 #include <dsfw/TaskProcessorRegistry.h>
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 
 namespace dstools {
+
+using namespace dsfw;
 
 // Self-register with the task processor registry.
 static TaskProcessorRegistry::Registrar<GameMidiProcessor> s_reg(
@@ -49,11 +51,11 @@ Result<void> GameMidiProcessor::initialize(ModelManager & /*mm*/,
     const auto path = configValueString(modelConfig, QStringLiteral("path")).toStdString();
     const auto deviceId = static_cast<int>(configValueInt(modelConfig, QStringLiteral("deviceId"), -1));
 
-    auto provider = deviceId < 0 ? Game::ExecutionProvider::CPU
+    auto provider = deviceId < 0 ? dsfw::infer::ExecutionProvider::CPU
 #ifdef ONNXRUNTIME_ENABLE_DML
-                                 : Game::ExecutionProvider::DML;
+                                 : dsfw::infer::ExecutionProvider::DML;
 #else
-                                 : Game::ExecutionProvider::CPU;
+                                 : dsfw::infer::ExecutionProvider::CPU;
 #endif
 
     auto result = m_game->loadModel(std::filesystem::path(path), provider, deviceId);

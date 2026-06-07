@@ -1,6 +1,6 @@
 #include "LogPage.h"
 
-#include <dstools/LogNotifier.h>
+#include <dsfw/LogNotifier.h>
 #include <dsfw/Log.h>
 #include <dsfw/widgets/LogViewer.h>
 
@@ -18,14 +18,14 @@
 
 namespace dstools {
 
-static dsfw::widgets::LogViewer::LogLevel mapLevel(dstools::LogLevel lvl) {
+static dsfw::widgets::LogViewer::LogLevel mapLevel(dsfw::LogLevel lvl) {
     switch (lvl) {
-        case dstools::LogLevel::Trace:   return dsfw::widgets::LogViewer::Debug;
-        case dstools::LogLevel::Debug:   return dsfw::widgets::LogViewer::Debug;
-        case dstools::LogLevel::Info:    return dsfw::widgets::LogViewer::Info;
-        case dstools::LogLevel::Warning: return dsfw::widgets::LogViewer::Warning;
-        case dstools::LogLevel::Error:   return dsfw::widgets::LogViewer::Error;
-        case dstools::LogLevel::Fatal:   return dsfw::widgets::LogViewer::Error;
+        case dsfw::LogLevel::Trace:   return dsfw::widgets::LogViewer::Debug;
+        case dsfw::LogLevel::Debug:   return dsfw::widgets::LogViewer::Debug;
+        case dsfw::LogLevel::Info:    return dsfw::widgets::LogViewer::Info;
+        case dsfw::LogLevel::Warning: return dsfw::widgets::LogViewer::Warning;
+        case dsfw::LogLevel::Error:   return dsfw::widgets::LogViewer::Error;
+        case dsfw::LogLevel::Fatal:   return dsfw::widgets::LogViewer::Error;
     }
     return dsfw::widgets::LogViewer::Debug;
 }
@@ -62,11 +62,11 @@ LogPage::LogPage(QWidget *parent)
 
     layout->addLayout(toolbar);
 
-    auto entries = dstools::Logger::instance().recentEntries(2000);
+    auto entries = dsfw::Logger::instance().recentEntries(2000);
     for (const auto &entry : entries)
         appendEntry(entry);
 
-    connect(&dstools::LogNotifier::instance(), &dstools::LogNotifier::entryAdded,
+    connect(&dsfw::LogNotifier::instance(), &dsfw::LogNotifier::entryAdded,
             this, &LogPage::appendEntry);
 }
 
@@ -94,7 +94,7 @@ void LogPage::onActivated() {
 
 void LogPage::onDeactivated() {}
 
-void LogPage::appendEntry(const dstools::LogEntry &entry) {
+void LogPage::appendEntry(const dsfw::LogEntry &entry) {
     QString cat = QString::fromStdString(entry.category);
     if (!m_knownCategories.contains(cat)) {
         m_knownCategories.insert(cat);
@@ -134,7 +134,7 @@ void LogPage::applyCategoryFilter() {
         m_activeCategories.insert(cat);
 
     m_viewer->clear();
-    auto entries = dstools::Logger::instance().recentEntries(2000);
+    auto entries = dsfw::Logger::instance().recentEntries(2000);
     for (const auto &entry : entries) {
         QString ecat = QString::fromStdString(entry.category);
         if (!m_activeCategories.isEmpty() && !m_activeCategories.contains(ecat))
@@ -163,14 +163,14 @@ void LogPage::exportToFile() {
     }
 
     QTextStream stream(&file);
-    auto entries = dstools::Logger::instance().recentEntries(2000);
+    auto entries = dsfw::Logger::instance().recentEntries(2000);
     for (const auto &entry : entries)
         stream << QString::fromStdString(entry.toString()) << "\n";
 }
 
 void LogPage::clear() {
     m_viewer->clear();
-    dstools::Logger::instance().clearRingBuffer();
+    dsfw::Logger::instance().clearRingBuffer();
 }
 
 } // namespace dstools

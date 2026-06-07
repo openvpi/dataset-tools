@@ -14,16 +14,16 @@
 
 namespace dsfw {
 
-// ── Mapping dstools::LogLevel → LogViewer::LogLevel ─────────────────
+// ── Mapping dsfw::LogLevel → LogViewer::LogLevel ─────────────────
 
-static widgets::LogViewer::LogLevel mapLevel(dstools::LogLevel lvl) {
+static widgets::LogViewer::LogLevel mapLevel(dsfw::LogLevel lvl) {
     switch (lvl) {
-        case dstools::LogLevel::Trace:   return widgets::LogViewer::Debug;
-        case dstools::LogLevel::Debug:   return widgets::LogViewer::Debug;
-        case dstools::LogLevel::Info:    return widgets::LogViewer::Info;
-        case dstools::LogLevel::Warning: return widgets::LogViewer::Warning;
-        case dstools::LogLevel::Error:   return widgets::LogViewer::Error;
-        case dstools::LogLevel::Fatal:   return widgets::LogViewer::Error;
+        case dsfw::LogLevel::Trace:   return widgets::LogViewer::Debug;
+        case dsfw::LogLevel::Debug:   return widgets::LogViewer::Debug;
+        case dsfw::LogLevel::Info:    return widgets::LogViewer::Info;
+        case dsfw::LogLevel::Warning: return widgets::LogViewer::Warning;
+        case dsfw::LogLevel::Error:   return widgets::LogViewer::Error;
+        case dsfw::LogLevel::Fatal:   return widgets::LogViewer::Error;
     }
     return widgets::LogViewer::Debug;
 }
@@ -78,16 +78,16 @@ LogPanelWidget::LogPanelWidget(QWidget *parent)
 
 void LogPanelWidget::connectToNotifier() {
     // Prepopulate from ring buffer
-    auto entries = dstools::Logger::instance().recentEntries(500);
+    auto entries = dsfw::Logger::instance().recentEntries(500);
     for (const auto &entry : entries)
         appendEntry(entry);
 
     // Live updates
-    connect(&dstools::LogNotifier::instance(), &dstools::LogNotifier::entryAdded,
+    connect(&dsfw::LogNotifier::instance(), &dsfw::LogNotifier::entryAdded,
             this, &LogPanelWidget::appendEntry);
 }
 
-void LogPanelWidget::appendEntry(const dstools::LogEntry &entry) {
+void LogPanelWidget::appendEntry(const dsfw::LogEntry &entry) {
     // Track category
     QString cat = QString::fromStdString(entry.category);
     if (!m_knownCategories.contains(cat)) {
@@ -123,7 +123,7 @@ void LogPanelWidget::exportToFile() {
     }
 
     QTextStream stream(&file);
-    auto entries = dstools::Logger::instance().recentEntries(500);
+    auto entries = dsfw::Logger::instance().recentEntries(500);
     for (const auto &entry : entries)
         stream << QString::fromStdString(entry.toString()) << "\n";
 
@@ -132,7 +132,7 @@ void LogPanelWidget::exportToFile() {
 
 void LogPanelWidget::clear() {
     m_viewer->clear();
-    dstools::Logger::instance().clearRingBuffer();
+    dsfw::Logger::instance().clearRingBuffer();
 }
 
 // ── Private ──────────────────────────────────────────────────────────
@@ -159,7 +159,7 @@ void LogPanelWidget::applyCategoryFilter() {
 
     // Rebuild display with current filter
     m_viewer->clear();
-    auto entries = dstools::Logger::instance().recentEntries(500);
+    auto entries = dsfw::Logger::instance().recentEntries(500);
     for (const auto &entry : entries) {
         QString ecat = QString::fromStdString(entry.category);
         if (!m_activeCategories.isEmpty() && !m_activeCategories.contains(ecat))

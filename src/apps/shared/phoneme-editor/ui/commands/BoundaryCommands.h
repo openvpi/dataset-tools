@@ -11,6 +11,7 @@
 
 namespace dstools {
     namespace phonemelabeler {
+        using namespace dsfw;
 
         class TextGridDocument;
 

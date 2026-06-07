@@ -77,16 +77,16 @@ namespace Rmvpe
         }
     }
 
-    dstools::Result<void> Rmvpe::get_f0(const std::filesystem::path &filepath, const float threshold, std::vector<RmvpeRes> &res,
+    dsfw::Result<void> Rmvpe::get_f0(const std::filesystem::path &filepath, const float threshold, std::vector<RmvpeRes> &res,
                                           const std::function<void(int)> &progressChanged) const {
         if (!m_rmvpe) {
-            return dstools::Err("RMVPE model not loaded");
+            return dsfw::Err("RMVPE model not loaded");
         }
 
         auto pipeline = dsfw::audio::AudioPipeline::create();
         auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(filepath), 16000);
         if (!result.ok()) {
-            return dstools::Err("Failed to decode audio for RMVPE: " + result.error());
+            return dsfw::Err("Failed to decode audio for RMVPE: " + result.error());
         }
         auto buffer = result.value();
         auto floats = buffer.floats();
@@ -97,30 +97,30 @@ namespace Rmvpe
         tempRes.offset = 0.0f;
         const bool success = m_rmvpe->forward(audio, threshold, tempRes.f0, tempRes.uv, msg);
         if (!success)
-            return dstools::Err(msg);
+            return dsfw::Err(msg);
         interp_f0(tempRes.f0, tempRes.uv);
         res.push_back(tempRes);
 
         if (progressChanged) {
             progressChanged(100);
         }
-        return dstools::Ok();
+        return dsfw::Ok();
     }
 
     void Rmvpe::terminate() { m_rmvpe->terminate(); }
 
-    dstools::Result<void> Rmvpe::load(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int deviceId) {
+    dsfw::Result<void> Rmvpe::load(const std::filesystem::path &modelPath, const ExecutionProvider provider, const int deviceId) {
         unload();
         try {
             m_rmvpe = std::make_unique<RmvpeModel>(modelPath, provider, deviceId);
             if (!m_rmvpe->is_open()) {
                 m_rmvpe.reset();
-                return dstools::Err("Cannot load RMVPE Model from " + dsfw::PathUtils::toUtf8(modelPath));
+                return dsfw::Err("Cannot load RMVPE Model from " + dsfw::PathUtils::toUtf8(modelPath));
             }
-            return dstools::Ok();
+            return dsfw::Ok();
         } catch (const std::exception &e) {
             m_rmvpe.reset();
-            return dstools::Err(e.what());
+            return dsfw::Err(e.what());
         }
     }
 

@@ -23,7 +23,7 @@
 #include <dsfw/widgets/ToastNotification.h>
 #include <dstools/DsKeys.h>
 #include <dstools/DsTextTypes.h>
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 #include <dstools/ModelManager.h>
 #include <dstools/PitchUtils.h>
 #include <filesystem>
@@ -54,9 +54,9 @@ struct FaLayerResult {
 
 static FaLayerResult buildFaLayers(const HFA::WordList& words) {
     FaLayerResult r;
-    r.graphemeLayer.name = QString::fromUtf8(dstools::keys::layers::grapheme);
+    r.graphemeLayer.name = QString::fromUtf8(::dstools::keys::layers::grapheme);
     r.graphemeLayer.type = QStringLiteral("interval");
-    r.phonemeLayer.name = QString::fromUtf8(dstools::keys::layers::phoneme);
+    r.phonemeLayer.name = QString::fromUtf8(::dstools::keys::layers::phoneme);
     r.phonemeLayer.type = QStringLiteral("interval");
 
     struct WordIds {
@@ -102,8 +102,8 @@ static FaLayerResult buildFaLayers(const HFA::WordList& words) {
         const auto& ids = wordIdList[wi];
 
         LayerDependency dep;
-        dep.parentLayerName = QString::fromUtf8(dstools::keys::layers::grapheme);
-        dep.childLayerName = QString::fromUtf8(dstools::keys::layers::phoneme);
+        dep.parentLayerName = QString::fromUtf8(::dstools::keys::layers::grapheme);
+        dep.childLayerName = QString::fromUtf8(::dstools::keys::layers::phoneme);
         dep.parentStartBoundaryId = ids.graphemeStartId;
         dep.parentEndBoundaryId =
             (wi + 1 < wordIdList.size()) ? wordIdList[wi + 1].graphemeStartId : ids.graphemeStartId;
@@ -142,11 +142,11 @@ PhonemeLabelerPage::PhonemeLabelerPage(QWidget* parent) : EditorPageBase("Phonem
     connect(m_actExtractMidi, &QAction::triggered, this, &PhonemeLabelerPage::onExtractMidi);
     m_editor->toolbar()->addAction(m_actExtractMidi);
 
-    shortcutManager()->bind(m_editor->saveAction(), dstools::settings::kShortcutSave, tr("Save"), tr("File"));
-    shortcutManager()->bind(m_editor->undoAction(), dstools::settings::kShortcutUndo, tr("Undo"), tr("Edit"));
-    shortcutManager()->bind(m_editor->redoAction(), dstools::settings::kShortcutRedo, tr("Redo"), tr("Edit"));
-    shortcutManager()->bind(m_faAction, dstools::settings::kShortcutFA, tr("Force Align"), tr("Processing"));
-    shortcutManager()->bind(m_editor->playPauseAction(), dstools::settings::kShortcutPlayPause, tr("Play/Pause"),
+    shortcutManager()->bind(m_editor->saveAction(), ::dstools::settings::kShortcutSave, tr("Save"), tr("File"));
+    shortcutManager()->bind(m_editor->undoAction(), ::dstools::settings::kShortcutUndo, tr("Undo"), tr("Edit"));
+    shortcutManager()->bind(m_editor->redoAction(), ::dstools::settings::kShortcutRedo, tr("Redo"), tr("Edit"));
+    shortcutManager()->bind(m_faAction, ::dstools::settings::kShortcutFA, tr("Force Align"), tr("Processing"));
+    shortcutManager()->bind(m_editor->playPauseAction(), ::dstools::settings::kShortcutPlayPause, tr("Play/Pause"),
                             tr("Playback"));
     shortcutManager()->applyAll();
     shortcutManager()->updateTooltips();
@@ -220,7 +220,7 @@ bool PhonemeLabelerPage::saveCurrentSlice() {
     markLayersModified(modifiedLayers);
     for (const auto& layerName : modifiedLayers) {
         setLayerManuallyEdited(layerName, true);
-        if (layerName == QString::fromUtf8(dstools::keys::layers::phoneme))
+        if (layerName == QString::fromUtf8(::dstools::keys::layers::phoneme))
             addEditedStep(QStringLiteral("phoneme_review"));
     }
     return true;
@@ -237,8 +237,8 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString& sliceId) {
 
         QList<IntervalLayer> layers;
         for (const auto& layer : doc.layers) {
-            if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) ||
-                layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
+            if (layer.name == QString::fromUtf8(::dstools::keys::layers::grapheme) ||
+                layer.name == QString::fromUtf8(::dstools::keys::layers::phoneme))
                 layers.append(layer);
         }
 
@@ -266,7 +266,7 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString& sliceId) {
             m_editor->document()->autoDetectBindingGroups();
 
         for (int i = 0; i < static_cast<int>(layers.size()); ++i) {
-            if (layers[i].name == QString::fromUtf8(dstools::keys::layers::phoneme)) {
+            if (layers[i].name == QString::fromUtf8(::dstools::keys::layers::phoneme)) {
                 m_editor->document()->setTierReadOnly(i, true);
                 break;
             }
@@ -305,7 +305,7 @@ void PhonemeLabelerPage::onSliceSelectedImpl(const QString& sliceId) {
 }
 
 void PhonemeLabelerPage::onDeactivatedImpl() {
-    enginePool()->invalidate(QLatin1String(dstools::keys::engines::phonemeAlignment));
+    enginePool()->invalidate(QLatin1String(::dstools::keys::engines::phonemeAlignment));
     aliveToken(QStringLiteral("moe_curve")).invalidate();
     bool hadFA = m_hfa != nullptr || isBatchRunning();
     m_hfa.reset();
@@ -330,7 +330,7 @@ BatchSliceResult PhonemeLabelerPage::processSlice(const QString& sliceId) {
 void PhonemeLabelerPage::restoreExtraSplitters() {
     if (m_editor) {
         m_editor->setViewportResolutionKey(QStringLiteral("Viewport/phoneme/resolution"));
-        auto state = settings().get(dstools::settings::kEditorSplitterState);
+        auto state = settings().get(::dstools::settings::kEditorSplitterState);
         if (!state.isEmpty())
             m_editor->restoreSplitterState(QByteArray::fromBase64(state.toUtf8()));
         m_editor->restoreChartVisibility();
@@ -339,7 +339,7 @@ void PhonemeLabelerPage::restoreExtraSplitters() {
 }
 
 void PhonemeLabelerPage::saveExtraSplitters() {
-    settings().set(dstools::settings::kEditorSplitterState,
+    settings().set(::dstools::settings::kEditorSplitterState,
                    QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
     m_editor->saveChartVisibility();
     m_editor->saveViewportResolution();
@@ -348,14 +348,14 @@ void PhonemeLabelerPage::saveExtraSplitters() {
 void PhonemeLabelerPage::onAutoInferPreloadEngines() {
     auto preload = preloadConfig();
     if (!preload.isEmpty()) {
-        auto faPreload = preload[dstools::keys::engines::phonemeAlignment].toObject();
+        auto faPreload = preload[::dstools::keys::engines::phonemeAlignment].toObject();
         if (faPreload["enabled"].toBool(false))
-            enginePool()->acquire<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment));
+            enginePool()->acquire<HFA::HFA>(QLatin1String(::dstools::keys::engines::phonemeAlignment));
     }
 }
 
 void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
-    bool needAutoFA = dirty.contains(QString::fromUtf8(dstools::keys::layers::phoneme));
+    bool needAutoFA = dirty.contains(QString::fromUtf8(::dstools::keys::layers::phoneme));
 
     if (!needAutoFA && !currentSliceId().isEmpty()) {
         auto result = source()->loadSlice(currentSliceId());
@@ -363,9 +363,9 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
             bool hasGrapheme = false;
             bool hasPhoneme = false;
             for (const auto& layer : result.value().layers) {
-                if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) && !layer.boundaries.empty())
+                if (layer.name == QString::fromUtf8(::dstools::keys::layers::grapheme) && !layer.boundaries.empty())
                     hasGrapheme = true;
-                if (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme) && !layer.boundaries.empty())
+                if (layer.name == QString::fromUtf8(::dstools::keys::layers::phoneme) && !layer.boundaries.empty())
                     hasPhoneme = true;
             }
             if (hasGrapheme && !hasPhoneme)
@@ -374,11 +374,11 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
     }
 
     if (needAutoFA) {
-        if (source()->isLayerManuallyEdited(currentSliceId(), QString::fromUtf8(dstools::keys::layers::phoneme))) {
+        if (source()->isLayerManuallyEdited(currentSliceId(), QString::fromUtf8(::dstools::keys::layers::phoneme))) {
             dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
                                                    tr("已跳过手动编辑的音素层，请手动重新对齐"), 4000);
         } else {
-            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(dstools::keys::layers::phoneme)});
+            source()->clearDirtyLayers(currentSliceId(), {QString::fromUtf8(::dstools::keys::layers::phoneme)});
 
             const QString sliceId = currentSliceId();
             QString audioPath = source()->validatedAudioPath(sliceId);
@@ -391,7 +391,7 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
             }
             bool hasGraphemeForFA = false;
             for (const auto& layer : loadResult.value().layers) {
-                if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) && !layer.boundaries.empty()) {
+                if (layer.name == QString::fromUtf8(::dstools::keys::layers::grapheme) && !layer.boundaries.empty()) {
                     hasGraphemeForFA = true;
                     break;
                 }
@@ -404,7 +404,7 @@ void PhonemeLabelerPage::onAutoInferProcessDirty(const QStringList& dirty) {
             QTimer::singleShot(500, this, [this, guard]() {
                 if (!guard || !guard->isVisible())
                     return;
-                m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment));
+                m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(::dstools::keys::engines::phonemeAlignment));
                 if (m_hfa && !isBatchRunning()) {
                     dsfw::widgets::ToastNotification::show(this, dsfw::widgets::ToastType::Info,
                                                            tr("Auto force-aligning..."), 3000);
@@ -467,9 +467,9 @@ static QString readFaInput(const DsTextDocument& doc) {
     const IntervalLayer* graphemeLayer = nullptr;
     const IntervalLayer* phonemeLayer = nullptr;
     for (const auto& layer : doc.layers) {
-        if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme))
+        if (layer.name == QString::fromUtf8(::dstools::keys::layers::grapheme))
             graphemeLayer = &layer;
-        else if (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
+        else if (layer.name == QString::fromUtf8(::dstools::keys::layers::phoneme))
             phonemeLayer = &layer;
     }
     if (graphemeLayer) {
@@ -510,7 +510,7 @@ static QString readFaInput(const DsTextDocument& doc) {
 
 void PhonemeLabelerPage::onEngineInvalidated(const QString& taskKey) {
     enginePool()->invalidate(taskKey);
-    if (taskKey == QLatin1String(dstools::keys::engines::phonemeAlignment)) {
+    if (taskKey == QLatin1String(::dstools::keys::engines::phonemeAlignment)) {
         m_hfa.reset();
         DSFW_LOG_WARN("fa", "FA task cancelled: model invalidated");
     }
@@ -522,8 +522,8 @@ void PhonemeLabelerPage::onRunFA() {
         return;
     }
 
-    m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment));
-    if (!enginePool()->isOpen<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment))) {
+    m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(::dstools::keys::engines::phonemeAlignment));
+    if (!enginePool()->isOpen<HFA::HFA>(QLatin1String(::dstools::keys::engines::phonemeAlignment))) {
         QMessageBox::warning(
             this, tr("Force Align"),
             tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
@@ -588,7 +588,7 @@ void PhonemeLabelerPage::runFaForSlice(const QString& sliceId) {
     std::weak_ptr<HFA::HFA> weakHfa = m_hfa;
 
     runAsyncTask<HFA::WordList>(
-        QLatin1String(dstools::keys::engines::phonemeAlignment), sliceId,
+        QLatin1String(::dstools::keys::engines::phonemeAlignment), sliceId,
         [weakHfa, audioPath, lyricsText = std::move(lyricsText),
          nonSpeechPh = std::move(nonSpeechPh)](const std::shared_ptr<std::atomic<bool>>&) -> Result<HFA::WordList> {
             auto hfa = weakHfa.lock();
@@ -687,8 +687,8 @@ void PhonemeLabelerPage::onBatchFA() {
         return;
     }
 
-    m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment));
-    if (!enginePool()->isOpen<HFA::HFA>(QLatin1String(dstools::keys::engines::phonemeAlignment))) {
+    m_hfa = enginePool()->acquire<HFA::HFA>(QLatin1String(::dstools::keys::engines::phonemeAlignment));
+    if (!enginePool()->isOpen<HFA::HFA>(QLatin1String(::dstools::keys::engines::phonemeAlignment))) {
         QMessageBox::warning(
             this, tr("Force Align"),
             tr("Force alignment model not loaded. Please configure the HuBERT-FA model path in Settings."));
@@ -723,7 +723,7 @@ void PhonemeLabelerPage::onBatchFA() {
     dlg->appendLog(tr("Total slices: %1").arg(ids.size()));
 
     auto* hfa = m_hfa.get();
-    auto hfaAlive = aliveToken(QLatin1String(dstools::keys::engines::phonemeAlignment)).token();
+    auto hfaAlive = aliveToken(QLatin1String(::dstools::keys::engines::phonemeAlignment)).token();
     auto* src = source();
     QPointer<PhonemeLabelerPage> guard(this);
 
@@ -800,7 +800,7 @@ void PhonemeLabelerPage::onBatchFA() {
                     if (skip) {
                         bool hasPhoneme = false;
                         for (const auto& layer : doc.layers) {
-                            if (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme) &&
+                            if (layer.name == QString::fromUtf8(::dstools::keys::layers::phoneme) &&
                                 !layer.boundaries.empty()) {
                                 hasPhoneme = true;
                                 break;
@@ -896,7 +896,7 @@ void PhonemeLabelerPage::onBatchFA() {
 }
 
 void PhonemeLabelerPage::updateProgress() {
-    EditorPageBase::updateProgress({QString::fromUtf8(dstools::keys::layers::phoneme)});
+    EditorPageBase::updateProgress({QString::fromUtf8(::dstools::keys::layers::phoneme)});
 }
 
 void PhonemeLabelerPage::onExtractF0() {
@@ -920,7 +920,7 @@ void PhonemeLabelerPage::onExtractF0() {
     auto provider = dsfw::infer::ExecutionProvider::DML;
     int deviceId = 0;
 
-    auto rmvpeProbe = dstools::probeRmvpeEngine<Rmvpe::Rmvpe>(std::filesystem::path(cfg.modelPath.toStdWString()),
+    auto rmvpeProbe = ::dstools::probeRmvpeEngine<Rmvpe::Rmvpe>(std::filesystem::path(cfg.modelPath.toStdWString()),
                                                                   provider, deviceId);
     if (!rmvpeProbe.success()) {
         QMessageBox::warning(this, tr("Extract F0"), tr("Failed to load RMVPE model."));
@@ -939,7 +939,7 @@ void PhonemeLabelerPage::onExtractF0() {
     if (results.empty() || results[0].f0.empty())
         return;
 
-    auto dsFile = std::make_shared<dstools::pitchlabeler::DsPitchDocument>();
+    auto dsFile = std::make_shared<::dstools::pitchlabeler::DsPitchDocument>();
     dsFile->offset = secToUs(results[0].offset);
     static constexpr TimePos kRmvpeTimestep = 5000;
     dsFile->f0.timestep = kRmvpeTimestep;
@@ -970,7 +970,7 @@ void PhonemeLabelerPage::onExtractMidi() {
     auto provider = dsfw::infer::ExecutionProvider::DML;
     int deviceId = 0;
 
-    auto gameProbe = dstools::probeGameEngine<Game::Game>(std::filesystem::path(cfg.modelPath.toStdWString()),
+    auto gameProbe = ::dstools::probeGameEngine<Game::Game>(std::filesystem::path(cfg.modelPath.toStdWString()),
                                                               provider, deviceId);
     if (!gameProbe.success()) {
         QMessageBox::warning(this, tr("Extract MIDI"),
@@ -990,14 +990,14 @@ void PhonemeLabelerPage::onExtractMidi() {
     if (gameNotes.empty())
         return;
 
-    auto dsFile = std::make_shared<dstools::pitchlabeler::DsPitchDocument>();
+    auto dsFile = std::make_shared<::dstools::pitchlabeler::DsPitchDocument>();
     dsFile->offset = 0;
 
     for (const auto& gn : gameNotes) {
         if (!gn.voiced)
             continue;
-        dstools::pitchlabeler::Note note;
-        note.name = dstools::midiToNoteName(static_cast<int>(gn.pitch));
+        ::dstools::pitchlabeler::Note note;
+        note.name = ::dstools::midiToNoteName(static_cast<int>(gn.pitch));
         note.duration = secToUs(static_cast<double>(gn.duration));
         note.slur = 0;
         note.glide.clear();
@@ -1013,8 +1013,8 @@ void PhonemeLabelerPage::onExtractMidi() {
 void PhonemeLabelerPage::loadFaResultIntoEditor(const DsTextDocument& doc) {
     QList<IntervalLayer> layers;
     for (const auto& layer : doc.layers) {
-        if (layer.name == QString::fromUtf8(dstools::keys::layers::grapheme) ||
-            layer.name == QString::fromUtf8(dstools::keys::layers::phoneme))
+        if (layer.name == QString::fromUtf8(::dstools::keys::layers::grapheme) ||
+            layer.name == QString::fromUtf8(::dstools::keys::layers::phoneme))
             layers.append(layer);
     }
 
@@ -1037,7 +1037,7 @@ void PhonemeLabelerPage::loadFaResultIntoEditor(const DsTextDocument& doc) {
         m_editor->document()->autoDetectBindingGroups();
 
     for (int i = 0; i < static_cast<int>(layers.size()); ++i) {
-        if (layers[i].name == QString::fromUtf8(dstools::keys::layers::phoneme)) {
+        if (layers[i].name == QString::fromUtf8(::dstools::keys::layers::phoneme)) {
             m_editor->document()->setTierReadOnly(i, true);
             break;
         }

@@ -15,6 +15,8 @@ namespace HFA {
 
 namespace dstools {
 
+    using namespace dsfw;
+
     /// @brief ITaskProcessor implementation for HuBERT-FA phoneme alignment.
     class HubertAlignmentProcessor : public ITaskProcessor {
     public:

@@ -140,16 +140,16 @@ const char *FunAsrAdapter::engineName() const {
     return "FunASR";
 }
 
-dstools::Result<void> FunAsrAdapter::load(const std::filesystem::path &modelPath,
-                                            dstools::infer::ExecutionProvider provider, int deviceId) {
+dsfw::Result<void> FunAsrAdapter::load(const std::filesystem::path &modelPath,
+                                            dsfw::infer::ExecutionProvider provider, int deviceId) {
     std::string errorMsg;
     if (!load(modelPath, provider, deviceId, errorMsg))
-        return dstools::Result<void>::Error(errorMsg);
-    return dstools::Result<void>::Ok();
+        return dsfw::Result<void>::Error(errorMsg);
+    return dsfw::Result<void>::Ok();
 }
 
 bool FunAsrAdapter::load(const std::filesystem::path &modelPath,
-                          dstools::infer::ExecutionProvider provider, int deviceId,
+                          dsfw::infer::ExecutionProvider provider, int deviceId,
                           std::string &errorMsg) {
     unload();
 
@@ -180,7 +180,9 @@ FunAsr::Model *FunAsrAdapter::model() const {
 
 namespace dstools {
 
-static TaskProcessorRegistry::Registrar<FunAsrProcessor> s_reg(
+using namespace dsfw;
+
+static dsfw::TaskProcessorRegistry::Registrar<FunAsrProcessor> s_reg(
     QStringLiteral("asr"), QStringLiteral("funasr"));
 
 FunAsrProcessor::FunAsrProcessor() = default;

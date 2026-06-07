@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.21)
-
 # Build tests only if BUILD_TESTS is ON
 if(NOT BUILD_TESTS)
     return()

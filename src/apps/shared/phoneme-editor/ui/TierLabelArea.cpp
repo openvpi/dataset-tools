@@ -5,6 +5,7 @@
 #include <dsfw/TimePos.h>
 
 namespace dstools {
+using namespace dsfw;
 
     TierLabelArea::TierLabelArea(QWidget *parent) : QWidget(parent) {
         setFixedHeight(24);

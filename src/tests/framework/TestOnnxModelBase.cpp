@@ -3,7 +3,7 @@
 
 #include <QTemporaryDir>
 
-using namespace dstools::infer;
+using namespace dsfw::infer;
 
 class TestOnnxModelBase : public QObject {
     Q_OBJECT

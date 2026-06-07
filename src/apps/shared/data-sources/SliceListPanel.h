@@ -36,8 +36,8 @@ namespace dstools {
         void setSliceDirtyLayers(const QString &sliceId, const QStringList &dirtyLayers);
         void setSliceLoadError(const QString &sliceId, const QString &error);
 
-        QString ensureSelection(AppSettings &settings);
-        void saveSelection(AppSettings &settings) const;
+        QString ensureSelection(dsfw::AppSettings &settings);
+        void saveSelection(dsfw::AppSettings &settings) const;
 
         void setSlicerMode(bool enabled);
         void setSliceData(const std::vector<double> &slicePoints, double totalDuration,

@@ -8,11 +8,12 @@
 /// the viewport; dragging its left/right edges zooms.
 
 #include <QWidget>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dsfw/widgets/ViewportController.h>
 #include <vector>
 
 namespace dstools {
+using namespace dsfw;
 
     class MiniMapScrollBar : public QWidget {
         Q_OBJECT

@@ -7,6 +7,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     namespace {
 
         TextBoundaryLayer parseBoundariesArray(const nlohmann::json &j) {

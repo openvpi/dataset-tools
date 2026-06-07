@@ -34,20 +34,20 @@ namespace Minlabel {
         /// @brief Load label data from a JSON file.
         /// @param jsonFilePath Path to the JSON label file.
         /// @return Label data or error.
-        static dstools::Result<LabelData> loadLabel(const QString &jsonFilePath);
+        static dsfw::Result<LabelData> loadLabel(const QString &jsonFilePath);
 
         /// @brief Save label data to both JSON and lab files.
         /// @param jsonFilePath Path to the output JSON file.
         /// @param labFilePath Path to the output lab file.
         /// @param data Label data to save.
         /// @return Success or error.
-        static dstools::Result<void> saveLabel(const QString &jsonFilePath, const QString &labFilePath,
+        static dsfw::Result<void> saveLabel(const QString &jsonFilePath, const QString &labFilePath,
                                                const LabelData &data);
 
         /// @brief Batch convert lab files in a directory to JSON format.
         /// @param dirName Path to the directory containing lab files.
         /// @return Conversion result or error.
-        static dstools::Result<ConvertResult> convertLabToJson(const QString &dirName);
+        static dsfw::Result<ConvertResult> convertLabToJson(const QString &dirName);
     };
 
 } // namespace Minlabel

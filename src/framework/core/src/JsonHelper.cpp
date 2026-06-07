@@ -23,4 +23,4 @@ namespace dsfw {
         return dsfw::AtomicFileWriter::writeJson(path, data.dump(indent));
     }
 
-} // namespace dstools
+} // namespace dsfw

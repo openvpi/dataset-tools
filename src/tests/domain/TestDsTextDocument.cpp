@@ -2,6 +2,7 @@
 #include <QTemporaryDir>
 #include <dstools/DsTextTypes.h>
 
+using namespace dsfw;
 using namespace dstools;
 
 class TestDsTextDocument : public QObject {

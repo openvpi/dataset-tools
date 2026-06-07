@@ -4,11 +4,13 @@
 
 #include <dsfw/ConfigTypes.h>
 #include <dsfw/TaskProcessorRegistry.h>
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 
 #include <nlohmann/json.hpp>
 
 namespace dstools {
+
+using namespace dsfw;
 
 RmvpePitchProcessor::RmvpePitchProcessor() = default;
 RmvpePitchProcessor::~RmvpePitchProcessor() = default;
@@ -36,11 +38,11 @@ Result<void> RmvpePitchProcessor::initialize(ModelManager & /*mm*/,
         return Err("RmvpePitchProcessor: missing 'path' in model config");
     }
 
-    auto provider = gpuIndex < 0 ? dstools::infer::ExecutionProvider::CPU
+    auto provider = gpuIndex < 0 ? dsfw::infer::ExecutionProvider::CPU
 #ifdef ONNXRUNTIME_ENABLE_DML
-                                 : dstools::infer::ExecutionProvider::DML;
+                                 : dsfw::infer::ExecutionProvider::DML;
 #else
-                                 : dstools::infer::ExecutionProvider::CPU;
+                                 : dsfw::infer::ExecutionProvider::CPU;
 #endif
 
     m_rmvpe = std::make_unique<Rmvpe::Rmvpe>();

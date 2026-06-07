@@ -4,7 +4,7 @@
 #include "DataAreaWidget.h"
 #include "PlayCursorOverlay.h"
 #include "TierLabelArea.h"
-#include "dstools/MiniMapScrollBar.h"
+#include "MiniMapScrollBar.h"
 
 #include <BoundaryDragController.h>
 #include <BoundaryOverlayWidget.h>
@@ -19,10 +19,11 @@
 #include <QWheelEvent>
 #include <algorithm>
 #include <dsfw/widgets/PlayWidget.h>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dsfw/TimePos.h>
 
 namespace dstools {
+using namespace dsfw;
 
 using dsfw::widgets::PlayWidget;
 using dsfw::widgets::ViewportController;
@@ -507,10 +508,10 @@ void AudioVisualizerContainer::setResolutionKey(const QString& key) {
 }
 
 void AudioVisualizerContainer::saveResolution() {
-    static const dstools::SettingsKey<int> kResolution("Viewport/resolution", 0);
+    static const dsfw::SettingsKey<int> kResolution("Viewport/resolution", 0);
     if (!m_resolutionKey.isEmpty()) {
         std::string keyPath = m_resolutionKey.toStdString();
-        dstools::SettingsKey<int> key(keyPath.c_str(), 0);
+        dsfw::SettingsKey<int> key(keyPath.c_str(), 0);
         m_settings.set(key, m_viewport->resolution());
     } else {
         m_settings.set(kResolution, m_viewport->resolution());
@@ -518,11 +519,11 @@ void AudioVisualizerContainer::saveResolution() {
 }
 
 bool AudioVisualizerContainer::restoreResolution() {
-    static const dstools::SettingsKey<int> kResolution("Viewport/resolution", 0);
+    static const dsfw::SettingsKey<int> kResolution("Viewport/resolution", 0);
     int saved = 0;
     if (!m_resolutionKey.isEmpty()) {
         std::string keyPath = m_resolutionKey.toStdString();
-        dstools::SettingsKey<int> key(keyPath.c_str(), 0);
+        dsfw::SettingsKey<int> key(keyPath.c_str(), 0);
         saved = m_settings.get(key);
     } else {
         saved = m_settings.get(kResolution);
@@ -561,7 +562,7 @@ void AudioVisualizerContainer::applyDefaultScale() {
         return;
     }
 
-    static const dstools::SettingsKey<int> kDefaultResolution("AudioVisualizer/defaultResolution", 0);
+    static const dsfw::SettingsKey<int> kDefaultResolution("AudioVisualizer/defaultResolution", 0);
     auto& s_avSettings = chartLayoutSettings();
     s_avSettings.reload();
     int defaultRes = s_avSettings.get(kDefaultResolution);
@@ -732,7 +733,7 @@ bool AudioVisualizerContainer::chartVisible(const QString& id) const {
 }
 
 void AudioVisualizerContainer::saveChartVisibility() {
-    static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+    static const dsfw::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
     QStringList visible;
     for (const auto& id : m_chartOrder) {
         if (!m_hiddenCharts.contains(id))
@@ -742,7 +743,7 @@ void AudioVisualizerContainer::saveChartVisibility() {
 }
 
 void AudioVisualizerContainer::restoreChartVisibility() {
-    static const dstools::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
+    static const dsfw::SettingsKey<QString> kChartVisible("ViewLayout/chartVisible", "");
     chartLayoutSettings().reload();
     QString saved = chartLayoutSettings().get(kChartVisible);
     if (saved.isEmpty())
@@ -762,12 +763,12 @@ void AudioVisualizerContainer::restoreChartVisibility() {
 }
 
 void AudioVisualizerContainer::saveChartOrder() {
-    static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+    static const dsfw::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
     chartLayoutSettings().set(kChartOrder, m_chartOrder.join(QLatin1Char(',')));
 }
 
 bool AudioVisualizerContainer::restoreChartOrder() {
-    static const dstools::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
+    static const dsfw::SettingsKey<QString> kChartOrder("ViewLayout/chartOrder", "");
     chartLayoutSettings().reload();
     QString saved = chartLayoutSettings().get(kChartOrder);
     if (saved.isEmpty())

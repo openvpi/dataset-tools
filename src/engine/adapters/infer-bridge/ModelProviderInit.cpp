@@ -11,6 +11,9 @@
 
 namespace dstools {
 
+using namespace dsfw;
+using namespace dsfw::infer;
+
 void registerModelProviders(ModelManager &mm) {
     auto asrType = registerModelType("asr");
     mm.registerProvider(

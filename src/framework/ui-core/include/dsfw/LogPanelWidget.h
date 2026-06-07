@@ -17,8 +17,8 @@ namespace dsfw {
 
     /// @brief Right-side log panel with level filter, category filter, clear, and export.
     ///
-    /// Connects to dstools::LogNotifier for live updates and prepopulates
-    /// from dstools::Logger::recentEntries() on construction.
+    /// Connects to dsfw::LogNotifier for live updates and prepopulates
+    /// from dsfw::Logger::recentEntries() on construction.
     class LogPanelWidget : public QWidget {
         Q_OBJECT
 
@@ -29,7 +29,7 @@ namespace dsfw {
         void connectToNotifier();
 
         /// @brief Append a log entry programmatically.
-        void appendEntry(const dstools::LogEntry &entry);
+        void appendEntry(const dsfw::LogEntry &entry);
 
         /// @brief Export all visible entries to a file.
         void exportToFile();

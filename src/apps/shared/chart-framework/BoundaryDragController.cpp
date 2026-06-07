@@ -9,7 +9,8 @@
 #include <cmath>
 
 namespace dstools {
-namespace dstools {
+
+using namespace dsfw;
 
 BoundaryDragController::BoundaryDragController(QObject *parent)
     : QObject(parent) {
@@ -225,5 +226,4 @@ std::vector<AlignedBoundary> BoundaryDragController::findPartners(
     return result;
 }
 
-} // namespace dstools
 } // namespace dstools

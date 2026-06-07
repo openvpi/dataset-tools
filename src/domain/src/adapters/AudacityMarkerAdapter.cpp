@@ -10,11 +10,10 @@
 
 namespace dstools {
 
-Result<std::vector<double>> AudacityMarkerAdapter::read(const QString &path) {
+dsfw::Result<std::vector<double>> AudacityMarkerAdapter::read(const QString& path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return Result<std::vector<double>>::Error(
-            QObject::tr("Cannot open file: %1").arg(path).toStdString());
+        return dsfw::Result<std::vector<double>>::Error(QObject::tr("Cannot open file: %1").arg(path).toStdString());
     }
 
     std::vector<double> times;
@@ -43,7 +42,7 @@ Result<std::vector<double>> AudacityMarkerAdapter::read(const QString &path) {
     return times;
 }
 
-Result<void> AudacityMarkerAdapter::write(const QString &path, const std::vector<double> &times) {
+dsfw::Result<void> AudacityMarkerAdapter::write(const QString& path, const std::vector<double>& times) {
     QString content;
     QTextStream out(&content);
     out.setRealNumberPrecision(6);
@@ -58,4 +57,4 @@ Result<void> AudacityMarkerAdapter::write(const QString &path, const std::vector
     return dsfw::AtomicFileWriter::write(dsfw::PathUtils::toStdPath(path), data);
 }
 
-} // namespace dstools
+}  // namespace dstools

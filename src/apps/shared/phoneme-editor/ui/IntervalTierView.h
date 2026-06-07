@@ -16,13 +16,12 @@ class QPainter;
 class QUndoStack;
 
 namespace dstools {
-    namespace dstools {
-        class BoundaryDragController;
-    }
+    using namespace dsfw;
+    class BoundaryDragController;
     namespace phonemelabeler {
+        using ::dstools::ChartCoordinate;
 
-        using dstools::dstools::ChartCoordinate;
-        using dstools::dstools::BoundaryDragController;
+        using ::dstools::BoundaryDragController;
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
 
@@ -82,7 +81,7 @@ namespace dstools {
             /// @param intervalIndex Index of the clicked interval.
             /// @param startTime Start time of the interval.
             /// @param endTime End time of the interval.
-            void intervalClicked(int intervalIndex, TimePos startTime, TimePos endTime);
+            void intervalClicked(int intervalIndex, dsfw::TimePos startTime, dsfw::TimePos endTime);
 
             /// @brief Emitted when an interval is double-clicked.
             /// @param intervalIndex Index of the double-clicked interval.
@@ -95,7 +94,7 @@ namespace dstools {
             /// @brief Emitted to request playback of an interval.
             /// @param startTime Playback start time.
             /// @param endTime Playback end time.
-            void requestPlayback(TimePos startTime, TimePos endTime);
+            void requestPlayback(dsfw::TimePos startTime, dsfw::TimePos endTime);
 
             /// @brief Emitted when this tier is activated by user interaction.
             /// @param tierIndex Index of the activated tier.

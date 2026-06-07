@@ -4,7 +4,8 @@
 #include <dsfw/TimePos.h>
 
 namespace dstools {
-    namespace dstools {
+
+        using namespace dsfw;
 
         struct OutOfBoundsRange {
             double startSec;
@@ -70,4 +71,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

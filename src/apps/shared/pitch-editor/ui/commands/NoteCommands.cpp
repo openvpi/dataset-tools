@@ -7,8 +7,8 @@ namespace dstools {
 namespace pitchlabeler {
 namespace ui {
 
-using dstools::parseNoteName;
-using dstools::shiftNoteCents;
+using ::dstools::parseNoteName;
+using ::dstools::shiftNoteCents;
 
 DeleteNotesCommand::DeleteNotesCommand(std::shared_ptr<DsPitchDocument> dsFile, std::vector<int> indices,
                                        QUndoCommand *parent)

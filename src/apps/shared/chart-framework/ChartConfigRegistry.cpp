@@ -5,7 +5,8 @@
 #include <nlohmann/json.hpp>
 
 namespace dstools {
-namespace dstools {
+
+using namespace dsfw;
 
 ChartConfigRegistry &ChartConfigRegistry::instance() {
     static ChartConfigRegistry inst;
@@ -111,5 +112,4 @@ void ChartConfigRegistry::saveConfig(const QString &chartId) {
     m_settings->setRawString(chartId.toStdString().c_str(), QString::fromStdString(chartJson.dump()));
 }
 
-} // namespace dstools
 } // namespace dstools

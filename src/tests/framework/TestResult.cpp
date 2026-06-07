@@ -1,7 +1,7 @@
 #include <QTest>
 #include <dsfw/Result.h>
 
-using namespace dstools;
+using namespace dsfw;
 
 class TestResult : public QObject {
     Q_OBJECT

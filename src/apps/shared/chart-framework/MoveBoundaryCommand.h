@@ -4,7 +4,8 @@
 #include <dsfw/TimePos.h>
 
 namespace dstools {
-    namespace dstools {
+
+        using namespace dsfw;
 
         class IBoundaryModel;
 
@@ -30,4 +31,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

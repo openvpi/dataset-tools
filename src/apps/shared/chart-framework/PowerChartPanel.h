@@ -5,7 +5,6 @@
 #include <QWidget>
 
 namespace dstools {
-    namespace dstools {
 
         class PowerChartPanel : public ChartPanelBase {
             Q_OBJECT
@@ -42,4 +41,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

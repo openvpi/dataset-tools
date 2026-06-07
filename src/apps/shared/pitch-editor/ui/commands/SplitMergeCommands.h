@@ -12,6 +12,7 @@ namespace dstools {
 
 
         namespace ui {
+            using namespace dsfw;
 
             class SplitNoteCommand : public QUndoCommand {
             public:

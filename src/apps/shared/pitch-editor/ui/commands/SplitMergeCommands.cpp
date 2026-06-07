@@ -5,6 +5,7 @@
 namespace dstools {
     namespace pitchlabeler {
         namespace ui {
+            using namespace dsfw;
 
             SplitNoteCommand::SplitNoteCommand(std::shared_ptr<DsPitchDocument> dsFile, int noteIndex, TimePos splitTime,
                                                QUndoCommand *parent) :

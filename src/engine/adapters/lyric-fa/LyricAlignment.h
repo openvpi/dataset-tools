@@ -45,7 +45,7 @@ namespace LyricFA {
     public:
         LyricMatcher();
 
-        dstools::Result<LyricData> process_lyric_file(const QString &lyric_path) const;
+        dsfw::Result<LyricData> process_lyric_file(const QString &lyric_path) const;
         LyricData processLyricContent(const QString &content) const;
 
         std::pair<QVector<QString>, QVector<QString>> process_asr_content(const QString &lab_content) const;
@@ -69,7 +69,7 @@ namespace LyricFA {
 
     class MatchLyric;
 
-    class LyricMatchTask final : public dstools::AsyncTask {
+    class LyricMatchTask final : public dsfw::AsyncTask {
         Q_OBJECT
     public:
         LyricMatchTask(MatchLyric *match, QString filename, QString labPath, QString jsonPath);

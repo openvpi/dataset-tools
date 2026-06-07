@@ -9,7 +9,6 @@
 #include <dsfw/widgets/ViewportController.h>
 
 namespace dstools {
-    namespace dstools {
 
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
@@ -71,4 +70,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

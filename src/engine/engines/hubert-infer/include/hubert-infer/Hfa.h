@@ -23,11 +23,11 @@ namespace HFA {
         explicit HFA(const std::filesystem::path &model_folder, ExecutionProvider provider, int device_id);
         ~HFA() override;
 
-        dstools::Result<void> recognize(const std::filesystem::path &wavPath, const std::string &language,
+        dsfw::Result<void> recognize(const std::filesystem::path &wavPath, const std::string &language,
                                         const std::vector<std::string> &non_speech_ph, const std::string &lyricsText,
                                         WordList &words) const;
 
-        dstools::Result<void> recognize(std::filesystem::path wavPath, const std::string &language,
+        dsfw::Result<void> recognize(std::filesystem::path wavPath, const std::string &language,
                                         const std::vector<std::string> &non_speech_ph, WordList &words) const;
 
         bool initialized() const {
@@ -41,7 +41,7 @@ namespace HFA {
             return "HuBERT-FA";
         }
 
-        dstools::Result<void> load(const std::filesystem::path &modelPath, ExecutionProvider provider,
+        dsfw::Result<void> load(const std::filesystem::path &modelPath, ExecutionProvider provider,
                                    int deviceId) override;
         void unload() override;
         int64_t estimatedMemoryBytes() const override;

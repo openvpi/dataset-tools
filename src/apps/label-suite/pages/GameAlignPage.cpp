@@ -10,7 +10,7 @@
 #include <QVBoxLayout>
 
 #include <dsfw/PathUtils.h>
-#include <dstools/PipelineContext.h>
+#include <dsfw/PipelineContext.h>
 #include <dsfw/PipelineRunner.h>
 #include <dsfw/PipelineValidators.h>
 #include <dsfw/widgets/PathSelector.h>
@@ -18,6 +18,7 @@
 #include <dstools/ProjectPaths.h>
 
 namespace dstools::labeler {
+    using namespace dsfw;
 
 GameAlignPage::GameAlignPage(QWidget* parent) : WizardPageBase(parent) {
     buildUi();

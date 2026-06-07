@@ -5,7 +5,6 @@
 #include <QWidget>
 
 namespace dstools {
-    namespace dstools {
 
         class WaveformChartPanel : public ChartPanelBase {
             Q_OBJECT
@@ -55,4 +54,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

@@ -28,9 +28,8 @@ namespace Game
      * @param applyWordUv If true, force unvoiced words to "rest" (used when uv_note_cond == "follow")
      * @return Aligned notes with slur flags, or error
      */
-    GAME_INFER_EXPORT dstools::Result<std::vector<AlignedNote>> alignNotesToWords(const std::vector<WordInfo> &words,
-                                                                                   const std::vector<std::string> &noteSeq,
-                                                                                   const std::vector<float> &noteDur, float tol = 0.01f,
-                                                                                   bool applyWordUv = false);
+    GAME_INFER_EXPORT dsfw::Result<std::vector<AlignedNote>>
+    alignNotesToWords(const std::vector<WordInfo> &words, const std::vector<std::string> &noteSeq,
+                      const std::vector<float> &noteDur, float tol = 0.01f, bool applyWordUv = false);
 
 } // namespace Game

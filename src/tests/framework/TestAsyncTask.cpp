@@ -4,7 +4,7 @@
 #include <QThreadPool>
 #include <dsfw/AsyncTask.h>
 
-using namespace dstools;
+using namespace dsfw;
 using namespace std::chrono_literals;
 
 class SuccessTask : public AsyncTask {

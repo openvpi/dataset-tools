@@ -13,6 +13,7 @@
 
 namespace dstools {
 namespace phonemelabeler {
+using namespace dsfw;
 
 TierLabelPanel::TierLabelPanel(ViewportController *viewport, QWidget *parent)
     : QWidget(parent)

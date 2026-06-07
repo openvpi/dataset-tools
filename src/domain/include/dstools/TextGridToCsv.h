@@ -10,6 +10,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 /// TextGrid → TranscriptionRow 转换
 class TextGridToCsv {
 public:

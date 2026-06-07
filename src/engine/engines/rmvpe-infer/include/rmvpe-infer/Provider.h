@@ -2,9 +2,9 @@
 /// @brief Re-exports ExecutionProvider into the Rmvpe namespace.
 
 #pragma once
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 
 namespace Rmvpe
 {
-    using ExecutionProvider = dstools::infer::ExecutionProvider; ///< Execution provider alias.
+    using ExecutionProvider = dsfw::infer::ExecutionProvider; ///< Execution provider alias.
 }

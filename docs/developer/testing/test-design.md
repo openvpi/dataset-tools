@@ -156,7 +156,6 @@ src/tests/
 |------|---------|---------|
 | `TestGame` | GAME 模型 | Audio→MIDI 转录正确性 |
 | `TestRmvpe` | RMVPE 模型 | F0 提取正确性 |
-| `TestSome` | Some 模型 | Some 模型推理正确性 |
 | `TestAudioUtil` | 无 | 重采样、格式转换、读写 |
 
 ---

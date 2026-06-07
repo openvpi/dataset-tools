@@ -9,7 +9,7 @@
 
 #include "audio-visualizer/AudioVisualizerContainer.h"
 
-using namespace dstools;
+using namespace dsfw;
 using namespace dsfw::widgets;
 
 class TestAudioVisualizerContainer : public QObject {

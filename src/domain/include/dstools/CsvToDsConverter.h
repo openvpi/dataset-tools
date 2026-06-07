@@ -5,13 +5,15 @@
 /// Equivalent to Python convert_ds.py csv2ds/ds2csv.
 
 #include <QString>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dsfw/Result.h>
 #include <dstools/TranscriptionCsv.h>
 #include <functional>
 #include <vector>
 
 namespace dstools {
+
+    using namespace dsfw;
 
     class CsvToDsConverter {
     public:

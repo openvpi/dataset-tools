@@ -16,7 +16,7 @@
 #include <dsfw/widgets/ShortcutManager.h>
 #include <dsfw/widgets/ToastNotification.h>
 #include <dsfw/Theme.h>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dstools/DsKeys.h>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -535,7 +535,7 @@ void EditorPageBase::startAutoSaveTimer() {
         });
     }
 
-    dstools::AppSettings appSettings("Editor");
+    dsfw::AppSettings appSettings("Editor");
     appSettings.reload();
 
     if (appSettings.get(dstools::settings::kAutoSaveEnabled)) {

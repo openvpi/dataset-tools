@@ -13,9 +13,9 @@
 
 namespace dstools {
     namespace phonemelabeler {
+        using ::dstools::ChartCoordinate;
 
-        using dstools::dstools::ChartCoordinate;
-        using dstools::dstools::IBoundaryModel;
+        using ::dstools::IBoundaryModel;
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
 

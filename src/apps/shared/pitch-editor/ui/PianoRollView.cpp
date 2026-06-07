@@ -22,6 +22,7 @@
 namespace dstools {
     namespace pitchlabeler {
         namespace ui {
+            using namespace dsfw;
 
             // ============================================================================
             // Construction / Setup
@@ -797,15 +798,15 @@ namespace dstools {
                 update();
             }
 
-            void PianoRollView::loadConfig(dstools::AppSettings &settings) {
-                m_snapToKey = settings.get(dstools::settings::pitch::kSnapToKey);
-                m_showPitchTextOverlay = settings.get(dstools::settings::pitch::kShowPitchTextOverlay);
-                m_showPhonemeTexts = settings.get(dstools::settings::pitch::kShowPhonemeTexts);
-                m_showCrosshairAndPitch = settings.get(dstools::settings::pitch::kShowCrosshairAndPitch);
-                m_vScale = settings.get(dstools::settings::pitch::kVScale);
-                m_boundaryHitRadius = settings.get(dstools::settings::pitch::kBoundaryHitRadius);
-                m_defaultResolution = settings.get(dstools::settings::pitch::kDefaultResolution);
-                m_inputHandler.setModulationDragSensitivity(settings.get(dstools::settings::pitch::kModulationDragSensitivity));
+            void PianoRollView::loadConfig(dsfw::AppSettings &settings) {
+                m_snapToKey = settings.get(::dstools::settings::pitch::kSnapToKey);
+                m_showPitchTextOverlay = settings.get(::dstools::settings::pitch::kShowPitchTextOverlay);
+                m_showPhonemeTexts = settings.get(::dstools::settings::pitch::kShowPhonemeTexts);
+                m_showCrosshairAndPitch = settings.get(::dstools::settings::pitch::kShowCrosshairAndPitch);
+                m_vScale = settings.get(::dstools::settings::pitch::kVScale);
+                m_boundaryHitRadius = settings.get(::dstools::settings::pitch::kBoundaryHitRadius);
+                m_defaultResolution = settings.get(::dstools::settings::pitch::kDefaultResolution);
+                m_inputHandler.setModulationDragSensitivity(settings.get(::dstools::settings::pitch::kModulationDragSensitivity));
 
                 if (m_actSnapToKey)
                     m_actSnapToKey->setChecked(m_snapToKey);
@@ -819,14 +820,14 @@ namespace dstools {
                 update();
             }
 
-            void PianoRollView::pullConfig(dstools::AppSettings &settings) const {
-                settings.set(dstools::settings::pitch::kSnapToKey, m_snapToKey);
-                settings.set(dstools::settings::pitch::kShowPitchTextOverlay, m_showPitchTextOverlay);
-                settings.set(dstools::settings::pitch::kShowPhonemeTexts, m_showPhonemeTexts);
-                settings.set(dstools::settings::pitch::kShowCrosshairAndPitch, m_showCrosshairAndPitch);
-                settings.set(dstools::settings::pitch::kVScale, m_vScale);
-                settings.set(dstools::settings::pitch::kBoundaryHitRadius, m_boundaryHitRadius);
-                settings.set(dstools::settings::pitch::kDefaultResolution, m_defaultResolution);
+            void PianoRollView::pullConfig(dsfw::AppSettings &settings) const {
+                settings.set(::dstools::settings::pitch::kSnapToKey, m_snapToKey);
+                settings.set(::dstools::settings::pitch::kShowPitchTextOverlay, m_showPitchTextOverlay);
+                settings.set(::dstools::settings::pitch::kShowPhonemeTexts, m_showPhonemeTexts);
+                settings.set(::dstools::settings::pitch::kShowCrosshairAndPitch, m_showCrosshairAndPitch);
+                settings.set(::dstools::settings::pitch::kVScale, m_vScale);
+                settings.set(::dstools::settings::pitch::kBoundaryHitRadius, m_boundaryHitRadius);
+                settings.set(::dstools::settings::pitch::kDefaultResolution, m_defaultResolution);
             }
 
             // ============================================================================

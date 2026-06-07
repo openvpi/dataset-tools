@@ -16,6 +16,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 namespace {
 
 QString reroundDurs(const QString& durStr) {

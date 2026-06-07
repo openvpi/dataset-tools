@@ -5,12 +5,14 @@
 
 #include "IBoundaryModel.h"
 
-using dstools::dstools::IBoundaryModel;
+using ::dstools::IBoundaryModel;
+using ::dstools::OutOfBoundsRange;
 
 #include <vector>
 
 namespace dstools {
     namespace phonemelabeler {
+        using namespace dsfw;
 
         /// @brief Single-tier boundary model backed by a sorted vector of time points.
         ///
@@ -58,7 +60,7 @@ namespace dstools {
 
             [[nodiscard]] TimePos clampBoundaryTime(int tierIndex, int boundaryIndex,
                                                     TimePos proposedTime) const override;
-            [[nodiscard]] std::vector<dstools::dstools::OutOfBoundsRange> getOutOfBoundsRanges(
+            [[nodiscard]] std::vector<OutOfBoundsRange> getOutOfBoundsRanges(
                 int tierIndex) const override;
             [[nodiscard]] TimePos snapToNearestBoundary(int tierIndex, TimePos proposedTime,
                                                         TimePos snapThreshold) const override;

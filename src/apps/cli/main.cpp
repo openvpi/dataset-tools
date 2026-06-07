@@ -3,7 +3,7 @@
 
 #include <dsfw/Log.h>
 #include <dsfw/PathUtils.h>
-#include <dstools/TaskProcessorRegistry.h>
+#include <dsfw/TaskProcessorRegistry.h>
 #include <dstools/DsKeys.h>
 #include <dstools/ModelManager.h>
 
@@ -53,7 +53,7 @@ static int cmdAsr(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
     QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto processor = dstools::TaskProcessorRegistry::instance().create(
+    auto processor = dsfw::TaskProcessorRegistry::instance().create(
         QStringLiteral("asr"), QStringLiteral("funasr"));
     if (!processor) {
         std::cerr << "Error: ASR processor not registered" << std::endl;
@@ -61,7 +61,7 @@ static int cmdAsr(const ParseResult &result) {
     }
 
     dstools::ModelManager mm;
-    dstools::ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     config["path"] = modelPath;
     auto initResult = processor->initialize(mm, config);
     if (!initResult) {
@@ -69,7 +69,7 @@ static int cmdAsr(const ParseResult &result) {
         return 1;
     }
 
-    dstools::TaskInput taskInput;
+    dsfw::TaskInput taskInput;
     taskInput.audioPath = input;
     auto processResult = processor->process(taskInput);
     if (!processResult) {
@@ -90,7 +90,7 @@ static int cmdAlign(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
     QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto processor = dstools::TaskProcessorRegistry::instance().create(
+    auto processor = dsfw::TaskProcessorRegistry::instance().create(
         QStringLiteral("phoneme_alignment"), QStringLiteral("hubert-fa"));
     if (!processor) {
         std::cerr << "Error: alignment processor not registered" << std::endl;
@@ -98,7 +98,7 @@ static int cmdAlign(const ParseResult &result) {
     }
 
     dstools::ModelManager mm;
-    dstools::ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     config["path"] = modelPath;
     auto initResult = processor->initialize(mm, config);
     if (!initResult) {
@@ -106,7 +106,7 @@ static int cmdAlign(const ParseResult &result) {
         return 1;
     }
 
-    dstools::TaskInput taskInput;
+    dsfw::TaskInput taskInput;
     taskInput.audioPath = input;
     auto processResult = processor->process(taskInput);
     if (!processResult) {
@@ -125,7 +125,7 @@ static int cmdPitch(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
     QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto processor = dstools::TaskProcessorRegistry::instance().create(
+    auto processor = dsfw::TaskProcessorRegistry::instance().create(
         QStringLiteral("pitch_extraction"), QStringLiteral("rmvpe"));
     if (!processor) {
         std::cerr << "Error: pitch processor not registered" << std::endl;
@@ -133,7 +133,7 @@ static int cmdPitch(const ParseResult &result) {
     }
 
     dstools::ModelManager mm;
-    dstools::ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     config["path"] = modelPath;
     auto initResult = processor->initialize(mm, config);
     if (!initResult) {
@@ -141,7 +141,7 @@ static int cmdPitch(const ParseResult &result) {
         return 1;
     }
 
-    dstools::TaskInput taskInput;
+    dsfw::TaskInput taskInput;
     taskInput.audioPath = input;
     auto processResult = processor->process(taskInput);
     if (!processResult) {
@@ -160,7 +160,7 @@ static int cmdTranscribe(const ParseResult &result) {
     QString input = QString::fromStdString(result.value("input").toString());
     QString modelPath = QString::fromStdString(result.valueForOption("model").toString());
 
-    auto processor = dstools::TaskProcessorRegistry::instance().create(
+    auto processor = dsfw::TaskProcessorRegistry::instance().create(
         QStringLiteral("midi_transcription"), QStringLiteral("game"));
     if (!processor) {
         std::cerr << "Error: transcription processor not registered" << std::endl;
@@ -168,7 +168,7 @@ static int cmdTranscribe(const ParseResult &result) {
     }
 
     dstools::ModelManager mm;
-    dstools::ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     config["path"] = modelPath;
     auto initResult = processor->initialize(mm, config);
     if (!initResult) {
@@ -176,7 +176,7 @@ static int cmdTranscribe(const ParseResult &result) {
         return 1;
     }
 
-    dstools::TaskInput taskInput;
+    dsfw::TaskInput taskInput;
     taskInput.audioPath = input;
     auto processResult = processor->process(taskInput);
     if (!processResult) {
@@ -301,7 +301,7 @@ static int cmdHfa(const ParseResult &result) {
 }
 
 int main(int argc, char *argv[]) {
-    dstools::Logger::instance().setMinLevel(dstools::LogLevel::Warning);
+    dsfw::Logger::instance().setMinLevel(dsfw::LogLevel::Warning);
 
     Command rootCommand("dstools", "DiffSinger dataset processing CLI");
 

@@ -13,6 +13,8 @@ namespace Game {
 
 namespace dstools {
 
+    using namespace dsfw;
+
     /// @brief ITaskProcessor implementation for GAME audio-to-MIDI transcription.
     ///
     /// Wraps the GAME engine as a single ModelTypeId (ADR-14: not split into sub-models).

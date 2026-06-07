@@ -46,7 +46,7 @@ namespace Rmvpe
         /// @param[out] res Extraction results per channel.
         /// @param progressChanged Callback for progress updates (percentage).
         /// @return Success or error.
-        dstools::Result<void> get_f0(const std::filesystem::path &filepath, float threshold, std::vector<RmvpeRes> &res,
+        dsfw::Result<void> get_f0(const std::filesystem::path &filepath, float threshold, std::vector<RmvpeRes> &res,
                                      const std::function<void(int)> &progressChanged) const;
 
         /// @brief Cancels a running inference.
@@ -55,7 +55,7 @@ namespace Rmvpe
         const char *engineName() const override { return "RMVPE"; }
 
         /// @brief Loads the model from the given path.
-        dstools::Result<void> load(const std::filesystem::path &modelPath, ExecutionProvider provider,
+        dsfw::Result<void> load(const std::filesystem::path &modelPath, ExecutionProvider provider,
                                    int deviceId) override;
         /// @brief Unloads the model and frees resources.
         void unload() override;

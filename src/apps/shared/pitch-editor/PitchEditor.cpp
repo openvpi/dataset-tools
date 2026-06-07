@@ -7,7 +7,7 @@
 
 #include <dsfw/TimePos.h>
 #include "../audio-visualizer/AudioVisualizerContainer.h"
-#include "../audio-visualizer/dstools/MiniMapScrollBar.h"
+#include "../audio-visualizer/MiniMapScrollBar.h"
 #include <WaveformChartPanel.h>
 
 #include <QHBoxLayout>
@@ -43,6 +43,7 @@ namespace {
 
 namespace dstools {
 namespace pitchlabeler {
+using namespace dsfw;
 
 PitchEditor::PitchEditor(QWidget *parent)
     : EditorContainerBase("pitch-editor", parent)
@@ -117,13 +118,13 @@ void PitchEditor::setABComparisonActive(bool active) {
     }
 }
 
-void PitchEditor::loadConfig(dstools::AppSettings &settings) {
+void PitchEditor::loadConfig(dsfw::AppSettings &settings) {
     if (m_pianoRollChart && m_pianoRollChart->pianoRollView()) {
         m_pianoRollChart->pianoRollView()->loadConfig(settings);
     }
 }
 
-void PitchEditor::pullConfig(dstools::AppSettings &settings) {
+void PitchEditor::pullConfig(dsfw::AppSettings &settings) {
     if (m_pianoRollChart && m_pianoRollChart->pianoRollView()) {
         m_pianoRollChart->pianoRollView()->pullConfig(settings);
     }

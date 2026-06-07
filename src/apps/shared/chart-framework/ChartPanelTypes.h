@@ -13,7 +13,6 @@
 class QUndoStack;
 
 namespace dstools {
-    namespace dstools {
 
         class IBoundaryModel;
         class BoundaryDragController;
@@ -76,4 +75,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

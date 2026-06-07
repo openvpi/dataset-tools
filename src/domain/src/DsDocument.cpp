@@ -2,9 +2,13 @@
 #include <dsfw/JsonHelper.h>
 #include <dsfw/PathUtils.h>
 
+using dsfw::JsonHelper;
+
 #include <QDebug>
 
 namespace dstools {
+
+using namespace dsfw;
 
 struct DsDocument::Impl {
     std::vector<nlohmann::json> sentences;

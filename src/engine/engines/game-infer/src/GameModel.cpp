@@ -22,7 +22,7 @@ namespace Game
     }
 
     GameModel::GameModel()
-        : CancellableOnnxModel(ExecutionProvider::CPU, 0) {}
+        : CancellableOnnxModel(dsfw::infer::ExecutionProvider::CPU, 0) {}
 
     GameModel::~GameModel() = default;
 
@@ -34,7 +34,7 @@ namespace Game
 
     const std::map<std::string, int> &GameModel::languageMap() const { return m_language_map; }
 
-    bool GameModel::loadModel(const std::filesystem::path &modelPath, const ExecutionProvider provider,
+    bool GameModel::loadModel(const std::filesystem::path &modelPath, const dsfw::infer::ExecutionProvider provider,
                                const int device_id, std::string &msg) {
         modelDir = modelPath;
         std::ifstream configFile(modelPath / "config.json");
@@ -76,7 +76,7 @@ namespace Game
             }
         }
 
-        auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(provider, device_id);
+        auto sessionOptions = dsfw::infer::OnnxEnv::createSessionOptions(provider, device_id);
         sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
 
         auto loadOneSession = [&](const std::string &name, std::unique_ptr<Ort::Session> &session)
@@ -88,9 +88,9 @@ namespace Game
             }
             try {
 #ifdef _WIN32
-                session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
+                session = std::make_unique<Ort::Session>(dsfw::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
 #else
-                session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
+                session = std::make_unique<Ort::Session>(dsfw::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
 #endif
                 return true;
             } catch (const Ort::Exception &e) {

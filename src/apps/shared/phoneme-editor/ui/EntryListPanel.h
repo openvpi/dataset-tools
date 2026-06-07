@@ -36,7 +36,7 @@ namespace dstools {
 
         signals:
             /// Emitted when the user selects an entry (by click or scroll).
-            void entrySelected(int tierIndex, int intervalIndex, TimePos startTime, TimePos endTime);
+            void entrySelected(int tierIndex, int intervalIndex, dsfw::TimePos startTime, dsfw::TimePos endTime);
 
         protected:
             void wheelEvent(QWheelEvent *event) override;

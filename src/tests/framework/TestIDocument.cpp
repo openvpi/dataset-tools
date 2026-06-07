@@ -1,7 +1,7 @@
 #include <QTest>
 #include <dsfw/IDocument.h>
 
-using namespace dstools;
+using namespace dsfw;
 
 class MockDocument : public IDocument {
 public:

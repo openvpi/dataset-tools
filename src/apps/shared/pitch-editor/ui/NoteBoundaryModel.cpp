@@ -7,6 +7,7 @@
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
+using namespace dsfw;
 
 NoteBoundaryModel::NoteBoundaryModel(QObject *parent)
     : QObject(parent)

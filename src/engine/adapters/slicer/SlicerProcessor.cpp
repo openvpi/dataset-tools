@@ -8,6 +8,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     // Self-register with the task processor registry.
     static TaskProcessorRegistry::Registrar<SlicerProcessor> s_reg(QStringLiteral("audio_slice"),
                                                                    QStringLiteral("slicer"));

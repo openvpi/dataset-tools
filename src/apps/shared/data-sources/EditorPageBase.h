@@ -114,10 +114,10 @@ namespace dstools {
         QSplitter *splitter() const {
             return m_splitter;
         }
-        dstools::AppSettings &settings() {
+        dsfw::AppSettings &settings() {
             return m_settings;
         }
-        const dstools::AppSettings &settings() const {
+        const dsfw::AppSettings &settings() const {
             return m_settings;
         }
 
@@ -450,7 +450,7 @@ namespace dstools {
         AppSettingsBackend *m_settingsBackend = nullptr;
         QString m_currentSliceId;
 
-        dstools::AppSettings m_settings;
+        dsfw::AppSettings m_settings;
         dsfw::widgets::ShortcutManager *m_shortcutManager = nullptr;
 
         QAction *m_prevAction = nullptr;

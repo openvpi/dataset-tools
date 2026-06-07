@@ -30,7 +30,7 @@ namespace dstools {
 
     namespace phonemelabeler {
 
-        using dstools::dstools::BoundaryDragController;
+        using ::dstools::BoundaryDragController;
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
 

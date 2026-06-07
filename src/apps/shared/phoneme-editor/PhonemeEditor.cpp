@@ -15,6 +15,7 @@
 
 namespace dstools {
 namespace phonemelabeler {
+using namespace dsfw;
 
 PhonemeEditor::PhonemeEditor(QWidget *parent)
     : EditorContainerBase(QStringLiteral("PhonemeEditor"), parent),
@@ -397,7 +398,7 @@ void PhonemeEditor::connectSignals() {
             bo->setTierLabelGeometry(m_document->tierCount() * 24, 24);
         }
     });
-    connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, TimePos) {
+    connect(m_document, &TextGridDocument::boundaryMoved, this, [this](int, int, dsfw::TimePos) {
         updateAllBoundaryOverlays();
         m_tierEditWidget->update();
         for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
@@ -440,7 +441,7 @@ void PhonemeEditor::connectSignals() {
 
     // Tier view right-click playback
     connect(m_tierEditWidget, &TierEditWidget::requestPlayback, this,
-            [this](TimePos startTime, TimePos endTime) {
+            [this](dsfw::TimePos startTime, dsfw::TimePos endTime) {
                 if (!m_playWidget) return;
                 // Guard against zero-length intervals (startTime == endTime in TextGrid)
                 if (startTime >= endTime) {
@@ -499,14 +500,14 @@ void PhonemeEditor::connectSignals() {
             bo->setDraggedBoundary(boundaryIndex);
     });
     connect(dragCtrl, &BoundaryDragController::dragging, this,
-            [this](int, int, TimePos) {
+            [this](int, int, dsfw::TimePos) {
                 m_container->invalidateBoundaryModel();
                 m_tierEditWidget->update();
                 for (auto *child : m_tierEditWidget->findChildren<QWidget *>()) {
                     child->update();
                 }
             });
-    connect(dragCtrl, &BoundaryDragController::dragFinished, this, [this](int, int, TimePos) {
+    connect(dragCtrl, &BoundaryDragController::dragFinished, this, [this](int, int, dsfw::TimePos) {
         if (auto *bo = m_container->boundaryOverlay())
             bo->setDraggedBoundary(-1);
         m_entryListPanel->rebuildEntries();

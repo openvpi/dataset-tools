@@ -6,9 +6,11 @@
 #include <dsfw/Log.h>
 #include <dsfw/PathUtils.h>
 #include <dsfw/TaskProcessorRegistry.h>
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 
 namespace dstools {
+
+    using namespace dsfw;
 
     static TaskProcessorRegistry::Registrar<HubertAlignmentProcessor> s_reg(QStringLiteral("phoneme_alignment"),
                                                                             QStringLiteral("hubert-fa"));
@@ -53,11 +55,11 @@ namespace dstools {
                 m_nonSpeechPh.push_back(s.toStdString());
         }
 
-        auto provider = deviceId < 0 ? dstools::infer::ExecutionProvider::CPU
+        auto provider = deviceId < 0 ? dsfw::infer::ExecutionProvider::CPU
 #ifdef ONNXRUNTIME_ENABLE_DML
-                                     : dstools::infer::ExecutionProvider::DML;
+                                     : dsfw::infer::ExecutionProvider::DML;
 #else
-                                     : dstools::infer::ExecutionProvider::CPU;
+                                     : dsfw::infer::ExecutionProvider::CPU;
 #endif
 
         m_hfa = std::make_unique<HFA::HFA>();

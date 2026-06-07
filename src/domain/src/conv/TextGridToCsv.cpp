@@ -12,6 +12,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 Result<TranscriptionRow> TextGridToCsv::extractFromTextGrid(const QString &tgPath) {
     auto textResult = dsfw::PathUtils::readFile(tgPath);
     if (!textResult.ok()) {

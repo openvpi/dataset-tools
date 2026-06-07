@@ -8,7 +8,6 @@
 #include <vector>
 
 namespace dstools {
-    namespace dstools {
 
         class SpectrogramColorPalette {
         public:
@@ -154,4 +153,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

@@ -1,3 +1,4 @@
+#include <dsfw/Result.h>
 #include <dsfw/PathUtils.h>
 #include <hubert-infer/DictionaryG2P.h>
 
@@ -7,12 +8,12 @@
 
 namespace HFA {
 
-    dstools::Result<std::unique_ptr<DictionaryG2P>> DictionaryG2P::load(const std::filesystem::path &dictionaryPath,
+    dsfw::Result<std::unique_ptr<DictionaryG2P>> DictionaryG2P::load(const std::filesystem::path &dictionaryPath,
                                                                          const std::string &language) {
         try {
             return std::unique_ptr<DictionaryG2P>(new DictionaryG2P(dictionaryPath, language));
         } catch (const std::exception &e) {
-            return dstools::Err<std::unique_ptr<DictionaryG2P>>(std::string("Failed to load dictionary: ") + e.what());
+            return dsfw::Err<std::unique_ptr<DictionaryG2P>>(std::string("Failed to load dictionary: ") + e.what());
         }
     }
 

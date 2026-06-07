@@ -103,10 +103,10 @@ namespace LyricFA {
     LyricMatcher::LyricMatcher() : m_highlighter(m_aligner) {
     }
 
-    dstools::Result<LyricData> LyricMatcher::process_lyric_file(const QString &lyric_path) const {
+    dsfw::Result<LyricData> LyricMatcher::process_lyric_file(const QString &lyric_path) const {
         QFile file(lyric_path);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            return dstools::Err<LyricData>("Cannot read lyric file");
+            return dsfw::Err<LyricData>("Cannot read lyric file");
         }
         QTextStream stream(&file);
         const QString content = stream.readAll();

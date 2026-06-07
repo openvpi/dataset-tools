@@ -110,9 +110,9 @@ AppShell::AppShell(QWidget* parent) : QMainWindow(parent), m_impl(std::make_uniq
 
     setCentralWidget(central);
 
-    dstools::Logger::instance().addSink(dstools::Logger::ringBufferSink(2000));
-    dstools::Logger::instance().addSink(dstools::LogNotifier::instance().sink());
-    dstools::Logger::instance().addSink(dstools::Logger::qtMessageSink());
+    dsfw::Logger::instance().addSink(dsfw::Logger::ringBufferSink(2000));
+    dsfw::Logger::instance().addSink(dsfw::LogNotifier::instance().sink());
+    dsfw::Logger::instance().addSink(dsfw::Logger::qtMessageSink());
 
     m_impl->audioManager = new AudioPlaybackManager(this);
 

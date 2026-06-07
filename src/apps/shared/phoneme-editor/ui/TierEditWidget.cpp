@@ -16,6 +16,7 @@
 
 namespace dstools {
     namespace phonemelabeler {
+        using namespace dsfw;
 
         TierEditWidget::TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack, ViewportController *viewport,
                                        BoundaryDragController *dragController, QWidget *parent) :
@@ -141,7 +142,7 @@ namespace dstools {
                             [this, i](int boundaryIndex) { emit tierHoveredBoundaryChanged(i, boundaryIndex); });
 
                     connect(view, &IntervalTierView::requestPlayback, this,
-                            [this](TimePos startTime, TimePos endTime) { emit requestPlayback(startTime, endTime); });
+                            [this](dsfw::TimePos startTime, dsfw::TimePos endTime) { emit requestPlayback(startTime, endTime); });
 
                     m_layout->addWidget(view);
                     m_tierViews.append(view);

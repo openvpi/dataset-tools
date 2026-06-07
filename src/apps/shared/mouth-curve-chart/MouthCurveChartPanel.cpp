@@ -7,6 +7,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 MouthCurveChartPanel::MouthCurveChartPanel(dsfw::widgets::ViewportController* viewport, QWidget* parent)
     : ChartPanelBase(QStringLiteral("mouthCurve"), viewport, parent) {
     setMinimumHeight(120);

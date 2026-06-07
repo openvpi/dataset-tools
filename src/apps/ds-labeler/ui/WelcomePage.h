@@ -35,7 +35,7 @@ namespace dstools {
 
     signals:
         /// Emitted when a project is successfully loaded or created.
-        void projectLoaded(dstools::DsProject *project, const QString &projectPath);
+        void projectLoaded(::dstools::DsProject *project, const QString &projectPath);
 
     private:
         QLabel *m_titleLabel = nullptr;

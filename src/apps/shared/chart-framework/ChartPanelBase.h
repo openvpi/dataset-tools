@@ -7,7 +7,7 @@
 #include <QPoint>
 #include <QWidget>
 #include <cstring>
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dsfw/widgets/PlayWidget.h>
 #include <dsfw/TimePos.h>
 #include <utility>
@@ -16,7 +16,8 @@
 class QUndoStack;
 
 namespace dstools {
-    namespace dstools {
+
+        using namespace dsfw;
 
         using dsfw::widgets::ViewportController;
 
@@ -73,7 +74,7 @@ namespace dstools {
             void boundaryDragging();
             void entryScrollRequested(int delta);
             void positionClicked(double sec);
-            void boundaryDragFinished(int tierIndex, int boundaryIndex, dstools::TimePos time);
+            void boundaryDragFinished(int tierIndex, int boundaryIndex, dsfw::TimePos time);
             void verticalContentScrolled();
 
         protected:
@@ -183,4 +184,3 @@ namespace dstools {
         };
 
     } // namespace dstools
-} // namespace dstools

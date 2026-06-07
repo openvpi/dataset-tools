@@ -4,8 +4,8 @@
 /// @brief Central bridge header that encapsulates all infer engine types and defines
 ///        EngineTraits specializations for use by apps through the libs layer.
 
-#include <dstools/IModelProvider.h>
-#include <dstools/InferenceModelProvider.h>
+#include <dsfw/IModelProvider.h>
+#include <dsfw/infer/InferenceModelProvider.h>
 #include <AsrPipeline.h>
 #include <FunAsrModelProvider.h>
 #include <game-infer/Game.h>
@@ -20,7 +20,7 @@ namespace dstools {
 
     template <>
     struct EngineTraits<HFA::HFA> {
-        using ProviderType = dstools::InferenceModelProvider<HFA::HFA>;
+        using ProviderType = dsfw::infer::InferenceModelProvider<HFA::HFA>;
 
         static bool isOpen(const HFA::HFA *engine) {
             return engine && engine->isOpen();
@@ -29,7 +29,7 @@ namespace dstools {
 
     template <>
     struct EngineTraits<Rmvpe::Rmvpe> {
-        using ProviderType = dstools::InferenceModelProvider<Rmvpe::Rmvpe>;
+        using ProviderType = dsfw::infer::InferenceModelProvider<Rmvpe::Rmvpe>;
 
         static bool isOpen(const Rmvpe::Rmvpe *engine) {
             return engine && engine->is_open();
@@ -38,7 +38,7 @@ namespace dstools {
 
     template <>
     struct EngineTraits<Game::Game> {
-        using ProviderType = dstools::InferenceModelProvider<Game::Game>;
+        using ProviderType = dsfw::infer::InferenceModelProvider<Game::Game>;
 
         static bool isOpen(const Game::Game *engine) {
             return engine && engine->isOpen();
@@ -56,7 +56,7 @@ namespace dstools {
 
 } // namespace dstools
 
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -78,7 +78,7 @@ namespace dstools {
                                                        int deviceId) {
         static_assert(std::is_same_v<Engine, Rmvpe::Rmvpe>, "Engine must be Rmvpe::Rmvpe");
         Engine engine(modelPath, provider, deviceId);
-        if (dstools::EngineTraits<Engine>::isOpen(&engine)) {
+        if (EngineTraits<Engine>::isOpen(&engine)) {
             return {std::move(engine), {}};
         }
         return {std::nullopt, "Failed to load RMVPE model"};

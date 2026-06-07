@@ -7,6 +7,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     /// @brief Wraps SlicerService as an ITaskProcessor for the task framework.
     class SlicerProcessor : public ITaskProcessor {
     public:

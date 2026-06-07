@@ -10,29 +10,30 @@ namespace dstools {
 
 // ─── DsDocumentAdapter ────────────────────────────────────────────────────────
 
-    DsDocumentAdapter::DsDocumentAdapter(DsDocument &doc) : m_doc(doc) {}
+DsDocumentAdapter::DsDocumentAdapter(DsDocument& doc) : m_doc(doc) {
+}
 
-    bool DsDocumentAdapter::isModified() const {
-        return false; // DsDocument does not track modification state
+bool DsDocumentAdapter::isModified() const {
+    return false;  // DsDocument does not track modification state
+}
+
+dsfw::Result<void> DsDocumentAdapter::load(const std::filesystem::path& path) {
+    QString qpath = dsfw::PathUtils::fromStdPath(path);
+    auto result = DsDocument::loadFile(qpath);
+    if (!result) {
+        return dsfw::Err(result.error());
     }
+    m_doc = std::move(result.value());
+    return dsfw::Ok();
+}
 
-    Result<void> DsDocumentAdapter::load(const std::filesystem::path &path) {
-        QString qpath = dsfw::PathUtils::fromStdPath(path);
-        auto result = DsDocument::loadFile(qpath);
-        if (!result) {
-            return Err(result.error());
-        }
-        m_doc = std::move(result.value());
-        return Ok();
-    }
+dsfw::Result<void> DsDocumentAdapter::save() {
+    return m_doc.saveFile();
+}
 
-    Result<void> DsDocumentAdapter::save() {
-        return m_doc.saveFile();
-    }
+dsfw::Result<void> DsDocumentAdapter::saveAs(const std::filesystem::path& path) {
+    QString qpath = dsfw::PathUtils::fromStdPath(path);
+    return m_doc.saveFile(qpath);
+}
 
-    Result<void> DsDocumentAdapter::saveAs(const std::filesystem::path &path) {
-        QString qpath = dsfw::PathUtils::fromStdPath(path);
-        return m_doc.saveFile(qpath);
-    }
-
-} // namespace dstools
+}  // namespace dstools

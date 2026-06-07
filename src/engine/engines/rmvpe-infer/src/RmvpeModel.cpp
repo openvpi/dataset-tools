@@ -7,7 +7,7 @@
 namespace Rmvpe
 {
     RmvpeModel::RmvpeModel(const std::filesystem::path &modelPath, const ExecutionProvider provider,
-                           const int device_id) : dstools::infer::CancellableOnnxModel(provider, device_id) {
+                           const int device_id) : dsfw::infer::CancellableOnnxModel(provider, device_id) {
 #if defined(_M_IX86) || defined(__i386__)
         m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 #endif

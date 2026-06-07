@@ -1,14 +1,16 @@
 #include "MoeCurveProcessor.h"
 
-#include "dstools/InferenceModelProvider.h"
+#include <dsfw/infer/InferenceModelProvider.h>
 
 #include <dsfw/PathUtils.h>
 #include <dsfw/audio/AudioPipeline.h>
 #include <QtConcurrent/QtConcurrent>
-#include <dsfw/ExecutionProvider.h>
+#include <dsfw/infer/ExecutionProvider.h>
 #include <moe-infer/Moe.h>
 
 namespace dstools {
+
+using namespace dsfw;
 
 MoeCurveProcessor::MoeCurveProcessor(QObject* parent) : QObject(parent) {
 }
@@ -30,7 +32,7 @@ void MoeCurveProcessor::runInference(const std::filesystem::path& audioPath, std
 
     if (!m_engine) {
         m_engine = std::make_unique<Moe::Moe>();
-        auto result = m_engine->load(m_modelPath, dstools::infer::ExecutionProvider::CPU, 0);
+        auto result = m_engine->load(m_modelPath, dsfw::infer::ExecutionProvider::CPU, 0);
         if (!result) {
             emit errorOccurred(QString::fromStdString(result.error()));
             if (onError)

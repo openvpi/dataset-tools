@@ -12,6 +12,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 static ModelTypeId taskKeyToTypeId(const QString &taskKey) {
     return registerModelType(taskKey.toStdString());
 }

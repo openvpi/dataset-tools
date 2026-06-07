@@ -72,7 +72,6 @@ cd /D vcpkg
 bootstrap-vcpkg.bat
 
 vcpkg install ^
-    --x-manifest-root=../scripts/vcpkg-manifest ^
     --x-install-root=./installed ^
     --triplet=x64-windows
 ```
@@ -93,7 +92,6 @@ cd vcpkg
 ./bootstrap-vcpkg.sh
 
 ./vcpkg install \
-    --x-manifest-root=../scripts/vcpkg-manifest \
     --x-install-root=./installed \
     --triplet=<triplet>
 
@@ -125,7 +123,6 @@ cmake --build build --target install
 | `AUDIO_UTIL_BUILD_TESTS` | `OFF` | Build TestAudioUtil |
 | `GAME_INFER_BUILD_TESTS` | `OFF` | Build TestGame (requires GAME model) |
 | `RMVPE_INFER_BUILD_TESTS` | `OFF` | Build TestRmvpe (requires RMVPE model) |
-| `SOME_INFER_BUILD_TESTS` | `OFF` | Build TestSome (requires SomeModel) |
 | `ONNXRUNTIME_ENABLE_DML` | `ON` (Windows) | Enable DirectML GPU acceleration |
 | `ONNXRUNTIME_ENABLE_CUDA` | `OFF` | Enable CUDA GPU acceleration |
 

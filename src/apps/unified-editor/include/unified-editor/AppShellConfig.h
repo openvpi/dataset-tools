@@ -33,7 +33,7 @@ namespace dstools::unified_editor {
     /// @brief Show crash recovery dialog if the previous session crashed.
     /// @param shell The AppShell instance (used as parent).
     inline void showCrashRecoveryDialog(dsfw::AppShell *shell) {
-        if (!dstools::AppInit::wasPreviousCrash())
+        if (!::dstools::AppInit::wasPreviousCrash())
             return;
 
         QMessageBox::information(
@@ -49,13 +49,13 @@ namespace dstools::unified_editor {
     /// @param shell The AppShell instance (used to find the SettingsPage child).
     /// @param modelManager The ModelManager instance.
     template <typename SettingsPageType>
-    inline void connectModelReload(dsfw::AppShell *shell, dstools::ModelManager *modelManager) {
+    inline void connectModelReload(dsfw::AppShell *shell, ::dstools::ModelManager *modelManager) {
         if (!modelManager)
             return;
         auto *settingsPage = shell->findChild<SettingsPageType *>(QString(), Qt::FindDirectChildrenOnly);
         if (settingsPage) {
             QObject::connect(settingsPage, &SettingsPageType::modelReloadRequested, modelManager,
-                             &dstools::ModelManager::invalidateModel);
+                             &::dstools::ModelManager::invalidateModel);
         }
     }
 

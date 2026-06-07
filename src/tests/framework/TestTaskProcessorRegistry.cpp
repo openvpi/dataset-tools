@@ -1,6 +1,7 @@
 #include <QTest>
 #include <dsfw/TaskProcessorRegistry.h>
 
+using namespace dsfw;
 using namespace dstools;
 
 class DummyProcessor : public ITaskProcessor {

@@ -8,6 +8,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 // Self-register with the task processor registry.
 static TaskProcessorRegistry::Registrar<AddPhNumProcessor> s_reg(
     QStringLiteral("add_ph_num"), QStringLiteral("add-ph-num"));

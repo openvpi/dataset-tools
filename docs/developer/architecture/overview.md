@@ -499,7 +499,7 @@ dataset-tools/
 │   └── tests/
 │       ├── framework/          # dsfw 核心类单元测试
 │       └── CMakeLists.txt      # 推理库测试注册
-├── scripts/vcpkg-manifest/     # vcpkg 依赖声明
+├── vcpkg.json                  # vcpkg 依赖声明（项目根目录）
 └── docs/
 ```
 

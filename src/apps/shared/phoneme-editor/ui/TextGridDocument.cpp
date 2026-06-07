@@ -1,6 +1,6 @@
 #include "TextGridDocument.h"
 
-#include <dsfw/Constants.h>
+#include <dstools/Constants.h>
 #include <dstools/DsKeys.h>
 
 #include <QRegularExpression>
@@ -12,6 +12,7 @@
 
 namespace dstools {
 namespace phonemelabeler {
+using namespace dsfw;
 
 TextGridDocument::TextGridDocument(QObject *parent)
     : QObject(parent)
@@ -105,7 +106,7 @@ void TextGridDocument::insertBoundary(int tierIndex, TimePos time) {
     auto tier = m_textGrid.GetTierAs<textgrid::IntervalTier>(tierIndex);
     if (!tier) return;
 
-    bool isPhoneme = (tierName(tierIndex) == QString::fromUtf8(dstools::keys::layers::phoneme));
+    bool isPhoneme = (tierName(tierIndex) == QString::fromUtf8(::dstools::keys::layers::phoneme));
     std::string rightText = isPhoneme ? "SP" : "";
 
     double timeSec = usToSec(time);
@@ -382,7 +383,7 @@ void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePo
         auto tier = std::make_shared<textgrid::IntervalTier>(
             tierName.toStdString(), 0.0, maxTime);
 
-        bool isPhoneme = (layer.name == QString::fromUtf8(dstools::keys::layers::phoneme));
+        bool isPhoneme = (layer.name == QString::fromUtf8(::dstools::keys::layers::phoneme));
         auto defaultText = [isPhoneme](const QString &text) -> std::string {
             if (text.isEmpty() && isPhoneme) return "SP";
             return text.toStdString();

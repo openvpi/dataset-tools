@@ -9,17 +9,17 @@
 
 namespace dstools {
 
-Result<void> PhNumCalculator::loadDictionary(const QString& dictPath) {
+dsfw::Result<void> PhNumCalculator::loadDictionary(const QString& dictPath) {
     m_vowels = {QStringLiteral("um")};
     m_consonants.clear();
-    const QSet<QString> defaultSpecial = {QStringLiteral("SP"), QStringLiteral("AP"), QStringLiteral("EP"),
-                                          QStringLiteral("GS")};
+    const QSet<QString> defaultSpecial = {
+        QStringLiteral("SP"), QStringLiteral("AP"), QStringLiteral("EP"), QStringLiteral("GS")};
     m_specialWords = defaultSpecial;
 
     QFile file(dictPath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return Result<void>::Error(std::string("Cannot open dictionary: ") +
-                                   dsfw::PathUtils::toUtf8(std::filesystem::path(dictPath.toStdWString())));
+        return dsfw::Result<void>::Error(std::string("Cannot open dictionary: ") +
+                                         dsfw::PathUtils::toUtf8(std::filesystem::path(dictPath.toStdWString())));
     }
 
     QTextStream in(&file);
@@ -32,15 +32,15 @@ Result<void> PhNumCalculator::loadDictionary(const QString& dictPath) {
 
         int tabIdx = line.indexOf(QLatin1Char('\t'));
         if (tabIdx < 0) {
-            return Result<void>::Error(std::string("Invalid dictionary line (no tab): ") + line.toStdString());
+            return dsfw::Result<void>::Error(std::string("Invalid dictionary line (no tab): ") + line.toStdString());
         }
 
         QString phonemeStr = line.mid(tabIdx + 1).trimmed();
         QStringList phonemes = phonemeStr.split(QLatin1Char(' '), Qt::SkipEmptyParts);
 
         if (phonemes.size() < 1 || phonemes.size() > 2) {
-            return Result<void>::Error(std::string("Dictionary line has ") + std::to_string(phonemes.size()) +
-                                       " phonemes (expected 1-2): " + line.toStdString());
+            return dsfw::Result<void>::Error(std::string("Dictionary line has ") + std::to_string(phonemes.size()) +
+                                             " phonemes (expected 1-2): " + line.toStdString());
         }
 
         if (phonemes.size() == 1) {
@@ -52,14 +52,14 @@ Result<void> PhNumCalculator::loadDictionary(const QString& dictPath) {
     }
 
     m_loaded = true;
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> PhNumCalculator::loadVowelsFromFile(const QString& path) {
+dsfw::Result<void> PhNumCalculator::loadVowelsFromFile(const QString& path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return Result<void>::Error(std::string("Cannot open vowels file: ") +
-                                   dsfw::PathUtils::toUtf8(std::filesystem::path(path.toStdWString())));
+        return dsfw::Result<void>::Error(std::string("Cannot open vowels file: ") +
+                                         dsfw::PathUtils::toUtf8(std::filesystem::path(path.toStdWString())));
     }
 
     QTextStream in(&file);
@@ -71,14 +71,14 @@ Result<void> PhNumCalculator::loadVowelsFromFile(const QString& path) {
         m_vowels.insert(line);
     }
     m_loaded = true;
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> PhNumCalculator::loadConsonantsFromFile(const QString& path) {
+dsfw::Result<void> PhNumCalculator::loadConsonantsFromFile(const QString& path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return Result<void>::Error(std::string("Cannot open consonants file: ") +
-                                   dsfw::PathUtils::toUtf8(std::filesystem::path(path.toStdWString())));
+        return dsfw::Result<void>::Error(std::string("Cannot open consonants file: ") +
+                                         dsfw::PathUtils::toUtf8(std::filesystem::path(path.toStdWString())));
     }
 
     QTextStream in(&file);
@@ -90,7 +90,7 @@ Result<void> PhNumCalculator::loadConsonantsFromFile(const QString& path) {
         m_consonants.insert(line);
     }
     m_loaded = true;
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 void PhNumCalculator::setVowels(const QSet<QString>& vowels) {
@@ -111,9 +111,9 @@ bool PhNumCalculator::isLoaded() const {
     return m_loaded;
 }
 
-Result<QString> PhNumCalculator::calculate(const QString& phSeq) const {
+dsfw::Result<QString> PhNumCalculator::calculate(const QString& phSeq) const {
     if (!m_loaded) {
-        return Result<QString>::Error("PhNumCalculator not loaded");
+        return dsfw::Result<QString>::Error("PhNumCalculator not loaded");
     }
 
     QStringList phones = phSeq.split(QLatin1Char(' '), Qt::SkipEmptyParts);
@@ -159,14 +159,14 @@ Result<QString> PhNumCalculator::calculate(const QString& phSeq) const {
     return fullResult.join(QLatin1Char(' '));
 }
 
-Result<void> PhNumCalculator::calculateBatch(std::vector<TranscriptionRow>& rows) const {
+dsfw::Result<void> PhNumCalculator::calculateBatch(std::vector<TranscriptionRow>& rows) const {
     for (auto& row : rows) {
         auto result = calculate(row.phSeq);
         if (!result.ok())
-            return Result<void>::Error(result.error());
+            return dsfw::Result<void>::Error(result.error());
         row.phNum = std::move(result.value());
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-} // namespace dstools
+}  // namespace dstools

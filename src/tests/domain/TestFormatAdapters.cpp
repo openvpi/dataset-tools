@@ -8,6 +8,7 @@
 #include <QTextStream>
 #include <nlohmann/json.hpp>
 
+using namespace dsfw;
 using namespace dstools;
 
 class TestFormatAdapters : public QObject {

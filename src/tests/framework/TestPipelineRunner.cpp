@@ -5,6 +5,7 @@
 #include <QDir>
 #include <nlohmann/json.hpp>
 
+using namespace dsfw;
 using namespace dstools;
 
 // Simple mock processor that copies input layer to output layer

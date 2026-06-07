@@ -16,13 +16,13 @@ namespace Game
 
     Game::~Game() = default;
 
-    dstools::Result<void> Game::loadModel(const std::filesystem::path &modelPath, const ExecutionProvider provider,
+    dsfw::Result<void> Game::loadModel(const std::filesystem::path &modelPath, const dsfw::infer::ExecutionProvider provider,
                                           const int device_id) const {
         std::string msg;
         m_gameModel->loadModel(modelPath, provider, device_id, msg);
         if (!m_gameModel->isOpen())
-            return dstools::Err(msg);
-        return dstools::Ok();
+            return dsfw::Err(msg);
+        return dsfw::Ok();
     }
 
     bool Game::isOpen() const { return m_gameModel && m_gameModel->isOpen(); }
@@ -104,18 +104,18 @@ namespace Game
         return sum;
     }
 
-    dstools::Result<void> Game::getMidi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis,
+    dsfw::Result<void> Game::getMidi(const std::filesystem::path &filepath, std::vector<GameMidi> &midis,
                                         const float tempo, const std::function<void(int)> &progressChanged,
                                         int max_audio_length) const {
         if (!m_gameModel) {
-            return dstools::Err("Model not loaded");
+            return dsfw::Err("Model not loaded");
         }
 
         const auto tar_sr = m_gameModel->targetSampleRate();
         auto pipeline = dsfw::audio::AudioPipeline::create();
         auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(filepath), tar_sr);
         if (!result.ok()) {
-            return dstools::Err("Failed to decode audio for Game inference: " + result.error());
+            return dsfw::Err("Failed to decode audio for Game inference: " + result.error());
         }
         auto buffer = result.value();
         auto floats = buffer.floats();
@@ -125,7 +125,7 @@ namespace Game
         const auto chunks = slicer.slice(audio);
 
         if (chunks.empty()) {
-            return dstools::Err("slicer: no audio chunks for output!");
+            return dsfw::Err("slicer: no audio chunks for output!");
         }
 
         int processedFrames = 0;
@@ -139,7 +139,7 @@ namespace Game
             double sliceDuration = static_cast<double>(frameCount) / tar_sr;
 
             if (sliceDuration > max_audio_length) {
-                return dstools::Err(
+                return dsfw::Err(
                     "Slice duration exceeds " + std::to_string(max_audio_length) +
                     " seconds: " + std::to_string(sliceDuration) +
                     "s.\nPlease check whether the accompaniment has been removed from the current audio.");
@@ -159,7 +159,7 @@ namespace Game
 
             const bool success = m_gameModel->forward(tmp, boundaries, durations, presence, scores, msg);
             if (!success)
-                return dstools::Err(msg);
+                return dsfw::Err(msg);
 
             int previous_end_tick = !midis.empty() ? midis.back().start + midis.back().duration : 0;
             int chunk_start_time_ticks =
@@ -177,21 +177,21 @@ namespace Game
                 progressChanged(progress);
             }
         }
-        return dstools::Ok();
+        return dsfw::Ok();
     }
 
-    dstools::Result<void> Game::getNotes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
+    dsfw::Result<void> Game::getNotes(const std::filesystem::path &filepath, std::vector<GameNote> &notes,
                                          const std::function<void(int)> &progressChanged,
                                          const int max_audio_length) const {
         if (!m_gameModel) {
-            return dstools::Err("Model not loaded");
+            return dsfw::Err("Model not loaded");
         }
 
         const auto tar_sr = m_gameModel->targetSampleRate();
         auto pipeline = dsfw::audio::AudioPipeline::create();
         auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(filepath), tar_sr);
         if (!result.ok()) {
-            return dstools::Err("Failed to decode audio for Game inference: " + result.error());
+            return dsfw::Err("Failed to decode audio for Game inference: " + result.error());
         }
         auto buffer = result.value();
         auto floats = buffer.floats();
@@ -200,7 +200,7 @@ namespace Game
         const dsfw::signal::Slicer slicer(tar_sr, 0.02f, 441, 441 * 4, 200, 30, 50);
         const auto chunks = slicer.slice(audio);
         if (chunks.empty()) {
-            return dstools::Err("slicer: no audio chunks for output!");
+            return dsfw::Err("slicer: no audio chunks for output!");
         }
 
         int processedFrames = 0;
@@ -214,7 +214,7 @@ namespace Game
             const double sliceDuration = static_cast<double>(frameCount) / tar_sr;
 
             if (sliceDuration > max_audio_length) {
-                return dstools::Err(
+                return dsfw::Err(
                     "Slice duration exceeds " + std::to_string(max_audio_length) +
                     " seconds: " + std::to_string(sliceDuration) +
                     "s.\nPlease check whether the accompaniment has been removed from the current audio.");
@@ -234,7 +234,7 @@ namespace Game
 
             const bool success = m_gameModel->forward(tmp, boundaries, durations, presence, scores, msg);
             if (!success)
-                return dstools::Err(msg);
+                return dsfw::Err(msg);
 
             const double chunkOffset = static_cast<double>(fst) / tar_sr;
             double noteOnset = 0.0;
@@ -284,12 +284,12 @@ namespace Game
         }
         notes.resize(writeIdx);
 
-        return dstools::Ok();
+        return dsfw::Ok();
     }
 
     const char *Game::engineName() const { return "GAME"; }
 
-    dstools::Result<void> Game::load(const std::filesystem::path &modelPath, const ExecutionProvider provider,
+    dsfw::Result<void> Game::load(const std::filesystem::path &modelPath, const dsfw::infer::ExecutionProvider provider,
                                      const int deviceId) {
         return loadModel(modelPath, provider, deviceId);
     }
@@ -298,15 +298,15 @@ namespace Game
 
     int64_t Game::estimatedMemoryBytes() const { return isOpen() ? 500 * 1024 * 1024LL : 0; }
 
-    dstools::Result<void> Game::align(const AlignInput &input, const AlignOptions &options,
+    dsfw::Result<void> Game::align(const AlignInput &input, const AlignOptions &options,
                                       std::vector<AlignedNote> &output) const {
         if (!m_gameModel) {
-            return dstools::Err("Model not loaded");
+            return dsfw::Err("Model not loaded");
         }
 
         auto [valid, errMsg] = validatePhones(input.phSeq, input.phDur, input.phNum);
         if (!valid) {
-            return dstools::Err("Invalid phoneme data for '" + dsfw::PathUtils::toUtf8(input.wavPath.filename()) + "': " + errMsg);
+            return dsfw::Err("Invalid phoneme data for '" + dsfw::PathUtils::toUtf8(input.wavPath.filename()) + "': " + errMsg);
         }
 
         std::vector<WordInfo> words;
@@ -325,7 +325,7 @@ namespace Game
         auto pipeline = dsfw::audio::AudioPipeline::create();
         auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(input.wavPath), tarSr);
         if (!result.ok()) {
-            return dstools::Err("Failed to load audio '" + dsfw::PathUtils::toUtf8(input.wavPath) + "': " +
+            return dsfw::Err("Failed to load audio '" + dsfw::PathUtils::toUtf8(input.wavPath) + "': " +
                                 result.error());
         }
         auto buffer = result.value();
@@ -335,11 +335,11 @@ namespace Game
         std::vector<float> durations, presence, scores;
         std::string msg;
         if (!m_gameModel->forwardWithKnownDurations(waveform, knownDurations, durations, presence, scores, msg)) {
-            return dstools::Err(msg);
+            return dsfw::Err(msg);
         }
 
         if (durations.empty()) {
-            return dstools::Err("Model returned empty note durations for '" +
+            return dsfw::Err("Model returned empty note durations for '" +
                                 dsfw::PathUtils::toUtf8(input.wavPath.filename()) + "'");
         }
 
@@ -353,7 +353,7 @@ namespace Game
         }
 
         if (validDur.empty()) {
-            return dstools::Err("All note durations are zero or negative for '" +
+            return dsfw::Err("All note durations are zero or negative for '" +
                                 dsfw::PathUtils::toUtf8(input.wavPath.filename()) + "'");
         }
 
@@ -382,7 +382,7 @@ namespace Game
 
             auto alignResult = alignNotesToWords(alignWords, noteSeq, validDur, 0.01f, options.uvNoteCond == UvNoteCond::Follow);
             if (!alignResult) {
-                return dstools::Err(alignResult.error());
+                return dsfw::Err(alignResult.error());
             }
             output = std::move(alignResult.value());
         } else {
@@ -397,17 +397,17 @@ namespace Game
             }
         }
 
-        return dstools::Ok();
+        return dsfw::Ok();
     }
 
-    dstools::Result<void> Game::alignCSV(const std::filesystem::path &csvPath, const std::filesystem::path &savePath,
+    dsfw::Result<void> Game::alignCSV(const std::filesystem::path &csvPath, const std::filesystem::path &savePath,
                                          const std::string &saveFilename, const bool overwrite,
                                          const AlignOptions &options,
                                          const std::function<void(int)> &progressChanged) const {
         std::vector<DiffSingerItem> items;
         auto parseResult = parseDiffSingerCSV(csvPath);
         if (!parseResult) {
-            return dstools::Err("Failed to parse CSV: " + parseResult.error());
+            return dsfw::Err("Failed to parse CSV: " + parseResult.error());
         }
         items = std::move(parseResult.value());
 
@@ -419,11 +419,11 @@ namespace Game
         } else if (overwrite) {
             outputPath = csvPath;
         } else {
-            return dstools::Err("No output path specified and overwrite is false");
+            return dsfw::Err("No output path specified and overwrite is false");
         }
 
         if (!overwrite && std::filesystem::exists(outputPath)) {
-            return dstools::Err("Output file already exists: " + dsfw::PathUtils::toUtf8(outputPath));
+            return dsfw::Err("Output file already exists: " + dsfw::PathUtils::toUtf8(outputPath));
         }
 
         std::vector<std::vector<AlignedNote>> allResults;
@@ -441,7 +441,7 @@ namespace Game
             std::vector<AlignedNote> result;
             auto alignResult = align(alignInput, options, result);
             if (!alignResult) {
-                return dstools::Err("Failed on item '" + item.name + "': " + alignResult.error());
+                return dsfw::Err("Failed on item '" + item.name + "': " + alignResult.error());
             }
             allResults.push_back(std::move(result));
 
@@ -452,10 +452,10 @@ namespace Game
 
         auto writeResult = writeDiffSingerCSV(outputPath, items, allResults);
         if (!writeResult) {
-            return dstools::Err("Failed to write output CSV: " + writeResult.error());
+            return dsfw::Err("Failed to write output CSV: " + writeResult.error());
         }
 
-        return dstools::Ok();
+        return dsfw::Ok();
     }
 
     void Game::setSegThreshold(const float threshold) const {

@@ -15,7 +15,7 @@
 
 namespace FunAsr {
     ModelImp::ModelImp(const std::filesystem::path &path, const int &nNumThread,
-                       ExecutionProvider /*provider*/, int /*deviceId*/) {
+                       dsfw::infer::ExecutionProvider /*provider*/, int /*deviceId*/) {
         const auto model_path = path / "model.onnx";
         const auto vocab_path = path / "vocab.txt";
 
@@ -26,15 +26,15 @@ namespace FunAsr {
                 return;
             }
 
-            auto sessionOptions = dstools::infer::OnnxEnv::createSessionOptions(
-                dstools::infer::ExecutionProvider::CPU, 0, nNumThread);
+            auto sessionOptions = dsfw::infer::OnnxEnv::createSessionOptions(
+                dsfw::infer::ExecutionProvider::CPU, 0, nNumThread);
             sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
 #ifdef _WIN32
-            m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
+            m_session = std::make_unique<Ort::Session>(dsfw::infer::OnnxEnv::env(), model_path.wstring().c_str(), sessionOptions);
             vocab = std::make_unique<Vocab>(vocab_path.wstring().c_str());
 #else
-            m_session = std::make_unique<Ort::Session>(dstools::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
+            m_session = std::make_unique<Ort::Session>(dsfw::infer::OnnxEnv::env(), model_path.c_str(), sessionOptions);
             vocab = std::make_unique<Vocab>(vocab_path.c_str());
 #endif
 

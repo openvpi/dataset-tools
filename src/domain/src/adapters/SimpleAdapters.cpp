@@ -21,6 +21,8 @@ REGISTER_FORMAT_ADAPTER(dstools::LabAdapter);
 
 namespace dstools {
 
+using namespace dsfw;
+
 // ─── FormatAdapterInit ────────────────────────────────────────────────────────
 
 void registerDomainFormatAdapters() {

@@ -9,6 +9,8 @@
 
 namespace dstools {
 
+    using namespace dsfw;
+
     class IEditorDataSource : public dsfw::ISliceDataSource {
         Q_OBJECT
 

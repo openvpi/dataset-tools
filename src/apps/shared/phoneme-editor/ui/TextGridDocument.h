@@ -2,7 +2,7 @@
 
 #include "IBoundaryModel.h"
 
-using dstools::dstools::IBoundaryModel;
+using ::dstools::IBoundaryModel;
 
 #include <QObject>
 #include <QString>
@@ -14,6 +14,7 @@ using dstools::dstools::IBoundaryModel;
 
 namespace dstools {
     namespace phonemelabeler {
+        using namespace dsfw;
 
         class TextGridDocument : public QObject, public IBoundaryModel {
             Q_OBJECT

@@ -7,6 +7,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 /// @brief Exports dataset items to HTS-style label files.
 class HtsLabelExportFormat : public dsfw::IExportFormat {
 public:

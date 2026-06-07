@@ -6,6 +6,7 @@
 
 namespace dstools {
 namespace phonemelabeler {
+using namespace dsfw;
 
 // ─── SetIntervalTextCommand ───────────────────────────────────────────────────
 

@@ -2,6 +2,7 @@
 #include <dstools/F0Curve.h>
 #include <dsfw/TimePos.h>
 
+using namespace dsfw;
 using namespace dstools;
 
 class TestF0Curve : public QObject {

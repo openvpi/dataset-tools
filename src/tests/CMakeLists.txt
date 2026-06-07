@@ -9,10 +9,6 @@ if (TARGET TestGame)
     add_test(NAME TestGame COMMAND TestGame)
 endif ()
 
-if (TARGET TestSome)
-    add_test(NAME TestSome COMMAND TestSome)
-endif ()
-
 if (TARGET TestRmvpe)
     add_test(NAME TestRmvpe COMMAND TestRmvpe)
 endif ()

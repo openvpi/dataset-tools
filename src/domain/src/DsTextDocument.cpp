@@ -7,6 +7,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 void IntervalLayer::sortBoundaries() {
     std::stable_sort(boundaries.begin(), boundaries.end(),
                      [](const Boundary& a, const Boundary& b) { return a.pos < b.pos; });

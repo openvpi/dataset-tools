@@ -1,6 +1,7 @@
 #include <QTest>
 #include "CompositeInferenceService.h"
 
+using namespace dsfw;
 using namespace dstools;
 
 class TestCompositeInferenceService : public QObject {

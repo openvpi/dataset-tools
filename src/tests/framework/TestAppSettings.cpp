@@ -5,7 +5,7 @@
 #include <dsfw/AppSettings.h>
 #include <dsfw/AppPaths.h>
 
-using namespace dstools;
+using namespace dsfw;
 
 class TestAppSettings : public QObject {
     Q_OBJECT

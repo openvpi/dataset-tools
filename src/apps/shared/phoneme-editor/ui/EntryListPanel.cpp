@@ -16,6 +16,7 @@ namespace {
 
 namespace dstools {
 namespace phonemelabeler {
+using namespace dsfw;
 
 EntryListPanel::EntryListPanel(QWidget *parent)
     : QWidget(parent)

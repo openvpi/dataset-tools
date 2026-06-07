@@ -11,6 +11,8 @@
 
 namespace dstools {
 
+using namespace dsfw;
+
 AudioSettingsPanel::AudioSettingsPanel(QWidget *parent) : QWidget(parent) {}
 
 QWidget *AudioSettingsPanel::createAudioTab() {
