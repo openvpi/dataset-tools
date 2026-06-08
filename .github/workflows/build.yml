@@ -161,7 +161,16 @@ jobs:
               cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
             fi
             if [ "$RUNNER_OS" = "Windows" ]; then
-              vcpkg/bootstrap-vcpkg.bat -disableMetrics
+              if [ ! -f "vcpkg/vcpkg.exe" ]; then
+                echo "Downloading vcpkg.exe directly (bypassing bootstrap script to avoid HTTP 504)..."
+                curl -L --retry 5 --retry-delay 15 --connect-timeout 30 \
+                  -o vcpkg/vcpkg.exe \
+                  https://github.com/microsoft/vcpkg-tool/releases/latest/download/vcpkg.exe
+              fi
+              if [ ! -f "vcpkg/vcpkg.exe" ]; then
+                echo "Download failed, falling back to bootstrap script..."
+                vcpkg/bootstrap-vcpkg.bat -disableMetrics
+              fi
             else
               vcpkg/bootstrap-vcpkg.sh -disableMetrics
             fi
@@ -185,6 +194,19 @@ jobs:
           max_attempts: 3
           retry_wait_seconds: 30
           command: |
+            mkdir -p ${{github.workspace}}/vcpkg/downloads
+            fetch_archive() {
+              local fname="$1" url="$2"
+              if [ ! -f "$fname" ]; then
+                curl -L --retry 10 --retry-delay 10 --connect-timeout 30 -o "$fname" "$url" || true
+              fi
+            }
+            cd ${{github.workspace}}/vcpkg/downloads
+            fetch_archive "wolfgitpr-cpp-pinyin-392463174391c97c70701f5144646dac22ff20a8.tar.gz" "https://github.com/wolfgitpr/cpp-pinyin/archive/392463174391c97c70701f5144646dac22ff20a8.tar.gz"
+            fetch_archive "SineStriker-syscmdline-0c9f3de8b11bd2f33b03bea5521bf446af4ead69.tar.gz" "https://github.com/SineStriker/syscmdline/archive/0c9f3de8b11bd2f33b03bea5521bf446af4ead69.tar.gz"
+            fetch_archive "SineStriker-stdcorelib-8b68eb5387e55cfe7bf1e65f3575902f57081c3f.tar.gz" "https://github.com/SineStriker/stdcorelib/archive/8b68eb5387e55cfe7bf1e65f3575902f57081c3f.tar.gz"
+            fetch_archive "stdware-qwindowkit-bc4c051ef400f6ceaaedad274f2284fe52bd4e43.tar.gz" "https://github.com/stdware/qwindowkit/archive/bc4c051ef400f6ceaaedad274f2284fe52bd4e43.tar.gz"
+            fetch_archive "stdware-qmsetup-e098893ed06343fe09a3b6affa84057f555f026a.tar.gz" "https://github.com/stdware/qmsetup/archive/e098893ed06343fe09a3b6affa84057f555f026a.tar.gz"
             cd ${{github.workspace}}/vcpkg
             ./vcpkg install \
               --x-manifest-root=../scripts/vcpkg-manifest \
