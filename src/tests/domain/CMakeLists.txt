@@ -29,7 +29,7 @@ foreach (test_name ${DOMAIN_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
     target_link_libraries(${test_name} PRIVATE
             dstools-domain
-            dsfw-base
+            dsfw-core
             dsfw-signal
             Qt${QT_VERSION_MAJOR}::Test
     )
@@ -75,7 +75,7 @@ set_tests_properties(TestSlicerService PROPERTIES
 add_executable(TestDsTextDocBridgeRoundtrip TestDsTextDocBridgeRoundtrip.cpp)
 target_link_libraries(TestDsTextDocBridgeRoundtrip PRIVATE
         dstools-domain
-        dsfw-base
+        dsfw-core
         dstools::shared::bridges
         Qt${QT_VERSION_MAJOR}::Test
 )

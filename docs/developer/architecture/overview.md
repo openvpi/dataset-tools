@@ -69,19 +69,17 @@ Layer 3 ─ dsfw-ui-core           AppShell, IconNavBar, Theme, FramelessHelper,
 Layer 2 ─ dstools-audio          AudioDecoder (FFmpeg), AudioPlayback (SDL2)
 Layer 1 ─ dsfw-core              AppSettings, ServiceLocator, AsyncTask, 接口集
                                  PipelineContext, PipelineRunner, ITaskProcessor
-                                 含 infer-common 源文件 (OnnxEnv, OnnxModelBase)
-Layer 0.5─ dsfw-base             JsonHelper (Qt-free 静态库)
+                                 JsonHelper, 含 infer-common 源文件 (OnnxEnv, OnnxModelBase)
 Layer 0 ─ dsfw-types             Result<T>, ExecutionProvider, TimePos (header-only)
 
 此外层:
 dsfw-signal     curve_tools, music_math, time_series (dsfw::signal 命名空间)
-dstools-widgets INTERFACE header-only 层
 ```
 
 ### 依赖关系
 
 ```
-dsfw-widgets ─PUBLIC──→ dsfw-core ───→ dsfw-base ───→ dsfw-types
+dsfw-widgets ─PUBLIC──→ dsfw-core ───→ dsfw-types
     │                       ↑
     ├─PRIVATE→ dsfw-ui-core ┘
     └─PRIVATE→ dstools-audio
@@ -115,11 +113,6 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
       │           │           │            │           │           │
       ▼           ▼           ▼            ▼           ▼           ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                      dstools-widgets (INTERFACE)                         │
-│  GpuSelector · ShortcutManager · 领域 UI 导出宏转发                     │
-└────────────────────────────┬─────────────────────────────────────────────┘
-                             │ PUBLIC
-┌────────────────────────────┴─────────────────────────────────────────────┐
 │                      dsfw-widgets (SHARED DLL)                           │
 │  PlayWidget · FileProgressTracker · ProgressDialog · PropertyEditor     │
 │  SettingsDialog · LogViewer · RunProgressRow · PathSelector · ...        │
@@ -161,13 +154,6 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 │ PipelineContext   │                    │
 │ PipelineRunner    │                    │
 │ ITaskProcessor    │                    │
-└───────┬───────────┘                    │
-        │ PUBLIC                         │
-┌───────┴───────────┐                    │
-│  dsfw-base        │                    │
-│  (STATIC, Qt-free)│                    │
-│                   │                    │
-│ JsonHelper        │                    │
 └───────┬───────────┘                    │
         │ PUBLIC                         │
 ┌───────┴───────────┐                    │
@@ -244,19 +230,13 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 
 ## 6. 共享库
 
-### dsfw-base (静态库, Qt-free)
-
-JSON 工具 (JsonHelper，纯 nlohmann/json 封装)。无 Qt 依赖，可用于 CLI 工具。
-
-依赖：nlohmann_json
-
 ### dsfw-core (静态库)
 
 通用框架核心。类型安全配置 (AppSettings)、服务定位器 (ServiceLocator)、异步任务 (AsyncTask)、结构化日志 (Logger)
-、编码统一接口 (TextEncoding)、文档/文件/导出/G2P 抽象接口 (IDocument, IG2PProvider, IExportFormat 等)
+、编码统一接口 (TextEncoding)、JSON 工具 (JsonHelper)、文档/文件/导出/G2P 抽象接口 (IDocument, IG2PProvider, IExportFormat 等)
 、后端服务接口 (IAlignmentService, IAsrService, IPitchService, ITranscriptionService)。
 
-依赖：dsfw-base, dstools-types, Qt Core/Network, nlohmann_json
+依赖：dstools-types, Qt Core/Network, nlohmann_json
 
 ### dsfw-ui-core (静态库)
 
@@ -283,12 +263,6 @@ AudioDecoder (FFmpeg)、AudioPlayback (SDL2)、AudioPlayer、WaveFormat。
 通用 GUI 组件。PlayWidget、FileProgressTracker、ProgressDialog、PropertyEditor、SettingsDialog、LogViewer 等。
 
 依赖：dsfw-core (PUBLIC), dsfw-ui-core + dstools-audio (PRIVATE)
-
-### dstools-widgets (INTERFACE header-only)
-
-DiffSinger 领域 UI 组件。所有应用的公共 UI 基础设施（通过 dsfw-widgets 导出宏转发）。
-
-依赖：dsfw-widgets (PUBLIC)
 
 ### 推理库
 
@@ -447,8 +421,6 @@ dataset-tools/
 │   ├── types/                  # dstools-types (HEADER-ONLY)
 │   │   └── include/dstools/    # Result<T>, ExecutionProvider, TimePos
 │   ├── framework/
-│   │   ├── base/                # dsfw-base (STATIC, Qt-free)
-│   │   │   └── include/dsfw/   # JsonHelper
 │   │   ├── core/               # dsfw-core (STATIC)
 │   │   │   ├── include/dsfw/   # AppSettings, ServiceLocator, Logger, ...
 │   │   │   └── src/
@@ -462,7 +434,7 @@ dataset-tools/
 │   ├── domain/                 # dstools-domain (STATIC)
 │   │   ├── include/dstools/    # DsDocument, DsProject, CsvToDsConverter, ...
 │   │   └── src/
-│   ├── ui-core/                # dstools-widgets (INTERFACE, header-only)
+│   ├── ui-core/                # dstools-ui-core (STATIC, 包装 dsfw-ui-core + dsfw-core + dstools-domain)
 │   ├── libs/
 │   │   ├── textgrid/          # header-only
 │   │   ├── hubert-fa/         # HuBERT 强制对齐处理器
@@ -510,9 +482,9 @@ dataset-tools/
 ```
 ~42 CMake targets (excluding tests):
 
-Framework (6):  dsfw-base → dsfw-signal → dsfw-core → dsfw-ui-core → dsfw-widgets + dstools-audio (infer-common 源文件编译入 dsfw-core)
+Framework (5):  dsfw-signal → dsfw-core → dsfw-ui-core → dsfw-widgets + dstools-audio (infer-common 源文件编译入 dsfw-core)
 Domain (1):     dstools-domain
-App-Lib (2):    dstools-ui-core, dstools-widgets (INTERFACE, header-only)
+App-Lib (1):    dstools-ui-core
 Infer (6):      audio-util, FunAsr, game-infer, hubert-infer, rmvpe-infer, moe-infer
 Libs (8):       slicer-lib, lyricfa-lib, hubertfa-lib, gameinfer-lib, rmvpepitch-lib, minlabel-lib, moelib, infer-bridge
 App-Shared (9): data-sources, audio-visualizer, phoneme-editor, pitch-editor, min-label-editor, settings, log-page, model-init, mouth-curve-chart

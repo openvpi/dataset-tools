@@ -2,7 +2,7 @@
 
 > 版本：4.1.0
 > 日期：2026-06-08
-> 状态：方案阶段
+> 状态：已完成（2026-06-08）
 > 取代：v4.0.0（已废除，因多处错误：错误地将 infer-bridge/unified-editor 判定为可合并薄模块、错误地认为 FileDialogHelper/PathSelector 与 FilePathSelector 功能重叠、错误地认为 JsonHelper 归属不当、错误地将 data-sources 目录重组作为必要项）
 
 ---

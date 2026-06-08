@@ -79,7 +79,8 @@ void ChartConfigRegistry::setValue(const QString &chartId, const QString &paramK
 void ChartConfigRegistry::loadDefaults() {
     if (!m_settings) return;
     for (const auto &chartId : chartIds()) {
-        QString raw = m_settings->getRawString(chartId.toStdString().c_str(), QStringLiteral("{}"));
+        std::string chartIdStr = chartId.toStdString();
+        QString raw = m_settings->getRawString(chartIdStr.c_str(), QStringLiteral("{}"));
         auto chartJson = nlohmann::json::parse(raw.toStdString(), nullptr, false);
         if (chartJson.is_null() || !chartJson.is_object()) continue;
 
@@ -105,10 +106,11 @@ void ChartConfigRegistry::saveConfig(const QString &chartId) {
     if (overrideIt == m_overrides.end()) return;
 
     for (auto it = overrideIt->begin(); it != overrideIt->end(); ++it) {
+        std::string key = it.key().toStdString();
         if (it->typeId() == QMetaType::Double) {
-            chartJson[it.key().toStdString()] = it->toDouble();
+            chartJson[key] = it->toDouble();
         } else {
-            chartJson[it.key().toStdString()] = it->toInt();
+            chartJson[key] = it->toInt();
         }
     }
     m_settings->setRawString(chartId.toStdString().c_str(), QString::fromStdString(chartJson.dump()));

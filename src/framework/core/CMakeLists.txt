@@ -23,7 +23,7 @@ dstools_add_library(${PROJECT_NAME}
         NAMESPACE dsfw::core
         EXPORT_SET dsfwTargets
         DEPENDS
-        PUBLIC dsfw-base dsfw::types Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
+        PUBLIC dsfw::types Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network nlohmann_json::nlohmann_json
         PRIVATE $<$<PLATFORM_ID:Windows>:dbghelp> Qt${QT_VERSION_MAJOR}::Widgets
         INCLUDE_DIRS
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
