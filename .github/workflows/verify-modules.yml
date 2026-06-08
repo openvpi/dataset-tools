@@ -164,16 +164,14 @@ jobs:
 
       - name: Install OnnxRuntime (Unix)
         if: runner.os != 'Windows'
-        working-directory: ${{github.workspace}}/src/infer
         run: |
-          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ${{github.workspace}}/cmake/setup-onnxruntime.cmake
 
       - name: Install OnnxRuntime (Windows)
         if: runner.os == 'Windows'
         shell: cmd
-        working-directory: ${{github.workspace}}/src/infer
         run: |
-          cmake -Dep=${{ matrix.onnxruntime_ep }} -P ../../cmake/setup-onnxruntime.cmake
+          cmake -Dep=${{ matrix.onnxruntime_ep }} -P "${{github.workspace}}/cmake/setup-onnxruntime.cmake"
 
       - name: Configure CMake (Unix)
         if: runner.os != 'Windows'
