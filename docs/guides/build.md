@@ -17,12 +17,12 @@ vcpkg manifest 位于项目根目录 `vcpkg.json`，管理以下依赖：
 
 | 包名 | 用途 |
 |------|------|
-| sdl2 | 音频播放 (dstools-audio) |
+| sdl2 | 音频播放 (dsfw-audio-playback) |
 | ffmpeg-fake | FFmpeg headers (自定义 overlay port，运行时需真实 FFmpeg DLL) |
 | fftw3 | FFT (PhonemeLabeler 频谱分析) |
 | cpp-pinyin | 中文拼音 G2P |
 | cpp-kana | 日文假名 G2P |
-| soxr | 音频重采样 (audio-util) |
+| soxr | 音频重采样 (dsfw-audio) |
 | wolf-midi | MIDI 读写 (game-infer) |
 | libsndfile | 音频文件读写 |
 | nlohmann-json | JSON 序列化 |
@@ -37,19 +37,19 @@ vcpkg 依赖（qwindowkit、qbreakpad）编译时绑定了特定 Qt 版本。如
 
 ## ONNX Runtime 下载
 
-构建前需先下载 ORT 二进制到 `src/infer/onnxruntime/`：
+构建前需先下载 ORT 二进制到 `src/engine/engines/onnxruntime/`：
 
 ```sh
 # Windows (DirectML GPU)
-cd src/infer
+cd src/engine/engines
 cmake -Dep=dml -P ../../cmake/setup-onnxruntime.cmake
 
 # Unix (CPU)
-cd src/infer
+cd src/engine/engines
 cmake -Dep=cpu -P ../../cmake/setup-onnxruntime.cmake
 
 # CUDA
-cd src/infer
+cd src/engine/engines
 cmake -Dep=gpu -P ../../cmake/setup-onnxruntime.cmake
 ```
 
@@ -66,7 +66,6 @@ cmake -Dep=gpu -P ../../cmake/setup-onnxruntime.cmake
 |------|--------|------|
 | `BUILD_TESTS` | ON | 构建单元测试目标 |
 | `BUILD_INTEGRATION_TESTS` | OFF | 构建集成/UI 测试（TestAppShellIntegration, dsfw-widgets-test） |
-| `AUDIO_UTIL_BUILD_TESTS` | OFF | TestAudioUtil |
 | `GAME_INFER_BUILD_TESTS` | OFF | TestGame（需要 GAME 模型） |
 | `RMVPE_INFER_BUILD_TESTS` | OFF | TestRmvpe（需要 RMVPE 模型） |
 | `ONNXRUNTIME_ENABLE_DML` | ON (Windows) | DirectML 加速 |
@@ -78,7 +77,7 @@ cmake -Dep=gpu -P ../../cmake/setup-onnxruntime.cmake
 |------|---------|---------|------|
 | Unit | `BUILD_TESTS` (ON) | TestTimePos, TestResult, TestJsonHelper, TestAppSettings 等 21 个 | 纯逻辑测试，无外部依赖 |
 | Integration | `BUILD_INTEGRATION_TESTS` (OFF) | TestAppShellIntegration, dsfw-widgets-test | 需要 QApplication / GUI |
-| Infer | `*_BUILD_TESTS` (OFF) | TestGame, TestRmvpe, TestAudioUtil | 需要 ONNX 模型文件 |
+| Infer | `*_BUILD_TESTS` (OFF) | TestGame, TestRmvpe | 需要 ONNX 模型文件 |
 
 ## 构建命令
 
@@ -123,7 +122,7 @@ vcpkg\vcpkg install ^
 3. **下载 ONNX Runtime (DirectML)**
 
 ```bat
-cd src\infer
+cd src\engine\engines
 cmake -Dep=dml -P ..\..\cmake\setup-onnxruntime.cmake
 cd ..\..
 ```
@@ -203,9 +202,9 @@ ctest --output-on-failure
 |------|------|
 | 应用 | LabelSuite, DsLabeler |
 | 工具 | dstools-cli, hfa-cli, WidgetGallery, TestShell |
-| 测试 | TestTimePos, TestResult, TestJsonHelper, TestAppSettings, TestServiceLocator, TestAsyncTask, TestModelManager, TestModelDownloader, TestF0Curve, TestCurveTools, TestGame, TestRmvpe, TestAudioUtil 等 |
-| 动态库 | dsfw-widgets, audio-util, game-infer, rmvpe-infer, hubert-infer, moe-infer |
-| header-only 库 | dstools-widgets, dstools-types, textgrid |
+| 测试 | TestTimePos, TestResult, TestJsonHelper, TestAppSettings, TestServiceLocator, TestAsyncTask, TestModelManager, TestModelDownloader, TestF0Curve, TestCurveTools, TestGame, TestRmvpe, TestAudioBuffer, TestAudioDecoder, TestAudioPipeline, TestAudioResampler 等 |
+| 动态库 | dsfw-widgets, game-infer, rmvpe-infer, hubert-infer, moe-infer |
+| header-only 库 | dstools-types, textgrid |
 
 所有二进制输出到 `build/bin/`，库文件输出到 `build/lib/`。
 
@@ -218,10 +217,10 @@ ctest --output-on-failure
 - `src/framework/ui-core/` — UI 框架静态库（dsfw-ui-core，AppShell/Theme/FramelessHelper）
 - `src/framework/widgets/` — 通用 GUI 组件动态库（dsfw-widgets）
 - `src/domain/` — DiffSinger 领域逻辑静态库（dstools-domain）
-- `src/framework/audio/` — 音频解码/播放静态库（dstools-audio）
-- `src/framework/widgets/` — 领域 GUI 组件（INTERFACE, header-only）
+- `src/framework/audio/` — 音频核心库 (dsfw-audio) + 播放适配层 (dsfw-audio-playback)
 - `src/libs/` — 领域逻辑库（静态库：slicer-lib, lyricfa-lib, hubertfa-lib, gameinfer-lib, rmvpepitch-lib, minlabel-lib, moelib, infer-bridge; header-only: textgrid）
-- `src/infer/` — 推理库（各自独立，共享 infer-common）
+- `src/engine/engines/` — 推理引擎（game-infer, hubert-infer, rmvpe-infer, moe-infer, FunAsr）
+- `src/engine/adapters/` — 引擎适配器/桥接层
 - `src/apps/` — 应用可执行文件（LabelSuite 通用标注工具集 + DsLabeler DiffSinger 专用标注器 + dstools-cli + WidgetGallery + TestShell）
 - `src/tests/` — 测试（framework/ 子目录含 dsfw 核心类测试）
 - `vcpkg.json` — vcpkg 依赖声明（项目根目录）
@@ -420,4 +419,4 @@ auto *io = dstools::ServiceLocator::get<IFileIOProvider>();
 
 ### ONNX Runtime 下载失败
 
-`setup-onnxruntime.cmake` 会自动检测系统代理。手动下载从 [NuGet](https://www.nuget.org/packages/Microsoft.ML.OnnxRuntime.DirectML) 获取 DML 版本，解压到 `src/infer/onnxruntime/`。
+`setup-onnxruntime.cmake` 会自动检测系统代理。手动下载从 [NuGet](https://www.nuget.org/packages/Microsoft.ML.OnnxRuntime.DirectML) 获取 DML 版本，解压到 `src/engine/engines/onnxruntime/`。

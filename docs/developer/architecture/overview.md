@@ -66,7 +66,7 @@ App Libs      dstools-domain      (STATIC, 领域逻辑: DsDocument, F0Curve, Cu
                     ↓
 Layer 4 ─ dsfw-widgets           通用 UI 组件 (SHARED DLL)
 Layer 3 ─ dsfw-ui-core           AppShell, IconNavBar, Theme, FramelessHelper, IPageActions
-Layer 2 ─ dstools-audio          AudioDecoder (FFmpeg), AudioPlayback (SDL2)
+Layer 2 ─ dsfw-audio + dsfw-audio-playback   音频解码(FFmpeg) + 重采样 + 播放适配(SDL2)
 Layer 1 ─ dsfw-core              AppSettings, ServiceLocator, AsyncTask, 接口集
                                  PipelineContext, PipelineRunner, ITaskProcessor
                                  JsonHelper, 含 infer-common 源文件 (OnnxEnv, OnnxModelBase)
@@ -82,7 +82,7 @@ dsfw-signal     curve_tools, music_math, time_series (dsfw::signal 命名空间)
 dsfw-widgets ─PUBLIC──→ dsfw-core ───→ dsfw-types
     │                       ↑
     ├─PRIVATE→ dsfw-ui-core ┘
-    └─PRIVATE→ dstools-audio
+    └─PUBLIC→ dsfw-audio-playback
 
 dsfw-signal ───→ dsfw-types
 dstools-domain → dsfw-core + dsfw-signal + dsfw-types
@@ -121,15 +121,15 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
                              │ PUBLIC
                 ┌────────────┼────────────┐
                 ▼            ▼            │
-┌───────────────────┐ ┌───────────────┐  │
-│  dsfw-ui-core     │ │ dstools-audio │  │
-│  (STATIC)         │ │ (STATIC)      │  │
-│                   │ │               │  │
-│ AppShell          │ │ AudioDecoder  │  │
-│ IconNavBar        │ │ AudioPlayback │  │
-│ Theme/Frameless   │ │ WaveFormat    │  │
-│ IPageActions      │ │               │  │
-│ IPageLifecycle    │ │ FFmpeg + SDL2 │  │
+┌───────────────────┐ ┌──────────────────────┐  │
+│  dsfw-ui-core     │ │ dsfw-audio-playback  │  │
+│  (STATIC)         │ │ (STATIC)             │  │
+│                   │ │                      │  │
+│ AppShell          │ │ IAudioPlayerAdapter  │  │
+│ IconNavBar        │ │ AudioPlayerAdapter   │  │
+│ Theme/Frameless   │ │ AudioPlaybackAdapter │  │
+│ IPageActions      │ │                      │  │
+│ IPageLifecycle    │ │ SDL2                  │  │
 │                   │ └───────────────┘  │
 └───────┬───────────┘                    │
         │ PUBLIC                         │
@@ -195,22 +195,23 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 └───────────────────┘
 
 ┌────────────────────────────────────────┐
-│              推理层 (src/infer/)        │
+│              引擎层 (src/engine/)      │
 │                                        │
 │  dstools-infer-common 非独立 target。   │
-│  OnnxEnv / OnnxModelBase 源文件位于     │
-│  src/framework/infer/，通过 dsfw-core   │
-│  的 target_sources() 编译入 dsfw-core。 │
 │  IInferenceEngine 接口位于 dsfw::infer  │
 │  命名空间（dsfw/infer/IInferenceEngine.h）│
+│  OnnxEnv / OnnxModelBase / EP 选择     │
+│  编译入 dsfw-infer（src/framework/infer/）│
 │                                        │
 │             │ PUBLIC                    │
 │  ┌──────────┼──────────┬──────────────┬──────────────┐│
 │  ▼          ▼          ▼              ▼              ▼│
-│ audio-util game-infer rmvpe-infer  hubert-infer  moe-infer
-│ (SHARED)   (SHARED)   (SHARED)     (SHARED)     (SHARED)
+│ game-infer rmvpe-infer hubert-infer  moe-infer   FunAsr
+│ (SHARED)   (SHARED)   (SHARED)      (SHARED)     (STATIC)
+│ (依赖 dsfw-audio)                      │
 │                                        │
-│  FunAsr (STATIC) ← 独立，直接链接 ORT  │
+│  第三方引擎位于 src/engine/engines/     │
+│  适配器桥接位于 src/engine/adapters/   │
 └────────────────────────────────────────┘
 ```
 
@@ -218,8 +219,8 @@ dstools-ui-core → dsfw-ui-core + dsfw-core + dstools-domain
 
 | 应用         | 直接链接的库                                                                                                                                                                                 |
 |------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| LabelSuite | dsfw-widgets, dstools-domain, dstools-audio, cpp-pinyin, textgrid, FFTW3, SndFile, nlohmann_json                                                                                       |
-| DsLabeler  | dsfw-widgets, dstools-domain, dstools-audio, audio-util, hubert-infer, game-infer, rmvpe-infer, moe-infer, FunAsr, cpp-pinyin, textgrid, FFTW3, SndFile, nlohmann_json, Qt::Concurrent |
+| LabelSuite | dsfw-widgets, dstools-domain, dsfw-audio-playback, cpp-pinyin, textgrid, FFTW3, SndFile, nlohmann_json                                                                                       |
+| DsLabeler  | dsfw-widgets, dstools-domain, dsfw-audio-playback, hubert-infer, game-infer, rmvpe-infer, moe-infer, FunAsr, cpp-pinyin, textgrid, FFTW3, SndFile, nlohmann_json, Qt::Concurrent |
 
 > **LabelSuite** 使用 `dsfw::AppShell` 多页面模式，11 个页面（Slice, ASR, Label, Align, Phone, CSV, MIDI, DS, Pitch,
 > Settings, Log），各自使用 `DirectoryDataSource` 文件系统 I/O。**DsLabeler** 使用多页面模式，8 个页面（Welcome, Slicer,
@@ -252,31 +253,37 @@ DiffSinger 领域逻辑。DsDocument/.ds 文件读写（含 SentenceView 值类�
 
 依赖：dsfw-core, dstools-types, Qt Core/Gui/Network, nlohmann_json, textgrid (PRIVATE), SndFile (PRIVATE)
 
-### dstools-audio (静态库)
+### dsfw-audio (静态库)
 
-AudioDecoder (FFmpeg)、AudioPlayback (SDL2)、AudioPlayer、WaveFormat。
+音频核心库（无 Qt 依赖）。AudioBuffer、AudioFormatInfo、ResampleConfig、FfmpegAudioDecoder（PIMPL）、SwresampleResampler（PIMPL）、
+AudioPipeline（组合层）、AudioFileWriter。
 
-依赖：Qt Core, FFmpeg, SDL2
+依赖：dstools-types, dsfw-core (PRIVATE), FFmpeg, SDL2
+
+### dsfw-audio-playback (静态库)
+
+音频播放适配层。IAudioPlayerAdapter（std::function 回调）、AudioPlayerAdapter（具体实现）、AudioPlaybackAdapter（SDL2 PIMPL）。
+
+依赖：dsfw-audio, dstools-types, Qt Core
 
 ### dsfw-widgets (动态库)
 
 通用 GUI 组件。PlayWidget、FileProgressTracker、ProgressDialog、PropertyEditor、SettingsDialog、LogViewer 等。
 
-依赖：dsfw-core (PUBLIC), dsfw-ui-core + dstools-audio (PRIVATE)
+依赖：dsfw-core (PUBLIC), dsfw-audio-playback (PUBLIC), dsfw-ui-core (PRIVATE)
 
 ### 推理库
 
 | 库                    | 类型 | 功能                                                                         | 特有依赖                                          |
 |----------------------|----|----------------------------------------------------------------------------|-----------------------------------------------|
-| dstools-infer-common¹ | —   | OnnxEnv 单例 + OnnxModelBase + IInferenceEngine + EP 选择 | dstools-types, onnxruntime |
-| audio-util           | 动态 | 重采样/格式转换/读写                                                                | SndFile, soxr, mpg123, (xsimd)                |
-| game-infer           | 动态 | GAME Audio→MIDI                                                            | audio-util, wolf-midi, SndFile, nlohmann_json |
-| rmvpe-infer          | 动态 | RMVPE F0 提取                                                                | audio-util, SndFile                           |
-| hubert-infer         | 动态 | HuBERT 强制对齐                                                                | audio-util, SndFile, nlohmann_json            |
-| moe-infer            | 动态 | R3MOE 口型曲线预估                                                               | audio-util, SndFile, nlohmann_json            |
+| dsfw-infer           | 静态 | OnnxEnv 单例 + OnnxModelBase + IInferenceEngine + EP 选择 | dsfw-core, dsfw-types, onnxruntime, nlohmann_json |
+| game-infer           | 动态 | GAME Audio→MIDI                                                            | dsfw-audio, wolf-midi, nlohmann_json |
+| rmvpe-infer          | 动态 | RMVPE F0 提取                                                                | dsfw-audio                           |
+| hubert-infer         | 动态 | HuBERT 强制对齐                                                                | dsfw-audio, nlohmann_json            |
+| moe-infer            | 动态 | R3MOE 口型曲线预估                                                               | dsfw-audio, nlohmann_json            |
 | FunAsr               | 静态 | FunASR Paraformer 中文 ASR                                                   | (直接链接 ORT)                                    |
 
-> ¹ `dstools-infer-common` 非独立 CMake target，源文件通过 dsfw-core 的 target_sources() 编译入 dsfw-core。
+> ¹ `dsfw-infer` 位于 `src/framework/infer/`，提供 IInferenceEngine 接口和 OnnxEnv/OnnxModelBase 实现。
 
 ### 第三方库
 
@@ -428,30 +435,31 @@ dataset-tools/
 │   │   │   ├── include/dsfw/   # AppShell, Theme, FramelessHelper, IPageActions, ...
 │   │   │   ├── src/
 │   │   │   └── res/            # 主题 QSS, 资源文件
-│   │   ├── audio/              # dstools-audio (STATIC)
-│   │   ├── infer/              # infer-common (STATIC, 编译入 dsfw-core)
+│   │   ├── audio/              # dsfw-audio (core, STATIC)
+│   │   │   └── playback/       # dsfw-audio-playback (STATIC)
+│   │   ├── infer/              # dsfw-infer (STATIC)
 │   │   └── widgets/            # dsfw-widgets (SHARED)
 │   ├── domain/                 # dstools-domain (STATIC)
 │   │   ├── include/dstools/    # DsDocument, DsProject, CsvToDsConverter, ...
 │   │   └── src/
 │   ├── ui-core/                # dstools-ui-core (STATIC, 包装 dsfw-ui-core + dsfw-core + dstools-domain)
-│   ├── libs/
-│   │   ├── textgrid/          # header-only
-│   │   ├── hubert-fa/         # HuBERT 强制对齐处理器
-│   │   ├── lyric-fa/          # 歌词对齐处理器
-│   │   ├── game-infer-lib/    # GAME MIDI 处理器
-│   │   ├── rmvpe-pitch/       # RMVPE F0 处理器
-│   │   ├── min-label-lib/     # MinLabel 服务 + AddPhNum 处理器
-│   │   ├── slicer/            # RMS 切片服务 + 处理器
-│   │   └── moe-lib/           # R3MOE 口型曲线处理器
-│   ├── infer/
-│   │   ├── onnxruntime/        # 预下载 ORT 二进制
-│   │   ├── audio-util/         # (SHARED, 独立可安装)
-│   │   ├── game-infer/         # (SHARED)
-│   │   ├── rmvpe-infer/        # (SHARED)
-│   │   ├── hubert-infer/       # (SHARED)
-│   │   ├── moe-infer/          # (SHARED)
-│   │   └── FunAsr/             # (STATIC)
+│   ├── engine/
+│   │   ├── adapters/              # 引擎适配器/桥接层
+│   │   │   ├── infer-bridge/     # InferBridge 统一入口
+│   │   │   ├── lyric-fa/         # 歌词对齐适配器
+│   │   │   ├── hubert-fa/        # HuBERT 强制对齐适配器
+│   │   │   ├── game-infer-lib/   # GAME MIDI 适配器
+│   │   │   ├── rmvpe-pitch/      # RMVPE F0 适配器
+│   │   │   ├── min-label-lib/    # MinLabel 服务适配器
+│   │   │   ├── slicer-lib/       # RMS 切片服务适配器
+│   │   │   └── moe-lib/          # R3MOE 口型曲线适配器
+│   │   └── engines/               # 推理引擎
+│   │       ├── onnxruntime/       # 预下载 ORT 二进制
+│   │       ├── game-infer/        # (SHARED)
+│   │       ├── rmvpe-infer/       # (SHARED)
+│   │       ├── hubert-infer/      # (SHARED)
+│   │       ├── moe-infer/         # (SHARED)
+│   │       └── FunAsr/            # (STATIC)
 │   ├── apps/
 │   │   ├── label-suite/            # LabelSuite — 通用标注工具集
 │   │   ├── ds-labeler/             # DsLabeler — DiffSinger 专用标注器
@@ -482,11 +490,11 @@ dataset-tools/
 ```
 ~42 CMake targets (excluding tests):
 
-Framework (5):  dsfw-signal → dsfw-core → dsfw-ui-core → dsfw-widgets + dstools-audio (infer-common 源文件编译入 dsfw-core)
+Framework (7):  dsfw-signal → dsfw-core → dsfw-ui-core → dsfw-widgets, dsfw-audio, dsfw-audio-playback, dsfw-infer
 Domain (1):     dstools-domain
 App-Lib (1):    dstools-ui-core
-Infer (6):      audio-util, FunAsr, game-infer, hubert-infer, rmvpe-infer, moe-infer
-Libs (8):       slicer-lib, lyricfa-lib, hubertfa-lib, gameinfer-lib, rmvpepitch-lib, minlabel-lib, moelib, infer-bridge
+Infer (5):      game-infer, hubert-infer, rmvpe-infer, moe-infer, FunAsr
+Adapters (8):   slicer-lib, lyricfa-lib, hubertfa-lib, gameinfer-lib, rmvpepitch-lib, minlabel-lib, moelib, infer-bridge
 App-Shared (9): data-sources, audio-visualizer, phoneme-editor, pitch-editor, min-label-editor, settings, log-page, model-init, mouth-curve-chart
 Apps (5):       LabelSuite, DsLabeler, dstools-cli, WidgetGallery, TestShell
 Header-Only (2): dstools-types, textgrid (no build output)

@@ -48,9 +48,8 @@
 
 | 位置 | 模块 | 功能 | 后端 | 问题 |
 |------|------|------|------|------|
-| `src/framework/audio/` | `dstools-audio` (STATIC) | 解码 + 播放 | FFmpeg + SDL2 | 输出固定 44100/stereo/float32；无独立重采样 API；布尔返回值 |
-| `src/infer/audio-util/` | `audio-util` (STATIC) | 重采样 + 格式转换 | libsndfile + soxr + mp3/flac decoder | 仅支持 WAV/MP3/FLAC；用 soxr（项目已有 FFmpeg 却不用 swresample）；无统一接口 |
-| `src/apps/shared/` | 应用层多处 | 手动混音为单声道 | 通过 AudioDecoder 读取后手动平均 | 代码重复（SlicerPage、SlicerService、WaveformRenderer 各写一份） |
+| `src/framework/audio/` | `dsfw-audio` (STATIC) | 解码 + 重采样 | FFmpeg + SDL2 | 已完成统一实施 |
+| `src/framework/audio/playback/` | `dsfw-audio-playback` (STATIC) | 播放适配 | SDL2 | IAudioPlayerAdapter 使用 std::function 回调 |
 
 ### 1.2 关键问题
 

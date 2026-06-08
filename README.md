@@ -120,7 +120,6 @@ cmake --build build --target install
 |---|---|---|
 | `BUILD_TESTS` | `ON` | Build unit tests |
 | `BUILD_INTEGRATION_TESTS` | `OFF` | Build integration/UI tests (require GUI) |
-| `AUDIO_UTIL_BUILD_TESTS` | `OFF` | Build TestAudioUtil |
 | `GAME_INFER_BUILD_TESTS` | `OFF` | Build TestGame (requires GAME model) |
 | `RMVPE_INFER_BUILD_TESTS` | `OFF` | Build TestRmvpe (requires RMVPE model) |
 | `ONNXRUNTIME_ENABLE_DML` | `ON` (Windows) | Enable DirectML GPU acceleration |
