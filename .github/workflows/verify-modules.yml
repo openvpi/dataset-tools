@@ -108,20 +108,25 @@ jobs:
           key: vcpkg-bootstrap-${{ runner.os }}-${{ env.VCPKG_COMMIT }}
 
       - name: Setup vcpkg
-        shell: bash
-        run: |
-          if [ -d "vcpkg/.git" ]; then
-            cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
-          else
-            rm -rf vcpkg
-            git clone https://github.com/microsoft/vcpkg.git
-            cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
-          fi
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            vcpkg/bootstrap-vcpkg.bat -disableMetrics
-          else
-            vcpkg/bootstrap-vcpkg.sh -disableMetrics
-          fi
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 10
+          shell: bash
+          command: |
+            if [ -d "vcpkg/.git" ]; then
+              cd vcpkg && git fetch && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+            else
+              rm -rf vcpkg
+              git clone https://github.com/microsoft/vcpkg.git
+              cd vcpkg && git checkout ${{ env.VCPKG_COMMIT }} && cd ..
+            fi
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              vcpkg/bootstrap-vcpkg.bat -disableMetrics
+            else
+              vcpkg/bootstrap-vcpkg.sh -disableMetrics
+            fi
 
       - name: Cache vcpkg installed packages
         uses: actions/cache@v4
@@ -141,6 +146,7 @@ jobs:
           ./vcpkg install \
             --x-manifest-root=../scripts/vcpkg-manifest \
             --x-install-root=./installed \
+            --overlay-ports=../scripts/vcpkg/ports \
             --overlay-triplets=../scripts/vcpkg/triplets \
             --triplet=${{ matrix.triplet }}
         env:
@@ -155,7 +161,7 @@ jobs:
         shell: cmd
         working-directory: ${{github.workspace}}/vcpkg
         run: |
-          vcpkg.exe install --x-manifest-root=..\scripts\vcpkg-manifest --x-install-root=.\installed --overlay-triplets=..\scripts\vcpkg\triplets --triplet=${{ matrix.triplet }}
+          vcpkg.exe install --x-manifest-root=..\scripts\vcpkg-manifest --x-install-root=.\installed --overlay-ports=..\scripts\vcpkg\ports --overlay-triplets=..\scripts\vcpkg\triplets --triplet=${{ matrix.triplet }}
         env:
           CMAKE_PREFIX_PATH: ${{env.QT_DIR}}
           QT_DIR: ${{env.QT_DIR}}
