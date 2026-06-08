@@ -1,4 +1,4 @@
-#include "SlicerPage.h"
+﻿#include "SlicerPage.h"
 
 #include <dstools/AudacityMarkerAdapter.h>
 #include "AudioFileListPanel.h"
@@ -49,7 +49,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 namespace {
 
@@ -97,7 +96,7 @@ bool writeSliceAtomically(const QString &filepath, const float *samples, int64_t
 
 } // anonymous namespace
 
-SlicerPage::SlicerPage(QWidget* parent) : EditorContainerBase(QStringLiteral("Slicer"), parent), m_settings("Slicer") {
+SlicerPage::SlicerPage(QWidget* parent) : dsfw::EditorContainerBase(QStringLiteral("dsfw::Slicer"), parent), m_settings("dsfw::Slicer") {
     m_boundaryModel = std::make_unique<phonemelabeler::SliceBoundaryModel>();
     m_boundaryModel->setAllowOverlap(true);
     buildLayout();
@@ -114,7 +113,7 @@ SlicerPage::SlicerPage(QWidget* parent) : EditorContainerBase(QStringLiteral("Sl
     });
 }
 
-SlicerPage::~SlicerPage() = default;
+SlicerPage::~dsfw::SlicerPage() = default;
 
 void SlicerPage::buildLayout() {
     m_audioFileList = new AudioFileListPanel(this);
@@ -266,7 +265,7 @@ void SlicerPage::buildLayout() {
         dragController->setPixelSnapThreshold(10.0);
     }
 
-    m_sliceListPanel = new SliceListPanel(contentWidget);
+    m_sliceListPanel = new dsfw::SliceListPanel(contentWidget);
     m_sliceListPanel->setSlicerMode(true);
 
     m_contentSplitter = new QSplitter(Qt::Horizontal, contentWidget);
@@ -294,7 +293,7 @@ void SlicerPage::buildLayout() {
 }
 
 void SlicerPage::connectSignals() {
-    // Viewport connections are managed by AudioVisualizerContainer via
+    // Viewport connections are managed by dsfw::AudioVisualizerContainer via
     // connectViewportToWidget (called by addChart). Direct connections
     // here would cause duplicate setViewport() calls.
     connect(m_btnAutoSlice, &QPushButton::clicked, this, &SlicerPage::onAutoSlice);
@@ -484,7 +483,7 @@ void SlicerPage::onExportAudio() {
         return;
     }
 
-    SliceExportDialog dlg(this);
+    dsfw::SliceExportDialog dlg(this);
     QString currentAudioPath = m_audioFileList->currentFilePath();
     QFileInfo audioInfo(currentAudioPath);
     dlg.setDefaultPrefix(audioInfo.completeBaseName());
@@ -850,7 +849,7 @@ void SlicerPage::onBatchExportAll() {
         return;
     }
 
-    SliceExportDialog dlg(this);
+    dsfw::SliceExportDialog dlg(this);
     dlg.setDefaultPrefix(QStringLiteral("batch"));
     dlg.setWindowTitle(tr("Batch Export All Sliced Audio"));
     if (dlg.exec() != QDialog::Accepted)
@@ -887,7 +886,7 @@ void SlicerPage::onBatchExportAll() {
                                  tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));
     });
 
-    QPointer<SlicerPage> guard(this);
+    QPointer<dsfw::SlicerPage> guard(this);
     auto future = QtConcurrent::run([guard, outputDir, digits, sampleFmt]() {
         if (!guard)
             return 0;

@@ -1,4 +1,4 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <QFile>
 #include <QDir>
@@ -7,7 +7,6 @@
 #include <dstools/TranscriptionCsv.h>
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestCsvToDsConverter : public QObject {
     Q_OBJECT
@@ -28,7 +27,7 @@ void TestCsvToDsConverter::testDsToCsv_basic() {
     QTemporaryDir tmp;
     QVERIFY(tmp.isValid());
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
     nlohmann::json sentence;
     sentence["offset"] = 0.0;
     sentence["text"] = "hello";
@@ -80,7 +79,7 @@ void TestCsvToDsConverter::testConvertFromMemory_withMockF0() {
     row.phDur = "0.1 0.2 0.3";
     rows.push_back(row);
 
-    auto mockF0 = [](const QString &) -> Result<std::vector<float>> {
+    auto mockF0 = [](const QString &) -> dsfw::Result<std::vector<float>> {
         std::vector<float> f0(100, 440.0f);
         return f0;
     };
@@ -123,7 +122,7 @@ void TestCsvToDsConverter::testConvertFromMemory_emptyRows() {
     opts.wavsDir = tmp.path();
     opts.outputDir = tmp.path();
 
-    auto mockF0 = [](const QString &) -> Result<std::vector<float>> {
+    auto mockF0 = [](const QString &) -> dsfw::Result<std::vector<float>> {
         std::vector<float> f0(100, 440.0f);
         return f0;
     };
@@ -163,7 +162,7 @@ void TestCsvToDsConverter::testConvertFromMemory_optionalFields() {
     row2.phDur = "0.3 0.4";
     rows.push_back(row2);
 
-    auto mockF0 = [](const QString &) -> Result<std::vector<float>> {
+    auto mockF0 = [](const QString &) -> dsfw::Result<std::vector<float>> {
         std::vector<float> f0(50, 440.0f);
         return f0;
     };
@@ -196,7 +195,7 @@ void TestCsvToDsConverter::testConvertFromMemory_dsContentVerification() {
     row.phDur = "0.1 0.2";
     rows.push_back(row);
 
-    auto mockF0 = [](const QString &) -> Result<std::vector<float>> {
+    auto mockF0 = [](const QString &) -> dsfw::Result<std::vector<float>> {
         std::vector<float> f0(50, 440.0f);
         return f0;
     };
@@ -212,7 +211,7 @@ void TestCsvToDsConverter::testConvertFromMemory_dsContentVerification() {
     QString dsPath = tmpOut.path() + "/song1.ds";
     auto loadResult = DsDocument::loadFile(dsPath);
     QVERIFY(loadResult.ok());
-    DsDocument doc = std::move(loadResult.value());
+    dsfw::DsDocument doc = std::move(loadResult.value());
     QVERIFY(!doc.isEmpty());
 
     auto sv = doc.sentenceView(0);
@@ -238,8 +237,8 @@ void TestCsvToDsConverter::testConvertFromMemory_f0CallbackError() {
     row.phDur = "0.1";
     rows.push_back(row);
 
-    auto failingF0 = [](const QString &) -> Result<std::vector<float>> {
-        return Result<std::vector<float>>::Error("F0 extraction failed");
+    auto failingF0 = [](const QString &) -> dsfw::Result<std::vector<float>> {
+        return dsfw::Result<std::vector<float>>::Error("F0 extraction failed");
     };
 
     CsvToDsConverter::Options opts;
@@ -255,7 +254,7 @@ void TestCsvToDsConverter::testDsToCsv_multiSentence() {
     QTemporaryDir tmp;
     QVERIFY(tmp.isValid());
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
     nlohmann::json s1;
     s1["offset"] = 0.0;
     s1["text"] = "hello";
@@ -294,7 +293,7 @@ void TestCsvToDsConverter::testDsToCsv_noteGlideFill() {
     QTemporaryDir tmp;
     QVERIFY(tmp.isValid());
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
     nlohmann::json s1;
     s1["offset"] = 0.0;
     s1["text"] = "test";

@@ -1,4 +1,4 @@
-#include "ExportSettingsPanel.h"
+﻿#include "ExportSettingsPanel.h"
 #include "Keys.h"
 
 #include <dsfw/AppSettings.h>
@@ -15,7 +15,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 ExportSettingsPanel::ExportSettingsPanel(QWidget *parent) : QWidget(parent) {}
 
@@ -64,7 +63,7 @@ QWidget *ExportSettingsPanel::createGeneralTab() {
     m_languageCombo->addItem(QStringLiteral("中文 (zh_CN)"), QStringLiteral("zh_CN"));
     m_languageCombo->addItem(QStringLiteral("English (en)"), QStringLiteral("en"));
 
-    AppSettings langSettings(QStringLiteral("DsLabeler"));
+    dsfw::AppSettings langSettings(QStringLiteral("DsLabeler"));
     QString savedLang = langSettings.get(settings::app::kLanguage);
     for (int i = 0; i < m_languageCombo->count(); ++i) {
         if (m_languageCombo->itemData(i).toString() == savedLang) {
@@ -261,7 +260,7 @@ void ExportSettingsPanel::collectAndSaveChartLayout() {
 void ExportSettingsPanel::collectAndSaveLanguage() {
     if (m_languageCombo) {
         QString lang = m_languageCombo->currentData().toString();
-        AppSettings langSettings(QStringLiteral("DsLabeler"));
+        dsfw::AppSettings langSettings(QStringLiteral("DsLabeler"));
         langSettings.set(settings::app::kLanguage, lang);
     }
 }

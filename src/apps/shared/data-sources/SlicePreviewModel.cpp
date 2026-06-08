@@ -1,4 +1,4 @@
-#include "SlicePreviewModel.h"
+﻿#include "SlicePreviewModel.h"
 
 #include <dstools/IEditorDataSource.h>
 #include <dstools/DsTextTypes.h>
@@ -11,9 +11,8 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-void SlicePreviewModel::setDataSource(IEditorDataSource *source) {
+void SlicePreviewModel::setDataSource(dsfw::IEditorDataSource *source) {
     m_source = source;
     invalidate();
 }
@@ -86,7 +85,7 @@ static void extractMidiData(const IntervalLayer &midiLayer,
         if (err.error == QJsonParseError::NoError && jdoc.isObject()) {
             auto obj = jdoc.object();
             notes << obj["n"].toString();
-            double durSec = usToSec(static_cast<TimePos>(obj["d"].toDouble()));
+            double durSec = usToSec(static_cast<dsfw::TimePos>(obj["d"].toDouble()));
             nd << QString::number(durSec, 'f', 6);
         } else {
             notes << b.text;
@@ -97,7 +96,7 @@ static void extractMidiData(const IntervalLayer &midiLayer,
     row.noteDur = nd.join(' ');
 }
 
-static void findLayers(const DsTextDocument &doc,
+static void findLayers(const dsfw::DsTextDocument &doc,
                        const IntervalLayer *&phonemeLayer,
                        const IntervalLayer *&graphemeLayer,
                        const IntervalLayer *&midiLayer,

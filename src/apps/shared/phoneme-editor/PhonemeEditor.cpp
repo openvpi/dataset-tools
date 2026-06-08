@@ -1,4 +1,4 @@
-#include "PhonemeEditor.h"
+﻿#include "PhonemeEditor.h"
 
 #include "AudioVisualizerContainer.h"
 #include "SpectrogramColorPalette.h"
@@ -15,13 +15,11 @@
 
 namespace dstools {
 
-using namespace dsfw;
 namespace phonemelabeler {
-using namespace dsfw;
 
 PhonemeEditor::PhonemeEditor(QWidget *parent)
-    : EditorContainerBase(QStringLiteral("PhonemeEditor"), parent),
-      m_document(new TextGridDocument(this)),
+    : dsfw::EditorContainerBase(QStringLiteral("dsfw::PhonemeEditor"), parent),
+      m_document(new dsfw::TextGridDocument(this)),
       m_renderer(new WaveformRenderer(this))
 {
     buildActions();
@@ -32,14 +30,14 @@ PhonemeEditor::PhonemeEditor(QWidget *parent)
 
 // ---- Configuration ----
 
-BoundaryDragController *PhonemeEditor::dragController() const {
+dsfw::BoundaryDragController *PhonemeEditor::dragController() const {
     return m_container ? m_container->dragController() : nullptr;
 }
 
-void PhonemeEditor::setDocument(TextGridDocument *doc) {
+void PhonemeEditor::setDocument(dsfw::TextGridDocument *doc) {
     Q_UNUSED(doc)
     // The editor owns its own document. External callers interact via loadAudio
-    // or future IEditorDataSource. This method is reserved for future use.
+    // or future dsfw::IEditorDataSource. This method is reserved for future use.
 }
 
 void PhonemeEditor::loadAudio(const QString &audioPath) {
@@ -274,7 +272,7 @@ void PhonemeEditor::buildLayout() {
     setupContainerAndPlayWidget(800);
     m_container->setResolutionKey(QStringLiteral("Viewport/phoneme/resolution"));
 
-    m_tierEditWidget = new TierEditWidget(m_document, m_undoStack, m_viewport, m_container->dragController(), m_container);
+    m_tierEditWidget = new dsfw::TierEditWidget(m_document, m_undoStack, m_viewport, m_container->dragController(), m_container);
     m_container->setEditorWidget(m_tierEditWidget);
     m_tierEditWidget->setCoordConverter(&m_container->coordConverter());
     m_container->setTierRadioPanel(m_tierEditWidget->radioButtonContainer());
@@ -318,7 +316,7 @@ void PhonemeEditor::buildLayout() {
         dragController->setToleranceUs(1000); // 1ms绑定容差
     }
 
-    m_entryListPanel = new EntryListPanel(this);
+    m_entryListPanel = new dsfw::EntryListPanel(this);
     m_entryListPanel->setViewportController(m_viewport);
     m_entryListPanel->setMinimumWidth(160);
     m_entryListPanel->setMaximumWidth(300);
@@ -357,9 +355,9 @@ void PhonemeEditor::connectSignals() {
         m_actZoomOut->setEnabled(m_viewport->canZoomOut());
     });
 
-    // Viewport connections are managed by AudioVisualizerContainer via
+    // Viewport connections are managed by dsfw::AudioVisualizerContainer via
     // connectViewportToWidget (called by addChart/setEditorWidget) and
-    // the constructor (TimeRuler, BoundaryOverlay, MiniMapScrollBar).
+    // the constructor (TimeRuler, BoundaryOverlay, dsfw::MiniMapScrollBar).
     // Direct connections here would cause duplicate setViewport() calls.
 
     // Sync menu action checked state with widget visibility (for external visibility changes)
@@ -445,11 +443,11 @@ void PhonemeEditor::connectSignals() {
     connect(m_tierEditWidget, &TierEditWidget::requestPlayback, this,
             [this](dsfw::TimePos startTime, dsfw::TimePos endTime) {
                 if (!m_playWidget) return;
-                // Guard against zero-length intervals (startTime == endTime in TextGrid)
+                // Guard against zero-length intervals (startTime == endTime in dsfw::TextGrid)
                 if (startTime >= endTime) {
                     // Extend zero-length intervals by 50ms for audible playback
                     endTime = startTime + 50000;
-                    DSFW_LOG_DEBUG("PhonemeEditor",
+                    DSFW_LOG_DEBUG("dsfw::PhonemeEditor",
                                    std::format("Extending zero-length interval playback to 50ms (start={})",
                                                usToSec(startTime)));
                 }
@@ -457,7 +455,7 @@ void PhonemeEditor::connectSignals() {
                 double endSec = usToSec(endTime);
                 m_playWidget->setPlaying(false);
                 if (startSec >= endSec) {
-                    DSFW_LOG_WARN("PhonemeEditor",
+                    DSFW_LOG_WARN("dsfw::PhonemeEditor",
                                   std::format("Cannot play: invalid range [{}, {}]", startSec, endSec));
                     return;
                 }
@@ -554,7 +552,7 @@ void PhonemeEditor::playBoundarySegment(double timeSec) {
 
     // Validate segment bounds before playback
     if (segStart >= segEnd) {
-        DSFW_LOG_WARN("PhonemeEditor", "Invalid segment range at timeSec");
+        DSFW_LOG_WARN("dsfw::PhonemeEditor", "Invalid segment range at timeSec");
         return;
     }
 

@@ -1,4 +1,4 @@
-#include <dstools/DsDocument.h>
+﻿#include <dstools/DsDocument.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/PathUtils.h>
 
@@ -8,7 +8,6 @@ using dsfw::JsonHelper;
 
 namespace dstools {
 
-using namespace dsfw;
 
 struct DsDocument::Impl {
     std::vector<nlohmann::json> sentences;
@@ -20,12 +19,12 @@ struct DsDocument::Impl {
 DsDocument::DsDocument()
     : m_impl(std::make_unique<Impl>()) {}
 
-DsDocument::~DsDocument() = default;
+DsDocument::~dsfw::DsDocument() = default;
 
-DsDocument::DsDocument(DsDocument &&other) noexcept
+DsDocument::DsDocument(dsfw::DsDocument &&other) noexcept
     : m_impl(std::move(other.m_impl)) {}
 
-DsDocument &DsDocument::operator=(DsDocument &&other) noexcept {
+dsfw::DsDocument &DsDocument::operator=(dsfw::DsDocument &&other) noexcept {
     if (this != &other)
         m_impl = std::move(other.m_impl);
     return *this;
@@ -33,29 +32,29 @@ DsDocument &DsDocument::operator=(DsDocument &&other) noexcept {
 
 // ── File I/O ──────────────────────────────────────────────────────────
 
-Result<DsDocument> DsDocument::loadFile(const QString &path) {
-    DsDocument doc;
+dsfw::Result<dsfw::DsDocument> DsDocument::loadFile(const QString &path) {
+    dsfw::DsDocument doc;
 
     auto textResult = dsfw::PathUtils::readFile(path);
     if (!textResult.ok()) {
-        return Result<DsDocument>::Error(textResult.error());
+        return dsfw::Result<dsfw::DsDocument>::Error(textResult.error());
     }
 
     nlohmann::json json;
     try {
         json = nlohmann::json::parse(textResult.value().toStdString());
     } catch (const nlohmann::json::parse_error &e) {
-        return Result<DsDocument>::Error(std::string("DS file JSON parse error: ") + e.what());
+        return dsfw::Result<dsfw::DsDocument>::Error(std::string("DS file JSON parse error: ") + e.what());
     } catch (const nlohmann::json::type_error &e) {
-        return Result<DsDocument>::Error(std::string("DS file JSON type error: ") + e.what());
+        return dsfw::Result<dsfw::DsDocument>::Error(std::string("DS file JSON type error: ") + e.what());
     }
 
     if (!json.is_array()) {
-        return Result<DsDocument>::Error("DS file must be a JSON array");
+        return dsfw::Result<dsfw::DsDocument>::Error("DS file must be a JSON array");
     }
 
     if (json.empty()) {
-        return Result<DsDocument>::Error("DS file is an empty array");
+        return dsfw::Result<dsfw::DsDocument>::Error("DS file is an empty array");
     }
 
     doc.m_impl->sentences.reserve(json.size());
@@ -73,22 +72,22 @@ Result<DsDocument> DsDocument::loadFile(const QString &path) {
 
     if (doc.m_impl->sentences.empty()) {
         if (skippedNonObject > 0)
-            return Result<DsDocument>::Error(
+            return dsfw::Result<dsfw::DsDocument>::Error(
                 QStringLiteral("DS file contains no valid sentence objects (%1/%2 elements skipped as non-object)")
                     .arg(skippedNonObject)
                     .arg(json.size())
                     .toStdString());
-        return Result<DsDocument>::Error("DS file contains no valid sentence objects");
+        return dsfw::Result<dsfw::DsDocument>::Error("DS file contains no valid sentence objects");
     }
 
     doc.m_impl->filePath = path;
     return doc;
 }
 
-Result<void> DsDocument::saveFile(const QString &path) const {
+dsfw::Result<void> DsDocument::saveFile(const QString &path) const {
     QString targetPath = path.isEmpty() ? m_impl->filePath : path;
     if (targetPath.isEmpty()) {
-        return Result<void>::Error("No file path specified");
+        return dsfw::Result<void>::Error("No file path specified");
     }
 
     nlohmann::json arr = nlohmann::json::array();
@@ -98,9 +97,9 @@ Result<void> DsDocument::saveFile(const QString &path) const {
 
     auto saveResult = JsonHelper::saveFile(dsfw::PathUtils::toStdPath(targetPath), arr);
     if (!saveResult) {
-        return Result<void>::Error(saveResult.error());
+        return dsfw::Result<void>::Error(saveResult.error());
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 // ── Sentence access ───────────────────────────────────────────────────

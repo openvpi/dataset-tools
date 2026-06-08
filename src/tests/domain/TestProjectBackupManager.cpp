@@ -1,4 +1,4 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <QDir>
 #include <QFile>
@@ -8,8 +8,6 @@
 #include <dsfw/PathUtils.h>
 
 using namespace dstools;
-using namespace dsfw;
-using namespace dsfw;
 
 class TestProjectBackupManager : public QObject {
     Q_OBJECT

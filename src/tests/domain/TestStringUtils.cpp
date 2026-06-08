@@ -1,9 +1,8 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dstools/StringUtils.h>
 #include <dstools/TranscriptionCsv.h>
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestStringUtils : public QObject {
     Q_OBJECT

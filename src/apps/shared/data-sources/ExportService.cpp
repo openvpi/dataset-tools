@@ -1,4 +1,4 @@
-#include "ExportService.h"
+﻿#include "ExportService.h"
 #include "PitchExtractionService.h"
 
 #include <dstools/IEditorDataSource.h>
@@ -19,9 +19,8 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-ExportValidationResult ExportService::validate(IEditorDataSource *source) {
+ExportValidationResult ExportService::validate(dsfw::IEditorDataSource *source) {
     ExportValidationResult result;
     if (!source)
         return result;
@@ -119,9 +118,9 @@ ExportValidationResult ExportService::validate(IEditorDataSource *source) {
     return result;
 }
 
-void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &sliceId,
+void ExportService::autoCompleteSlice(dsfw::IEditorDataSource *source, const QString &sliceId,
                                        dsfw::infer::IInferenceService *inferService,
-                                       PhNumCalculator *phNumCalc) {
+                                       dsfw::PhNumCalculator *phNumCalc) {
     if (!source)
         return;
 
@@ -129,7 +128,7 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
     if (!result)
         return;
 
-    DsTextDocument doc = std::move(result.value());
+    dsfw::DsTextDocument doc = std::move(result.value());
 
     bool hasPhoneme = false;
     bool hasPhNum = false;
@@ -279,10 +278,10 @@ void ExportService::autoCompleteSlice(IEditorDataSource *source, const QString &
     }
 }
 
-ExportResult ExportService::exportDataset(IEditorDataSource *source, const ExportOptions &options,
+dsfw::ExportResult ExportService::exportDataset(dsfw::IEditorDataSource *source, const ExportOptions &options,
                                            dsfw::infer::IInferenceService *,
-                                           PhNumCalculator *) {
-    ExportResult result;
+                                           dsfw::PhNumCalculator *) {
+    dsfw::ExportResult result;
     if (!source)
         return result;
 
@@ -307,7 +306,7 @@ ExportResult ExportService::exportDataset(IEditorDataSource *source, const Expor
             continue;
         }
 
-        const DsTextDocument &doc = loadResult.value();
+        const dsfw::DsTextDocument &doc = loadResult.value();
 
         if (options.exportWavs) {
             QString srcAudio = source->validatedAudioPath(sliceId);
@@ -322,7 +321,7 @@ ExportResult ExportService::exportDataset(IEditorDataSource *source, const Expor
         }
 
         if (options.exportDs && doc.meta.editedSteps.contains(QStringLiteral("pitch_review"))) {
-            DsDocument dsDoc;
+            dsfw::DsDocument dsDoc;
             nlohmann::json sentence;
             sentence["name"] = sliceId.toStdString();
             for (const auto &layer : doc.layers) {
@@ -424,7 +423,7 @@ ExportResult ExportService::exportDataset(IEditorDataSource *source, const Expor
                     if (err.error == QJsonParseError::NoError && jdoc.isObject()) {
                         auto obj = jdoc.object();
                         notes << obj["n"].toString();
-                        double durSec = usToSec(static_cast<TimePos>(obj["d"].toDouble()));
+                        double durSec = usToSec(static_cast<dsfw::TimePos>(obj["d"].toDouble()));
                         noteDurs << QString::number(durSec, 'f', 6);
                     } else {
                         notes << b.text;

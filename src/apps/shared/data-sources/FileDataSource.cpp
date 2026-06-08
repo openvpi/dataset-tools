@@ -1,4 +1,4 @@
-#include "FileDataSource.h"
+﻿#include "FileDataSource.h"
 
 #include <dsfw/FormatAdapterRegistry.h>
 #include <dsfw/IFormatAdapter.h>
@@ -12,7 +12,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 namespace {
 
@@ -29,8 +28,8 @@ QString formatIdFromExtension(const QString& filePath) {
     return {};
 }
 
-Result<DsTextDocument> layersToDocument(const std::map<QString, LayerData>& layers, const QString& audioPath) {
-    DsTextDocument doc;
+dsfw::Result<dsfw::DsTextDocument> layersToDocument(const std::map<QString, LayerData>& layers, const QString& audioPath) {
+    dsfw::DsTextDocument doc;
     doc.audio.path = audioPath;
 
     for (const auto& [key, layerData] : layers) {
@@ -73,10 +72,10 @@ Result<DsTextDocument> layersToDocument(const std::map<QString, LayerData>& laye
         }
     }
 
-    return Result<DsTextDocument>::Ok(std::move(doc));
+    return dsfw::Result<dsfw::DsTextDocument>::Ok(std::move(doc));
 }
 
-void documentToLayers(const DsTextDocument& doc, std::map<QString, LayerData>& layers) {
+void documentToLayers(const dsfw::DsTextDocument& doc, std::map<QString, LayerData>& layers) {
     for (const auto& layer : doc.layers) {
         nlohmann::json layerJson;
         layerJson["name"] = layer.name.toStdString();
@@ -108,7 +107,7 @@ void documentToLayers(const DsTextDocument& doc, std::map<QString, LayerData>& l
 
 } // namespace
 
-FileDataSource::FileDataSource(QObject* parent) : IEditorDataSource(parent) {
+FileDataSource::FileDataSource(QObject* parent) : dsfw::IEditorDataSource(parent) {
 }
 
 int FileDataSource::getSliceCount() const {
@@ -139,7 +138,7 @@ QStringList FileDataSource::sliceIds() const {
     return {m_annotationPath};
 }
 
-Result<DsTextDocument> FileDataSource::loadSlice(const QString& sliceId) {
+dsfw::Result<dsfw::DsTextDocument> FileDataSource::loadSlice(const QString& sliceId) {
     Q_UNUSED(sliceId)
 
     if (m_formatId.isEmpty())
@@ -152,23 +151,23 @@ Result<DsTextDocument> FileDataSource::loadSlice(const QString& sliceId) {
     std::map<QString, LayerData> layers;
     auto result = adapter->importToLayers(m_annotationPath, layers, {});
     if (!result) {
-        return Result<DsTextDocument>::Error(result.error());
+        return dsfw::Result<dsfw::DsTextDocument>::Error(result.error());
     }
 
     auto docResult = layersToDocument(layers, m_audioPath);
     if (!docResult) {
-        return Result<DsTextDocument>::Error(docResult.error());
+        return dsfw::Result<dsfw::DsTextDocument>::Error(docResult.error());
     }
 
     auto validationResult = docResult.value().validate();
     if (!validationResult) {
-        return Result<DsTextDocument>::Error("Imported document validation failed: " + validationResult.error());
+        return dsfw::Result<dsfw::DsTextDocument>::Error("Imported document validation failed: " + validationResult.error());
     }
 
     return docResult;
 }
 
-Result<void> FileDataSource::saveSlice(const QString& sliceId, const DsTextDocument& doc) {
+dsfw::Result<void> FileDataSource::saveSlice(const QString& sliceId, const dsfw::DsTextDocument& doc) {
     Q_UNUSED(sliceId)
 
     if (m_formatId.isEmpty()) {

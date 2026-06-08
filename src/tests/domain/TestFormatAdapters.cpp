@@ -1,4 +1,4 @@
-#include "../../domain/src/adapters/DsFileAdapter.h"
+﻿#include "../../domain/src/adapters/DsFileAdapter.h"
 #include "../../domain/src/adapters/LabAdapter.h"
 #include "dstools/CsvAdapter.h"
 
@@ -8,9 +8,7 @@
 #include <QTextStream>
 #include <nlohmann/json.hpp>
 
-using namespace dsfw;
 using namespace dstools;
-using namespace dsfw;
 
 class TestFormatAdapters : public QObject {
     Q_OBJECT
@@ -48,7 +46,7 @@ void TestFormatAdapters::lab_roundtrip() {
     QVERIFY(adapter.canExport());
 
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(labPath, layers, config);
     QVERIFY(result.ok());
 
@@ -86,11 +84,11 @@ void TestFormatAdapters::csv_import() {
         out << "item1,a b c,0.1 0.2 0.3\n";
     }
 
-    CsvAdapter adapter;
+    dsfw::CsvAdapter adapter;
     QCOMPARE(adapter.formatId(), QStringLiteral("csv"));
 
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(csvPath, layers, config);
     QVERIFY(result.ok());
 
@@ -129,11 +127,11 @@ void TestFormatAdapters::ds_import() {
         out << QString::fromStdString(doc.dump());
     }
 
-    DsFileAdapter adapter;
+    dsfw::DsFileAdapter adapter;
     QCOMPARE(adapter.formatId(), QStringLiteral("ds"));
 
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(dsPath, layers, config);
     QVERIFY(result.ok());
 
@@ -168,7 +166,7 @@ void TestFormatAdapters::lab_empty_file() {
 
     LabAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(labPath, layers, config);
     QVERIFY(result.ok());
     QVERIFY(layers.count(QStringLiteral("grapheme")) == 1);
@@ -190,9 +188,9 @@ void TestFormatAdapters::csv_empty_file() {
         out << "name,ph_seq,ph_dur\n";
     }
 
-    CsvAdapter adapter;
+    dsfw::CsvAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(csvPath, layers, config);
     QVERIFY(result.ok());
 }
@@ -210,9 +208,9 @@ void TestFormatAdapters::csv_missing_columns() {
         out << "item1,value\n";
     }
 
-    CsvAdapter adapter;
+    dsfw::CsvAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(csvPath, layers, config);
     QVERIFY(!result.ok());
 }
@@ -230,9 +228,9 @@ void TestFormatAdapters::csv_invalid_duration() {
         out << "item1,a b,0.1 invalid\n";
     }
 
-    CsvAdapter adapter;
+    dsfw::CsvAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(csvPath, layers, config);
     QVERIFY(!result.ok());
 }
@@ -240,15 +238,15 @@ void TestFormatAdapters::csv_invalid_duration() {
 void TestFormatAdapters::lab_nonexistent_file() {
     LabAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(QStringLiteral("/nonexistent/file.lab"), layers, config);
     QVERIFY(!result.ok());
 }
 
 void TestFormatAdapters::csv_nonexistent_file() {
-    CsvAdapter adapter;
+    dsfw::CsvAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(QStringLiteral("/nonexistent/file.csv"), layers, config);
     QVERIFY(!result.ok());
 }
@@ -267,7 +265,7 @@ void TestFormatAdapters::lab_single_word() {
 
     LabAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(labPath, layers, config);
     QVERIFY(result.ok());
     QVERIFY(layers.count(QStringLiteral("grapheme")) == 1);
@@ -291,9 +289,9 @@ void TestFormatAdapters::csv_single_phoneme() {
         out << "item1,a,0.5\n";
     }
 
-    CsvAdapter adapter;
+    dsfw::CsvAdapter adapter;
     std::map<QString, LayerData> layers;
-    ProcessorConfig config;
+    dsfw::ProcessorConfig config;
     auto result = adapter.importToLayers(csvPath, layers, config);
     QVERIFY(result.ok());
     QVERIFY(layers.count(QStringLiteral("phoneme")) == 1);

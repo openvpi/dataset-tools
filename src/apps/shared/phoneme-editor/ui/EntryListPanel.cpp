@@ -1,4 +1,4 @@
-#include "EntryListPanel.h"
+﻿#include "EntryListPanel.h"
 #include "TextGridDocument.h"
 #include <dsfw/TimePos.h>
 #include <dsfw/widgets/ViewportController.h>
@@ -16,9 +16,7 @@ namespace {
 
 namespace dstools {
 
-using namespace dsfw;
 namespace phonemelabeler {
-using namespace dsfw;
 
 EntryListPanel::EntryListPanel(QWidget *parent)
     : QWidget(parent)
@@ -40,12 +38,12 @@ EntryListPanel::EntryListPanel(QWidget *parent)
             this, &EntryListPanel::onCurrentRowChanged);
 }
 
-void EntryListPanel::setDocument(TextGridDocument *doc) {
+void EntryListPanel::setDocument(dsfw::TextGridDocument *doc) {
     m_document = doc;
     rebuildEntries();
 }
 
-void EntryListPanel::setViewportController(ViewportController *viewport) {
+void EntryListPanel::setViewportController(dsfw::ViewportController *viewport) {
     m_viewport = viewport;
 }
 
@@ -71,8 +69,8 @@ void EntryListPanel::rebuildEntries() {
     int count = m_document->intervalCount(tier);
     for (int i = 0; i < count; ++i) {
         QString text = m_document->intervalText(tier, i);
-        TimePos start = m_document->intervalStart(tier, i);
-        TimePos end = m_document->intervalEnd(tier, i);
+        dsfw::TimePos start = m_document->intervalStart(tier, i);
+        dsfw::TimePos end = m_document->intervalEnd(tier, i);
 
         QString display;
         if (text.isEmpty()) {
@@ -150,8 +148,8 @@ void EntryListPanel::onCurrentRowChanged(int row) {
     if (!item) return;
 
     int intervalIndex = item->data(IntervalIndexRole).toInt();
-    TimePos start = item->data(IntervalStartRole).toLongLong();
-    TimePos end = item->data(IntervalEndRole).toLongLong();
+    dsfw::TimePos start = item->data(IntervalStartRole).toLongLong();
+    dsfw::TimePos end = item->data(IntervalEndRole).toLongLong();
     int tier = m_document->activeTierIndex();
 
     centerEntryInViewport(intervalIndex);

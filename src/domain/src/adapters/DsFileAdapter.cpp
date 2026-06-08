@@ -1,4 +1,4 @@
-#include "DsFileAdapter.h"
+﻿#include "DsFileAdapter.h"
 #include "PhonemeLayerBuilder.h"
 
 #include <dsfw/ConfigTypes.h>
@@ -10,7 +10,6 @@ REGISTER_FORMAT_ADAPTER(dstools::DsFileAdapter);
 
 namespace dstools {
 
-using namespace dsfw;
 
 namespace {
 
@@ -148,7 +147,7 @@ dsfw::Result<void> DsFileAdapter::exportFromLayers(const std::map<QString, dsfw:
             sentence["f0_timestep"] = pitchIt->second["f0_timestep"];
     }
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
     doc.addRawSentence(sentence.dump());
 
     auto result = doc.saveFile(outputPath);

@@ -1,4 +1,4 @@
-#include "SlicerIntegrityGuard.h"
+﻿#include "SlicerIntegrityGuard.h"
 
 #include <dstools/DsKeys.h>
 #include <dstools/DsTextTypes.h>
@@ -13,7 +13,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
     std::vector<FileIntegrityReport> SlicerIntegrityGuard::scanAffectedSlices(
         const QString &workingDir, const std::vector<QString> &affectedBaseNames) {

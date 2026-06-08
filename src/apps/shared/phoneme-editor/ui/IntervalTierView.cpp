@@ -1,4 +1,4 @@
-#include "IntervalTierView.h"
+﻿#include "IntervalTierView.h"
 #include "commands/BoundaryCommands.h"
 #include "BoundaryDragController.h"
 
@@ -17,15 +17,13 @@ using ::dstools::MoveBoundaryCommand;
 
 namespace dstools {
 
-using namespace dsfw;
 namespace phonemelabeler {
-using namespace dsfw;
 using dsfw::widgets::ViewportController;
 using dsfw::widgets::ViewportState;
 
-IntervalTierView::IntervalTierView(int tierIndex, TextGridDocument *doc,
-                                     QUndoStack *undoStack, ViewportController *viewport,
-                                     BoundaryDragController *dragController,
+IntervalTierView::IntervalTierView(int tierIndex, dsfw::TextGridDocument *doc,
+                                     QUndoStack *undoStack, dsfw::ViewportController *viewport,
+                                     dsfw::BoundaryDragController *dragController,
                                      QWidget *parent)
     : QWidget(parent),
     m_tierIndex(tierIndex),
@@ -120,7 +118,7 @@ void IntervalTierView::drawBindingLines(QPainter &painter) {
     if (m_dragController->partnerCount() == 0)
         return;
 
-    TimePos sourceTime = m_doc->boundaryTime(
+    dsfw::TimePos sourceTime = m_doc->boundaryTime(
         m_dragController->draggedTier(), m_dragController->draggedBoundary());
     int sourceX = static_cast<int>(timeToX(usToSec(sourceTime)));
 
@@ -152,9 +150,9 @@ int IntervalTierView::hitTestBoundary(int x) const {
         int bx = static_cast<int>(timeToX(usToSec(m_doc->boundaryTime(m_tierIndex, b))));
         int dist = std::abs(x - bx);
         if (dist <= kBoundaryHitWidth / 2) {
-            TimePos pos = m_doc->boundaryTime(m_tierIndex, b);
-            TimePos leftClamp = (b > 0) ? m_doc->boundaryTime(m_tierIndex, b - 1) : 0;
-            TimePos rightClamp = (b + 1 < count) ? m_doc->boundaryTime(m_tierIndex, b + 1) : INT64_MAX;
+            dsfw::TimePos pos = m_doc->boundaryTime(m_tierIndex, b);
+            dsfw::TimePos leftClamp = (b > 0) ? m_doc->boundaryTime(m_tierIndex, b - 1) : 0;
+            dsfw::TimePos rightClamp = (b + 1 < count) ? m_doc->boundaryTime(m_tierIndex, b + 1) : INT64_MAX;
             int room = static_cast<int>(std::min(pos - leftClamp, rightClamp - pos));
 
             hits.push_back({b, dist, room});
@@ -198,7 +196,7 @@ double IntervalTierView::xToTime(int x) const {
 }
 
 void IntervalTierView::mousePressEvent(QMouseEvent *event) {
-    // Activation only via radio buttons in TierEditWidget.
+    // Activation only via radio buttons in dsfw::TierEditWidget.
     // Clicking on a boundary starts drag without switching activation layer.
     if (event->button() == Qt::LeftButton) {
         int boundaryIdx = hitTestBoundary(event->pos().x());
@@ -209,8 +207,8 @@ void IntervalTierView::mousePressEvent(QMouseEvent *event) {
     } else if (event->button() == Qt::RightButton) {
         int intervalIndex = hitTestInterval(event->pos().x());
         if (intervalIndex >= 0 && m_doc) {
-            TimePos startTime = m_doc->intervalStart(m_tierIndex, intervalIndex);
-            TimePos endTime = m_doc->intervalEnd(m_tierIndex, intervalIndex);
+            dsfw::TimePos startTime = m_doc->intervalStart(m_tierIndex, intervalIndex);
+            dsfw::TimePos endTime = m_doc->intervalEnd(m_tierIndex, intervalIndex);
             emit requestPlayback(startTime, endTime);
         }
     }
@@ -219,7 +217,7 @@ void IntervalTierView::mousePressEvent(QMouseEvent *event) {
 
 void IntervalTierView::mouseMoveEvent(QMouseEvent *event) {
     if (m_dragController && m_dragController->isDragging()) {
-        TimePos currentTime = secToUs(xToTime(event->pos().x()));
+        dsfw::TimePos currentTime = secToUs(xToTime(event->pos().x()));
         m_dragController->updateDrag(currentTime);
         update();
     } else {
@@ -255,7 +253,7 @@ void IntervalTierView::mouseDoubleClickEvent(QMouseEvent *event) {
                 // Edit interval text
                 bool ok;
                 QString currentText = m_doc->intervalText(m_tierIndex, i);
-                QString newText = QInputDialog::getText(this, tr("Edit Interval Text"),
+                QString newText = QInputDialog::getText(this, tr("Edit dsfw::Interval Text"),
                                                       tr("Text:"), QLineEdit::Normal,
                                                       currentText, &ok);
                 if (ok && newText != currentText && m_undoStack) {
@@ -280,7 +278,7 @@ void IntervalTierView::leaveEvent(QEvent *event) {
 
 void IntervalTierView::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton && m_dragController && m_dragController->isDragging()) {
-        TimePos finalTime = secToUs(xToTime(event->pos().x()));
+        dsfw::TimePos finalTime = secToUs(xToTime(event->pos().x()));
         m_dragController->endDrag(finalTime, m_undoStack);
         unsetCursor();
         update();
@@ -385,14 +383,14 @@ void IntervalTierView::selectPrevInterval() {
     update();
 }
 
-void IntervalTierView::adjustSelectedBoundary(TimePos deltaUs) {
+void IntervalTierView::adjustSelectedBoundary(dsfw::TimePos deltaUs) {
     if (!m_doc || m_hoveredBoundary < 0) return;
 
-    TimePos oldTime = m_doc->boundaryTime(m_tierIndex, m_hoveredBoundary);
-    TimePos newTime = oldTime + deltaUs;
+    dsfw::TimePos oldTime = m_doc->boundaryTime(m_tierIndex, m_hoveredBoundary);
+    dsfw::TimePos newTime = oldTime + deltaUs;
 
     if (m_undoStack) {
-        m_undoStack->push(new MoveBoundaryCommand(
+        m_undoStack->push(new dsfw::MoveBoundaryCommand(
             m_doc, m_tierIndex, m_hoveredBoundary, oldTime, newTime));
     }
 }

@@ -1,8 +1,6 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/signal/curve_tools.h>
 
-using namespace dsfw;
-using namespace dsfw::signal;
 
 class TestCurveTools : public QObject {
     Q_OBJECT
@@ -109,8 +107,8 @@ void TestCurveTools::resample_tail_fill() {
 
 void TestCurveTools::resample_rmvpe_to_ds() {
     // RMVPE 10ms → DiffSinger 11.61ms (44100/512)
-    TimePos src = secToUs(0.01);                 // 10000 μs
-    TimePos dst = hopSizeToTimestep(512, 44100); // ~11610 μs
+    dsfw::TimePos src = secToUs(0.01);                 // 10000 μs
+    dsfw::TimePos dst = hopSizeToTimestep(512, 44100); // ~11610 μs
     QVERIFY(dst > 11600 && dst < 11620);
 
     // 100 frames at 10ms
@@ -259,7 +257,7 @@ void TestCurveTools::smoothstep_crossfade_basic() {
 // ── Helpers ──
 
 void TestCurveTools::hopsize_to_timestep() {
-    QCOMPARE(hopSizeToTimestep(512, 44100), TimePos(11610));
+    QCOMPARE(hopSizeToTimestep(512, 44100), dsfw::TimePos(11610));
 }
 
 void TestCurveTools::expected_frames() {

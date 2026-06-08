@@ -1,4 +1,4 @@
-#include "MoeCurveProcessor.h"
+﻿#include "MoeCurveProcessor.h"
 
 #include <dsfw/infer/InferenceModelProvider.h>
 
@@ -10,14 +10,12 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 MoeCurveProcessor::MoeCurveProcessor(QObject* parent) : QObject(parent) {
 }
 
-MoeCurveProcessor::~MoeCurveProcessor() = default;
+MoeCurveProcessor::~dsfw::MoeCurveProcessor() = default;
 
 void MoeCurveProcessor::setModelPath(const std::filesystem::path& path) {
     m_modelPath = path;
@@ -46,7 +44,7 @@ void MoeCurveProcessor::runInference(const std::filesystem::path& audioPath, std
     if (!*alive)
         return;
 
-    QPointer<MoeCurveProcessor> self(this);
+    QPointer<dsfw::MoeCurveProcessor> self(this);
 
     QtConcurrent::run([=]() {
         if (!self || !*alive)
@@ -93,7 +91,7 @@ void MoeCurveProcessor::runInference(const std::filesystem::path& audioPath, std
             return;
 
         MouthCurve curve;
-        curve.timestep = static_cast<TimePos>(self->m_engine->frameTimestep() * 1e6);
+        curve.timestep = static_cast<dsfw::TimePos>(self->m_engine->frameTimestep() * 1e6);
         curve.values = std::move(predictResult.value().curve);
 
         if (self)

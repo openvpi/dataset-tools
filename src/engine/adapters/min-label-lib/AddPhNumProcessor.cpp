@@ -1,4 +1,4 @@
-#include "AddPhNumProcessor.h"
+﻿#include "AddPhNumProcessor.h"
 
 #include <dstools/DsKeys.h>
 #include <dstools/PhNumCalculator.h>
@@ -8,12 +8,10 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 // Self-register with the task processor registry.
-static TaskProcessorRegistry::Registrar<AddPhNumProcessor> s_reg(
+static TaskProcessorRegistry::Registrar<dsfw::AddPhNumProcessor> s_reg(
     QStringLiteral("add_ph_num"), QStringLiteral("add-ph-num"));
 
 TaskSpec AddPhNumProcessor::taskSpec() const {
@@ -22,17 +20,17 @@ TaskSpec AddPhNumProcessor::taskSpec() const {
             {{QString::fromUtf8(dstools::keys::layers::phNum), QString::fromUtf8(dstools::keys::layers::phNum)}}};
 }
 
-Result<void> AddPhNumProcessor::initialize(ModelManager & /*mm*/,
-                                           const ProcessorConfig & /*config*/) {
-    return Ok();
+dsfw::Result<void> AddPhNumProcessor::initialize(dsfw::ModelManager & /*mm*/,
+                                           const dsfw::ProcessorConfig & /*config*/) {
+    return dsfw::Ok();
 }
 
 void AddPhNumProcessor::release() {}
 
-Result<TaskOutput> AddPhNumProcessor::process(const TaskInput &input) {
+dsfw::Result<dsfw::TaskOutput> AddPhNumProcessor::process(const dsfw::TaskInput &input) {
     auto it = input.layers.find(QString::fromUtf8(dstools::keys::layers::phoneme));
     if (it == input.layers.end())
-        return Err<TaskOutput>("Missing phoneme input layer");
+        return dsfw::Err<dsfw::TaskOutput>("Missing phoneme input layer");
 
     const auto &phonemeLayerData = it->second;
 
@@ -51,22 +49,22 @@ Result<TaskOutput> AddPhNumProcessor::process(const TaskInput &input) {
     }
 
     if (phSeq.isEmpty())
-        return Err<TaskOutput>("Empty phoneme sequence");
+        return dsfw::Err<dsfw::TaskOutput>("Empty phoneme sequence");
 
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
 
     // Load dictionary if path provided in config.
     if (input.config.contains(QStringLiteral("dictPath"))) {
         const QString dictPath = configValueString(input.config, QStringLiteral("dictPath"));
         auto loadResult = calc.loadDictionary(dictPath);
         if (!loadResult.ok())
-            return Err<TaskOutput>(
+            return dsfw::Err<dsfw::TaskOutput>(
                 "Failed to load dictionary: " + loadResult.error());
     }
 
     auto calcResult = calc.calculate(phSeq);
     if (!calcResult.ok())
-        return Err<TaskOutput>("PhNum calculation failed: " + calcResult.error());
+        return dsfw::Err<dsfw::TaskOutput>("PhNum calculation failed: " + calcResult.error());
 
     const QString phNum = std::move(calcResult.value());
 
@@ -75,9 +73,9 @@ Result<TaskOutput> AddPhNumProcessor::process(const TaskInput &input) {
     for (const auto &s : phNum.split(' ', Qt::SkipEmptyParts))
         phNumArray.push_back(s.toInt());
 
-    TaskOutput output;
+    dsfw::TaskOutput output;
     output.layers[QString::fromUtf8(dstools::keys::layers::phNum)] = LayerData::fromJson({{"values", phNumArray}});
-    return Ok(std::move(output));
+    return dsfw::Ok(std::move(output));
 }
 
 } // namespace dstools

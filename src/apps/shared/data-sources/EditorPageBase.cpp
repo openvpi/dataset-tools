@@ -1,4 +1,4 @@
-#include "EditorPageBase.h"
+﻿#include "EditorPageBase.h"
 #include "EnginePool.h"
 #include "Keys.h"
 #include "SliceListPanel.h"
@@ -39,7 +39,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 #pragma region Construction / Destruction
 
@@ -49,9 +48,9 @@ EditorPageBase::EditorPageBase(const QString &settingsGroup, QWidget *parent)
     m_enginePool = std::make_unique<EnginePool>(this);
 }
 
-EditorPageBase::~EditorPageBase() = default;
+EditorPageBase::~dsfw::EditorPageBase() = default;
 
-double EditorPageBase::audioDurationSec(const DsTextDocument &doc) {
+double EditorPageBase::audioDurationSec(const dsfw::DsTextDocument &doc) {
     if (doc.audio.out > doc.audio.in)
         return usToSec(doc.audio.out - doc.audio.in);
     return 0.0;
@@ -157,7 +156,7 @@ QJsonObject EditorPageBase::preloadConfig() const {
 #pragma region Setup Helpers
 
 void EditorPageBase::setupBaseLayout(QWidget *editorWidget) {
-    m_sliceList = new SliceListPanel(this);
+    m_sliceList = new dsfw::SliceListPanel(this);
     m_sliceList->setMinimumWidth(160);
     m_sliceList->setMaximumWidth(280);
 
@@ -200,7 +199,7 @@ void EditorPageBase::setupNavigationActions() {
 
 #pragma region Data Source & Slice Selection
 
-void EditorPageBase::setDataSource(IEditorDataSource *source, AppSettingsBackend *settingsBackend) {
+void EditorPageBase::setDataSource(dsfw::IEditorDataSource *source, AppSettingsBackend *settingsBackend) {
     m_source = source;
     m_settingsBackend = settingsBackend;
     if (m_sliceList)
@@ -225,7 +224,7 @@ void EditorPageBase::onSliceSelected(const QString &sliceId) {
 
 #pragma endregion
 
-#pragma region IPageActions / IPageLifecycle
+#pragma region dsfw::IPageActions / dsfw::IPageLifecycle
 
 QString EditorPageBase::windowTitle() const {
     QString title = windowTitlePrefix();
@@ -557,7 +556,7 @@ void EditorPageBase::stopAutoSaveTimer() {
 
 #pragma region Async Engine Loading
 
-std::tuple<ModelManager *, ModelTypeId>
+std::tuple<dsfw::ModelManager *, ModelTypeId>
     EditorPageBase::loadModelForTask(const QString &taskKey, const QString &modelTypeName) {
         auto config = readModelConfig(settingsBackend(), taskKey);
         if (config.modelPath.isEmpty())
@@ -583,7 +582,7 @@ std::tuple<ModelManager *, ModelTypeId>
         return;
 
     m_loadingEngines.insert(taskKey);
-    QPointer<EditorPageBase> guard(this);
+    QPointer<dsfw::EditorPageBase> guard(this);
     auto alive = aliveToken(taskKey).token();
 
     (void) QtConcurrent::run([guard, alive, taskKey, loadFunc = std::move(loadFunc),
@@ -624,7 +623,7 @@ void EditorPageBase::cancelAsyncTask(std::shared_ptr<std::atomic<bool>> &aliveTo
     aliveToken.reset();
 }
 
-ModelManager *EditorPageBase::ensureModelManager() {
+dsfw::ModelManager *EditorPageBase::ensureModelManager() {
     if (m_modelManager)
         return m_modelManager;
 
@@ -655,9 +654,9 @@ void EditorPageBase::applyBatchResult(const QString &sliceId, const BatchSliceRe
 void EditorPageBase::runBatchProcess(
     const BatchConfig &config,
     const QStringList &sliceIds,
-    std::function<void(BatchProcessDialog *)> addExtraParams)
+    std::function<void(dsfw::BatchProcessDialog *)> addExtraParams)
 {
-    auto *dlg = new BatchProcessDialog(config.dialogTitle, this);
+    auto *dlg = new dsfw::BatchProcessDialog(config.dialogTitle, this);
     dlg->setAttribute(Qt::WA_DeleteOnClose);
 
     auto *skipExisting = new QCheckBox(config.skipExistingLabel, dlg);
@@ -671,7 +670,7 @@ void EditorPageBase::runBatchProcess(
 
     auto aliveToken = batchAliveToken();
     auto *src = source();
-    QPointer<EditorPageBase> guard(this);
+    QPointer<dsfw::EditorPageBase> guard(this);
 
     connect(dlg, &BatchProcessDialog::started, this,
         [dlg, src, ids = sliceIds, guard, skipExisting, aliveToken]() {
@@ -768,7 +767,7 @@ void EditorPageBase::runBatchProcess(
     dlg->show();
 }
 
-bool EditorPageBase::applyAndReload(const QString &sliceId, const DsTextDocument &doc) {
+bool EditorPageBase::applyAndReload(const QString &sliceId, const dsfw::DsTextDocument &doc) {
     if (!source())
         return false;
     auto saveResult = source()->saveSlice(sliceId, doc);

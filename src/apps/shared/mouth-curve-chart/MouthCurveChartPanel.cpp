@@ -1,4 +1,4 @@
-#include "MouthCurveChartPanel.h"
+﻿#include "MouthCurveChartPanel.h"
 #include "ChartConfigRegistry.h"
 
 #include <QPaintEvent>
@@ -7,10 +7,9 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 MouthCurveChartPanel::MouthCurveChartPanel(dsfw::widgets::ViewportController* viewport, QWidget* parent)
-    : ChartPanelBase(QStringLiteral("mouthCurve"), viewport, parent) {
+    : dsfw::ChartPanelBase(QStringLiteral("mouthCurve"), viewport, parent) {
     setMinimumHeight(120);
     m_amplitudeScale = 1.0;
     loadConfigParams();

@@ -1,15 +1,14 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QSignalSpy>
 #include <QThread>
 #include <QThreadPool>
 #include <dsfw/AsyncTask.h>
 
-using namespace dsfw;
 using namespace std::chrono_literals;
 
-class SuccessTask : public AsyncTask {
+class SuccessTask : public dsfw::AsyncTask {
 public:
-    SuccessTask() : AsyncTask("success-task") {}
+    SuccessTask() : dsfw::AsyncTask("success-task") {}
 protected:
     bool execute(QString &msg) override {
         msg = "done";
@@ -17,9 +16,9 @@ protected:
     }
 };
 
-class FailTask : public AsyncTask {
+class FailTask : public dsfw::AsyncTask {
 public:
-    FailTask() : AsyncTask("fail-task") {}
+    FailTask() : dsfw::AsyncTask("fail-task") {}
 protected:
     bool execute(QString &msg) override {
         msg = "something failed";
@@ -27,9 +26,9 @@ protected:
     }
 };
 
-class CancellableTask : public AsyncTask {
+class CancellableTask : public dsfw::AsyncTask {
 public:
-    CancellableTask() : AsyncTask("cancel-task") {}
+    CancellableTask() : dsfw::AsyncTask("cancel-task") {}
 protected:
     bool execute(QString &msg) override {
         for (int i = 0; i < 100 && !isCanceled(); ++i)

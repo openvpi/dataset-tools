@@ -1,4 +1,4 @@
-#include <dstools/LayerSerialization.h>
+﻿#include <dstools/LayerSerialization.h>
 
 #include <dstools/DsKeys.h>
 #include <dsfw/TimePos.h>
@@ -7,7 +7,6 @@
 
 namespace dstools {
 
-    using namespace dsfw;
 
     namespace {
 
@@ -145,7 +144,7 @@ namespace dstools {
 
     } // namespace
 
-    Result<LayerDataVariant> parseLayerData(const LayerData &data, const QString &layerType) {
+    dsfw::Result<LayerDataVariant> parseLayerData(const LayerData &data, const QString &layerType) {
         try {
             const auto j = data.toJson();
 
@@ -176,10 +175,10 @@ namespace dstools {
                 return LayerDataVariant(parseTextValue(j));
             }
 
-            return Result<LayerDataVariant>::Error(
+            return dsfw::Result<LayerDataVariant>::Error(
                 "Unknown layer type: " + layerType.toStdString());
         } catch (const std::exception &e) {
-            return Result<LayerDataVariant>::Error(
+            return dsfw::Result<LayerDataVariant>::Error(
                 std::string("parseLayerData failed: ") + e.what());
         }
     }

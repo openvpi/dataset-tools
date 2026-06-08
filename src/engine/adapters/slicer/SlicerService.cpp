@@ -1,4 +1,4 @@
-#include "SlicerService.h"
+﻿#include "SlicerService.h"
 
 #include <dsfw/audio/AudioPipeline.h>
 #include <dsfw/signal/Slicer.h>
@@ -8,27 +8,25 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
-Result<SliceResult> SlicerService::slice(const QString& audioPath, double threshold, int minLength, int minInterval,
+dsfw::Result<SliceResult> SlicerService::slice(const QString& audioPath, double threshold, int minLength, int minInterval,
                                          int hopSize, int maxSilKept) {
     if (!QFileInfo::exists(audioPath)) {
-        return Result<SliceResult>::Error("Audio file does not exist: " + audioPath.toStdString());
+        return dsfw::Result<SliceResult>::Error("Audio file does not exist: " + audioPath.toStdString());
     }
 
     std::filesystem::path path = audioPath.toStdWString();
     auto pipeline = dsfw::audio::AudioPipeline::create();
     auto probeResult = pipeline.probe(dsfw::PathUtils::toUtf8(path));
     if (!probeResult.ok()) {
-        return Result<SliceResult>::Error("Failed to probe audio file: " + probeResult.error());
+        return dsfw::Result<SliceResult>::Error("Failed to probe audio file: " + probeResult.error());
     }
     int sampleRate = probeResult.value().sampleRate;
 
     auto decodeResult = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(path), sampleRate);
     if (!decodeResult.ok()) {
-        return Result<SliceResult>::Error("Failed to decode audio: " + decodeResult.error());
+        return dsfw::Result<SliceResult>::Error("Failed to decode audio: " + decodeResult.error());
     }
     auto buffer = decodeResult.value();
     auto floats = buffer.floats();
@@ -43,7 +41,7 @@ Result<SliceResult> SlicerService::slice(const QString& audioPath, double thresh
 
     auto slicer = dsfw::signal::Slicer::fromMilliseconds(sampleRate, params);
     if (slicer.errorCode() != dsfw::signal::SlicerError::Ok) {
-        return Result<SliceResult>::Error(slicer.errorMessage());
+        return dsfw::Result<SliceResult>::Error(slicer.errorMessage());
     }
 
     auto markers = slicer.slice(monoSamples);
@@ -55,7 +53,7 @@ Result<SliceResult> SlicerService::slice(const QString& audioPath, double thresh
         result.chunks.emplace_back(marker.first, marker.second);
     }
 
-    return Result<SliceResult>::Ok(std::move(result));
+    return dsfw::Result<SliceResult>::Ok(std::move(result));
 }
 
 std::vector<double> SlicerService::computeSlicePoints(const std::vector<float>& samples, int sampleRate,

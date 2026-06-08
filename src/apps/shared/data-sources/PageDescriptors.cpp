@@ -1,4 +1,4 @@
-#include "PageDescriptors.h"
+﻿#include "PageDescriptors.h"
 
 #include "MinLabelPage.h"
 #include "PhonemeLabelerPage.h"
@@ -11,35 +11,34 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-QWidget *MinLabelPageDescriptor::create(dsfw::AppShell *shell, IEditorDataSource *dataSource,
+QWidget *MinLabelPageDescriptor::create(dsfw::AppShell *shell, dsfw::IEditorDataSource *dataSource,
                                         AppSettingsBackend *settingsBackend) const {
-    auto *page = new MinLabelPage(shell);
+    auto *page = new dsfw::MinLabelPage(shell);
     page->setDataSource(dataSource, settingsBackend);
     return page;
 }
 
-QWidget *PhonemeLabelerPageDescriptor::create(dsfw::AppShell *shell, IEditorDataSource *dataSource,
+QWidget *PhonemeLabelerPageDescriptor::create(dsfw::AppShell *shell, dsfw::IEditorDataSource *dataSource,
                                               AppSettingsBackend *settingsBackend) const {
-    auto *page = new PhonemeLabelerPage(shell);
+    auto *page = new dsfw::PhonemeLabelerPage(shell);
     page->setDataSource(dataSource, settingsBackend);
     return page;
 }
 
-QWidget *PitchLabelerPageDescriptor::create(dsfw::AppShell *shell, IEditorDataSource *dataSource,
+QWidget *PitchLabelerPageDescriptor::create(dsfw::AppShell *shell, dsfw::IEditorDataSource *dataSource,
                                             AppSettingsBackend *settingsBackend) const {
-    auto *page = new PitchLabelerPage(shell);
+    auto *page = new dsfw::PitchLabelerPage(shell);
     page->setDataSource(dataSource, settingsBackend);
     return page;
 }
 
-QWidget *SettingsPageDescriptor::create(dsfw::AppShell *shell, IEditorDataSource * /*dataSource*/,
+QWidget *SettingsPageDescriptor::create(dsfw::AppShell *shell, dsfw::IEditorDataSource * /*dataSource*/,
                                         AppSettingsBackend *settingsBackend) const {
     return new SettingsPage(settingsBackend, shell);
 }
 
-QWidget *LogPageDescriptor::create(dsfw::AppShell *shell, IEditorDataSource * /*dataSource*/,
+QWidget *LogPageDescriptor::create(dsfw::AppShell *shell, dsfw::IEditorDataSource * /*dataSource*/,
                                    AppSettingsBackend * /*settingsBackend*/) const {
     return new LogPage(shell);
 }

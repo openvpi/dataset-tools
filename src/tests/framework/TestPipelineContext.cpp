@@ -1,7 +1,6 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/PipelineContext.h>
 
-using namespace dsfw;
 
 class TestPipelineContext : public QObject {
     Q_OBJECT
@@ -14,7 +13,7 @@ private slots:
 };
 
 void TestPipelineContext::buildTaskInput_ok() {
-    PipelineContext ctx;
+    dsfw::PipelineContext ctx;
     ctx.audioPath = QStringLiteral("/audio/test.wav");
     ctx.globalConfig = {
         {"sampleRate", 44100}
@@ -42,7 +41,7 @@ void TestPipelineContext::buildTaskInput_ok() {
 }
 
 void TestPipelineContext::buildTaskInput_missing() {
-    PipelineContext ctx;
+    dsfw::PipelineContext ctx;
     ctx.audioPath = QStringLiteral("/audio/test.wav");
 
     TaskSpec spec;
@@ -57,14 +56,14 @@ void TestPipelineContext::buildTaskInput_missing() {
 }
 
 void TestPipelineContext::applyTaskOutput() {
-    PipelineContext ctx;
+    dsfw::PipelineContext ctx;
 
     TaskSpec spec;
     spec.outputs = {
         {QStringLiteral("aligned"), QStringLiteral("alignment")}
     };
 
-    TaskOutput output;
+    dsfw::TaskOutput output;
     output.layers[QStringLiteral("aligned")] = LayerData::fromJson({
         {"boundaries", "1 2 3"}
     });
@@ -75,7 +74,7 @@ void TestPipelineContext::applyTaskOutput() {
 }
 
 void TestPipelineContext::json_roundtrip() {
-    PipelineContext ctx;
+    dsfw::PipelineContext ctx;
     ctx.audioPath = QStringLiteral("/audio/test.wav");
     ctx.itemId = QStringLiteral("item_001");
     ctx.globalConfig = {
@@ -115,7 +114,7 @@ void TestPipelineContext::json_roundtrip() {
 }
 
 void TestPipelineContext::status_serialization() {
-    PipelineContext ctx;
+    dsfw::PipelineContext ctx;
     ctx.audioPath = QStringLiteral("/audio/test.wav");
     ctx.itemId = QStringLiteral("item_002");
     ctx.status = PipelineContext::Status::Discarded;

@@ -1,4 +1,4 @@
-#include "SliceListModel.h"
+﻿#include "SliceListModel.h"
 
 #include <dstools/IEditorDataSource.h>
 #include <dsfw/AppSettings.h>
@@ -11,7 +11,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 SliceListModel::SliceListModel(QObject *parent) : QAbstractListModel(parent) {}
 
@@ -78,7 +77,7 @@ QVariant SliceListModel::data(const QModelIndex &index, int role) const {
     }
 }
 
-void SliceListModel::setDataSource(IEditorDataSource *source) {
+void SliceListModel::setDataSource(dsfw::IEditorDataSource *source) {
     m_source = source;
     if (m_source) {
         connect(m_source, &IEditorDataSource::sliceListChanged,
@@ -161,7 +160,7 @@ void SliceListModel::setSliceLoadError(const QString &sliceId, const QString &er
     }
 }
 
-QString SliceListModel::ensureSelection(AppSettings &settings) {
+QString SliceListModel::ensureSelection(dsfw::AppSettings &settings) {
     QString lastSlice = settings.get(settings::kLastSlice);
     if (!lastSlice.isEmpty()) {
         setCurrentSlice(lastSlice);
@@ -181,7 +180,7 @@ QString SliceListModel::ensureSelection(AppSettings &settings) {
     return {};
 }
 
-void SliceListModel::saveSelection(AppSettings &settings) const {
+void SliceListModel::saveSelection(dsfw::AppSettings &settings) const {
     settings.set(settings::kLastSlice, currentSliceId());
 }
 

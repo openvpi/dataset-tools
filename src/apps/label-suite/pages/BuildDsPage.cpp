@@ -1,4 +1,4 @@
-#include "BuildDsPage.h"
+﻿#include "BuildDsPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -16,9 +16,8 @@
 
 namespace dstools::labeler {
 
-using namespace dsfw;
 
-BuildDsPage::BuildDsPage(QWidget *parent) : WizardPageBase(parent) {
+BuildDsPage::BuildDsPage(QWidget *parent) : dsfw::WizardPageBase(parent) {
     buildUi();
 }
 
@@ -83,7 +82,7 @@ void BuildDsPage::buildUi() {
 
         m_log->append(tr("Found %1 item(s) in CSV.").arg(rows.size()));
 
-        std::vector<PipelineContext> contexts;
+        std::vector<dsfw::PipelineContext> contexts;
         for (const auto &row : rows) {
             const QString wavPath = ProjectPaths::slicerOutputAudioPath(m_workingDir, row.name);
             if (!QFile::exists(wavPath)) {
@@ -91,7 +90,7 @@ void BuildDsPage::buildUi() {
                 continue;
             }
 
-            PipelineContext ctx;
+            dsfw::PipelineContext ctx;
             ctx.itemId = row.name;
             ctx.audioPath = wavPath;
             contexts.push_back(std::move(ctx));
@@ -155,7 +154,7 @@ void BuildDsPage::buildUi() {
             }
         }
 
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         QObject::connect(&runner, &PipelineRunner::progress,
                          this, [this](int, int item, int total, const QString &) {
                              if (total > 0)

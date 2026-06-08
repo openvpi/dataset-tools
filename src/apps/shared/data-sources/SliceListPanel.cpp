@@ -1,4 +1,4 @@
-#include "SliceListPanel.h"
+﻿#include "SliceListPanel.h"
 
 #include <dstools/IEditorDataSource.h>
 #include <dsfw/AppSettings.h>
@@ -9,10 +9,9 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 SliceListPanel::SliceListPanel(QWidget *parent) : QWidget(parent) {
-    m_model = new SliceListModel(this);
+    m_model = new dsfw::SliceListModel(this);
 
     m_listView = new QListView(this);
     m_listView->setModel(m_model);
@@ -40,7 +39,7 @@ SliceListPanel::SliceListPanel(QWidget *parent) : QWidget(parent) {
     });
 }
 
-void SliceListPanel::setDataSource(IEditorDataSource *source) {
+void SliceListPanel::setDataSource(dsfw::IEditorDataSource *source) {
     m_source = source;
     m_model->setDataSource(source);
 }
@@ -124,11 +123,11 @@ void SliceListPanel::setSliceLoadError(const QString &sliceId, const QString &er
     m_model->setSliceLoadError(sliceId, error);
 }
 
-QString SliceListPanel::ensureSelection(AppSettings &settings) {
+QString SliceListPanel::ensureSelection(dsfw::AppSettings &settings) {
     return m_model->ensureSelection(settings);
 }
 
-void SliceListPanel::saveSelection(AppSettings &settings) const {
+void SliceListPanel::saveSelection(dsfw::AppSettings &settings) const {
     m_model->saveSelection(settings);
 }
 

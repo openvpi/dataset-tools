@@ -1,4 +1,4 @@
-#include <QDir>
+﻿#include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
 #include <QTest>
@@ -7,7 +7,6 @@
 #include <dstools/ExportFormats.h>
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestExportFormats : public QObject {
     Q_OBJECT

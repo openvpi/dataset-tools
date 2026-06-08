@@ -1,4 +1,4 @@
-#include "ExportPage.h"
+﻿#include "ExportPage.h"
 
 #include "AutoCompleteService.h"
 #include "CompositeInferenceService.h"
@@ -47,15 +47,14 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
     ExportPage::ExportPage(QWidget *parent) : QWidget(parent) {
-        m_phNumCalc = std::make_unique<PhNumCalculator>();
-        m_previewData = std::make_shared<SlicePreviewModel>();
+        m_phNumCalc = std::make_unique<dsfw::PhNumCalculator>();
+        m_previewData = std::make_shared<dsfw::SlicePreviewModel>();
         buildUi();
     }
 
-    ExportPage::~ExportPage() = default;
+    ExportPage::~dsfw::ExportPage() = default;
 
     void ExportPage::buildUi() {
         auto *mainLayout = new QVBoxLayout(this);
@@ -364,7 +363,7 @@ using namespace dsfw;
         m_previewData->setDataSource(m_source);
         m_previewData->invalidate();
 
-        QPointer<ExportPage> guard(this);
+        QPointer<dsfw::ExportPage> guard(this);
         auto preview = m_previewData;  // shared_ptr copy — safe across threads
 
         (void)QtConcurrent::run([guard, preview]() {
@@ -389,7 +388,7 @@ using namespace dsfw;
         });
     }
 
-    void ExportPage::setDataSource(ProjectDataSource *source) {
+    void ExportPage::setDataSource(dsfw::ProjectDataSource *source) {
         m_source = source;
         m_previewData->invalidate();
         updateExportButton();
@@ -629,12 +628,12 @@ using namespace dsfw;
             auto *phNumCalc = m_phNumCalc.get();
             auto enginesAlive = m_enginePool ? m_enginePool->aliveToken(QStringLiteral("export")) : nullptr;
             auto *src = m_source;
-            QPointer<ExportPage> guard(this);
+            QPointer<dsfw::ExportPage> guard(this);
 
             // Run inference loop in background; save + continue export on main thread
             (void) QtConcurrent::run([guard, hfa, rmvpe, game, phNumCalc, enginesAlive, src, sliceIds, outputDir]() {
-                // Map of sliceId → modified DsTextDocument (only non-empty docs saved)
-                std::map<QString, DsTextDocument> modifiedDocs;
+                // Map of sliceId → modified dsfw::DsTextDocument (only non-empty docs saved)
+                std::map<QString, dsfw::DsTextDocument> modifiedDocs;
 
                 int processed = 0;
                 for (const auto &sliceId : sliceIds) {
@@ -663,7 +662,7 @@ using namespace dsfw;
                             continue;
                         }
 
-                        DsTextDocument doc = std::move(result.value());
+                        dsfw::DsTextDocument doc = std::move(result.value());
                         QString audioPath = src->audioPath(sliceId);
                         dstools::CompositeInferenceService inferService(hfa.get(), rmvpe.get(), game.get());
                         auto outcome = dstools::autoCompleteSlice(std::move(doc), audioPath, &inferService, phNumCalc);
@@ -774,7 +773,7 @@ using namespace dsfw;
             bool chkWavsChecked = m_chkWavs->isChecked();
             bool chkDsChecked = m_chkDs->isChecked();
             auto alive = m_enginePool ? m_enginePool->aliveToken(QStringLiteral("export")) : nullptr;
-            QPointer<ExportPage> self(this);
+            QPointer<dsfw::ExportPage> self(this);
 
             QtConcurrent::run([alive, sliceIds, backupDir, wavsDir, dsDir,
                                chkWavsChecked, chkDsChecked]() {
@@ -825,7 +824,7 @@ using namespace dsfw;
                 continue;
             }
 
-            const DsTextDocument &doc = result.value();
+            const dsfw::DsTextDocument &doc = result.value();
             auto *ctx = m_source->context(sliceId);
 
             if (m_chkWavs->isChecked()) {
@@ -845,7 +844,7 @@ using namespace dsfw;
 
             if (m_chkDs->isChecked() && ctx) {
                 if (ctx->editedSteps.contains(QStringLiteral("pitch_review"))) {
-                    DsDocument dsDoc;
+                    dsfw::DsDocument dsDoc;
                     nlohmann::json sentence;
                     sentence["name"] = sliceId.toStdString();
                     for (const auto &layer : doc.layers) {
@@ -943,7 +942,7 @@ using namespace dsfw;
                         if (err.error == QJsonParseError::NoError && jdoc.isObject()) {
                             auto obj = jdoc.object();
                             notes << obj["n"].toString();
-                            double durSec = usToSec(static_cast<TimePos>(obj["d"].toDouble()));
+                            double durSec = usToSec(static_cast<dsfw::TimePos>(obj["d"].toDouble()));
                             noteDurs << QString::number(durSec, 'f', 6);
                         } else {
                             notes << b.text;
@@ -1038,7 +1037,7 @@ using namespace dsfw;
 
         auto &colCov = m_columnCoverages;
 
-        // Delegate to centralized ExportService for all validation logic
+        // Delegate to centralized dsfw::ExportService for all validation logic
         auto result = dstools::ExportService::validate(m_source);
 
         m_readyForCsv = result.readyForCsv;

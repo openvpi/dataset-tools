@@ -1,4 +1,4 @@
-#include "BuildCsvPage.h"
+﻿#include "BuildCsvPage.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -15,9 +15,8 @@
 
 namespace dstools::labeler {
 
-using namespace dsfw;
 
-BuildCsvPage::BuildCsvPage(QWidget *parent) : WizardPageBase(parent) {
+BuildCsvPage::BuildCsvPage(QWidget *parent) : dsfw::WizardPageBase(parent) {
     buildUi();
 }
 
@@ -50,21 +49,21 @@ void BuildCsvPage::buildUi() {
         QDir().mkpath(ProjectPaths::buildCsvDir(m_workingDir));
 
         m_log->clear();
-        m_log->append(tr("Building CSV from TextGrid files..."));
-        m_log->append(tr("TextGrid dir: %1").arg(tgDir));
+        m_log->append(tr("Building CSV from dsfw::TextGrid files..."));
+        m_log->append(tr("dsfw::TextGrid dir: %1").arg(tgDir));
         m_log->append(tr("Output: %1").arg(csvPath));
 
         QDir dir(tgDir);
-        const QStringList tgFiles = dir.entryList({QStringLiteral("*.TextGrid")}, QDir::Files);
+        const QStringList tgFiles = dir.entryList({QStringLiteral("*.dsfw::TextGrid")}, QDir::Files);
 
         if (tgFiles.isEmpty()) {
-            m_log->append(tr("<b>Error:</b> No .TextGrid files found in %1").arg(tgDir));
+            m_log->append(tr("<b>Error:</b> No .dsfw::TextGrid files found in %1").arg(tgDir));
             QMessageBox::warning(this, tr("Build CSV Failed"),
-                                 tr("No .TextGrid files found in %1").arg(tgDir));
+                                 tr("No .dsfw::TextGrid files found in %1").arg(tgDir));
             return;
         }
 
-        m_log->append(tr("Found %1 TextGrid file(s).").arg(tgFiles.size()));
+        m_log->append(tr("Found %1 dsfw::TextGrid file(s).").arg(tgFiles.size()));
 
         std::vector<dsfw::PipelineContext> contexts;
         for (const QString &fileName : tgFiles) {

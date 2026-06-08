@@ -1,4 +1,4 @@
-/// @file TestAudioDecoder.cpp
+﻿/// @file TestAudioDecoder.cpp
 /// @brief Unit tests for dsfw::audio::FfmpegAudioDecoder.
 
 #include <dsfw/audio/FfmpegAudioDecoder.h>
@@ -10,7 +10,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace dsfw::audio;
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 
@@ -86,7 +85,7 @@ static void test_probe_wav() {
     std::string path = "test_sine_44100.wav";
     writeWav(path, samples, 44100);
 
-    FfmpegAudioDecoder decoder;
+    dsfw::audio::FfmpegAudioDecoder decoder;
     auto result = decoder.probe(path);
     TEST_ASSERT(result.ok(), "probe ok");
     auto& info = result.value();
@@ -99,7 +98,7 @@ static void test_probe_wav() {
 }
 
 static void test_probe_nonexistent() {
-    FfmpegAudioDecoder decoder;
+    dsfw::audio::FfmpegAudioDecoder decoder;
     auto result = decoder.probe("nonexistent_file.wav");
     TEST_ASSERT(!result.ok(), "probe nonexistent fails");
     TEST_PASS("probe_nonexistent");
@@ -110,7 +109,7 @@ static void test_decode_all() {
     std::string path = "test_decode_22050.wav";
     writeWav(path, samples, 22050);
 
-    FfmpegAudioDecoder decoder;
+    dsfw::audio::FfmpegAudioDecoder decoder;
     auto openResult = decoder.open(path);
     TEST_ASSERT(openResult.ok(), "open ok");
     TEST_ASSERT(decoder.isOpen(), "isOpen");
@@ -139,7 +138,7 @@ static void test_decode_segment() {
     std::string path = "test_segment_44100.wav";
     writeWav(path, samples, 44100);
 
-    FfmpegAudioDecoder decoder;
+    dsfw::audio::FfmpegAudioDecoder decoder;
     auto openResult = decoder.open(path);
     TEST_ASSERT(openResult.ok(), "open ok");
 
@@ -161,7 +160,7 @@ static void test_streaming_read() {
     std::string path = "test_stream_16000.wav";
     writeWav(path, samples, 16000);
 
-    FfmpegAudioDecoder decoder;
+    dsfw::audio::FfmpegAudioDecoder decoder;
     TEST_ASSERT(decoder.open(path).ok(), "open ok");
 
     int64_t totalFrames = 0;
@@ -188,7 +187,7 @@ static void test_seek() {
     std::string path = "test_seek_44100.wav";
     writeWav(path, samples, 44100);
 
-    FfmpegAudioDecoder decoder;
+    dsfw::audio::FfmpegAudioDecoder decoder;
     TEST_ASSERT(decoder.open(path).ok(), "open ok");
 
     double totalDur = decoder.totalDuration();
@@ -219,7 +218,7 @@ static void test_double_open() {
     writeWav(path1, samples, 44100);
     writeWav(path2, samples, 44100);
 
-    FfmpegAudioDecoder decoder;
+    dsfw::audio::FfmpegAudioDecoder decoder;
     TEST_ASSERT(decoder.open(path1).ok(), "open first");
     TEST_ASSERT(decoder.isOpen(), "isOpen first");
     TEST_ASSERT(decoder.open(path2).ok(), "open second");

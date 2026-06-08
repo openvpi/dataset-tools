@@ -1,10 +1,8 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dstools/F0Curve.h>
 #include <dsfw/TimePos.h>
 
-using namespace dsfw;
 using namespace dstools;
-using namespace dsfw;
 
 class TestF0Curve : public QObject {
     Q_OBJECT
@@ -21,29 +19,29 @@ private slots:
 };
 
 void TestF0Curve::testEmptyCurve() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     QVERIFY(curve.isEmpty());
     QCOMPARE(curve.sampleCount(), 0);
-    QCOMPARE(curve.totalDuration(), TimePos(0));
+    QCOMPARE(curve.totalDuration(), dsfw::TimePos(0));
     QCOMPARE(curve.getValueAtTime(500000), int32_t(0));
     QVERIFY(curve.getRange(0, 1000000).empty());
 }
 
 void TestF0Curve::testTotalDuration() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.timestep = 10000;                                  // 10ms = 10000us
     curve.values = {440000, 441000, 442000, 443000, 444000}; // mHz
-    QCOMPARE(curve.totalDuration(), TimePos(50000));         // 5 * 10ms = 50ms = 50000us
+    QCOMPARE(curve.totalDuration(), dsfw::TimePos(50000));         // 5 * 10ms = 50ms = 50000us
 }
 
 void TestF0Curve::testSampleCount() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.values = {1000, 2000, 3000};
     QCOMPARE(curve.sampleCount(), 3);
 }
 
 void TestF0Curve::testGetValueAtTimeInterpolation() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.timestep = 10000;                  // 10ms
     curve.values = {100000, 200000, 300000}; // mHz
 
@@ -56,7 +54,7 @@ void TestF0Curve::testGetValueAtTimeInterpolation() {
 }
 
 void TestF0Curve::testGetValueAtTimeBoundary() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.timestep = 10000;
     curve.values = {100000, 200000, 300000};
 
@@ -66,7 +64,7 @@ void TestF0Curve::testGetValueAtTimeBoundary() {
 }
 
 void TestF0Curve::testGetRange() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.timestep = 10000;
     curve.values = {10000, 20000, 30000, 40000, 50000};
 
@@ -78,7 +76,7 @@ void TestF0Curve::testGetRange() {
 }
 
 void TestF0Curve::testGetRangeEmpty() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.timestep = 10000;
     curve.values = {10000, 20000};
 
@@ -87,7 +85,7 @@ void TestF0Curve::testGetRangeEmpty() {
 }
 
 void TestF0Curve::testSetRange() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.timestep = 10000;
     curve.values = {10000, 20000, 30000, 40000, 50000};
 
@@ -99,7 +97,7 @@ void TestF0Curve::testSetRange() {
 }
 
 void TestF0Curve::testSetRangeOutOfBounds() {
-    F0Curve curve;
+    dsfw::F0Curve curve;
     curve.timestep = 10000;
     curve.values = {10000, 20000, 30000};
 

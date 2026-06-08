@@ -1,4 +1,4 @@
-#include <dstools/AppInit.h>
+﻿#include <dstools/AppInit.h>
 
 #include <dstools/ModelManager.h>
 #include <dsfw/AppPaths.h>
@@ -25,7 +25,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 std::vector<AppInit::InitHook> &AppInit::hooks() {
     static std::vector<InitHook> s_hooks;
@@ -114,8 +113,8 @@ bool AppInit::init(QApplication &app, bool initCrashHandler) {
         dsfw::CrashSafeGuard::markCleanExit();
     });
 
-    // 5. Initialize ModelManager (instance() available after construction)
-    new ModelManager(&app);
+    // 5. Initialize dsfw::ModelManager (instance() available after construction)
+    new dsfw::ModelManager(&app);
 
     // 6. Load translations (follows system locale; apps can customize via CommonKeys::Language)
     dsfw::TranslationManager::install();

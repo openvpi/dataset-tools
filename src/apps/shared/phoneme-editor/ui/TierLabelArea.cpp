@@ -1,4 +1,4 @@
-#include "TierLabelArea.h"
+﻿#include "TierLabelArea.h"
 
 #include "IBoundaryModel.h"
 
@@ -6,14 +6,12 @@
 
 namespace dstools {
 
-using namespace dsfw;
-using namespace dsfw;
 
     TierLabelArea::TierLabelArea(QWidget *parent) : QWidget(parent) {
         setFixedHeight(24);
     }
 
-    TierLabelArea::~TierLabelArea() = default;
+    TierLabelArea::~dsfw::TierLabelArea() = default;
 
     void TierLabelArea::setBoundaryModel(IBoundaryModel *model) {
         m_boundaryModel = model;
@@ -24,7 +22,7 @@ using namespace dsfw;
         return m_boundaryModel;
     }
 
-    void TierLabelArea::setViewportController(ViewportController *viewport) {
+    void TierLabelArea::setViewportController(dsfw::ViewportController *viewport) {
         if (m_viewport) {
             disconnect(m_viewport, nullptr, this, nullptr);
         }
@@ -41,7 +39,7 @@ using namespace dsfw;
         update();
     }
 
-    ViewportController *TierLabelArea::viewportController() const {
+    dsfw::ViewportController *TierLabelArea::viewportController() const {
         return m_viewport;
     }
 

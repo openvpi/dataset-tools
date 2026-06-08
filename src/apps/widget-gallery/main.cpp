@@ -1,4 +1,4 @@
-#include <QApplication>
+﻿#include <QApplication>
 #include <QMainWindow>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -14,7 +14,6 @@
 #include <dsfw/widgets/LogViewer.h>
 #include <dsfw/widgets/ProgressDialog.h>
 
-using namespace dsfw::widgets;
 
 static QWidget *createPathSelectorDemo() {
     auto *widget = new QWidget;
@@ -22,17 +21,17 @@ static QWidget *createPathSelectorDemo() {
 
     auto *group1 = new QGroupBox("OpenFile Mode");
     auto *l1 = new QVBoxLayout(group1);
-    l1->addWidget(new PathSelector(PathSelector::OpenFile, "Audio File:", "WAV Files (*.wav);;All Files (*)"));
+    l1->addWidget(new dsfw::widgets::PathSelector(PathSelector::OpenFile, "Audio File:", "WAV Files (*.wav);;All Files (*)"));
     layout->addWidget(group1);
 
     auto *group2 = new QGroupBox("SaveFile Mode");
     auto *l2 = new QVBoxLayout(group2);
-    l2->addWidget(new PathSelector(PathSelector::SaveFile, "Output:", "TextGrid (*.TextGrid)"));
+    l2->addWidget(new dsfw::widgets::PathSelector(PathSelector::SaveFile, "Output:", "TextGrid (*.TextGrid)"));
     layout->addWidget(group2);
 
     auto *group3 = new QGroupBox("Directory Mode");
     auto *l3 = new QVBoxLayout(group3);
-    l3->addWidget(new PathSelector(PathSelector::Directory, "Working Dir:"));
+    l3->addWidget(new dsfw::widgets::PathSelector(PathSelector::Directory, "Working Dir:"));
     layout->addWidget(group3);
 
     layout->addStretch();
@@ -48,16 +47,16 @@ static QWidget *createProgressDemo() {
     l1->addWidget(new RunProgressRow("Run Task"));
     layout->addWidget(group1);
 
-    auto *group2 = new QGroupBox("FileProgressTracker (Label)");
+    auto *group2 = new QGroupBox("dsfw::widgets::FileProgressTracker (Label)");
     auto *l2 = new QVBoxLayout(group2);
-    auto *tracker1 = new FileProgressTracker(FileProgressTracker::LabelOnly);
+    auto *tracker1 = new dsfw::widgets::FileProgressTracker(FileProgressTracker::LabelOnly);
     tracker1->setProgress(42, 100);
     l2->addWidget(tracker1);
     layout->addWidget(group2);
 
-    auto *group3 = new QGroupBox("FileProgressTracker (Bar)");
+    auto *group3 = new QGroupBox("dsfw::widgets::FileProgressTracker (Bar)");
     auto *l3 = new QVBoxLayout(group3);
-    auto *tracker2 = new FileProgressTracker(FileProgressTracker::ProgressBarStyle);
+    auto *tracker2 = new dsfw::widgets::FileProgressTracker(FileProgressTracker::ProgressBarStyle);
     tracker2->setProgress(75, 100);
     l3->addWidget(tracker2);
     layout->addWidget(group3);
@@ -82,7 +81,7 @@ static QWidget *createPropertyEditorDemo() {
 }
 
 static QWidget *createLogViewerDemo() {
-    auto *viewer = new LogViewer;
+    auto *viewer = new dsfw::widgets::LogViewer;
     viewer->appendLog(LogViewer::Debug, "Application started");
     viewer->appendLog(LogViewer::Info, "Loading model from /path/to/model.onnx");
     viewer->appendLog(LogViewer::Info, "Model loaded successfully");
@@ -101,10 +100,10 @@ int main(int argc, char *argv[]) {
     window.resize(600, 500);
 
     auto *tabs = new QTabWidget;
-    tabs->addTab(createPathSelectorDemo(), "PathSelector");
+    tabs->addTab(createPathSelectorDemo(), "dsfw::widgets::PathSelector");
     tabs->addTab(createProgressDemo(), "Progress");
     tabs->addTab(createPropertyEditorDemo(), "PropertyEditor");
-    tabs->addTab(createLogViewerDemo(), "LogViewer");
+    tabs->addTab(createLogViewerDemo(), "dsfw::widgets::LogViewer");
 
     window.setCentralWidget(tabs);
     window.show();

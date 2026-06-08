@@ -1,4 +1,4 @@
-#include "BoundaryOverlayWidget.h"
+﻿#include "BoundaryOverlayWidget.h"
 #include "IBoundaryModel.h"
 
 #include <dsfw/TimePos.h>
@@ -14,11 +14,9 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
-BoundaryOverlayWidget::BoundaryOverlayWidget(ViewportController *viewport, QWidget *parent)
+BoundaryOverlayWidget::BoundaryOverlayWidget(dsfw::ViewportController *viewport, QWidget *parent)
     : QWidget(parent), m_viewport(viewport)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents, true);

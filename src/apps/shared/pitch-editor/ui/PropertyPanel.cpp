@@ -1,4 +1,4 @@
-#include "PropertyPanel.h"
+﻿#include "PropertyPanel.h"
 #include <dstools/PitchUtils.h>
 #include <dsfw/TimePos.h>
 
@@ -14,7 +14,6 @@
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
-using namespace dsfw;
 
 using ::dstools::NotePitch;
 using ::dstools::parseNoteName;
@@ -112,7 +111,7 @@ PropertyPanel::PropertyPanel(QWidget *parent)
     setupUI();
 }
 
-PropertyPanel::~PropertyPanel() = default;
+PropertyPanel::~dsfw::PropertyPanel() = default;
 
 void PropertyPanel::setupUI() {
     auto *outer = new QVBoxLayout(this);

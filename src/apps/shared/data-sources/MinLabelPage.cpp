@@ -1,4 +1,4 @@
-#include "MinLabelPage.h"
+﻿#include "MinLabelPage.h"
 
 #include "AsrPipeline.h"
 #include "BatchProcessDialog.h"
@@ -37,9 +37,8 @@
 
 namespace dstools {
 
-    using namespace dsfw;
 
-    MinLabelPage::MinLabelPage(QWidget *parent) : EditorPageBase("MinLabel", parent) {
+    MinLabelPage::MinLabelPage(QWidget *parent) : dsfw::EditorPageBase("MinLabel", parent) {
         setBatchTaskKey(QStringLiteral("asr"));
         m_editor = new Minlabel::MinLabelEditor(this);
 
@@ -106,7 +105,7 @@ namespace dstools {
                                      tr("Enter raw lyrics here..."));
     }
 
-    MinLabelPage::~MinLabelPage() = default;
+    MinLabelPage::~dsfw::MinLabelPage() = default;
 
     void MinLabelPage::updateUndoRedoState() {
         auto *contentText = m_editor->textWidget()->contentText;
@@ -204,7 +203,7 @@ namespace dstools {
             batchG2P(sliceId);
     }
 
-    // ── EditorPageBase hooks ──────────────────────────────────────────────────────
+    // ── dsfw::EditorPageBase hooks ──────────────────────────────────────────────────────
 
     QString MinLabelPage::windowTitlePrefix() const {
         return tr("Lyrics Labeling");
@@ -225,7 +224,7 @@ namespace dstools {
                 ("Failed to load slice for save: " + currentSliceId().toStdString() + " - " + result.error()).c_str());
             return false;
         }
-        DsTextDocument doc = std::move(result.value());
+        dsfw::DsTextDocument doc = std::move(result.value());
 
         IntervalLayer *graphemeLayer = nullptr;
         for (auto &layer : doc.layers) {
@@ -351,7 +350,7 @@ namespace dstools {
         m_asr.reset();
     }
 
-    // ── IPageActions ──────────────────────────────────────────────────────────────
+    // ── dsfw::IPageActions ──────────────────────────────────────────────────────────────
 
     QMenuBar *MinLabelPage::createMenuBar(QWidget *parent) {
         auto *bar = new QMenuBar(parent);
@@ -468,16 +467,16 @@ namespace dstools {
 
         runAsyncTask<QString>(
             QStringLiteral("asr"), sliceId,
-            [weakAsr, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> Result<QString> {
+            [weakAsr, audioPath](const std::shared_ptr<std::atomic<bool>> &) -> dsfw::Result<QString> {
                 auto asr = weakAsr.lock();
                 if (!asr)
-                    return Err<QString>("ASR engine is null");
+                    return dsfw::Err<QString>("ASR engine is null");
                 std::string msg;
                 if (asr->recognize(audioPath.toStdWString(), msg))
                     return QString::fromUtf8(msg);
-                return Err<QString>(std::move(msg));
+                return dsfw::Err<QString>(std::move(msg));
             },
-            [this](const QString &sliceId, const Result<QString> &result) {
+            [this](const QString &sliceId, const dsfw::Result<QString> &result) {
                 setBatchRunning(false);
                 if (result) {
                     setAsrResult(sliceId, result.value());
@@ -525,11 +524,11 @@ namespace dstools {
         config.skipExistingLabel = tr("Skip slices with existing lyrics");
         config.defaultSkipExisting = true;
 
-        runBatchProcess(config, ids, [this](BatchProcessDialog *dlg) {
+        runBatchProcess(config, ids, [this](dsfw::BatchProcessDialog *dlg) {
             auto *autoG2PBox = new QCheckBox(tr("自动 G2P (拼音) 到结果"), dlg);
             autoG2PBox->setChecked(false);
             dlg->addParamWidget(autoG2PBox);
-            QPointer<MinLabelPage> guard(this);
+            QPointer<dsfw::MinLabelPage> guard(this);
             connect(dlg, &BatchProcessDialog::started, this, [this, guard, autoG2PBox]() {
                 if (guard)
                     m_batchAutoG2P = autoG2PBox->isChecked();
@@ -542,7 +541,7 @@ namespace dstools {
             return;
 
         auto result = source()->loadSlice(sliceId);
-        DsTextDocument doc;
+        dsfw::DsTextDocument doc;
         if (result)
             doc = std::move(result.value());
 
@@ -660,7 +659,7 @@ namespace dstools {
         if (m_matchLyric && m_matchLyric->isInitialized())
             return;
 
-        QString lyricDir = settings().get(settings::kLyricDir);
+        QString lyricDir = dsfw::settings().get(settings::kLyricDir);
 
         if (lyricDir.isEmpty() || !QDir(lyricDir).exists()) {
             dsfw::widgets::FilePathSelector selector(
@@ -669,7 +668,7 @@ namespace dstools {
             lyricDir = selector.exec();
             if (lyricDir.isEmpty())
                 return;
-            settings().set(settings::kLyricDir, lyricDir);
+            dsfw::settings().set(settings::kLyricDir, lyricDir);
         }
 
         if (!m_matchLyric)
@@ -750,7 +749,7 @@ namespace dstools {
             return;
 
         auto result = source()->loadSlice(sliceId);
-        DsTextDocument doc;
+        dsfw::DsTextDocument doc;
         if (result)
             doc = std::move(result.value());
 

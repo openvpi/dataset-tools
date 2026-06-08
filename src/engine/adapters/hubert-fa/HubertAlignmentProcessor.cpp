@@ -1,4 +1,4 @@
-#include "HubertAlignmentProcessor.h"
+﻿#include "HubertAlignmentProcessor.h"
 
 #include <hubert-infer/Hfa.h>
 
@@ -10,15 +10,13 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-    using namespace dsfw;
 
-    static TaskProcessorRegistry::Registrar<HubertAlignmentProcessor> s_reg(QStringLiteral("phoneme_alignment"),
+    static TaskProcessorRegistry::Registrar<dsfw::HubertAlignmentProcessor> s_reg(QStringLiteral("phoneme_alignment"),
                                                                             QStringLiteral("hubert-fa"));
 
     HubertAlignmentProcessor::HubertAlignmentProcessor() = default;
-    HubertAlignmentProcessor::~HubertAlignmentProcessor() = default;
+    HubertAlignmentProcessor::~dsfw::HubertAlignmentProcessor() = default;
 
     QString HubertAlignmentProcessor::processorId() const {
         return QStringLiteral("hubert-fa");
@@ -34,14 +32,14 @@ using namespace dsfw;
                 {{QStringLiteral("phoneme"), QStringLiteral("phoneme")}}};
     }
 
-    ProcessorConfig HubertAlignmentProcessor::capabilities() const noexcept {
-        ProcessorConfig cap;
+    dsfw::ProcessorConfig HubertAlignmentProcessor::capabilities() const noexcept {
+        dsfw::ProcessorConfig cap;
         cap["language"] = ConfigValue(false);
         cap["nonSpeechPhonemes"] = ConfigValue(std::vector<QString>{});
         return cap;
     }
 
-    Result<void> HubertAlignmentProcessor::initialize(ModelManager & /*mm*/, const ProcessorConfig &modelConfig) {
+    dsfw::Result<void> HubertAlignmentProcessor::initialize(dsfw::ModelManager & /*mm*/, const dsfw::ProcessorConfig &modelConfig) {
         std::lock_guard<std::mutex> lock(m_mutex);
 
         auto path = configValueString(modelConfig, QStringLiteral("path")).toStdString();
@@ -68,9 +66,9 @@ using namespace dsfw;
         auto result = m_hfa->load(path, provider, deviceId);
         if (!result) {
             m_hfa.reset();
-            return Err(result.error());
+            return dsfw::Err(result.error());
         }
-        return Ok();
+        return dsfw::Ok();
     }
 
     void HubertAlignmentProcessor::release() {
@@ -78,11 +76,11 @@ using namespace dsfw;
         m_hfa.reset();
     }
 
-    Result<TaskOutput> HubertAlignmentProcessor::process(const TaskInput &input) {
+    dsfw::Result<dsfw::TaskOutput> HubertAlignmentProcessor::process(const dsfw::TaskInput &input) {
         std::lock_guard<std::mutex> lock(m_mutex);
 
         if (!m_hfa || !m_hfa->isOpen()) {
-            return Result<TaskOutput>::Error("HuBERT-FA model is not loaded");
+            return dsfw::Result<dsfw::TaskOutput>::Error("HuBERT-FA model is not loaded");
         }
 
         // Per-call config overrides
@@ -110,7 +108,7 @@ using namespace dsfw;
         }
 
         if (lyricsText.empty()) {
-            return Result<TaskOutput>::Error("No grapheme/lyrics text provided for forced alignment");
+            return dsfw::Result<dsfw::TaskOutput>::Error("No grapheme/lyrics text provided for forced alignment");
         }
 
         DSFW_LOG_INFO("fa", ("FA process started | language: " + language
@@ -121,7 +119,7 @@ using namespace dsfw;
             m_hfa->recognize(dsfw::PathUtils::toStdPath(input.audioPath), language, nonSpeechPh, lyricsText, words);
         if (!recognizeResult) {
             DSFW_LOG_ERROR("fa", ("FA process failed: " + recognizeResult.error()).c_str());
-            return Result<TaskOutput>::Error(recognizeResult.error());
+            return dsfw::Result<dsfw::TaskOutput>::Error(recognizeResult.error());
         }
 
         // Convert results to output layer
@@ -138,9 +136,9 @@ using namespace dsfw;
 
         DSFW_LOG_INFO("fa", ("FA process completed | phonemes: " + std::to_string(phonemeArray.size())).c_str());
 
-        TaskOutput output;
+        dsfw::TaskOutput output;
         output.layers[QStringLiteral("phoneme")] = LayerData::fromJson(std::move(phonemeArray));
-        return Result<TaskOutput>::Ok(std::move(output));
+        return dsfw::Result<dsfw::TaskOutput>::Ok(std::move(output));
     }
 
 } // namespace dstools

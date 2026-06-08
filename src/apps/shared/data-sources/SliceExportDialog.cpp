@@ -1,4 +1,4 @@
-#include "SliceExportDialog.h"
+﻿#include "SliceExportDialog.h"
 
 #include <dsfw/widgets/FilePathSelector.h>
 
@@ -13,7 +13,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
     SliceExportDialog::SliceExportDialog(QWidget *parent) : QDialog(parent) {
         setWindowTitle(tr("Export Slice Audio"));

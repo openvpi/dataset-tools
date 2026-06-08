@@ -1,4 +1,4 @@
-#include "TierLabelPanel.h"
+﻿#include "TierLabelPanel.h"
 
 #include <dsfw/Theme.h>
 
@@ -13,11 +13,9 @@
 
 namespace dstools {
 
-using namespace dsfw;
 namespace phonemelabeler {
-using namespace dsfw;
 
-TierLabelPanel::TierLabelPanel(ViewportController *viewport, QWidget *parent)
+TierLabelPanel::TierLabelPanel(dsfw::ViewportController *viewport, QWidget *parent)
     : QWidget(parent)
     , m_viewport(viewport)
 {

@@ -1,4 +1,4 @@
-#include "BoundaryCommands.h"
+﻿#include "BoundaryCommands.h"
 #include "../TextGridDocument.h"
 
 #include <QString>
@@ -6,11 +6,10 @@
 
 namespace dstools {
 namespace phonemelabeler {
-using namespace dsfw;
 
 // ─── SetIntervalTextCommand ───────────────────────────────────────────────────
 
-SetIntervalTextCommand::SetIntervalTextCommand(TextGridDocument *doc, int tierIndex,
+SetIntervalTextCommand::SetIntervalTextCommand(dsfw::TextGridDocument *doc, int tierIndex,
                                                int intervalIndex, const QString &oldText,
                                                const QString &newText, QUndoCommand *parent)
     : QUndoCommand(parent)
@@ -47,8 +46,8 @@ bool SetIntervalTextCommand::mergeWith(const QUndoCommand *other) {
 
 // ─── InsertBoundaryCommand ────────────────────────────────────────────────────
 
-InsertBoundaryCommand::InsertBoundaryCommand(TextGridDocument *doc, int tierIndex,
-                                            TimePos time, QUndoCommand *parent)
+InsertBoundaryCommand::InsertBoundaryCommand(dsfw::TextGridDocument *doc, int tierIndex,
+                                            dsfw::TimePos time, QUndoCommand *parent)
     : QUndoCommand(parent)
     , m_doc(doc)
     , m_tierIndex(tierIndex)
@@ -67,7 +66,7 @@ void InsertBoundaryCommand::redo() {
 void InsertBoundaryCommand::undo() {
     if (m_doc) {
         int count = m_doc->boundaryCount(m_tierIndex);
-        constexpr TimePos kTolerance = 1000; // 1ms
+        constexpr dsfw::TimePos kTolerance = 1000; // 1ms
         for (int i = 0; i < count; ++i) {
             if (std::abs(m_doc->boundaryTime(m_tierIndex, i) - m_time) < kTolerance) {
                 m_doc->removeBoundary(m_tierIndex, i);
@@ -79,7 +78,7 @@ void InsertBoundaryCommand::undo() {
 
 // ─── RemoveBoundaryCommand ────────────────────────────────────────────────────
 
-RemoveBoundaryCommand::RemoveBoundaryCommand(TextGridDocument *doc, int tierIndex,
+RemoveBoundaryCommand::RemoveBoundaryCommand(dsfw::TextGridDocument *doc, int tierIndex,
                                             int boundaryIndex, QUndoCommand *parent)
     : QUndoCommand(parent)
     , m_doc(doc)

@@ -1,4 +1,4 @@
-#include "AsrPipeline.h"
+﻿#include "AsrPipeline.h"
 #include "MatchLyric.h"
 
 #include <Model.h>
@@ -103,7 +103,7 @@ namespace LyricFA {
     AsrThread::AsrThread(Asr *asr, QString filename, QString wavPath, QString labPath,
                      const QSharedPointer<Pinyin::Pinyin> &g2p,
                      ILyricFileLoader *loader)
-    : AsyncTask(std::move(filename)), m_asr(asr), m_wavPath(std::move(wavPath)), m_labPath(std::move(labPath)),
+    : dsfw::AsyncTask(std::move(filename)), m_asr(asr), m_wavPath(std::move(wavPath)), m_labPath(std::move(labPath)),
       m_g2p(g2p), m_loader(loader) {
 }
 
@@ -180,7 +180,6 @@ FunAsr::Model *FunAsrAdapter::model() const {
 
 namespace dstools {
 
-using namespace dsfw;
 
 static dsfw::TaskProcessorRegistry::Registrar<FunAsrProcessor> s_reg(
     QStringLiteral("asr"), QStringLiteral("funasr"));
@@ -200,8 +199,8 @@ TaskSpec FunAsrProcessor::taskSpec() const {
     return {QStringLiteral("asr"), {}, {{QStringLiteral("text"), QStringLiteral("transcription")}}};
 }
 
-Result<void> FunAsrProcessor::initialize(ModelManager & /*mm*/,
-                                         const ProcessorConfig &modelConfig) {
+dsfw::Result<void> FunAsrProcessor::initialize(dsfw::ModelManager & /*mm*/,
+                                         const dsfw::ProcessorConfig &modelConfig) {
     std::lock_guard lock(m_mutex);
 
     const auto path = configValueString(modelConfig, QStringLiteral("path"));
@@ -217,9 +216,9 @@ Result<void> FunAsrProcessor::initialize(ModelManager & /*mm*/,
     m_asr = std::make_unique<LyricFA::Asr>(path, provider, deviceId);
     if (!m_asr->initialized()) {
         m_asr.reset();
-        return Result<void>::Error("Failed to initialize FunASR model");
+        return dsfw::Result<void>::Error("Failed to initialize FunASR model");
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 void FunAsrProcessor::release() {
@@ -227,23 +226,23 @@ void FunAsrProcessor::release() {
     m_asr.reset();
 }
 
-Result<TaskOutput> FunAsrProcessor::process(const TaskInput &input) {
+dsfw::Result<dsfw::TaskOutput> FunAsrProcessor::process(const dsfw::TaskInput &input) {
     std::lock_guard lock(m_mutex);
 
     if (!m_asr || !m_asr->initialized()) {
-        return Result<TaskOutput>::Error("FunASR model is not initialized");
+        return dsfw::Result<dsfw::TaskOutput>::Error("FunASR model is not initialized");
     }
 
     std::string msg;
     const bool ok = m_asr->recognize(dsfw::PathUtils::toStdPath(input.audioPath), msg);
     if (!ok) {
-        return Result<TaskOutput>::Error(msg);
+        return dsfw::Result<dsfw::TaskOutput>::Error(msg);
     }
 
-    TaskOutput output;
+    dsfw::TaskOutput output;
     output.layers[QStringLiteral("text")] = LayerData::fromJson(
         nlohmann::json{{u8"text", msg}});
-    return Result<TaskOutput>::Ok(std::move(output));
+    return dsfw::Result<dsfw::TaskOutput>::Ok(std::move(output));
 }
 
 } // namespace dstools

@@ -1,4 +1,4 @@
-#include "GameMidiProcessor.h"
+﻿#include "GameMidiProcessor.h"
 
 #include <game-infer/Game.h>
 
@@ -9,16 +9,14 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 // Self-register with the task processor registry.
-static TaskProcessorRegistry::Registrar<GameMidiProcessor> s_reg(
+static TaskProcessorRegistry::Registrar<dsfw::GameMidiProcessor> s_reg(
     QStringLiteral("midi_transcription"), QStringLiteral("game"));
 
 GameMidiProcessor::GameMidiProcessor() = default;
-GameMidiProcessor::~GameMidiProcessor() = default;
+GameMidiProcessor::~dsfw::GameMidiProcessor() = default;
 
 QString GameMidiProcessor::processorId() const {
     return QStringLiteral("game");
@@ -32,8 +30,8 @@ TaskSpec GameMidiProcessor::taskSpec() const {
     return {"midi_transcription", {}, {{"midi", "midi"}}};
 }
 
-ProcessorConfig GameMidiProcessor::capabilities() const noexcept {
-        ProcessorConfig cap;
+dsfw::ProcessorConfig GameMidiProcessor::capabilities() const noexcept {
+        dsfw::ProcessorConfig cap;
         cap["segThreshold"] = ConfigValue(0.0);
         cap["segRadiusFrames"] = ConfigValue(0.0);
         cap["estThreshold"] = ConfigValue(0.0);
@@ -42,8 +40,8 @@ ProcessorConfig GameMidiProcessor::capabilities() const noexcept {
         return cap;
     }
 
-Result<void> GameMidiProcessor::initialize(ModelManager & /*mm*/,
-                                           const ProcessorConfig &modelConfig) {
+dsfw::Result<void> GameMidiProcessor::initialize(dsfw::ModelManager & /*mm*/,
+                                           const dsfw::ProcessorConfig &modelConfig) {
     std::lock_guard lock(m_mutex);
 
     if (!m_game) {
@@ -63,10 +61,10 @@ Result<void> GameMidiProcessor::initialize(ModelManager & /*mm*/,
     auto result = m_game->loadModel(std::filesystem::path(path), provider, deviceId);
     if (!result) {
         m_game.reset();
-        return Err(result.error());
+        return dsfw::Err(result.error());
     }
 
-    return Ok();
+    return dsfw::Ok();
 }
 
 void GameMidiProcessor::release() {
@@ -74,7 +72,7 @@ void GameMidiProcessor::release() {
     m_game.reset();
 }
 
-void GameMidiProcessor::applyConfig(const ProcessorConfig &config) const {
+void GameMidiProcessor::applyConfig(const dsfw::ProcessorConfig &config) const {
         if (!m_game)
             return;
 
@@ -106,11 +104,11 @@ std::vector<float> GameMidiProcessor::generateD3pmTimesteps(int nSteps) {
     return ts;
 }
 
-Result<TaskOutput> GameMidiProcessor::process(const TaskInput &input) {
+dsfw::Result<dsfw::TaskOutput> GameMidiProcessor::process(const dsfw::TaskInput &input) {
     std::lock_guard lock(m_mutex);
 
     if (!m_game || !m_game->isOpen()) {
-        return Err<TaskOutput>("Model not loaded");
+        return dsfw::Err<dsfw::TaskOutput>("Model not loaded");
     }
 
     applyConfig(input.config);
@@ -123,23 +121,23 @@ Result<TaskOutput> GameMidiProcessor::process(const TaskInput &input) {
                                        dsfw::PathUtils::toStdPath(savePath),
                                        std::string{}, false, opts, nullptr);
         if (!result) {
-            return Err<TaskOutput>(result.error());
+            return dsfw::Err<dsfw::TaskOutput>(result.error());
         }
-        TaskOutput output;
+        dsfw::TaskOutput output;
         output.layers["alignment"] = LayerData::fromJson(nlohmann::json::object({
             {"csvPath", csvPath.toStdString()},
             {"savePath", savePath.toStdString()}
         }));
-        return Ok(std::move(output));
+        return dsfw::Ok(std::move(output));
     }
 
     std::vector<Game::GameNote> notes;
     auto result = m_game->getNotes(input.audioPath.toStdWString(), notes, nullptr);
     if (!result) {
-        return Err<TaskOutput>(result.error());
+        return dsfw::Err<dsfw::TaskOutput>(result.error());
     }
 
-    TaskOutput output;
+    dsfw::TaskOutput output;
     auto &midiLayerData = output.layers["midi"];
     nlohmann::json midiLayer = nlohmann::json::array();
     for (const auto &n : notes) {
@@ -151,7 +149,7 @@ Result<TaskOutput> GameMidiProcessor::process(const TaskInput &input) {
         });
     }
     midiLayerData = LayerData::fromJson(midiLayer);
-    return Ok(std::move(output));
+    return dsfw::Ok(std::move(output));
 }
 
 } // namespace dstools

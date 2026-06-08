@@ -1,4 +1,4 @@
-#include "TaskWindowAdapter.h"
+﻿#include "TaskWindowAdapter.h"
 
 #include "commands/DiscardSliceCommand.h"
 
@@ -7,7 +7,6 @@
 
 namespace dstools::labeler {
 
-using namespace dsfw;
 
 TaskWindowAdapter::TaskWindowAdapter(dsfw::widgets::TaskWindow *page, QWidget *parent)
     : QWidget(parent), m_page(page) {
@@ -20,7 +19,7 @@ TaskWindowAdapter::TaskWindowAdapter(dsfw::widgets::TaskWindow *page, QWidget *p
     setupSliceContextMenu();
 }
 
-TaskWindowAdapter::~TaskWindowAdapter() = default;
+TaskWindowAdapter::~dsfw::TaskWindowAdapter() = default;
 
 dsfw::widgets::TaskWindow *TaskWindowAdapter::innerPage() const {
     return m_page;

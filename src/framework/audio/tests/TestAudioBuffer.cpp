@@ -1,4 +1,4 @@
-/// @file TestAudioBuffer.cpp
+﻿/// @file TestAudioBuffer.cpp
 /// @brief Unit tests for dsfw::audio::AudioBuffer.
 
 #include <dsfw/audio/AudioBuffer.h>
@@ -8,7 +8,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace dsfw::audio;
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-#include <QDir>
+﻿#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <algorithm>
@@ -16,7 +16,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 namespace {
 
@@ -44,12 +43,12 @@ QString formatF0Seq(const std::vector<float>& f0) {
     return QString::fromStdString(oss.str());
 }
 
-Result<std::vector<float>> extractF0Builtin(const QString& wavPath, int sampleRate, int hopSize, float minF0,
+dsfw::Result<std::vector<float>> extractF0Builtin(const QString& wavPath, int sampleRate, int hopSize, float minF0,
                                             float maxF0) {
     auto pipeline = dsfw::audio::AudioPipeline::create();
     auto result = pipeline.decodeToMonoFloat(dsfw::PathUtils::toUtf8(dsfw::PathUtils::toStdPath(wavPath)), sampleRate);
     if (!result.ok()) {
-        return Result<std::vector<float>>::Error(result.error());
+        return dsfw::Result<std::vector<float>>::Error(result.error());
     }
     auto buffer = result.value();
     auto floats = buffer.floats();
@@ -117,17 +116,17 @@ Result<std::vector<float>> extractF0Builtin(const QString& wavPath, int sampleRa
 
 } // anonymous namespace
 
-Result<void> CsvToDsConverter::convert(const Options& opts, F0Callback f0Callback, ProgressCallback progress) {
+dsfw::Result<void> CsvToDsConverter::convert(const Options& opts, F0Callback f0Callback, ProgressCallback progress) {
     std::vector<TranscriptionRow> rows;
     auto result = CsvAdapter::readRows(opts.csvPath, rows);
     if (!result.ok()) {
-        return Result<void>::Error(result.error());
+        return dsfw::Result<void>::Error(result.error());
     }
 
     return convertFromMemory(rows, opts, f0Callback, progress);
 }
 
-Result<void> CsvToDsConverter::convertFromMemory(const std::vector<TranscriptionRow>& rows, const Options& opts,
+dsfw::Result<void> CsvToDsConverter::convertFromMemory(const std::vector<TranscriptionRow>& rows, const Options& opts,
                                                  F0Callback f0Callback, ProgressCallback progress) {
     QDir outDir(opts.outputDir);
     if (!outDir.exists()) {
@@ -150,7 +149,7 @@ Result<void> CsvToDsConverter::convertFromMemory(const std::vector<Transcription
         auto f0Result = f0Callback ? f0Callback(wavPath)
                                    : extractF0Builtin(wavPath, opts.sampleRate, opts.hopSize, opts.minF0, opts.maxF0);
         if (!f0Result.ok()) {
-            return Result<void>::Error(f0Result.error());
+            return dsfw::Result<void>::Error(f0Result.error());
         }
         const auto& f0 = f0Result.value();
 
@@ -181,21 +180,21 @@ Result<void> CsvToDsConverter::convertFromMemory(const std::vector<Transcription
 
         sentence["f0_timestep"] = std::to_string(static_cast<double>(opts.hopSize) / opts.sampleRate);
 
-        DsDocument doc;
+        dsfw::DsDocument doc;
         doc.addRawSentence(sentence.dump());
         auto saveResult = doc.saveFile(dsPath);
         if (!saveResult) {
-            return Result<void>::Error(saveResult.error());
+            return dsfw::Result<void>::Error(saveResult.error());
         }
     }
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> CsvToDsConverter::dsToCsv(const QString& dsDir, const QString& csvPath) {
+dsfw::Result<void> CsvToDsConverter::dsToCsv(const QString& dsDir, const QString& csvPath) {
     QDir dir(dsDir);
     if (!dir.exists()) {
-        return Result<void>::Error((QStringLiteral("Directory does not exist: ") + dsDir).toStdString());
+        return dsfw::Result<void>::Error((QStringLiteral("Directory does not exist: ") + dsDir).toStdString());
     }
     const QFileInfoList entries = dir.entryInfoList({QStringLiteral("*.ds")}, QDir::Files, QDir::Name);
 
@@ -211,11 +210,11 @@ Result<void> CsvToDsConverter::dsToCsv(const QString& dsDir, const QString& csvP
 
         auto docResult = DsDocument::loadFile(entry.absoluteFilePath());
         if (!docResult) {
-            return Result<void>::Error(docResult.error());
+            return dsfw::Result<void>::Error(docResult.error());
         }
-        DsDocument doc = std::move(*docResult);
+        dsfw::DsDocument doc = std::move(*docResult);
         if (doc.isEmpty())
-            return Result<void>::Error("Empty document: " + entry.fileName().toStdString());
+            return dsfw::Result<void>::Error("Empty document: " + entry.fileName().toStdString());
 
         const auto sv = doc.sentenceView(0);
 
@@ -244,11 +243,11 @@ Result<void> CsvToDsConverter::dsToCsv(const QString& dsDir, const QString& csvP
 
         auto docResult = DsDocument::loadFile(entry.absoluteFilePath());
         if (!docResult) {
-            return Result<void>::Error(docResult.error());
+            return dsfw::Result<void>::Error(docResult.error());
         }
-        DsDocument doc = std::move(*docResult);
+        dsfw::DsDocument doc = std::move(*docResult);
         if (doc.isEmpty())
-            return Result<void>::Error("Empty document: " + entry.fileName().toStdString());
+            return dsfw::Result<void>::Error("Empty document: " + entry.fileName().toStdString());
 
         const int count = doc.sentenceCount();
         for (int idx = 0; idx < count; ++idx) {
@@ -291,9 +290,9 @@ Result<void> CsvToDsConverter::dsToCsv(const QString& dsDir, const QString& csvP
 
     auto result = CsvAdapter::writeRows(csvPath, rows);
     if (!result.ok()) {
-        return Result<void>::Error(result.error());
+        return dsfw::Result<void>::Error(result.error());
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 } // namespace dstools

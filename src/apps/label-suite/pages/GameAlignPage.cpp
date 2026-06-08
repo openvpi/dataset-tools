@@ -1,4 +1,4 @@
-#include "GameAlignPage.h"
+﻿#include "GameAlignPage.h"
 
 #include <QComboBox>
 #include <QDir>
@@ -19,10 +19,8 @@
 
 namespace dstools::labeler {
 
-using namespace dsfw;
-    using namespace dsfw;
 
-GameAlignPage::GameAlignPage(QWidget* parent) : WizardPageBase(parent) {
+GameAlignPage::GameAlignPage(QWidget* parent) : dsfw::WizardPageBase(parent) {
     buildUi();
 }
 
@@ -74,9 +72,9 @@ void GameAlignPage::buildUi() {
 
         m_log->append(tr("Found %1 audio file(s).").arg(wavFiles.size()));
 
-        std::vector<PipelineContext> contexts;
+        std::vector<dsfw::PipelineContext> contexts;
         for (const QString& fileName : wavFiles) {
-            PipelineContext ctx;
+            dsfw::PipelineContext ctx;
             ctx.itemId = QFileInfo(fileName).completeBaseName();
             ctx.audioPath = QDir(audioDir).filePath(fileName);
             contexts.push_back(std::move(ctx));
@@ -117,7 +115,7 @@ void GameAlignPage::buildUi() {
             }
         }
 
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         QObject::connect(&runner, &PipelineRunner::progress, this, [this](int, int item, int total, const QString&) {
             if (total > 0)
                 m_runProgress->setProgress(item * 100 / total);

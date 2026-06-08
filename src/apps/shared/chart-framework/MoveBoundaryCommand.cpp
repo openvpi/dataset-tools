@@ -1,16 +1,14 @@
-#include "MoveBoundaryCommand.h"
+﻿#include "MoveBoundaryCommand.h"
 #include "IBoundaryModel.h"
 
 #include <QString>
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 MoveBoundaryCommand::MoveBoundaryCommand(IBoundaryModel *model, int tierIndex,
-                                       int boundaryIndex, TimePos oldTime, TimePos newTime,
+                                       int boundaryIndex, dsfw::TimePos oldTime, dsfw::TimePos newTime,
                                        QUndoCommand *parent)
     : QUndoCommand(parent)
     , m_model(model)
@@ -37,7 +35,7 @@ void MoveBoundaryCommand::undo() {
 bool MoveBoundaryCommand::mergeWith(const QUndoCommand *other) {
     if (other->id() != id())
         return false;
-    auto *o = static_cast<const MoveBoundaryCommand *>(other);
+    auto *o = static_cast<const dsfw::MoveBoundaryCommand *>(other);
     if (o->m_tierIndex != m_tierIndex || o->m_boundaryIndex != m_boundaryIndex)
         return false;
     m_newTime = o->m_newTime;

@@ -1,4 +1,4 @@
-#include "AudioSettingsPanel.h"
+﻿#include "AudioSettingsPanel.h"
 #include "Keys.h"
 
 #include <dsfw/AppSettings.h>
@@ -11,7 +11,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 AudioSettingsPanel::AudioSettingsPanel(QWidget *parent) : QWidget(parent) {}
 
@@ -41,7 +40,7 @@ QWidget *AudioSettingsPanel::createAudioTab() {
         m_audioDeviceCombo->setEnabled(false);
     }
 
-    AppSettings settings(QStringLiteral("DsLabeler"));
+    dsfw::AppSettings settings(QStringLiteral("DsLabeler"));
     QString savedDevice = settings.get(settings::app::kAudioDevice);
     if (!savedDevice.isEmpty()) {
         for (int i = 0; i < m_audioDeviceCombo->count(); ++i) {
@@ -73,7 +72,7 @@ QWidget *AudioSettingsPanel::createAudioTab() {
 
 void AudioSettingsPanel::connectDirtySignals() {
     connect(m_audioDeviceCombo, &QComboBox::currentIndexChanged, this, [this]() {
-        AppSettings settings(QStringLiteral("DsLabeler"));
+        dsfw::AppSettings settings(QStringLiteral("DsLabeler"));
         settings.set(settings::app::kAudioDevice,
                      m_audioDeviceCombo->currentData().toString());
         emit dirtyChanged();

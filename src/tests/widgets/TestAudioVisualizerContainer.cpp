@@ -1,4 +1,4 @@
-#include <QtTest/QtTest>
+﻿#include <QtTest/QtTest>
 
 #include <QLabel>
 #include <QApplication>
@@ -9,8 +9,6 @@
 
 #include "audio-visualizer/AudioVisualizerContainer.h"
 
-using namespace dsfw;
-using namespace dsfw::widgets;
 
 class TestAudioVisualizerContainer : public QObject {
     Q_OBJECT
@@ -45,7 +43,7 @@ void TestAudioVisualizerContainer::cleanupTestCase() {
 }
 
 void TestAudioVisualizerContainer::construction() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     QVERIFY(container.viewport() != nullptr);
     QVERIFY(container.timeRuler() != nullptr);
     QVERIFY(container.boundaryOverlay() != nullptr);
@@ -56,7 +54,7 @@ void TestAudioVisualizerContainer::construction() {
 }
 
 void TestAudioVisualizerContainer::viewport_access() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     auto* vp = container.viewport();
     QVERIFY(vp != nullptr);
     QCOMPARE(vp->startSec(), 0.0);
@@ -65,14 +63,14 @@ void TestAudioVisualizerContainer::viewport_access() {
 }
 
 void TestAudioVisualizerContainer::set_total_duration() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     container.setTotalDuration(120.0);
     auto* vp = container.viewport();
     QCOMPARE(vp->totalDuration(), 120.0);
 }
 
 void TestAudioVisualizerContainer::viewport_zoom() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     container.setTotalDuration(60.0);
     auto* vp = container.viewport();
     vp->setViewRange(0.0, 10.0);
@@ -84,7 +82,7 @@ void TestAudioVisualizerContainer::viewport_zoom() {
 }
 
 void TestAudioVisualizerContainer::viewport_scroll() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     container.setTotalDuration(60.0);
     auto* vp = container.viewport();
     vp->setViewRange(5.0, 15.0);
@@ -94,7 +92,7 @@ void TestAudioVisualizerContainer::viewport_scroll() {
 }
 
 void TestAudioVisualizerContainer::add_chart() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     auto* label = new QLabel(QStringLiteral("test chart"));
     container.addChart(QStringLiteral("chart1"), label, 0);
     auto order = container.chartOrder();
@@ -102,7 +100,7 @@ void TestAudioVisualizerContainer::add_chart() {
 }
 
 void TestAudioVisualizerContainer::remove_chart() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     auto* label = new QLabel(QStringLiteral("test chart"));
     container.addChart(QStringLiteral("chart1"), label, 0);
     container.removeChart(QStringLiteral("chart1"));
@@ -111,7 +109,7 @@ void TestAudioVisualizerContainer::remove_chart() {
 }
 
 void TestAudioVisualizerContainer::chart_order() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     auto* label1 = new QLabel(QStringLiteral("c1"));
     auto* label2 = new QLabel(QStringLiteral("c2"));
     auto* label3 = new QLabel(QStringLiteral("c3"));
@@ -128,7 +126,7 @@ void TestAudioVisualizerContainer::chart_order() {
 }
 
 void TestAudioVisualizerContainer::chart_visibility() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     auto* label = new QLabel(QStringLiteral("test chart"));
     container.addChart(QStringLiteral("chart1"), label, 0);
     container.setChartVisible(QStringLiteral("chart1"), false);
@@ -138,7 +136,7 @@ void TestAudioVisualizerContainer::chart_visibility() {
 }
 
 void TestAudioVisualizerContainer::resolution_persistence() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     container.setTotalDuration(60.0);
     container.setResolutionKey(QStringLiteral("Viewport/test/resolution"));
 
@@ -149,7 +147,7 @@ void TestAudioVisualizerContainer::resolution_persistence() {
     QSettings settings;
     QVERIFY(settings.value(QStringLiteral("Viewport/test/resolution")).toInt() == 200);
 
-    AudioVisualizerContainer container2(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container2(QStringLiteral("test"), nullptr);
     container2.setTotalDuration(60.0);
     container2.setResolutionKey(QStringLiteral("Viewport/test/resolution"));
     QVERIFY(container2.restoreResolution());
@@ -157,21 +155,21 @@ void TestAudioVisualizerContainer::resolution_persistence() {
 }
 
 void TestAudioVisualizerContainer::fit_to_window() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     container.setTotalDuration(30.0);
     container.fitToWindow();
     QVERIFY(container.viewport()->resolution() > 0);
 }
 
 void TestAudioVisualizerContainer::set_audio_data() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     std::vector<float> samples(44100, 0.0f);
     container.setAudioData(samples, 44100);
     QVERIFY(container.miniMap() != nullptr);
 }
 
 void TestAudioVisualizerContainer::set_boundary_model() {
-    AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
+    dsfw::AudioVisualizerContainer container(QStringLiteral("test"), nullptr);
     QVERIFY(container.boundaryModel() == nullptr);
     container.setBoundaryModel(nullptr);
     QVERIFY(container.boundaryModel() == nullptr);

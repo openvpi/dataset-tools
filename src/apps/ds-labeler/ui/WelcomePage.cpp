@@ -1,4 +1,4 @@
-#include "WelcomePage.h"
+﻿#include "WelcomePage.h"
 
 #include "Keys.h"
 
@@ -22,20 +22,19 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 static constexpr int kMaxRecentProjects = 10;
 
 static void writeRecentProjects(const QStringList& list) {
-    AppSettings settings(QStringLiteral("DsLabeler"));
+    dsfw::AppSettings settings(QStringLiteral("DsLabeler"));
     settings.set(settings::app::kRecentProjects, list.join(QLatin1Char('\n')));
 }
 
 static QStringList readRecentProjects() {
-    AppSettings settings(QStringLiteral("DsLabeler"));
+    dsfw::AppSettings settings(QStringLiteral("DsLabeler"));
     QString raw = settings.get(settings::app::kRecentProjects);
     if (raw.isEmpty()) {
-        // Phase 0 migration: old QSettings → new AppSettings
+        // Phase 0 migration: old QSettings → new dsfw::AppSettings
         QSettings oldSettings;
         QStringList oldList = oldSettings.value(QStringLiteral("App/recentProjects")).toStringList();
         if (!oldList.isEmpty()) {
@@ -156,7 +155,7 @@ QMenuBar* WelcomePage::createMenuBar(QWidget* parent) {
 }
 
 void WelcomePage::onNewProject() {
-    NewProjectDialog dlg(this);
+    dsfw::NewProjectDialog dlg(this);
     if (dlg.exec() != QDialog::Accepted)
         return;
 
@@ -169,7 +168,7 @@ void WelcomePage::onNewProject() {
 }
 
 void WelcomePage::onOpenProject() {
-    AppSettings settings(QStringLiteral("DsLabeler"));
+    dsfw::AppSettings settings(QStringLiteral("DsLabeler"));
     const QString lastDir = settings.get(settings::app::kLastProjectDir);
     dsfw::widgets::FilePathSelector selector(
         {dsfw::widgets::FilePathSelector::Mode::OpenFile, QStringLiteral("打开工程"),
@@ -190,7 +189,7 @@ void WelcomePage::loadProject(const QString& path) {
         return;
     }
 
-    auto project = std::make_unique<DsProject>(std::move(result.value()));
+    auto project = std::make_unique<dsfw::DsProject>(std::move(result.value()));
     addToRecent(path);
 
     auto missingPaths = project->validateExternalPaths();

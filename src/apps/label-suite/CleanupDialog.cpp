@@ -1,4 +1,4 @@
-#include "CleanupDialog.h"
+﻿#include "CleanupDialog.h"
 
 #include <QDialogButtonBox>
 #include <QDir>
@@ -12,10 +12,9 @@
 
 namespace dstools::labeler {
 
-using namespace dsfw;
 
     static const char *stepNames[] = {
-        "Slice", "ASR", "Label", "Align", "Phone", "CSV", "MIDI", "DS", "Pitch",
+        "Slice", "ASR", "Label", "Align", "dsfw::Phone", "CSV", "MIDI", "DS", "Pitch",
     };
 
     static const char *stepDirs[] = {

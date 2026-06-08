@@ -1,4 +1,4 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/audio/AudioPipeline.h>
 #include <dsfw/audio/AudioBuffer.h>
 
@@ -8,7 +8,6 @@
 #include <sndfile.hh>
 #include <cmath>
 
-using namespace dsfw::audio;
 
 /// @brief Edge-case tests for AudioPipeline: empty files, corrupt data,
 ///        segment decoding, and resample config validation.
@@ -123,7 +122,7 @@ private slots:
         QString wavPath = generateSineWav(tmpDir.path(), 44100, 1, 440.0f, 2.0f);
 
         auto pipeline = AudioPipeline::create();
-        ResampleConfig config;
+        dsfw::audio::ResampleConfig config;
         config.targetSampleRate = 22050;
         config.targetChannelCount = 1;
 
@@ -144,7 +143,7 @@ private slots:
         QString wavPath = generateSineWav(tmpDir.path(), 44100, 1, 440.0f, 1.0f);
 
         auto pipeline = AudioPipeline::create();
-        ResampleConfig config;
+        dsfw::audio::ResampleConfig config;
         config.targetSampleRate = 44100;
         config.targetChannelCount = 1;
 
@@ -162,7 +161,7 @@ private slots:
         QString wavPath = generateSineWav(tmpDir.path(), 44100, 2, 440.0f, 1.0f);
 
         auto pipeline = AudioPipeline::create();
-        ResampleConfig config;
+        dsfw::audio::ResampleConfig config;
         config.targetSampleRate = 16000;
         config.targetChannelCount = 1;
 

@@ -1,13 +1,11 @@
-#include <QTest>
+﻿#include <QTest>
 
 // Include directly to ensure static registration is linked
 #include "SlicerProcessor.h"
 
 #include <dsfw/TaskProcessorRegistry.h>
 
-using namespace dsfw;
 using namespace dstools;
-using namespace dsfw;
 
 class TestSlicerProcessor : public QObject {
     Q_OBJECT
@@ -17,13 +15,13 @@ private slots:
 };
 
 void TestSlicerProcessor::direct_create() {
-    SlicerProcessor proc;
+    dsfw::SlicerProcessor proc;
     QCOMPARE(proc.processorId(), QStringLiteral("slicer"));
-    QCOMPARE(proc.displayName(), QStringLiteral("Audio Slicer"));
+    QCOMPARE(proc.displayName(), QStringLiteral("Audio dsfw::Slicer"));
 }
 
 void TestSlicerProcessor::task_spec() {
-    SlicerProcessor proc;
+    dsfw::SlicerProcessor proc;
     auto spec = proc.taskSpec();
     QCOMPARE(spec.taskName, QStringLiteral("audio_slice"));
     QCOMPARE(spec.outputs.size(), size_t(1));

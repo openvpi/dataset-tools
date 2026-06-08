@@ -1,4 +1,4 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/audio/AudioPipeline.h>
 #include <dsfw/audio/AudioFormatInfo.h>
 
@@ -9,7 +9,6 @@
 
 #include <cmath>
 
-using namespace dsfw::audio;
 
 class TestAudioProcessing : public QObject {
     Q_OBJECT

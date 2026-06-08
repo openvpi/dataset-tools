@@ -1,4 +1,4 @@
-#include "PianoRollRenderer.h"
+﻿#include "PianoRollRenderer.h"
 #include "PitchProcessor.h"
 #include <dstools/DsPitchDocument.h>
 
@@ -14,7 +14,6 @@
 namespace dstools {
 namespace pitchlabeler {
 namespace ui {
-using namespace dsfw;
 
 using ::dstools::parseNoteName;
 using ::dstools::midiToNoteName;

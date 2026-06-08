@@ -1,294 +1,728 @@
-# dataset-tools 精简重构方案
+# 精简重构方案 v6.0.0
 
-> 版本：4.1.0
-> 日期：2026-06-08
-> 状态：已完成（2026-06-08）
-> 取代：v4.0.0（已废除，因多处错误：错误地将 infer-bridge/unified-editor 判定为可合并薄模块、错误地认为 FileDialogHelper/PathSelector 与 FilePathSelector 功能重叠、错误地认为 JsonHelper 归属不当、错误地将 data-sources 目录重组作为必要项）
-
----
-
-## 0. 前置声明
-
-### 0.1 方案目标
-
-1. 保证当前全部功能和行为完全不变，只做适当精简
-2. 保证实际使用中工程数据的稳定性、安全性
-3. 符合 [human-decisions.md](../../human-decisions.md) 全部设计准则
-4. 抛弃一切技术债和架构债，去掉历史包袱
-5. 统一底层接口：跨平台路径和编码问题由固定模块负责解析与预处理
-6. 补充 C++20/Qt6 优秀项目的工程准则
-7. 保守的性能优化：不改变原始逻辑，只做工程上等价优化
-
-### 0.2 方案约束
-
-- 功能零退化：所有现有功能保持完全一致，行为不变
-- 数据零风险：所有文件 I/O 操作保持原子性，数据完整性校验不变
-- 编译零新增警告：重构后编译通过，无新增 warning
-- 不引入任何新的外部依赖
-- 变更粒度：每个任务独立提交，不推送
-
-### 0.3 取舍原则
-
-**纳入标准**：满足以下全部条件才纳入方案：
-1. 问题真实存在且已通过代码审查逐文件验证
-2. 修复后能消除实际风险（编译风险、维护风险、行为不一致风险）
-3. 变更风险可控（编译器可验证，或机械替换）
-4. 符合 ARCH-07（开闭原则），不修改稳定核心逻辑
-
-**剔除标准**：满足以下任一条件即剔除：
-1. 纯组织性调整（如目录重命名）——无实际危害，收益不抵 churn
-2. 单类模块——ARCH-04 要求 >60% 相同才合并，单类模块不触发
-3. 已有合规实现（如信号槽已全部使用新式语法）
-4. 变更范围过大、风险不可控
-5. 仅为美观调整（如 `using namespace` 去重不影响编译和运行）
+> 本文档设计于 2026-06-08，基于项目当前代码全量探索结果制定。
+> 方案严格遵循 `docs/human-decisions.md` 设计准则，保证功能不变、行为一致，仅做精简与规范化。
+>
+> 修正记录：
+> - v6.0.0：重新设计阶段顺序（准则先行→代码清理→架构修复→信号解耦→性能优化），
+>   修正阶段七 OPT-1 实现方案（保留 paintEvent 中的 rebuildCache 以兼容 resizeEvent），
+>   阶段五按模块拆分、纳入 `using namespace dsfw` 头文件清理。
 
 ---
 
-## 1. 补充准则（SUP-11 ~ SUP-18）
+## 1. 概述
 
-以下准则基于 C++20/Qt6 优秀项目（LLVM、KDE Frameworks、Qt 官方最佳实践）的工程经验补充：
+### 1.1 目标
 
-| 编号 | 准则 | 说明 |
-|------|------|------|
-| SUP-11 | 编译期检查优先 | 能用 `static_assert` / `consteval` / `if constexpr` 验证的约束不在运行时检查 |
-| SUP-12 | 头文件最小化 | 头文件只包含必要的 `#include`，优先使用前向声明；IWYU 原则 |
-| SUP-13 | 不可变对象优先 | 能用 `const` 标记的就用；配置对象创建后不可变 |
-| SUP-14 | 文件对话框统一入口 | 应用层文件选择通过 `dsfw::widgets::FilePathSelector` 或 `dsfw::widgets::PathSelector`，禁止直接调用 `QFileDialog` 静态方法 |
-| SUP-15 | 资源文件集中管理 | 每个模块的 `.qrc` 文件统一放在模块根目录，图标资源使用统一的命名前缀 |
-| SUP-16 | CMake target 依赖显式化 | 每个 `target_link_libraries` 必须显式列出所有直接依赖，不依赖传递依赖的隐式可用性 |
-| SUP-17 | 模块头文件目录与命名空间一致 | `include/dsfw/audio/` 对应 `dsfw::audio` 命名空间；`include/dstools/` 对应 `dstools` 命名空间，禁止交叉放置 |
-| SUP-18 | 测试文件与源文件同目录结构 | `src/tests/` 的目录结构镜像 `src/` 的模块结构，测试文件名以 `Test` 前缀与源文件对应 |
+- 补充工程准则，覆盖 C++/Qt 项目最佳实践
+- 清理死代码与历史包袱，消除技术债与架构债
+- 修复 `dsfw-ui-core` ↔ `dsfw-widgets` 循环依赖（SUP-05）
+- 统一文件选择路径记忆行为，消除各应用不一致
+- 清理全局 `using namespace dsfw` 污染（INFRA-06 延伸）
+- 解除接口对 Qt 信号的依赖，符合 ARCH-02 准则
+- 图表渲染性能优化（保证逻辑等价）
+
+### 1.2 原则
+
+- 功能完全不变，行为一致
+- 数据稳定性、安全性不降级
+- 符合全部设计准则与人工决策
+- 不引入新的外部依赖
+- 不修改稳定核心代码实现新功能（新增类/适配器替代）
+
+### 1.3 阶段总览
+
+| 阶段 | 内容 | 风险 | 依赖 | 预估变更文件数 |
+|------|------|------|------|---------------|
+| 一 | 补充工程准则 SUP-01~SUP-10 | 低 | 无 | 1 |
+| 二 | 清理死代码与历史包袱 | 低 | 无 | 3 |
+| 三 | 修复 `dsfw-ui-core` ↔ `dsfw-widgets` 循环依赖 | 低 | 无 | 7 |
+| 四 | 统一文件选择路径记忆行为 | 低 | 无 | 6 |
+| 五 | 清理 `using namespace dsfw` 污染 | 低 | 无 | 55+ |
+| 六 | 解除接口对 Qt 信号的依赖 | 中 | 无 | 11 |
+| 七 | 图表渲染性能优化 | 低 | 无 | 4 |
+
+执行顺序：阶段一 → 阶段二 → 阶段三 → 阶段四 → 阶段五 → 阶段六 → 阶段七。每个阶段独立编译验证后提交。
 
 ---
 
-## 2. 现状分析
+## 2. 阶段一：补充工程准则 (SUP-01 ~ SUP-10)
 
-### 2.1 逐文件核实的问题清单
+> 以下准则基于 LLVM Coding Standards、KDE Frameworks、Qt Best Practices、Chromium C++ Style Guide、Abseil Tip of the Week 等优秀 C++/Qt 项目提炼，补充至 `human-decisions.md`。
 
-对每个问题均通过读取实际文件内容、检查 CMakeLists.txt 依赖关系、搜索引用链进行核实。
+### SUP-01：编译期检查优先于运行时检查
 
-#### P1: `dsfw-base` 幽灵模块（核验通过）
+优先使用 `static_assert`、`constexpr`、`consteval`、`requires` 在编译期捕获错误。类型安全优于运行时断言。
 
-| 项目 | 核实结果 |
-|------|----------|
-| 源文件 | `src/framework/base/include/dsfw/` 为空，`src/framework/base/src/` 为空 |
-| CMakeLists.txt | 创建 `dsfw::base` 静态库，PUBLIC 依赖 `dsfw::types` 和 `nlohmann_json`，无任何源文件 |
-| 被引用链 | `dsfw-core` (PUBLIC) → `dsfw-base`；`tests/domain` (PRIVATE, 2 处) → `dsfw-base` |
-| 实际作用 | 仅作为依赖传递层，将 `nlohmann_json` 和 `dsfw::types` 传播给消费者 |
-| 架构文档 | `overview.md` 声称 `dsfw-base` 包含 `JsonHelper`，但 `JsonHelper.h` 实际在 `src/framework/core/include/dsfw/JsonHelper.h`，属于 `dsfw-core` |
+```cpp
+// 推荐
+static_assert(sizeof(Header) == 64, "Header size mismatch");
+template <typename T> requires std::is_arithmetic_v<T>
+auto compute(T value) -> T;
 
-**结论**：`dsfw-base` 是空模块，无源码，唯一作用是传递依赖。移除后 `dsfw-core` 可直接声明 `nlohmann_json` 和 `dsfw::types` 依赖（`dsfw-core` CMakeLists.txt 第 26 行已同时声明两者）。
+// 避免
+assert(sizeof(Header) == 64);
+```
 
-#### P2: 空 `include/dstools/` 目录（核验通过）
+### SUP-02：数据成员默认值优先于构造函数初始化列表冗余赋值
 
-| 目录 | 核实结果 |
-|------|----------|
-| `src/framework/core/include/dstools/` | 空，无任何文件 |
-| `src/framework/types/include/dstools/` | 空，无任何文件 |
-| `src/framework/infer/include/dstools/` | 空，无任何文件 |
+C++ 类内初始化器（NSDMI）优先级高于构造函数初始化列表，减少重复。
 
-**结论**：三个空目录违反 SUP-17（模块头文件目录与命名空间一致）。`dstools` 命名空间的实际头文件在 `src/domain/include/dstools/` 和 `src/ui-core/include/dstools/`。
+```cpp
+// 推荐
+class Widget {
+    int m_count = 0;
+    QString m_name;
+};
 
-#### P3: 架构文档与实际构建系统不一致（核验通过）
+// 避免
+class Widget {
+    int m_count;
+    Widget() : m_count(0) {}
+};
+```
 
-| 文档声称 | 实际状态 |
-|----------|----------|
-| `dsfw-base` 为 Qt-free 静态库，含 `JsonHelper` | `dsfw-base` 无源码，`JsonHelper` 在 `dsfw-core` |
-| `dstools-widgets` 为 INTERFACE header-only 层 | 构建系统中不存在此 target |
-| `dsfw-core` 依赖 `dsfw-base` | 仅依赖传递，`dsfw-core` 已直接声明 `nlohmann_json` |
+### SUP-03：禁止隐式类型转换
 
-**结论**：架构文档 `overview.md` 需要更新以反映实际构建系统。
+单参数构造函数标记 `explicit`，禁止隐式 bool 转换和隐式数值转换。
 
-#### 以下问题经核实不纳入
+```cpp
+// 推荐
+explicit PathSelector(const Config &config, QWidget *parent = nullptr);
 
-| 编号 | 原始主张 | 核实结论 | 不纳入原因 |
-|------|----------|----------|------------|
-| - | 合并 `audio/playback` 子模块 | `playback` 子模块封装 `AudioPlayerAdapter`（PIMPL 模式），是 `IAudioPlayerAdapter` 的独立实现层，遵循 ARCH-01（模块职责单一）。仅被 `dsfw-widgets` 的 `PlayWidget` 引用 | 职责独立，合并会破坏关注点分离 |
-| - | 合并 `infer-bridge` 模块 | `infer-bridge` 聚合 5 个推理引擎（hubert-infer, rmvpe-infer, game-infer, lyricfa-lib, dsfw-infer），作为 `EngineTraits` 特化和 `ModelProviderInit` 集中注册点。被 4 个 target 引用 | 职责明确，合并会引入循环依赖风险 |
-| - | 合并 `unified-editor` 模块 | header-only 模块，提供 `AppShellConfig` 工具函数，被 `label-suite` 和 `ds-labeler` 引用 | 头文件仅含 `inline`/`template` 函数，无编译开销，遵循 ARCH-04 |
-| - | 整理 `data-sources/` 目录为子目录结构 | 47 个文件已按命名约定清晰分组（Page/Service/Model/Factory/Dialog），编译为单个 CMake target | 纯组织性调整，收益不抵 47 个文件的 include 路径变更风险 |
-| - | `JsonHelper` 归属不当 | `JsonHelper` 在 `dsfw-core` 中，被 14 个文件引用（含 `dsfw-core`、`domain`、`engine` 层）。`dsfw-core` 是 Qt-free 工具集的合理位置 | 归属正确，无需变更 |
-| - | `FileDialogHelper` 与 `FilePathSelector` 功能重叠 | `FileDialogHelper` 是 header-only 静态工具类（直接封装 `QFileDialog::get*`），`FilePathSelector` 是有状态 QObject 封装（含 Config 和 signals）。两者层次不同，`FileDialogHelper` 是 `FilePathSelector` 和 `PathSelector` 的底层实现细节 | 层次分明，无重叠 |
-| - | `PathSelector` 与 `FilePathSelector` 冲突 | `PathSelector` 是 QWidget（含 browse button + drag-drop），`FilePathSelector` 是 QObject（无 UI）。两者用于不同场景：Settings 面板用 `PathSelector`（内联路径选择），对话框/页面用 `FilePathSelector`（抽象文件选择） | 用途不同，无冲突 |
+// 避免
+PathSelector(const Config &config);  // 可能被隐式调用
+```
 
-### 2.2 已核验合规项（无需重构）
+### SUP-04：公开接口明确所有权语义
 
-| 项目 | 状态 |
+- 裸指针（`T*`）= 非持有、可为空
+- 引用（`T&`）= 非持有、非空
+- `std::unique_ptr<T>` = 独占所有权
+- `std::shared_ptr<T>` = 共享所有权
+- 禁止 `std::auto_ptr`、`std::unique_ptr` 的 `release()` 裸指针传递
+
+```cpp
+// 推荐
+void process(const Config &config);               // 非持有，非空
+void setParent(QWidget *parent);                   // 非持有，可为空
+std::unique_ptr<IDecoder> createDecoder();         // 转移所有权
+```
+
+### SUP-05：模块间循环依赖零容忍
+
+模块依赖必须形成有向无环图（DAG）。任何新增依赖必须通过依赖图验证无环。
+
+```
+dsfw-types → dsfw-core → dsfw-audio → dsfw-widgets
+    ↓            ↓             ↓
+ dstools-domain → dstools-ui-core → dstools-apps
+```
+
+### SUP-06：头文件自包含
+
+每个 `.h` 文件必须可独立编译，不依赖使用者预先包含其他头文件。验证方式：每个 `.h` 在关联的 `.cpp` 中作为第一个 include。
+
+```cpp
+// Foo.cpp
+#include "Foo.h"  // 必须是第一个 include
+#include <QWidget>
+// ...
+```
+
+### SUP-07：禁止可变全局状态
+
+禁止 `mutable static` 变量、全局 `std::map`/`std::vector` 等可变容器。全局常量允许（`constexpr`、`const`）。
+
+```cpp
+// 允许：编译期常量
+constexpr int kMaxRetries = 3;
+inline const std::string kAppName = "dataset-tools";
+
+// 禁止：可变全局状态
+static std::map<QString, int> g_counter;  // 多线程不安全
+```
+
+### SUP-08：资源获取即初始化无例外
+
+所有资源（内存、文件句柄、锁、线程）必须通过 RAII 管理。禁止手动 `new`/`delete`、`fopen`/`fclose`、`lock()`/`unlock()`。
+
+```cpp
+// 推荐
+auto file = std::make_unique<QFile>(path);
+std::lock_guard lock(m_mutex);
+std::jthread worker{std::move(task)};
+
+// 禁止
+auto *file = new QFile(path);
+m_mutex.lock();
+```
+
+### SUP-09：数值计算使用标准库
+
+时间用 `std::chrono`，跨度用 `std::span`（C++20），浮点比较用 `std::fabs(a - b) < epsilon`。禁止裸 `int64_t` 表示时间戳。
+
+```cpp
+// 推荐
+using namespace std::chrono_literals;
+auto timeout = 500ms;
+auto elapsed = std::chrono::steady_clock::now() - start;
+
+// 避免
+int64_t timeoutMs = 500;
+```
+
+### SUP-10：日志分级与结构化
+
+使用 `DSFW_LOG_*` 宏，禁止 `printf`/`std::cout`/`qDebug()` 直接输出。日志级别：TRACE（开发调试）、DEBUG（诊断信息）、INFO（关键节点）、WARN（可恢复异常）、ERROR（不可恢复错误）。
+
+```cpp
+// 推荐
+DSFW_LOG_INFO("audio", std::format("Decoded {} frames in {:.2f}s", frames, elapsed));
+
+// 禁止
+qDebug() << "Decoded" << frames << "frames";
+std::cout << "Decoded " << frames << " frames\n";
+```
+
+### 2.1 影响范围
+
+- 仅修改 `docs/human-decisions.md`，追加 SUP-01~SUP-10 至速查表与正文
+- 无代码变更
+
+---
+
+## 3. 阶段二：清理死代码与历史包袱
+
+### 3.1 移除空 `.gitkeep` 文件
+
+| 文件 | 原因 |
 |------|------|
-| `path().string()` 使用 | 仅在 `PathUtils.cpp` 自身实现中使用，0 处业务代码违规 |
-| `processEvents()` 使用 | 全项目 0 处 |
-| 信号槽语法 | 全部使用新式语法（成员函数指针） |
-| 头文件 `using namespace dsfw` | 33 个头文件已清理（v3.0 完成） |
-| 音频模块设计文档 | 已更新状态（v3.0 完成） |
-| 裸 `new`/`delete` | 仅在第三方引擎代码中存在，项目自有代码已合规 |
-| `ServiceLocator::get()` | 仅在 `ServiceLocator` 自身和 `main.cpp` 中使用 |
-| `vector::reserve()` 优化 | 全项目 30+ 处已使用 `reserve()` 预分配，无需额外优化 |
+| `src/framework/core/include/dsfw/.gitkeep` | 空目录标记文件，无实际用途 |
+| `src/framework/core/src/.gitkeep` | 空目录标记文件，无实际用途 |
 
-### 2.3 性能优化：逐文件核验
+### 3.2 移除 `AUDIO_UTIL_BUILD_TESTS` 残留引用
 
-对 `QString`/`std::string` 转换、容器操作等热点路径进行逐文件检查：
+**文件**: `src/CMakeLists.txt` 第 8 行
 
-| 位置 | 模式 | 是否优化 | 说明 |
-|------|------|----------|------|
-| `ChartConfigRegistry::loadDefaults()` | `chartId.toStdString()` 在同一循环中调用 2 次 | 是 | 缓存为局部变量 `std::string key = chartId.toStdString()` |
-| `ChartConfigRegistry::saveConfig()` | `it.key().toStdString()` 在循环体内每次迭代调用 | 是 | 缓存为局部变量，减少重复编码转换 |
-| `AudioPipeline::decodeAndResample()` | `chunks.push_back(std::move(...))` 无 `reserve()` | 否 | 分块数量取决于文件大小，无法预知 |
-| 其他 `toStdString()` 调用 | 均为单次调用或日志输出 | 否 | 单次调用无优化空间 |
+```cmake
+# 删除以下行:
+set(AUDIO_UTIL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+```
+
+原因：`src/infer/audio-util/` 目录已不存在，该 CMake 变量为死引用。
+
+### 3.3 影响范围
+
+- 无功能影响，仅清理构建系统残留
+- 编译行为不变
 
 ---
 
-## 3. 重构方案
+## 4. 阶段三：修复 `dsfw-ui-core` ↔ `dsfw-widgets` 循环依赖
 
-### 3.1 阶段一：消除 `dsfw-base` 幽灵模块（P1）
+### 4.1 问题分析
 
-**目标**：移除空的 `dsfw-base` 模块，消除构建图中的无效节点。
+当前存在循环依赖，违反 SUP-05（模块间循环依赖零容忍）：
 
-**变更范围**：
+```
+dsfw-ui-core ──(include)──→ dsfw-widgets
+    ↑                           │
+    └────────(CMake PRIVATE)────┘
+```
 
-1. 删除 `src/framework/base/` 目录（含 CMakeLists.txt、空 include/、空 src/）
-2. 从 `src/framework/CMakeLists.txt` 移除 `add_subdirectory(base)` 行
-3. 修改 `src/framework/core/CMakeLists.txt`：将 `PUBLIC dsfw-base` 替换为 `PUBLIC dsfw::types nlohmann_json::nlohmann_json`
-   - `dsfw-base` 的唯一 PUBLIC 依赖就是 `dsfw::types` 和 `nlohmann_json::nlohmann_json`，直接声明完全等价
-4. 修改 `src/tests/domain/CMakeLists.txt`：将 2 处 `dsfw-base` 替换为 `dsfw-core`
+具体依赖关系：
 
-**风险**：极低。`dsfw-base` 无源码，移除后依赖关系由 `dsfw-core` 完整继承。编译器可验证。
+| 方向 | 文件 | 依赖内容 |
+|------|------|----------|
+| ui-core → widgets | `LogPanelWidget.cpp` | `#include <dsfw/widgets/LogViewer.h>`, `#include <dsfw/FileDialogHelper.h>` |
+| ui-core → widgets | `AppShell.h` / `AppShell.cpp` | `#include "dsfw/widgets/ToastNotification.h"` |
+| widgets → ui-core | `ShortcutEditorWidget.cpp` | `#include <dsfw/FramelessHelper.h>` |
+| widgets → ui-core | `CMakeLists.txt` | `PRIVATE dsfw-ui-core` |
 
-**验证**：编译通过，所有测试通过。
+### 4.2 方案
+
+将 `FramelessHelper` 从 `dsfw-ui-core` 移至 `dsfw-widgets`，移除 `dsfw-widgets` 对 `dsfw-ui-core` 的 CMake 依赖。
+
+理由：
+- `FramelessHelper` 是窗口工具类，语义上属于 widgets 层
+- `ShortcutEditorWidget`（widgets 层）和 `AppShell`（ui-core 层）均使用它
+- `AppShell` 已依赖 `dsfw-widgets`（`ToastNotification`），移动后不新增依赖
+
+### 4.3 文件变更
+
+| 操作 | 文件 | 说明 |
+|------|------|------|
+| 移动 | `ui-core/include/dsfw/FramelessHelper.h` → `widgets/include/dsfw/widgets/FramelessHelper.h` | 移至 widgets 模块 |
+| 移动 | `ui-core/src/FramelessHelper.cpp` → `widgets/src/FramelessHelper.cpp` | 移至 widgets 模块 |
+| 修改 | `widgets/CMakeLists.txt` | 移除 `PRIVATE dsfw-ui-core` 依赖 |
+| 修改 | `ui-core/CMakeLists.txt` | 移除 FramelessHelper 源文件 |
+| 修改 | `ShortcutEditorWidget.cpp` | `#include <dsfw/FramelessHelper.h>` → `<dsfw/widgets/FramelessHelper.h>` |
+| 修改 | `AppShell.cpp` | `#include <dsfw/FramelessHelper.h>` → `<dsfw/widgets/FramelessHelper.h>` |
+| 修改 | `FramelessHelper.cpp` | 更新自身 include 路径 |
+
+### 4.4 影响范围
+
+- 仅移动文件，逻辑不变
+- 解除循环依赖后，`dsfw-widgets` 可独立编译（不再依赖 `dsfw-ui-core`）
 
 ---
 
-### 3.2 阶段二：清理空 `include/dstools/` 目录（P2）
+## 5. 阶段四：统一文件选择路径记忆行为
 
-**目标**：移除违反 SUP-17 的空目录。
+### 5.1 问题分析
 
-**变更范围**：
+当前文件选择场景存在路径记忆（`RecentPathStore`）行为不一致：
 
-1. 删除 `src/framework/core/include/dstools/`（空目录）
-2. 删除 `src/framework/types/include/dstools/`（空目录）
-3. 删除 `src/framework/infer/include/dstools/`（空目录）
+| 类 | 基类 | 用途 | 是否使用 RecentPathStore |
+|----|------|------|--------------------------|
+| `PathSelector` | QWidget | 嵌入式控件（行编辑+浏览按钮），用于设置面板 | 是 |
+| `FilePathSelector` | QObject | 模态对话框（立刻弹窗返回路径），用于 SlicerPage、导出页等 | 是 |
+| `FileDialogHelper` 裸调用 | 静态工具类 | `TaskWindow`、`DroppableFileListPanel`、`LogPanelWidget` 直接使用 | **否** |
 
-**风险**：零。空目录不参与编译，删除不影响任何构建行为。
+`FileDialogHelper` 是对 `QFileDialog` 静态方法的薄封装，`PathSelector` 和 `FilePathSelector` 内部均通过它调用对话框。但 `TaskWindow` 和 `DroppableFileListPanel` 绕过了 `FilePathSelector`，直接使用 `FileDialogHelper`，导致路径记忆功能缺失。
 
-**验证**：目录列表确认已删除。
+此外，`FileDialogHelper` 位于 `dsfw/widgets/include/dsfw/FileDialogHelper.h`，但包含路径为 `<dsfw/FileDialogHelper.h>`（无 `widgets/` 子目录），与同目录下其他 widget 头文件命名不一致。
 
----
+### 5.2 方案
 
-### 3.3 阶段三：保守性能优化（仅 2 处、等价替换）
+**不合并 PathSelector 和 FilePathSelector**。两者服务于不同的 UX 模式：
+- `PathSelector`：嵌入表单布局，显示行编辑+浏览按钮
+- `FilePathSelector`：模态对话框，立即弹出返回路径
 
-**目标**：消除 `ChartConfigRegistry` 中重复的 `QString::toStdString()` 编码转换。
+**统一路径记忆**：所有文件选择场景均通过 `FilePathSelector` 或 `PathSelector`，确保 `RecentPathStore` 集成一致。
 
-**变更范围**：
+**修正 FileDialogHelper 位置**：将 `FileDialogHelper.h` 移到 `dsfw/widgets/include/dsfw/widgets/FileDialogHelper.h`，包含路径改为 `<dsfw/widgets/FileDialogHelper.h>`。
 
-1. `ChartConfigRegistry::loadDefaults()`（`src/apps/shared/chart-framework/ChartConfigRegistry.cpp` 第 82-87 行）：
-   - 缓存 `chartId.toStdString()` 为局部变量 `std::string chartIdStr`
-   - 缓存 `param.key.toStdString()` 为局部变量 `std::string key`
-   - 逻辑完全等价，仅减少重复编码转换
+### 5.3 迁移路径
 
-2. `ChartConfigRegistry::saveConfig()`（`src/apps/shared/chart-framework/ChartConfigRegistry.cpp` 第 109-111 行）：
-   - 在第 108 行循环内缓存 `it.key().toStdString()` 为局部变量
-   - 逻辑完全等价
+| 原用法 | 新用法 |
+|--------|--------|
+| `TaskWindow.cpp`: `FileDialogHelper::getOpenFileNames({this, ...})` | `FilePathSelector({Mode::OpenFiles, ...}, this).exec()` + `selectedPaths()` |
+| `TaskWindow.cpp`: `FileDialogHelper::getExistingDirectory({this, ...})` | `FilePathSelector({Mode::OpenDirectory, ...}, this).exec()` + `selectedPath()` |
+| `DroppableFileListPanel.cpp`: `FileDialogHelper::getOpenFileNames({this, ...})` | `FilePathSelector({Mode::OpenFiles, ...}, this).exec()` + `selectedPaths()` |
+| `DroppableFileListPanel.cpp`: `FileDialogHelper::getExistingDirectory({this, ...})` | `FilePathSelector({Mode::OpenDirectory, ...}, this).exec()` + `selectedPath()` |
+| `LogPanelWidget.cpp`: `FileDialogHelper::getSaveFileName({this, ...})` | `FilePathSelector({Mode::SaveFile, ...}, this).exec()` + `selectedPath()` |
 
-**风险**：零。纯等价替换，不改变任何逻辑。
+### 5.4 文件变更
 
-**验证**：编译通过，`ChartConfigRegistry` 行为不变。
+| 操作 | 文件 | 说明 |
+|------|------|------|
+| 移动 | `dsfw/FileDialogHelper.h` → `dsfw/widgets/FileDialogHelper.h` | 修正命名不一致 |
+| 修改 | `PathSelector.cpp` | `#include <dsfw/FileDialogHelper.h>` → `<dsfw/widgets/FileDialogHelper.h>` |
+| 修改 | `FilePathSelector.cpp` | 同上 |
+| 修改 | `TaskWindow.cpp` | FileDialogHelper → FilePathSelector |
+| 修改 | `DroppableFileListPanel.cpp` | FileDialogHelper → FilePathSelector |
+| 修改 | `LogPanelWidget.cpp` | FileDialogHelper → FilePathSelector |
 
----
+### 5.5 影响范围
 
-### 3.4 阶段四：更新架构文档（P3）
-
-**目标**：使 `overview.md` 与实际构建系统一致。
-
-**变更范围**：
-
-1. 更新 `docs/developer/architecture/overview.md`：
-   - 移除 `dsfw-base` 层（Layer 0.5）
-   - 将 `JsonHelper` 从 `dsfw-base` 层移至 `dsfw-core` 层
-   - 移除 `dstools-widgets INTERFACE` 层（构建系统中不存在）
-   - 更新模块依赖图：`dsfw-core` 直接依赖 `dsfw::types` + `nlohmann_json`
-   - 更新模块层次结构表
-
-2. 更新 `docs/human-decisions.md`：
-   - 更新最后更新日期和变更说明
-   - 确认 SUP-11~SUP-18 补充准则已添加
-
-**风险**：零。纯文档更新。
-
----
-
-## 4. 实施计划
-
-### 4.1 阶段划分
-
-| 阶段 | 内容 | 优先级 | 风险 | 影响范围 |
-|------|------|--------|------|----------|
-| 一 | 消除 `dsfw-base` 幽灵模块 | 高 | 极低 | 1 个目录删除 + 3 个 CMakeLists.txt 修改 |
-| 二 | 清理空 `include/dstools/` 目录 | 高 | 零 | 3 个空目录删除 |
-| 三 | 保守性能优化（ChartConfigRegistry） | 中 | 零 | 1 个文件 2 处等价替换 |
-| 四 | 更新架构文档 | 低 | 零 | 2 个文档文件 |
-
-### 4.2 执行顺序
-
-1. 阶段一：消除幽灵模块（优先执行，风险最低）
-2. 阶段二：清理空目录（独立，可并行）
-3. 阶段三：保守性能优化（独立，可并行）
-4. 阶段四：更新架构文档（依赖前三个阶段完成）
-
-### 4.3 每个阶段的执行流程
-
-1. 执行代码变更
-2. 编译通过（CLion MCP 增量编译）
-3. 运行单元测试
-4. 提交（不推送）
+| 文件 | 迁移内容 |
+|------|---------|
+| `TaskWindow.cpp` | 2 处 FileDialogHelper → FilePathSelector |
+| `DroppableFileListPanel.cpp` | 2 处 FileDialogHelper → FilePathSelector |
+| `LogPanelWidget.cpp` | 1 处 FileDialogHelper → FilePathSelector |
+| `PathSelector.cpp` | 更新 include 路径 |
+| `FilePathSelector.cpp` | 更新 include 路径 |
 
 ---
 
-## 5. 不做的事及原因
+## 6. 阶段五：清理 `using namespace dsfw` 污染
 
-| 内容 | 剔除原因 |
-|------|----------|
-| 合并 `audio/playback` 子模块 | 职责独立，`IAudioPlayerAdapter` 接口 + `AudioPlayerAdapter` PIMPL 实现是合理的关注点分离，遵循 ARCH-01 |
-| 合并 `infer-bridge` 模块 | 聚合 5 个推理引擎的桥接层，合并会引入循环依赖风险 |
-| 合并 `unified-editor` 模块 | header-only 工具模块，无编译开销，遵循 ARCH-04 |
-| 整理 `data-sources/` 目录结构 | 纯组织性调整，47 个文件的 include 路径变更风险大于收益 |
-| 修正 `JsonHelper` 归属 | `dsfw-core` 是 Qt-free 工具集的正确位置，归属正确 |
-| 合并 `FileDialogHelper` 与 `FilePathSelector` | 不同层次：`FileDialogHelper` 是底层静态工具，`FilePathSelector` 是上层有状态封装 |
-| 替换 `PathSelector` 为 `FilePathSelector` | 不同用途：`PathSelector` 是 QWidget（内联路径选择），`FilePathSelector` 是 QObject（抽象文件选择） |
-| 删除重复的 `using namespace dsfw;`（25 个文件） | 纯格式问题，不影响编译和运行。已纳入编码规范检查，待后续 clang-format 统一处理 |
-| PIMPL 隔离第三方头文件 | 涉及 `nlohmann/json`、`onnxruntime` 等头文件暴露，风险不可控 |
-| 接口版本化全面推行 | 存量接口无多实现需求，暂不强制 |
-| 从 Sqlite 迁移音频文件注册表 | 涉及数据格式变更，不在本次精简重构范围内 |
-| 统一 `AudioEditorWidgetBase` 和 `EditorContainerBase` | 两个基类有不同职责（编辑器 vs 容器），遵循 ARCH-05 组合优于继承 |
+### 6.1 问题分析
+
+当前约 55 个文件存在 `using namespace dsfw;` 声明，污染命名空间。违反 INFRA-06（RAII 资源管理）的延伸要求（禁止全局级命名空间污染）。
+
+除 `.cpp` 文件外，部分**头文件**也存在 `using namespace dsfw`，这会导致所有包含该头文件的翻译单元都被污染，危害更大。
+
+### 6.2 方案
+
+分 5 个子阶段执行，每子阶段独立编译验证：
+
+| 子阶段 | 模块 | 文件数 | 说明 |
+|--------|------|--------|------|
+| 5a | 头文件 | ~5 | 优先清理头文件污染（影响范围最大） |
+| 5b | `apps/shared/phoneme-editor` | 8 | 音素编辑器 |
+| 5c | `apps/shared/chart-framework` | 8 | 图表框架 |
+| 5d | `apps/shared/data-sources` | 12 | 数据源 |
+| 5e | `apps/shared/audio-visualizer` + `bridges` | 4 | 音频可视化 + 桥接层 |
+| 5f | `engine/adapters` + `domain/src/adapters` | 12 | 引擎适配器 + 领域适配器 |
+| 5g | `ui-core` + `tests` + 其他 | 16 | UI 核心 + 测试 + 其余 |
+
+每文件逐行将 `Result`、`PathUtils`、`Log` 等符号显式加上 `dsfw::` 前缀。
+
+### 6.3 影响范围
+
+- 约 55 个文件，纯机械重构，无行为变更
+- 头文件优先，防止污染扩散
 
 ---
 
-## 6. 附录：变更文件清单
+## 7. 阶段六：解除接口对 Qt 信号的依赖
 
-### 阶段一
+### 7.1 问题分析
+
+ARCH-02 明确规定："被动数据接口+容器通知，接口不加 QObject"。当前 2 个接口违反此规则：
+
+| 接口 | 文件 | Qt 信号 | 使用者 |
+|------|------|---------|--------|
+| `IAudioPlayerAdapter` | `framework/audio/playback/include/dsfw/audio/IAudioPlayerAdapter.h` | `stateChanged`, `deviceChanged` | `PlayWidget` |
+| `ISliceDataSource` | `framework/core/include/dsfw/ISliceDataSource.h` | `sliceListChanged`, `sliceSaved`, `audioAvailabilityChanged` | `SliceListModel` 等 |
+
+`IEditorDataSource`（`src/domain/include/dstools/IEditorDataSource.h`）继承自 `ISliceDataSource`，同样受影响。
+
+### 7.2 设计要点
+
+- **仅移除 Q_OBJECT**，保留 Qt 类型（`QString`、`QStringList`）。ARCH-02 禁止的是 QObject 信号机制，不是 Qt 类型。框架层已依赖 Qt，Qt 类型在接口中完全合法。
+- 底层 `AudioPlaybackAdapter` 已使用 `std::function` 回调，`AudioPlayerAdapter` 中 `emit` 语句仅需改为调用注册的回调。
+- `PlayWidget` 回调通过 `QMetaObject::invokeMethod` 安全投递到 UI 线程。
+
+### 7.3 IAudioPlayerAdapter 重构
+
+**新接口**（纯虚类，无 QObject，保留 Qt 类型）：
+
+```cpp
+namespace dsfw::audio {
+
+class IAudioPlayerAdapter {
+public:
+    using StateCallback = std::function<void(State newState)>;
+    using DeviceCallback = std::function<void(const QString &device)>;
+
+    static constexpr int kInterfaceVersion = 2;
+
+    enum class State { Stopped, Playing };
+
+    virtual ~IAudioPlayerAdapter() = default;
+
+    virtual dsfw::Result<void> open(const std::filesystem::path &path) = 0;
+    virtual void close() = 0;
+    [[nodiscard]] virtual bool isOpen() const = 0;
+    [[nodiscard]] virtual double duration() const = 0;
+    [[nodiscard]] virtual double position() const = 0;
+    virtual void setPosition(double sec) = 0;
+    virtual void play() = 0;
+    virtual void stop() = 0;
+    [[nodiscard]] virtual bool isPlaying() const = 0;
+    [[nodiscard]] virtual QStringList devices() const = 0;
+    [[nodiscard]] virtual QString currentDevice() const = 0;
+    virtual void setDevice(const QString &device) = 0;
+    virtual bool setup(int sampleRate, int channels, int bufferSize) = 0;
+
+    virtual void setStateCallback(StateCallback cb) = 0;
+    virtual void setDeviceCallback(DeviceCallback cb) = 0;
+};
+
+} // namespace dsfw::audio
+```
+
+**AudioPlayerAdapter 适配**：现有 `emit stateChanged(...)` 和 `emit deviceChanged(...)` 改为调用注册的回调：
+
+```cpp
+// AudioPlayerAdapter.cpp 构造函数中
+d->playback->setStateCallback([this](bool playing) {
+    if (m_stateCallback) {
+        m_stateCallback(playing ? State::Playing : State::Stopped);
+    }
+});
+
+d->playback->setDeviceCallback([this](const std::string &device) {
+    if (m_deviceCallback) {
+        m_deviceCallback(QString::fromStdString(device));
+    }
+});
+```
+
+**PlayWidget 适配**：将 `connect(m_player, &IAudioPlayerAdapter::stateChanged, ...)` 改为 `m_player->setStateCallback([this](State s) { QMetaObject::invokeMethod(this, [this, s] { handleStateChanged(s); }, Qt::QueuedConnection); })`。
+
+### 7.4 ISliceDataSource / IEditorDataSource 重构
+
+**新接口**（纯虚类，无 QObject，保留 Qt 类型）：
+
+```cpp
+namespace dsfw {
+
+class ISliceDataSource {
+public:
+    using SliceListCallback = std::function<void()>;
+    using SliceSavedCallback = std::function<void(const QString &sliceId)>;
+    using AudioAvailabilityCallback = std::function<void()>;
+
+    static constexpr int kInterfaceVersion = 2;
+
+    virtual ~ISliceDataSource() = default;
+
+    [[nodiscard]] virtual int getSliceCount() const = 0;
+    [[nodiscard]] virtual QStringList sliceIds() const = 0;
+    [[nodiscard]] virtual QString audioPath(const QString &sliceId) const = 0;
+    // ... 其他纯虚方法不变 ...
+
+    virtual void setSliceListCallback(SliceListCallback cb) = 0;
+    virtual void setSliceSavedCallback(SliceSavedCallback cb) = 0;
+    virtual void setAudioAvailabilityCallback(AudioAvailabilityCallback cb) = 0;
+};
+
+} // namespace dsfw
+```
+
+**派生类适配**：将 `emit` 改为调用注册的回调（如 `if (m_sliceListCallback) m_sliceListCallback();`）。
+
+| 派生类 | 文件 | emit 语句 |
+|--------|------|-----------|
+| `FileDataSource` | `apps/shared/data-sources/FileDataSource.cpp` | 2 处 `sliceListChanged`, 3 处 `sliceSaved` |
+| `DirectoryDataSource` | `apps/shared/data-sources/DirectoryDataSource.cpp` | 1 处 `sliceListChanged`, 1 处 `sliceSaved` |
+| `ProjectDataSource` | `apps/ds-labeler/core/ProjectDataSource.cpp` | 2 处 `sliceListChanged`, 1 处 `sliceSaved`, 1 处 `audioAvailabilityChanged` |
+
+**SliceListModel 适配**：将 `connect(m_source, &IEditorDataSource::sliceListChanged, ...)` 改为 `m_source->setSliceListCallback([this]() { ... })`。
+
+### 7.5 影响范围
+
+| 文件 | 变更 |
+|------|------|
+| `IAudioPlayerAdapter.h` | 移除 Q_OBJECT，添加 `std::function` 回调注册方法 |
+| `AudioPlayerAdapter.h` | 继承纯虚接口，实现回调注册，内部存储 `StateCallback`/`DeviceCallback` 成员 |
+| `AudioPlayerAdapter.cpp` | emit → 回调调用 |
+| `PlayWidget.cpp` | connect → setCallback + `QMetaObject::invokeMethod` |
+| `ISliceDataSource.h` | 移除 Q_OBJECT，添加 `std::function` 回调注册方法 |
+| `IEditorDataSource.h` | 移除 Q_OBJECT（仅继承声明，无额外信号） |
+| `FileDataSource.cpp` | emit → 回调调用 |
+| `DirectoryDataSource.cpp` | emit → 回调调用 |
+| `ProjectDataSource.cpp` | emit → 回调调用 |
+| `SliceListModel.cpp` | connect → setCallback |
+
+---
+
+## 8. 阶段七：图表渲染性能优化
+
+### 8.1 问题分析
+
+Phoneme 编辑器包含 4~5 个图表面板（波形图、功率图、频谱图、口型曲线、钢琴卷帘），
+共享同一个 `ViewportController`。用户缩放或调整窗口大小时，渲染管线如下：
 
 ```
-删除：src/framework/base/                                  （整个目录，含 CMakeLists.txt + 空 include/ + 空 src/）
-修改：src/framework/CMakeLists.txt                          （移除 add_subdirectory(base)）
-修改：src/framework/core/CMakeLists.txt                     （dsfw-base → dsfw::types + nlohmann_json::nlohmann_json）
-修改：src/tests/domain/CMakeLists.txt                       （2 处 dsfw-base → dsfw-core）
+ViewportController::viewportChanged 信号
+  → AudioVisualizerContainer::connectViewportToWidget
+    → ChartPanelBase::onViewportUpdate(coord, pixelWidth)
+      → m_cacheDirty = true; update()
+        → paintEvent → rebuildCache(m_pendingRegion) → drawContent
 ```
 
-### 阶段二
+**关键瓶颈**：
 
-```
-删除：src/framework/core/include/dstools/                   （空目录）
-删除：src/framework/types/include/dstools/                  （空目录）
-删除：src/framework/infer/include/dstools/                   （空目录）
+| 瓶颈 | 描述 | 严重度 |
+|------|------|--------|
+| 无更新合并 | 连续缩放（Ctrl+滚轮）时，每个滚轮事件在独立事件循环迭代中触发一次全量重建，所有图表同时阻塞 UI 线程 | 高 |
+| 无视图状态变化检测 | `onViewportUpdate` 总是设置 `m_cacheDirty = true`，即使 `coord` 与上次完全相同 | 中 |
+| 频谱图 QImage 重复创建 | `rebuildViewImage` 每次都在堆上分配新 `QImage`，即使尺寸未变 | 中 |
+| 不可见图表仍重建缓存 | `onViewportUpdate` 不检查 `isVisible()`，隐藏的图表也执行 `rebuildCache` | 低 |
+
+**数据流追踪**（以缩放为例）：
+
+1. `EditorContainerBase::onZoomIn()` → `m_viewport->zoomIn(centerSec)` → `clampAndEmit()` → `emit viewportChanged(state)`
+2. `AudioVisualizerContainer` 中 `connectViewportToWidget` 的 lambda 对每个已注册 chart 调用 `panel->onViewportUpdate(m_coordConverter, ...)`
+3. `ChartPanelBase::onViewportUpdate` 设置 `m_converter = &conv; m_dataPixelWidth = pixelWidth; m_cacheDirty = true; update();`
+4. Qt 事件循环处理 `paintEvent`（注：同一事件循环迭代内多次 `update()` 会被 Qt 合并，但不同滚轮事件在不同迭代中，无法合并）
+5. `paintEvent` → `rebuildCache(m_pendingRegion)` → 子类实现（`rebuildWaveformCache` / `rebuildViewImage` / `rebuildPowerCache`）
+6. `drawContent` 使用缓存数据绘制
+
+注意：`m_pendingRegion` 始终为默认值 `{fullRebuild=true}`，即每次都是全量重建。
+`RegionUpdate` 的增量更新（`shiftCache` + 部分重算）仅在边界拖拽等场景使用，缩放场景从未触发。
+
+### 8.2 优化方案（保证逻辑等价）
+
+#### OPT-1：视口更新合并（ChartPanelBase）
+
+**原理**：连续缩放时，多个 `onViewportUpdate` 调用在不同事件循环迭代中到达。
+使用 16ms 单次定时器将多次更新合并为一次，减少中间状态的无效重建。
+
+**关键设计决策**：保留 `paintEvent` 中的 `rebuildCache` 逻辑不变。
+`resizeEvent` 也通过设置 `m_cacheDirty = true` 并依赖 `paintEvent` 来触发重建，
+因此不能移除 `paintEvent` 中的 `rebuildCache`。定时器仅用于延迟 `update()` 调用，
+`paintEvent` 中已有的 `rebuildCache` 逻辑作为统一入口。
+
+**改动**：
+
+```cpp
+// ChartPanelBase.h 新增成员
+private:
+    QTimer *m_updateTimer = nullptr;  // 16ms single-shot coalescing timer
+
+// ChartPanelBase.cpp 构造函数末尾
+m_updateTimer = new QTimer(this);
+m_updateTimer->setSingleShot(true);
+connect(m_updateTimer, &QTimer::timeout, this, [this]() {
+    update();  // 触发 paintEvent，paintEvent 中检查 m_cacheDirty 并调用 rebuildCache
+});
+
+// ChartPanelBase::onViewportUpdate 改为
+void ChartPanelBase::onViewportUpdate(const ChartCoordinate &conv, int pixelWidth) {
+    // OPT-2 的跳过逻辑在此处插入（见下文）
+    m_converter = &conv;
+    m_dataPixelWidth = pixelWidth;
+    m_cacheDirty = true;
+    if (!m_updateTimer->isActive()) {
+        m_updateTimer->start(16);  // ~60fps, 合并同一时间段内的多次调用
+    }
+}
 ```
 
-### 阶段三
+**注意**：`paintEvent` 中的 `rebuildCache` 逻辑完全不变。定时器仅负责延迟 `update()` 调用，
+避免每个滚轮事件都立即触发 `paintEvent`。`resizeEvent` 通过 `QWidget::resizeEvent` 间接触发
+`paintEvent`，仍然走 `paintEvent → rebuildCache` 路径。
 
-```
-修改：src/apps/shared/chart-framework/ChartConfigRegistry.cpp （2 处 toStdString() 缓存优化）
+**影响**：4 个图表面板 + 钢琴卷帘均受益。代码增加约 10 行。
+
+#### OPT-2：跳过冗余重建（ChartPanelBase）
+
+**原理**：当 `onViewportUpdate` 收到的 `coord` 与上次已应用的 `coord` 完全相同时，
+跳过缓存重建。这在以下场景触发：
+- 图表可见性切换时，`rebuildChartLayout` 可能触发 `viewportChanged`
+- 同一 viewport 状态被重复 emit（如 `syncStateFields` 后 `clampAndEmit`）
+
+**改动**：
+
+```cpp
+// ChartPanelBase.h 新增成员
+private:
+    ChartCoordinate m_lastAppliedCoord{};
+    bool m_lastAppliedValid = false;
+
+// onViewportUpdate 开头添加（在 OPT-1 设置字段之前）
+void ChartPanelBase::onViewportUpdate(const ChartCoordinate &conv, int pixelWidth) {
+    if (m_lastAppliedValid &&
+        std::abs(m_lastAppliedCoord.viewStart - conv.viewStart) < 1e-9 &&
+        std::abs(m_lastAppliedCoord.viewEnd - conv.viewEnd) < 1e-9 &&
+        m_lastAppliedCoord.pixelWidth == conv.pixelWidth &&
+        m_dataPixelWidth == pixelWidth) {
+        return;  // 与上次已应用的坐标相同，跳过
+    }
+    // ... 原有逻辑（OPT-1 的字段设置 + 定时器启动）
+}
+
+// paintEvent 中，rebuildCache 之后记录
+// 在 m_cacheDirty = false; 之后添加：
+if (m_converter) {
+    m_lastAppliedCoord = *m_converter;
+    m_lastAppliedCoord.pixelWidth = m_dataPixelWidth;
+    m_lastAppliedValid = true;
+}
 ```
 
-### 阶段四
+**影响**：4 个图表面板 + 钢琴卷帘均受益。代码增加约 12 行。
 
+#### OPT-3：频谱图 QImage 缓冲区复用（SpectrogramChartPanel）
+
+**原理**：`rebuildViewImage` 每次调用都创建新 `QImage(dataW, h, Format_RGB32)`，
+旧 `QImage` 被析构释放。当窗口尺寸未变时，可以复用现有缓冲区。
+
+**改动**：
+
+```cpp
+// SpectrogramChartPanel::rebuildViewImage 中
+// 原来：
+m_viewImage = QImage(dataW, h, QImage::Format_RGB32);
+m_viewImage.fill(qRgb(0, 0, 0));
+
+// 改为：
+if (m_viewImage.isNull() || m_viewImage.width() != dataW || m_viewImage.height() != h) {
+    m_viewImage = QImage(dataW, h, QImage::Format_RGB32);
+}
+m_viewImage.fill(qRgb(0, 0, 0));  // 始终清零，fillImageColumns 只覆盖可见范围
 ```
-修改：docs/developer/architecture/overview.md
-修改：docs/human-decisions.md
+
+**影响**：仅频谱图面板受益。代码增加约 3 行。缩放时（尺寸不变）避免重复内存分配。
+
+#### OPT-4：不可见图表跳过更新（connectViewportToWidget）
+
+**原理**：`connectViewportToWidget` 无条件调用 `onViewportUpdate`，即使图表被隐藏。
+隐藏图表的 `rebuildCache` 是无用功。
+
+**改动**：
+
+```cpp
+// AudioVisualizerContainer::connectViewportToWidget 中
+connect(m_viewport, &ViewportController::viewportChanged, this, [safeWidget, this](const ViewportState& state) {
+    if (!safeWidget || !safeWidget->isVisible())  // 新增 isVisible 检查
+        return;
+    if (auto* panel = qobject_cast<dstools::ChartPanelBase*>(safeWidget.data())) {
+        panel->onViewportUpdate(m_coordConverter, safeWidget->width());
+    }
+});
 ```
+
+**注意**：图表从隐藏变为可见时，需在 `rebuildChartLayout` 或 `setChartVisible` 中
+主动触发一次 `onViewportUpdate` 以确保缓存刷新。需验证现有代码中可见性切换后是否已有
+`onViewportUpdate` 调用——通常 `rebuildChartLayout` 会触发 `viewportChanged` 信号，
+间接调用 `onViewportUpdate`，但被 `isVisible()` 拦截。需在 `setChartVisible(true)` 后
+显式调用 `panel->onViewportUpdate(m_coordConverter, panel->width())`。
+
+**影响**：所有图表面板受益。当用户隐藏频谱图或钢琴卷帘时，缩放不再触发其重建。
+代码增加约 3 行。
+
+### 8.3 初次渲染分析
+
+初次渲染（加载音频后）的性能瓶颈主要在频谱图 FFT 计算。当前 `prepareSpectrogramParams`
+在 `setAudioData` → `onAudioDataChanged` 时调用，仅计算全局参数（`m_totalFrames`, `m_numFreqBins`），
+尚未执行 FFT。实际 FFT 在首次 `rebuildViewImage` → `ensureSpectrogramRange` → `computeSpectrogramRange` 时
+按需计算。
+
+**现状已合理**：FFT 已按需懒加载（仅计算可见帧 + 2 帧余量），无需额外优化。
+将 FFT 移到后台线程会显著增加复杂度（需处理 `QImage` 线程安全、数据同步），
+不符合"不大幅增加代码复杂度"的约束。
+
+### 8.4 改动范围
+
+| 文件 | 变更内容 | 优化项 |
+|------|---------|--------|
+| `chart-framework/ChartPanelBase.h` | 新增 `m_updateTimer`, `m_lastAppliedCoord`, `m_lastAppliedValid` | OPT-1, OPT-2 |
+| `chart-framework/ChartPanelBase.cpp` | 修改构造函数、`onViewportUpdate`、`paintEvent` | OPT-1, OPT-2 |
+| `chart-framework/SpectrogramChartPanel.cpp` | 修改 `rebuildViewImage` 中的 QImage 创建逻辑 | OPT-3 |
+| `audio-visualizer/AudioVisualizerContainer.cpp` | 修改 `connectViewportToWidget` 添加 `isVisible` 检查 | OPT-4 |
+
+### 8.5 性能收益预估
+
+| 场景 | 优化前 | 优化后 | 原理 |
+|------|--------|--------|------|
+| 连续缩放 3 步 | 3 次全量重建 | 1 次全量重建 | OPT-1 合并 |
+| 频谱图缩放（尺寸不变） | 每次分配 QImage 堆内存 | 复用已有缓冲区 | OPT-3 |
+| 隐藏频谱图后缩放 | 频谱图仍执行 FFT 重建 | 跳过 | OPT-4 |
+| 重复 viewportChanged | 重复重建缓存 | 跳过 | OPT-2 |
+
+**逻辑等价性保证**：所有优化不改变任何渲染结果。`m_cacheDirty` → `rebuildCache` → `drawContent` 的
+逻辑流程完全保持，仅调整触发时机和频率。
+
+---
+
+## 9. 实施计划
+
+| 阶段 | 内容 | 风险 | 文件数 | 验收要点 |
+|------|------|------|--------|---------|
+| 一 | 补充工程准则 SUP-01~SUP-10 | 低 | 1 | human-decisions.md 新增 10 条准则 |
+| 二 | 清理死代码 | 低 | 3 | .gitkeep 删除、cmake 变量清理 |
+| 三 | 修复循环依赖 | 低 | 7 | dsfw-widgets 不再依赖 dsfw-ui-core |
+| 四 | 统一文件选择 | 低 | 6 | 所有场景通过 FilePathSelector/PathSelector |
+| 五 | 清理 using namespace | 低 | 55+ | 所有文件无 `using namespace dsfw` |
+| 六 | 解除 Qt 信号依赖 | 中 | 11 | 接口无 Q_OBJECT，回调正确投递 UI 线程 |
+| 七 | 图表渲染优化 | 低 | 4 | 连续缩放仅触发一次重建，不可见图表跳过 |
+
+每个阶段独立编译验证后提交，不推送。
+
+---
+
+## 10. 验收标准
+
+- [ ] 编译通过（`cmake --build --preset release`），无新增警告
+- [ ] 所有现有功能行为不变（手动回归测试）
+- [ ] 阶段一：`human-decisions.md` 新增 SUP-01~SUP-10 准则
+- [ ] 阶段二：`.gitkeep` 删除、`AUDIO_UTIL_BUILD_TESTS` 变量清理
+- [ ] 阶段三：`dsfw-widgets` 不再依赖 `dsfw-ui-core`，循环依赖消除
+- [ ] 阶段四：所有文件选择场景均通过 `FilePathSelector` 或 `PathSelector`，`RecentPathStore` 行为一致
+- [ ] 阶段四：`FileDialogHelper` 移至 `dsfw/widgets/` 命名子目录下
+- [ ] 阶段五：所有文件无 `using namespace dsfw;` 声明（含头文件）
+- [ ] 阶段六：`IAudioPlayerAdapter`、`ISliceDataSource`、`IEditorDataSource` 不再继承 QObject
+- [ ] 阶段六：`PlayWidget` 回调正确投递到 UI 线程，无跨线程 UI 操作
+- [ ] 阶段七：连续缩放仅触发一次缓存重建，不可见图表不参与重建
+- [ ] 阶段七：频谱图缩放时 QImage 缓冲区复用，无可观察的渲染差异
+- [ ] 阶段七：图表从隐藏变为可见时缓存正确刷新
+- [ ] `clang-format` 格式检查通过
+- [ ] 设计文档引用与实际代码一致

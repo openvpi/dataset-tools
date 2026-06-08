@@ -1,4 +1,4 @@
-#include "BatchProcessDialog.h"
+﻿#include "BatchProcessDialog.h"
 
 #include "FileDataSource.h"
 
@@ -22,7 +22,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 BatchProcessDialog::BatchProcessDialog(const QString& title, QWidget* parent) : QDialog(parent) {
     setWindowTitle(title);
@@ -105,7 +104,7 @@ BatchProcessDialog::BatchProcessDialog(const QString& title, QWidget* parent) : 
     connect(m_closeBtn, &QPushButton::clicked, this, &QDialog::accept);
 }
 
-BatchProcessDialog::~BatchProcessDialog() = default;
+BatchProcessDialog::~dsfw::BatchProcessDialog() = default;
 
 void BatchProcessDialog::addParamWidget(QWidget* widget) {
     m_paramLayout->addWidget(widget);

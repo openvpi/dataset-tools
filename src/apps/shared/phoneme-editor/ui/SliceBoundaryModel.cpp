@@ -1,4 +1,4 @@
-/// @file SliceBoundaryModel.cpp
+﻿/// @file dsfw::SliceBoundaryModel.cpp
 /// @brief Simple single-tier boundary model for slicer pages.
 
 #include "SliceBoundaryModel.h"
@@ -7,9 +7,7 @@
 
 namespace dstools {
 
-using namespace dsfw;
     namespace phonemelabeler {
-        using namespace dsfw;
 
         static constexpr int64_t kUsPerSec = 1000000;
 
@@ -28,23 +26,23 @@ using namespace dsfw;
             return static_cast<int>(m_pointsSec.size());
         }
 
-        TimePos SliceBoundaryModel::boundaryTime(int tierIndex, int boundaryIndex) const {
+        dsfw::TimePos SliceBoundaryModel::boundaryTime(int tierIndex, int boundaryIndex) const {
             if (tierIndex != 0 || boundaryIndex < 0 || boundaryIndex >= static_cast<int>(m_pointsSec.size()))
                 return 0;
-            return static_cast<TimePos>(m_pointsSec[boundaryIndex] * kUsPerSec);
+            return static_cast<dsfw::TimePos>(m_pointsSec[boundaryIndex] * kUsPerSec);
         }
 
-        void SliceBoundaryModel::moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) {
+        void SliceBoundaryModel::moveBoundary(int tierIndex, int boundaryIndex, dsfw::TimePos newTime) {
             if (tierIndex != 0 || boundaryIndex < 0 || boundaryIndex >= static_cast<int>(m_pointsSec.size()))
                 return;
             m_pointsSec[boundaryIndex] = static_cast<double>(newTime) / kUsPerSec;
         }
 
-        TimePos SliceBoundaryModel::totalDuration() const {
-            return static_cast<TimePos>(m_durationSec * kUsPerSec);
+        dsfw::TimePos SliceBoundaryModel::totalDuration() const {
+            return static_cast<dsfw::TimePos>(m_durationSec * kUsPerSec);
         }
 
-        TimePos SliceBoundaryModel::clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const {
+        dsfw::TimePos SliceBoundaryModel::clampBoundaryTime(int tierIndex, int boundaryIndex, dsfw::TimePos proposedTime) const {
             if (tierIndex != 0 || boundaryIndex < 0 || boundaryIndex >= static_cast<int>(m_pointsSec.size()))
                 return proposedTime;
 
@@ -52,7 +50,7 @@ using namespace dsfw;
 
             if (m_allowOverlap) {
                 double clamped = std::clamp(proposedSec, 0.0, m_durationSec);
-                return static_cast<TimePos>(clamped * kUsPerSec);
+                return static_cast<dsfw::TimePos>(clamped * kUsPerSec);
             }
 
             double prevBoundary = (boundaryIndex > 0) ? m_pointsSec[boundaryIndex - 1] : 0.0;
@@ -67,11 +65,11 @@ using namespace dsfw;
             double maxClamp =
                 (boundaryIndex + 1 < static_cast<int>(m_pointsSec.size())) ? nextBoundary - kMinBoundaryGapSec : nextBoundary;
             double clamped = std::clamp(proposedSec, minClamp, maxClamp);
-            return static_cast<TimePos>(clamped * kUsPerSec);
+            return static_cast<dsfw::TimePos>(clamped * kUsPerSec);
         }
 
-        TimePos SliceBoundaryModel::snapToNearestBoundary(int tierIndex, TimePos proposedTime,
-                                                          TimePos snapThreshold) const {
+        dsfw::TimePos SliceBoundaryModel::snapToNearestBoundary(int tierIndex, dsfw::TimePos proposedTime,
+                                                          dsfw::TimePos snapThreshold) const {
             if (tierIndex != 0)
                 return proposedTime;
 
@@ -89,10 +87,10 @@ using namespace dsfw;
                 }
             }
 
-            return static_cast<TimePos>(bestTime * kUsPerSec);
+            return static_cast<dsfw::TimePos>(bestTime * kUsPerSec);
         }
 
-        TimePos SliceBoundaryModel::snapToNearestBoundaryPixels(int tierIndex, TimePos proposedTime,
+        dsfw::TimePos SliceBoundaryModel::snapToNearestBoundaryPixels(int tierIndex, dsfw::TimePos proposedTime,
                                                                 double pixelsPerSecond, double pixelThreshold) const {
             if (tierIndex != 0 || pixelsPerSecond <= 0)
                 return proposedTime;
@@ -111,7 +109,7 @@ using namespace dsfw;
                 }
             }
 
-            return static_cast<TimePos>(bestTime * kUsPerSec);
+            return static_cast<dsfw::TimePos>(bestTime * kUsPerSec);
         }
 
         std::vector<OutOfBoundsRange> SliceBoundaryModel::getOutOfBoundsRanges(int tierIndex) const {

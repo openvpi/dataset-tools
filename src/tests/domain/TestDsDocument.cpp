@@ -1,4 +1,4 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 
 #include <dstools/DsDocument.h>
@@ -6,7 +6,6 @@
 #include <cmath>
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestDsDocument : public QObject {
     Q_OBJECT
@@ -26,7 +25,7 @@ private slots:
 };
 
 void TestDsDocument::testEmptyDocument() {
-    DsDocument doc;
+    dsfw::DsDocument doc;
     QVERIFY(doc.isEmpty());
     QCOMPARE(doc.sentenceCount(), 0);
     QVERIFY(doc.filePath().isEmpty());
@@ -43,7 +42,7 @@ void TestDsDocument::testSaveAndLoadRoundTrip() {
     QVERIFY(tmp.isValid());
     QString path = tmp.path() + "/test.ds";
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
     nlohmann::json s1;
     s1["offset"] = 0.0;
     s1["text"] = "hello";
@@ -72,7 +71,7 @@ void TestDsDocument::testSaveFileResultApi() {
     QVERIFY(tmp.isValid());
     QString path = tmp.path() + "/result_test.ds";
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
     doc.addRawSentence(nlohmann::json::object({{"text", "test"}}).dump());
 
     auto result = doc.saveFile(path);
@@ -84,7 +83,7 @@ void TestDsDocument::testLoadFileResultApi() {
     QVERIFY(tmp.isValid());
     QString path = tmp.path() + "/load_result_test.ds";
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
     doc.addRawSentence(nlohmann::json::object({{"text", "data"}}).dump());
     doc.saveFile(path);
 
@@ -94,7 +93,7 @@ void TestDsDocument::testLoadFileResultApi() {
 }
 
 void TestDsDocument::testSentenceAccess() {
-    DsDocument doc;
+    dsfw::DsDocument doc;
     doc.addRawSentence(nlohmann::json::object({{"text", "first"}}).dump());
     doc.addRawSentence(nlohmann::json::object({{"text", "second"}}).dump());
 
@@ -108,7 +107,7 @@ void TestDsDocument::testSentenceViewAllFieldsRoundTrip() {
     QVERIFY(tmp.isValid());
     QString path = tmp.path() + "/all_fields.ds";
 
-    DsDocument doc;
+    dsfw::DsDocument doc;
 
     nlohmann::json s;
     s["text"] = "测试句子";
@@ -163,13 +162,13 @@ void TestDsDocument::testSentenceViewAllFieldsRoundTrip() {
 }
 
 void TestDsDocument::testSetFilePath() {
-    DsDocument doc;
+    dsfw::DsDocument doc;
     doc.setFilePath("/some/path.ds");
     QCOMPARE(doc.filePath(), QString("/some/path.ds"));
 }
 
 void TestDsDocument::testSaveWithoutPath() {
-    DsDocument doc;
+    dsfw::DsDocument doc;
     doc.addRawSentence(nlohmann::json::object({{"text", "test"}}).dump());
     auto result = doc.saveFile();
     QVERIFY(!result.ok());

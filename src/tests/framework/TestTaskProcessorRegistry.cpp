@@ -1,11 +1,9 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/TaskProcessorRegistry.h>
 
-using namespace dsfw;
 using namespace dstools;
-using namespace dsfw;
 
-class DummyProcessor : public ITaskProcessor {
+class DummyProcessor : public dsfw::ITaskProcessor {
 public:
     explicit DummyProcessor(QString id = QStringLiteral("dummy"), QString task = QStringLiteral("test_task")) :
         m_id(std::move(id)), m_task(std::move(task)) {
@@ -20,13 +18,13 @@ public:
     TaskSpec taskSpec() const override {
         return {m_task, {}, {}};
     }
-    Result<void> initialize(ModelManager &, const ProcessorConfig &) override {
-        return Ok();
+    dsfw::Result<void> initialize(dsfw::ModelManager &, const dsfw::ProcessorConfig &) override {
+        return dsfw::Ok();
     }
     void release() override {
     }
-    Result<TaskOutput> process(const TaskInput &) override {
-        return Ok(TaskOutput{});
+    dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &) override {
+        return dsfw::Ok(dsfw::TaskOutput{});
     }
 
 private:
@@ -104,7 +102,7 @@ void TestTaskProcessorRegistry::testRegistrar() {
     QCOMPARE(proc->processorId(), QStringLiteral("dummy"));
 }
 
-class TaskSpecValidationProcessor : public ITaskProcessor {
+class TaskSpecValidationProcessor : public dsfw::ITaskProcessor {
 public:
     TaskSpecValidationProcessor(QString id, QString task,
                                 std::vector<SlotSpec> inputs,
@@ -116,9 +114,9 @@ public:
     QString processorId() const override { return m_id; }
     QString displayName() const override { return QStringLiteral("ValidationProcessor"); }
     TaskSpec taskSpec() const override { return {m_task, m_inputs, m_outputs}; }
-    Result<void> initialize(ModelManager &, const ProcessorConfig &) override { return Ok(); }
+    dsfw::Result<void> initialize(dsfw::ModelManager &, const dsfw::ProcessorConfig &) override { return dsfw::Ok(); }
     void release() override {}
-    Result<TaskOutput> process(const TaskInput &) override { return Ok(TaskOutput{}); }
+    dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &) override { return dsfw::Ok(dsfw::TaskOutput{}); }
 
 private:
     QString m_id;

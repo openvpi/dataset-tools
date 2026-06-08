@@ -1,13 +1,12 @@
-#include "SplitMergeCommands.h"
+﻿#include "SplitMergeCommands.h"
 
 #include <dstools/DsPitchDocument.h>
 
 namespace dstools {
     namespace pitchlabeler {
         namespace ui {
-            using namespace dsfw;
 
-            SplitNoteCommand::SplitNoteCommand(std::shared_ptr<DsPitchDocument> dsFile, int noteIndex, TimePos splitTime,
+            SplitNoteCommand::SplitNoteCommand(std::shared_ptr<DsPitchDocument> dsFile, int noteIndex, dsfw::TimePos splitTime,
                                                QUndoCommand *parent) :
                 QUndoCommand(parent), m_dsFile(std::move(dsFile)), m_noteIndex(noteIndex), m_splitTime(splitTime) {
                 setText(QObject::tr("Split note"));
@@ -22,8 +21,8 @@ namespace dstools {
                     return;
 
                 const auto &n = m_dsFile->notes[m_noteIndex];
-                TimePos noteStart = n.start;
-                TimePos noteEnd = noteStart + m_originalSnapshot.duration;
+                dsfw::TimePos noteStart = n.start;
+                dsfw::TimePos noteEnd = noteStart + m_originalSnapshot.duration;
 
                 if (m_splitTime <= noteStart || m_splitTime >= noteEnd)
                     return;

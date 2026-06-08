@@ -1,4 +1,4 @@
-#include "MiniMapScrollBar.h"
+﻿#include "MiniMapScrollBar.h"
 
 #include <dstools/Constants.h>
 
@@ -12,13 +12,11 @@
 
 namespace dstools {
 
-using namespace dsfw;
-using namespace dsfw;
 
 using dsfw::widgets::ViewportController;
 using dsfw::widgets::ViewportState;
 
-MiniMapScrollBar::MiniMapScrollBar(ViewportController *viewport, QWidget *parent)
+MiniMapScrollBar::MiniMapScrollBar(dsfw::ViewportController *viewport, QWidget *parent)
     : QWidget(parent), m_viewport(viewport) {
     setFixedHeight(kFixedHeight);
     setCursor(Qt::OpenHandCursor);
@@ -31,7 +29,7 @@ MiniMapScrollBar::MiniMapScrollBar(ViewportController *viewport, QWidget *parent
     }
 }
 
-MiniMapScrollBar::~MiniMapScrollBar() = default;
+MiniMapScrollBar::~dsfw::MiniMapScrollBar() = default;
 
 QSize MiniMapScrollBar::minimumSizeHint() const {
     return {40, kFixedHeight};
@@ -47,7 +45,7 @@ void MiniMapScrollBar::setAudioData(const std::vector<float> &samples, int sampl
     m_totalDuration = m_samples.empty() ? 0.0
                                         : static_cast<double>(m_samples.size()) / m_sampleRate;
     // Note: do NOT call m_viewport->setTotalDuration() here — the caller
-    // (SlicerPage/PhonemeEditor) has already called setAudioParams() with the
+    // (dsfw::SlicerPage/dsfw::PhonemeEditor) has already called setAudioParams() with the
     // correct sample rate. Calling setTotalDuration() would reset it to default.
     rebuildPeakCache();
     update();

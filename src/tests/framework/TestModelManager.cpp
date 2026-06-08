@@ -1,13 +1,12 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dstools/ModelManager.h>
 
 using namespace dstools;
-using namespace dsfw;
 
 static const auto TestCustomType = registerModelType("Custom");
 static const auto TestAsrType = registerModelType("Asr");
 
-class MockModelProvider : public IModelProvider {
+class MockModelProvider : public dsfw::IModelProvider {
 public:
     int loadCount = 0;
     int unloadCount = 0;
@@ -21,10 +20,10 @@ public:
         return "MockModel";
     }
 
-    Result<void> load(const QString & /*modelPath*/, int /*gpuIndex*/) override {
+    dsfw::Result<void> load(const QString & /*modelPath*/, int /*gpuIndex*/) override {
         ++loadCount;
         m_status = ModelStatus::Ready;
-        return Result<void>::Ok();
+        return dsfw::Result<void>::Ok();
     }
 
     void unload() override {
@@ -50,7 +49,7 @@ private slots:
 };
 
 void TestModelManager::testRegisterProvider() {
-    ModelManager mgr;
+    dsfw::ModelManager mgr;
     auto mock = std::make_unique<MockModelProvider>();
     auto *ptr = mock.get();
     mgr.registerProvider(TestCustomType, std::move(mock));
@@ -58,17 +57,17 @@ void TestModelManager::testRegisterProvider() {
 }
 
 void TestModelManager::testStatusUnloaded() {
-    ModelManager mgr;
+    dsfw::ModelManager mgr;
     QCOMPARE(mgr.status(TestCustomType), ModelStatus::Unloaded);
 }
 
 void TestModelManager::testProviderReturnsNull() {
-    ModelManager mgr;
+    dsfw::ModelManager mgr;
     QVERIFY(mgr.provider(TestAsrType) == nullptr);
 }
 
 void TestModelManager::testMockLoadUnload() {
-    ModelManager mgr;
+    dsfw::ModelManager mgr;
     auto mock = std::make_unique<MockModelProvider>();
     auto *ptr = mock.get();
     mgr.registerProvider(TestCustomType, std::move(mock));

@@ -1,10 +1,9 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <dstools/PhNumCalculator.h>
 #include <dstools/TranscriptionCsv.h>
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestPhNumCalculator : public QObject {
     Q_OBJECT
@@ -21,7 +20,7 @@ private slots:
 };
 
 void TestPhNumCalculator::testCalculate_simpleVowels() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     calc.setVowels({"a", "i", "u", "SP", "AP"});
     calc.setConsonants({"k", "s"});
 
@@ -31,7 +30,7 @@ void TestPhNumCalculator::testCalculate_simpleVowels() {
 }
 
 void TestPhNumCalculator::testCalculate_consonantFollowsVowel() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     calc.setVowels({"a", "i"});
     calc.setConsonants({"k", "s"});
 
@@ -41,7 +40,7 @@ void TestPhNumCalculator::testCalculate_consonantFollowsVowel() {
 }
 
 void TestPhNumCalculator::testCalculate_empty() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     calc.setVowels({"a"});
     calc.setConsonants({"k"});
 
@@ -51,7 +50,7 @@ void TestPhNumCalculator::testCalculate_empty() {
 }
 
 void TestPhNumCalculator::testCalculate_singlePhoneme() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     calc.setVowels({"a"});
     calc.setConsonants({"k"});
 
@@ -61,7 +60,7 @@ void TestPhNumCalculator::testCalculate_singlePhoneme() {
 }
 
 void TestPhNumCalculator::testCalculate_mixed() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     calc.setVowels({"a", "i", "SP"});
     calc.setConsonants({"k", "s"});
 
@@ -71,7 +70,7 @@ void TestPhNumCalculator::testCalculate_mixed() {
 }
 
 void TestPhNumCalculator::testSetVowelsAndConsonants() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     calc.setVowels({"a", "e"});
     calc.setConsonants({"b", "c"});
 
@@ -81,7 +80,7 @@ void TestPhNumCalculator::testSetVowelsAndConsonants() {
 }
 
 void TestPhNumCalculator::testLoadDictionaryInvalidPath() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     auto result = calc.loadDictionary("/nonexistent/dict.txt");
     QVERIFY(!result.ok());
     QVERIFY(!result.error().empty());
@@ -100,7 +99,7 @@ void TestPhNumCalculator::testLoadDictionaryValidFile() {
     out << "a\ta\n";
     f.close();
 
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     auto result = calc.loadDictionary(dictPath);
     QVERIFY(result.ok());
     QVERIFY(calc.isLoaded());
@@ -111,7 +110,7 @@ void TestPhNumCalculator::testLoadDictionaryValidFile() {
 }
 
 void TestPhNumCalculator::testCalculateBatch() {
-    PhNumCalculator calc;
+    dsfw::PhNumCalculator calc;
     calc.setVowels({"a", "i"});
     calc.setConsonants({"k", "s"});
 

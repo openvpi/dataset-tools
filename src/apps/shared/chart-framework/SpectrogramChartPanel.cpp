@@ -1,4 +1,4 @@
-#include "SpectrogramChartPanel.h"
+﻿#include "SpectrogramChartPanel.h"
 
 #include "ChartConfigRegistry.h"
 
@@ -16,12 +16,10 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
-SpectrogramChartPanel::SpectrogramChartPanel(ViewportController *viewport, QWidget *parent)
-    : ChartPanelBase(QStringLiteral("spectrogram"), viewport, parent)
+SpectrogramChartPanel::SpectrogramChartPanel(dsfw::ViewportController *viewport, QWidget *parent)
+    : dsfw::ChartPanelBase(QStringLiteral("spectrogram"), viewport, parent)
 {
     setMinimumHeight(200);
 }

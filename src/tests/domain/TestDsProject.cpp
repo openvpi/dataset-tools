@@ -1,10 +1,9 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <dsfw/PathUtils.h>
 #include <dstools/DsProject.h>
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestDsProject : public QObject {
     Q_OBJECT
@@ -20,7 +19,7 @@ private slots:
 };
 
 void TestDsProject::defaultConstruction() {
-    DsProject proj;
+    dsfw::DsProject proj;
     QVERIFY(proj.workingDirectory().isEmpty());
     QVERIFY(proj.filePath().isEmpty());
     QVERIFY(proj.items().empty());
@@ -36,10 +35,10 @@ void TestDsProject::saveLoadRoundtrip() {
     QTemporaryDir tmpDir;
     QVERIFY(tmpDir.isValid());
 
-    DsProject proj;
+    dsfw::DsProject proj;
     proj.setWorkingDirectory(QStringLiteral("/test/dir"));
 
-    ExportConfig exp;
+    dsfw::ExportConfig exp;
     exp.hopSize = 256;
     exp.sampleRate = 22050;
     exp.resampleRate = 22050;
@@ -109,7 +108,7 @@ void TestDsProject::v3ItemsAndSlices() {
     QTemporaryDir tmpDir;
     QVERIFY(tmpDir.isValid());
 
-    DsProject proj;
+    dsfw::DsProject proj;
     Item item;
     item.id = QStringLiteral("item_001");
     item.name = QStringLiteral("test_item");
@@ -178,8 +177,8 @@ void TestDsProject::exportConfigRoundtrip() {
     QTemporaryDir tmpDir;
     QVERIFY(tmpDir.isValid());
 
-    DsProject proj;
-    ExportConfig exp;
+    dsfw::DsProject proj;
+    dsfw::ExportConfig exp;
     exp.formats = {QStringLiteral("ds"), QStringLiteral("csv"), QStringLiteral("json")};
     exp.hopSize = 128;
     exp.sampleRate = 16000;
@@ -205,7 +204,7 @@ void TestDsProject::slicerStateRoundtrip() {
     QTemporaryDir tmpDir;
     QVERIFY(tmpDir.isValid());
 
-    DsProject proj;
+    dsfw::DsProject proj;
     SlicerState state;
     state.params.threshold = -35.0;
     state.params.minLength = 4000;

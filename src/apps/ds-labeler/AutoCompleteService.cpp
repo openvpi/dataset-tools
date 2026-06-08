@@ -1,4 +1,4 @@
-#include "AutoCompleteService.h"
+﻿#include "AutoCompleteService.h"
 
 #include <dstools/PhNumCalculator.h>
 #include <dstools/PitchUtils.h>
@@ -10,13 +10,11 @@
 
 namespace dstools {
 
-using namespace dsfw;
-    using namespace dsfw;
 
-AutoCompleteResult autoCompleteSlice(DsTextDocument doc,
+AutoCompleteResult autoCompleteSlice(dsfw::DsTextDocument doc,
                                      const QString &audioPath,
                                      dsfw::infer::IInferenceService *inferService,
-                                     PhNumCalculator *phNumCalc) {
+                                     dsfw::PhNumCalculator *phNumCalc) {
     AutoCompleteResult result;
     result.doc = std::move(doc);
 

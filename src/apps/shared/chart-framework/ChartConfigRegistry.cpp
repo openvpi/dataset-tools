@@ -1,4 +1,4 @@
-#include "ChartConfigRegistry.h"
+﻿#include "ChartConfigRegistry.h"
 
 #include <QMetaType>
 #include <dsfw/AppSettings.h>
@@ -6,16 +6,14 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
-ChartConfigRegistry &ChartConfigRegistry::instance() {
-    static ChartConfigRegistry inst;
+dsfw::ChartConfigRegistry &ChartConfigRegistry::instance() {
+    static dsfw::ChartConfigRegistry inst;
     return inst;
 }
 
-void ChartConfigRegistry::setSettings(AppSettings *settings) {
+void ChartConfigRegistry::setSettings(dsfw::AppSettings *settings) {
     m_settings = settings;
 }
 

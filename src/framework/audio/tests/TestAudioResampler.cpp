@@ -1,4 +1,4 @@
-/// @file TestAudioResampler.cpp
+﻿/// @file TestAudioResampler.cpp
 /// @brief Unit tests for dsfw::audio::SwresampleResampler.
 
 #include <dsfw/audio/SwresampleResampler.h>
@@ -7,7 +7,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace dsfw::audio;
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 
@@ -41,8 +40,8 @@ static void test_resample_rate() {
         f[i] = std::sin(2.0 * 3.14159265358979323846 * 220.0 * i / inputRate);
     }
 
-    SwresampleResampler resampler;
-    ResampleConfig config = ResampleConfig::forMonoFloat(22050);
+    dsfw::audio::SwresampleResampler resampler;
+    dsfw::audio::ResampleConfig config = ResampleConfig::forMonoFloat(22050);
 
     auto result = resampler.convert(input, inputRate, config);
     TEST_ASSERT(result.ok(), "convert ok");
@@ -64,8 +63,8 @@ static void test_resample_no_change() {
         f[i] = std::sin(2.0 * 3.14159265358979323846 * 440.0 * i / rate);
     }
 
-    SwresampleResampler resampler;
-    ResampleConfig config = ResampleConfig::forMonoFloat(16000);
+    dsfw::audio::SwresampleResampler resampler;
+    dsfw::audio::ResampleConfig config = ResampleConfig::forMonoFloat(16000);
 
     auto result = resampler.convert(input, rate, config);
     TEST_ASSERT(result.ok(), "convert ok");
@@ -86,8 +85,8 @@ static void test_resample_stereo_to_mono() {
         f[i * 2 + 1] = std::sin(2.0 * 3.14159265358979323846 * 880.0 * i / rate);
     }
 
-    SwresampleResampler resampler;
-    ResampleConfig config = ResampleConfig::forMonoFloat(16000);
+    dsfw::audio::SwresampleResampler resampler;
+    dsfw::audio::ResampleConfig config = ResampleConfig::forMonoFloat(16000);
 
     auto result = resampler.convert(input, rate, config);
     TEST_ASSERT(result.ok(), "convert ok");
@@ -108,8 +107,8 @@ static void test_resample_int16_to_float() {
 
     auto input = AudioBuffer::fromCopy(data.data(), frames, 1, SampleFormat::Int16);
 
-    SwresampleResampler resampler;
-    ResampleConfig config = ResampleConfig::forMonoFloat(16000);
+    dsfw::audio::SwresampleResampler resampler;
+    dsfw::audio::ResampleConfig config = ResampleConfig::forMonoFloat(16000);
 
     auto result = resampler.convert(input, rate, config);
     TEST_ASSERT(result.ok(), "convert ok");
@@ -128,7 +127,7 @@ static void test_convenience_to_mono_float() {
         f[i] = std::sin(2.0 * 3.14159265358979323846 * 440.0 * i / rate);
     }
 
-    SwresampleResampler resampler;
+    dsfw::audio::SwresampleResampler resampler;
     auto result = resampler.toMonoFloat(input, rate, 16000);
     TEST_ASSERT(result.ok(), "toMonoFloat ok");
     auto output = result.value();
@@ -140,8 +139,8 @@ static void test_convenience_to_mono_float() {
 
 static void test_empty_input() {
     auto input = AudioBuffer::create(0, 0, SampleFormat::Float32);
-    SwresampleResampler resampler;
-    ResampleConfig config = ResampleConfig::forMonoFloat(16000);
+    dsfw::audio::SwresampleResampler resampler;
+    dsfw::audio::ResampleConfig config = ResampleConfig::forMonoFloat(16000);
 
     auto result = resampler.convert(input, 44100, config);
     // Empty input should return empty or error

@@ -1,4 +1,4 @@
-/// @file TestAudioPipeline.cpp
+﻿/// @file TestAudioPipeline.cpp
 /// @brief Unit tests for dsfw::audio::AudioPipeline.
 
 #include <dsfw/audio/AudioPipeline.h>
@@ -9,7 +9,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace dsfw::audio;
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 

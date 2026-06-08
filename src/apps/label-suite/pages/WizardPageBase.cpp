@@ -1,10 +1,9 @@
-#include "WizardPageBase.h"
+﻿#include "WizardPageBase.h"
 
 #include <QKeySequence>
 
 namespace dstools::labeler {
 
-using namespace dsfw;
 
 WizardPageBase::WizardPageBase(QWidget *parent) : QWidget(parent) {}
 

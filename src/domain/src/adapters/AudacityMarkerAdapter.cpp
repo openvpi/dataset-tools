@@ -1,4 +1,4 @@
-#include <dstools/AudacityMarkerAdapter.h>
+﻿#include <dstools/AudacityMarkerAdapter.h>
 
 #include <QFile>
 #include <QTextStream>
@@ -10,7 +10,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 dsfw::Result<std::vector<double>> AudacityMarkerAdapter::read(const QString& path) {
     QFile file(path);

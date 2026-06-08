@@ -1,4 +1,4 @@
-#include <dstools/CsvAdapter.h>
+﻿#include <dstools/CsvAdapter.h>
 #include "PhonemeLayerBuilder.h"
 
 #include <dsfw/ConfigTypes.h>
@@ -10,9 +10,7 @@ REGISTER_FORMAT_ADAPTER(dstools::CsvAdapter);
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 static std::map<QString, LayerData> phonemeRowToLayers(const TranscriptionRow &row) {
     std::map<QString, LayerData> temp;
@@ -40,33 +38,33 @@ static std::map<QString, nlohmann::json> layersToJson(const std::map<QString, La
     return result;
 }
 
-static Result<void> validateLayerData(const std::map<QString, LayerData> &layers) {
+static dsfw::Result<void> validateLayerData(const std::map<QString, LayerData> &layers) {
     if (layers.empty())
-        return Result<void>::Error("import produced no layers");
+        return dsfw::Result<void>::Error("import produced no layers");
     for (const auto &[key, val] : layers) {
         if (val.empty())
-            return Result<void>::Error(QString("layer '%1' is empty").arg(key).toStdString());
+            return dsfw::Result<void>::Error(QString("layer '%1' is empty").arg(key).toStdString());
         try {
             const auto j = val.toJson();
             if (j.is_null())
-                return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key).toStdString());
+                return dsfw::Result<void>::Error(QString("layer '%1' contains null JSON").arg(key).toStdString());
         } catch (const std::exception &e) {
-            return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()).toStdString());
+            return dsfw::Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()).toStdString());
         }
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> CsvAdapter::importToLayers(const QString &filePath,
+dsfw::Result<void> CsvAdapter::importToLayers(const QString &filePath,
                                         std::map<QString, LayerData> &layers,
-                                        const ProcessorConfig &config) {
+                                        const dsfw::ProcessorConfig &config) {
     auto csvResult = TranscriptionCsv::read(filePath);
     if (!csvResult.ok())
-        return Result<void>::Error(csvResult.error());
+        return dsfw::Result<void>::Error(csvResult.error());
 
     auto rows = std::move(csvResult.value());
     if (rows.empty())
-        return Result<void>::Error("CSV file contains no rows");
+        return dsfw::Result<void>::Error("CSV file contains no rows");
 
     const TranscriptionRow *target = &rows[0];
     if (config.contains(QStringLiteral("name"))) {
@@ -85,16 +83,16 @@ Result<void> CsvAdapter::importToLayers(const QString &filePath,
         return validation;
 
     layers = std::move(temp);
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> CsvAdapter::exportFromLayers(const std::map<QString, LayerData> &layers,
+dsfw::Result<void> CsvAdapter::exportFromLayers(const std::map<QString, LayerData> &layers,
                                           const QString &outputPath,
-                                          const ProcessorConfig &config) {
+                                          const dsfw::ProcessorConfig &config) {
     const auto lyr = layersToJson(layers);
     auto it = lyr.find(QStringLiteral("phoneme"));
     if (it == lyr.end())
-        return Result<void>::Error("No phoneme layer found");
+        return dsfw::Result<void>::Error("No phoneme layer found");
 
     const auto &boundaries = it->second["boundaries"];
 
@@ -102,8 +100,8 @@ Result<void> CsvAdapter::exportFromLayers(const std::map<QString, LayerData> &la
     QStringList durs;
     for (size_t i = 0; i + 1 < boundaries.size(); ++i) {
         phones.append(QString::fromStdString(boundaries[i].value("text", "")));
-        const TimePos posA = boundaries[i].value("pos", int64_t(0));
-        const TimePos posB = boundaries[i + 1].value("pos", int64_t(0));
+        const dsfw::TimePos posA = boundaries[i].value("pos", int64_t(0));
+        const dsfw::TimePos posB = boundaries[i + 1].value("pos", int64_t(0));
         durs.append(QString::number(usToSec(posB - posA), 'f', 6));
     }
 
@@ -124,14 +122,14 @@ Result<void> CsvAdapter::exportFromLayers(const std::map<QString, LayerData> &la
 
     auto writeResult = TranscriptionCsv::write(outputPath, {row});
     if (!writeResult.ok())
-        return Result<void>::Error(writeResult.error());
+        return dsfw::Result<void>::Error(writeResult.error());
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> CsvAdapter::batchExport(const std::vector<PipelineContext> &contexts,
+dsfw::Result<void> CsvAdapter::batchExport(const std::vector<dsfw::PipelineContext> &contexts,
                                       const QString &outputPath,
-                                      const ProcessorConfig & /*config*/) {
+                                      const dsfw::ProcessorConfig & /*config*/) {
     std::vector<TranscriptionRow> rows;
 
     for (const auto &ctx : contexts) {
@@ -149,8 +147,8 @@ Result<void> CsvAdapter::batchExport(const std::vector<PipelineContext> &context
         QStringList durs;
         for (size_t i = 0; i + 1 < boundaries.size(); ++i) {
             phones.append(QString::fromStdString(boundaries[i].value("text", "")));
-            const TimePos posA = boundaries[i].value("pos", int64_t(0));
-            const TimePos posB = boundaries[i + 1].value("pos", int64_t(0));
+            const dsfw::TimePos posA = boundaries[i].value("pos", int64_t(0));
+            const dsfw::TimePos posB = boundaries[i + 1].value("pos", int64_t(0));
             durs.append(QString::number(usToSec(posB - posA), 'f', 6));
         }
 
@@ -174,36 +172,36 @@ Result<void> CsvAdapter::batchExport(const std::vector<PipelineContext> &context
     }
 
     if (rows.empty())
-        return Result<void>::Error("No valid items to export");
+        return dsfw::Result<void>::Error("No valid items to export");
 
     auto writeResult = TranscriptionCsv::write(outputPath, rows);
     if (!writeResult.ok())
-        return Result<void>::Error(writeResult.error());
+        return dsfw::Result<void>::Error(writeResult.error());
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> CsvAdapter::writeRows(const QString &outputPath, const std::vector<TranscriptionRow> &rows) {
+dsfw::Result<void> CsvAdapter::writeRows(const QString &outputPath, const std::vector<TranscriptionRow> &rows) {
     if (rows.empty())
-        return Result<void>::Error("No rows to write");
+        return dsfw::Result<void>::Error("No rows to write");
 
     auto writeResult = TranscriptionCsv::write(outputPath, rows);
     if (!writeResult.ok())
-        return Result<void>::Error(writeResult.error());
+        return dsfw::Result<void>::Error(writeResult.error());
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> CsvAdapter::readRows(const QString &filePath, std::vector<TranscriptionRow> &rows) {
+dsfw::Result<void> CsvAdapter::readRows(const QString &filePath, std::vector<TranscriptionRow> &rows) {
     auto csvResult = TranscriptionCsv::read(filePath);
     if (!csvResult.ok())
-        return Result<void>::Error(csvResult.error());
+        return dsfw::Result<void>::Error(csvResult.error());
 
     rows = std::move(csvResult.value());
     if (rows.empty())
-        return Result<void>::Error("CSV file contains no rows");
+        return dsfw::Result<void>::Error("CSV file contains no rows");
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 } // namespace dstools

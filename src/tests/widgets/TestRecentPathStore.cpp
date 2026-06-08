@@ -1,9 +1,8 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <dsfw/widgets/RecentPathStore.h>
 #include <dsfw/AppSettings.h>
 
-using namespace dsfw::widgets;
 
 class TestRecentPathStore : public QObject {
     Q_OBJECT

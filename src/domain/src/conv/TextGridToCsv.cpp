@@ -1,4 +1,4 @@
-#include <dstools/TextGridToCsv.h>
+﻿#include <dstools/TextGridToCsv.h>
 
 #include <dsfw/PathUtils.h>
 #include <textgrid.hpp>
@@ -12,12 +12,11 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-Result<TranscriptionRow> TextGridToCsv::extractFromTextGrid(const QString &tgPath) {
+dsfw::Result<TranscriptionRow> TextGridToCsv::extractFromTextGrid(const QString &tgPath) {
     auto textResult = dsfw::PathUtils::readFile(tgPath);
     if (!textResult.ok()) {
-        return Result<TranscriptionRow>::Error(textResult.error());
+        return dsfw::Result<TranscriptionRow>::Error(textResult.error());
     }
 
     const std::string content = textResult.value().toStdString();
@@ -28,8 +27,8 @@ Result<TranscriptionRow> TextGridToCsv::extractFromTextGrid(const QString &tgPat
         textgrid::Parser parser(iss);
         tg = parser.Parse();
     } catch (const textgrid::Exception &e) {
-        return Result<TranscriptionRow>::Error(
-            std::string("TextGrid parse error in ") + tgPath.toStdString() + ": " + e.what());
+        return dsfw::Result<TranscriptionRow>::Error(
+            std::string("dsfw::TextGrid parse error in ") + tgPath.toStdString() + ": " + e.what());
     }
 
     // Find "phones" tier (case-insensitive)
@@ -44,7 +43,7 @@ Result<TranscriptionRow> TextGridToCsv::extractFromTextGrid(const QString &tgPat
     }
 
     if (!phonesTier) {
-        return Result<TranscriptionRow>::Error(
+        return dsfw::Result<TranscriptionRow>::Error(
             std::string("No \"phones\" interval tier found in ") + tgPath.toStdString());
     }
 
@@ -70,22 +69,22 @@ Result<TranscriptionRow> TextGridToCsv::extractFromTextGrid(const QString &tgPat
     return row;
 }
 
-Result<std::vector<TranscriptionRow>> TextGridToCsv::extractDirectory(const QString &dir) {
+dsfw::Result<std::vector<TranscriptionRow>> TextGridToCsv::extractDirectory(const QString &dir) {
     QDir d(dir);
     if (!d.exists()) {
-        return Result<std::vector<TranscriptionRow>>::Error(
+        return dsfw::Result<std::vector<TranscriptionRow>>::Error(
             std::string("Directory does not exist: ") + dir.toStdString());
     }
 
     const QStringList files =
-        d.entryList({QStringLiteral("*.TextGrid")}, QDir::Files | QDir::Readable, QDir::Name);
+        d.entryList({QStringLiteral("*.dsfw::TextGrid")}, QDir::Files | QDir::Readable, QDir::Name);
 
     std::vector<TranscriptionRow> rows;
     for (const QString &filename : files) {
         const QString filePath = d.filePath(filename);
         auto rowResult = extractFromTextGrid(filePath);
         if (!rowResult.ok()) {
-            return Result<std::vector<TranscriptionRow>>::Error(
+            return dsfw::Result<std::vector<TranscriptionRow>>::Error(
                 std::string("Failed on ") + filename.toStdString() + ": " + rowResult.error());
         }
         rows.push_back(std::move(rowResult.value()));

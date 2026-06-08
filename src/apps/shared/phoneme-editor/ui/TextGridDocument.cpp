@@ -1,4 +1,4 @@
-#include "TextGridDocument.h"
+﻿#include "TextGridDocument.h"
 
 #include <dstools/Constants.h>
 #include <dstools/DsKeys.h>
@@ -12,9 +12,7 @@
 
 namespace dstools {
 
-using namespace dsfw;
 namespace phonemelabeler {
-using namespace dsfw;
 
 TextGridDocument::TextGridDocument(QObject *parent)
     : QObject(parent)
@@ -37,7 +35,7 @@ const textgrid::PointTier *TextGridDocument::pointTier(int index) const {
     return tier ? tier.get() : nullptr;
 }
 
-TimePos TextGridDocument::totalDuration() const {
+dsfw::TimePos TextGridDocument::totalDuration() const {
     if (tierCount() == 0) return 0;
     return secToUs(m_textGrid.GetMaxTime());
 }
@@ -52,7 +50,7 @@ bool TextGridDocument::isIntervalTier(int index) const {
     return std::dynamic_pointer_cast<textgrid::IntervalTier>(m_textGrid.GetTier(index)) != nullptr;
 }
 
-void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, TimePos newTime) {
+void TextGridDocument::moveBoundary(int tierIndex, int boundaryIndex, dsfw::TimePos newTime) {
     if (tierIndex < 0 || tierIndex >= tierCount()) return;
 
     auto tier = m_textGrid.GetTierAs<textgrid::IntervalTier>(tierIndex);
@@ -101,7 +99,7 @@ void TextGridDocument::setIntervalText(int tierIndex, int intervalIndex, const Q
     emit modifiedChanged(true);
 }
 
-void TextGridDocument::insertBoundary(int tierIndex, TimePos time) {
+void TextGridDocument::insertBoundary(int tierIndex, dsfw::TimePos time) {
     if (tierIndex < 0 || tierIndex >= tierCount()) return;
     if (isTierReadOnly(tierIndex)) return;
 
@@ -153,7 +151,7 @@ void TextGridDocument::removeBoundary(int tierIndex, int boundaryIndex) {
     emit modifiedChanged(true);
 }
 
-TimePos TextGridDocument::boundaryTime(int tierIndex, int boundaryIndex) const {
+dsfw::TimePos TextGridDocument::boundaryTime(int tierIndex, int boundaryIndex) const {
     if (tierIndex < 0 || tierIndex >= tierCount()) return 0;
 
     const auto *tier = intervalTier(tierIndex);
@@ -187,7 +185,7 @@ QString TextGridDocument::intervalText(int tierIndex, int intervalIndex) const {
     return QString::fromStdString(tier->GetInterval(intervalIndex).text);
 }
 
-TimePos TextGridDocument::intervalStart(int tierIndex, int intervalIndex) const {
+dsfw::TimePos TextGridDocument::intervalStart(int tierIndex, int intervalIndex) const {
     if (tierIndex < 0 || tierIndex >= tierCount()) return 0;
     const auto *tier = intervalTier(tierIndex);
     if (!tier) return 0;
@@ -195,7 +193,7 @@ TimePos TextGridDocument::intervalStart(int tierIndex, int intervalIndex) const 
     return secToUs(tier->GetInterval(intervalIndex).min_time);
 }
 
-TimePos TextGridDocument::intervalEnd(int tierIndex, int intervalIndex) const {
+dsfw::TimePos TextGridDocument::intervalEnd(int tierIndex, int intervalIndex) const {
     if (tierIndex < 0 || tierIndex >= tierCount()) return 0;
     const auto *tier = intervalTier(tierIndex);
     if (!tier) return 0;
@@ -218,7 +216,7 @@ void TextGridDocument::setActiveTierIndex(int index) {
     }
 }
 
-TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, TimePos proposedTime) const {
+dsfw::TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, dsfw::TimePos proposedTime) const {
     if (tierIndex < 0 || tierIndex >= tierCount()) return proposedTime;
 
     const auto *tier = intervalTier(tierIndex);
@@ -246,7 +244,7 @@ TimePos TextGridDocument::clampBoundaryTime(int tierIndex, int boundaryIndex, Ti
     return secToUs(clamped);
 }
 
-TimePos TextGridDocument::snapToNearestBoundary(int tierIndex, TimePos proposedTime, TimePos snapThreshold) const {
+dsfw::TimePos TextGridDocument::snapToNearestBoundary(int tierIndex, dsfw::TimePos proposedTime, dsfw::TimePos snapThreshold) const {
     if (tierCount() == 0) return proposedTime;
 
     double proposedSec = usToSec(proposedTime);
@@ -297,7 +295,7 @@ TimePos TextGridDocument::snapToNearestBoundary(int tierIndex, TimePos proposedT
     return secToUs(bestTime);
 }
 
-TimePos TextGridDocument::snapToNearestBoundaryPixels(int tierIndex, TimePos proposedTime, double pixelsPerSecond, double pixelThreshold) const {
+dsfw::TimePos TextGridDocument::snapToNearestBoundaryPixels(int tierIndex, dsfw::TimePos proposedTime, double pixelsPerSecond, double pixelThreshold) const {
     if (pixelsPerSecond <= 0) return proposedTime;
 
     double proposedSec = usToSec(proposedTime);
@@ -348,7 +346,7 @@ TimePos TextGridDocument::snapToNearestBoundaryPixels(int tierIndex, TimePos pro
     return secToUs(bestTime);
 }
 
-void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, TimePos duration) {
+void TextGridDocument::loadFromDsText(const QList<IntervalLayer> &layers, dsfw::TimePos duration) {
     m_textGrid = textgrid::TextGrid();
     double maxTime = usToSec(duration);
     if (maxTime <= 0.0) {
@@ -470,7 +468,7 @@ void TextGridDocument::autoDetectBindingGroups() {
     m_groups.clear();
 
     // Build a map: tier + boundaryIndex → boundaryId
-    // When two boundaries from different tiers share the exact same TimePos,
+    // When two boundaries from different tiers share the exact same dsfw::TimePos,
     // they form a binding group.
     struct Loc { int tier; int index; int id; };
     std::vector<Loc> allBoundaries;
@@ -483,12 +481,12 @@ void TextGridDocument::autoDetectBindingGroups() {
     }
 
     // Group by exact time position
-    std::map<TimePos, std::vector<int>> posMap;
+    std::map<dsfw::TimePos, std::vector<int>> posMap;
     for (const auto &loc : allBoundaries) {
         // Generate a unique-ish cross-tier boundary ID: use tier*N+boundary+1
         // (positive, non-zero, unique across tiers)
         int uniqueId = loc.tier * 10000 + loc.index + 1;
-        TimePos pos = boundaryTime(loc.tier, loc.index);
+        dsfw::TimePos pos = boundaryTime(loc.tier, loc.index);
         posMap[pos].push_back(uniqueId);
     }
 

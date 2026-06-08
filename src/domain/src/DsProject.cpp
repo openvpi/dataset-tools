@@ -1,4 +1,4 @@
-#include <dsfw/ConfigTypesJson.h>
+﻿#include <dsfw/ConfigTypesJson.h>
 #include <dstools/DsProject.h>
 #include <dstools/ProjectBackupManager.h>
 #include <dsfw/Result.h>
@@ -19,7 +19,6 @@ using dsfw::JsonHelper;
 
 namespace dstools {
 
-using namespace dsfw;
 
 // ── PIMPL ─────────────────────────────────────────────────────────────
 
@@ -28,7 +27,7 @@ struct DsProject::Impl {
     QString m_workingDirectory;
     std::vector<Item> m_items;
     SlicerState m_slicerState;
-    ExportConfig m_exportConfig;
+    dsfw::ExportConfig m_exportConfig;
     nlohmann::json m_extraFields; // preserve unknown fields for round-trip
 };
 
@@ -37,12 +36,12 @@ struct DsProject::Impl {
 DsProject::DsProject()
     : m_impl(std::make_unique<Impl>()) {}
 
-DsProject::~DsProject() = default;
+DsProject::~dsfw::DsProject() = default;
 
-DsProject::DsProject(DsProject&& other) noexcept
+DsProject::DsProject(dsfw::DsProject&& other) noexcept
     : m_impl(std::move(other.m_impl)) {}
 
-DsProject& DsProject::operator=(DsProject&& other) noexcept {
+dsfw::DsProject& DsProject::operator=(dsfw::DsProject&& other) noexcept {
     if (this != &other)
         m_impl = std::move(other.m_impl);
     return *this;
@@ -133,8 +132,8 @@ static nlohmann::json serializeItem(const Item& item) {
 
 // ── File I/O ──────────────────────────────────────────────────────────
 
-Result<DsProject> DsProject::loadFile(const QString& path) {
-    DsProject proj;
+dsfw::Result<dsfw::DsProject> DsProject::loadFile(const QString& path) {
+    dsfw::DsProject proj;
 
     if (path.isEmpty()) {
         DSFW_LOG_WARN("io", "DsProject::loadFile: empty path, returning default project");
@@ -153,13 +152,13 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
         }
     }
     if (!jsonResult) {
-        return Result<DsProject>::Error(jsonResult.error());
+        return dsfw::Result<dsfw::DsProject>::Error(jsonResult.error());
     }
 
     const auto& json = jsonResult.value();
 
     if (!json.is_object()) {
-        return Result<DsProject>::Error("Project file must be a JSON object");
+        return dsfw::Result<dsfw::DsProject>::Error("Project file must be a JSON object");
     }
 
     proj.m_impl->m_filePath = path;
@@ -315,11 +314,11 @@ Result<DsProject> DsProject::loadFile(const QString& path) {
     return proj;
 }
 
-Result<void> DsProject::saveFile(const QString& path) const {
+dsfw::Result<void> DsProject::saveFile(const QString& path) const {
 
     QString targetPath = path.isEmpty() ? m_impl->m_filePath : path;
     if (targetPath.isEmpty()) {
-        return Result<void>::Error("No file path specified");
+        return dsfw::Result<void>::Error("No file path specified");
     }
 
     auto backupResult = ProjectBackupManager::createBackup(dsfw::PathUtils::toStdPath(targetPath));
@@ -337,7 +336,7 @@ Result<void> DsProject::saveFile(const QString& path) const {
     if (!m_impl->m_workingDirectory.isEmpty())
         json["workingDirectory"] = dsfw::PathUtils::toPosixSeparators(m_impl->m_workingDirectory).toStdString();
 
-    // Slicer state (params + audioFiles + slicePoints)
+    // dsfw::Slicer state (params + audioFiles + slicePoints)
     {
         nlohmann::json slicer = nlohmann::json::object();
 
@@ -391,21 +390,21 @@ Result<void> DsProject::saveFile(const QString& path) const {
 
     auto saveResult = JsonHelper::saveFile(dsfw::PathUtils::toStdPath(targetPath), json);
     if (!saveResult) {
-        return Result<void>::Error(saveResult.error());
+        return dsfw::Result<void>::Error(saveResult.error());
     }
 
     auto pruneResult = ProjectBackupManager::pruneBackups(dsfw::PathUtils::toStdPath(targetPath));
     if (!pruneResult)
         DSFW_LOG_WARN("io", ("DsProject::saveFile: prune failed: " + pruneResult.error()).c_str());
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 // ── Validation ────────────────────────────────────────────────────────
 
-Result<void> DsProject::validateSliceConsistency() const {
+dsfw::Result<void> DsProject::validateSliceConsistency() const {
     if (m_impl->m_items.empty())
-        return Result<void>::Ok();
+        return dsfw::Result<void>::Ok();
 
     QStringList issues;
 
@@ -460,9 +459,9 @@ Result<void> DsProject::validateSliceConsistency() const {
     }
 
     if (issues.isEmpty())
-        return Result<void>::Ok();
+        return dsfw::Result<void>::Ok();
 
-    return Result<void>::Error(issues.join(QStringLiteral("\n")).toStdString());
+    return dsfw::Result<void>::Error(issues.join(QStringLiteral("\n")).toStdString());
 }
 
 std::vector<QString> DsProject::validateExternalPaths() const {
@@ -501,30 +500,30 @@ std::vector<QString> DsProject::validateExternalPaths() const {
     return missing;
 }
 
-Result<void> DsProject::validateSchema() const {
+dsfw::Result<void> DsProject::validateSchema() const {
     // Check required top-level fields
     if (m_impl->m_filePath.isEmpty())
-        return Result<void>::Error("Project file path is empty");
+        return dsfw::Result<void>::Error("Project file path is empty");
 
     // Check items
     for (size_t i = 0; i < m_impl->m_items.size(); ++i) {
         const auto& item = m_impl->m_items[i];
         if (item.id.isEmpty())
-            return Result<void>::Error("Item[" + std::to_string(i) + "] has empty id");
+            return dsfw::Result<void>::Error("Item[" + std::to_string(i) + "] has empty id");
 
         for (size_t j = 0; j < item.slices.size(); ++j) {
             const auto& slice = item.slices[j];
             if (slice.id.isEmpty())
-                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                return dsfw::Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
                                            item.id.toStdString() + "' has empty id");
             if (slice.inPos < 0)
-                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                return dsfw::Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
                                            item.id.toStdString() + "' has negative inPos");
             if (slice.outPos < 0)
-                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                return dsfw::Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
                                            item.id.toStdString() + "' has negative outPos");
             if (slice.inPos > slice.outPos)
-                return Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
+                return dsfw::Result<void>::Error("Slice[" + std::to_string(j) + "] in item '" +
                                            item.id.toStdString() + "' has inPos > outPos");
         }
     }
@@ -532,17 +531,17 @@ Result<void> DsProject::validateSchema() const {
     // Check slicer params
     const auto& sp = m_impl->m_slicerState.params;
     if (sp.minLength <= 0)
-        return Result<void>::Error("Slicer minLength must be positive");
+        return dsfw::Result<void>::Error("dsfw::Slicer minLength must be positive");
     if (sp.hopSize <= 0)
-        return Result<void>::Error("Slicer hopSize must be positive");
+        return dsfw::Result<void>::Error("dsfw::Slicer hopSize must be positive");
 
     // Check export config
     if (m_impl->m_exportConfig.hopSize <= 0)
-        return Result<void>::Error("Export hopSize must be positive");
+        return dsfw::Result<void>::Error("Export hopSize must be positive");
     if (m_impl->m_exportConfig.sampleRate <= 0)
-        return Result<void>::Error("Export sampleRate must be positive");
+        return dsfw::Result<void>::Error("Export sampleRate must be positive");
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 // ── Properties ────────────────────────────────────────────────────────
@@ -575,11 +574,11 @@ void DsProject::setSlicerState(SlicerState state) {
     m_impl->m_slicerState = std::move(state);
 }
 
-const ExportConfig& DsProject::exportConfig() const {
+const dsfw::ExportConfig& DsProject::exportConfig() const {
     return m_impl->m_exportConfig;
 }
 
-void DsProject::setExportConfig(ExportConfig config) {
+void DsProject::setExportConfig(dsfw::ExportConfig config) {
     m_impl->m_exportConfig = std::move(config);
 }
 

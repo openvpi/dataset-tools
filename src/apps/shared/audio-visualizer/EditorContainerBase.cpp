@@ -1,4 +1,4 @@
-#include "EditorContainerBase.h"
+﻿#include "EditorContainerBase.h"
 
 #include "AudioVisualizerContainer.h"
 #include <dsfw/widgets/ViewportController.h>
@@ -17,7 +17,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 EditorContainerBase::EditorContainerBase(const QString &settingsGroup, QWidget *parent)
     : AudioEditorWidgetBase(parent), m_settingsGroup(settingsGroup) {
@@ -25,11 +24,11 @@ EditorContainerBase::EditorContainerBase(const QString &settingsGroup, QWidget *
     m_playWidget->hide();
 }
 
-EditorContainerBase::~EditorContainerBase() = default;
+EditorContainerBase::~dsfw::EditorContainerBase() = default;
 
 void EditorContainerBase::setupContainerAndPlayWidget(int defaultResolution) {
     m_defaultResolution = defaultResolution;
-    m_container = new AudioVisualizerContainer(m_settingsGroup, this);
+    m_container = new dsfw::AudioVisualizerContainer(m_settingsGroup, this);
     m_container->setDefaultResolution(defaultResolution);
     m_viewport = m_container->viewport();
     m_container->setPlayWidget(m_playWidget);
@@ -149,7 +148,7 @@ void EditorContainerBase::addPowerChart(int tierIndex, int panelIndex, double st
 
 void EditorContainerBase::addMouthCurveChart(int tierIndex, int panelIndex, double stretch) {
     MouthCurveChartPanel::registerChartConfig();
-    m_mouthCurveChart = new MouthCurveChartPanel(m_viewport, m_container);
+    m_mouthCurveChart = new dsfw::MouthCurveChartPanel(m_viewport, m_container);
     m_mouthCurveChart->setPlayWidget(m_playWidget);
     m_container->addChart(QStringLiteral("mouthCurve"), m_mouthCurveChart, tierIndex, panelIndex, stretch);
 }

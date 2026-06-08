@@ -1,4 +1,4 @@
-#include <dstools/TranscriptionCsv.h>
+﻿#include <dstools/TranscriptionCsv.h>
 
 #include <dsfw/PathUtils.h>
 
@@ -6,7 +6,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 // ── CSV parsing helpers ──────────────────────────────────────────────
 
@@ -104,10 +103,10 @@ static constexpr int kColumnCount = sizeof(kColumns) / sizeof(kColumns[0]);
 
 // ── Public API ───────────────────────────────────────────────────────
 
-Result<std::vector<TranscriptionRow>> TranscriptionCsv::parse(const QString &content) {
+dsfw::Result<std::vector<TranscriptionRow>> TranscriptionCsv::parse(const QString &content) {
     std::vector<TranscriptionRow> rows;
     if (content.isEmpty()) {
-        return Result<std::vector<TranscriptionRow>>::Error("Empty content");
+        return dsfw::Result<std::vector<TranscriptionRow>>::Error("Empty content");
     }
 
     // Skip BOM
@@ -118,7 +117,7 @@ Result<std::vector<TranscriptionRow>> TranscriptionCsv::parse(const QString &con
     // Parse header
     const QStringList header = parseCsvRecord(content, pos);
     if (header.isEmpty()) {
-        return Result<std::vector<TranscriptionRow>>::Error("Missing header row");
+        return dsfw::Result<std::vector<TranscriptionRow>>::Error("Missing header row");
     }
 
     // Build column index map: CSV column name → index in header
@@ -133,7 +132,7 @@ Result<std::vector<TranscriptionRow>> TranscriptionCsv::parse(const QString &con
         if (it != colIndex.constEnd()) {
             colMap[i] = it.value();
         } else if (kColumns[i].required) {
-            return Result<std::vector<TranscriptionRow>>::Error(
+            return dsfw::Result<std::vector<TranscriptionRow>>::Error(
                 std::string("Missing required column: ") + kColumns[i].csvName);
         } else {
             colMap[i] = -1;
@@ -172,15 +171,15 @@ Result<std::vector<TranscriptionRow>> TranscriptionCsv::parse(const QString &con
     return rows;
 }
 
-Result<std::vector<TranscriptionRow>> TranscriptionCsv::read(const QString &path) {
+dsfw::Result<std::vector<TranscriptionRow>> TranscriptionCsv::read(const QString &path) {
     auto textResult = dsfw::PathUtils::readFile(path);
     if (!textResult.ok()) {
-        return Result<std::vector<TranscriptionRow>>::Error(textResult.error());
+        return dsfw::Result<std::vector<TranscriptionRow>>::Error(textResult.error());
     }
     return parse(textResult.value());
 }
 
-Result<void> TranscriptionCsv::write(const QString &path,
+dsfw::Result<void> TranscriptionCsv::write(const QString &path,
                                    const std::vector<TranscriptionRow> &rows) {
     // Determine which optional columns to include
     bool includeCol[kColumnCount];
@@ -231,9 +230,9 @@ Result<void> TranscriptionCsv::write(const QString &path,
     // Write file
     auto writeResult = dsfw::PathUtils::writeFile(path, out);
     if (!writeResult.ok()) {
-        return Result<void>::Error(writeResult.error());
+        return dsfw::Result<void>::Error(writeResult.error());
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 } // namespace dstools

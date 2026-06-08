@@ -1,4 +1,4 @@
-#include <dsfw/JsonHelper.h>
+﻿#include <dsfw/JsonHelper.h>
 #include <dsfw/PathUtils.h>
 #include <dstools/ExportFormats.h>
 #include <filesystem>
@@ -6,7 +6,6 @@
 
 namespace dstools {
 
-    using namespace dsfw;
 
     const char *HtsLabelExportFormat::formatName() const {
         return "HTS Labels";
@@ -15,17 +14,17 @@ namespace dstools {
         return ".lab";
     }
 
-    Result<void> HtsLabelExportFormat::exportItem(const std::filesystem::path &sourceFile,
+    dsfw::Result<void> HtsLabelExportFormat::exportItem(const std::filesystem::path &sourceFile,
                                                   const std::filesystem::path &workingDir,
                                                   const std::filesystem::path &outputPath) {
         auto jsonResult = JsonHelper::loadFile(sourceFile);
         if (!jsonResult)
-            return Err(jsonResult.error());
+            return dsfw::Err(jsonResult.error());
 
         const auto &j = jsonResult.value();
         std::ofstream out(outputPath);
         if (!out.is_open()) {
-            return Err("Cannot open output file: " + dsfw::PathUtils::toUtf8(outputPath));
+            return dsfw::Err("Cannot open output file: " + dsfw::PathUtils::toUtf8(outputPath));
         }
 
         (void) workingDir;
@@ -35,13 +34,13 @@ namespace dstools {
                 out << ph.value("start", 0.0) << " " << ph.value("end", 0.0) << " " << ph.value("symbol", "")
                     << "\n";
                 if (!out.good())
-                    return Err("Write error in HTS label export");
+                    return dsfw::Err("Write error in HTS label export");
             }
         }
-        return Ok();
+        return dsfw::Ok();
     }
 
-    Result<void> HtsLabelExportFormat::exportAll(const std::filesystem::path &workingDir,
+    dsfw::Result<void> HtsLabelExportFormat::exportAll(const std::filesystem::path &workingDir,
                                                  const std::filesystem::path &outputDir) {
         std::error_code ec;
         for (const auto &entry : std::filesystem::directory_iterator(workingDir, ec)) {
@@ -54,21 +53,21 @@ namespace dstools {
             }
         }
         if (ec)
-            return Err("Failed to scan working directory: " + ec.message());
-        return Ok();
+            return dsfw::Err("Failed to scan working directory: " + ec.message());
+        return dsfw::Ok();
     }
 
-    Result<void> SinsyXmlExportFormat::exportItem(const std::filesystem::path &sourceFile,
+    dsfw::Result<void> SinsyXmlExportFormat::exportItem(const std::filesystem::path &sourceFile,
                                                   const std::filesystem::path &workingDir,
                                                   const std::filesystem::path &outputPath) {
         auto jsonResult = JsonHelper::loadFile(sourceFile);
         if (!jsonResult)
-            return Err(jsonResult.error());
+            return dsfw::Err(jsonResult.error());
 
         const auto &j = jsonResult.value();
         std::ofstream out(outputPath);
         if (!out.is_open()) {
-            return Err("Cannot open output file: " + dsfw::PathUtils::toUtf8(outputPath));
+            return dsfw::Err("Cannot open output file: " + dsfw::PathUtils::toUtf8(outputPath));
         }
 
         (void) workingDir;
@@ -80,13 +79,13 @@ namespace dstools {
                 out << "  <ph start=\"" << ph.value("start", 0.0) << "\" end=\"" << ph.value("end", 0.0)
                     << "\" symbol=\"" << ph.value("symbol", "") << "\"/>\n";
                 if (!out.good())
-                    return Err("Write error in Sinsy XML export");
+                    return dsfw::Err("Write error in Sinsy XML export");
             }
         }
         out << "</sinsy>\n";
         if (!out.good())
-            return Err("Write error in Sinsy XML export");
-        return Ok();
+            return dsfw::Err("Write error in Sinsy XML export");
+        return dsfw::Ok();
     }
 
     const char *SinsyXmlExportFormat::formatName() const {
@@ -96,7 +95,7 @@ namespace dstools {
         return ".xml";
     }
 
-    Result<void> SinsyXmlExportFormat::exportAll(const std::filesystem::path &workingDir,
+    dsfw::Result<void> SinsyXmlExportFormat::exportAll(const std::filesystem::path &workingDir,
                                                  const std::filesystem::path &outputDir) {
         std::error_code ec;
         for (const auto &entry : std::filesystem::directory_iterator(workingDir, ec)) {
@@ -109,8 +108,8 @@ namespace dstools {
             }
         }
         if (ec)
-            return Err("Failed to scan working directory: " + ec.message());
-        return Ok();
+            return dsfw::Err("Failed to scan working directory: " + ec.message());
+        return dsfw::Ok();
     }
 
 } // namespace dstools

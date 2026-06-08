@@ -1,4 +1,4 @@
-#include "PitchExtractionService.h"
+﻿#include "PitchExtractionService.h"
 
 #include "InferBridge.h"
 
@@ -13,8 +13,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
-    using namespace dsfw;
 
     using dsfw::signal::expectedFrameCount;
     using dsfw::signal::hopSizeToTimestep;
@@ -42,7 +40,7 @@ using namespace dsfw;
             const int sampleRate = probeResult.value().sampleRate;
             const int64_t audioFrames = probeResult.value().totalFrameCount;
 
-            const TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
+            const dsfw::TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
             const int alignLength = expectedFrameCount(audioFrames, constants::kDefaultHopSize);
 
             result.f0Mhz = resampleCurve(mergedF0, secToUs(0.01), dstTimestepUs, alignLength);
@@ -65,7 +63,7 @@ using namespace dsfw;
         return result;
     }
 
-    void PitchExtractionService::applyPitchToDocument(DsTextDocument &doc, const std::vector<float> &f0Mhz,
+    void PitchExtractionService::applyPitchToDocument(dsfw::DsTextDocument &doc, const std::vector<float> &f0Mhz,
                                                       float timestep) {
         if (f0Mhz.empty())
             return;
@@ -86,7 +84,7 @@ using namespace dsfw;
         pitchCurve->timestep = dstools::secToUs(static_cast<double>(timestep));
     }
 
-    void PitchExtractionService::applyMidiToDocument(DsTextDocument &doc, const std::vector<Game::GameNote> &notes) {
+    void PitchExtractionService::applyMidiToDocument(dsfw::DsTextDocument &doc, const std::vector<Game::GameNote> &notes) {
         if (notes.empty())
             return;
 
@@ -120,7 +118,7 @@ using namespace dsfw;
         }
     }
 
-    void PitchExtractionService::applyMidiToDocument(DsTextDocument &doc,
+    void PitchExtractionService::applyMidiToDocument(dsfw::DsTextDocument &doc,
                                                       const std::vector<dsfw::infer::MidiNote> &notes) {
         if (notes.empty())
             return;

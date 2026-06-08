@@ -1,4 +1,4 @@
-#include "BoundaryDragController.h"
+﻿#include "BoundaryDragController.h"
 #include "IBoundaryModel.h"
 #include "MoveBoundaryCommand.h"
 
@@ -10,9 +10,7 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 BoundaryDragController::BoundaryDragController(QObject *parent)
     : QObject(parent) {
@@ -32,11 +30,11 @@ void BoundaryDragController::setSnapEnabled(bool enabled) {
     }
 }
 
-void BoundaryDragController::setToleranceUs(TimePos toleranceUs) {
+void BoundaryDragController::setToleranceUs(dsfw::TimePos toleranceUs) {
     m_toleranceUs = toleranceUs;
 }
 
-void BoundaryDragController::setSnapThresholdUs(TimePos thresholdUs) {
+void BoundaryDragController::setSnapThresholdUs(dsfw::TimePos thresholdUs) {
     m_snapThresholdUs = thresholdUs;
 }
 
@@ -77,23 +75,23 @@ void BoundaryDragController::startDrag(int tierIndex, int boundaryIndex,
     emit dragStarted(tierIndex, boundaryIndex);
 }
 
-void BoundaryDragController::updateDrag(TimePos proposedTime) {
+void BoundaryDragController::updateDrag(dsfw::TimePos proposedTime) {
     if (!m_dragging || !m_model)
         return;
 
-    TimePos clampedTime = m_model->clampBoundaryTime(
+    dsfw::TimePos clampedTime = m_model->clampBoundaryTime(
         m_draggedTier, m_draggedBoundary, proposedTime);
 
-    TimePos tentativeDelta = clampedTime - m_dragStartTime;
+    dsfw::TimePos tentativeDelta = clampedTime - m_dragStartTime;
     for (size_t i = 0; i < m_partners.size(); ++i) {
-        TimePos partnerTarget = m_partnerStartTimes[i] + tentativeDelta;
+        dsfw::TimePos partnerTarget = m_partnerStartTimes[i] + tentativeDelta;
         m_model->moveBoundary(m_partners[i].tierIndex,
                               m_partners[i].boundaryIndex, partnerTarget);
     }
 
     m_model->moveBoundary(m_draggedTier, m_draggedBoundary, clampedTime);
 
-    TimePos snappedTime = clampedTime;
+    dsfw::TimePos snappedTime = clampedTime;
     if (m_snapEnabled && clampedTime == proposedTime) {
         snappedTime = m_model->snapToNearestBoundaryPixels(
             m_draggedTier, clampedTime, PPS(), m_pixelSnapThreshold);
@@ -101,9 +99,9 @@ void BoundaryDragController::updateDrag(TimePos proposedTime) {
 
     if (snappedTime != clampedTime) {
         m_model->moveBoundary(m_draggedTier, m_draggedBoundary, snappedTime);
-        TimePos snapDelta = snappedTime - clampedTime;
+        dsfw::TimePos snapDelta = snappedTime - clampedTime;
         for (size_t i = 0; i < m_partners.size(); ++i) {
-            TimePos partnerTarget = m_partnerStartTimes[i] + tentativeDelta + snapDelta;
+            dsfw::TimePos partnerTarget = m_partnerStartTimes[i] + tentativeDelta + snapDelta;
             m_model->moveBoundary(m_partners[i].tierIndex,
                                   m_partners[i].boundaryIndex, partnerTarget);
         }
@@ -112,20 +110,20 @@ void BoundaryDragController::updateDrag(TimePos proposedTime) {
     emit dragging(m_draggedTier, m_draggedBoundary, snappedTime);
 }
 
-void BoundaryDragController::endDrag(TimePos finalTime, QUndoStack *undoStack) {
+void BoundaryDragController::endDrag(dsfw::TimePos finalTime, QUndoStack *undoStack) {
     if (!m_dragging || !m_model)
         return;
 
-    TimePos clampedFinal = m_model->clampBoundaryTime(
+    dsfw::TimePos clampedFinal = m_model->clampBoundaryTime(
         m_draggedTier, m_draggedBoundary, finalTime);
 
-    TimePos snappedFinal = clampedFinal;
+    dsfw::TimePos snappedFinal = clampedFinal;
     if (m_snapEnabled && clampedFinal == finalTime) {
         snappedFinal = m_model->snapToNearestBoundaryPixels(
             m_draggedTier, clampedFinal, PPS(), m_pixelSnapThreshold);
     }
 
-    snappedFinal = std::clamp(snappedFinal, TimePos(0), m_model->totalDuration());
+    snappedFinal = std::clamp(snappedFinal, dsfw::TimePos(0), m_model->totalDuration());
 
     restoreOriginals();
 
@@ -134,17 +132,17 @@ void BoundaryDragController::endDrag(TimePos finalTime, QUndoStack *undoStack) {
 
     if (undoStack) {
         if (m_partners.empty()) {
-            undoStack->push(new MoveBoundaryCommand(
+            undoStack->push(new dsfw::MoveBoundaryCommand(
                 m_model, tier, boundary, m_dragStartTime, snappedFinal));
         } else {
             auto *parent = new QUndoCommand(
                 QStringLiteral("Linked boundary move"));
-            new MoveBoundaryCommand(m_model, tier, boundary,
+            new dsfw::MoveBoundaryCommand(m_model, tier, boundary,
                                     m_dragStartTime, snappedFinal, parent);
-            TimePos delta = snappedFinal - m_dragStartTime;
+            dsfw::TimePos delta = snappedFinal - m_dragStartTime;
             for (size_t i = 0; i < m_partners.size(); ++i) {
-                TimePos newPartnerTime = m_partnerStartTimes[i] + delta;
-                new MoveBoundaryCommand(m_model,
+                dsfw::TimePos newPartnerTime = m_partnerStartTimes[i] + delta;
+                new dsfw::MoveBoundaryCommand(m_model,
                                         m_partners[i].tierIndex,
                                         m_partners[i].boundaryIndex,
                                         m_partnerStartTimes[i],
@@ -154,7 +152,7 @@ void BoundaryDragController::endDrag(TimePos finalTime, QUndoStack *undoStack) {
         }
     } else {
         m_model->moveBoundary(tier, boundary, snappedFinal);
-        TimePos delta = snappedFinal - m_dragStartTime;
+        dsfw::TimePos delta = snappedFinal - m_dragStartTime;
         for (size_t i = 0; i < m_partners.size(); ++i) {
             m_model->moveBoundary(m_partners[i].tierIndex,
                                   m_partners[i].boundaryIndex,
@@ -180,7 +178,7 @@ void BoundaryDragController::cancelDrag() {
 
     int tier = m_draggedTier;
     int boundary = m_draggedBoundary;
-    TimePos startTime = m_dragStartTime;
+    dsfw::TimePos startTime = m_dragStartTime;
 
     m_dragging = false;
     m_draggedTier = -1;
@@ -209,7 +207,7 @@ std::vector<AlignedBoundary> BoundaryDragController::findPartners(
     if (!m_model)
         return result;
 
-    TimePos sourceTime = m_model->boundaryTime(sourceTier, sourceBoundaryIndex);
+    dsfw::TimePos sourceTime = m_model->boundaryTime(sourceTier, sourceBoundaryIndex);
 
     int tierCount = m_model->tierCount();
     for (int t = 0; t < tierCount; ++t) {
@@ -218,7 +216,7 @@ std::vector<AlignedBoundary> BoundaryDragController::findPartners(
 
         int bCount = m_model->boundaryCount(t);
         for (int b = 0; b < bCount; ++b) {
-            TimePos bTime = m_model->boundaryTime(t, b);
+            dsfw::TimePos bTime = m_model->boundaryTime(t, b);
             if (std::abs(bTime - sourceTime) <= m_toleranceUs) {
                 result.push_back({t, b, bTime});
             }

@@ -1,4 +1,4 @@
-#include <dstools/DomainInit.h>
+﻿#include <dstools/DomainInit.h>
 #include <dsfw/FormatAdapterRegistry.h>
 #include <dsfw/PipelineContext.h>
 #include <dstools/CsvAdapter.h>
@@ -21,9 +21,7 @@ REGISTER_FORMAT_ADAPTER(dstools::LabAdapter);
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 // ─── FormatAdapterInit ────────────────────────────────────────────────────────
 
@@ -32,37 +30,37 @@ void registerDomainFormatAdapters() {
     // This function is kept for backward compatibility.
 }
 
-Result<void> exportContextsToCsv(const std::vector<PipelineContext>& contexts, const QString& outputPath,
-                                 const ProcessorConfig& config) {
+dsfw::Result<void> exportContextsToCsv(const std::vector<dsfw::PipelineContext>& contexts, const QString& outputPath,
+                                 const dsfw::ProcessorConfig& config) {
     return CsvAdapter::batchExport(contexts, outputPath, config);
 }
 
 // ─── Import validation helper ─────────────────────────────────────────────────
 
-static Result<void> validateLayerData(const std::map<QString, LayerData>& layers) {
+static dsfw::Result<void> validateLayerData(const std::map<QString, LayerData>& layers) {
     if (layers.empty())
-        return Result<void>::Error("import produced no layers");
+        return dsfw::Result<void>::Error("import produced no layers");
     for (const auto& [key, val] : layers) {
         if (val.empty())
-            return Result<void>::Error(QString("layer '%1' is empty").arg(key).toStdString());
+            return dsfw::Result<void>::Error(QString("layer '%1' is empty").arg(key).toStdString());
         try {
             const auto j = val.toJson();
             if (j.is_null())
-                return Result<void>::Error(QString("layer '%1' contains null JSON").arg(key).toStdString());
+                return dsfw::Result<void>::Error(QString("layer '%1' contains null JSON").arg(key).toStdString());
         } catch (const std::exception& e) {
-            return Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()).toStdString());
+            return dsfw::Result<void>::Error(QString("layer '%1' JSON parse error: %2").arg(key, e.what()).toStdString());
         }
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 // ─── TextGridAdapter ──────────────────────────────────────────────────────────
 
-Result<void> TextGridAdapter::importToLayers(const QString& filePath, std::map<QString, LayerData>& layers,
-                                             const ProcessorConfig& /*config*/) {
+dsfw::Result<void> TextGridAdapter::importToLayers(const QString& filePath, std::map<QString, LayerData>& layers,
+                                             const dsfw::ProcessorConfig& /*config*/) {
     auto rowResult = TextGridToCsv::extractFromTextGrid(filePath);
     if (!rowResult.ok())
-        return Result<void>::Error(rowResult.error());
+        return dsfw::Result<void>::Error(rowResult.error());
 
     const auto& row = rowResult.value();
 
@@ -70,7 +68,7 @@ Result<void> TextGridAdapter::importToLayers(const QString& filePath, std::map<Q
     const QStringList durs = row.phDur.split(' ', Qt::SkipEmptyParts);
 
     if (phones.size() != durs.size())
-        return Result<void>::Error("ph_seq and ph_dur count mismatch");
+        return dsfw::Result<void>::Error("ph_seq and ph_dur count mismatch");
 
     std::map<QString, LayerData> temp;
     auto boundaries = buildBoundaries(phones, durs, 0);
@@ -89,21 +87,21 @@ Result<void> TextGridAdapter::importToLayers(const QString& filePath, std::map<Q
         return validation;
 
     layers = std::move(temp);
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> TextGridAdapter::exportFromLayers(const std::map<QString, LayerData>& /*layers*/,
-                                               const QString& /*outputPath*/, const ProcessorConfig& /*config*/) {
-    return Result<void>::Error("TextGrid export not implemented");
+dsfw::Result<void> TextGridAdapter::exportFromLayers(const std::map<QString, LayerData>& /*layers*/,
+                                               const QString& /*outputPath*/, const dsfw::ProcessorConfig& /*config*/) {
+    return dsfw::Result<void>::Error("dsfw::TextGrid export not implemented");
 }
 
 // ─── LabAdapter ───────────────────────────────────────────────────────────────
 
-Result<void> LabAdapter::importToLayers(const QString& filePath, std::map<QString, LayerData>& layers,
-                                        const ProcessorConfig& /*config*/) {
+dsfw::Result<void> LabAdapter::importToLayers(const QString& filePath, std::map<QString, LayerData>& layers,
+                                        const dsfw::ProcessorConfig& /*config*/) {
     auto textResult = dsfw::PathUtils::readFile(filePath);
     if (!textResult.ok())
-        return Result<void>::Error(textResult.error());
+        return dsfw::Result<void>::Error(textResult.error());
 
     const QString content = textResult.value().trimmed();
 
@@ -126,14 +124,14 @@ Result<void> LabAdapter::importToLayers(const QString& filePath, std::map<QStrin
         return validation;
 
     layers = std::move(temp);
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> LabAdapter::exportFromLayers(const std::map<QString, LayerData>& layers, const QString& outputPath,
-                                          const ProcessorConfig& /*config*/) {
+dsfw::Result<void> LabAdapter::exportFromLayers(const std::map<QString, LayerData>& layers, const QString& outputPath,
+                                          const dsfw::ProcessorConfig& /*config*/) {
     auto it = layers.find(QStringLiteral("grapheme"));
     if (it == layers.end())
-        return Result<void>::Error("No grapheme layer found");
+        return dsfw::Result<void>::Error("No grapheme layer found");
 
     const nlohmann::json layerJson = it->second.toJson();
     const auto& boundaries = layerJson["boundaries"];
@@ -146,8 +144,8 @@ Result<void> LabAdapter::exportFromLayers(const std::map<QString, LayerData>& la
 
     auto writeResult = dsfw::PathUtils::writeFile(outputPath, texts.join(' '));
     if (!writeResult.ok())
-        return Result<void>::Error(writeResult.error());
-    return Result<void>::Ok();
+        return dsfw::Result<void>::Error(writeResult.error());
+    return dsfw::Result<void>::Ok();
 }
 
 } // namespace dstools

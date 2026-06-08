@@ -1,11 +1,10 @@
-#include "DsTextDocBridge.h"
+﻿#include "DsTextDocBridge.h"
 #include <dstools/DsKeys.h>
 
 namespace dstools {
 
-using namespace dsfw;
 
-QList<IntervalLayer> DsTextDocBridge::extractIntervalLayers(const DsTextDocument& doc) {
+QList<IntervalLayer> DsTextDocBridge::extractIntervalLayers(const dsfw::DsTextDocument& doc) {
     QList<IntervalLayer> result;
     for (const auto& layer : doc.layers) {
         result.append(layer);
@@ -13,7 +12,7 @@ QList<IntervalLayer> DsTextDocBridge::extractIntervalLayers(const DsTextDocument
     return result;
 }
 
-void DsTextDocBridge::mergeIntervalLayers(DsTextDocument& doc, const QList<IntervalLayer>& layers) {
+void DsTextDocBridge::mergeIntervalLayers(dsfw::DsTextDocument& doc, const QList<IntervalLayer>& layers) {
     for (const auto& editorLayer : layers) {
         IntervalLayer* target = nullptr;
         for (auto& layer : doc.layers) {
@@ -31,8 +30,8 @@ void DsTextDocBridge::mergeIntervalLayers(DsTextDocument& doc, const QList<Inter
     }
 }
 
-std::shared_ptr<pitchlabeler::DsPitchDocument> DsTextDocBridge::toPitchDoc(const DsTextDocument& doc,
-                                                                           TimePos totalDurationUs) {
+std::shared_ptr<pitchlabeler::DsPitchDocument> DsTextDocBridge::toPitchDoc(const dsfw::DsTextDocument& doc,
+                                                                           dsfw::TimePos totalDurationUs) {
     auto file = std::make_shared<pitchlabeler::DsPitchDocument>();
 
     for (const auto& curve : doc.curves) {
@@ -79,10 +78,10 @@ std::shared_ptr<pitchlabeler::DsPitchDocument> DsTextDocBridge::toPitchDoc(const
     return file;
 }
 
-Result<void> DsTextDocBridge::fromPitchDoc(DsTextDocument& doc, const pitchlabeler::DsPitchDocument& pdoc) {
+dsfw::Result<void> DsTextDocBridge::fromPitchDoc(dsfw::DsTextDocument& doc, const pitchlabeler::DsPitchDocument& pdoc) {
     auto validationResult = pdoc.validate();
     if (!validationResult) {
-        return Result<void>::Error("DsPitchDocument validation failed: " + validationResult.error());
+        return dsfw::Result<void>::Error("DsPitchDocument validation failed: " + validationResult.error());
     }
 
     for (auto& curve : doc.curves) {
@@ -120,12 +119,12 @@ Result<void> DsTextDocBridge::fromPitchDoc(DsTextDocument& doc, const pitchlabel
             layer.sortBoundaries();
         }
     }
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> DsTextDocBridge::verifyLayerRoundtrip(const DsTextDocument& original, const DsTextDocument& restored) {
+dsfw::Result<void> DsTextDocBridge::verifyLayerRoundtrip(const dsfw::DsTextDocument& original, const dsfw::DsTextDocument& restored) {
     if (original.layers.size() != restored.layers.size())
-        return Result<void>::Error("Layer count mismatch: " + std::to_string(original.layers.size()) + " vs " +
+        return dsfw::Result<void>::Error("Layer count mismatch: " + std::to_string(original.layers.size()) + " vs " +
                                    std::to_string(restored.layers.size()));
 
     for (size_t li = 0; li < original.layers.size(); ++li) {
@@ -133,30 +132,30 @@ Result<void> DsTextDocBridge::verifyLayerRoundtrip(const DsTextDocument& origina
         const auto& rest = restored.layers[li];
 
         if (orig.name != rest.name)
-            return Result<void>::Error("Layer name mismatch at index " + std::to_string(li) + ": " +
+            return dsfw::Result<void>::Error("Layer name mismatch at index " + std::to_string(li) + ": " +
                                        orig.name.toStdString() + " vs " + rest.name.toStdString());
 
         if (orig.boundaries.size() != rest.boundaries.size())
-            return Result<void>::Error("Boundary count mismatch in layer '" + orig.name.toStdString() +
+            return dsfw::Result<void>::Error("Boundary count mismatch in layer '" + orig.name.toStdString() +
                                        "': " + std::to_string(orig.boundaries.size()) + " vs " +
                                        std::to_string(rest.boundaries.size()));
 
         for (size_t bi = 0; bi < orig.boundaries.size(); ++bi) {
             if (orig.boundaries[bi].pos != rest.boundaries[bi].pos)
-                return Result<void>::Error("Boundary pos mismatch in layer '" + orig.name.toStdString() +
+                return dsfw::Result<void>::Error("Boundary pos mismatch in layer '" + orig.name.toStdString() +
                                            "' at index " + std::to_string(bi));
         }
     }
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> DsTextDocBridge::verifyPitchDocRoundtrip(const DsTextDocument& original,
+dsfw::Result<void> DsTextDocBridge::verifyPitchDocRoundtrip(const dsfw::DsTextDocument& original,
                                                       const pitchlabeler::DsPitchDocument& restored) {
     for (const auto& curve : original.curves) {
         if (curve.name == QString::fromUtf8(dstools::keys::layers::pitch)) {
             if (curve.values.size() != restored.f0.values.size())
-                return Result<void>::Error("Pitch curve value count mismatch: " + std::to_string(curve.values.size()) +
+                return dsfw::Result<void>::Error("Pitch curve value count mismatch: " + std::to_string(curve.values.size()) +
                                            " vs " + std::to_string(restored.f0.values.size()));
             break;
         }
@@ -165,13 +164,13 @@ Result<void> DsTextDocBridge::verifyPitchDocRoundtrip(const DsTextDocument& orig
     for (const auto& layer : original.layers) {
         if (layer.name == QString::fromUtf8(dstools::keys::layers::midi)) {
             if (layer.boundaries.size() != restored.notes.size() * 2)
-                return Result<void>::Error("MIDI boundary count mismatch: " + std::to_string(layer.boundaries.size()) +
+                return dsfw::Result<void>::Error("MIDI boundary count mismatch: " + std::to_string(layer.boundaries.size()) +
                                            " vs " + std::to_string(restored.notes.size() * 2));
             break;
         }
     }
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
 } // namespace dstools

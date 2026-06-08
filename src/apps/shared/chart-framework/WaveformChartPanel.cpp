@@ -1,4 +1,4 @@
-#include "WaveformChartPanel.h"
+﻿#include "WaveformChartPanel.h"
 #include "ChartConfigRegistry.h"
 
 #include <QPainter>
@@ -13,12 +13,10 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
-WaveformChartPanel::WaveformChartPanel(ViewportController *viewport, QWidget *parent)
-    : ChartPanelBase(QStringLiteral("waveform"), viewport, parent)
+WaveformChartPanel::WaveformChartPanel(dsfw::ViewportController *viewport, QWidget *parent)
+    : dsfw::ChartPanelBase(QStringLiteral("waveform"), viewport, parent)
 {
     setMinimumHeight(64);
     loadConfigParams();

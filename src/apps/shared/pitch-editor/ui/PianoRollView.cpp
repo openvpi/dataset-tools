@@ -1,4 +1,4 @@
-#include "PianoRollView.h"
+﻿#include "PianoRollView.h"
 #include <dstools/DsPitchDocument.h>
 #include "commands/PitchCommands.h"
 #include "commands/SplitMergeCommands.h"
@@ -22,7 +22,6 @@
 namespace dstools {
     namespace pitchlabeler {
         namespace ui {
-            using namespace dsfw;
 
             // ============================================================================
             // Construction / Setup
@@ -51,7 +50,7 @@ namespace dstools {
                 m_scrollY = static_cast<int>((m_configMaxMidi - 72) * m_vScale);
             }
 
-            PianoRollView::~PianoRollView() = default;
+            PianoRollView::~dsfw::PianoRollView() = default;
 
             void PianoRollView::setupInputCallbacks() {
                 InputHandlerCallbacks cb;
@@ -268,7 +267,7 @@ namespace dstools {
 
                 // Create boundary model for the DsPitchDocument
                 if (ds) {
-                    m_boundaryModel = std::make_unique<NoteBoundaryModel>();
+                    m_boundaryModel = std::make_unique<dsfw::NoteBoundaryModel>();
                     m_boundaryModel->setDsPitchDocument(ds);
                 } else {
                     m_boundaryModel.reset();
@@ -619,7 +618,7 @@ namespace dstools {
 
                 s.coord = m_coord;
 
-                // Layout config (from ChartConfigRegistry)
+                // Layout config (from dsfw::ChartConfigRegistry)
                 s.pianoWidth = m_configPianoWidth;
                 s.scrollBarSize = m_configScrollBarSize;
                 s.minMidi = m_configMinMidi;
@@ -631,7 +630,7 @@ namespace dstools {
             }
 
             // ============================================================================
-            // Paint — delegates to PianoRollRenderer
+            // Paint — delegates to dsfw::PianoRollRenderer
  // ============================================================================
             // Rendering
 
@@ -692,7 +691,7 @@ namespace dstools {
             }
 
             void PianoRollView::wheelEvent(QWheelEvent *event) {
-                // Ctrl+wheel and Shift+wheel are handled by AudioVisualizerContainer
+                // Ctrl+wheel and Shift+wheel are handled by dsfw::AudioVisualizerContainer
                 if (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) {
                     event->ignore();
                     return;
@@ -758,7 +757,7 @@ namespace dstools {
             }
 
             // ============================================================================
-            // Pitch editing — delegates math to PitchProcessor
+            // Pitch editing — delegates math to dsfw::PitchProcessor
             // ============================================================================
 
             void PianoRollView::doPitchMove(const std::vector<int> &indices, int deltaCents) {
@@ -831,7 +830,7 @@ namespace dstools {
             }
 
             // ============================================================================
-            // ViewportController integration
+            // dsfw::ViewportController integration
             // ============================================================================
 
             void PianoRollView::setViewportController(dsfw::widgets::ViewportController *vc) {
@@ -881,17 +880,17 @@ namespace dstools {
                     return;
 
                 const auto &note = m_dsFile->notes[noteIndex];
-                TimePos noteStart = note.start;
-                TimePos noteEnd = note.end();
+                dsfw::TimePos noteStart = note.start;
+                dsfw::TimePos noteEnd = note.end();
 
                 int activeTier = m_phonemeBoundaryModel->activeTierIndex();
                 if (activeTier < 0)
                     return;
 
-                std::vector<TimePos> splitTimes;
+                std::vector<dsfw::TimePos> splitTimes;
                 int bc = m_phonemeBoundaryModel->boundaryCount(activeTier);
                 for (int b = 0; b < bc; ++b) {
-                    TimePos bt = m_phonemeBoundaryModel->boundaryTime(activeTier, b);
+                    dsfw::TimePos bt = m_phonemeBoundaryModel->boundaryTime(activeTier, b);
                     if (bt > noteStart && bt < noteEnd)
                         splitTimes.push_back(bt);
                 }
@@ -925,12 +924,12 @@ namespace dstools {
 
                 for (int n = static_cast<int>(m_dsFile->notes.size()) - 1; n >= 0; --n) {
                     const auto &note = m_dsFile->notes[n];
-                    TimePos noteStart = note.start;
-                    TimePos noteEnd = note.end();
+                    dsfw::TimePos noteStart = note.start;
+                    dsfw::TimePos noteEnd = note.end();
 
                     bool hasBoundary = false;
                     for (int b = 0; b < bc; ++b) {
-                        TimePos bt = m_phonemeBoundaryModel->boundaryTime(activeTier, b);
+                        dsfw::TimePos bt = m_phonemeBoundaryModel->boundaryTime(activeTier, b);
                         if (bt > noteStart && bt < noteEnd) {
                             hasBoundary = true;
                             break;

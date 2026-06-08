@@ -1,4 +1,4 @@
-#include "PowerChartPanel.h"
+﻿#include "PowerChartPanel.h"
 #include "ChartConfigRegistry.h"
 
 #include <QPainter>
@@ -11,12 +11,10 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
-PowerChartPanel::PowerChartPanel(ViewportController *viewport, QWidget *parent)
-    : ChartPanelBase(QStringLiteral("power"), viewport, parent)
+PowerChartPanel::PowerChartPanel(dsfw::ViewportController *viewport, QWidget *parent)
+    : dsfw::ChartPanelBase(QStringLiteral("power"), viewport, parent)
 {
     setMinimumHeight(80);
     loadConfigParams();

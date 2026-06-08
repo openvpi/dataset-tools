@@ -1,4 +1,4 @@
-#include "ChartPanelBase.h"
+﻿#include "ChartPanelBase.h"
 
 #include "BoundaryDragController.h"
 #include "IBoundaryModel.h"
@@ -19,12 +19,10 @@
 
 namespace dstools {
 
-using namespace dsfw;
 using dsfw::widgets::ViewportController;
 
-        using namespace dsfw;
 
-        ChartPanelBase::ChartPanelBase(const QString &id, ViewportController *viewport, QWidget *parent) :
+        ChartPanelBase::ChartPanelBase(const QString &id, dsfw::ViewportController *viewport, QWidget *parent) :
             QWidget(parent), m_id(id), m_viewport(viewport) {
             setMouseTracking(true);
         }
@@ -239,7 +237,7 @@ using dsfw::widgets::ViewportController;
 
         void ChartPanelBase::mouseMoveEvent(QMouseEvent *event) {
             if (m_dragController && m_dragController->isDragging()) {
-                TimePos currentTime = secToUs(clientXToTime(event->pos().x()));
+                dsfw::TimePos currentTime = secToUs(clientXToTime(event->pos().x()));
                 m_dragController->updateDrag(currentTime);
                 emit boundaryDragging();
                 return;
@@ -272,7 +270,7 @@ using dsfw::widgets::ViewportController;
             if (m_dragController && m_dragController->isDragging()) {
                 int draggedTier = m_dragController->draggedTier();
                 int draggedBoundary = m_dragController->draggedBoundary();
-                TimePos finalTime = secToUs(clientXToTime(event->pos().x()));
+                dsfw::TimePos finalTime = secToUs(clientXToTime(event->pos().x()));
                 m_dragController->endDrag(finalTime, m_undoStack);
                 unsetCursor();
                 emit boundaryDragFinished(draggedTier, draggedBoundary, finalTime);

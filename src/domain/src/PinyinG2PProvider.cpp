@@ -1,13 +1,12 @@
-#include <dstools/PinyinG2PProvider.h>
+﻿#include <dstools/PinyinG2PProvider.h>
 
 #include <algorithm>
 
 namespace dstools {
 
-using namespace dsfw;
 
-PinyinG2PProvider& PinyinG2PProvider::instance() {
-    static PinyinG2PProvider s_instance;
+dsfw::PinyinG2PProvider& PinyinG2PProvider::instance() {
+    static dsfw::PinyinG2PProvider s_instance;
     return s_instance;
 }
 
@@ -45,7 +44,7 @@ dsfw::Result<std::vector<dsfw::G2PResult>> PinyinG2PProvider::convert(const std:
         results.push_back(std::move(r));
     }
 
-    return Ok(std::move(results));
+    return dsfw::Ok(std::move(results));
 }
 
 dsfw::Result<dsfw::G2PResult> PinyinG2PProvider::convertWord(const std::string& word, const std::string& langCode) {
@@ -56,7 +55,7 @@ dsfw::Result<dsfw::G2PResult> PinyinG2PProvider::convertWord(const std::string& 
     dsfw::G2PResult result;
     result.word = word;
     result.phonemes = toPinyin(word);
-    return Ok(std::move(result));
+    return dsfw::Ok(std::move(result));
 }
 
 std::vector<std::string> PinyinG2PProvider::toPinyin(const std::string& text) {

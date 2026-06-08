@@ -1,4 +1,4 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <dsfw/PathUtils.h>
 #include <dstools/DsKeys.h>
@@ -7,7 +7,6 @@
 #include "DsTextDocBridge.h"
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestDsTextDocBridgeRoundtrip : public QObject {
     Q_OBJECT
@@ -17,7 +16,7 @@ private slots:
 };
 
 void TestDsTextDocBridgeRoundtrip::layer_roundtrip() {
-    DsTextDocument original;
+    dsfw::DsTextDocument original;
     original.audio.path = "test.wav";
 
     IntervalLayer grapheme;
@@ -52,14 +51,14 @@ void TestDsTextDocBridgeRoundtrip::layer_roundtrip() {
     QCOMPARE(extracted.size(), original.layers.size());
 
     // Roundtrip verification with modified document should fail
-    DsTextDocument modified = restored;
+    dsfw::DsTextDocument modified = restored;
     modified.layers[0].boundaries[0].pos = 999;
     auto verifyFail = DsTextDocBridge::verifyLayerRoundtrip(original, modified);
     QVERIFY(!verifyFail.ok());
 }
 
 void TestDsTextDocBridgeRoundtrip::pitch_doc_roundtrip() {
-    DsTextDocument original;
+    dsfw::DsTextDocument original;
     original.audio.path = "test.wav";
 
     IntervalLayer midi;
@@ -74,20 +73,20 @@ void TestDsTextDocBridgeRoundtrip::pitch_doc_roundtrip() {
     pitch.values = {261.6, 262.0, 0.0, 293.7, 295.0, 0.0};
     original.curves.push_back(pitch);
 
-    // Extract IntervalLayers from DsTextDocument
+    // Extract IntervalLayers from dsfw::DsTextDocument
     auto extracted = DsTextDocBridge::extractIntervalLayers(original);
 
     // Merge back into a clean document
-    DsTextDocument restored;
+    dsfw::DsTextDocument restored;
     DsTextDocBridge::mergeIntervalLayers(restored, extracted);
 
     // Convert to DsPitchDocument and back
-    auto pitchDoc = DsTextDocBridge::toPitchDoc(original, TimePos(2000000));
+    auto pitchDoc = DsTextDocBridge::toPitchDoc(original, dsfw::TimePos(2000000));
     QVERIFY(pitchDoc != nullptr);
     QCOMPARE(pitchDoc->f0.values.size(), original.curves[0].values.size());
     QCOMPARE(pitchDoc->notes.size(), size_t(2));
 
-    DsTextDocument roundtripped;
+    dsfw::DsTextDocument roundtripped;
     roundtripped.curves.push_back(pitch);
     auto mergeResult = DsTextDocBridge::fromPitchDoc(roundtripped, *pitchDoc);
     QVERIFY(mergeResult.ok());

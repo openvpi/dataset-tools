@@ -1,4 +1,4 @@
-#include "PitchLabelerPageHelpers.h"
+﻿#include "PitchLabelerPageHelpers.h"
 
 #include "BatchProcessDialog.h"
 #include "EnginePool.h"
@@ -26,13 +26,12 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
     using dsfw::signal::expectedFrameCount;
     using dsfw::signal::hopSizeToTimestep;
     using dsfw::signal::resampleCurve;
 
-    void pitchLabelerApplyPitchResult(IEditorDataSource *source, std::shared_ptr<pitchlabeler::DsPitchDocument> &currentFile,
+    void pitchLabelerApplyPitchResult(dsfw::IEditorDataSource *source, std::shared_ptr<pitchlabeler::DsPitchDocument> &currentFile,
                                       pitchlabeler::PitchEditor *editor, const QString &sliceId,
                                       const std::vector<float> &f0, float timestep) {
         if (!source)
@@ -60,7 +59,7 @@ using namespace dsfw;
                 ("Failed to load slice for pitch result: " + sliceId.toStdString() + " - " + result.error()).c_str());
             return;
         }
-        DsTextDocument doc = std::move(result.value());
+        dsfw::DsTextDocument doc = std::move(result.value());
 
         CurveLayer *pitchCurve = nullptr;
         for (auto &curve : doc.curves) {
@@ -84,7 +83,7 @@ using namespace dsfw;
         }
     }
 
-    void pitchLabelerApplyMidiResult(IEditorDataSource *source, std::shared_ptr<pitchlabeler::DsPitchDocument> &currentFile,
+    void pitchLabelerApplyMidiResult(dsfw::IEditorDataSource *source, std::shared_ptr<pitchlabeler::DsPitchDocument> &currentFile,
                                      pitchlabeler::PitchEditor *editor, const QString &sliceId,
                                      const std::vector<Game::GameNote> &notes) {
         if (!source)
@@ -99,7 +98,7 @@ using namespace dsfw;
                 ("Failed to load slice for MIDI result: " + sliceId.toStdString() + " - " + result.error()).c_str());
             return;
         }
-        DsTextDocument doc = std::move(result.value());
+        dsfw::DsTextDocument doc = std::move(result.value());
 
         if (!notes.empty()) {
             IntervalLayer *midiLayer = nullptr;
@@ -161,7 +160,7 @@ using namespace dsfw;
         editor->loadDsPitchDocument(currentFile);
     }
 
-    void pitchLabelerRunBatchExtract(PitchLabelerPage *page) {
+    void pitchLabelerRunBatchExtract(dsfw::PitchLabelerPage *page) {
         if (!page)
             return;
 
@@ -193,7 +192,7 @@ using namespace dsfw;
             return;
         }
 
-        auto *dlg = new BatchProcessDialog(QObject::tr("批量提取音高 + MIDI"), page);
+        auto *dlg = new dsfw::BatchProcessDialog(QObject::tr("批量提取音高 + MIDI"), page);
         dlg->setAttribute(Qt::WA_DeleteOnClose);
 
         auto *extractPitch = new QCheckBox(QObject::tr("提取音高 (RMVPE)"), dlg);
@@ -227,7 +226,7 @@ using namespace dsfw;
         auto rmvpeAlive = page->aliveToken(QLatin1String(::dstools::keys::engines::pitchExtraction)).token();
         auto gameAlive = page->aliveToken(QLatin1String(::dstools::keys::engines::midiTranscription)).token();
         auto *src = source;
-        QPointer<PitchLabelerPage> guard(page);
+        QPointer<dsfw::PitchLabelerPage> guard(page);
         page->loadPhNumCalculator();
         auto phNumCalc = page->phNumCalc();
 
@@ -325,7 +324,7 @@ using namespace dsfw;
                                     if (probeResult.ok()) {
                                         const int sampleRate = probeResult.value().sampleRate;
                                         const int64_t audioFrames = probeResult.value().totalFrameCount;
-                                        const TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
+                                        const dsfw::TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
                                         const int alignLength = expectedFrameCount(audioFrames, constants::kDefaultHopSize);
                                         f0Mhz = resampleCurve(f0Mhz, secToUs(0.01), dstTimestepUs, alignLength);
                                         timestep = static_cast<float>(usToSec(dstTimestepUs));
@@ -368,7 +367,7 @@ using namespace dsfw;
                                             for (size_t i = 0; i < bnd.size(); ++i) {
                                                 if (!bnd[i].text.isEmpty()) {
                                                     alignInput.phSeq.push_back(bnd[i].text.toStdString());
-                                                    TimePos dur = (i + 1 < bnd.size())
+                                                    dsfw::TimePos dur = (i + 1 < bnd.size())
                                                                       ? bnd[i + 1].pos - bnd[i].pos
                                                                       : secToUs(EditorPageBase::audioDurationSec(doc)) -
                                                                             bnd[i].pos;

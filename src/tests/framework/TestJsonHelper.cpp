@@ -1,7 +1,6 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/JsonHelper.h>
 
-using namespace dsfw;
 using json = nlohmann::json;
 
 class TestJsonHelper : public QObject {

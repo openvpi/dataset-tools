@@ -1,4 +1,4 @@
-#include "RmvpePitchProcessor.h"
+﻿#include "RmvpePitchProcessor.h"
 
 #include <rmvpe-infer/Rmvpe.h>
 
@@ -10,12 +10,10 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-using namespace dsfw;
 
 RmvpePitchProcessor::RmvpePitchProcessor() = default;
-RmvpePitchProcessor::~RmvpePitchProcessor() = default;
+RmvpePitchProcessor::~dsfw::RmvpePitchProcessor() = default;
 
 QString RmvpePitchProcessor::processorId() const {
     return QStringLiteral("rmvpe");
@@ -29,15 +27,15 @@ TaskSpec RmvpePitchProcessor::taskSpec() const {
     return {QStringLiteral("pitch_extraction"), {}, {{QStringLiteral("pitch"), QStringLiteral("pitch")}}};
 }
 
-Result<void> RmvpePitchProcessor::initialize(ModelManager & /*mm*/,
-                                              const ProcessorConfig &modelConfig) {
+dsfw::Result<void> RmvpePitchProcessor::initialize(dsfw::ModelManager & /*mm*/,
+                                              const dsfw::ProcessorConfig &modelConfig) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     const auto path = configValueString(modelConfig, QStringLiteral("path"));
     const int gpuIndex = static_cast<int>(configValueInt(modelConfig, QStringLiteral("deviceId"), -1));
 
     if (path.isEmpty()) {
-        return Err("RmvpePitchProcessor: missing 'path' in model config");
+        return dsfw::Err("RmvpePitchProcessor: missing 'path' in model config");
     }
 
     auto provider = gpuIndex < 0 ? dsfw::infer::ExecutionProvider::CPU
@@ -51,9 +49,9 @@ Result<void> RmvpePitchProcessor::initialize(ModelManager & /*mm*/,
     auto result = m_rmvpe->load(path.toStdWString(), provider, gpuIndex);
     if (!result) {
         m_rmvpe.reset();
-        return Err(result.error());
+        return dsfw::Err(result.error());
     }
-    return Ok();
+    return dsfw::Ok();
 }
 
 void RmvpePitchProcessor::release() {
@@ -61,16 +59,16 @@ void RmvpePitchProcessor::release() {
     m_rmvpe.reset();
 }
 
-Result<TaskOutput> RmvpePitchProcessor::process(const TaskInput &input) {
+dsfw::Result<dsfw::TaskOutput> RmvpePitchProcessor::process(const dsfw::TaskInput &input) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_rmvpe) {
-        return Err<TaskOutput>("RmvpePitchProcessor: model not loaded");
+        return dsfw::Err<dsfw::TaskOutput>("RmvpePitchProcessor: model not loaded");
     }
 
     std::vector<Rmvpe::RmvpeRes> res;
     auto result = m_rmvpe->get_f0(input.audioPath.toStdWString(), 0.03f, res, nullptr);
     if (!result) {
-        return Err<TaskOutput>(result.error());
+        return dsfw::Err<dsfw::TaskOutput>(result.error());
     }
 
     std::vector<float> f0All;
@@ -78,13 +76,13 @@ Result<TaskOutput> RmvpePitchProcessor::process(const TaskInput &input) {
         f0All.insert(f0All.end(), r.f0.begin(), r.f0.end());
     }
 
-    TaskOutput output;
+    dsfw::TaskOutput output;
     output.layers[QStringLiteral("pitch")] = LayerData::fromJson(nlohmann::json(f0All));
-    return Ok(std::move(output));
+    return dsfw::Ok(std::move(output));
 }
 
 // Self-registration
-static TaskProcessorRegistry::Registrar<RmvpePitchProcessor> s_reg(
+static TaskProcessorRegistry::Registrar<dsfw::RmvpePitchProcessor> s_reg(
     QStringLiteral("pitch_extraction"), QStringLiteral("rmvpe"));
 
 } // namespace dstools

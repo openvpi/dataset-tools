@@ -1,11 +1,10 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <QFile>
 #include <QDir>
 
 #include <dsfw/PathUtils.h>
 
-using namespace dsfw;
 
 class TestPathUtils : public QObject {
     Q_OBJECT

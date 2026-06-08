@@ -1,9 +1,8 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/IDocument.h>
 
-using namespace dsfw;
 
-class MockDocument : public IDocument {
+class MockDocument : public dsfw::IDocument {
 public:
     std::filesystem::path m_filePath;
     bool m_modified = false;
@@ -14,29 +13,29 @@ public:
         return m_modified;
     }
 
-    Result<void> load(const std::filesystem::path &path) override {
+    dsfw::Result<void> load(const std::filesystem::path &path) override {
         if (m_loadShouldFail) {
-            return Err("mock load error");
+            return dsfw::Err("mock load error");
         }
         m_filePath = path;
-        return Ok();
+        return dsfw::Ok();
     }
 
-    Result<void> save() override {
+    dsfw::Result<void> save() override {
         if (m_saveShouldFail) {
-            return Err("mock save error");
+            return dsfw::Err("mock save error");
         }
         m_modified = false;
-        return Ok();
+        return dsfw::Ok();
     }
 
-    Result<void> saveAs(const std::filesystem::path &path) override {
+    dsfw::Result<void> saveAs(const std::filesystem::path &path) override {
         if (m_saveShouldFail) {
-            return Err("mock saveAs error");
+            return dsfw::Err("mock saveAs error");
         }
         m_filePath = path;
         m_modified = false;
-        return Ok();
+        return dsfw::Ok();
     }
 };
 

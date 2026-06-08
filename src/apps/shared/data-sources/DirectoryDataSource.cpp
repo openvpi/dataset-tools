@@ -1,4 +1,4 @@
-#include "DirectoryDataSource.h"
+﻿#include "DirectoryDataSource.h"
 
 #include <QDir>
 #include <QFile>
@@ -7,10 +7,9 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 DirectoryDataSource::DirectoryDataSource(QObject *parent)
-    : IEditorDataSource(parent) {}
+    : dsfw::IEditorDataSource(parent) {}
 
 int DirectoryDataSource::getSliceCount() const { return m_sliceIds.size(); }
 
@@ -43,18 +42,18 @@ void DirectoryDataSource::refresh() {
 
 QStringList DirectoryDataSource::sliceIds() const { return m_sliceIds; }
 
-Result<DsTextDocument> DirectoryDataSource::loadSlice(const QString &sliceId) {
+dsfw::Result<dsfw::DsTextDocument> DirectoryDataSource::loadSlice(const QString &sliceId) {
     const QString path = dstextPath(sliceId);
     if (QFile::exists(path))
         return DsTextDocument::load(path);
 
-    DsTextDocument doc;
+    dsfw::DsTextDocument doc;
     doc.audio.path = sliceAudioPath(sliceId);
     return doc;
 }
 
-Result<void> DirectoryDataSource::saveSlice(const QString &sliceId,
-                                             const DsTextDocument &doc) {
+dsfw::Result<void> DirectoryDataSource::saveSlice(const QString &sliceId,
+                                             const dsfw::DsTextDocument &doc) {
     const QString path = dstextPath(sliceId);
     QDir().mkpath(QFileInfo(path).absolutePath());
 

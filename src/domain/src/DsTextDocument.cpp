@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <dsfw/AtomicFileWriter.h>
 #include <dsfw/JsonHelper.h>
 #include <dsfw/PathUtils.h>
@@ -7,7 +7,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 void IntervalLayer::sortBoundaries() {
     std::stable_sort(boundaries.begin(), boundaries.end(),
@@ -23,25 +22,25 @@ int IntervalLayer::nextId() const {
     return maxId + 1;
 }
 
-Result<DsTextDocument> DsTextDocument::load(const QString& path) {
+dsfw::Result<dsfw::DsTextDocument> DsTextDocument::load(const QString& path) {
     auto textResult = dsfw::PathUtils::readFile(path);
     if (!textResult.ok())
-        return Result<DsTextDocument>::Error(textResult.error());
+        return dsfw::Result<dsfw::DsTextDocument>::Error(textResult.error());
 
     nlohmann::json j;
     try {
         j = nlohmann::json::parse(textResult.value().toStdString());
     } catch (const nlohmann::json::parse_error& e) {
-        return Result<DsTextDocument>::Error("DsTextDocument JSON parse error [" + dsfw::PathUtils::toNarrowPath(path) +
+        return dsfw::Result<dsfw::DsTextDocument>::Error("dsfw::DsTextDocument JSON parse error [" + dsfw::PathUtils::toNarrowPath(path) +
                                              "]: " + e.what());
     } catch (const nlohmann::json::type_error& e) {
-        return Result<DsTextDocument>::Error("DsTextDocument JSON type error [" + dsfw::PathUtils::toNarrowPath(path) +
+        return dsfw::Result<dsfw::DsTextDocument>::Error("dsfw::DsTextDocument JSON type error [" + dsfw::PathUtils::toNarrowPath(path) +
                                              "]: " + e.what());
     }
 
     auto version = QString::fromStdString(j.value("version", std::string(kDsTextVersionFallback)));
 
-    DsTextDocument doc;
+    dsfw::DsTextDocument doc;
     doc.version = version;
 
     if (j.contains("audio")) {
@@ -131,43 +130,43 @@ Result<DsTextDocument> DsTextDocument::load(const QString& path) {
         }
     }
 
-    return Result<DsTextDocument>::Ok(std::move(doc));
+    return dsfw::Result<dsfw::DsTextDocument>::Ok(std::move(doc));
 }
 
-Result<void> DsTextDocument::validate() const {
+dsfw::Result<void> DsTextDocument::validate() const {
     if (version.isEmpty()) {
-        return Result<void>::Error("version is empty");
+        return dsfw::Result<void>::Error("version is empty");
     }
 
     if (audio.path.isEmpty()) {
-        return Result<void>::Error("audio.path is empty");
+        return dsfw::Result<void>::Error("audio.path is empty");
     }
 
     if (audio.in < 0) {
-        return Result<void>::Error("audio.in is negative");
+        return dsfw::Result<void>::Error("audio.in is negative");
     }
 
     if (audio.out < 0) {
-        return Result<void>::Error("audio.out is negative");
+        return dsfw::Result<void>::Error("audio.out is negative");
     }
 
     if (audio.out < audio.in) {
-        return Result<void>::Error("audio.out < audio.in");
+        return dsfw::Result<void>::Error("audio.out < audio.in");
     }
 
     for (size_t i = 0; i < layers.size(); ++i) {
         const auto& layer = layers[i];
         if (layer.name.isEmpty()) {
-            return Result<void>::Error("layers[" + std::to_string(i) + "].name is empty");
+            return dsfw::Result<void>::Error("layers[" + std::to_string(i) + "].name is empty");
         }
         for (size_t j = 0; j < layer.boundaries.size(); ++j) {
             const auto& b = layer.boundaries[j];
             if (b.id <= 0) {
-                return Result<void>::Error("layers[" + std::to_string(i) + "].boundaries[" + std::to_string(j) +
+                return dsfw::Result<void>::Error("layers[" + std::to_string(i) + "].boundaries[" + std::to_string(j) +
                                            "].id is invalid");
             }
             if (b.pos < 0) {
-                return Result<void>::Error("layers[" + std::to_string(i) + "].boundaries[" + std::to_string(j) +
+                return dsfw::Result<void>::Error("layers[" + std::to_string(i) + "].boundaries[" + std::to_string(j) +
                                            "].pos is negative");
             }
         }
@@ -175,29 +174,29 @@ Result<void> DsTextDocument::validate() const {
 
     for (size_t i = 0; i < curves.size(); ++i) {
         if (curves[i].name.isEmpty()) {
-            return Result<void>::Error("curves[" + std::to_string(i) + "].name is empty");
+            return dsfw::Result<void>::Error("curves[" + std::to_string(i) + "].name is empty");
         }
     }
 
     for (size_t i = 0; i < dependencies.size(); ++i) {
         const auto& dep = dependencies[i];
         if (dep.parentLayerIndex < 0 && dep.parentLayerName.isEmpty()) {
-            return Result<void>::Error("dependencies[" + std::to_string(i) +
+            return dsfw::Result<void>::Error("dependencies[" + std::to_string(i) +
                                        "]: parentLayerIndex and parentLayerName are both invalid");
         }
         if (dep.childLayerIndex < 0 && dep.childLayerName.isEmpty()) {
-            return Result<void>::Error("dependencies[" + std::to_string(i) +
+            return dsfw::Result<void>::Error("dependencies[" + std::to_string(i) +
                                        "]: childLayerIndex and childLayerName are both invalid");
         }
     }
 
-    return Result<void>::Ok();
+    return dsfw::Result<void>::Ok();
 }
 
-Result<void> DsTextDocument::save(const QString& path) const {
+dsfw::Result<void> DsTextDocument::save(const QString& path) const {
     auto validationResult = validate();
     if (!validationResult) {
-        return Result<void>::Error(validationResult.error());
+        return dsfw::Result<void>::Error(validationResult.error());
     }
 
     nlohmann::json j;
@@ -262,7 +261,7 @@ Result<void> DsTextDocument::save(const QString& path) const {
         j["meta"]["editedSteps"] = editedArr;
     }
 
-    // AtomicFileWriter handles directory creation internally
+    // dsfw::AtomicFileWriter handles directory creation internally
     auto str = j.dump(4);
     return dsfw::AtomicFileWriter::writeJson(dsfw::PathUtils::toStdPath(path), str);
 }

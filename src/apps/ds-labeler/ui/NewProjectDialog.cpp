@@ -1,4 +1,4 @@
-#include "NewProjectDialog.h"
+﻿#include "NewProjectDialog.h"
 
 #include "Keys.h"
 
@@ -22,7 +22,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 NewProjectDialog::NewProjectDialog(QWidget *parent)
     : QDialog(parent) {
@@ -83,7 +82,7 @@ NewProjectDialog::NewProjectDialog(QWidget *parent)
 }
 
 void NewProjectDialog::onBrowseDir() {
-    AppSettings settings(QStringLiteral("DsLabeler"));
+    dsfw::AppSettings settings(QStringLiteral("DsLabeler"));
     const QString lastDir = settings.get(settings::app::kLastProjectDir);
     dsfw::widgets::FilePathSelector selector(
         {dsfw::widgets::FilePathSelector::Mode::OpenDirectory, QStringLiteral("选择工程保存位置"), {}, {}, lastDir}, this);
@@ -115,7 +114,7 @@ void NewProjectDialog::onAccepted() {
     }
 
     // Create empty project (no items — slices will be created from slicer page)
-    DsProject project;
+    dsfw::DsProject project;
     project.setWorkingDirectory(projectDir);
 
     const QString filePath = QDir(projectDir).filePath(name + QStringLiteral(".dsproj"));

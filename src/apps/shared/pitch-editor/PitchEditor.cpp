@@ -1,4 +1,4 @@
-#include "PitchEditor.h"
+﻿#include "PitchEditor.h"
 
 #include <dstools/DsPitchDocument.h>
 #include "ui/PianoRollChartPanel.h"
@@ -43,10 +43,9 @@ namespace {
 
 namespace dstools {
 namespace pitchlabeler {
-using namespace dsfw;
 
 PitchEditor::PitchEditor(QWidget *parent)
-    : EditorContainerBase("pitch-editor", parent)
+    : dsfw::EditorContainerBase("pitch-editor", parent)
 {
     // Setup container and play widget with default resolution (440 = equivalent to setPixelsPerSecond(100))
     setupContainerAndPlayWidget(440);
@@ -57,7 +56,7 @@ PitchEditor::PitchEditor(QWidget *parent)
     connectSignals();
 }
 
-PitchEditor::~PitchEditor() = default;
+PitchEditor::~dsfw::PitchEditor() = default;
 
 void PitchEditor::loadDsPitchDocument(std::shared_ptr<DsPitchDocument> file) {
     m_currentFile = std::move(file);
@@ -317,7 +316,7 @@ void PitchEditor::buildLayout() {
     // 容器放入上方（钢琴窗）
     m_mainSplitter->addWidget(m_container);
 
-    // === PropertyPanel (右侧属性面板) ===
+    // === dsfw::PropertyPanel (右侧属性面板) ===
     m_propertyPanel = new ui::PropertyPanel();
     m_propertyPanel->setMinimumWidth(250);
     m_propertyPanel->setMaximumWidth(400);
@@ -438,7 +437,7 @@ void PitchEditor::connectSignals() {
     // Playback
     connect(m_playWidget, &dsfw::widgets::PlayWidget::playheadChanged, this, &PitchEditor::updatePlayheadPosition);
 
-    // Seek via container's MiniMapScrollBar (handled by container)
+    // Seek via container's dsfw::MiniMapScrollBar (handled by container)
     // No need for separate progress slider connections
 }
 
@@ -476,7 +475,7 @@ void PitchEditor::onZoomReset() {
 }
 
 void PitchEditor::updateZoomStatus() {
-    // Zoom status is handled by EditorContainerBase
+    // Zoom status is handled by dsfw::EditorContainerBase
     emit zoomChanged(m_viewport->resolution());
 }
 

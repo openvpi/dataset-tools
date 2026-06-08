@@ -1,4 +1,4 @@
-#include "AudioVisualizerContainer.h"
+﻿#include "AudioVisualizerContainer.h"
 
 #include "ChartPanelBase.h"
 #include "DataAreaWidget.h"
@@ -24,22 +24,20 @@
 
 namespace dstools {
 
-using namespace dsfw;
-using namespace dsfw;
 
 using dsfw::widgets::PlayWidget;
 using dsfw::widgets::ViewportController;
 using dsfw::widgets::ViewportState;
 
-AppSettings& AudioVisualizerContainer::chartLayoutSettings() {
-    static AppSettings s_settings("AudioVisualizer");
+dsfw::AppSettings& AudioVisualizerContainer::chartLayoutSettings() {
+    static dsfw::AppSettings s_settings("AudioVisualizer");
     return s_settings;
 }
 
 AudioVisualizerContainer::AudioVisualizerContainer(const QString& settingsAppName, QWidget* parent)
     : QWidget(parent), m_settings(settingsAppName) {
-    m_viewport = new ViewportController(this);
-    m_dragController = new BoundaryDragController(this);
+    m_viewport = new dsfw::ViewportController(this);
+    m_dragController = new dsfw::BoundaryDragController(this);
 
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -59,13 +57,13 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString& settingsAppNam
 
     mainLayout->addWidget(pairWidget);
 
-    m_miniMap = new MiniMapScrollBar(m_viewport, m_dataArea);
+    m_miniMap = new dsfw::MiniMapScrollBar(m_viewport, m_dataArea);
     m_dataArea->layout()->addWidget(m_miniMap);
 
     m_timeRuler = new TimeRulerWidget(m_viewport, m_dataArea);
     m_dataArea->layout()->addWidget(m_timeRuler);
 
-    m_tierLabelArea = new TierLabelArea(m_dataArea);
+    m_tierLabelArea = new dsfw::TierLabelArea(m_dataArea);
     m_tierLabelArea->setViewportController(m_viewport);
     m_tierLabelArea->installEventFilter(this);
     m_dataArea->layout()->addWidget(m_tierLabelArea);
@@ -76,7 +74,7 @@ AudioVisualizerContainer::AudioVisualizerContainer(const QString& settingsAppNam
     m_chartSplitter->installEventFilter(this);
     static_cast<QVBoxLayout*>(m_dataArea->layout())->addWidget(m_chartSplitter, 1);
 
-    m_boundaryOverlay = new BoundaryOverlayWidget(m_viewport, m_dataArea);
+    m_boundaryOverlay = new dsfw::BoundaryOverlayWidget(m_viewport, m_dataArea);
     m_boundaryOverlay->trackWidget(m_chartSplitter);
 
     m_playCursorOverlay = new PlayCursorOverlay(m_dataArea);
@@ -170,9 +168,9 @@ void AudioVisualizerContainer::updateScaleIndicator() {
     m_scaleLabel->raise();
 }
 
-AudioVisualizerContainer::~AudioVisualizerContainer() = default;
+AudioVisualizerContainer::~dsfw::AudioVisualizerContainer() = default;
 
-ViewportController* AudioVisualizerContainer::viewport() const {
+dsfw::ViewportController* AudioVisualizerContainer::viewport() const {
     return m_viewport;
 }
 
@@ -180,7 +178,7 @@ IBoundaryModel* AudioVisualizerContainer::boundaryModel() const {
     return m_boundaryModel;
 }
 
-BoundaryDragController* AudioVisualizerContainer::dragController() const {
+dsfw::BoundaryDragController* AudioVisualizerContainer::dragController() const {
     return m_dragController;
 }
 
@@ -188,11 +186,11 @@ TimeRulerWidget* AudioVisualizerContainer::timeRuler() const {
     return m_timeRuler;
 }
 
-BoundaryOverlayWidget* AudioVisualizerContainer::boundaryOverlay() const {
+dsfw::BoundaryOverlayWidget* AudioVisualizerContainer::boundaryOverlay() const {
     return m_boundaryOverlay;
 }
 
-TierLabelArea* AudioVisualizerContainer::tierLabelArea() const {
+dsfw::TierLabelArea* AudioVisualizerContainer::tierLabelArea() const {
     return m_tierLabelArea;
 }
 
@@ -200,7 +198,7 @@ QSplitter* AudioVisualizerContainer::chartSplitter() const {
     return m_chartSplitter;
 }
 
-MiniMapScrollBar* AudioVisualizerContainer::miniMap() const {
+dsfw::MiniMapScrollBar* AudioVisualizerContainer::miniMap() const {
     return m_miniMap;
 }
 
@@ -223,7 +221,7 @@ void AudioVisualizerContainer::setBoundaryModel(IBoundaryModel* model) {
     updateOverlayTopOffset();
 }
 
-void AudioVisualizerContainer::setTierLabelArea(TierLabelArea* area) {
+void AudioVisualizerContainer::setTierLabelArea(dsfw::TierLabelArea* area) {
     if (!area || area == m_tierLabelArea)
         return;
 
@@ -435,8 +433,8 @@ void AudioVisualizerContainer::wheelEvent(QWheelEvent* event) {
 }
 
 bool AudioVisualizerContainer::eventFilter(QObject* watched, QEvent* event) {
-    // Cross-widget drag capture: once BoundaryDragController enters dragging state
-    // (from ChartPanelBase or IntervalTierView or this handler), all subsequent
+    // Cross-widget drag capture: once dsfw::BoundaryDragController enters dragging state
+    // (from dsfw::ChartPanelBase or dsfw::IntervalTierView or this handler), all subsequent
     // MouseMove/Release events on any installed widget are intercepted here to
     // provide continuous drag across widget boundaries using global coordinates.
     // Press detection uses active-tier-only 30ms proximity; per-widget handlers
@@ -447,13 +445,13 @@ bool AudioVisualizerContainer::eventFilter(QObject* watched, QEvent* event) {
             int tier = m_boundaryModel ? m_boundaryModel->activeTierIndex() : -1;
             if (tier >= 0) {
                 double time = xToTimeGlobal(me->globalPosition().x());
-                TimePos targetTime = secToUs(time);
-                TimePos kSnapThreshold = secToUs(0.03);
+                dsfw::TimePos targetTime = secToUs(time);
+                dsfw::TimePos kSnapThreshold = secToUs(0.03);
                 int count = m_boundaryModel->boundaryCount(tier);
                 int bestIdx = -1;
-                TimePos bestDist = kSnapThreshold;
+                dsfw::TimePos bestDist = kSnapThreshold;
                 for (int b = 0; b < count; ++b) {
-                    TimePos dist = std::abs(m_boundaryModel->boundaryTime(tier, b) - targetTime);
+                    dsfw::TimePos dist = std::abs(m_boundaryModel->boundaryTime(tier, b) - targetTime);
                     if (dist < bestDist) {
                         bestDist = dist;
                         bestIdx = b;
@@ -817,7 +815,7 @@ void AudioVisualizerContainer::setUndoStack(QUndoStack* stack) {
     m_undoStack = stack;
 }
 
-void AudioVisualizerContainer::setPlayWidget(PlayWidget* playWidget) {
+void AudioVisualizerContainer::setPlayWidget(dsfw::PlayWidget* playWidget) {
     if (m_playWidget == playWidget)
         return;
 

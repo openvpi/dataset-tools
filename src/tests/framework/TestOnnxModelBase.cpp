@@ -1,9 +1,8 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/infer/OnnxModelBase.h>
 
 #include <QTemporaryDir>
 
-using namespace dsfw::infer;
 
 class TestOnnxModelBase : public QObject {
     Q_OBJECT

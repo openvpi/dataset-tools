@@ -1,4 +1,4 @@
-#include "DsSlicerPage.h"
+﻿#include "DsSlicerPage.h"
 
 #include "AudioFileListPanel.h"
 #include "core/ProjectDataSource.h"
@@ -39,15 +39,14 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-DsSlicerPage::DsSlicerPage(QWidget* parent) : SlicerPage(parent) {
+DsSlicerPage::DsSlicerPage(QWidget* parent) : dsfw::SlicerPage(parent) {
     connectProjectSignals();
 }
 
-DsSlicerPage::~DsSlicerPage() = default;
+DsSlicerPage::~dsfw::DsSlicerPage() = default;
 
-void DsSlicerPage::setDataSource(ProjectDataSource* source) {
+void DsSlicerPage::setDataSource(dsfw::ProjectDataSource* source) {
     m_dataSource = source;
 }
 
@@ -165,7 +164,7 @@ void DsSlicerPage::onExportAudio() {
             QString dsitemDir = ProjectPaths::dsItemsDir(m_dataSource->workingDir());
             QDir().mkpath(dsitemDir);
 
-            PipelineContext dsCtx;
+            dsfw::PipelineContext dsCtx;
             dsCtx.itemId = sliceId;
             dsCtx.audioPath = item.audioSource;
             dsCtx.status = PipelineContext::Status::Active;
@@ -181,7 +180,7 @@ void DsSlicerPage::onExportAudio() {
     project->saveFile();
     emit m_dataSource->sliceListChanged();
 
-    SlicerIntegrityGuard guard;
+    dsfw::SlicerIntegrityGuard guard;
     guard.recordExportedSlicePoints(m_dataSource->workingDir(), m_fileSlicePoints);
 }
 
@@ -200,7 +199,7 @@ void DsSlicerPage::onBatchExportAll() {
         return;
     }
 
-    SliceExportDialog dlg(this);
+    dsfw::SliceExportDialog dlg(this);
     dlg.setDefaultPrefix(QStringLiteral("batch"));
     dlg.setWindowTitle(tr("Batch Export All Sliced Audio"));
     if (dlg.exec() != QDialog::Accepted)
@@ -230,7 +229,7 @@ void DsSlicerPage::onBatchExportAll() {
     progressDlg->setLabelText(tr("Exporting %1 files...").arg(totalFiles));
     progressDlg->setCancelButtonEnabled(false);
 
-    QPointer<DsSlicerPage> guard(this);
+    QPointer<dsfw::DsSlicerPage> guard(this);
     auto* watcher = new QFutureWatcher<int>(this);
     connect(watcher, &QFutureWatcher<int>::finished, this, [this, watcher, progressDlg, outputDir, digits, guard]() {
         if (!guard)
@@ -291,7 +290,7 @@ void DsSlicerPage::onBatchExportAll() {
             project->saveFile();
             emit m_dataSource->sliceListChanged();
 
-            SlicerIntegrityGuard slicerGuard;
+            dsfw::SlicerIntegrityGuard slicerGuard;
             slicerGuard.recordExportedSlicePoints(m_dataSource->workingDir(), m_fileSlicePoints);
         }
 
@@ -302,7 +301,7 @@ void DsSlicerPage::onBatchExportAll() {
                                  tr("Exported %1 slice files to:\n%2").arg(totalExported).arg(outputDir));
     });
 
-    QPointer<DsSlicerPage> self(this);
+    QPointer<dsfw::DsSlicerPage> self(this);
 
     auto future = QtConcurrent::run([self, outputDir, digits, sndFormat]() {
         if (!self)
@@ -338,7 +337,7 @@ void DsSlicerPage::promptSliceUpdateIfNeeded() {
     if (affectedFiles.isEmpty())
         return;
 
-    SlicerIntegrityGuard guard;
+    dsfw::SlicerIntegrityGuard guard;
     auto reports = guard.scanAffectedSlices(m_dataSource->workingDir(), affectedBaseNames);
 
     QDialog dlg(this);

@@ -1,11 +1,10 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <QFile>
 #include <QDir>
 #include <dstools/TextGridToCsv.h>
 
 using namespace dstools;
-using namespace dsfw;
 
 class TestTextGridToCsv : public QObject {
     Q_OBJECT
@@ -33,7 +32,7 @@ static bool writeTextGrid(const QString &path, const QString &content) {
 static QString basicTextGrid() {
     return QStringLiteral(
         "File type = \"ooTextFile\"\n"
-        "Object class = \"TextGrid\"\n"
+        "Object class = \"dsfw::TextGrid\"\n"
         "\n"
         "xmin = 0\n"
         "xmax = 1.5\n"
@@ -41,7 +40,7 @@ static QString basicTextGrid() {
         "size = 1\n"
         "item []:\n"
         "    item [1]:\n"
-        "        class = \"IntervalTier\"\n"
+        "        class = \"dsfw::IntervalTier\"\n"
         "        name = \"phones\"\n"
         "        xmin = 0\n"
         "        xmax = 1.5\n"
@@ -63,7 +62,7 @@ static QString basicTextGrid() {
 void TestTextGridToCsv::testExtractFromTextGrid_basic() {
     QTemporaryDir tmp;
     QVERIFY(tmp.isValid());
-    QString tgPath = tmp.path() + "/test.TextGrid";
+    QString tgPath = tmp.path() + "/test.dsfw::TextGrid";
     QVERIFY(writeTextGrid(tgPath, basicTextGrid()));
 
     auto result = TextGridToCsv::extractFromTextGrid(tgPath);
@@ -85,7 +84,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_caseInsensitiveTier() {
     // Use "Phones" (capitalized) as tier name
     QString content = basicTextGrid();
     content.replace("\"phones\"", "\"Phones\"");
-    QString tgPath = tmp.path() + "/capitalized.TextGrid";
+    QString tgPath = tmp.path() + "/capitalized.dsfw::TextGrid";
     QVERIFY(writeTextGrid(tgPath, content));
 
     auto result = TextGridToCsv::extractFromTextGrid(tgPath);
@@ -98,7 +97,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_emptyIntervals() {
     QVERIFY(tmp.isValid());
     QString content = QStringLiteral(
         "File type = \"ooTextFile\"\n"
-        "Object class = \"TextGrid\"\n"
+        "Object class = \"dsfw::TextGrid\"\n"
         "\n"
         "xmin = 0\n"
         "xmax = 1.5\n"
@@ -106,7 +105,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_emptyIntervals() {
         "size = 1\n"
         "item []:\n"
         "    item [1]:\n"
-        "        class = \"IntervalTier\"\n"
+        "        class = \"dsfw::IntervalTier\"\n"
         "        name = \"phones\"\n"
         "        xmin = 0\n"
         "        xmax = 1.5\n"
@@ -127,7 +126,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_emptyIntervals() {
         "            xmin = 1.0\n"
         "            xmax = 1.5\n"
         "            text = \"c\"\n");
-    QString tgPath = tmp.path() + "/empty_intervals.TextGrid";
+    QString tgPath = tmp.path() + "/empty_intervals.dsfw::TextGrid";
     QVERIFY(writeTextGrid(tgPath, content));
 
     auto result = TextGridToCsv::extractFromTextGrid(tgPath);
@@ -136,7 +135,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_emptyIntervals() {
 }
 
 void TestTextGridToCsv::testExtractFromTextGrid_nonExistentFile() {
-    auto result = TextGridToCsv::extractFromTextGrid("/nonexistent/file.TextGrid");
+    auto result = TextGridToCsv::extractFromTextGrid("/nonexistent/file.dsfw::TextGrid");
     QVERIFY(!result.ok());
     QVERIFY(!result.error().empty());
 }
@@ -144,14 +143,14 @@ void TestTextGridToCsv::testExtractFromTextGrid_nonExistentFile() {
 void TestTextGridToCsv::testExtractDirectory() {
     QTemporaryDir tmp;
     QVERIFY(tmp.isValid());
-    // Create two TextGrid files with names that sort alphabetically
-    QVERIFY(writeTextGrid(tmp.path() + "/alpha.TextGrid", basicTextGrid()));
+    // Create two dsfw::TextGrid files with names that sort alphabetically
+    QVERIFY(writeTextGrid(tmp.path() + "/alpha.dsfw::TextGrid", basicTextGrid()));
 
     QString content2 = basicTextGrid();
     content2.replace("\"sh\"", "\"k\"");
     content2.replace("\"a\"", "\"o\"");
     content2.replace("\"n\"", "\"t\"");
-    QVERIFY(writeTextGrid(tmp.path() + "/beta.TextGrid", content2));
+    QVERIFY(writeTextGrid(tmp.path() + "/beta.dsfw::TextGrid", content2));
 
     auto result = TextGridToCsv::extractDirectory(tmp.path());
     QVERIFY(result.ok());
@@ -178,7 +177,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_multipleTiers() {
     QVERIFY(tmp.isValid());
     QString content = QStringLiteral(
         "File type = \"ooTextFile\"\n"
-        "Object class = \"TextGrid\"\n"
+        "Object class = \"dsfw::TextGrid\"\n"
         "\n"
         "xmin = 0\n"
         "xmax = 1.0\n"
@@ -186,7 +185,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_multipleTiers() {
         "size = 2\n"
         "item []:\n"
         "    item [1]:\n"
-        "        class = \"IntervalTier\"\n"
+        "        class = \"dsfw::IntervalTier\"\n"
         "        name = \"words\"\n"
         "        xmin = 0\n"
         "        xmax = 1.0\n"
@@ -196,7 +195,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_multipleTiers() {
         "            xmax = 1.0\n"
         "            text = \"hello\"\n"
         "    item [2]:\n"
-        "        class = \"IntervalTier\"\n"
+        "        class = \"dsfw::IntervalTier\"\n"
         "        name = \"phones\"\n"
         "        xmin = 0\n"
         "        xmax = 1.0\n"
@@ -209,7 +208,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_multipleTiers() {
         "            xmin = 0.5\n"
         "            xmax = 1.0\n"
         "            text = \"a\"\n");
-    QString tgPath = tmp.path() + "/multi_tier.TextGrid";
+    QString tgPath = tmp.path() + "/multi_tier.dsfw::TextGrid";
     QVERIFY(writeTextGrid(tgPath, content));
 
     auto result = TextGridToCsv::extractFromTextGrid(tgPath);
@@ -222,7 +221,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_noPhonesTier() {
     QVERIFY(tmp.isValid());
     QString content = QStringLiteral(
         "File type = \"ooTextFile\"\n"
-        "Object class = \"TextGrid\"\n"
+        "Object class = \"dsfw::TextGrid\"\n"
         "\n"
         "xmin = 0\n"
         "xmax = 1.0\n"
@@ -230,7 +229,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_noPhonesTier() {
         "size = 1\n"
         "item []:\n"
         "    item [1]:\n"
-        "        class = \"IntervalTier\"\n"
+        "        class = \"dsfw::IntervalTier\"\n"
         "        name = \"words\"\n"
         "        xmin = 0\n"
         "        xmax = 1.0\n"
@@ -239,7 +238,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_noPhonesTier() {
         "            xmin = 0\n"
         "            xmax = 1.0\n"
         "            text = \"hello\"\n");
-    QString tgPath = tmp.path() + "/no_phones.TextGrid";
+    QString tgPath = tmp.path() + "/no_phones.dsfw::TextGrid";
     QVERIFY(writeTextGrid(tgPath, content));
 
     auto result = TextGridToCsv::extractFromTextGrid(tgPath);
@@ -250,8 +249,8 @@ void TestTextGridToCsv::testExtractFromTextGrid_noPhonesTier() {
 void TestTextGridToCsv::testExtractFromTextGrid_malformedContent() {
     QTemporaryDir tmp;
     QVERIFY(tmp.isValid());
-    QString tgPath = tmp.path() + "/bad.TextGrid";
-    QVERIFY(writeTextGrid(tgPath, "this is not a valid TextGrid"));
+    QString tgPath = tmp.path() + "/bad.dsfw::TextGrid";
+    QVERIFY(writeTextGrid(tgPath, "this is not a valid dsfw::TextGrid"));
 
     auto result = TextGridToCsv::extractFromTextGrid(tgPath);
     QVERIFY(!result.ok());
@@ -262,7 +261,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_allEmptyIntervals() {
     QVERIFY(tmp.isValid());
     QString content = QStringLiteral(
         "File type = \"ooTextFile\"\n"
-        "Object class = \"TextGrid\"\n"
+        "Object class = \"dsfw::TextGrid\"\n"
         "\n"
         "xmin = 0\n"
         "xmax = 1.0\n"
@@ -270,7 +269,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_allEmptyIntervals() {
         "size = 1\n"
         "item []:\n"
         "    item [1]:\n"
-        "        class = \"IntervalTier\"\n"
+        "        class = \"dsfw::IntervalTier\"\n"
         "        name = \"phones\"\n"
         "        xmin = 0\n"
         "        xmax = 1.0\n"
@@ -283,7 +282,7 @@ void TestTextGridToCsv::testExtractFromTextGrid_allEmptyIntervals() {
         "            xmin = 0.5\n"
         "            xmax = 1.0\n"
         "            text = \"\"\n");
-    QString tgPath = tmp.path() + "/all_empty.TextGrid";
+    QString tgPath = tmp.path() + "/all_empty.dsfw::TextGrid";
     QVERIFY(writeTextGrid(tgPath, content));
 
     auto result = TextGridToCsv::extractFromTextGrid(tgPath);

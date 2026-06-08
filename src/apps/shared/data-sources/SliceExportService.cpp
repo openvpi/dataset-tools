@@ -1,4 +1,4 @@
-#include "SliceExportService.h"
+﻿#include "SliceExportService.h"
 
 #include <dsfw/PathUtils.h>
 #include <dsfw/audio/AudioFileWriter.h>
@@ -9,7 +9,6 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
 SliceExportResult SliceExportService::exportSlices(const std::vector<float> &samples, int sampleRate,
                                                     const std::vector<double> &slicePoints,

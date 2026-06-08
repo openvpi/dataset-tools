@@ -1,13 +1,11 @@
-#include <QTest>
+﻿#include <QTest>
 #include <dsfw/PipelineRunner.h>
 #include <dsfw/PipelineContext.h>
 #include <dsfw/TaskProcessorRegistry.h>
 
-using namespace dsfw;
 using namespace dstools;
-using namespace dsfw;
 
-class MockPitchProcessor : public ITaskProcessor {
+class MockPitchProcessor : public dsfw::ITaskProcessor {
 public:
     QString processorId() const override { return QStringLiteral("mock-rmvpe"); }
     QString displayName() const override { return QStringLiteral("Mock RMVPE"); }
@@ -16,10 +14,10 @@ public:
                 {{QStringLiteral("audio_in"), QStringLiteral("audio")}},
                 {{QStringLiteral("f0_out"), QStringLiteral("pitch")}}};
     }
-    Result<void> initialize(ModelManager &, const ProcessorConfig &) override { return Ok(); }
+    dsfw::Result<void> initialize(dsfw::ModelManager &, const dsfw::ProcessorConfig &) override { return dsfw::Ok(); }
     void release() override {}
-    Result<TaskOutput> process(const TaskInput &) override {
-        TaskOutput out;
+    dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &) override {
+        dsfw::TaskOutput out;
         int numFrames = 100;
         std::vector<float> f0(numFrames);
         for (int i = 0; i < numFrames; ++i)
@@ -28,11 +26,11 @@ public:
         pitchJson["f0"] = f0;
         pitchJson["timestep"] = 0.01;
         out.layers[QStringLiteral("f0_out")] = LayerData::fromJson(pitchJson);
-        return Ok(std::move(out));
+        return dsfw::Ok(std::move(out));
     }
 };
 
-class MockMidiProcessor : public ITaskProcessor {
+class MockMidiProcessor : public dsfw::ITaskProcessor {
 public:
     QString processorId() const override { return QStringLiteral("mock-game"); }
     QString displayName() const override { return QStringLiteral("Mock GAME"); }
@@ -41,19 +39,19 @@ public:
                 {{QStringLiteral("audio_in"), QStringLiteral("audio")}},
                 {{QStringLiteral("midi_out"), QStringLiteral("midi")}}};
     }
-    Result<void> initialize(ModelManager &, const ProcessorConfig &) override { return Ok(); }
+    dsfw::Result<void> initialize(dsfw::ModelManager &, const dsfw::ProcessorConfig &) override { return dsfw::Ok(); }
     void release() override {}
-    Result<TaskOutput> process(const TaskInput &) override {
-        TaskOutput out;
+    dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &) override {
+        dsfw::TaskOutput out;
         nlohmann::json midiJson = nlohmann::json::array();
         midiJson.push_back({{"pitch", 60}, {"onset", 0.0}, {"duration", 1.0}, {"voiced", true}});
         midiJson.push_back({{"pitch", 64}, {"onset", 1.0}, {"duration", 0.5}, {"voiced", true}});
         out.layers[QStringLiteral("midi_out")] = LayerData::fromJson(midiJson);
-        return Ok(std::move(out));
+        return dsfw::Ok(std::move(out));
     }
 };
 
-class MockAlignmentProcessor : public ITaskProcessor {
+class MockAlignmentProcessor : public dsfw::ITaskProcessor {
 public:
     QString processorId() const override { return QStringLiteral("mock-hfa"); }
     QString displayName() const override { return QStringLiteral("Mock HFA"); }
@@ -63,19 +61,19 @@ public:
                  {QStringLiteral("graph_in"), QStringLiteral("grapheme")}},
                 {{QStringLiteral("phone_out"), QStringLiteral("phoneme")}}};
     }
-    Result<void> initialize(ModelManager &, const ProcessorConfig &) override { return Ok(); }
+    dsfw::Result<void> initialize(dsfw::ModelManager &, const dsfw::ProcessorConfig &) override { return dsfw::Ok(); }
     void release() override {}
-    Result<TaskOutput> process(const TaskInput &) override {
-        TaskOutput out;
+    dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &) override {
+        dsfw::TaskOutput out;
         nlohmann::json phoneJson;
         phoneJson["phonemes"] = "h eh l ow";
         phoneJson["durations"] = {0.1, 0.1, 0.2, 0.1, 0.1};
         out.layers[QStringLiteral("phone_out")] = LayerData::fromJson(phoneJson);
-        return Ok(std::move(out));
+        return dsfw::Ok(std::move(out));
     }
 };
 
-class FailingProcessor : public ITaskProcessor {
+class FailingProcessor : public dsfw::ITaskProcessor {
 public:
     QString processorId() const override { return QStringLiteral("failing"); }
     QString displayName() const override { return QStringLiteral("Failing"); }
@@ -84,10 +82,10 @@ public:
                 {{QStringLiteral("in"), QStringLiteral("input")}},
                 {{QStringLiteral("out"), QStringLiteral("output")}}};
     }
-    Result<void> initialize(ModelManager &, const ProcessorConfig &) override { return Ok(); }
+    dsfw::Result<void> initialize(dsfw::ModelManager &, const dsfw::ProcessorConfig &) override { return dsfw::Ok(); }
     void release() override {}
-    Result<TaskOutput> process(const TaskInput &) override {
-        return Err<TaskOutput>("Simulated inference failure");
+    dsfw::Result<dsfw::TaskOutput> process(const dsfw::TaskInput &) override {
+        return dsfw::Err<dsfw::TaskOutput>("Simulated inference failure");
     }
 };
 
@@ -112,14 +110,14 @@ private slots:
     }
 
     void testMockPitchExtraction() {
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         PipelineOptions opts;
         StepConfig step;
         step.taskName = QStringLiteral("pitch_extraction");
         step.processorId = QStringLiteral("mock-rmvpe");
         opts.steps = {step};
 
-        std::vector<PipelineContext> ctxs(1);
+        std::vector<dsfw::PipelineContext> ctxs(1);
         ctxs[0].itemId = QStringLiteral("item0");
         ctxs[0].audioPath = QStringLiteral("/fake/audio.wav");
         ctxs[0].layers[QStringLiteral("audio")] = LayerData::fromJson({{"sampleRate", 44100}});
@@ -133,14 +131,14 @@ private slots:
     }
 
     void testMockMidiTranscription() {
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         PipelineOptions opts;
         StepConfig step;
         step.taskName = QStringLiteral("midi_transcription");
         step.processorId = QStringLiteral("mock-game");
         opts.steps = {step};
 
-        std::vector<PipelineContext> ctxs(1);
+        std::vector<dsfw::PipelineContext> ctxs(1);
         ctxs[0].itemId = QStringLiteral("item0");
         ctxs[0].audioPath = QStringLiteral("/fake/audio.wav");
         ctxs[0].layers[QStringLiteral("audio")] = LayerData::fromJson({{"sampleRate", 44100}});
@@ -156,14 +154,14 @@ private slots:
     }
 
     void testMockPhonemeAlignment() {
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         PipelineOptions opts;
         StepConfig step;
         step.taskName = QStringLiteral("phoneme_alignment");
         step.processorId = QStringLiteral("mock-hfa");
         opts.steps = {step};
 
-        std::vector<PipelineContext> ctxs(1);
+        std::vector<dsfw::PipelineContext> ctxs(1);
         ctxs[0].itemId = QStringLiteral("item0");
         ctxs[0].audioPath = QStringLiteral("/fake/audio.wav");
         ctxs[0].layers[QStringLiteral("audio")] = LayerData::fromJson({{"sampleRate", 44100}});
@@ -178,7 +176,7 @@ private slots:
     }
 
     void testMultiStepPipeline() {
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         PipelineOptions opts;
 
         StepConfig alignStep;
@@ -195,7 +193,7 @@ private slots:
 
         opts.steps = {alignStep, pitchStep, midiStep};
 
-        std::vector<PipelineContext> ctxs(1);
+        std::vector<dsfw::PipelineContext> ctxs(1);
         ctxs[0].itemId = QStringLiteral("item0");
         ctxs[0].audioPath = QStringLiteral("/fake/audio.wav");
         ctxs[0].layers[QStringLiteral("audio")] = LayerData::fromJson({{"sampleRate", 44100}});
@@ -210,14 +208,14 @@ private slots:
     }
 
     void testFailingProcessor() {
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         PipelineOptions opts;
         StepConfig step;
         step.taskName = QStringLiteral("failing_task");
         step.processorId = QStringLiteral("failing");
         opts.steps = {step};
 
-        std::vector<PipelineContext> ctxs(1);
+        std::vector<dsfw::PipelineContext> ctxs(1);
         ctxs[0].itemId = QStringLiteral("item0");
         ctxs[0].layers[QStringLiteral("input")] = LayerData::fromJson({{"data", "test"}});
 
@@ -228,12 +226,12 @@ private slots:
     }
 
     void testPipelineWithValidatorDiscard() {
-        PipelineRunner runner;
+        dsfw::PipelineRunner runner;
         PipelineOptions opts;
         StepConfig step;
         step.taskName = QStringLiteral("pitch_extraction");
         step.processorId = QStringLiteral("mock-rmvpe");
-        step.validator = [](const PipelineContext &ctx, const TaskSpec &, QString &reason) {
+        step.validator = [](const dsfw::PipelineContext &ctx, const TaskSpec &, QString &reason) {
             if (ctx.audioPath.isEmpty()) {
                 reason = QStringLiteral("No audio path");
                 return PipelineContext::Status::Discarded;
@@ -242,7 +240,7 @@ private slots:
         };
         opts.steps = {step};
 
-        std::vector<PipelineContext> ctxs(2);
+        std::vector<dsfw::PipelineContext> ctxs(2);
         ctxs[0].itemId = QStringLiteral("has_audio");
         ctxs[0].audioPath = QStringLiteral("/fake/audio.wav");
         ctxs[0].layers[QStringLiteral("audio")] = LayerData::fromJson({{"sampleRate", 44100}});
@@ -257,7 +255,7 @@ private slots:
     }
 
     void testPipelineContextBuildInputForPitch() {
-        PipelineContext ctx;
+        dsfw::PipelineContext ctx;
         ctx.audioPath = QStringLiteral("/audio/slice_001.wav");
         ctx.layers[QStringLiteral("audio")] = LayerData::fromJson({{"sampleRate", 44100}});
 
@@ -272,14 +270,14 @@ private slots:
     }
 
     void testPipelineContextApplyPitchOutput() {
-        PipelineContext ctx;
+        dsfw::PipelineContext ctx;
         ctx.itemId = QStringLiteral("slice_001");
 
         TaskSpec spec;
         spec.taskName = QStringLiteral("pitch_extraction");
         spec.outputs = {{QStringLiteral("f0_out"), QStringLiteral("pitch")}};
 
-        TaskOutput output;
+        dsfw::TaskOutput output;
         std::vector<float> f0(100, 440.0f);
         output.layers[QStringLiteral("f0_out")] = LayerData::fromJson({{"f0", f0}, {"timestep", 0.01}});
 

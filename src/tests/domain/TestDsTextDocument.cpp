@@ -1,10 +1,8 @@
-#include <QTest>
+﻿#include <QTest>
 #include <QTemporaryDir>
 #include <dstools/DsTextTypes.h>
 
-using namespace dsfw;
 using namespace dstools;
-using namespace dsfw;
 
 class TestDsTextDocument : public QObject {
     Q_OBJECT
@@ -92,9 +90,9 @@ void TestDsTextDocument::sort_boundaries() {
         {2, 200, "b"},
     };
     layer.sortBoundaries();
-    QCOMPARE(layer.boundaries[0].pos, TimePos(100));
-    QCOMPARE(layer.boundaries[1].pos, TimePos(200));
-    QCOMPARE(layer.boundaries[2].pos, TimePos(300));
+    QCOMPARE(layer.boundaries[0].pos, dsfw::TimePos(100));
+    QCOMPARE(layer.boundaries[1].pos, dsfw::TimePos(200));
+    QCOMPARE(layer.boundaries[2].pos, dsfw::TimePos(300));
 }
 
 void TestDsTextDocument::nextId() {
@@ -106,7 +104,7 @@ void TestDsTextDocument::nextId() {
 }
 
 void TestDsTextDocument::groups_lookup() {
-    DsTextDocument doc;
+    dsfw::DsTextDocument doc;
     doc.groups = {{1, 2, 3}, {4, 5}};
 
     const auto *g = doc.findGroup(2);
@@ -148,7 +146,7 @@ void TestDsTextDocument::curve_layer() {
     const auto &doc = res.value();
     QCOMPARE(doc.curves.size(), size_t(1));
     QCOMPARE(doc.curves[0].name, "f0");
-    QCOMPARE(doc.curves[0].timestep, TimePos(5000));
+    QCOMPARE(doc.curves[0].timestep, dsfw::TimePos(5000));
     QCOMPARE(doc.curves[0].values, (std::vector<float>{100.0f, 200.0f, 300.0f}));
 
     const QString path2 = tmp.filePath("curve2.dstext");

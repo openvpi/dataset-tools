@@ -1,4 +1,4 @@
-#include "PitchProcessor.h"
+﻿#include "PitchProcessor.h"
 
 #include <dstools/DsPitchDocument.h>
 
@@ -10,7 +10,6 @@
 namespace dstools {
     namespace pitchlabeler {
         namespace ui {
-            using namespace dsfw;
 
             std::vector<double> PitchProcessor::movingAverage(const std::vector<double> &values, int window) {
                 return dsfw::signal::movingAverage(values, window, true);
@@ -42,7 +41,7 @@ namespace dstools {
 
                 f0.values = preAdjustF0;
 
-                TimePos offset = ds.offset;
+                dsfw::TimePos offset = ds.offset;
 
                 for (int noteIdx : selectedNotes) {
                     if (noteIdx < 0 || noteIdx >= static_cast<int>(ds.notes.size()))

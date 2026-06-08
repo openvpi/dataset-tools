@@ -1,4 +1,4 @@
-#include "ProjectDataSource.h"
+﻿#include "ProjectDataSource.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -13,11 +13,10 @@
 
 namespace dstools {
 
-using namespace dsfw;
 
-ProjectDataSource::ProjectDataSource(QObject *parent) : IEditorDataSource(parent) {}
+ProjectDataSource::ProjectDataSource(QObject *parent) : dsfw::IEditorDataSource(parent) {}
 
-void ProjectDataSource::setProject(DsProject *project, const QString &workingDir) {
+void ProjectDataSource::setProject(dsfw::DsProject *project, const QString &workingDir) {
     QMutexLocker locker(&m_contextsMutex);
     
     m_project = project;
@@ -55,19 +54,19 @@ QStringList ProjectDataSource::sliceIds() const {
     return ids;
 }
 
-Result<DsTextDocument> ProjectDataSource::loadSlice(const QString &sliceId) {
+dsfw::Result<dsfw::DsTextDocument> ProjectDataSource::loadSlice(const QString &sliceId) {
     const QString path = dstextPath(sliceId);
     if (QFile::exists(path))
         return DsTextDocument::load(path);
 
     // Return empty document for slices without existing dstext
-    DsTextDocument doc;
+    dsfw::DsTextDocument doc;
     doc.audio.path = sliceAudioPath(sliceId);
     return doc;
 }
 
-Result<void> ProjectDataSource::saveSlice(const QString &sliceId,
-                                           const DsTextDocument &doc) {
+dsfw::Result<void> ProjectDataSource::saveSlice(const QString &sliceId,
+                                           const dsfw::DsTextDocument &doc) {
     const QString path = dstextPath(sliceId);
 
     // Ensure directory exists
@@ -118,7 +117,7 @@ void ProjectDataSource::addDirtyLayers(const QString &sliceId,
     auto it = m_contexts.find(sliceId);
     if (it == m_contexts.end()) {
         // 如果上下文不存在，创建它
-        PipelineContext ctx;
+        dsfw::PipelineContext ctx;
         ctx.itemId = sliceId;
         ctx.audioPath = sliceAudioPath(sliceId);
         it = m_contexts.insert({sliceId, std::move(ctx)}).first;
@@ -166,7 +165,7 @@ void ProjectDataSource::addEditedStep(const QString &sliceId, const QString &ste
     auto it = m_contexts.find(sliceId);
     if (it == m_contexts.end()) {
         // 如果上下文不存在，创建它
-        PipelineContext ctx;
+        dsfw::PipelineContext ctx;
         ctx.itemId = sliceId;
         ctx.audioPath = sliceAudioPath(sliceId);
         it = m_contexts.insert({sliceId, std::move(ctx)}).first;
@@ -211,7 +210,7 @@ void ProjectDataSource::rescanAudioAvailability() {
         emit audioAvailabilityChanged();
 }
 
-PipelineContext *ProjectDataSource::context(const QString &sliceId) {
+dsfw::PipelineContext *ProjectDataSource::context(const QString &sliceId) {
     QMutexLocker locker(&m_contextsMutex);
     
     auto it = m_contexts.find(sliceId);
@@ -237,19 +236,19 @@ PipelineContext *ProjectDataSource::context(const QString &sliceId) {
     }
 
     // Create empty context
-    PipelineContext ctx;
+    dsfw::PipelineContext ctx;
     ctx.itemId = sliceId;
     ctx.audioPath = sliceAudioPath(sliceId);
     m_contexts[sliceId] = std::move(ctx);
     return &m_contexts[sliceId];
 }
 
-Result<void> ProjectDataSource::saveContext(const QString &sliceId) {
+dsfw::Result<void> ProjectDataSource::saveContext(const QString &sliceId) {
     QMutexLocker locker(&m_contextsMutex);
 
     auto it = m_contexts.find(sliceId);
     if (it == m_contexts.end())
-        return Result<void>::Error("No context loaded for slice: " + sliceId.toStdString());
+        return dsfw::Result<void>::Error("No context loaded for slice: " + sliceId.toStdString());
 
     const QString path = contextPath(sliceId);
 

@@ -1,4 +1,4 @@
-#include "TierEditWidget.h"
+﻿#include "TierEditWidget.h"
 
 #include "BoundaryDragController.h"
 #include "IntervalTierView.h"
@@ -16,14 +16,12 @@
 
 namespace dstools {
 
-using namespace dsfw;
     namespace phonemelabeler {
-        using namespace dsfw;
         using dsfw::widgets::ViewportController;
         using dsfw::widgets::ViewportState;
 
-        TierEditWidget::TierEditWidget(TextGridDocument *doc, QUndoStack *undoStack, ViewportController *viewport,
-                                       BoundaryDragController *dragController, QWidget *parent) :
+        TierEditWidget::TierEditWidget(dsfw::TextGridDocument *doc, QUndoStack *undoStack, dsfw::ViewportController *viewport,
+                                       dsfw::BoundaryDragController *dragController, QWidget *parent) :
             QWidget(parent), m_document(doc), m_undoStack(undoStack), m_viewport(viewport),
             m_dragController(dragController) {
             // 创建主水平布局：仅包含层级视图容器（单选按钮由外部容器管理）
@@ -61,9 +59,9 @@ using namespace dsfw;
             }
         }
 
-        TierEditWidget::~TierEditWidget() = default;
+        TierEditWidget::~dsfw::TierEditWidget() = default;
 
-        void TierEditWidget::setDocument(TextGridDocument *doc) {
+        void TierEditWidget::setDocument(dsfw::TextGridDocument *doc) {
             m_document = doc;
             rebuildTierViews();
         }
@@ -121,7 +119,7 @@ using namespace dsfw;
                     });
 
                     // 创建层级视图
-                    auto *view = new IntervalTierView(i, m_document, m_undoStack, m_viewport, m_dragController,
+                    auto *view = new dsfw::IntervalTierView(i, m_document, m_undoStack, m_viewport, m_dragController,
                                                       m_tierViewsContainer);
                     view->setActive(i == m_document->activeTierIndex());
                     if (m_converter) view->setCoordConverter(m_converter);

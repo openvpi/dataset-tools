@@ -1,4 +1,4 @@
-#include "PitchLabelerPage.h"
+﻿#include "PitchLabelerPage.h"
 
 #include "BatchProcessDialog.h"
 #include "AppSettingsBackend.h"
@@ -39,13 +39,12 @@ struct PitchExtractionData {
 
 namespace dstools {
 
-using namespace dsfw;
 
 using dsfw::signal::expectedFrameCount;
 using dsfw::signal::hopSizeToTimestep;
 using dsfw::signal::resampleCurve;
 
-PitchLabelerPage::PitchLabelerPage(QWidget* parent) : EditorPageBase("PitchLabeler", parent) {
+PitchLabelerPage::PitchLabelerPage(QWidget* parent) : dsfw::EditorPageBase("PitchLabeler", parent) {
     m_editor = new pitchlabeler::PitchEditor(this);
 
     setupBaseLayout(m_editor);
@@ -93,7 +92,7 @@ PitchLabelerPage::PitchLabelerPage(QWidget* parent) : EditorPageBase("PitchLabel
     connect(m_editor->undoStack(), &QUndoStack::cleanChanged, this, [this]() { updateDirtyIndicator(); });
 }
 
-PitchLabelerPage::~PitchLabelerPage() = default;
+PitchLabelerPage::~dsfw::PitchLabelerPage() = default;
 
 QString PitchLabelerPage::windowTitlePrefix() const {
     return tr("Pitch Labeling");
@@ -113,7 +112,7 @@ void PitchLabelerPage::onDeactivatedImpl() {
 void PitchLabelerPage::saveExtraSplitters() {
     if (m_editor) {
         m_editor->saveViewportResolution();
-        settings().set(::dstools::settings::kEditorSplitterState,
+        dsfw::settings().set(::dstools::settings::kEditorSplitterState,
                        QString::fromLatin1(m_editor->saveSplitterState().toBase64()));
     }
 }
@@ -121,7 +120,7 @@ void PitchLabelerPage::saveExtraSplitters() {
 void PitchLabelerPage::restoreExtraSplitters() {
     if (m_editor) {
         m_editor->restoreViewportResolution();
-        auto state = settings().get(::dstools::settings::kEditorSplitterState);
+        auto state = dsfw::settings().get(::dstools::settings::kEditorSplitterState);
         if (!state.isEmpty())
             m_editor->restoreSplitterState(QByteArray::fromBase64(state.toUtf8()));
     }
@@ -131,7 +130,7 @@ BatchSliceResult PitchLabelerPage::processSlice(const QString& sliceId) {
     Q_UNUSED(sliceId)
     BatchSliceResult result;
     result.status = BatchSliceResult::Error;
-    result.error = QStringLiteral("PitchLabelerPage uses manual pitch/MIDI flow, not batch pipeline");
+    result.error = QStringLiteral("dsfw::PitchLabelerPage uses manual pitch/MIDI flow, not batch pipeline");
     return result;
 }
 
@@ -149,7 +148,7 @@ void PitchLabelerPage::onSliceSelectedImpl(const QString& sliceId) {
     double audioDurSec = 0.0;
     if (result) {
         const auto& doc = result.value();
-        TimePos totalDuration = secToUs(audioDurationSec(doc));
+        dsfw::TimePos totalDuration = secToUs(audioDurationSec(doc));
         auto file = DsTextDocBridge::toPitchDoc(doc, totalDuration);
 
         if (!audioPath.isEmpty())
@@ -180,7 +179,7 @@ bool PitchLabelerPage::saveCurrentSlice() {
             ("Failed to load slice for save: " + currentSliceId().toStdString() + " - " + result.error()).c_str());
         return false;
     }
-    DsTextDocument doc = std::move(result.value());
+    dsfw::DsTextDocument doc = std::move(result.value());
 
     auto mergeResult = DsTextDocBridge::fromPitchDoc(doc, *m_currentFile);
     if (!mergeResult) {
@@ -491,7 +490,7 @@ bool PitchLabelerPage::buildAlignInput(Game::AlignInput& outAlignInput) const {
             for (size_t i = 0; i < bnd.size(); ++i) {
                 if (!bnd[i].text.isEmpty()) {
                     outAlignInput.phSeq.push_back(bnd[i].text.toStdString());
-                    TimePos dur = (i + 1 < bnd.size()) ? bnd[i + 1].pos - bnd[i].pos
+                    dsfw::TimePos dur = (i + 1 < bnd.size()) ? bnd[i + 1].pos - bnd[i].pos
                                                        : secToUs(audioDurationSec(doc)) - bnd[i].pos;
                     outAlignInput.phDur.push_back(static_cast<float>(usToSec(dur)));
                 }
@@ -529,10 +528,10 @@ void PitchLabelerPage::runPitchExtraction(const QString& sliceId) {
 
     runAsyncTask<PitchExtractionData>(
         QLatin1String(::dstools::keys::engines::pitchExtraction), sliceId,
-        [weakRmvpe, audioPath](const std::shared_ptr<std::atomic<bool>>&) -> Result<PitchExtractionData> {
+        [weakRmvpe, audioPath](const std::shared_ptr<std::atomic<bool>>&) -> dsfw::Result<PitchExtractionData> {
             auto rmvpe = weakRmvpe.lock();
             if (!rmvpe)
-                return Err<PitchExtractionData>("RMVPE engine is null");
+                return dsfw::Err<PitchExtractionData>("RMVPE engine is null");
             std::vector<Rmvpe::RmvpeRes> results;
             auto result = rmvpe->get_f0(audioPath.toStdWString(), 0.01f, results, nullptr);
             if (result && !results.empty()) {
@@ -547,7 +546,7 @@ void PitchLabelerPage::runPitchExtraction(const QString& sliceId) {
                 if (probeResult.ok()) {
                     const int sampleRate = probeResult.value().sampleRate;
                     const int64_t audioFrames = probeResult.value().totalFrameCount;
-                    const TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
+                    const dsfw::TimePos dstTimestepUs = hopSizeToTimestep(constants::kDefaultHopSize, sampleRate);
                     const int alignLength = expectedFrameCount(audioFrames, constants::kDefaultHopSize);
                     data.f0Mhz = resampleCurve(mergedF0, secToUs(0.01), dstTimestepUs, alignLength);
                     data.timestep = static_cast<float>(usToSec(dstTimestepUs));
@@ -557,9 +556,9 @@ void PitchLabelerPage::runPitchExtraction(const QString& sliceId) {
                 }
                 return data;
             }
-            return Err<PitchExtractionData>(result.error());
+            return dsfw::Err<PitchExtractionData>(result.error());
         },
-        [this](const QString& sliceId, const Result<PitchExtractionData>& result) {
+        [this](const QString& sliceId, const dsfw::Result<PitchExtractionData>& result) {
             setBatchRunning(false);
             m_extractPitchAction->setEnabled(true);
             m_extractMidiAction->setEnabled(true);
@@ -624,10 +623,10 @@ void PitchLabelerPage::runMidiTranscription(const QString& sliceId, const Game::
     runAsyncTask<std::vector<Game::GameNote>>(
         QLatin1String(::dstools::keys::engines::midiTranscription), sliceId,
         [weakGame, audioPath, useAlign, capturedInput, options = std::move(options)](
-            const std::shared_ptr<std::atomic<bool>>&) -> Result<std::vector<Game::GameNote>> {
+            const std::shared_ptr<std::atomic<bool>>&) -> dsfw::Result<std::vector<Game::GameNote>> {
             auto game = weakGame.lock();
             if (!game)
-                return Err<std::vector<Game::GameNote>>("Game engine is null");
+                return dsfw::Err<std::vector<Game::GameNote>>("Game engine is null");
             std::vector<Game::GameNote> notes;
 
             if (useAlign && capturedInput) {
@@ -653,15 +652,15 @@ void PitchLabelerPage::runMidiTranscription(const QString& sliceId, const Game::
                     }
                     return notes;
                 }
-                return Err<std::vector<Game::GameNote>>(result.error());
+                return dsfw::Err<std::vector<Game::GameNote>>(result.error());
             } else {
                 auto result = game->getNotes(audioPath.toStdWString(), notes, nullptr);
                 if (result)
                     return notes;
-                return Err<std::vector<Game::GameNote>>(result.error());
+                return dsfw::Err<std::vector<Game::GameNote>>(result.error());
             }
         },
-        [this](const QString& sliceId, const Result<std::vector<Game::GameNote>>& result) {
+        [this](const QString& sliceId, const dsfw::Result<std::vector<Game::GameNote>>& result) {
             setBatchRunning(false);
             m_extractPitchAction->setEnabled(true);
             m_extractMidiAction->setEnabled(true);
@@ -731,7 +730,7 @@ void PitchLabelerPage::runAddPhNum(const QString& sliceId) {
         return;
     }
 
-    DsTextDocument doc = std::move(result.value());
+    dsfw::DsTextDocument doc = std::move(result.value());
 
     QStringList phSeq;
     for (const auto& layer : doc.layers) {
