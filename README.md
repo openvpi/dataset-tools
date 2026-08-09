@@ -40,7 +40,22 @@ new "AP" annotations on intervals already marked as "SP").
 
 ### GAME Model
 
-Required for GameInfer. Place the model directory (containing `config.json`, `encoder.onnx`, `segmenter.onnx`, `bd2dur.onnx`, `dur2bd.onnx`, `estimator.onnx`) under `<app_dir>/model/`.
+Required for GameInfer. Download an archive with `onnx` in its filename from the
+[GAME releases](https://github.com/openvpi/GAME/releases), then extract the model directory under
+`<app_dir>/model/` or select it from GameInfer. The selected directory must contain `config.json`,
+`encoder.onnx`, `segmenter.onnx`, `bd2dur.onnx`, `dur2bd.onnx`, and `estimator.onnx`.
+
+### GameInfer Usage
+
+1. Select the GAME model directory and the execution provider/device.
+2. Add one or more WAV, FLAC, or MP3 files, or drag them into the task queue.
+3. Choose the default `Language` and `Tempo` for new tasks. Use **Apply to all editable tasks** when
+   existing pending or failed tasks should use the same values.
+4. Adjust input/output paths, output names, `Language`, or `Tempo` directly in individual queue rows.
+   MIDI output defaults to the input directory with the same base file name.
+5. Select **Start conversion**. Tasks run in queue order; a failed task does not stop later tasks.
+
+The interface language can be changed between English and Simplified Chinese from **Settings**.
 
 ## Build from Source
 

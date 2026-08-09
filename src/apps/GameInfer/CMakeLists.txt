@@ -4,13 +4,14 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-file(GLOB_RECURSE _src *.h *.cpp)
+file(GLOB_RECURSE _src CONFIGURE_DEPENDS *.h *.cpp)
 add_executable(${PROJECT_NAME} ${_src})
 
 find_package(SndFile CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::Concurrent
         game-infer::game-infer
 )
 
@@ -19,6 +20,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
+
+qt_add_translations(${PROJECT_NAME}
+        TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/translations/GameInfer_zh_CN.ts
+        RESOURCE_PREFIX /i18n
+)
 
 
 if (WIN32)
