@@ -11,6 +11,7 @@ DiffSinger dataset processing tools for singing voice synthesis data preparation
 | **AudioSlicer** | RMS-based automatic audio slicing with Audacity CSV marker support |
 | **LyricFA** | Lyric forced alignment using FunASR Paraformer (Chinese) |
 | **HubertFA** | HuBERT phoneme forced alignment with Praat TextGrid output |
+| **Tifa** | TIFA forced alignment (Mandarin/Cantonese/Japanese/English) with Praat TextGrid output |
 | **GameInfer** | GAME audio-to-MIDI transcription (4-model ONNX pipeline) |
 
 ## Supported Platforms
@@ -41,6 +42,16 @@ new "AP" annotations on intervals already marked as "SP").
 ### GAME Model
 
 Required for GameInfer. Place the model directory (containing `config.json`, `encoder.onnx`, `segmenter.onnx`, `bd2dur.onnx`, `dur2bd.onnx`, `estimator.onnx`) under `<app_dir>/model/`.
+
+### TIFA Model
+
+Required for Tifa. Export the model with [`deploy_dataset_tools.py`](https://github.com/openvpi/TIFA) of the TIFA repository:
+
+```bash
+python deploy_dataset_tools.py -m [model-path] -o [save-dir]
+```
+
+Copy `<save-dir>/model/Tifa` to `<app_dir>/model/Tifa`; it contains `config.json`, `vocabulary.json`, `spectrogram.onnx`, `model.onnx`, `prepare.onnx`, `score.onnx` and `select.onnx`. The pronunciation dictionaries are deployed to `<app_dir>/dict` automatically: the four text dictionaries of `src/apps/Tifa/dict` and the `mandarin` and `cantonese` folders of cpp-pinyin. The optional English out-of-vocabulary model `LstmG2p-Eng` is not part of the repository; see [dict/README.md](src/apps/Tifa/dict/README.md).
 
 ## Build from Source
 
@@ -134,7 +145,7 @@ cmake --build build --target install
 
 | Type | Files |
 |---|---|
-| Applications | `MinLabel.exe`, `SlurCutter.exe`, `AudioSlicer.exe`, `LyricFA.exe`, `HubertFA.exe`, `GameInfer.exe` |
+| Applications | `MinLabel.exe`, `SlurCutter.exe`, `AudioSlicer.exe`, `LyricFA.exe`, `HubertFA.exe`, `Tifa.exe`, `GameInfer.exe` |
 | Test executables | `TestGame.exe`, `TestRmvpe.exe`, `TestSome.exe`, `TestAudioUtil.exe` |
 | Shared libraries | `game-infer.dll`, `rmvpe-infer.dll`, `some-infer.dll`, `audio-util.dll` |
 
@@ -176,6 +187,14 @@ cmake --build build --target install
     + MIT License
 + [nlohmann/json](https://github.com/nlohmann/json)
     + MIT License
++ [cpp-pinyin](https://github.com/wolfgitpr/cpp-pinyin)
+    + Apache 2.0 License
++ [cpp-kana](https://github.com/wolfgitpr/cpp-kana)
+    + Apache 2.0 License
++ [TIFA](https://github.com/openvpi/TIFA)
+    + MIT License
++ [LstmG2p](https://github.com/wolfgitpr/LstmG2p)
+    + See the upstream repository
 + [FoxBreatheLabeler](https://github.com/autumn-DL/FoxBreatheLabeler)
     + GNU AGPL v3.0
 + [textgrid.hpp](https://github.com/eiichiroi/textgrid.hpp)
